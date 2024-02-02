@@ -1,0 +1,15 @@
+
+#vt3d-main-ui {
+    display: flex;
+    gap:var(--vt3d-gutter-s);
+    padding: var(--vt3d-gutter);
+
+    position: fixed;
+    top: 0;
+    bottom: 100vh;
+    left: 0;
+    right: 100vw;
+
+    z-index: var(--vt3d-ui-layer-zindex);
+
+}

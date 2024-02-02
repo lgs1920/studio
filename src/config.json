@@ -1,0 +1,16 @@
+{
+  "ionToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4ZmZkZjZkYS1iODgwLTQzYzUtOTM5ZS1iYTc2Nzk0OTM1ZjQiLCJpZCI6MTkwODA4LCJpYXQiOjE3MDU2ODQ3OTZ9.BV6yuYzhp8A_cgEs5MbqZWZaCtyOW-08aSORPflJ3dw",
+  "center": {
+    "longitude": 5.70291,
+    "latitude": 45.33524,
+    "height": 2600,
+    "target": true,
+    "camera" : {
+      "heading": 360,
+      "pitch": -30,
+      "roll": 0,
+      "range": 2000
+    }
+  },
+  "theme": "dark"
+}

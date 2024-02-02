@@ -1,0 +1,50 @@
+@import-normalize; /* bring in normalize.css styles */
+
+html {
+    height: 100vh;
+}
+
+body {
+    font-size: var(--vt3d-font-size);
+    font-family : var(--vt3d-font-family)
+}
+
+.ui {
+    font-size: var(--vt3d-font-size-s);
+    line-height: var(--vt3d-font-line-height);
+    z-index: var(--vt3d-layer-top);
+}
+.ui-element {
+    background-color: var(--vt3d-dark-ui-bg-color);
+    color:var(--vt3d-dark-ui-fg-color);
+    align-items: center;
+
+    border: var(--vt3d-border-width-s) solid var(--vt3d-dark-ui-secondary-color);
+    border-radius: var(--vt3d-border-radius-s);
+    display: flex;
+    padding: var(--vt3d-gutter-xs);
+    gap: var(--vt3d-gutter-s);
+}
+
+.ui-element .ui-element {
+    padding:0
+}
+
+.ui-element.transparent {
+    background-color: transparent;
+    border:none
+}
+.ui-element.transparent .ui-element {
+    padding: var(--vt3d-gutter-xs);
+}
+
+.vt3d-hidden {
+    display: none;
+}
+
+
+
+/** Hide the main toolbar */
+#viewTrack3DViewer .cesium-viewer-toolbar {
+    display: none;
+}

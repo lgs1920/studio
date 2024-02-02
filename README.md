@@ -21,7 +21,9 @@ But we expect to have :
 The app will be based on :
 
 * cesiumjs - https://cesium.com/ - The Map engine
-* Vue - https://vuejs.org/ - The JS Framework
+* Vite -  https://vitej.dev/ - frontend tooling
+* React - https://react.dev/ - UI
+* Rhesium - https://resium.reearth.io/ - React compenents for Cesium
 * Shoelace - https://shoelace.style/ - The web components used for UI
 * fontawesome - https://fontawesome.com/ - The icons library
 
