@@ -3,7 +3,6 @@ export class AppUtils {
         if (!theme) {
             theme = window.vt3DContext.configuration.theme
         }
-        console.log(document.documentElement)
         document.documentElement.classList.add(`sl-theme-${theme}`);
     }
 }

@@ -77,6 +77,7 @@ export class CameraUtils {
      *
      */
     static turnAroundCameraTarget = () => {
+        return
         /**
          * Only if target has been defined
          */

@@ -32,7 +32,9 @@ body {
 
 .ui-element.transparent {
     background-color: transparent;
-    border:none
+    border:none;
+    padding-left:0;
+    padding-right:0;
 }
 .ui-element.transparent .ui-element {
     padding: var(--vt3d-gutter-xs);

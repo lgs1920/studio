@@ -8,7 +8,7 @@ export const TextValueUI = forwardRef(function TextValue(props, ref) {
     }
 
 
-    const classes = (props.class)?props.class+' ':'' + 'vt3d-text-value'
+    const classes = (props.class) ? props.class + ' ' : '' + 'vt3d-text-value'
 
     return (
         <div id={props.id} className={classes}>
@@ -19,15 +19,18 @@ export const TextValueUI = forwardRef(function TextValue(props, ref) {
 
 export const update = (props) => {
     const component = document.getElementById(props.id)
-    if (component !== undefined) {
-        if (props.text) {
-            component.querySelector('.vt3d-tv-text').innerHTML = props.text
+    if (component !== undefined && component !== null) {
+        const text = component.querySelector('.vt3d-tv-text')
+        const value = component.querySelector('.vt3d-tv-value')
+        const unit = component.querySelector('.vt3d-tv-unit')
+        if (props.text && text) {
+            text.innerHTML = props.text
         }
-        if (props.value) {
-            component.querySelector('.vt3d-tv-value').innerHTML = props.value
+        if (props.value && value) {
+            value.innerHTML = props.value
         }
-        if (props.unit) {
-            component.querySelector('.vt3d-tv-unit').innerHTML = props.unit
+        if (props.unit && unit) {
+            unit.innerHTML = props.unit
         }
     }
 }

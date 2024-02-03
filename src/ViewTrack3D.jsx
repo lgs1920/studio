@@ -8,7 +8,7 @@ import {useEffect, useRef} from "react";
  */
 import {Camera, CameraFlyTo, useCesium, Globe, Scene, Viewer} from "resium";
 import * as Cesium from "cesium";
-import {Vr3DContext} from "./Utils/Vr3DContext";
+import {Vt3DContext} from "./Utils/Vt3DContext.js";
 import {CameraUtils} from "./Utils/CameraUtils.js";
 
 /**
@@ -28,7 +28,7 @@ import {AppUtils} from "./Utils/AppUtils.js";
  * Some initialization
  */
 
-window.vt3DContext = new Vr3DContext()
+window.vt3DContext = new Vt3DContext()
 
 export const APP_NAME = 'visu-rando-3d'
 export const CONFIGURATION = './config.json'

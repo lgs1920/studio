@@ -35,7 +35,11 @@
     --vt3d-button-bg-hover-color: var(--vt3d-dark-ui-primary-color);
 
     --vt3d-input-height-s:1.5rem;
-    --vt3d-border-width-s:1px
+    --vt3d-border-width-s:1px;
+
+    --vt3d-compass-stroke-color:var(--vt3d-dark-ui-secondary-color);
+    --vt3d-compass-fill-color:var(--vt3d-dark-ui-secondary-color);
+
 }
 
     .sl-theme-light {
@@ -55,7 +59,7 @@
     }
 
     .button--standard.button--default::part(base):hover:not(.button--disabled) {
-        background-color: var(--vt3d-button-hover-bg-color);
-        border-color: var(--vt3d-button-hover-border-color);
+        background-color: var(--vt3d-button-bg-hover-color);
+        border-color: var(--vt3d-button-border-hover-color);
         color: var(--vt3d-button-hover-color);
     }
