@@ -1,16 +1,13 @@
 import './style.css'
-import {forwardRef}          from 'react'
-import {FontAwesomeIcon}     from '@fortawesome/react-fontawesome'
+import {library}             from '@fortawesome/fontawesome-svg-core'
 import {faMapLocation}       from '@fortawesome/pro-regular-svg-icons'
+import {FontAwesomeIcon}     from '@fortawesome/react-fontawesome'
 import {SlButton, SlTooltip} from '@shoelace-style/shoelace/dist/react'
+import {forwardRef}          from 'react'
 import {TrackUtils}          from '../../../Utils/TrackUtils'
-import {UINotifier}          from '../../../Utils/UINotifier'
-import { library, dom } from '@fortawesome/fontawesome-svg-core'
-import { findIconDefinition, icon } from '@fortawesome/fontawesome-svg-core'
 
 
 library.add(faMapLocation)
-console.log(icon(faMapLocation).html)
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
     const uploadFile = async () => {
