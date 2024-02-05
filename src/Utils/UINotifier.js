@@ -8,7 +8,7 @@ import {SECOND}        from './AppUtils'
 import {UIUtils as UI} from './UIUtils'
 
 export const VT3D_INFORMATION_TOAST = 'information'
-export const VT3D_SUCCESS_TOAST = 'succes'
+export const VT3D_SUCCESS_TOAST = 'success'
 export const VT3D_WARNING_TOAST = 'warning'
 export const VT3D_ERROR_TOAST = 'danger'
 
