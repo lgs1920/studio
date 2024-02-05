@@ -6,17 +6,18 @@ html {
 
 body {
     font-size: var(--vt3d-font-size);
-    font-family : var(--vt3d-font-family)
+    font-family: var(--vt3d-font-family)
 }
 
 .ui {
     font-size: var(--vt3d-font-size-s);
     line-height: var(--vt3d-font-line-height);
-    z-index: var(--vt3d-layer-top);
+    z-index: var(--vt3d-ui-layer-zindex);
 }
+
 .ui-element {
     background-color: var(--vt3d-dark-ui-bg-color);
-    color:var(--vt3d-dark-ui-fg-color);
+    color: var(--vt3d-dark-ui-fg-color);
     align-items: center;
 
     border: var(--vt3d-border-width-s) solid var(--vt3d-dark-ui-secondary-color);
@@ -27,15 +28,17 @@ body {
 }
 
 .ui-element .ui-element {
-    padding:0
+    padding: 0;
 }
 
 .ui-element.transparent {
     background-color: transparent;
-    border:none;
-    padding-left:0;
-    padding-right:0;
+    border: none;
+    padding-left: 0;
+    padding-right: 0;
+    transition: 0.3s;
 }
+
 .ui-element.transparent .ui-element {
     padding: var(--vt3d-gutter-xs);
 }
@@ -45,8 +48,39 @@ body {
 }
 
 
-
 /** Hide the main toolbar */
 #viewTrack3DViewer .cesium-viewer-toolbar {
     display: none;
+}
+
+/**
+ * Toast
+ */
+
+/* Toast stack on bottomleft */
+.sl-toast-stack {
+    left: 0;
+    right: auto;
+    bottom: 0;
+    top: auto
+}
+
+.toast-caption {
+    font-weight: 800;
+}
+
+.toast-text {
+
+}
+
+/**
+ * Drop Zone
+ */
+#vt3d-drop-zone {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--vt3d-drop-zone-zindex);
 }

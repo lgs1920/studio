@@ -1,4 +1,4 @@
-import {getFileAsString} from "easy-file-picker";
+import {getFileAsString} from 'easy-file-picker'
 
 export class FileUtils {
 
@@ -9,26 +9,52 @@ export class FileUtils {
      *
      * @returns {Promise<FileStringResult>}
      */
-    static async uploadFileFromFrontEnd(types=null) {
+    static async uploadFileFromFrontEnd(props = null) {
         return await getFileAsString(
-            types ? {acceptedExtensions: types}:{}
+            props.accepted ? {acceptedExtensions: props.accepted} : {},
         ).then(file => {
-            // If no types specified, we return the file without any checks
-            return file
 
-            // Else, Let's check for the real type found in content to avoid hacking
-            let found = false
-            let checkedFile=''
-            types.forEach(type => {
-                // If file type is empty, we cannot check.
-                // So we hope that it is a text file #crossfingers
-                if (!found && (file.type === '' || file.type.includes(type.slice(1)))) {
-                    found = true
-                    checkedFile = file
-                }
-            })
-            return checkedFile;
+            // Let's add extension info to file and change name by removing it
+            const info = FileUtils.getFileNameAndExtension(file.name)
+            file.name = info.name
+            file.extension = info.extension
 
+            // If no types specified, we force one type if mimes are specified
+            // else we use extension as types.
+            // Then we return the file object
+            if (file.type === '' && props.mimes) {
+                file.type = props.mimes[file.extension][0]
+                return file
+            }
+
+            // Else, Let's check for the type found in content to avoid hacking
+            if (file.type === extension || (props.mimes && props.mimes[file.extension].includes(file.type))) {
+                return file
+            }
+
+            return ''
         })
+    }
+
+    /**
+     * Extract file extension (ie after the last dot)
+     *
+     * @param {string} fileName file name
+     * @returns {*} extension
+     */
+    static getExtension(fileName) {
+        return fileName.slice((Math.max(0, fileName.lastIndexOf('.')) || Infinity) + 1)
+    }
+
+    /**
+     * Split file name in name and extension
+     *
+     * @param {string} fileName
+     * @returns {{extension, name: *}}
+     */
+    static getFileNameAndExtension(fileName) {
+        const extension = FileUtils.getExtension(fileName)
+        const re = new RegExp(`.${extension}`, 'g')
+        return {name: fileName.replace(re, ''), extension: extension}
     }
 }

@@ -1,15 +1,15 @@
 :root {
-    --vt3d-gutter : 1rem;
-    --vt3d-gutter-s : 0.5rem;
-    --vt3d-gutter-xs : 0.35rem;
+    --vt3d-gutter: 1rem;
+    --vt3d-gutter-s: 0.5rem;
+    --vt3d-gutter-xs: 0.35rem;
 
-    --vt3d-border-radius:0.5rem;
+    --vt3d-border-radius: 0.5rem;
     --vt3d-border-radius-s: 0.25rem;
     --vt3d-border-radius-xs: 0.15rem;
 
-    --vt3d-font-family :Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-    --vt3d-font-line-height:  1.2;
-    --vt3d-font-weight : 400;
+    --vt3d-font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    --vt3d-font-line-height: 1.2;
+    --vt3d-font-weight: 400;
 
     color-scheme: light dark;
     --vt3d-dark-ui-primary-color: #3e3232;
@@ -18,13 +18,14 @@
     --vt3d-dark-ui-4th-color: #a87c7c;
     --vt3d-dark-ui-5th-color: #9f9898;
 
-    --vt3d-dark-ui-bg-color : var(--vt3d-dark-ui-5th-color);
-    --vt3d-dark-ui-fg-color : var(--vt3d-dark-ui-primary-color);
+    --vt3d-dark-ui-bg-color: var(--vt3d-dark-ui-5th-color);
+    --vt3d-dark-ui-fg-color: var(--vt3d-dark-ui-primary-color);
 
-    --vt3d-font-size : 1rem;
-    --vt3d-font-size-s : 0.8rem;
+    --vt3d-font-size: 1rem;
+    --vt3d-font-size-s: 0.8rem;
 
     --vt3d-ui-layer-zindex: 200;
+    --vt3d-drop-zone-zindex: 10;
 
     --vt3d-button-border-color: var(--vt3d-dark-ui-secondary-color);
     --vt3d-button-color: var(--vt3d-dark-ui-primary-color);
@@ -34,32 +35,33 @@
     --vt3d-button-hover-color: var(--vt3d-dark-ui-secondary-color);
     --vt3d-button-bg-hover-color: var(--vt3d-dark-ui-primary-color);
 
-    --vt3d-input-height-s:1.5rem;
-    --vt3d-border-width-s:1px;
+    --vt3d-input-height-s: 1.5rem;
+    --vt3d-border-width-s: 1px;
 
-    --vt3d-compass-stroke-color:var(--vt3d-dark-ui-secondary-color);
-    --vt3d-compass-fill-color:var(--vt3d-dark-ui-secondary-color);
+    --vt3d-compass-stroke-color: var(--vt3d-dark-ui-secondary-color);
+    --vt3d-compass-fill-color: var(--vt3d-dark-ui-secondary-color);
 
 }
 
-    .sl-theme-light {
-        --sl-input-border-width-small: 4px;
-        --test: var(--vt3d-border-radius-s);
-        font-size: var(--vt3d-font-size-s);
-        --sl-input-border-width: var(--vt3d-border-width-s);
-        --sl-input-height-small: var(--vt3d-input-height-s);
-        line-height: calc(var(--sl-input-height-small) - var(--sl-input-border-width) * 2);
-        border-radius: var(--sl-input-border-radius-small);
-    }
+.sl-theme-light {
+    --sl-input-border-width-small: 4px;
+    --test: var(--vt3d-border-radius-s);
+    font-size: var(--vt3d-font-size-s);
+    --sl-input-border-width: var(--vt3d-border-width-s);
+    --sl-input-height-small: var(--vt3d-input-height-s);
+    line-height: calc(var(--sl-input-height-small) - var(--sl-input-border-width) * 2);
+    border-radius: var(--sl-input-border-radius-small);
+}
 
-    button.button--standard.button--default::part(base) {
-        background-color: var(--vt3d-button-bg-color);
-        border-color: var(--vt3d-button-border-color);
-        color: var(--vt3d-button-color);
-    }
+button.button--standard.button--default::part(base) {
+    background-color: var(--vt3d-button-bg-color);
+    border-color: var(--vt3d-button-border-color);
+    color: var(--vt3d-button-color);
+}
 
-    .button--standard.button--default::part(base):hover:not(.button--disabled) {
-        background-color: var(--vt3d-button-bg-hover-color);
-        border-color: var(--vt3d-button-border-hover-color);
-        color: var(--vt3d-button-hover-color);
-    }
+.button--standard.button--default::part(base):hover:not(.button--disabled) {
+    background-color: var(--vt3d-button-bg-hover-color);
+    border-color: var(--vt3d-button-border-hover-color);
+    color: var(--vt3d-button-hover-color);
+}
+

@@ -25,9 +25,7 @@ export class UIUtils {
         // use Font Awesome icons in Shoelace
         registerIconLibrary('far', {
             resolver: name => {
-                console.log(name, icon(UIUtils.icons[name]).html[0])
                 const blob = new Blob(icon(UIUtils.icons[name]).html, {type: 'image/svg+xml'})
-                console.log(name, URL.createObjectURL(blob))
                 return URL.createObjectURL(blob)
             },
             mutator: svg => {
@@ -46,7 +44,6 @@ export class UIUtils {
      * @return {string[]}
      */
     static useIcon(iconFromReact) {
-        console.log(iconFromReact)
         const name = `${iconFromReact.prefix}-${iconFromReact.iconName}`
         UIUtils.icons[name] = iconFromReact
         return name
