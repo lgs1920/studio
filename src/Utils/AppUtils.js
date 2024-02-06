@@ -1,13 +1,12 @@
 //import { registerIconLibrary } from '@shoelace-style';
-import { library, icon } from '@fortawesome/fontawesome-svg-core'
 
 
 export class AppUtils {
-    static setTheme = (theme=null) => {
+    static setTheme = (theme = null) => {
         if (!theme) {
-            theme = window.vt3DContext.configuration.theme
+            theme = window.vt3d.configuration.theme
         }
-        document.documentElement.classList.add(`sl-theme-${theme}`);
+        document.documentElement.classList.add(`sl-theme-${theme}`)
     }
 
     /**
@@ -16,7 +15,7 @@ export class AppUtils {
      * @param string {string}
      * @return {string}
      */
-    static  capitalize= (string) =>{
+    static  capitalize = (string) => {
         return string[0].toUpperCase() + string.slice(1)
     }
 
@@ -26,7 +25,7 @@ export class AppUtils {
      * @param string {string}
      * @return {string}
      */
-    static camelCase =(string) =>{
+    static camelCase = (string) => {
         return string
             .split('-')
             .map((s, index) => {
