@@ -1,5 +1,5 @@
-import {Cartesian3, Transforms,Matrix4, HeadingPitchRange, Math} from "cesium";
-import {update} from "../Components/UI/TextValueUI/TextValueUI.jsx";
+import {Cartesian3, HeadingPitchRange, Math, Transforms} from 'cesium'
+import {update}                                          from '../Components/UI/TextValueUI/TextValueUI.jsx'
 
 export class CameraUtils {
 
@@ -18,7 +18,7 @@ export class CameraUtils {
         if (camera) {
             return {
                 heading: Math.toDegrees(camera.heading),
-                pitch: Math.toDegrees(camera.pitch)
+                pitch: Math.toDegrees(camera.pitch),
             }
         } else {
             return {heading: 0, pitch: 0}
@@ -32,14 +32,14 @@ export class CameraUtils {
     static getPosition = (camera) => {
 
         if (!camera) {
-            camera = window.vt3DContext.camera
+            camera = window.vt3d.camera
         }
 
         const {longitude, latitude, height} = camera.positionCartographic
         return {
             longitude: Math.toDegrees(longitude),
             latitude: Math.toDegrees(latitude),
-            height: height
+            height: height,
         }
     }
 
@@ -51,7 +51,7 @@ export class CameraUtils {
 
 
         if (!camera) {
-            camera = window.vt3DContext.camera
+            camera = window.vt3d.camera
         }
 
         try {
@@ -81,23 +81,23 @@ export class CameraUtils {
         /**
          * Only if target has been defined
          */
-        if (window.vt3DContext.configuration.center.target) {
+        if (window.vt3d.configuration.center.target) {
             const cameraOffset = new HeadingPitchRange(
-                Math.toRadians(window.vt3DContext.configuration.center.camera.heading),
-                Math.toRadians(window.vt3DContext.configuration.center.camera.pitch),
-                window.vt3DContext.configuration.center.camera.range
+                Math.toRadians(window.vt3d.configuration.center.camera.heading),
+                Math.toRadians(window.vt3d.configuration.center.camera.pitch),
+                window.vt3d.configuration.center.camera.range,
             )
-            CameraUtils.lookAt(window.vt3DContext.camera, window.vt3DContext.windowCenter, cameraOffset)
+            CameraUtils.lookAt(window.vt3d.camera, window.vt3d.windowCenter, cameraOffset)
 
             /**
              * Let's rotate on left for PI/1000 angle
              */
-            const step=Math.PI/1000
-            window.vt3DContext.viewer.clock.onTick.addEventListener(() => {
-                window.vt3DContext.camera.rotateLeft(step)
+            const step = Math.PI / 1000
+            window.vt3d.viewer.clock.onTick.addEventListener(() => {
+                window.vt3d.camera.rotateLeft(step)
                 // No event on rotate, so we force update position
                 CameraUtils.updatePosition()
-            });
+            })
         }
     }
 

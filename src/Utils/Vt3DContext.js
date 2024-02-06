@@ -29,7 +29,7 @@ export class Vt3DContext {
     }
 
     get canvas() {
-        return this.#context?.scene?.canvas
+        return this.#context?.canvas
     }
 
 
@@ -46,7 +46,7 @@ export class Vt3DContext {
 
     addTrack = (track) => {
         if (track && track.name) {
-            this.context.tracks.push({[track.name]: track})
+            this.context.tracks.push({[`${track.name}.${track.extension}`]: track})
         }
     }
 

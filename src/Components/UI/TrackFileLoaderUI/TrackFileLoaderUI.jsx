@@ -14,7 +14,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
         const file = await TrackUtils.loadTrack()
         // File is correct, we save it in context
         if (file !== undefined) {
-            window.vt3DContext.addTrack(file)
+            window.vt3d.addTrack(file)
             TrackUtils.showTrack(file)
         }
     }

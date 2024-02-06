@@ -6,7 +6,7 @@ import {CompassUI}         from '../CompassUI/CompassUI.jsx'
 import {TrackFileLoaderUI} from '../TrackFileLoaderUI/TrackFileLoaderUI.jsx'
 
 export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
-    window.vt3DContext.viewer = useCesium().viewer
+    window.vt3d.viewer = useCesium().viewer
 
     return (
         <>

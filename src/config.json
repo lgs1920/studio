@@ -5,12 +5,20 @@
     "latitude": 45.33524,
     "height": 2600,
     "target": true,
-    "camera" : {
+    "camera": {
       "heading": 360,
       "pitch": -30,
       "roll": 0,
       "range": 2000
     }
+  },
+  "track": {
+    "color": "#B22222FF",
+    "width": 2
+  },
+  "route": {
+    "color": "#1E90FFFF",
+    "width": 2
   },
   "theme": "dark"
 }

@@ -32,23 +32,23 @@ setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 
 UIUtils.init()
 
-window.vt3DContext = new Vt3DContext()
+window.vt3d = new Vt3DContext()
 
 export const APP_NAME = 'visu-rando-3d'
 export const CONFIGURATION = './config.json'
-window.vt3DContext.configuration = await import(/* @vite-ignore */ CONFIGURATION)
-Cesium.Ion.defaultAccessToken = window.vt3DContext.configuration.ionToken
+window.vt3d.configuration = await import(/* @vite-ignore */ CONFIGURATION)
+Cesium.Ion.defaultAccessToken = window.vt3d.configuration.ionToken
 
 
 export function ViewTrack3D() {
 
     const viewerRef = useRef(null)
 
-    window.vt3DContext.viewer = useCesium().viewer
-    const center = window.vt3DContext.configuration.center
-    window.vt3DContext.windowCenter = Cesium.Cartesian3.fromDegrees(center.longitude, center.latitude, center.height)
+    window.vt3d.viewer = useCesium().viewer
+    const center = window.vt3d.configuration.center
+    window.vt3d.windowCenter = Cesium.Cartesian3.fromDegrees(center.longitude, center.latitude, center.height)
 
-    window.vt3DContext.cameraOrientation = {
+    window.vt3d.cameraOrientation = {
         heading: Cesium.Math.toRadians(center.camera.heading),
         pitch: Cesium.Math.toRadians(center.camera.pitch),
         roll: Cesium.Math.toRadians(center.camera.roll),
@@ -83,9 +83,9 @@ export function ViewTrack3D() {
             <Globe enableLighting={false}></Globe>
             <Camera onMoveEnd={CameraUtils.updatePosition} ref={viewerRef}>
                 <CameraFlyTo
-                    orientation={window.vt3DContext.cameraOrientation}
+                    orientation={window.vt3d.cameraOrientation}
                     duration={3}
-                    destination={window.vt3DContext.windowCenter}
+                    destination={window.vt3d.windowCenter}
                     once={true}
                     onComplete={CameraUtils.turnAroundCameraTarget}
                 />

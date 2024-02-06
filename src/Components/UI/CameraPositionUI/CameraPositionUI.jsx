@@ -1,24 +1,24 @@
 import './style.css'
-import {TextValueUI} from "../TextValueUI/TextValueUI.jsx"
-import {forwardRef, useEffect, useState} from "react";
-import {useCesium} from "resium";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
 import {faAngle, faCompass, faMountains, faVideo} from '@fortawesome/pro-regular-svg-icons'
-import {CameraUtils} from "../../../Utils/CameraUtils.js";
-import {SlButton, SlAnimation, SlTooltip} from "@shoelace-style/shoelace/dist/react";
+import {FontAwesomeIcon}                          from '@fortawesome/react-fontawesome'
+import {SlAnimation, SlButton, SlTooltip}         from '@shoelace-style/shoelace/dist/react'
+import {forwardRef, useEffect, useState}          from 'react'
+import {useCesium}                                from 'resium'
+import {CameraUtils}                              from '../../../Utils/CameraUtils.js'
+import {TextValueUI}                              from '../TextValueUI/TextValueUI.jsx'
 
 export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref) {
-    window.vt3DContext.viewer = useCesium().viewer;
-    const [shown, show] = useState(false);
+    window.vt3d.viewer = useCesium().viewer
+    const [shown, show] = useState(false)
 
     const toggle = () => {
         show((shown) => !shown)
     }
 
     useEffect(() => {
-        CameraUtils.updatePosition(window.vt3DContext?.camera)
-    }, []);
+        CameraUtils.updatePosition(window.vt3d?.camera)
+    }, [])
 
     return (
         <div id="camera-position" className={'ui-element transparent'} ref={ref}>
