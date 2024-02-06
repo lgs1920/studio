@@ -12,28 +12,28 @@ Maybe , later I will add subscription to have a personnal account to save tracks
 As off today there's no official roadmap;
  but I think of something like that:
 
-o MVP : first
+### MVP : first
 - A mockup that will be able to load track file and display it
 - A dedicated site (ie public build)
 
-o Beta : adding some animation on tracks
+### Beta : adding some animation on tracks
 
 - follow à track with a camera targetted to window center.
 - bird view ie following the route from a few metres above, from the rear, looking ahead.
 
-o Beta : Add track data and profile
+### Beta : Add track data and profile
 
 - compute elevation +,-, speed, 
 hourly (km/h) and kilometer (time/km) averages and all similar and useful data.
 - Add a profile synchronised with track animation
 
-o 1.0 : Video export
+### 1.0 : Video export
 
 - Add an image/video tool able to make simple screenshots for social network dedicated videos (9x16, 16x9, 4x3, 1x1)
 - A local database for storing personal projects
 - UI to add/edit/manage tracks
 
-o Later (to be scheduled and ordered)
+### Later (to be scheduled and ordered)
 
 - Subscriptions 
 -- an external database
