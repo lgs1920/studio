@@ -1,8 +1,8 @@
-# visurando3d
+# ViewTrack3D
 
 ## Goal of the project 
 
-This project aims to be a free 3D visualization application for KML, KMZ, GPX files with a video creation tool for social networks.
+This project aims to be a free 3D visualization application for KML, KMZ, GPX, GeoJSON files with a video creation tool for social networks.
 The application could be used to track cycling, biking, hiking or running routes.
 
 Maybe , later I will add subscription to have a personnal account to save tracks and video. 
