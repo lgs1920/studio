@@ -1,5 +1,4 @@
-import {icon}                from '@fortawesome/fontawesome-svg-core'
-import {registerIconLibrary} from '@shoelace-style/shoelace/dist/utilities/icon-library'
+import {icon} from '@fortawesome/fontawesome-svg-core'
 
 
 export class UIUtils {
@@ -18,21 +17,7 @@ export class UIUtils {
         return div.innerHTML
     })
 
-    static icons = {}
-
     static init = () => {
-
-        // use Font Awesome icons in Shoelace
-        registerIconLibrary('far', {
-            resolver: name => {
-                const blob = new Blob(icon(UIUtils.icons[name]).html, {type: 'image/svg+xml'})
-                return URL.createObjectURL(blob)
-            },
-            mutator: svg => {
-                svg.setAttribute('fill', 'currentColor')
-            },
-        })
-
     }
 
     /**
@@ -43,10 +28,10 @@ export class UIUtils {
      * @param iconFromReact
      * @return {string[]}
      */
-    static useIcon(iconFromReact) {
-        const name = `${iconFromReact.prefix}-${iconFromReact.iconName}`
-        UIUtils.icons[name] = iconFromReact
-        return name
+
+    static useFAIcon = (iconFromReact) => {
+        const blob = new Blob(icon(iconFromReact).html, {type: 'image/svg+xml'})
+        return URL.createObjectURL(blob)
     }
 
 }

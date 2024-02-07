@@ -32,7 +32,7 @@ export class UINotifier {
             closable: true,
             duration: duration,
             innerHTML: `
-              <sl-icon library="far" name="${UI.useIcon(UINotifier.VT3D_TOAST_ICONS[type])}"></sl-icon>
+              <sl-icon src="${UI.useFAIcon(UINotifier.VT3D_TOAST_ICONS[type])}"></sl-icon>
 
         ${(UINotifier.#setNotificationContent(message))}
       `,
