@@ -6,7 +6,8 @@ This project aims to be a free 3D visualization application for KML, KMZ, GPX, G
 for social networks.
 The application could be used to track cycling, biking, hiking or running routes.
 
-Maybe , later I will add subscription to have a personnal account to save tracks and video.
+Maybe , later I will add subscription to have a personal account to save tracks and videos andto access them with a
+unique url.
 
 ## Roadmap
 
