@@ -1,7 +1,7 @@
-import {forwardRef} from "react";
+import {forwardRef} from 'react'
 import './style.css'
 
-export const TextValueUI = forwardRef(function TextValue(props, ref) {
+export const TextValueUI = forwardRef(function TextValueUI(props, ref) {
     let toShow = props.value ?? null
     if (toShow && props.formatter) {
         toShow = props.formatter(toShow)
@@ -12,8 +12,8 @@ export const TextValueUI = forwardRef(function TextValue(props, ref) {
 
     return (
         <div id={props.id} className={classes}>
-            <span className='vt3d-tv-text'>{props.text}</span><span className='vt3d-tv-value'>{toShow}</span><span
-            className='vt3d-tv-unit'>{props.unit}</span>
+            <span className="vt3d-tv-text">{props.text}</span><span className="vt3d-tv-value">{toShow}</span><span
+            className="vt3d-tv-unit">{props.unit}</span>
         </div>)
 })
 
