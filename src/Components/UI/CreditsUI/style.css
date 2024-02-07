@@ -1,0 +1,8 @@
+
+#open-credits-pane {
+    position: fixed;
+    bottom: var(--vt3d-gutter);
+    left: var(--vt3d-gutter);
+    top: auto;
+    right: auto;
+}
