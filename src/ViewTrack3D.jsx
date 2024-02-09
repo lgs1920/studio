@@ -20,24 +20,18 @@ import {CameraUtils}                                          from './Utils/Came
  * We are using shoelace Web Components
  */
 import '@shoelace-style/shoelace/dist/themes/light.css'
+/**
+ * Then import our owns
+ */
 import {UINotifier}                                           from './Utils/UINotifier'
 import {UIUtils}                                              from './Utils/UIUtils'
-import {Vt3DContext}                                          from './Utils/Vt3DContext.js'
 
 setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 
 /**
- * Some initialization
+ * Let's go
  */
-
-UIUtils.init()
-
-window.vt3d = new Vt3DContext()
-
-export const APP_NAME = 'visu-rando-3d'
-export const CONFIGURATION = './config.json'
-window.vt3d.configuration = await import(/* @vite-ignore */ CONFIGURATION)
-Cesium.Ion.defaultAccessToken = window.vt3d.configuration.ionToken
+await UIUtils.init()
 
 
 export function ViewTrack3D() {
@@ -61,7 +55,10 @@ export function ViewTrack3D() {
         AppUtils.setTheme()
 
         // Ready
-        UINotifier.notifySuccess('Welcome ! we\'re ready to assist you !')
+        UINotifier.notifySuccess({
+            caption: `Welcome on ${window.vt3d.configuration.applicationName}!`,
+            text: 'We\'re ready to assist you !',
+        })
         console.log('ViewTrack3D has been loaded and is ready !')
     })
 

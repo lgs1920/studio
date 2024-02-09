@@ -1,5 +1,9 @@
-import {icon} from '@fortawesome/fontawesome-svg-core'
+import {findIconDefinition, icon, library} from '@fortawesome/fontawesome-svg-core'
+import {registerIconLibrary}               from '@shoelace-style/shoelace'
+import * as Cesium                         from 'cesium'
+import {Vt3DContext}                       from './Vt3DContext'
 
+export const CONFIGURATION = '../config.json'
 
 export class UIUtils {
 
@@ -16,8 +20,58 @@ export class UIUtils {
         div.textContent = html
         return div.innerHTML
     })
+    static icons
 
-    static init = () => {
+    static init = async () => {
+        // Set Context
+        window.vt3d = new Vt3DContext()
+        window.vt3d.configuration = await import(/* @vite-ignore */ CONFIGURATION)
+
+        // Cesium ION auth
+        Cesium.Ion.defaultAccessToken = window.vt3d.configuration.ionToken
+        const iconLibs = {
+            fab: 'brands',
+            fad: 'duotone',
+            fal: 'light',
+            far: 'regular',
+            fasl: 'sharp-light',
+            fasr: 'sharp-regular',
+            fass: 'sharp-solid',
+            fast: 'sharp-thin',
+            fas: 'solid',
+            fat: 'thin' //
+        }
+
+        Object?keys(iconLibs).forEach(icon => {
+                UIUtils.registerReactFontAwesomeInShoeLaceLibrary(icon,iconLibs[icon])
+            })
+
+    }
+
+    static registerReactFontAwesomeInShoeLaceLibrary = ( (library,directory)=> {
+        // Register FontAwesome icons for ShoeLace components
+        registerIconLibrary(library, {
+            resolver: name => {
+_
+
+                // Weeeeekep the following incase eof ...
+
+
+                // // extract prefix and iconName
+                // const dashIndex = name.indexOf('-')
+                // const prefix = name.slice(0, dashIndex)
+                // const iconName = name.slice(dashIndex + 1)
+                //
+                // // Find the right icon
+                // const faIcon = findIconDefinition({prefix: prefix, iconName: iconName})
+                // const blob = new Blob(icon(faIcon).html, {type: 'text/html'})
+                // return URL.createObjectURL(blob)
+            },
+            mutator: svg => {
+                svg.setAttribute('fill', 'currentColor')
+                svg.setAttribute('part', 'svg')
+            },
+        })
     }
 
     /**
@@ -28,11 +82,13 @@ export class UIUtils {
      * @param iconFromReact
      * @return {string[]}
      */
-
-    static useFAIcon = (iconFromReact) => {
-        const blob = new Blob(icon(iconFromReact).html, {type: 'image/svg+xml'})
-        return URL.createObjectURL(blob)
+    static faIconName = (iconFromReact) => {
+        library.add(iconFromReact)
+        return `${iconFromReact.prefix}-${iconFromReact.iconName}`
     }
+
+    fontAwesomeResolver = () => []
+
 
 }
 

@@ -31,18 +31,16 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
                              onSlFinish={() => show(false)}>
                     <div className={'ui-element'} ref={ref}>
                         {/*<FontAwesomeIcon icon={faCompass}/>*/}
-                        <sl-icon src={UI.useFAIcon(faCompass)}></sl-icon>
+                        <sl-icon src={UI.faIconName(faCompass)}></sl-icon>
                         <TextValueUI ref={ref} id={'camera-longitude'} text={'Lon:'}/>
                         <TextValueUI ref={ref} id={'camera-latitude'} text={'Lat:'}/>
-                        <sl-icon src={UI.useFAIcon(faAngle)}></sl-icon>
+                        <sl-icon src={UI.faIconName(faAngle)}></sl-icon>
                         <TextValueUI ref={ref} id={'camera-heading'} text={'Heading:'} unit={'°'}/>
                         <TextValueUI ref={ref} id={'camera-pitch'} text={'Pitch:'} unit={'°'}/>
-                        <sl-icon src={UI.useFAIcon(faMountains)}></sl-icon>
+                        <sl-icon src={UI.faIconName(faMountains)}></sl-icon>
                         <TextValueUI ref={ref} id={'camera-altitude'} unit={'m'}/>
                     </div>
                 </SlAnimation>
-
-
             }
         </div>
     )

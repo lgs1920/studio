@@ -74,13 +74,9 @@ body {
 }
 
 /**
- * Drop Zone
+ * Cesium Crédits
  */
-#vt3d-drop-zone {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: var(--vt3d-drop-zone-zindex);
+
+.cesium-widget-credits {
+    display: none !important;
 }

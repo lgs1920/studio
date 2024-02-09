@@ -6,3 +6,14 @@
     top: auto;
     right: auto;
 }
+
+#credits-pane-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#credits-pane-footer strong:after {
+    content: ' - ';
+    font-weight: normal;
+}
