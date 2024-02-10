@@ -13,9 +13,7 @@ export const CreditsUI = forwardRef(function CreditsUI(props, ref) {
         <SlDrawer className="ui-element transparent" id="credits-pane" open={open}
                   onSlAfterHide={() => setOpen(false)}>
             <SlInclude src="/src/assets/pages/credits.html"/>
-
-            <sl-icon library="fa" name={FA2SL.set(faCircleInfo)}></sl-icon>
-
+            
             <div id="credits-pane-footer" slot={'footer'}>
                 <div>
                     <strong>{window.vt3d.configuration.applicationName}</strong><span>{info.version}</span>
