@@ -99,7 +99,7 @@ export class FA2SL {
      * To be used with Shoelace, we need to preregister this icon into the current Font Awesome library.
      * (see https://fontawesome.com/docs/apis/javascript/methods#library-add-icondefinitions)
      *
-     * @param {iconDefinition} iconDefinition Icon structure
+     * @param {IconDefinition} iconDefinition Icon structure
      * @return {string}        name on the form of <prefix>-<iconName>
      *
      */
