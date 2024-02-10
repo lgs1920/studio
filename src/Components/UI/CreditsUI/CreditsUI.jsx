@@ -20,12 +20,12 @@ export const CreditsUI = forwardRef(function CreditsUI(props, ref) {
                 <div>
                     <strong>{window.vt3d.configuration.applicationName}</strong><span>{info.version}</span>
                 </div>
-                {/*<SlTooltip content="Our GitHub repo">*/}
-                <SlIconButton library="fa" name={FA2SL.set(faGithub)}
-                              target={'_blank'}
-                              href={'https://github.com/ViewTrack3D/vt3d'}
-                />
-                {/*</SlTooltip>*/}
+                <SlTooltip content="Our GitHub repo">
+                    <SlIconButton library="fa" name={FA2SL.set(faGithub)}
+                                  target={'_blank'}
+                                  href={'https://github.com/ViewTrack3D/vt3d'}
+                    />
+                </SlTooltip>
             </div>
         </SlDrawer>
         <SlTooltip content="Show Credits">
