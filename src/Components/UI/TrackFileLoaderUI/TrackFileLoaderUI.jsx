@@ -3,8 +3,8 @@ import {library}                     from '@fortawesome/fontawesome-svg-core'
 import {faMapLocation}               from '@fortawesome/pro-regular-svg-icons'
 import {SlButton, SlIcon, SlTooltip} from '@shoelace-style/shoelace/dist/react'
 import {forwardRef}                  from 'react'
+import {FA2SL}                       from '../../../Utils/FA2SL'
 import {TrackUtils}                  from '../../../Utils/TrackUtils'
-import {UIUtils as UI}               from '../../../Utils/UIUtils'
 
 library.add(faMapLocation)
 
@@ -22,7 +22,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
         <div id="file-loader" className={'ui-element transparent'} ref={ref}>
             <SlTooltip content="Load a track file">
                 <SlButton size="small" onClick={uploadFile}>
-                    <SlIcon src={UI.faIconName(faMapLocation)} slot={'prefix'}/>
+                    <SlIcon library="fa" name={FA2SL.set(faMapLocation)} slot={'prefix'}/>
                 </SlButton>
             </SlTooltip>
         </div>

@@ -1,14 +1,13 @@
-import {findIconDefinition, icon, library} from '@fortawesome/fontawesome-svg-core'
-import {registerIconLibrary}               from '@shoelace-style/shoelace'
-import * as Cesium                         from 'cesium'
-import {Vt3DContext}                       from './Vt3DContext'
+import * as Cesium   from 'cesium'
+import {FA2SL}       from './FA2SL'
+import {Vt3DContext} from './Vt3DContext'
 
 export const CONFIGURATION = '../config.json'
 
 export class UIUtils {
 
     /**
-     * Escape HTML  (frm https://shoelace.style/components/alert)
+     * Escape HTML  (from https://shoelace.style/components/alert)
      *
      * @param html {string} HTML to escape
      * @returns {string} escaped DHTML
@@ -29,66 +28,11 @@ export class UIUtils {
 
         // Cesium ION auth
         Cesium.Ion.defaultAccessToken = window.vt3d.configuration.ionToken
-        const iconLibs = {
-            fab: 'brands',
-            fad: 'duotone',
-            fal: 'light',
-            far: 'regular',
-            fasl: 'sharp-light',
-            fasr: 'sharp-regular',
-            fass: 'sharp-solid',
-            fast: 'sharp-thin',
-            fas: 'solid',
-            fat: 'thin' //
-        }
 
-        Object?keys(iconLibs).forEach(icon => {
-                UIUtils.registerReactFontAwesomeInShoeLaceLibrary(icon,iconLibs[icon])
-            })
+        // Register Font Awesome icons in ShoeLace
+        FA2SL.useFontAwesomeInShoelace('fa')
 
     }
-
-    static registerReactFontAwesomeInShoeLaceLibrary = ( (library,directory)=> {
-        // Register FontAwesome icons for ShoeLace components
-        registerIconLibrary(library, {
-            resolver: name => {
-_
-
-                // Weeeeekep the following incase eof ...
-
-
-                // // extract prefix and iconName
-                // const dashIndex = name.indexOf('-')
-                // const prefix = name.slice(0, dashIndex)
-                // const iconName = name.slice(dashIndex + 1)
-                //
-                // // Find the right icon
-                // const faIcon = findIconDefinition({prefix: prefix, iconName: iconName})
-                // const blob = new Blob(icon(faIcon).html, {type: 'text/html'})
-                // return URL.createObjectURL(blob)
-            },
-            mutator: svg => {
-                svg.setAttribute('fill', 'currentColor')
-                svg.setAttribute('part', 'svg')
-            },
-        })
-    }
-
-    /**
-     * Create svg tag from Font Awesome Icon
-     *
-     * It's an alias to icon function from fontawesome-svg-core
-     *
-     * @param iconFromReact
-     * @return {string[]}
-     */
-    static faIconName = (iconFromReact) => {
-        library.add(iconFromReact)
-        return `${iconFromReact.prefix}-${iconFromReact.iconName}`
-    }
-
-    fontAwesomeResolver = () => []
-
 
 }
 

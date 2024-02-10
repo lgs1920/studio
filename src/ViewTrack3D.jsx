@@ -1,7 +1,6 @@
 /**
  * React
  */
-import {setBasePath}                                          from '@shoelace-style/shoelace/dist/utilities/base-path'
 import * as Cesium                                            from 'cesium'
 import {useEffect, useRef}                                    from 'react'
 
@@ -26,7 +25,7 @@ import '@shoelace-style/shoelace/dist/themes/light.css'
 import {UINotifier}                                           from './Utils/UINotifier'
 import {UIUtils}                                              from './Utils/UIUtils'
 
-setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
+//setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 
 /**
  * Let's go

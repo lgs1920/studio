@@ -6,7 +6,7 @@ import {SlAnimation, SlButton, SlTooltip}         from '@shoelace-style/shoelace
 import {forwardRef, useEffect, useState}          from 'react'
 import {useCesium}                                from 'resium'
 import {CameraUtils}                              from '../../../Utils/CameraUtils.js'
-import {UIUtils as UI}                            from '../../../Utils/UIUtils'
+import {FA2SL}                                    from '../../../Utils/FA2SL'
 import {TextValueUI}                              from '../TextValueUI/TextValueUI.jsx'
 
 export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref) {
@@ -31,13 +31,13 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
                              onSlFinish={() => show(false)}>
                     <div className={'ui-element'} ref={ref}>
                         {/*<FontAwesomeIcon icon={faCompass}/>*/}
-                        <sl-icon src={UI.faIconName(faCompass)}></sl-icon>
+                        <sl-icon library="fa" name={FA2SL.set(faCompass)}></sl-icon>
                         <TextValueUI ref={ref} id={'camera-longitude'} text={'Lon:'}/>
                         <TextValueUI ref={ref} id={'camera-latitude'} text={'Lat:'}/>
-                        <sl-icon src={UI.faIconName(faAngle)}></sl-icon>
+                        <sl-icon library="fa" name={FA2SL.set(faAngle)}></sl-icon>
                         <TextValueUI ref={ref} id={'camera-heading'} text={'Heading:'} unit={'°'}/>
                         <TextValueUI ref={ref} id={'camera-pitch'} text={'Pitch:'} unit={'°'}/>
-                        <sl-icon src={UI.faIconName(faMountains)}></sl-icon>
+                        <sl-icon library="fa" name={FA2SL.set(faMountains)}></sl-icon>
                         <TextValueUI ref={ref} id={'camera-altitude'} unit={'m'}/>
                     </div>
                 </SlAnimation>

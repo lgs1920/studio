@@ -3,9 +3,9 @@ import {
     faCircleInfo,
     faHexagonExclamation,
     faTriangleExclamation,
-}                      from '@fortawesome/pro-regular-svg-icons'
-import {SECOND}        from './AppUtils'
-import {UIUtils as UI} from './UIUtils'
+}               from '@fortawesome/pro-regular-svg-icons'
+import {SECOND} from './AppUtils'
+import {FA2SL}  from './FA2SL'
 
 export const VT3D_INFORMATION_TOAST = 'information'
 export const VT3D_SUCCESS_TOAST = 'success'
@@ -32,7 +32,7 @@ export class UINotifier {
             closable: true,
             duration: duration,
             innerHTML: `
-              // <sl-icon slot='icon" src="${UI.faIconName(UINotifier.VT3D_TOAST_ICONS[type])}"></sl-icon>
+              // <sl-icon slot='icon" src="${FA2SL.set(UINotifier.VT3D_TOAST_ICONS[type])}"></sl-icon>
 
         ${(UINotifier.#setNotificationContent(message))}
       `,
