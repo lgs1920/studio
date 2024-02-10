@@ -1,6 +1,38 @@
 import {findIconDefinition, icon, library} from '@fortawesome/fontawesome-svg-core'
 import {registerIconLibrary}               from '@shoelace-style/shoelace'
 
+/**
+ * This class is used to insert font awesome icons (version 6.5 and higher) into Shoelace web components.
+ *
+ * Font Awesome : https://fontawesome.com
+ * Shoelace     : https://shoelace.style
+ *
+ * Usage:
+ *
+ *  // for pro icons,you need to have a pro account
+ *  // Icons installation here : https://fontawesome.com/docs/web/setup/packages
+ *
+ *
+ *  import {faCircleInfo}               from '@fortawesome/pro-regular-svg-icons'
+ *  import {faGithub}                                                       from '@fortawesome/free-brands-svg-icons'
+ *
+ *  import {SlIcon}                     from '@shoelace-style/shoelace/dist/react'
+ *
+ *  import {FA2SL}                      from '../FA2SL'
+ *  FA2SL.useFontAwesomeInShoelace('fa')  // This should be done once in your app.
+ *
+ *  return (
+ *      <>
+ *           <sl-icon library="fa" name={FA2SL.set(faCircleInfo)}></sl-icon>
+ *           <SlIconButton library="fa" name={FA2SL.set(faGithub)} target={'_blank'} href={'<any URL>'}/>
+ *      </>
+ *  )
+ *
+ *
+ *
+ * @author : christian Denat (christian.denat@orange.fr)
+ * @version : 1.0
+ */
 export class FA2SL {
     /**
      * This method register a Font Awesome Family (or an array of family)
@@ -36,7 +68,7 @@ export class FA2SL {
                     const iconName = name.slice(dashIndex + 1)
                     // Find the right icon in the icon library
                     const faIcon = findIconDefinition({prefix: prefix, iconName: iconName})
-                    // And return it as encoded
+                    // And return it as encoded URL
                     return `data:image/svg+xml,${encodeURIComponent(icon(faIcon).html)}`
                 },
                 /**
