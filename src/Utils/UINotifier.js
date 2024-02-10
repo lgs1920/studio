@@ -14,7 +14,7 @@ export const VT3D_ERROR_TOAST = 'danger'
 
 export class UINotifier {
 
-    static DURATION = 300 * SECOND
+    static DURATION = 3 * SECOND
 
     static VT3D_TOAST_ICONS = {
         [VT3D_INFORMATION_TOAST]: faCircleInfo,
@@ -32,9 +32,10 @@ export class UINotifier {
             closable: true,
             duration: duration,
             innerHTML: `
-              // <sl-icon slot='icon" src="${FA2SL.set(UINotifier.VT3D_TOAST_ICONS[type])}"></sl-icon>
+              <sl-icon slot='icon' library="fa" name="${FA2SL.set(UINotifier.VT3D_TOAST_ICONS[type])}"></sl-icon>
 
         ${(UINotifier.#setNotificationContent(message))}
+      
       `,
         })
 
