@@ -1,12 +1,9 @@
 import './style.css'
-import {library}                     from '@fortawesome/fontawesome-svg-core'
-import {faMapLocation}               from '@fortawesome/pro-regular-svg-icons'
-import {SlButton, SlIcon, SlTooltip} from '@shoelace-style/shoelace/dist/react'
-import {forwardRef}                  from 'react'
-import {FA2SL}                       from '../../../Utils/FA2SL'
-import {TrackUtils}                  from '../../../Utils/TrackUtils'
-
-library.add(faMapLocation)
+import {faMapLocation}                             from '@fortawesome/pro-regular-svg-icons'
+import {SlButton, SlIcon, SlIconButton, SlTooltip} from '@shoelace-style/shoelace/dist/react'
+import {forwardRef}                                from 'react'
+import {FA2SL}                                     from '../../../Utils/FA2SL'
+import {TrackUtils}                                from '../../../Utils/TrackUtils'
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
     const uploadFile = async () => {
@@ -24,6 +21,10 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                 <SlButton size="small" onClick={uploadFile}>
                     <SlIcon library="fa" name={FA2SL.set(faMapLocation)} slot={'prefix'}/>
                 </SlButton>
+                <SlIconButton name="circle-check"
+                              target={'_blank'}
+                              href={'https://github.com/ViewTrack3D/vt3d'}
+                />
             </SlTooltip>
         </div>
     )
