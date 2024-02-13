@@ -72,8 +72,8 @@ export class Mobility {
 
     /**
      * Compute duration (in seconds) between 2 date in ISO format
-     * @param {DateTime} start
-     * @param {DateTime} stop
+     * @param {string} start
+     * @param {string} stop
      * @return {number} duration in seconds
      */
     static duration(start, stop) {
