@@ -1,0 +1,3 @@
+[install.scopes]
+"@fortawesome" = { token="E5F93D4E-0B49-453E-8FFC-F236467C6168" , url ="https://npm.fontawesome.com/" }
+"@awesome.me" = { token="E5F93D4E-0B49-453E-8FFC-F236467C6168" , url ="https://npm.fontawesome.com/" }
