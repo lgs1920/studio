@@ -38,24 +38,24 @@ export class AppUtils {
     }
 }
 
-const SECOND = 1000
+/** Time ans duration constants in seconds */
+const MILLIS = 1000
+const SECOND = 1 * MILLIS
 const MINUTE = 60 * SECOND
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 const WEEK = 7 * DAY
 const MONTH = 30 * DAY
 const YEAR = 365 * DAY
+export {MILLIS, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR}
 
-export {SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR}
+/** Distance constants */
+const METER = 1
+const FOOT = METER * 0.3048        // foot
+const KM = 1000 * METER            // meters
 
+const MILE = KM / 0.62137119223    // miles = MILE * kms
+export {KM, MILE, FOOT}
 
-// registerIconLibrary('fa', {
-//     resolver: name => {
-//         const filename = name.replace(/^fa[rbs]-/, '');
-//         let folder = 'regular';
-//         if (name.substring(0, 4) === 'fas-') folder = 'solid';
-//         if (name.substring(0, 4) === 'fab-') folder = 'brands';
-//         return `https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.1/svgs/${folder}/${filename}.svg`;
-//     },
-//     mutator: svg => svg.setAttribute('fill', 'currentColor')
-// });
+/** other */
+export const WRONG = -99999999999
