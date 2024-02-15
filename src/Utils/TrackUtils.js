@@ -187,20 +187,6 @@ export class TrackUtils {
                     let index = 0
                     const temp = []
 
-                    // Some heights info are missing. Let's simulate them
-
-                    // TODO add different plugins for DEM elevation like:
-                    //        https://tessadem.com/elevation-api/  ($)
-                    //     or https://github.com/Jorl17/open-elevation/blob/master/docs/api.md
-
-                    if (!properties.hasHeight) {
-                        const fixed = await TrackUtils.getElevationFromTerrain(feature.geometry.coordinates)
-                        for (let j = 0; j < fixed.length; j++) {
-                            feature.geometry.coordinates[j][2] = fixed[j]
-                        }
-                    }
-
-                    // TODO interpolate points to avoid GPS errors (Kalman FIlter ?)
                     for (const coordinates of feature.geometry.coordinates) {
                         let point = {
                             longitude: coordinates[0], latitude: coordinates[1], height: coordinates[2],
@@ -217,42 +203,6 @@ export class TrackUtils {
         }
         return dataExtract
     }
-    /**
-     * Extract some data from the Geo JSON
-     *
-     * > longitude, latitude, height,time
-     *
-     * @param geoJson
-     * @return {[[{longitude, latitude, height,time}]]}
-     *
-     */
-    static extractDataForMetrics = async geoJson => {
-        const dataExtract = [] = []
-        if (geoJson.type === FEATURE_COLLECTION) {
-            for (const feature of geoJson.features) {
-                if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
-
-                    const properties = TrackUtils.checkIfDataContainsHeightOrTime(feature)
-                    let index = 0
-                    const temp = []
-
-                    for (const coordinates of feature.geometry.coordinates) {
-                        let point = {
-                            longitude: coordinates[0], latitude: coordinates[1], height: coordinates[2],
-                        }
-                        if (properties.hasTime) {
-                            point.time = feature.properties?.coordinateProperties?.times[index]
-                        }
-                        temp.push(point)
-                        index++
-                    }
-                    dataExtract.push(temp)
-                }
-            }
-        }
-        return dataExtract
-    }
-
     /**
      * Prepare GeoJson
      *
@@ -377,8 +327,8 @@ export class TrackUtils {
                 // Max Height
                 global.maxHeight = Math.max(...dataSet.map(a => a?.height))
 
-                // If the first have time, all the data set have time
-                if (featureMetrics[0].time) {
+                // If the first have duration time, all the data set have time
+                if (featureMetrics[0].duration) {
                     // Max speed
                     tmp = TrackUtils.filterArray(featureMetrics, {
                         speed: speed => speed !== 0 && speed !== undefined,
