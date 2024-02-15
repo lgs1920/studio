@@ -117,14 +117,9 @@ export class TrackUtils {
      */
     static trackToGeoJson = async (trackFile) => {
         /**
-         * Load DataSource and add it
-         *
          * Available formats are : gpx,kml,kmz,geojson
-         *
-         * For convenient reasons, we translate kml and gpx to GeoJson formt
-         *
+         * For convenient reasons, we translate kml and gpx to GeoJson format
          */
-
         try {
             let geoJson
             switch (trackFile.extension) {
