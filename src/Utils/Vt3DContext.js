@@ -46,7 +46,7 @@ export class Vt3DContext {
     addTrack = (track) => {
         if (track) {
             this.#context.tracks.push({
-                [`${track.name}.${track.extension}`]: track,
+                [`${track.name}.${track.type}`]: track,
             })
         }
     }
