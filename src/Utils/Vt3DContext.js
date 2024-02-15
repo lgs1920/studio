@@ -38,15 +38,16 @@ export class Vt3DContext {
     }
 
     getTrackByName(name) {
-        console.log(name)
-        return this.#context.tracks.filter(function (arr) {
-            return arr.name === name
+        return this.#context.tracks.filter(function (track) {
+            return track.name === name
         })[0]
     }
 
     addTrack = (track) => {
-        if (track && track.name) {
-            this.context.tracks.push({[`${track.name}.${track.extension}`]: track})
+        if (track) {
+            this.#context.tracks.push({
+                [`${track.name}.${track.extension}`]: track,
+            })
         }
     }
 
