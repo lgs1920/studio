@@ -3,19 +3,19 @@ import {faMapLocation}                             from '@fortawesome/pro-regula
 import {SlButton, SlIcon, SlIconButton, SlTooltip} from '@shoelace-style/shoelace/dist/react'
 import {forwardRef}                                from 'react'
 import {FA2SL}                                     from '../../../Utils/FA2SL'
-import {TrackUtils}                                from '../../../Utils/TrackUtils'
+import {TrackUtils as TU}                          from '../../../Utils/TrackUtils'
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
     const uploadFile = async () => {
-        const track = await TrackUtils.loadTrackFromFile()
+        const track = await TU.loadTrackFromFile()
         // File is correct let's work with
         if (track !== undefined) {
-            // Let extratct GeoJson
-            const geoJson = TrackUtils.trackToGeoJson(track)
+            // Let extract GeoJson
+            const geoJson = TU.trackToGeoJson(track)
             // May be we have some changes to operate
-            const newGeoJson = await TrackUtils.prepareGeoJson(geoJson)
+            const newGeoJson = await TU.prepareGeoJson(geoJson)
             // Get metrics
-            const metrics = await TrackUtils.getMetrics(newGeoJson)
+            const metrics = await TU.getMetrics(newGeoJson)
 
             // Let's add information to context
             window.vt3d.addTrack({
@@ -26,7 +26,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
             })
 
             // All's fine, the show continues :!
-            await TrackUtils.showTrack(newGeoJson)
+            await TU.showTrack(newGeoJson)
         }
     }
 
