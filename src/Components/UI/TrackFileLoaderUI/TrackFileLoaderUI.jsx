@@ -11,8 +11,8 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
         // File is correct let's work with
         if (track !== undefined) {
             // Let extract GeoJson
-            const geoJson = TU.trackToGeoJson(track)
-            // May be we have some changes to operate
+            const geoJson = await TU.trackToGeoJson(track)
+            // Maybe we have some changes to operate
             const newGeoJson = await TU.prepareGeoJson(geoJson)
             // Get metrics
             const metrics = await TU.getMetrics(newGeoJson)
