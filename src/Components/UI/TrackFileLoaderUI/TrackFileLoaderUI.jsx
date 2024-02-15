@@ -7,11 +7,26 @@ import {TrackUtils}                                from '../../../Utils/TrackUti
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
     const uploadFile = async () => {
-        const file = await TrackUtils.loadTrack()
-        // File is correct, we save it in context
-        if (file !== undefined) {
-            window.vt3d.addTrack(file)
-            TrackUtils.showTrack(file)
+        const track = await TrackUtils.loadTrackFromFile()
+        // File is correct let's work with
+        if (track !== undefined) {
+            // Let extratct GeoJson
+            const geoJson = TrackUtils.trackToGeoJson(track)
+            // May be we have some changes to operate
+            const newGeoJson = await TrackUtils.prepareGeoJson(geoJson)
+            // Get metrics
+            const metrics = await TrackUtils.getMetrics(newGeoJson)
+
+            // Let's add information to context
+            window.vt3d.addTrack({
+                content: newGeoJson,
+                name: track.name,
+                type: track.extension,
+                metrics: metrics,
+            })
+
+            // All's fine, the show continues :!
+            await TrackUtils.showTrack(newGeoJson)
         }
     }
 
