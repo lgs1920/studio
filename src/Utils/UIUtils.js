@@ -1,5 +1,5 @@
 import * as Cesium from 'cesium'
-import {VT3D}      from '../VT3D'
+import {VT3D}      from '../classes/VT3D'
 import {FA2SL}     from './FA2SL'
 
 export const CONFIGURATION = '../config.json'
