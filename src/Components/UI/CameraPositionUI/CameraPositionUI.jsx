@@ -3,19 +3,24 @@ import './style.css'
 import {faAngle, faCompass, faMountains, faVideo} from '@fortawesome/pro-regular-svg-icons'
 import {FontAwesomeIcon}                          from '@fortawesome/react-fontawesome'
 import {SlAnimation, SlButton, SlTooltip}         from '@shoelace-style/shoelace/dist/react'
-import {forwardRef, useEffect, useState}          from 'react'
+import {forwardRef, useEffect}                    from 'react'
 import {useCesium}                                from 'resium'
+import {useSnapshot}                              from 'valtio'
 import {CameraUtils}                              from '../../../Utils/CameraUtils.js'
 import {FA2SL}                                    from '../../../Utils/FA2SL'
 import {TextValueUI}                              from '../TextValueUI/TextValueUI.jsx'
 
+
 export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref) {
     window.vt3d.viewer = useCesium().viewer
-    const [shown, show] = useState(false)
+
+    const store = window.vt3d.store.components
+    const snap = useSnapshot(store)
 
     const toggle = () => {
-        show((shown) => !shown)
+        store.cameraPosition.show = !store.cameraPosition.show
     }
+
 
     useEffect(() => {
         CameraUtils.updatePosition(window.vt3d?.camera)
@@ -26,9 +31,9 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
             <SlTooltip content="Show real time camera information">
                 <SlButton size="small" onClick={toggle}><FontAwesomeIcon icon={faVideo} slot={'prefix'}/></SlButton>
             </SlTooltip>
-            {shown &&
-                <SlAnimation easing="bounceInLeft" duration={1000} iterations={1} play={shown}
-                             onSlFinish={() => show(false)}>
+            {snap.cameraPosition.show &&
+                <SlAnimation easing="bounceInLeft" duration={1000} iterations={1} play={snap.cameraPosition.show}
+                             onSlFinish={() => toggle()}>
                     <div className={'ui-element'} ref={ref}>
                         {/*<FontAwesomeIcon icon={faCompass}/>*/}
                         <sl-icon library="fa" name={FA2SL.set(faCompass)}></sl-icon>

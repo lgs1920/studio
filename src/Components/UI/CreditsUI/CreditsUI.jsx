@@ -1,19 +1,33 @@
 import {faGithub}                                                       from '@fortawesome/free-brands-svg-icons'
 import {faCircleInfo}                                                   from '@fortawesome/pro-regular-svg-icons'
 import {SlButton, SlDrawer, SlIcon, SlIconButton, SlInclude, SlTooltip} from '@shoelace-style/shoelace/dist/react'
-import {forwardRef, useState}                                           from 'react'
+import {forwardRef}                                                     from 'react'
+import {useSnapshot}                                                    from 'valtio'
 import {FA2SL}                                                          from '../../../Utils/FA2SL'
-import info                                                             from '../../../version.json'
 import './style.css'
 
+//read version
+import info from '../../../version.json'
+
+
 export const CreditsUI = forwardRef(function CreditsUI(props, ref) {
-    const [open, setOpen] = useState(false)
+
+    const store = window.vt3d.store.components
+    const snap = useSnapshot(store)
+
+    const toggle = () => {
+        store.credits.show = !store.credits.show
+    }
+
+    const setOpen = (open) => {
+        store.credits.show = open
+    }
 
     return (<>
-        <SlDrawer className="ui-element transparent" id="credits-pane" open={open}
+        <SlDrawer className="ui-element transparent" id="credits-pane" open={snap.credits.show}
                   onSlAfterHide={() => setOpen(false)}>
             <SlInclude src="/src/assets/pages/credits.html"/>
-            
+
             <div id="credits-pane-footer" slot={'footer'}>
                 <div>
                     <strong>{window.vt3d.configuration.applicationName}</strong><span>{info.version}</span>
