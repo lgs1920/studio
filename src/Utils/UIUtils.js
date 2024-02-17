@@ -24,7 +24,6 @@ export class UIUtils {
     static init = async () => {
         // Set Context
         window.vt3d = new VT3D()
-        console.log(window.vt3d)
         window.vt3d.configuration = await import(/* @vite-ignore */ CONFIGURATION)
 
         // Cesium ION auth
