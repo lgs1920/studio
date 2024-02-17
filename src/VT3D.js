@@ -1,12 +1,28 @@
-export class Vt3DContext {
+import {proxy}    from 'valtio'
+import {AppUtils} from './Utils/AppUtils'
+
+export class VT3D {
     #context
+    #store
 
     constructor() {
+        // Context is dedicated to maps
         this.#context = {
             tracks: [],
         }
 
+        // We use valtio to manage states
+        this.#store = proxy({
+            components: {
+                cameraPosition: {
+                    show: false,
+                },
+                credits: {show: false},
+            },
+
+        })
     }
+
 
     get context() {
         return this.#context
@@ -32,6 +48,10 @@ export class Vt3DContext {
         return this.#context?.canvas
     }
 
+    get store() {
+        return this.#store
+    }
+
 
     get tracks() {
         return this.#context.tracks
@@ -46,7 +66,7 @@ export class Vt3DContext {
     addTrack = (track) => {
         if (track) {
             this.#context.tracks.push({
-                [`${track.name}.${track.type}`]: track,
+                [AppUtils.slugify(`${track.name}-${track.type}`)]: track,
             })
         }
     }
