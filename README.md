@@ -55,6 +55,7 @@ The app is based on :
 * Rhesium - https://resium.reearth.io/ - React components for Cesium
 * Vite -  https://vitej.dev/ - frontend tooling
 * React - https://react.dev/ - UI
+* Valtio - https://valtio.pmnd.rs - state management
 * Shoelace - https://shoelace.style/ - The web components used for UI
 * fontawesome - https://fontawesome.com/ - The icons library
 
