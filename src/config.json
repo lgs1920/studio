@@ -13,6 +13,21 @@
       "range": 2000
     }
   },
+  "DEMServers": [
+    {
+      "name": "I confirm, no Altitude",
+      "value": "none"
+    },
+    {
+      "name": "Internal catcher",
+      "value": "internal"
+    },
+    {
+      "name": "Open-Elevation DEM",
+      "value": "open-elevation",
+      "url": "https://github.com/Jorl17/open-elevation/blob/master/docs/api.md"
+    }
+  ],
   "track": {
     "color": "#B22222FF",
     "width": 2
