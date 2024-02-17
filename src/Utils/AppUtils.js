@@ -62,7 +62,7 @@ export class AppUtils {
 
 /** Time ans duration constants in seconds */
 const MILLIS = 1000
-const SECOND = 1 * MILLIS
+const SECOND = MILLIS
 const MINUTE = 60 * SECOND
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR

@@ -10,14 +10,10 @@ import './style.css'
 import info from '../../../version.json'
 
 
-export const CreditsUI = forwardRef(function CreditsUI(props, ref) {
+export const CreditsUI = forwardRef(function CreditsUI() {
 
     const store = window.vt3d.store.components
     const snap = useSnapshot(store)
-
-    const toggle = () => {
-        store.credits.show = !store.credits.show
-    }
 
     const setOpen = (open) => {
         store.credits.show = open
