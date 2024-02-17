@@ -1,5 +1,4 @@
-import {proxy}    from 'valtio'
-import {AppUtils} from './Utils/AppUtils'
+import {proxy} from 'valtio'
 
 export class VT3D {
     #context
@@ -8,7 +7,12 @@ export class VT3D {
     constructor() {
         // Context is dedicated to maps
         this.#context = {
-            tracks: [],
+            tracks: [],   // TODO save/read tracks in DB (local or remote)
+        }
+
+        // Get the first as current track
+        if (this.#context.tracks.length) {
+            this.currentTrack = this.#context.tracks[0]
         }
 
         // We use valtio to manage states
@@ -18,6 +22,13 @@ export class VT3D {
                     show: false,
                 },
                 credits: {show: false},
+
+            },
+            modals: {
+                altitudeChoice: {
+                    show: false,
+                    model: 'terrain',
+                },
             },
 
         })
@@ -57,6 +68,10 @@ export class VT3D {
         return this.#context.tracks
     }
 
+    get track() {
+        return this.currentTrack
+    }
+
     getTrackByName(name) {
         return this.#context.tracks.filter(function (track) {
             return track.name === name
@@ -66,9 +81,14 @@ export class VT3D {
     addTrack = (track) => {
         if (track) {
             this.#context.tracks.push({
-                [AppUtils.slugify(`${track.name}-${track.type}`)]: track,
+                [track.slug]: JSON.stringify(track),
             })
+            this.currentTrack = track
         }
+    }
+
+    saveTrack = (track = this.currentTrack) => {
+        this.#context.tracks[track.slug] = JSON.stringify(track)
     }
 
 }
