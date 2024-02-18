@@ -162,6 +162,7 @@ export class TrackUtils {
             positions.push(Cesium.Cartographic.fromDegrees(coordinate[0], coordinate[1]))
         })
 
+        //TODO apply only if height is missing for some coordinates
         const height = []
         const temp = await Cesium.sampleTerrainMostDetailed(window.vt3d.viewer.terrainProvider, positions)
         temp.forEach(coordinate => {
