@@ -1,20 +1,42 @@
 import './style.css'
-import {faMapLocation}                             from '@fortawesome/pro-regular-svg-icons'
-import {SlButton, SlIcon, SlIconButton, SlTooltip} from '@shoelace-style/shoelace/dist/react'
-import {forwardRef}                                from 'react'
-import {Track}                                     from '../../../classes/Track'
-import {FA2SL}                                     from '../../../Utils/FA2SL'
-import {TrackUtils as TU}                          from '../../../Utils/TrackUtils'
-import {AltitudeChoice}                            from '../Modals/AltitudeChoice'
+import {faMapLocation}               from '@fortawesome/pro-regular-svg-icons'
+import {SlButton, SlIcon, SlTooltip} from '@shoelace-style/shoelace/dist/react'
+import {forwardRef}                  from 'react'
+import {useSnapshot}                 from 'valtio'
+import {Track}                       from '../../../classes/Track'
+import {FA2SL}                       from '../../../Utils/FA2SL'
+import {TrackUtils}                  from '../../../Utils/TrackUtils'
+import {UINotifier}                  from '../../../Utils/UINotifier'
+import {AltitudeChoice}              from '../Modals/AltitudeChoice'
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
+
+    const store = window.vt3d.store
+    const snap = useSnapshot(store)
+
     const uploadFile = async () => {
-        const track = await TU.loadTrackFromFile()
+        const track = await TrackUtils.loadTrackFromFile()
         // File is correct let's work with
         if (track !== undefined) {
             let currentTrack = new Track(track.name, track.extension, track.content)
-            currentTrack.addToContext()
-            await currentTrack.show()
+            // Check the track already exists in context
+            // If not we manage and show it.
+            if (window.vt3d.getTrackBySlug(currentTrack.slug)?.slug === undefined) {
+                currentTrack.checkDataConsistency()
+                if (!currentTrack.hasHeight) {
+                    store.modals.altitudeChoice.show = true
+                }
+                currentTrack.addToContext()
+                store.currentTrack = currentTrack.slug
+                await currentTrack.show()
+            } else {
+                // It exists, we notify it
+                UINotifier.notifyWarning({
+                    caption: `This track has already been loaded!`,
+                    text: 'You can load another one !',
+                })
+            }
+
         }
     }
 
@@ -25,10 +47,6 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                     <SlButton size="small" onClick={uploadFile}>
                         <SlIcon library="fa" name={FA2SL.set(faMapLocation)} slot={'prefix'}/>
                     </SlButton>
-                    <SlIconButton name="circle-check"
-                                  target={'_blank'}
-                                  href={'https://github.com/ViewTrack3D/vt3d'}
-                    />
                 </SlTooltip>
             </div>
             <AltitudeChoice/>

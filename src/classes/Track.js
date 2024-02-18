@@ -1,26 +1,36 @@
-import {gpx, kml}                                    from '@tmcw/togeojson'
+import {gpx, kml} from '@tmcw/togeojson'
+
+import {DateTime}                                    from 'luxon'
 import {AppUtils}                                    from '../Utils/AppUtils'
 import {Mobility}                                    from '../Utils/Mobility'
 import {FEATURE_COLLECTION, LINE_STRING, TrackUtils} from '../Utils/TrackUtils'
 
+export const NO_DEM_SERVER = 'none'
+export const SIMULATE_HEIGHT = 'simulate-height'
+export const INITIAL_LOADING = 'first-load'
+
 export class Track {
-    static NO_DEM = 'none'
+
     #name
     #type   // gpx,kml,geojson  //TODO kmz
-    #slug
+    slug
     #geoJson
     #DEMServer
     #realName
     #metrics
+    hasHeight
 
     constructor(name, type, content) {
         this.#name = name
         this.#realName = name
         this.#type = type
         this.slug = AppUtils.slugify(`${name}-${type}`)
-        this.#DEMServer = Track.NO_DEM
-
+        this.#DEMServer = NO_DEM_SERVER
+        // get GeoJson
         this.toGeoJson(content)
+
+        this.checkDataConsistency()
+        // Let's compute all information
         this.computeAll()
     }
 
@@ -65,7 +75,7 @@ export class Track {
      * @return {string}
      */
     get DEMServer() {
-        return this.#DEMServer ?? Track.NO_DEM
+        return this.#DEMServer ?? NO_DEM_SERVER
     }
 
     /**
@@ -74,7 +84,7 @@ export class Track {
      * @param server
      */
     set DEMServer(server) {
-        this.#DEMServer = server ?? Track.NO_DEM
+        this.#DEMServer = server ?? NO_DEM_SERVER
     }
 
     /**
@@ -84,9 +94,9 @@ export class Track {
      */
     async computeAll() {
         // Maybe we have some changes to operate
-        await this.prepareGeoJson()
-        // Get metrics
-        this.#metrics = await this.#calculateMetrics()
+        return await this.prepareGeoJson().then(
+            await this.#calculateMetrics().then(metrics => this.#metrics = metrics),
+        )
     }
 
     /**
@@ -255,26 +265,29 @@ export class Track {
             let index = 0
             for (const feature of this.#geoJson.features) {
                 if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
-
-                    const properties = TrackUtils.checkIfDataContainsHeightOrTime(feature)
-                    if (!properties.hasHeight && this.DEMServer === Track.NO_DEM) {
-                        window.vt3d.store.modals.altitudeChoice.show = true
-                    }
                     let index = 0
-                    const temp = []
+                    if (!this.hasHeight && this.DEMServer !== NO_DEM_SERVER) {
+                        // Some heights info are missing. Let's simulate them
 
-                    // Some heights info are missing. Let's simulate them
+                        // TODO add different plugins for DEM elevation like:
+                        //        https://tessadem.com/elevation-api/  ($)
+                        //     or https://github.com/Jorl17/open-elevation/blob/master/docs/api.md
 
-                    // TODO add different plugins for DEM elevation like:
-                    //        https://tessadem.com/elevation-api/  ($)
-                    //     or https://github.com/Jorl17/open-elevation/blob/master/docs/api.md
-
-                    if (!properties.hasHeight) {
-                        const fixed = await TrackUtils.getElevationFromTerrain(feature.geometry.coordinates)
-                        for (let j = 0; j < fixed.length; j++) {
-                            feature.geometry.coordinates[j][2] = fixed[j]
+                        let heights = []
+                        switch (this.DEMServer) {
+                            case NO_DEM_SERVER:
+                            case 'internal' :
+                                heights = await TrackUtils.getElevationFromTerrain(feature.geometry.coordinates)
+                                break
+                            case 'open-elevation' : {
+                            }
+                        }
+                        // Add them to data
+                        for (let j = 0; j < heights.length; j++) {
+                            feature.geometry.coordinates[j][2] = heights[j]
                         }
                     }
+
                     // TODO interpolate points to avoid GPS errors (Kalman Filter ?)
                     // TODO Clean
 
@@ -285,12 +298,44 @@ export class Track {
         }
     }
 
-    addToContext = () => {
+    /**
+     * Add this track to the application context
+     *
+     */
+    addToContext = (setToCurrent = true) => {
         window.vt3d.addTrack(this)
+        if (setToCurrent) {
+            window.vt3d.track = this
+        }
     }
 
-    show = async () => {
-        await TrackUtils.showTrack(this.geoJson)
+    /**
+     * Show the Track on the globe
+     *
+     * @return {Promise<void>}
+     */
+    show = async (action = INITIAL_LOADING) => {
+        await TrackUtils.showTrack(this.geoJson, this.#name, action)
+    }
+
+    showAfterHeightSimulation = async () => {
+        await this.show(SIMULATE_HEIGHT)
+    }
+
+    checkDataConsistency = () => {
+        this.hasHeight = true
+        if (this.#geoJson.type === FEATURE_COLLECTION) {
+            let index = 0
+            for (const feature of this.#geoJson.features) {
+                if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
+                    const {hasTime, hasHeight} = TrackUtils.checkIfDataContainsHeightOrTime(feature)
+                    if (!hasHeight) {
+                        this.hasHeight = false
+                        break
+                    }
+                }
+            }
+        }
     }
 
 }

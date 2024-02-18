@@ -1,7 +1,8 @@
-import * as Cesium                from 'cesium'
-import {Color, GeoJsonDataSource} from 'cesium'
-import {FileUtils}                from './FileUtils.js'
-import {UINotifier}               from './UINotifier'
+import * as Cesium                        from 'cesium'
+import {Color, GeoJsonDataSource}         from 'cesium'
+import {INITIAL_LOADING, SIMULATE_HEIGHT} from '../classes/Track'
+import {FileUtils}                        from './FileUtils.js'
+import {UINotifier}                       from './UINotifier'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE = 'Feature', FEATURE_COLLECTION = 'FeatureCollection', LINE_STRING = 'LineString'
@@ -44,10 +45,12 @@ export class TrackUtils {
      * Show track on the map
      *
      * @param geoJson
+     * @param name
+     * @param action   load | simulateHeight
      * @return {Promise<void>}
      *
      */
-    static showTrack = async (geoJson, name = '') => {
+    static showTrack = async (geoJson, name = '', action = 'load') => {
         let dataSource
         const configuration = window.vt3d.configuration
         const trackStroke = {
@@ -70,9 +73,22 @@ export class TrackUtils {
             window.vt3d.viewer.dataSources.add(dataSource)
                 .then(function (dataSource) {
                     // Ok => we notify
+                    let caption = '', text = ''
+                    switch (action) {
+                        case INITIAL_LOADING: {
+                            caption = 'Loaded!'
+                            text = `The track <strong>${name}</strong> has been loaded and displayed on the map.`
+                            break
+                        }
+                        case SIMULATE_HEIGHT : {
+                            caption = 'Altitudes has been simulated!'
+                            text = `The modified track <strong>${name}</strong> has been loaded and displayed on the map.`
+                            break
+                        }
+                    }
                     UINotifier.notifySuccess({
-                        caption: 'Loaded!',
-                        text: `The track <strong>${name}</strong> has been loaded and displayed on the map.`,
+                        caption: caption,
+                        text: text,
                     })
                     window.vt3d.viewer.zoomTo(dataSource.entities)
                 })

@@ -30,6 +30,7 @@ export class VT3D {
                     model: 'terrain',
                 },
             },
+            currentTrack: null,
 
         })
     }
@@ -72,23 +73,25 @@ export class VT3D {
         return this.currentTrack
     }
 
-    getTrackByName(name) {
+    set track(track) {
+        this.currentTrack = track
+    }
+
+    getTrackBySlug(slug) {
         return this.#context.tracks.filter(function (track) {
-            return track.name === name
+            return track.slug === slug
         })[0]
     }
 
-    addTrack = (track) => {
+    addTrack = (track, setToCurrent = true) => {
         if (track) {
-            this.#context.tracks.push({
-                [track.slug]: JSON.stringify(track),
-            })
-            this.currentTrack = track
+            // Look if this track already exist in context
+            const index = this.#context.tracks.findIndex(item => item.slug === track.slug)
+            if (index >= 0) {           // Found ! We replace it
+                this.#context.tracks[index] = track
+            } else {                    // Nope,we add it
+                this.#context.tracks.push(track)
+            }
         }
     }
-
-    saveTrack = (track = this.currentTrack) => {
-        this.#context.tracks[track.slug] = JSON.stringify(track)
-    }
-
 }
