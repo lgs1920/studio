@@ -1,19 +1,19 @@
 /**
  * React
  */
-import * as Cesium                                            from 'cesium'
-import {useEffect, useRef}                                    from 'react'
+import * as Cesium                                                          from 'cesium'
+import {useEffect, useRef}                                                  from 'react'
 
 /**
  * Some Cesium and Resium modules are needed
  */
-import {Camera, CameraFlyTo, Globe, Scene, useCesium, Viewer} from 'resium'
+import {Camera, CameraFlyTo, Globe, ImageryLayer, Scene, useCesium, Viewer} from 'resium'
 /**
  * We also need our owns
  */
-import {VT3D_UI}                                              from './Components/UI/VT3D_UI/VT3D_UI.jsx'
-import {AppUtils}                                             from './Utils/AppUtils.js'
-import {CameraUtils}                                          from './Utils/CameraUtils.js'
+import {VT3D_UI}                                                            from './Components/UI/VT3D_UI/VT3D_UI.jsx'
+import {AppUtils}                                                           from './Utils/AppUtils.js'
+import {CameraUtils}                                                        from './Utils/CameraUtils.js'
 
 /**
  * We are using shoelace Web Components
@@ -22,8 +22,8 @@ import '@shoelace-style/shoelace/dist/themes/light.css'
 /**
  * Then import our owns
  */
-import {UINotifier}                                           from './Utils/UINotifier'
-import {UIUtils}                                              from './Utils/UIUtils'
+import {UINotifier}                                                         from './Utils/UINotifier'
+import {UIUtils}                                                            from './Utils/UIUtils'
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 
@@ -70,11 +70,17 @@ export function ViewTrack3D() {
                     baseLayerPicker={false}
                     sceneModePicker={false}
                     terrain={Cesium.Terrain.fromWorldTerrain({
-                        requestVertexNormals: true,
+                        requestVertexNormals: false,
                     })}
                     id="viewTrack3DViewer"
+                    baseLayerPicker={false}
+                    imageryProvider={false}
                     ref={viewerRef}
         >
+            <ImageryLayer imageryProvider={new Cesium.IonImageryProvider({
+                assetId: 3954,
+                // tilingScheme: new Cesium.TilingScheme(),
+            })}/>
             <Scene></Scene>
             <Globe enableLighting={false}></Globe>
             <Camera onMoveEnd={CameraUtils.updatePosition} ref={viewerRef}>
@@ -91,7 +97,7 @@ export function ViewTrack3D() {
 
         </Viewer>
     )
-//
+    //
 
     //
 }
