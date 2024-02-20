@@ -6,7 +6,8 @@ html {
 
 body {
     font-size: var(--vt3d-font-size);
-    font-family: var(--vt3d-font-family)
+    font-family: var(--vt3d-font-family);
+    color: var(--vt3d-dark-ui-fg-color);
 }
 
 .ui {
