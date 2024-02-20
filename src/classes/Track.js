@@ -70,6 +70,15 @@ export class Track {
     }
 
     /**
+     * Get name
+     *
+     * @return {string} name
+     */
+    get name() {
+        return this.#name
+    }
+
+    /**
      * Get DEM Server
      *
      * @return {string}
