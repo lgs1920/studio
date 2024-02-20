@@ -63,7 +63,7 @@ export class CameraUtils {
             update({id: 'camera-heading', value: cameraAngles.heading.toFixed()})
             update({id: 'camera-pitch', value: (cameraAngles.pitch).toFixed(), class: 'test'})
         } catch (e) {
-            console.log(e)
+            console.error(e)
         }
 
 
