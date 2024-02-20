@@ -1,0 +1,19 @@
+
+#tracks-editor-pane {
+    position: fixed;
+    bottom: var(--vt3d-gutter);
+    left: var(--vt3d-gutter);
+    top: auto;
+    right: auto;
+}
+
+#tracks-editor-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#tracks-editor-footer strong:after {
+    content: ' - ';
+    font-weight: normal;
+}

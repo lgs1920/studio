@@ -22,6 +22,11 @@ export class VT3D {
                     show: false,
                 },
                 credits: {show: false},
+                tracksEditor: {
+                    visible: false,
+                    show: false,
+                    list: [],
+                },
 
             },
             modals: {
@@ -83,7 +88,7 @@ export class VT3D {
         })[0]
     }
 
-    addTrack = (track, setToCurrent = true) => {
+    addTrack = (track) => {
         if (track) {
             // Look if this track already exist in context
             const index = this.#context.tracks.findIndex(item => item.slug === track.slug)
@@ -91,6 +96,8 @@ export class VT3D {
                 this.#context.tracks[index] = track
             } else {                    // Nope,we add it
                 this.#context.tracks.push(track)
+                vt3d.store.components.tracksEditor.visible = true
+                vt3d.store.components.tracksEditor.list.push(track.slug)
             }
         }
     }

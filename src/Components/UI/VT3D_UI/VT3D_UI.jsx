@@ -5,6 +5,7 @@ import {CameraPositionUI}  from '../CameraPositionUI/CameraPositionUI'
 import {CompassUI}         from '../CompassUI/CompassUI'
 import {CreditsUI}         from '../CreditsUI/CreditsUI'
 import {TrackFileLoaderUI} from '../TrackFileLoaderUI/TrackFileLoaderUI'
+import {TracksEditor}      from '../TracksEditor/TracksEditor'
 
 export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
     window.vt3d.viewer = useCesium().viewer
@@ -16,6 +17,8 @@ export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
                 <TrackFileLoaderUI ref={ref}/>
                 <CompassUI ref={ref}/>
                 <CreditsUI ref={ref}/>
+                <TracksEditor ref={ref}/>
+
             </div>
         </>
     )
