@@ -17,14 +17,6 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
         store.modals.altitudeChoice.show = open
     }
 
-
-    const handleRequestClose = event => {
-        if (event.detail.source === 'overlay') {
-            event.preventDefault()
-        } else {
-            window.vt3d.track.DEMServer = window.vt3d.getTrackBySlug(snap.currentTrack).DEMServer
-        }
-    }
     /**
      * Let's simulate altitudes if we have a DEM Server
      * @param event
@@ -43,7 +35,7 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
                 if (server !== NO_DEM_SERVER) {
                     await window.vt3d.track.computeAll()
                     window.vt3d.track.addToContext()
-                    // The we redraw the track
+                    // Then we redraw the track
                     await window.vt3d.track.showAfterHeightSimulation()
                 }
         }
@@ -53,10 +45,8 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
     return (
         <> {snap.currentTrack &&
 
-            <SlDialog className={'ui-element'} open={snap.modals.altitudeChoice.show}
+            <SlDialog open={snap.modals.altitudeChoice.show}
                       style={{'--width': '50vw'}}
-                      onSlAfterHide={() => setOpen(false)}
-                      onSlRequestClose={handleRequestClose}
                       onSlHide={simulateAltitudes}
             >
 
