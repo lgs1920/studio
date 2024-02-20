@@ -19,7 +19,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
         // File is correct let's work with
         if (track !== undefined) {
             let currentTrack = new Track(track.name, track.extension, track.content)
-            // Check the track already exists in context
+            // Check if the track already exists in context
             // If not we manage and show it.
             if (window.vt3d.getTrackBySlug(currentTrack.slug)?.slug === undefined) {
                 currentTrack.checkDataConsistency()
@@ -36,7 +36,6 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                     text: 'You can load another one !',
                 })
             }
-
         }
     }
 
