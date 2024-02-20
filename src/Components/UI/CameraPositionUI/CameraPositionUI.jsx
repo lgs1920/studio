@@ -34,7 +34,7 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
             {snap.cameraPosition.show &&
                 <SlAnimation easing="bounceInLeft" duration={1000} iterations={1} play={snap.cameraPosition.show}
                              onSlFinish={() => toggle()}>
-                    <div className={'ui-element'} ref={ref}>
+                    <div className={'ui-element'} ref={ref} open={snap.cameraPosition.show}>
                         {/*<FontAwesomeIcon icon={faCompass}/>*/}
                         <sl-icon library="fa" name={FA2SL.set(faCompass)}></sl-icon>
                         <TextValueUI ref={ref} id={'camera-longitude'} text={'Lon:'}/>
