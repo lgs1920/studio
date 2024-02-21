@@ -12,9 +12,9 @@ import {TextValueUI}                              from '../TextValueUI/TextValue
 
 
 export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref) {
-    window.vt3d.viewer = useCesium().viewer
+    vt3d.viewer = useCesium().viewer
 
-    const store = window.vt3d.store.components
+    const store = vt3d.store.components
     const snap = useSnapshot(store)
 
     const toggle = () => {
@@ -23,7 +23,7 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
 
 
     useEffect(() => {
-        CameraUtils.updatePosition(window.vt3d?.camera)
+        CameraUtils.updatePosition(vt3d?.camera)
     }, [])
 
     return (

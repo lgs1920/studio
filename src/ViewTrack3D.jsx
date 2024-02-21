@@ -37,11 +37,11 @@ export function ViewTrack3D() {
 
     const viewerRef = useRef(null)
 
-    window.vt3d.viewer = useCesium().viewer
-    const center = window.vt3d.configuration.center
-    window.vt3d.windowCenter = Cesium.Cartesian3.fromDegrees(center.longitude, center.latitude, center.height)
+    vt3d.viewer = useCesium().viewer
+    const center = vt3d.configuration.center
+    vt3d.windowCenter = Cesium.Cartesian3.fromDegrees(center.longitude, center.latitude, center.height)
 
-    window.vt3d.cameraOrientation = {
+    vt3d.cameraOrientation = {
         heading: Cesium.Math.toRadians(center.camera.heading),
         pitch: Cesium.Math.toRadians(center.camera.pitch),
         roll: Cesium.Math.toRadians(center.camera.roll),
@@ -55,7 +55,7 @@ export function ViewTrack3D() {
 
         // Ready
         UINotifier.notifySuccess({
-            caption: `Welcome on ${window.vt3d.configuration.applicationName}!`,
+            caption: `Welcome on ${vt3d.configuration.applicationName}!`,
             text: 'We\'re ready to assist you !',
         })
         console.log('ViewTrack3D has been loaded and is ready !')
@@ -85,9 +85,9 @@ export function ViewTrack3D() {
             <Globe enableLighting={false}></Globe>
             <Camera onMoveEnd={CameraUtils.updatePosition} ref={viewerRef}>
                 <CameraFlyTo
-                    orientation={window.vt3d.cameraOrientation}
+                    orientation={vt3d.cameraOrientation}
                     duration={3}
-                    destination={window.vt3d.windowCenter}
+                    destination={vt3d.windowCenter}
                     once={true}
                     onComplete={CameraUtils.turnAroundCameraTarget}
                 />

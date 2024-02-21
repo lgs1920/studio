@@ -6,8 +6,8 @@ export const CompassUI = forwardRef(function CompassUI(props, ref) {
 
     useEffect(() => {
         const compass = document.querySelector('cesium-compass')
-        compass.scene = window.vt3d.viewer.scene
-        compass.clock = window.vt3d.viewer.clock
+        compass.scene = vt3d.viewer.scene
+        compass.clock = vt3d.viewer.clock
 
     }, [])
 

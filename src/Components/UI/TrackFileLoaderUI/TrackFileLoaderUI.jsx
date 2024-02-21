@@ -11,7 +11,7 @@ import {AltitudeChoice}              from '../Modals/AltitudeChoice'
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
 
-    const store = window.vt3d.store
+    const store = vt3d.store
     const snap = useSnapshot(store)
 
     const uploadFile = async () => {
@@ -21,7 +21,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
             let currentTrack = new Track(track.name, track.extension, track.content)
             // Check if the track already exists in context
             // If not we manage and show it.
-            if (window.vt3d.getTrackBySlug(currentTrack.slug)?.slug === undefined) {
+            if (vt3d.getTrackBySlug(currentTrack.slug)?.slug === undefined) {
                 currentTrack.checkDataConsistency()
                 if (!currentTrack.hasHeight) {
                     store.modals.altitudeChoice.show = true

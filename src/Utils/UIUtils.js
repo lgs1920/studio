@@ -24,10 +24,10 @@ export class UIUtils {
     static init = async () => {
         // Set Context
         window.vt3d = new VT3D()
-        window.vt3d.configuration = await import(/* @vite-ignore */ CONFIGURATION)
+        vt3d.configuration = await import(/* @vite-ignore */ CONFIGURATION)
 
         // Cesium ION auth
-        Cesium.Ion.defaultAccessToken = window.vt3d.configuration.ionToken
+        Cesium.Ion.defaultAccessToken = vt3d.configuration.ionToken
 
         // Register Font Awesome icons in ShoeLace
         FA2SL.useFontAwesomeInShoelace('fa')

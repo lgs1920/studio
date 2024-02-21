@@ -12,7 +12,7 @@ import info from '../../../version.json'
 
 export const CreditsUI = forwardRef(function CreditsUI() {
 
-    const store = window.vt3d.store.components
+    const store = vt3d.store.components
     const snap = useSnapshot(store)
 
     const setOpen = (open) => {
@@ -26,7 +26,7 @@ export const CreditsUI = forwardRef(function CreditsUI() {
 
             <div id="credits-pane-footer" slot={'footer'}>
                 <div>
-                    <strong>{window.vt3d.configuration.applicationName}</strong><span>{info.version}</span>
+                    <strong>{vt3d.configuration.applicationName}</strong><span>{info.version}</span>
                 </div>
                 <SlTooltip content="Our GitHub repo">
                     <SlIconButton library="fa" name={FA2SL.set(faGithub)}

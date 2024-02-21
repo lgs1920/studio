@@ -32,7 +32,7 @@ export class CameraUtils {
     static getPosition = (camera) => {
 
         if (!camera) {
-            camera = window.vt3d.camera
+            camera = vt3d.camera
         }
 
         const {longitude, latitude, height} = camera.positionCartographic
@@ -51,7 +51,7 @@ export class CameraUtils {
 
 
         if (!camera) {
-            camera = window.vt3d.camera
+            camera = vt3d.camera
         }
 
         try {
@@ -81,20 +81,20 @@ export class CameraUtils {
         /**
          * Only if target has been defined
          */
-        if (window.vt3d.configuration.center.target) {
+        if (vt3d.configuration.center.target) {
             const cameraOffset = new HeadingPitchRange(
-                Math.toRadians(window.vt3d.configuration.center.camera.heading),
-                Math.toRadians(window.vt3d.configuration.center.camera.pitch),
-                window.vt3d.configuration.center.camera.range,
+                Math.toRadians(vt3d.configuration.center.camera.heading),
+                Math.toRadians(vt3d.configuration.center.camera.pitch),
+                vt3d.configuration.center.camera.range,
             )
-            CameraUtils.lookAt(window.vt3d.camera, window.vt3d.windowCenter, cameraOffset)
+            CameraUtils.lookAt(vt3d.camera, vt3d.windowCenter, cameraOffset)
 
             /**
              * Let's rotate on left for PI/1000 angle
              */
             const step = Math.PI / 1000
-            window.vt3d.viewer.clock.onTick.addEventListener(() => {
-                window.vt3d.camera.rotateLeft(step)
+            vt3d.viewer.clock.onTick.addEventListener(() => {
+                vt3d.camera.rotateLeft(step)
                 // No event on rotate, so we force update position
                 CameraUtils.updatePosition()
             })

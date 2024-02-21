@@ -52,7 +52,7 @@ export class TrackUtils {
      */
     static showTrack = async (geoJson, name = '', action = 'load') => {
         let dataSource
-        const configuration = window.vt3d.configuration
+        const configuration = vt3d.configuration
         const trackStroke = {
             color: Color.fromCssColorString(configuration.track.color), width: configuration.track.width,
         }
@@ -70,7 +70,7 @@ export class TrackUtils {
             })
 
             //dataSource.name = `${track.name}.${track.extension}`
-            window.vt3d.viewer.dataSources.add(dataSource)
+            vt3d.viewer.dataSources.add(dataSource)
                 .then(function (dataSource) {
                     // Ok => we notify
                     let caption = '', text = ''
@@ -90,7 +90,7 @@ export class TrackUtils {
                         caption: caption,
                         text: text,
                     })
-                    window.vt3d.viewer.zoomTo(dataSource.entities)
+                    vt3d.viewer.zoomTo(dataSource.entities)
                 })
                 .catch(error => {
                     // Error => we notify
@@ -180,7 +180,7 @@ export class TrackUtils {
 
         //TODO apply only if height is missing for some coordinates
         const height = []
-        const temp = await Cesium.sampleTerrainMostDetailed(window.vt3d.viewer.terrainProvider, positions)
+        const temp = await Cesium.sampleTerrainMostDetailed(vt3d.viewer.terrainProvider, positions)
         temp.forEach(coordinate => {
             height.push(coordinate.height)
         })

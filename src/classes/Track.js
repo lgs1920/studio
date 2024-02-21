@@ -314,9 +314,9 @@ export class Track {
      *
      */
     addToContext = (setToCurrent = true) => {
-        window.vt3d.addTrack(this)
+        vt3d.addTrack(this)
         if (setToCurrent) {
-            window.vt3d.track = this
+            vt3d.track = this
         }
     }
 

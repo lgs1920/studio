@@ -26,6 +26,7 @@ export class VT3D {
                     visible: false,
                     show: false,
                     list: [],
+                    currentTrack: null,
                 },
 
             },

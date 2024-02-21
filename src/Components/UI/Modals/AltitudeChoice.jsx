@@ -9,9 +9,9 @@ import {DEMServerSelection}   from '../TrackFileLoaderUI/DEMServerSelection'
 
 export const AltitudeChoice = forwardRef(function AltitudeChoice() {
 
-    const store = window.vt3d.store
+    const store = vt3d.store
     const snap = useSnapshot(store)
-    const [server, setServer] = useState(window.vt3d?.currentTrack?.DEMServer ?? NO_DEM_SERVER)
+    const [server, setServer] = useState(vt3d?.currentTrack?.DEMServer ?? NO_DEM_SERVER)
 
     const setOpen = (open) => {
         store.modals.altitudeChoice.show = open
@@ -31,12 +31,12 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
                 break
             case 'sl-dialog':
                 // It comes from the dialog so we validate the selection and simulates altitudes
-                window.vt3d.track.DEMServer = server
+                vt3d.track.DEMServer = server
                 if (server !== NO_DEM_SERVER) {
-                    await window.vt3d.track.computeAll()
-                    window.vt3d.track.addToContext()
+                    await vt3d.track.computeAll()
+                    vt3d.track.addToContext()
                     // Then we redraw the track
-                    await window.vt3d.track.showAfterHeightSimulation()
+                    await vt3d.track.showAfterHeightSimulation()
                 }
         }
 
