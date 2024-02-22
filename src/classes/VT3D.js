@@ -1,18 +1,18 @@
 import {proxy} from 'valtio'
 
 export class VT3D {
-    #context
     #store
+    tracks = []
+    #trackStore
+    #viewer
+
 
     constructor() {
-        // Context is dedicated to maps
-        this.#context = {
-            tracks: [],   // TODO save/read tracks in DB (local or remote)
-        }
+        // TODO save/read tracks in DB (local or remote)
 
         // Get the first as current track
-        if (this.#context.tracks.length) {
-            this.currentTrack = this.#context.tracks[0]
+        if (this.tracks.length) {
+            this.currentTrack = this.tracks[0]
         }
 
         // We use valtio to manage states
@@ -26,7 +26,6 @@ export class VT3D {
                     visible: false,
                     show: false,
                     list: [],
-                    currentTrack: null,
                 },
 
             },
@@ -37,25 +36,28 @@ export class VT3D {
                 },
             },
             currentTrack: null,
-
         })
-    }
 
+        this.#trackStore = proxy({
+            slug: null,
+            track: {
+                stroke: null,
 
-    get context() {
-        return this.#context
+            },
+        })
+
     }
 
     get viewer() {
-        return this.#context.viewer
+        return this.#viewer
     }
 
     set viewer(viewer) {
-        this.#context.viewer = viewer
+        this.#viewer = viewer
     }
 
     get scene() {
-        return this.#context.viewer?.scene
+        return this.#viewer?.scene
     }
 
     get camera() {
@@ -63,16 +65,20 @@ export class VT3D {
     }
 
     get canvas() {
-        return this.#context?.canvas
+        return this?.canvas
     }
 
     get store() {
         return this.#store
     }
 
+    get trackStore() {
+        return this.#trackStore
+    }
+
 
     get tracks() {
-        return this.#context.tracks
+        return this.tracks
     }
 
     get track() {
@@ -84,7 +90,7 @@ export class VT3D {
     }
 
     getTrackBySlug(slug) {
-        return this.#context.tracks.filter(function (track) {
+        return this.tracks.filter(function (track) {
             return track.slug === slug
         })[0]
     }
@@ -92,11 +98,11 @@ export class VT3D {
     addTrack = (track) => {
         if (track) {
             // Look if this track already exist in context
-            const index = this.#context.tracks.findIndex(item => item.slug === track.slug)
+            const index = this.tracks.findIndex(item => item.slug === track.slug)
             if (index >= 0) {           // Found ! We replace it
-                this.#context.tracks[index] = track
+                this.tracks[index] = track
             } else {                    // Nope,we add it
-                this.#context.tracks.push(track)
+                this.tracks.push(track)
                 vt3d.store.components.tracksEditor.visible = true
                 vt3d.store.components.tracksEditor.list.push(track.slug)
             }
