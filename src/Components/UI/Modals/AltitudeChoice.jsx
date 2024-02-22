@@ -4,7 +4,7 @@ import {useSnapshot}          from 'valtio'
 
 import '../../../assets/css/modals.css'
 import {NO_DEM_SERVER}        from '../../../classes/Track'
-import {DEMServerSelection}   from '../TrackFileLoaderUI/DEMServerSelection'
+import {DEMServerSelection}   from '../TracksEditor/DEMServerSelection'
 
 
 export const AltitudeChoice = forwardRef(function AltitudeChoice() {
@@ -18,36 +18,46 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
     }
 
     /**
-     * Let's simulate altitudes if we have a DEM Server
+     * Allow altitudes simulation by setting the DEM server
+     *
      * @param event
      */
-    const simulateAltitudes = async event => {
-        switch (event.target.localName) {
-            case 'sl-select':
-                // We're coming from the selection,just put the value aside
-                setServer(event.target.value)
-                event.preventDefault()
-                setOpen(true)
-                break
-            case 'sl-dialog':
-                // It comes from the dialog so we validate the selection and simulates altitudes
-                vt3d.track.DEMServer = server
-                if (server !== NO_DEM_SERVER) {
-                    await vt3d.track.computeAll()
-                    vt3d.track.addToContext()
-                    // Then we redraw the track
-                    await vt3d.track.showAfterHeightSimulation()
-                }
+    const allowAltitudeSimulation = async event => {
+        if (isOK(event)) {
+            setServer(event.target.value)
+            event.preventDefault()
         }
-
-
     }
+
+    /**
+     * When the dialog is closed we add some tasks
+     *
+     * - simulate
+     * - compute lmetrics
+     * - notify user
+     *
+     * @param event
+     * @return {Promise<void>}
+     */
+    const closeDialog = async (event) => {
+        if (isOK(event)) {
+            event.preventDefault()
+            vt3d.track.DEMServer = server
+            if (server !== NO_DEM_SERVER) {
+                await vt3d.track.computeAll()
+                vt3d.track.addToContext()
+                // Then we redraw the track
+                await vt3d.track.showAfterHeightSimulation()
+            }
+        }
+    }
+
     return (
         <> {snap.currentTrack &&
 
             <SlDialog open={snap.modals.altitudeChoice.show}
                       style={{'--width': '50vw'}}
-                      onSlHide={simulateAltitudes}
+                      onSlHide={closeDialog}
             >
 
                 <div slot="label">
@@ -63,7 +73,7 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
                         <DEMServerSelection
                             default={snap.currentTrack.DEMServer ?? NO_DEM_SERVER}
                             label={'Choose the way you wish to obtain altitude:'}
-                            onChange={simulateAltitudes}/>
+                            onChange={allowAltitudeSimulation}/>
                     </div>
                 </div>
                 <SlButton slot="footer" variant="primary" onClick={() => setOpen(false)}>
