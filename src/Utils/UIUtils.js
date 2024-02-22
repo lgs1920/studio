@@ -32,6 +32,13 @@ export class UIUtils {
         // Register Font Awesome icons in ShoeLace
         FA2SL.useFontAwesomeInShoelace('fa')
 
+
+        // Shoelace needs to avoid bubbling events. Here's an helper
+        window.isOK = (event) => {
+            return event.eventPhase === Event.AT_TARGET
+        }
+
+
     }
 
 }
