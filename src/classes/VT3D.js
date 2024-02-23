@@ -10,9 +10,15 @@ export class VT3D {
     constructor() {
         // TODO save/read tracks in DB (local or remote)
 
+
+        this.editor = proxy({
+            track: null,
+        })
+
         // Get the first as current track
         if (this.tracks.length) {
             this.currentTrack = this.tracks[0]
+            this.addToEditor()
         }
 
         // We use valtio to manage states
@@ -36,14 +42,6 @@ export class VT3D {
                 },
             },
             currentTrack: null,
-        })
-
-        this.#trackStore = proxy({
-            slug: null,
-            track: {
-                stroke: null,
-
-            },
         })
 
     }
@@ -76,7 +74,6 @@ export class VT3D {
         return this.#trackStore
     }
 
-
     get tracks() {
         return this.tracks
     }
@@ -87,6 +84,7 @@ export class VT3D {
 
     set track(track) {
         this.currentTrack = track
+        this.addToEditor()
     }
 
     getTrackBySlug(slug) {
@@ -107,5 +105,10 @@ export class VT3D {
                 vt3d.store.components.tracksEditor.list.push(track.slug)
             }
         }
+    }
+
+    addToEditor = () => {
+        this.editor.track = {...this.currentTrack}
+
     }
 }
