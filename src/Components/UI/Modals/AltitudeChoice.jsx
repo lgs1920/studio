@@ -4,13 +4,17 @@ import {useSnapshot}          from 'valtio'
 
 import '../../../assets/css/modals.css'
 import {NO_DEM_SERVER}        from '../../../classes/Track'
-import {DEMServerSelection}   from '../TracksEditor/DEMServerSelection'
+import {DEMServerSelection}   from '../DEMServerSelection'
 
 
 export const AltitudeChoice = forwardRef(function AltitudeChoice() {
 
     const store = vt3d.store
     const snap = useSnapshot(store)
+
+    const trackStore = vt3d.editor
+    const snapTrack = useSnapshot(trackStore)
+
     const [server, setServer] = useState(vt3d?.currentTrack?.DEMServer ?? NO_DEM_SERVER)
 
     const setOpen = (open) => {
@@ -52,8 +56,9 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
         }
     }
 
+    console.log(snapTrack)
     return (
-        <> {snap.currentTrack &&
+        <> {snapTrack.track &&
 
             <SlDialog open={snap.modals.altitudeChoice.show}
                       style={{'--width': '50vw'}}
@@ -71,7 +76,7 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
                     </div>
                     <div className="dialog-action">
                         <DEMServerSelection
-                            default={snap.currentTrack.DEMServer ?? NO_DEM_SERVER}
+                            default={snapTrack.track.DEMServer ?? NO_DEM_SERVER}
                             label={'Choose the way you wish to obtain altitude:'}
                             onChange={allowAltitudeSimulation}/>
                     </div>
