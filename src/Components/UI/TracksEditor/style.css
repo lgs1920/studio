@@ -1,4 +1,14 @@
 
+#tracks-editor-container {
+    position: absolute;
+    z-index: var(--vt3d-ui-layer-zindex);
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+}
+
 #tracks-editor-pane {
     position: fixed;
     bottom: var(--vt3d-gutter);
@@ -16,4 +26,10 @@
 #tracks-editor-footer strong:after {
     content: ' - ';
     font-weight: normal;
+}
+
+#track-line-settings {
+    display: flex;
+    gap: var(--vt3d-gutter);
+    align-items: center;
 }
