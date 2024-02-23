@@ -9,8 +9,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     const handleRequestClose = event => {
         event.preventDefault()
     }
-
-    const store = window.vt3d.store.components.tracksEditor
+    const store = vt3d.store.components.tracksEditor
     const snap = useSnapshot(store)
 
     let tracks = []
@@ -18,12 +17,25 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
         tracks.push(vt3d.getTrackBySlug(slug))
     })
 
-    console.log(tracks)
+    // sort list alphabetically
+    tracks.sort(function (a, b) {
+        if (a.name < b.name) {
+            return 1
+        }
+        if (a.name > b.name) {
+            return -1
+        }
+        return 0
+    })
 
+    // set Default
+    store.currentTrack = vt3d.track?.slug
     return (
         <>
-            <SlSelect hoist label={props.label} value={window.vt3d.context.currentTrack} /*onSlChange={props.onChange}*/
-                      onSlSelect={handleRequestClose}>
+            <SlSelect hoist label={props.label}
+                      value={snap.currentTrack}
+                      onSlChange={props.onChange}
+            >
                 <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
                 {tracks.map(track =>
