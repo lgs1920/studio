@@ -29,12 +29,18 @@
     }
   ],
   "track": {
-    "color": "#B22222FF",
-    "width": 2
+    "color": "#B22222ff",
+    "thickness": 2
   },
   "route": {
     "color": "#1E90FFFF",
-    "width": 2
+    "thickness": 2
   },
-  "theme": "dark"
+  "theme": "dark",
+  "defaultTrackColors": [
+    "#7FFF00",
+    "#D2691E",
+    "#B22222ff",
+    "#1E90FFFF"
+  ]
 }
