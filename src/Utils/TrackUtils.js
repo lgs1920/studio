@@ -27,6 +27,14 @@ export class TrackUtils {
         }
     })
 
+    static prepareTrackEdition = (event) => {
+        // SUbscribe to change  https://valtio.pmnd.rs/docs/api/advanced/subscribe
+        if (isOK(event)) {
+            console.log(event.target.value)
+        }
+    }
+
+
     /**
      * Load a track file
      *
@@ -46,18 +54,24 @@ export class TrackUtils {
      *
      * @param geoJson
      * @param name
+     * @param line : track color and width {line,width}
      * @param action   load | simulateHeight
      * @return {Promise<void>}
      *
      */
-    static showTrack = async (geoJson, name = '', action = 'load') => {
+    static showTrack = async (geoJson, name = '', line = null, action = 'load') => {
         let dataSource
         const configuration = vt3d.configuration
+        if (line === null) {
+            line = {
+                color: vt3d.configuration.track.color, thickness: vt3d.configuration.track.thickness,
+            }
+        }
         const trackStroke = {
-            color: Color.fromCssColorString(configuration.track.color), width: configuration.track.width,
+            color: Color.fromCssColorString(line.color), thickness: line.thickness,
         }
         const routeStroke = {
-            color: Color.fromCssColorString(configuration.route.color), width: configuration.route.width,
+            color: Color.fromCssColorString(configuration.route.color), thickness: configuration.route.thickness,
         }
         const commonOptions = {
             clampToGround: true, name: name, markerSymbol: '<i>?</i>',
@@ -76,19 +90,18 @@ export class TrackUtils {
                     let caption = '', text = ''
                     switch (action) {
                         case INITIAL_LOADING: {
-                            caption = 'Loaded!'
-                            text = `The track <strong>${name}</strong> has been loaded and displayed on the map.`
+                            caption = `<strong>${name}</strong> Loaded!`
+                            text = `Track loaded and displayed on the map.`
                             break
                         }
                         case SIMULATE_HEIGHT : {
-                            caption = 'Altitudes has been simulated!'
-                            text = `The modified track <strong>${name}</strong> has been loaded and displayed on the map.`
+                            caption = `<strong>${name}</strong> changed!`
+                            text = `Track loaded and displayed on the map.`
                             break
                         }
                     }
                     UINotifier.notifySuccess({
-                        caption: caption,
-                        text: text,
+                        caption: caption, text: text,
                     })
                     vt3d.viewer.zoomTo(dataSource.entities)
                 })
