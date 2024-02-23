@@ -9,6 +9,8 @@ export const NO_DEM_SERVER = 'none'
 export const SIMULATE_HEIGHT = 'simulate-height'
 export const INITIAL_LOADING = 'first-load'
 
+const CONFIGURATION = '../config.json'
+
 export class Track {
 
     #name
@@ -16,15 +18,18 @@ export class Track {
     slug
     #geoJson
     #DEMServer
-    #realName
+    title
     #metrics
     hasHeight
 
     constructor(name, type, content) {
         this.#name = name
-        this.#realName = name
+        this.title = name
         this.#type = type
         this.slug = AppUtils.slugify(`${name}-${type}`)
+        this.color = vt3d.configuration.track.color
+        this.thickness = vt3d.configuration.track.thickness
+
         this.#DEMServer = NO_DEM_SERVER
         // get GeoJson
         this.toGeoJson(content)
@@ -32,6 +37,7 @@ export class Track {
         this.checkDataConsistency()
         // Let's compute all information
         this.computeAll()
+
     }
 
     /**
@@ -104,10 +110,9 @@ export class Track {
     async computeAll() {
         // Maybe we have some changes to operate
         return await this.prepareGeoJson().then(async () => {
-                await this.#calculateMetrics()
-                this.addToContext()
-            },
-        )
+            await this.#calculateMetrics()
+            this.addToContext()
+        })
     }
 
     /**
@@ -326,7 +331,9 @@ export class Track {
      * @return {Promise<void>}
      */
     show = async (action = INITIAL_LOADING) => {
-        await TrackUtils.showTrack(this.geoJson, this.#name, action)
+        await TrackUtils.showTrack(this.geoJson, this.#name, {
+            color: this.color, thickness: this.thickness,
+        }, action)
     }
 
     showAfterHeightSimulation = async () => {
