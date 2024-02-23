@@ -16,32 +16,40 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     snap.list.forEach(slug => {
         tracks.push(vt3d.getTrackBySlug(slug))
     })
+    const several = tracks.length > 1
 
-    // sort list alphabetically
-    tracks.sort(function (a, b) {
-        if (a.name < b.name) {
-            return 1
-        }
-        if (a.name > b.name) {
-            return -1
-        }
-        return 0
-    })
+    if (several) {
+        // sort list alphabetically
+        tracks.sort(function (a, b) {
+            if (a.title < b.title) {
+                return 1
+            }
+            if (a.title > b.title) {
+                return -1
+            }
+            return 0
+        })
+    }
 
     // set Default
     store.currentTrack = vt3d.track?.slug
+
+
     return (
         <>
-            <SlSelect hoist label={props.label}
-                      value={snap.currentTrack}
-                      onSlChange={props.onChange}
-            >
-                <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
+            {
+                several &&
+                <SlSelect hoist label={props.label}
+                          value={snap.currentTrack}
+                          onSlChange={props.onChange}
+                >
+                    <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
-                {tracks.map(track =>
-                    <SlOption key={track.slug} value={track.slug}>{track.name}</SlOption>,
-                )}
-            </SlSelect>
+                    {tracks.map(track =>
+                        <SlOption key={track.slug} value={track.slug}>{track.title}</SlOption>,
+                    )}
+                </SlSelect>
+            }
         </>
     )
 })
