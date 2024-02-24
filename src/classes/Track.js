@@ -21,6 +21,7 @@ export class Track {
     title
     metrics
     hasHeight
+    visible
 
     constructor(name, type, content) {
         this.name = name
@@ -29,6 +30,7 @@ export class Track {
         this.slug = AppUtils.slugify(`${name}-${type}`)
         this.color = vt3d.configuration.track.color
         this.thickness = vt3d.configuration.track.thickness
+        this.visible = true
 
         this.DEMServer = NO_DEM_SERVER
         // get GeoJson

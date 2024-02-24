@@ -1,19 +1,25 @@
-import {faPenPaintbrush}                         from '@fortawesome/pro-regular-svg-icons'
-import {SlColorPicker, SlIcon, SlInput, SlRange} from '@shoelace-style/shoelace/dist/react'
-import {useSnapshot}                             from 'valtio'
-import {NO_DEM_SERVER}                           from '../../../classes/Track'
-import {FA2SL}                                   from '../../../Utils/FA2SL'
-import {TracksEditorUtils}                       from '../../../Utils/TracksEditorUtils'
-import {DEMServerSelection}                      from '../DEMServerSelection'
+import {faPenPaintbrush}    from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlColorPicker,
+    SlDivider,
+    SlIcon,
+    SlInput,
+    SlRange,
+    SlSwitch,
+    SlTooltip,
+}                           from '@shoelace-style/shoelace/dist/react'
+import {useSnapshot}        from 'valtio'
+import {NO_DEM_SERVER}      from '../../../classes/Track'
+import {FA2SL}              from '../../../Utils/FA2SL'
+import {
+    TracksEditorUtils,
+}                           from '../../../Utils/TracksEditorUtils'
+import {DEMServerSelection} from '../DEMServerSelection'
 
 export const TrackSettings = function TrackSettings() {
 
-    const store = vt3d.mainProxy
-    const snap = useSnapshot(store)
-
     const storeEditor = vt3d.editorProxy
     const snapEditor = useSnapshot(storeEditor)
-
 
     /**
      * Change track Color
@@ -51,7 +57,18 @@ export const TrackSettings = function TrackSettings() {
     })
 
     /**
-     * CHange DEM server
+     * Change track visibility
+     *
+     * @type {setThickness}
+     */
+    const setVisibility = (event => {
+        storeEditor.track.visible = event.target.checked
+        TracksEditorUtils.reRenderTrackSettings()
+        vt3d.addTrack(Object.assign({}, storeEditor.track))
+    })
+
+    /**
+     * Change DEM server
      *
      * @type {setDEMServer}
      */
@@ -63,6 +80,7 @@ export const TrackSettings = function TrackSettings() {
         console.log(tmp)
         vt3d.addTrack(tmp)
     })
+
 
     return (<>
         <div id="track-settings" key={vt3d.mainProxy.components.tracksEditor.trackSettingsKey}>
@@ -86,11 +104,33 @@ export const TrackSettings = function TrackSettings() {
                                label={'Color'}
                                value={snapEditor.track.color}
                                swatches={vt3d.configuration.defaultTrackColors.join(';')}
-                               onSlChange={setColor}>
-                </SlColorPicker>
-                <SlRange label={'Thickness (px)'} min={1} max={10} step={1}
-                         value={snapEditor.track.thickness}
-                         onSlChange={setThickness}/>
+                               onSlChange={setColor}
+                               disabled={!snapEditor.track.visible}
+                />
+                <SlTooltip content="Thickness (px)">
+                    <SlRange min={1} max={10} step={1}
+                             value={snapEditor.track.thickness}
+                             style={{'--thumb-size': '1rem'}}
+                             onSlChange={setThickness}
+                             disabled={!snapEditor.track.visible}
+                    />
+                </SlTooltip>
+
+                <SlDivider id="test-line" style={{
+                    '--color': snapEditor.track.visible ? snapEditor.track.color : 'transparent',
+                    '--width': `${snapEditor.track.thickness}px`,
+                    '--spacing': 0,
+                }}
+                           disabled={!snapEditor.track.visible}
+                />
+
+                <SlTooltip content="Track visibility" className={'visibility-switch'}>
+                    <SlSwitch size="small"
+                              checked={snapEditor.track.visible}
+                              style={{'--thumb-size': '1rem'}}
+                              onSlChange={setVisibility}
+                    />
+                </SlTooltip>
             </div>
         </div>
 

@@ -32,4 +32,11 @@
     display: flex;
     gap: var(--vt3d-gutter);
     align-items: center;
+    align-content: center;
+    justify-content: space-between;
+}
+
+#test-line {
+    width: 4rem;
+    border-radius: 3px;
 }
