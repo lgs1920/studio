@@ -14,7 +14,7 @@ import {TextValueUI}                              from '../TextValueUI/TextValue
 export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref) {
     vt3d.viewer = useCesium().viewer
 
-    const store = vt3d.store.components
+    const store = vt3d.mainProxy.components
     const snap = useSnapshot(store)
 
     const toggle = () => {

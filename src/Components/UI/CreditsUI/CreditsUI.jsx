@@ -12,7 +12,7 @@ import info from '../../../version.json'
 
 export const CreditsUI = forwardRef(function CreditsUI() {
 
-    const store = vt3d.store.components
+    const store = vt3d.mainProxy.components
     const snap = useSnapshot(store)
 
     const setOpen = (open) => {

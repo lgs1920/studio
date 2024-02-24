@@ -27,16 +27,8 @@ export class TrackUtils {
         }
     })
 
-    static prepareTrackEdition = (event) => {
-        // SUbscribe to change  https://valtio.pmnd.rs/docs/api/advanced/subscribe
-        if (isOK(event)) {
-            console.log(event.target.value)
-        }
-    }
-
-
     /**
-     * Load a track file
+     * Load a currentTrack file
      *
      * return
      *
@@ -50,7 +42,7 @@ export class TrackUtils {
     }
 
     /**
-     * Show track on the map
+     * Show currentTrack on the map
      *
      * @param geoJson
      * @param name
@@ -83,7 +75,7 @@ export class TrackUtils {
                 ...commonOptions, stroke: trackStroke.color, strokeWidth: trackStroke.width,
             })
 
-            //dataSource.name = `${track.name}.${track.extension}`
+            //dataSource.name = `${currentTrack.name}.${currentTrack.extension}`
             vt3d.viewer.dataSources.add(dataSource)
                 .then(function (dataSource) {
                     // Ok => we notify

@@ -13,24 +13,24 @@ const CONFIGURATION = '../config.json'
 
 export class Track {
 
-    #name
-    #type   // gpx,kml,geojson  //TODO kmz
+    name
+    type   // gpx,kml,geojson  //TODO kmz
     slug
-    #geoJson
-    #DEMServer
+    geoJson
+    DEMServer
     title
-    #metrics
+    metrics
     hasHeight
 
     constructor(name, type, content) {
-        this.#name = name
+        this.name = name
         this.title = name
-        this.#type = type
+        this.type = type
         this.slug = AppUtils.slugify(`${name}-${type}`)
         this.color = vt3d.configuration.track.color
         this.thickness = vt3d.configuration.track.thickness
 
-        this.#DEMServer = NO_DEM_SERVER
+        this.DEMServer = NO_DEM_SERVER
         // get GeoJson
         this.toGeoJson(content)
 
@@ -41,68 +41,6 @@ export class Track {
     }
 
     /**
-     * Get Geo Json
-     *
-     * @return {*} Geo Json content
-     */
-    get geoJson() {
-        return this.#geoJson
-    }
-
-    /**
-     * set Geo Json
-     *
-     * @param geoJson
-     */
-    set geoJson(geoJson) {
-        this.#geoJson = geoJson
-    }
-
-    /**
-     * Get Metrics
-     *
-     * @return {object}
-     */
-    get metrics() {
-        return this.#metrics
-    }
-
-    /**
-     * Set Metrics
-     *
-     */
-    set metrics(metrics) {
-        this.#metrics = metrics
-    }
-
-    /**
-     * Get name
-     *
-     * @return {string} name
-     */
-    get name() {
-        return this.#name
-    }
-
-    /**
-     * Get DEM Server
-     *
-     * @return {string}
-     */
-    get DEMServer() {
-        return this.#DEMServer ?? NO_DEM_SERVER
-    }
-
-    /**
-     * set DEM server
-     *
-     * @param server
-     */
-    set DEMServer(server) {
-        this.#DEMServer = server ?? NO_DEM_SERVER
-    }
-
-    /**
      * Prepare it an extract all metrics
      *
      * @param content
@@ -110,15 +48,15 @@ export class Track {
     async computeAll() {
         // Maybe we have some changes to operate
         return await this.prepareGeoJson().then(async () => {
-            await this.#calculateMetrics()
+            await this.calculateMetrics()
             this.addToContext()
         })
     }
 
     /**
-     * Get the track data and set the GeoJson Structure
+     * Get the currentTrack data and set the GeoJson Structure
      *
-     * @param content content of the track file
+     * @param content content of the currentTrack file
      *
      * @exception {any} in case of ay error, we return undefined
      */
@@ -129,19 +67,18 @@ export class Track {
          */
         try {
             let geoJson
-            switch (this.#type) {
+            switch (this.type) {
                 case 'gpx':
-                    this.#geoJson = gpx(new DOMParser().parseFromString(content, 'text/xml'))
+                    this.geoJson = gpx(new DOMParser().parseFromString(content, 'text/xml'))
                     break
                 case 'kmz' :
                     // TODO unzip to get kml. but what to do with the assets files that are sometimes embedded
                     break
                 case 'kml':
-                    this.#geoJson = kml(new DOMParser().parseFromString(content, 'text/xml'))
+                    this.geoJson = kml(new DOMParser().parseFromString(content, 'text/xml'))
                     break
                 case 'geojson' :
-                    geoJson = JSON.parse(content)
-                    this.#geoJson = geoJson
+                    this.geoJson = JSON.parse(content)
             }
 
         } catch (error) {
@@ -150,17 +87,17 @@ export class Track {
             UINotifier.notifyError({
                 caption: `An error occurs during loading <strong>${trackFile.name}<strong>!`, text: error,
             })
-            this.#geoJson = undefined
+            this.geoJson = undefined
         }
     }
 
     /**
-     * Compute all metrics from a track
+     * Compute all metrics from a currentTrack
      *
      * set metrics as  {[metrics/all points,global]}
      */
-    #calculateMetrics = async () => {
-        return await TrackUtils.prepareDataForMetrics(this.#geoJson).then(dataForMetrics => {
+    calculateMetrics = async () => {
+        return await TrackUtils.prepareDataForMetrics(this.geoJson).then(dataForMetrics => {
             let metrics = []
             let index = 1
 
@@ -277,9 +214,9 @@ export class Track {
      */
     prepareGeoJson = async () => {
 
-        if (this.#geoJson.type === FEATURE_COLLECTION) {
+        if (this.geoJson.type === FEATURE_COLLECTION) {
             let index = 0
-            for (const feature of this.#geoJson.features) {
+            for (const feature of this.geoJson.features) {
                 if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
                     let index = 0
                     if (!this.hasHeight && this.DEMServer !== NO_DEM_SERVER) {
@@ -307,7 +244,7 @@ export class Track {
                     // TODO interpolate points to avoid GPS errors (Kalman Filter ?)
                     // TODO Clean
 
-                    this.#geoJson.features[index] = feature
+                    this.geoJson.features[index] = feature
                 }
                 index++
             }
@@ -315,13 +252,13 @@ export class Track {
     }
 
     /**
-     * Add this track to the application context
+     * Add this currentTrack to the application context
      *
      */
     addToContext = (setToCurrent = true) => {
         vt3d.addTrack(this)
         if (setToCurrent) {
-            vt3d.track = this
+            vt3d.currentTrack = this
         }
     }
 
@@ -331,7 +268,7 @@ export class Track {
      * @return {Promise<void>}
      */
     show = async (action = INITIAL_LOADING) => {
-        await TrackUtils.showTrack(this.geoJson, this.#name, {
+        await TrackUtils.showTrack(this.geoJson, this.name, {
             color: this.color, thickness: this.thickness,
         }, action)
     }
@@ -342,9 +279,9 @@ export class Track {
 
     checkDataConsistency = () => {
         this.hasHeight = true
-        if (this.#geoJson.type === FEATURE_COLLECTION) {
+        if (this.geoJson.type === FEATURE_COLLECTION) {
             let index = 0
-            for (const feature of this.#geoJson.features) {
+            for (const feature of this.geoJson.features) {
                 if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
                     const {hasTime, hasHeight} = TrackUtils.checkIfDataContainsHeightOrTime(feature)
                     if (!hasHeight) {

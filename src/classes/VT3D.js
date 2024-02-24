@@ -1,7 +1,8 @@
 import {proxy} from 'valtio'
 
 export class VT3D {
-    #store
+    #mainProxy
+    #editorProxy
     tracks = []
     #trackStore
     #viewer
@@ -11,18 +12,15 @@ export class VT3D {
         // TODO save/read tracks in DB (local or remote)
 
 
-        this.editor = proxy({
+        // Declare Stores and snapshots for states management by @valtio
+
+        // Editor store is used to manage the settings of the currentTrack in edit
+        this.#editorProxy = proxy({
             track: null,
         })
 
-        // Get the first as current track
-        if (this.tracks.length) {
-            this.currentTrack = this.tracks[0]
-            this.addToEditor()
-        }
-
-        // We use valtio to manage states
-        this.#store = proxy({
+        // Main is global to the app
+        this.#mainProxy = proxy({
             components: {
                 cameraPosition: {
                     show: false,
@@ -32,6 +30,8 @@ export class VT3D {
                     visible: false,
                     show: false,
                     list: [],
+                    trackListKey: 0,
+                    trackSettingsKey: 0,
                 },
 
             },
@@ -43,6 +43,13 @@ export class VT3D {
             },
             currentTrack: null,
         })
+
+        // Get the first as current currentTrack
+        if (this.tracks.length) {
+            this.mainProxy.currentTrack = this.tracks[0]
+            this.addToEditor()
+        }
+
 
     }
 
@@ -66,10 +73,6 @@ export class VT3D {
         return this?.canvas
     }
 
-    get store() {
-        return this.#store
-    }
-
     get trackStore() {
         return this.#trackStore
     }
@@ -78,13 +81,21 @@ export class VT3D {
         return this.tracks
     }
 
-    get track() {
-        return this.currentTrack
+    get currentTrack() {
+        return this.#mainProxy.currentTrack
     }
 
-    set track(track) {
-        this.currentTrack = track
+    set currentTrack(track) {
+        this.#mainProxy.currentTrack = track
         this.addToEditor()
+    }
+
+    get mainProxy() {
+        return this.#mainProxy
+    }
+
+    get editorProxy() {
+        return this.#editorProxy
     }
 
     getTrackBySlug(slug) {
@@ -95,20 +106,19 @@ export class VT3D {
 
     addTrack = (track) => {
         if (track) {
-            // Look if this track already exist in context
+            // Look if this currentTrack already exist in context
             const index = this.tracks.findIndex(item => item.slug === track.slug)
             if (index >= 0) {           // Found ! We replace it
                 this.tracks[index] = track
             } else {                    // Nope,we add it
                 this.tracks.push(track)
-                vt3d.store.components.tracksEditor.visible = true
-                vt3d.store.components.tracksEditor.list.push(track.slug)
+                this.mainProxy.components.tracksEditor.visible = true
+                this.mainProxy.components.tracksEditor.list.push(track.slug)
             }
         }
     }
 
     addToEditor = () => {
-        this.editor.track = {...this.currentTrack}
-
+        this.editorProxy.track = {...this.mainProxy.currentTrack}
     }
 }

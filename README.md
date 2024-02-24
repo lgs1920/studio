@@ -4,7 +4,7 @@
 
 This project aims to be a free 3D visualization application for KML, KMZ, GPX, GeoJSON files with a video creation tool
 for social networks.
-The application could be used to track cycling, biking, hiking or running routes.
+The application could be used to currentTrack cycling, biking, hiking or running routes.
 
 Maybe , later I will add subscription to have a personal account to save tracks and videos andto access them with a
 unique url.
@@ -16,19 +16,19 @@ but I think of something like that:
 
 ### MVP : first
 
-* A mockup that will be able to load track file and display it
+* A mockup that will be able to load currentTrack file and display it
 * A dedicated site (ie public build)
 
 ### Beta : adding some animation on tracks
 
-* follow à track with a camera targeted to window center.
+* follow à currentTrack with a camera targeted to window center.
 * bird view ie following the route from a few metres above, from the rear, looking ahead.
 
-### Beta : Add track data and profile
+### Beta : Add currentTrack data and profile
 
 * compute elevation +,-, speed,
   hourly (km/h) and kilometer (time/km) averages and all similar and useful data.
-* Add a profile synchronised with track animation
+* Add a profile synchronised with currentTrack animation
 
 ### 1.0 : Video export
 
@@ -43,7 +43,7 @@ but I think of something like that:
     * direct link to video
     * share videos to Facebook, Instagram, TikTok, Youtube ...
 * Other
-    * tools used to import files from tracker apps (direct access to track file)
+    * tools used to import files from tracker apps (direct access to currentTrack file)
     * manage projects (ie group of tracks)
     * ...
 

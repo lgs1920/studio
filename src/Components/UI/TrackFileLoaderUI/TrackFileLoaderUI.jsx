@@ -11,7 +11,7 @@ import {AltitudeChoice}              from '../Modals/AltitudeChoice'
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
 
-    const store = vt3d.store
+    const store = vt3d.mainProxy
     const snap = useSnapshot(store)
 
     const uploadFile = async () => {
