@@ -270,7 +270,7 @@ export class Track {
      * @return {Promise<void>}
      */
     show = async (action = INITIAL_LOADING) => {
-        await TrackUtils.showTrack(this.geoJson, this.name, {
+        await TrackUtils.showTrack(this.geoJson, this.title, {
             color: this.color, thickness: this.thickness,
         }, action)
     }
