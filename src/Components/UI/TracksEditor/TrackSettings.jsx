@@ -1,13 +1,12 @@
 import {faPenPaintbrush}                         from '@fortawesome/pro-regular-svg-icons'
 import {SlColorPicker, SlIcon, SlInput, SlRange} from '@shoelace-style/shoelace/dist/react'
-import {forwardRef}                              from 'react'
 import {useSnapshot}                             from 'valtio'
 import {NO_DEM_SERVER}                           from '../../../classes/Track'
 import {FA2SL}                                   from '../../../Utils/FA2SL'
 import {TracksEditorUtils}                       from '../../../Utils/TracksEditorUtils'
 import {DEMServerSelection}                      from '../DEMServerSelection'
 
-export const TrackSettings = forwardRef(function TrackSettings(props, ref) {
+export const TrackSettings = function TrackSettings() {
 
     const store = vt3d.mainProxy
     const snap = useSnapshot(store)
@@ -96,4 +95,4 @@ export const TrackSettings = forwardRef(function TrackSettings(props, ref) {
         </div>
 
     </>)
-})
+}
