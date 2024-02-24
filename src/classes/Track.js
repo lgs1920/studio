@@ -45,7 +45,7 @@ export class Track {
      *
      * @param content
      */
-    async computeAll() {
+    computeAll = async () => {
         // Maybe we have some changes to operate
         return await this.prepareGeoJson().then(async () => {
             await this.calculateMetrics()
