@@ -70,7 +70,7 @@ export const TrackSettings = function TrackSettings() {
             <SlInput label="Name:" value={snapEditor.track.title}
                      onSlChange={setTitle}/>
 
-            {/* Add DEM server selectionif we do ot have height initially (ie in the file) */
+            {/* Add DEM server selection if we do not have height initially (ie in the track file) */
                 !snapEditor.track.hasHeight && <DEMServerSelection
                     default={snapEditor.track?.DEMServer ?? NO_DEM_SERVER}
                     label={'Simulate Altitude:'}
