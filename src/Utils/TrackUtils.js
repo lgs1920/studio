@@ -75,7 +75,6 @@ export class TrackUtils {
                 ...commonOptions, stroke: trackStroke.color, strokeWidth: trackStroke.width,
             })
 
-            //dataSource.name = `${currentTrack.name}.${currentTrack.extension}`
             vt3d.viewer.dataSources.add(dataSource)
                 .then(function (dataSource) {
                     // Ok => we notify
