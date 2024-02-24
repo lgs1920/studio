@@ -55,8 +55,6 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
             }
         }
     }
-
-    console.log(snapTrack)
     return (
         <> {snapTrack.track &&
 
