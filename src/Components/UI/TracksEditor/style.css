@@ -32,8 +32,12 @@
     display: flex;
     gap: var(--vt3d-gutter);
     align-items: center;
-    align-content: center;
     justify-content: space-between;
+}
+
+#track-line-settings sl-switch::part(base),
+#track-line-settings sl-range::part(base) {
+    display: flex
 }
 
 #test-line {
