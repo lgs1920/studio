@@ -1,23 +1,36 @@
-import {SlColorPicker, SlDivider, SlInput, SlRange, SlSwitch, SlTooltip} from '@shoelace-style/shoelace/dist/react'
-import {snapshot, useSnapshot}                                           from 'valtio'
-import {NO_DEM_SERVER, Track}                                            from '../../../classes/Track'
-import {TracksEditorUtils}                                               from '../../../Utils/TracksEditorUtils'
-import {DEMServerSelection}                                              from '../DEMServerSelection'
+import {faTrashCan}           from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlCard,
+    SlColorPicker,
+    SlDivider,
+    SlIcon,
+    SlInput,
+    SlRange,
+    SlSwitch,
+    SlTooltip,
+}                             from '@shoelace-style/shoelace/dist/react'
+import {useSnapshot}          from 'valtio'
+import {NO_DEM_SERVER, Track} from '../../../classes/Track'
+import {FA2SL}                from '../../../Utils/FA2SL'
+import {
+    TracksEditorUtils,
+}                             from '../../../Utils/TracksEditorUtils'
+import {DEMServerSelection}   from '../DEMServerSelection'
 
 export const TrackSettings = function TrackSettings() {
 
-    const storeEditor = vt3d.editorProxy
-    const snapEditor = useSnapshot(storeEditor)
+    const editorStore = vt3d.editorProxy
+    const editorSnapshot = useSnapshot(editorStore)
 
     /**
      * Change track Color
      *
      * @type {setColor}
      */
-    const setColor = (event => {
-        storeEditor.track.color = event.target.value
-        vt3d.addTrack(Object.assign({}, storeEditor.track))
-        rebuildTrack()
+    const setColor = (async event => {
+        editorStore.track.color = event.target.value
+        TracksEditorUtils.reRenderTracksList()
+        await rebuildTrack()
     })
 
     /**
@@ -27,10 +40,20 @@ export const TrackSettings = function TrackSettings() {
      *
      * @type {setTitle}
      */
-    const setTitle = (event => {
-        storeEditor.track.title = event.target.value
+    const setTitle = (async event => {
+        const title = event.target.value
+        // Title is empty, we force the former value
+        if (title === '') {
+            const field = document.getElementById('track-title')
+            field.value = editorStore.track.title
+            return
+        }
+        // Let's check if the next title has not been already used for
+        // another track.
+        const newTitle = Track.unicTitle(title)
+        editorStore.track.title = newTitle
         TracksEditorUtils.reRenderTracksList()
-        rebuildTrack()
+        await rebuildTrack()
     })
 
     /**
@@ -38,10 +61,11 @@ export const TrackSettings = function TrackSettings() {
      *
      * @type {setThickness}
      */
-    const setThickness = (event => {
-        storeEditor.track.thickness = event.target.value
+    const setThickness = (async event => {
+        editorStore.track.thickness = event.target.value
         TracksEditorUtils.reRenderTrackSettings()
-        rebuildTrack()
+        await rebuildTrack()
+
     })
 
     /**
@@ -49,11 +73,10 @@ export const TrackSettings = function TrackSettings() {
      *
      * @type {setThickness}
      */
-    const setVisibility = (event => {
-        storeEditor.track.visible = event.target.checked
+    const setVisibility = (async event => {
+        editorStore.track.visible = event.target.checked
         TracksEditorUtils.reRenderTrackSettings()
-        rebuildTrack()
-
+        await rebuildTrack()
     })
 
     /**
@@ -61,86 +84,94 @@ export const TrackSettings = function TrackSettings() {
      *
      * @type {setDEMServer}
      */
-    const setDEMServer = (event => {
-        storeEditor.track.DEMServer = event.target.value
+    const setDEMServer = (async event => {
+        editorStore.track.DEMServer = event.target.value
         TracksEditorUtils.reRenderTrackSettings()
-        rebuildTrack()
+        await rebuildTrack()
     })
+
+    const removeTrack = () => {
+        alert('Not yet implemented!')
+    }
 
 
     /**
      * Re build the track object,
-     * Re compute metricx //TODO voir one peut paseprendre le anciens(tant que DEM n'a pa change)
+     * Re compute metrix //TODO voir one peut paseprendre le anciens(tant que DEM n'a pa change)
      *
      * @return {Track}
      */
-    const rebuildTrack = () => {
-        const tmp2 = snapshot(storeEditor.track)
-        const track = new Track(tmp2.name, tmp2.type, tmp2.geoJson)
-        track.computeAll()
-        track.color = tmp2.color
-        track.title = tmp2.title
-        track.thickness = tmp2.thickness
-        track.visible = tmp2.visible
-        vt3d.addTrack(track)
+    const rebuildTrack = async () => {
+        const track = Track.clone(editorStore.track)
+        if (track.DEMServer !== NO_DEM_SERVER) {
+            await track.computeAll()
+        }
+        vt3d.saveTrack(track)
+        vt3d.viewer.dataSources.removeAll()
         if (track.visible) {
             track.showAfterNewSettings()
         }
         return track
     }
 
-
     return (<>
-        <div id="track-settings" key={vt3d.mainProxy.components.tracksEditor.trackSettingsKey}>
-            {/* Change visible name (title) */}
-            <SlInput label="Name:" value={snapEditor.track.title}
-                     onSlChange={setTitle}/>
-
-            {/* Add DEM server selection if we do not have height initially (ie in the track file) */
-                !snapEditor.track.hasHeight && <DEMServerSelection
-                    default={snapEditor.track?.DEMServer ?? NO_DEM_SERVER}
-                    label={'Simulate Altitude:'}
-                    onChange={setDEMServer}
-                />}
-
-            {/* Track line settings */}
-            {/* <label><SlIcon library="fa" name={FA2SL.set(faPenPaintbrush)}></SlIcon>Line</label> */}
-            <br/>
-            <div id="track-line-settings">
-                <SlTooltip content="Color">
-                    <SlColorPicker opacity
-                                   size={'small'}
-                                   label={'Color'}
-                                   value={snapEditor.track.color}
-                                   swatches={vt3d.configuration.defaultTrackColors.join(';')}
-                                   onSlChange={setColor}
-                                   disabled={!snapEditor.track.visible}
-                    />
-                </SlTooltip>
-                <SlTooltip content="Thickness (px)">
-                    <SlRange min={1} max={10} step={1}
-                             value={snapEditor.track.thickness}
-                             style={{'--thumb-size': '1rem'}}
-                             onSlChange={setThickness}
-                             disabled={!snapEditor.track.visible}
-                    />
-                </SlTooltip>
-
-                <SlDivider id="test-line" style={{
-                    '--color': snapEditor.track.visible ? snapEditor.track.color : 'transparent',
-                    '--width': `${snapEditor.track.thickness}px`,
-                    '--spacing': 0,
-                }}
-                           disabled={!snapEditor.track.visible}
+        {editorSnapshot.track &&
+            <SlCard id="track-settings" key={vt3d.mainProxy.components.tracksEditor.trackSettingsKey}>
+                {/* Change visible name (title) */}
+                <SlInput id="track-title" label="Title:" value={editorSnapshot.track.title}
+                         onSlChange={setTitle}
                 />
 
-                <SlSwitch size="small"
-                          checked={snapEditor.track.visible}
-                          style={{'--thumb-size': '1rem'}}
-                          onSlChange={setVisibility}
-                />
-            </div>
-        </div>
+                {/* Add DEM server selection if we do not have height initially (ie in the track file) */
+                    !editorSnapshot.track.hasHeight &&
+                    <DEMServerSelection
+                        default={editorSnapshot.track?.DEMServer ?? NO_DEM_SERVER}
+                        label={'Simulate Altitude:'}
+                        onChange={setDEMServer}
+                    />}
 
+                {/* Track line settings */}
+                <div id="track-line-settings">
+                    <SlTooltip content="Color">
+                        <SlColorPicker opacity
+                                       size={'small'}
+                                       label={'Color'}
+                                       value={editorSnapshot.track.color}
+                                       swatches={vt3d.configuration.defaultTrackColors.join(';')}
+                                       onSlChange={setColor}
+                                       disabled={!editorSnapshot.track.visible}
+                        />
+                    </SlTooltip>
+                    <SlTooltip content="Thickness">
+                        <SlRange min={1} max={10} step={1}
+                                 value={editorSnapshot.track.thickness}
+                                 style={{'--thumb-size': '1rem'}}
+                                 onSlChange={setThickness}
+                                 disabled={!editorSnapshot.track.visible}
+                        />
+                    </SlTooltip>
+
+                    <SlDivider id="test-line" style={{
+                        '--color': editorSnapshot.track.visible ? editorSnapshot.track.color : 'transparent',
+                        '--width': `${editorSnapshot.track.thickness}px`,
+                        '--spacing': 0,
+                    }}
+                               disabled={!editorSnapshot.track.visible}
+                    />
+
+                    <SlSwitch size="small"
+                              checked={editorSnapshot.track.visible}
+                              style={{'--thumb-size': '1rem'}}
+                              onSlChange={setVisibility}
+                    />
+
+                    <SlTooltip content={'Remove'}>
+                        <a onClick={removeTrack}>
+                            <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
+                        </a>
+                    </SlTooltip>
+                </div>
+            </SlCard>
+        }
     </>)
 }
