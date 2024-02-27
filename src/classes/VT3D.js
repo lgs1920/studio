@@ -47,7 +47,7 @@ export class VT3D {
         // Get the first as current currentTrack
         if (this.tracks.length) {
             this.mainProxy.currentTrack = this.tracks[0]
-            this.addToEditor()
+            this.addToEditor(this.tracks[0])
         }
 
 
@@ -87,7 +87,7 @@ export class VT3D {
 
     set currentTrack(track) {
         this.#mainProxy.currentTrack = track
-        this.addToEditor()
+        this.addToEditor(track)
     }
 
     get mainProxy() {
@@ -104,21 +104,28 @@ export class VT3D {
         })[0]
     }
 
-    addTrack = (track) => {
+
+    /**
+     * Save or replace track in context
+     *
+     * @param track
+     */
+    saveTrack = (track) => {
         if (track) {
             // Look if this currentTrack already exist in context
             const index = this.tracks.findIndex(item => item.slug === track.slug)
             if (index >= 0) {           // Found ! We replace it
                 this.tracks[index] = track
+                this.mainProxy.components.tracksEditor.list[index] = track.slug
             } else {                    // Nope,we add it
                 this.tracks.push(track)
-                this.mainProxy.components.tracksEditor.visible = true
                 this.mainProxy.components.tracksEditor.list.push(track.slug)
             }
+            this.mainProxy.components.tracksEditor.visible = true
         }
     }
 
-    addToEditor = () => {
-        this.editorProxy.track = {...this.mainProxy.currentTrack}
+    addToEditor = (track) => {
+        this.editorProxy.track = track
     }
 }
