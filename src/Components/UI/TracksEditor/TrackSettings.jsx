@@ -1,4 +1,4 @@
-import {faTrashCan}            from '@fortawesome/pro-regular-svg-icons'
+import {faTrashCan}           from '@fortawesome/pro-regular-svg-icons'
 import {
     SlCard,
     SlColorPicker,
@@ -8,14 +8,14 @@ import {
     SlRange,
     SlSwitch,
     SlTooltip,
-}                              from '@shoelace-style/shoelace/dist/react'
-import {snapshot, useSnapshot} from 'valtio'
-import {NO_DEM_SERVER, Track}  from '../../../classes/Track'
-import {FA2SL}                 from '../../../Utils/FA2SL'
+}                             from '@shoelace-style/shoelace/dist/react'
+import {useSnapshot}          from 'valtio'
+import {NO_DEM_SERVER, Track} from '../../../classes/Track'
+import {FA2SL}                from '../../../Utils/FA2SL'
 import {
     TracksEditorUtils,
-}                              from '../../../Utils/TracksEditorUtils'
-import {DEMServerSelection}    from '../DEMServerSelection'
+}                             from '../../../Utils/TracksEditorUtils'
+import {DEMServerSelection}   from '../DEMServerSelection'
 
 
 export const TrackSettings = function TrackSettings() {
@@ -91,6 +91,9 @@ export const TrackSettings = function TrackSettings() {
         await rebuildTrack()
     })
 
+    /**
+     * Remove track
+     */
     const removeTrack = () => {
         alert('Not yet implemented!')
     }
@@ -103,10 +106,8 @@ export const TrackSettings = function TrackSettings() {
      * @return {Track}
      */
     const rebuildTrack = async () => {
-        const track = Track.clone(snapshot(editorStore.track))
-        if (track.DEMServer !== NO_DEM_SERVER) {
-            await track.computeAll()
-        }
+        const track = Track.clone(JSON.parse(JSON.stringify(editorStore.track)))
+        await track.computeAll()
         vt3d.saveTrack(track)
         vt3d.viewer.dataSources.removeAll()
         if (track.visible) {

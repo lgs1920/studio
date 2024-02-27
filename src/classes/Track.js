@@ -25,14 +25,7 @@ export class Track {
     visible
 
     attributes = [
-        'color',
-        'title',
-        'geoJson',
-        'title',
-        'visible',
-        'hasHeight',
-        'DEMServer',
-        'thickness',
+        'color', 'title', 'geoJson', 'title', 'visible', 'hasHeight', 'DEMServer', 'thickness',
     ]
 
     constructor(title, type, options = {}) {
@@ -300,43 +293,57 @@ export class Track {
                     /**
                      * Have height or simulate ?
                      */
-                    if (!this.hasHeight && this.DEMServer !== NO_DEM_SERVER) {
+                    if (!this.hasHeight) {
                         // Some heights info are missing. Let's simulate them
 
                         // TODO add different plugins for DEM elevation like:
                         //        https://tessadem.com/elevation-api/  ($)
                         //     or https://github.com/Jorl17/open-elevation/blob/master/docs/api.md
 
-                        let heights = []
-                        switch (this.DEMServer) {
-                            case NO_DEM_SERVER:
-                            case 'internal' :
-                                heights = await TrackUtils.getElevationFromTerrain(feature.geometry.coordinates)
-                                break
-                            case 'open-elevation' : {
+
+                        if (this.DEMServer === NO_DEM_SERVER) {
+                            // May be, some computations have been done before, so we cleaned them
+                            // use case : any DEM server -> no DEM server
+                            let j = 0
+                            feature.geometry.coordinates.forEach(coordinate => {
+                                if (coordinate.length === 3) {
+                                    feature.geometry.coordinates[j] = coordinate.splice(2, 1)
+                                }
+                                j++
+                            })
+                        } else {
+                            // We have aDEM Server, so let's compute height
+                            let heights = []
+                            switch (this.DEMServer) {
+                                case NO_DEM_SERVER:
+                                case 'internal' :
+                                    heights = await TrackUtils.getElevationFromTerrain(feature.geometry.coordinates)
+                                    break
+                                case 'open-elevation' : {
+                                }
+                            }
+                            // Add them to data
+                            for (let j = 0; j < heights.length; j++) {
+                                feature.geometry.coordinates[j].push(heights[j])
                             }
                         }
-                        // Add them to data
-                        for (let j = 0; j < heights.length; j++) {
-                            feature.geometry.coordinates[j][2] = heights[j]
-                        }
+
+                        /**
+                         * Use title as feature name
+                         */
+                        feature.properties.name = this.title
+
+
+                        // TODO interpolate points to avoid GPS errors (Kalman Filter ?)
+                        // TODO Clean
+
+                        this.geoJson.features[index] = feature
                     }
-
-                    /**
-                     * Use title as feature name
-                     */
-                    feature.properties.name = this.title
-
-
-                    // TODO interpolate points to avoid GPS errors (Kalman Filter ?)
-                    // TODO Clean
-
-                    this.geoJson.features[index] = feature
+                    index++
                 }
-                index++
+
+
             }
-
-
         }
     }
 
