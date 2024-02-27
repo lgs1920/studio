@@ -14,7 +14,6 @@ export class TracksEditorUtils {
 
     static prepareTrackEdition = (event) => {
         // SUbscribe to change  https://valtio.pmnd.rs/docs/api/advanced/subscribe
-        console.log('prepare')
         if (isOK(event)) {
             vt3d.editorProxy.track = vt3d.getTrackBySlug(event.target.value)
             TracksEditorUtils.reRenderTrackSettings()
