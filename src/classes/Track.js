@@ -80,12 +80,15 @@ export class Track {
      * @param options {slug}
      * @return {Track} the new track
      */
-    static clone = (source, options = {}) => {
-        const track = new Track(source.title, source.type, options)
-        track.slug = options.slug ?? AppUtils.slugify(`${source.title}-${source.type}`)
+    static clone = (source, exceptions = {}) => {
+        const track = new Track(source.title, source.type, exceptions)
 
         source.attributes.forEach(attribute => {
-            track[attribute] = source[attribute]
+            if (exceptions[attribute]) {
+                track[attribute] = exceptions[attribute]
+            } else {
+                track[attribute] = source[attribute]
+            }
         })
 
         return track

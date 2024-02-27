@@ -61,8 +61,9 @@ export const TrackSettings = function TrackSettings() {
         // another track.
         const newTitle = Track.unicTitle(title)
         editorStore.track.title = newTitle
-        TracksEditorUtils.reRenderTracksList()
         await rebuildTrack()
+
+        TracksEditorUtils.reRenderTracksList()
     })
 
     /**
@@ -115,7 +116,13 @@ export const TrackSettings = function TrackSettings() {
      * @return {Track}
      */
     const rebuildTrack = async () => {
-        const track = Track.clone(JSON.parse(JSON.stringify(editorStore.track)))
+        // unproxify
+        const unproxyfied = JSON.parse(JSON.stringify(editorStore.track))
+        // We clone but keep the same slug
+        const track = Track.clone(unproxyfied, {
+            slug: unproxyfied.slug,
+            title: unproxyfied.title,
+        })
         await track.computeAll()
         vt3d.saveTrack(track)
         vt3d.viewer.dataSources.removeAll()
