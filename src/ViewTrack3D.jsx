@@ -73,7 +73,6 @@ export function ViewTrack3D() {
                         requestVertexNormals: false,
                     })}
                     id="viewTrack3DViewer"
-                    baseLayerPicker={false}
                     imageryProvider={false}
                     ref={viewerRef}
         >
