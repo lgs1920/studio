@@ -1,4 +1,4 @@
-import {faTrashCan}           from '@fortawesome/pro-regular-svg-icons'
+import {faTrashCan}            from '@fortawesome/pro-regular-svg-icons'
 import {
     SlCard,
     SlColorPicker,
@@ -8,14 +8,15 @@ import {
     SlRange,
     SlSwitch,
     SlTooltip,
-}                             from '@shoelace-style/shoelace/dist/react'
-import {useSnapshot}          from 'valtio'
-import {NO_DEM_SERVER, Track} from '../../../classes/Track'
-import {FA2SL}                from '../../../Utils/FA2SL'
+}                              from '@shoelace-style/shoelace/dist/react'
+import {snapshot, useSnapshot} from 'valtio'
+import {NO_DEM_SERVER, Track}  from '../../../classes/Track'
+import {FA2SL}                 from '../../../Utils/FA2SL'
 import {
     TracksEditorUtils,
-}                             from '../../../Utils/TracksEditorUtils'
-import {DEMServerSelection}   from '../DEMServerSelection'
+}                              from '../../../Utils/TracksEditorUtils'
+import {DEMServerSelection}    from '../DEMServerSelection'
+
 
 export const TrackSettings = function TrackSettings() {
 
@@ -102,7 +103,7 @@ export const TrackSettings = function TrackSettings() {
      * @return {Track}
      */
     const rebuildTrack = async () => {
-        const track = Track.clone(editorStore.track)
+        const track = Track.clone(snapshot(editorStore.track))
         if (track.DEMServer !== NO_DEM_SERVER) {
             await track.computeAll()
         }
