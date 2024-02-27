@@ -71,7 +71,8 @@ export class TrackUtils {
 
         try {
             // Load Geo Json
-            dataSource = await GeoJsonDataSource.load(geoJson, {
+            const source = new GeoJsonDataSource(name)
+            dataSource = await source.load(geoJson, {
                 ...commonOptions, stroke: trackStroke.color, strokeWidth: trackStroke.width,
             })
 
