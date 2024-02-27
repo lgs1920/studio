@@ -50,25 +50,29 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
     }
 
 
-    return (<>
-        <div id="tracks-editor-container" key={snap.key}>
+    return (
+        <>
+            <div id="tracks-editor-container" key={snap.key}>
 
-            {snap.visible && <SlDrawer id="tracks-editor-pane" open={snap.show}
-                                       no-modal
-                                       contained
-                                       onSlRequestClose={handleRequestClose}
-                                       onSlHide={closeTracksEditor}
-                                       onSlShow={TrackUtils.prepareTrackEdition}>
-                <TrackSelector onChange={TracksEditorUtils.prepareTrackEdition}/>
-                <TrackSettings/>
-                <div id="tracks-editor-footer" slot={'footer'}>
-                </div>
-            </SlDrawer>}
-        </div>
-        {/* <SlTooltip content="Edit Tracks"> */}
-        {snap.visible && <SlButton size="small" id={'open-currentTrack-editor'} onClick={openTracksEditor}>
-            <SlIcon library="fa" name={FA2SL.set(faPencil)}></SlIcon>
-        </SlButton>}
-        {/* </SlTooltip> */}
-    </>)
+                {snap.visible && <SlDrawer id="tracks-editor-pane" open={snap.show}
+                                           no-modal
+                                           contained
+                                           onSlRequestClose={handleRequestClose}
+                                           onSlHide={closeTracksEditor}
+                                           onSlShow={TrackUtils.prepareTrackEdition}>
+                    <TrackSelector onChange={TracksEditorUtils.prepareTrackEdition}/>
+                    <TrackSettings/>
+                    <div id="tracks-editor-footer" slot={'footer'}>
+                    </div>
+                </SlDrawer>}
+            </div>
+            {/* <SlTooltip content="Edit Tracks"> */}
+            {
+                snap.visible &&
+                <SlButton size="small" id={'open-currentTrack-editor'} onClick={openTracksEditor}>
+                    <SlIcon library="fa" name={FA2SL.set(faPencil)}></SlIcon>
+                </SlButton>
+            }
+            {/* </SlTooltip> */}
+        </>)
 })
