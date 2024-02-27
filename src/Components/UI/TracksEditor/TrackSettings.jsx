@@ -1,21 +1,29 @@
-import {faTrashCan}           from '@fortawesome/pro-regular-svg-icons'
+import {faTrashCan}  from '@fortawesome/pro-regular-svg-icons'
 import {
     SlCard,
     SlColorPicker,
     SlDivider,
     SlIcon,
     SlInput,
+    SlProgressBar,
     SlRange,
     SlSwitch,
     SlTooltip,
-}                             from '@shoelace-style/shoelace/dist/react'
-import {useSnapshot}          from 'valtio'
-import {NO_DEM_SERVER, Track} from '../../../classes/Track'
-import {FA2SL}                from '../../../Utils/FA2SL'
+}                    from '@shoelace-style/shoelace/dist/react'
+import {useSnapshot} from 'valtio'
+import {
+    NO_DEM_SERVER,
+    Track,
+}                    from '../../../classes/Track'
+import {
+    FA2SL,
+}                    from '../../../Utils/FA2SL'
 import {
     TracksEditorUtils,
-}                             from '../../../Utils/TracksEditorUtils'
-import {DEMServerSelection}   from '../DEMServerSelection'
+}                    from '../../../Utils/TracksEditorUtils'
+import {
+    DEMServerSelection,
+}                    from '../DEMServerSelection'
 
 
 export const TrackSettings = function TrackSettings() {
@@ -87,6 +95,7 @@ export const TrackSettings = function TrackSettings() {
      */
     const setDEMServer = (async event => {
         editorStore.track.DEMServer = event.target.value
+        editorStore.longTask = editorStore.track.DEMServer !== NO_DEM_SERVER
         TracksEditorUtils.reRenderTrackSettings()
         await rebuildTrack()
     })
@@ -126,11 +135,15 @@ export const TrackSettings = function TrackSettings() {
 
                 {/* Add DEM server selection if we do not have height initially (ie in the track file) */
                     !editorSnapshot.track.hasHeight &&
-                    <DEMServerSelection
-                        default={editorSnapshot.track?.DEMServer ?? NO_DEM_SERVER}
-                        label={'Simulate Altitude:'}
-                        onChange={setDEMServer}
-                    />}
+                    <>
+                        <DEMServerSelection
+                            default={editorSnapshot.track?.DEMServer ?? NO_DEM_SERVER}
+                            label={'Simulate Altitude:'}
+                            onChange={setDEMServer}
+                        />
+                        {editorSnapshot.longTask && <SlProgressBar indeterminate/>}
+                    </>
+                }
 
                 {/* Track line settings */}
                 <div id="track-line-settings">

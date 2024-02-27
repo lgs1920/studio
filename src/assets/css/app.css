@@ -75,6 +75,13 @@ body {
 }
 
 /**
+ * Progress Bars
+ */
+sl-progress-bar {
+    --height: var(--vt3d-gutter-xs)
+}
+
+/**
  * Cesium Crédits
  */
 

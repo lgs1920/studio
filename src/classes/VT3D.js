@@ -17,6 +17,7 @@ export class VT3D {
         // Editor store is used to manage the settings of the currentTrack in edit
         this.#editorProxy = proxy({
             track: null,
+            longTask: false,
         })
 
         // Main is global to the app
