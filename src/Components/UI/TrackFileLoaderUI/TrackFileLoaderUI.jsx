@@ -7,7 +7,6 @@ import {Track}                       from '../../../classes/Track'
 import {FA2SL}                       from '../../../Utils/FA2SL'
 import {TrackUtils}                  from '../../../Utils/TrackUtils'
 import {UINotifier}                  from '../../../Utils/UINotifier'
-import {AltitudeChoice}              from '../Modals/AltitudeChoice'
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
 
@@ -18,7 +17,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
         const track = await TrackUtils.loadTrackFromFile()
         // File is correct let's work with
         if (track !== undefined) {
-            let currentTrack = new Track(track.name, track.extension, track.content)
+            let currentTrack = new Track(track.name, track.extension, {content: track.content})
             // Check if the track already exists in context
             // If not we manage and show it.
             if (vt3d.getTrackBySlug(currentTrack.slug)?.slug === undefined) {
@@ -27,7 +26,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                     store.modals.altitudeChoice.show = true
                 }
                 currentTrack.addToContext()
-                vt3d.addToEditor()
+                vt3d.addToEditor(currentTrack)
                 await currentTrack.show()
             } else {
                 // It exists, we notify it
@@ -48,7 +47,6 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                     </SlButton>
                 </SlTooltip>
             </div>
-            <AltitudeChoice/>
         </>
     )
 
