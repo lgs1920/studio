@@ -12,33 +12,107 @@ export const INITIAL_LOADING = 'first-load'
 const CONFIGURATION = '../config.json'
 
 export class Track {
-
-    name
-    type   // gpx,kml,geojson  //TODO kmz
     slug
+    title
+    type   // gpx,kml,geojson  //TODO kmz
     geoJson
     DEMServer
-    title
+
     metrics
     hasHeight
+    color
+    thickness
     visible
 
-    constructor(name, type, content) {
-        this.name = name
-        this.title = name
+    attributes = [
+        'color',
+        'title',
+        'geoJson',
+        'title',
+        'visible',
+        'hasHeight',
+        'DEMServer',
+        'thickness',
+    ]
+
+    constructor(title, type, options = {}) {
+        this.title = title
         this.type = type
-        this.slug = AppUtils.slugify(`${name}-${type}`)
+
+        this.slug = options.slug ?? AppUtils.slugify(`${title}-${type}`)
         this.color = vt3d.configuration.track.color
         this.thickness = vt3d.configuration.track.thickness
         this.visible = true
 
         this.DEMServer = NO_DEM_SERVER
         // get GeoJson
-        this.toGeoJson(content)
+        this.toGeoJson(options.content ?? '')
+        this.setTrackName(this.title)
 
         this.checkDataConsistency()
         // Let's compute all information
         this.computeAll()
+
+    }
+
+    /**
+     * create an unic title
+     *
+     * if "my title" already exists as track title,
+     * let's change it to "my title (1) or ...(2) until ...(n)
+     * if new title already exists.
+     *
+     * @param title
+     * @return {string}
+     */
+    static unicTitle = title => {
+        let counter = 0
+        let unic = title
+
+        // Vérifie si la valeur existe déjà dans le tableau
+        let valueExists = vt3d.tracks.some(obj => obj.title === unic)
+
+        while (valueExists) {
+            counter++
+            unic = `${title} (${counter})`
+            valueExists = vt3d.tracks.some(obj => obj.title === unic)
+        }
+        return unic
+
+    }
+
+    /**
+     * Clone current track
+     *
+     * @param options {slug}
+     * @return {Track} the new track
+     */
+    static clone = (source, options = {}) => {
+        const track = new Track(source.title, source.type, options)
+        track.slug = options.slug ?? AppUtils.slugify(`${source.title}-${source.type}`)
+
+        source.attributes.forEach(attribute => {
+            track[attribute] = source[attribute]
+        })
+
+        return track
+    }
+
+    /**
+     * Set Geo Json feature name
+     *
+     * @param name
+     */
+    setTrackName(name) {
+        if (this.geoJson.type === FEATURE_COLLECTION) {
+            let index = 0
+            for (const feature of this.geoJson.features) {
+                if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
+                    this.geoJson.features[index].properties['name'] = name
+                }
+                index++
+            }
+        }
 
     }
 
@@ -49,10 +123,9 @@ export class Track {
      */
     computeAll = async () => {
         // Maybe we have some changes to operate
-        return await this.prepareGeoJson().then(async () => {
-            await this.calculateMetrics()
-            this.addToContext()
-        })
+        await this.prepareGeoJson()
+        await this.calculateMetrics()
+        this.addToContext()
     }
 
     /**
@@ -87,7 +160,7 @@ export class Track {
             console.error(error)
             // Error => we notify
             UINotifier.notifyError({
-                caption: `An error occurs during loading <strong>${trackFile.name}<strong>!`, text: error,
+                caption: `An error occurs during loading <strong>${trackFile.title}<strong>!`, text: error,
             })
             this.geoJson = undefined
         }
@@ -216,11 +289,17 @@ export class Track {
      */
     prepareGeoJson = async () => {
 
+        /**
+         * Only for Feature Collections
+         */
         if (this.geoJson.type === FEATURE_COLLECTION) {
             let index = 0
             for (const feature of this.geoJson.features) {
                 if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
                     let index = 0
+                    /**
+                     * Have height or simulate ?
+                     */
                     if (!this.hasHeight && this.DEMServer !== NO_DEM_SERVER) {
                         // Some heights info are missing. Let's simulate them
 
@@ -243,6 +322,12 @@ export class Track {
                         }
                     }
 
+                    /**
+                     * Use title as feature name
+                     */
+                    feature.properties.name = this.title
+
+
                     // TODO interpolate points to avoid GPS errors (Kalman Filter ?)
                     // TODO Clean
 
@@ -250,6 +335,8 @@ export class Track {
                 }
                 index++
             }
+
+
         }
     }
 
@@ -258,7 +345,7 @@ export class Track {
      *
      */
     addToContext = (setToCurrent = true) => {
-        vt3d.addTrack(this)
+        vt3d.saveTrack(this)
         if (setToCurrent) {
             vt3d.currentTrack = this
         }
@@ -279,6 +366,10 @@ export class Track {
         await this.show(SIMULATE_HEIGHT)
     }
 
+    showAfterNewSettings = async () => {
+        await this.show()
+    }
+
     checkDataConsistency = () => {
         this.hasHeight = true
         if (this.geoJson.type === FEATURE_COLLECTION) {
@@ -294,5 +385,6 @@ export class Track {
             }
         }
     }
+
 
 }
