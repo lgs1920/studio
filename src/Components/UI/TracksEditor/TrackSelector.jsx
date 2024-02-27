@@ -11,7 +11,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     }
     const store = vt3d.mainProxy.components.tracksEditor
     const snap = useSnapshot(store)
-    const snapEditor = useSnapshot(vt3d.editorProxy)
+    const editorSnapshot = useSnapshot(vt3d.editorProxy)
 
     const several = snap.list.length > 1
 
@@ -43,20 +43,21 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
 
     // set Default
     store.currentTrack = vt3d.currentTrack?.slug
-    
+
     return (
         <>
             {
                 several &&
                 <SlSelect hoist label={props.label}
-                          value={snapEditor.track.slug}
+                          value={editorSnapshot.track.slug}
                           onSlChange={props.onChange}
                           key={snap.trackListKey}
+                          label={'Select a track:'}
                 >
                     <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
                     {tracks.map(track =>
-                        <SlOption key={track.slug} value={track.slug}>{track.title}</SlOption>,
+                        <SlOption key={track.title} value={track.slug}>{track.title}</SlOption>,
                     )}
                 </SlSelect>
             }
