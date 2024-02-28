@@ -1,5 +1,6 @@
-import {getFileAsString} from 'easy-file-picker'
+import { getFileAsString } from 'easy-file-picker'
 
+/* https://github.com/danisss9/easy-file-picker */
 export class FileUtils {
 
 
