@@ -1,29 +1,20 @@
-import {faTrashCan}  from '@fortawesome/pro-regular-svg-icons'
+import { faTrashCan }  from '@fortawesome/pro-regular-svg-icons'
 import {
-    SlCard,
-    SlColorPicker,
-    SlDivider,
-    SlIcon,
-    SlInput,
-    SlProgressBar,
-    SlRange,
-    SlSwitch,
-    SlTooltip,
-}                    from '@shoelace-style/shoelace/dist/react'
-import {useSnapshot} from 'valtio'
+    SlCard, SlColorPicker, SlDivider, SlIcon, SlInput, SlProgressBar, SlRange, SlSwitch, SlTooltip,
+}                      from '@shoelace-style/shoelace/dist/react'
+import { useSnapshot } from 'valtio'
 import {
-    NO_DEM_SERVER,
-    Track,
-}                    from '../../../classes/Track'
+    NO_DEM_SERVER, Track,
+}                      from '../../../classes/Track'
 import {
     FA2SL,
-}                    from '../../../Utils/FA2SL'
+}                      from '../../../Utils/FA2SL'
 import {
     TracksEditorUtils,
-}                    from '../../../Utils/TracksEditorUtils'
+}                      from '../../../Utils/TracksEditorUtils'
 import {
     DEMServerSelection,
-}                    from '../DEMServerSelection'
+}                      from '../DEMServerSelection'
 
 
 export const TrackSettings = function TrackSettings() {
@@ -98,14 +89,27 @@ export const TrackSettings = function TrackSettings() {
         editorStore.track.DEMServer = event.target.value
         editorStore.longTask = editorStore.track.DEMServer !== NO_DEM_SERVER
         TracksEditorUtils.reRenderTrackSettings()
-        await rebuildTrack()
     })
 
     /**
      * Remove track
      */
     const removeTrack = () => {
-        alert('Not yet implemented!')
+        const store = vt3d.mainProxy.components.tracksEditor
+        const track = editorStore.track.slug
+        const index = store.list.findIndex((list) => list === track)
+        if (index >= 0) {
+            // Delete from store
+            store.list.splice(index, 1)
+            // Delete from context
+            vt3d.tracks.splice(index, 1)
+        }
+        vt3d.currentTrack = vt3d.getTrackBySlug(store.list[0])
+
+        TracksEditorUtils.reRenderTracksList()
+        TracksEditorUtils.reRenderTrackSettings()
+
+        //TODO remove track ongraph
     }
 
 
