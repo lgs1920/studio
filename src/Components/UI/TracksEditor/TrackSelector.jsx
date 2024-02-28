@@ -1,8 +1,8 @@
-import {faChevronDown}              from '@fortawesome/pro-regular-svg-icons'
-import {SlIcon, SlOption, SlSelect} from '@shoelace-style/shoelace/dist/react'
-import {forwardRef}                 from 'react'
-import {useSnapshot}                from 'valtio'
-import {FA2SL}                      from '../../../Utils/FA2SL'
+import { faChevronDown }              from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
+import { forwardRef }                 from 'react'
+import { useSnapshot }                from 'valtio'
+import { FA2SL }                      from '../../../Utils/FA2SL'
 
 export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
 
@@ -52,7 +52,6 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
                           value={editorSnapshot.track.slug}
                           onSlChange={props.onChange}
                           key={snap.trackListKey}
-                          label={'Select a track:'}
                 >
                     <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
