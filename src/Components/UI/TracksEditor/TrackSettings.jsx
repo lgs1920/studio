@@ -116,8 +116,14 @@ export const TrackSettings = function TrackSettings() {
             }
             vt3d.currentTrack = vt3d.getTrackBySlug(store.list[0])
 
-            TracksEditorUtils.reRenderTracksList()
-            TracksEditorUtils.reRenderTrackSettings()
+            // If we have tracks, lets Dialog opened, else we close it
+            if (vt3d.currentTrack !== undefined) {
+                TracksEditorUtils.reRenderTracksList()
+                TracksEditorUtils.reRenderTrackSettings()
+            } else {
+                vt3d.mainProxy.components.tracksEditor.visible = false
+            }
+
 
             //TODO remove track ongraph
         }
