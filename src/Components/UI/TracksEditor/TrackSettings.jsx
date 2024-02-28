@@ -15,9 +15,17 @@ import {
 import {
     DEMServerSelection,
 }                      from '../DEMServerSelection'
+import {
+    useConfirm,
+}                      from '../Modals/ConfirmUI'
 
 
 export const TrackSettings = function TrackSettings() {
+
+    const [ConfirmRemoveTrackDialog, confirmRemoveTrack] = useConfirm(
+        'Remove Track',
+        'Are you sure you want to remove this track ?',
+    )
 
     const editorStore = vt3d.editorProxy
     const editorSnapshot = useSnapshot(editorStore)
@@ -94,22 +102,25 @@ export const TrackSettings = function TrackSettings() {
     /**
      * Remove track
      */
-    const removeTrack = () => {
-        const store = vt3d.mainProxy.components.tracksEditor
-        const track = editorStore.track.slug
-        const index = store.list.findIndex((list) => list === track)
-        if (index >= 0) {
-            // Delete from store
-            store.list.splice(index, 1)
-            // Delete from context
-            vt3d.tracks.splice(index, 1)
+    const removeTrack = async () => {
+        const confirmation = await confirmRemoveTrack()
+        if (confirmation) {
+            const store = vt3d.mainProxy.components.tracksEditor
+            const track = editorStore.track.slug
+            const index = store.list.findIndex((list) => list === track)
+            if (index >= 0) {
+                // Delete from store
+                store.list.splice(index, 1)
+                // Delete from context
+                vt3d.tracks.splice(index, 1)
+            }
+            vt3d.currentTrack = vt3d.getTrackBySlug(store.list[0])
+
+            TracksEditorUtils.reRenderTracksList()
+            TracksEditorUtils.reRenderTrackSettings()
+
+            //TODO remove track ongraph
         }
-        vt3d.currentTrack = vt3d.getTrackBySlug(store.list[0])
-
-        TracksEditorUtils.reRenderTracksList()
-        TracksEditorUtils.reRenderTrackSettings()
-
-        //TODO remove track ongraph
     }
 
 
@@ -196,6 +207,7 @@ export const TrackSettings = function TrackSettings() {
                             <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
                         </a>
                     </SlTooltip>
+                    <ConfirmRemoveTrackDialog/>
                 </div>
             </SlCard>
         }
