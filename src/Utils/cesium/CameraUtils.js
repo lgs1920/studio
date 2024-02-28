@@ -1,5 +1,5 @@
-import {Cartesian3, HeadingPitchRange, Math, Transforms} from 'cesium'
-import {update}                                          from '../Components/UI/TextValueUI/TextValueUI.jsx'
+import { Cartesian3, HeadingPitchRange, Math, Transforms } from 'cesium'
+import { update }                                          from '../../Components/UI/TextValueUI/TextValueUI.jsx'
 
 export class CameraUtils {
 

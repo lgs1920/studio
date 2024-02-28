@@ -1,12 +1,12 @@
 import './style.css'
-import {faMapLocation}               from '@fortawesome/pro-regular-svg-icons'
-import {SlButton, SlIcon, SlTooltip} from '@shoelace-style/shoelace/dist/react'
-import {forwardRef}                  from 'react'
-import {useSnapshot}                 from 'valtio'
-import {Track}                       from '../../../classes/Track'
-import {FA2SL}                       from '../../../Utils/FA2SL'
-import {TrackUtils}                  from '../../../Utils/TrackUtils'
-import {UINotifier}                  from '../../../Utils/UINotifier'
+import { faMapLocation }               from '@fortawesome/pro-regular-svg-icons'
+import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { forwardRef }                  from 'react'
+import { useSnapshot }                 from 'valtio'
+import { Track }                       from '../../../classes/Track'
+import { TrackUtils }                  from '../../../Utils/cesium/TrackUtils'
+import { FA2SL }                       from '../../../Utils/FA2SL'
+import { UINotifier }                  from '../../../Utils/UINotifier'
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
 

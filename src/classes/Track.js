@@ -1,9 +1,9 @@
-import {gpx, kml} from '@tmcw/togeojson'
+import { gpx, kml } from '@tmcw/togeojson'
 
-import {DateTime}                                    from 'luxon'
-import {AppUtils}                                    from '../Utils/AppUtils'
-import {Mobility}                                    from '../Utils/Mobility'
-import {FEATURE_COLLECTION, LINE_STRING, TrackUtils} from '../Utils/TrackUtils'
+import { DateTime }                                    from 'luxon'
+import { AppUtils }                                    from '../Utils/AppUtils'
+import { FEATURE_COLLECTION, LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
+import { Mobility }                                    from '../Utils/Mobility'
 
 export const NO_DEM_SERVER = 'none'
 export const SIMULATE_HEIGHT = 'simulate-height'

@@ -1,14 +1,14 @@
 import './style.css'
 
-import {faAngle, faCompass, faMountains, faVideo} from '@fortawesome/pro-regular-svg-icons'
-import {FontAwesomeIcon}                          from '@fortawesome/react-fontawesome'
-import {SlAnimation, SlButton, SlTooltip}         from '@shoelace-style/shoelace/dist/react'
-import {forwardRef, useEffect}                    from 'react'
-import {useCesium}                                from 'resium'
-import {useSnapshot}                              from 'valtio'
-import {CameraUtils}                              from '../../../Utils/CameraUtils.js'
-import {FA2SL}                                    from '../../../Utils/FA2SL'
-import {TextValueUI}                              from '../TextValueUI/TextValueUI.jsx'
+import { faAngle, faCompass, faMountains, faVideo } from '@fortawesome/pro-regular-svg-icons'
+import { FontAwesomeIcon }                          from '@fortawesome/react-fontawesome'
+import { SlAnimation, SlButton, SlTooltip }         from '@shoelace-style/shoelace/dist/react'
+import { forwardRef, useEffect }                    from 'react'
+import { useCesium }                                from 'resium'
+import { useSnapshot }                              from 'valtio'
+import { CameraUtils }                              from '../../../Utils/cesium/CameraUtils.js'
+import { FA2SL }                                    from '../../../Utils/FA2SL'
+import { TextValueUI }                              from '../../UI/TextValueUI/TextValueUI.jsx'
 
 
 export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref) {
