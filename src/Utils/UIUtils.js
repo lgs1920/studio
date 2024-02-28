@@ -1,6 +1,6 @@
 import * as Cesium from 'cesium'
-import {VT3D}      from '../classes/VT3D'
-import {FA2SL}     from './FA2SL'
+import { VT3D }    from '../classes/VT3D'
+import { FA2SL }   from './FA2SL'
 
 export const CONFIGURATION = '../config.json'
 
@@ -31,7 +31,6 @@ export class UIUtils {
 
         // Register Font Awesome icons in ShoeLace
         FA2SL.useFontAwesomeInShoelace('fa')
-
 
         // Shoelace needs to avoid bubbling events. Here's an helper
         window.isOK = (event) => {
