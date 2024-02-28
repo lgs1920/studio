@@ -1,8 +1,8 @@
-import * as Cesium                        from 'cesium'
-import {Color, GeoJsonDataSource}         from 'cesium'
-import {INITIAL_LOADING, SIMULATE_HEIGHT} from '../classes/Track'
-import {FileUtils}                        from './FileUtils.js'
-import {UINotifier}                       from './UINotifier'
+import * as Cesium                          from 'cesium'
+import { Color, GeoJsonDataSource }         from 'cesium'
+import { INITIAL_LOADING, SIMULATE_HEIGHT } from '../classes/Track'
+import { FileUtils }                        from './FileUtils.js'
+import { UINotifier }                       from './UINotifier'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE = 'Feature', FEATURE_COLLECTION = 'FeatureCollection', LINE_STRING = 'LineString'
@@ -73,7 +73,7 @@ export class TrackUtils {
             // Load Geo Json
             const source = new GeoJsonDataSource(name)
             dataSource = await source.load(geoJson, {
-                ...commonOptions, stroke: trackStroke.color, strokeWidth: trackStroke.width,
+                ...commonOptions, stroke: trackStroke.color, strokeWidth: trackStroke.thickness,
             })
 
             vt3d.viewer.dataSources.add(dataSource)
