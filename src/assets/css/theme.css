@@ -53,6 +53,11 @@
     border-radius: var(--sl-input-border-radius-small);
 }
 
+
+/*******************************************************************************
+ * Buttons
+ */
+
 button.button--standard.button--default::part(base) {
     background-color: var(--vt3d-button-bg-color);
     border-color: var(--vt3d-button-border-color);
@@ -65,3 +70,8 @@ button.button--standard.button--default::part(base) {
     color: var(--vt3d-button-hover-color);
 }
 
+.buttons-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--vt3d-gutter-s);
+}
