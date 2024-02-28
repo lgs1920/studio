@@ -1,8 +1,8 @@
 import * as Cesium                          from 'cesium'
 import { Color, GeoJsonDataSource }         from 'cesium'
-import { INITIAL_LOADING, SIMULATE_HEIGHT } from '../classes/Track'
-import { FileUtils }                        from './FileUtils.js'
-import { UINotifier }                       from './UINotifier'
+import { INITIAL_LOADING, SIMULATE_HEIGHT } from '../../classes/Track'
+import { FileUtils }                        from '../FileUtils.js'
+import { UINotifier }                       from '../UINotifier'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE = 'Feature', FEATURE_COLLECTION = 'FeatureCollection', LINE_STRING = 'LineString'
@@ -95,7 +95,12 @@ export class TrackUtils {
                     UINotifier.notifySuccess({
                         caption: caption, text: text,
                     })
-                    vt3d.viewer.zoomTo(dataSource.entities)
+                    const cameraOffset = new Cesium.HeadingPitchRange(
+                        Cesium.Math.toRadians(vt3d.configuration.center.camera.heading),
+                        Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch),
+                        vt3d.configuration.center.camera.range,
+                    )
+                    vt3d.viewer.zoomTo(dataSource.entities, cameraOffset)
                 })
                 .catch(error => {
                     // Error => we notify
