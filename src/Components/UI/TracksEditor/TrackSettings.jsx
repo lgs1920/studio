@@ -7,6 +7,9 @@ import {
     NO_DEM_SERVER, Track,
 }                      from '../../../classes/Track'
 import {
+    TrackUtils,
+}                      from '../../../Utils/cesium/TrackUtils'
+import {
     FA2SL,
 }                      from '../../../Utils/FA2SL'
 import {
@@ -18,7 +21,6 @@ import {
 import {
     useConfirm,
 }                      from '../Modals/ConfirmUI'
-
 
 export const TrackSettings = function TrackSettings() {
 
@@ -123,6 +125,7 @@ export const TrackSettings = function TrackSettings() {
             } else {
                 vt3d.mainProxy.components.tracksEditor.visible = false
             }
+            await rebuildTrack()
 
 
             //TODO remove track ongraph
@@ -144,8 +147,14 @@ export const TrackSettings = function TrackSettings() {
             slug: unproxyfied.slug,
             title: unproxyfied.title,
         })
+        // get entityet voir ce qu'ilfaut faire
+
+        const path = TrackUtils.getEntities(track.slug)
+
         await track.computeAll()
+        track.addTipsMarkers()
         vt3d.saveTrack(track)
+
         vt3d.viewer.dataSources.removeAll()
         if (track.visible) {
             track.showAfterNewSettings()
