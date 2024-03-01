@@ -1,4 +1,4 @@
-import {proxy} from 'valtio'
+import { proxy } from 'valtio'
 
 export class VT3D {
     #mainProxy
@@ -10,7 +10,6 @@ export class VT3D {
 
     constructor() {
         // TODO save/read tracks in DB (local or remote)
-
 
         // Declare Stores and snapshots for states management by @valtio
 
@@ -128,5 +127,6 @@ export class VT3D {
 
     addToEditor = (track) => {
         this.editorProxy.track = track
+        this.editorProxy.track.entitiesId = track.entitiesId // we need this  TODO Why?
     }
 }
