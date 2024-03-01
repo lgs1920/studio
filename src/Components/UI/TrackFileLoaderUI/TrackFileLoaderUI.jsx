@@ -27,7 +27,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                 }
                 currentTrack.addToContext()
                 vt3d.addToEditor(currentTrack)
-                await currentTrack.show()
+                await currentTrack.load()
             } else {
                 // It exists, we notify it
                 UINotifier.notifyWarning({
