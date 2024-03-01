@@ -1,5 +1,11 @@
-import * as Cesium                                               from 'cesium'
-import { MARKER_CIRCLE, MARKER_COLOR, MARKER_ICON, MARKER_TEXT } from '../../classes/MapMarker'
+import * as Cesium from 'cesium'
+
+// Pin Marker Type
+export const MARKER_ICON = 1
+export const MARKER_TEXT = 2
+export const MARKER_COLOR = 3
+//Other paths
+export const MARKER_CIRCLE = 4
 
 export class MarkerUtils {
     static draw = (marker) => {
@@ -41,6 +47,7 @@ export class MarkerUtils {
                 break
             case MARKER_COLOR:
                 markerOptions.billboard.image = pinBuilder.fromColor(backgroundColor, marker.size).toDataURL()
+                console.log(pinBuilder.fromColor(backgroundColor, marker.size).toDataURL())
                 entity = vt3d.viewer.entities.add(markerOptions)
                 break
             case MARKER_TEXT:
