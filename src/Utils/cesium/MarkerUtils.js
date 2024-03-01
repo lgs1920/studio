@@ -1,4 +1,5 @@
-import * as Cesium from 'cesium'
+import { icon, library } from '@fortawesome/fontawesome-svg-core'
+import * as Cesium       from 'cesium'
 
 // Pin Marker Type
 export const MARKER_ICON = 1
@@ -16,13 +17,10 @@ export class MarkerUtils {
             position: Cesium.Cartesian3.fromDegrees(marker.coordinates[0], marker.coordinates[1], marker.coordinates[2]),
         }
         const pinBuilder = new Cesium.PinBuilder()
-        if ([MARKER_COLOR, MARKER_COLOR, MARKER_TEXT].includes(marker.type)) {
-            markerOptions.billboard = {
-                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-            }
-        } else {
 
+        markerOptions.billboard = {
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         }
 
         const backgroundColor = Cesium.Color.fromCssColorString(marker.backgroundColor)
@@ -47,7 +45,6 @@ export class MarkerUtils {
                 break
             case MARKER_COLOR:
                 markerOptions.billboard.image = pinBuilder.fromColor(backgroundColor, marker.size).toDataURL()
-                console.log(pinBuilder.fromColor(backgroundColor, marker.size).toDataURL())
                 entity = vt3d.viewer.entities.add(markerOptions)
                 break
             case MARKER_TEXT:
@@ -55,7 +52,6 @@ export class MarkerUtils {
                 entity = vt3d.viewer.entities.add(markerOptions)
                 break
             case MARKER_ICON:
-                //TODO
                 markerOptions.billboard.image = pinBuilder.fromUrl(MarkerUtils.useFontAwesome(marker.icon), backgroundColor, marker.size)
                 entity = vt3d.viewer.entities.add(markerOptions)
                 break

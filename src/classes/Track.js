@@ -1,10 +1,12 @@
-import { gpx, kml } from '@tmcw/togeojson'
+import { faFlagCheckered } from '@fortawesome/pro-regular-svg-icons'
+import { gpx, kml }        from '@tmcw/togeojson'
 
 import { DateTime }                                    from 'luxon'
 import { AppUtils }                                    from '../Utils/AppUtils'
+import { MARKER_COLOR, MARKER_ICON }                   from '../Utils/cesium/MarkerUtils'
 import { FEATURE_COLLECTION, LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
 import { Mobility }                                    from '../Utils/Mobility'
-import { MapMarker, MARKER_COLOR }                     from './MapMarker'
+import { MapMarker }                                   from './MapMarker'
 
 export const NO_DEM_SERVER = 'none'
 export const SIMULATE_HEIGHT = 'simulate-height'
@@ -132,8 +134,8 @@ export class Track {
                     this.markers.set('stop', new MapMarker({
                             name: 'stop',
                             coordinates: [stop[0], stop[1]],
-                            type: MARKER_COLOR,
-                            // icon: faFlagCheckered,
+                            type: MARKER_ICON,
+                            icon: faFlagCheckered,
                             backgroundColor: '#00ff00',
                             description: 'End point',
                         },
