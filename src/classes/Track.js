@@ -4,6 +4,7 @@ import { DateTime }                                    from 'luxon'
 import { AppUtils }                                    from '../Utils/AppUtils'
 import { FEATURE_COLLECTION, LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
 import { Mobility }                                    from '../Utils/Mobility'
+import { MapMarker, MARKER_COLOR }                     from './MapMarker'
 
 export const NO_DEM_SERVER = 'none'
 export const SIMULATE_HEIGHT = 'simulate-height'
@@ -12,20 +13,33 @@ export const INITIAL_LOADING = 'first-load'
 const CONFIGURATION = '../config.json'
 
 export class Track {
-    slug
-    title
-    type   // gpx,kml,geojson  //TODO kmz
-    geoJson
-    DEMServer
 
-    metrics
-    hasHeight
-    color
-    thickness
-    visible
+    slug        // unic Id for the track
+    title       // Track title
+    type        // gpx,kml,geojson  //TODO kmz
+    geoJson     // All the data are translated into GeoJson
+    metrics     // All the metrics associated to the track
+    visible     // Is visible ?
+
+    hasHeight   // Is fail contains altitudes ?
+    DEMServer   // DEM server associate if we need altitude
+
+    color       // The color associated
+    thickness   // The thickness associated
+    entitiesId  // The entities Id
+    markers = new Map()// external markers
 
     attributes = [
-        'color', 'title', 'geoJson', 'title', 'visible', 'hasHeight', 'DEMServer', 'thickness',
+        'color',
+        'entitiesId',
+        'title',
+        'geoJson',
+        'title',
+        'visible',
+        'hasHeight',
+        'DEMServer',
+        'thickness',
+        'markers',
     ]
 
     constructor(title, type, options = {}) {
@@ -44,7 +58,9 @@ export class Track {
 
         this.checkDataConsistency()
         // Let's compute all information
-        this.computeAll()
+        this.computeAll().then(
+            this.addTipsMarkers(),
+        )
 
     }
 
@@ -58,7 +74,8 @@ export class Track {
      * @param title
      * @return {string}
      */
-    static unicTitle = title => {
+    static
+    unicTitle = title => {
         let counter = 0
         let unic = title
 
@@ -80,7 +97,8 @@ export class Track {
      * @param options {slug}
      * @return {Track} the new track
      */
-    static clone = (source, exceptions = {}) => {
+    static
+    clone = (source, exceptions = {}) => {
         const track = new Track(source.title, source.type, exceptions)
 
         source.attributes.forEach(attribute => {
@@ -92,6 +110,49 @@ export class Track {
         })
 
         return track
+    }
+
+    addTipsMarkers(coordinates) {
+
+        if (this.geoJson.type === FEATURE_COLLECTION) {
+            let index = 0
+            for (const feature of this.geoJson.features) {
+                if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
+                    // Add start an Stop Markers
+                    const start = feature.geometry.coordinates[0]
+                    this.markers.set('start', new MapMarker({
+                            name: 'start',
+                            coordinates: [start[0], start[1]],
+                            type: MARKER_COLOR,
+                            backgroundColor: '#ff0000',
+                            description: 'Start point',
+                        },
+                    ))
+                    const stop = feature.geometry.coordinates[feature.geometry.coordinates.length - 1]
+                    this.markers.set('stop', new MapMarker({
+                            name: 'stop',
+                            coordinates: [stop[0], stop[1]],
+                            type: MARKER_COLOR,
+                            // icon: faFlagCheckered,
+                            backgroundColor: '#00ff00',
+                            description: 'End point',
+                        },
+                    ))
+                }
+                index++
+            }
+        }
+    }
+
+    /**
+     * Add this currentTrack to the application context
+     *
+     */
+    addToContext = (setToCurrent = true) => {
+        vt3d.saveTrack(this)
+        if (setToCurrent) {
+            vt3d.currentTrack = this
+        }
     }
 
     /**
@@ -109,7 +170,6 @@ export class Track {
                 index++
             }
         }
-
     }
 
     /**
@@ -342,8 +402,14 @@ export class Track {
                         // TODO interpolate points to avoid GPS errors (Kalman Filter ?)
                         // TODO Clean
 
+
+                        // Add Current GeoJson
                         this.geoJson.features[index] = feature
+
+
                     }
+
+
                     index++
                 }
 
@@ -353,33 +419,27 @@ export class Track {
     }
 
     /**
-     * Add this currentTrack to the application context
-     *
-     */
-    addToContext = (setToCurrent = true) => {
-        vt3d.saveTrack(this)
-        if (setToCurrent) {
-            vt3d.currentTrack = this
-        }
-    }
-
-    /**
-     * Show the Track on the globe
+     * Load the Track on the globe
      *
      * @return {Promise<void>}
      */
-    show = async (action = INITIAL_LOADING) => {
-        await TrackUtils.showTrack(this.geoJson, this.title, {
+    load = async (action = INITIAL_LOADING) => {
+        this.entitiesId = TrackUtils.loadTrack(this.geoJson, this.slug, {
             color: this.color, thickness: this.thickness,
-        }, action)
+        }, action).then(() => {
+            this.markers.forEach(marker => {
+                marker.draw()
+            })
+        })
+
     }
 
     showAfterHeightSimulation = async () => {
-        await this.show(SIMULATE_HEIGHT)
+        await this.load(SIMULATE_HEIGHT)
     }
 
     showAfterNewSettings = async () => {
-        await this.show()
+        await this.load()
     }
 
     checkDataConsistency = () => {
@@ -396,6 +456,10 @@ export class Track {
                 }
             }
         }
+    }
+
+    getInternalId = () => {
+        return TrackUtils.getEntities(this.slug, this.entitiesId)
     }
 
 
