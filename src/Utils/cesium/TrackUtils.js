@@ -51,7 +51,7 @@ export class TrackUtils {
      * @return {Promise<void>}
      *
      */
-    static showTrack = async (geoJson, name = '', line = null, action = 'load') => {
+    static loadTrack = async (geoJson, name = '', line = null, action = 'load') => {
         let dataSource
         const configuration = vt3d.configuration
         if (line === null) {
@@ -68,7 +68,6 @@ export class TrackUtils {
         const commonOptions = {
             clampToGround: true, name: name, markerSymbol: '<i>?</i>',
         }
-
         try {
             // Load Geo Json
             const source = new GeoJsonDataSource(name)
@@ -76,7 +75,7 @@ export class TrackUtils {
                 ...commonOptions, stroke: trackStroke.color, strokeWidth: trackStroke.thickness,
             })
 
-            vt3d.viewer.dataSources.add(dataSource)
+            return vt3d.viewer.dataSources.add(dataSource)
                 .then(function (dataSource) {
                     // Ok => we notify
                     let caption = '', text = ''
@@ -95,12 +94,12 @@ export class TrackUtils {
                     UINotifier.notifySuccess({
                         caption: caption, text: text,
                     })
-                    const cameraOffset = new Cesium.HeadingPitchRange(
-                        Cesium.Math.toRadians(vt3d.configuration.center.camera.heading),
-                        Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch),
-                        vt3d.configuration.center.camera.range,
-                    )
+                    const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading), Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
                     vt3d.viewer.zoomTo(dataSource.entities, cameraOffset)
+
+                    // We return the entities entitiesId in order to work on it later
+                    return dataSource.entities.id
+
                 })
                 .catch(error => {
                     // Error => we notify
@@ -157,7 +156,7 @@ export class TrackUtils {
 
                     const properties = TrackUtils.checkIfDataContainsHeightOrTime(feature)
                     let index = 0
-                    const temp = []
+                    const newLine = []
 
                     for (const coordinates of feature.geometry.coordinates) {
                         let point = {
@@ -166,10 +165,10 @@ export class TrackUtils {
                         if (properties.hasTime) {
                             point.time = feature.properties?.coordinateProperties?.times[index]
                         }
-                        temp.push(point)
+                        newLine.push(point)
                         index++
                     }
-                    dataExtract.push(temp)
+                    dataExtract.push(newLine)
                 }
             }
         }
@@ -197,6 +196,22 @@ export class TrackUtils {
 
         return height
 
+    }
+
+    /**
+     * Retrieve the entities
+     *
+     * @param name  {string|null}   name of the datasource
+     */
+    static getEntities = (name) => {
+        // if we do not have datasource name, we'll find in all datasource
+        let dataSource
+        for (let i = 0; i < vt3d.viewer.dataSources.length; i++) {
+            const item = vt3d.viewer.dataSources.get(i)
+            if (item.name === name) {
+                return item.entities
+            }
+        }
     }
 
 }
