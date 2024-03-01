@@ -1,12 +1,5 @@
-import { MarkerUtils } from '../Utils/cesium/MarkerUtils'
+import { MARKER_CIRCLE, MarkerUtils } from '../Utils/cesium/MarkerUtils'
 
-
-// Pin Marker Type
-export const MARKER_ICON = 1
-export const MARKER_TEXT = 2
-export const MARKER_COLOR = 3
-//Other paths
-export const MARKER_CIRCLE = 4
 
 export class MapMarker {
 
@@ -20,18 +13,18 @@ export class MapMarker {
     static getMarkerById = (id => {
         return MapMarker.markers.filter(marker => marker.id === id)[0]
     })
-    #type
-    #coordinates
-    #backgroundColor
-    #foregroundColor
-    #text
-    #icon
-    #size
-    #marker
-    #name
-    #border
-    #description
-    #image
+    type
+    coordinates
+    backgroundColor
+    foregroundColor
+    text
+    icon
+    size
+    marker
+    name
+    border
+    description
+    image
 
     constructor(options) {
         this.type = options.type
