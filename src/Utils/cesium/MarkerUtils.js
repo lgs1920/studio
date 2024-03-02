@@ -1,4 +1,5 @@
 import { icon, library } from '@fortawesome/fontawesome-svg-core'
+import { Canvg }         from 'canvg'
 import * as Cesium       from 'cesium'
 
 // Pin Marker Type
@@ -8,6 +9,8 @@ export const PIN_COLOR = 3
 //Other paths
 export const PIN_CIRCLE = 4
 export const JUST_ICON = 5
+
+export const NO_MARKER_COLOR = 'transparent'
 
 export class MarkerUtils {
     static draw = async (marker) => {
@@ -20,8 +23,7 @@ export class MarkerUtils {
         const pinBuilder = new Cesium.PinBuilder()
 
         markerOptions.billboard = {
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         }
 
         const backgroundColor = Cesium.Color.fromCssColorString(marker.backgroundColor)
@@ -73,56 +75,38 @@ export class MarkerUtils {
         const html = icon(marker.icon).html[0]
         // Get SVG
         const svg = (new DOMParser()).parseFromString(html, 'image/svg+xml').querySelector('svg')
-        svg.querySelector('path').setAttribute('fill', 'yellow')
+        // add foreground
+        svg.querySelector('path').setAttribute('fill', marker.foregroundColor)
+        if (marker.backgroundColor !== NO_MARKER_COLOR) {
+            // add background
+            const rectangle = document.createElement('rect')
+            rectangle.setAttribute('rx', 10)
+            rectangle.setAttribute('ry', 10)
+            rectangle.setAttribute('width', '100%')
+            rectangle.setAttribute('height', '100%')
+            rectangle.setAttribute('fill', marker.backgroundColor)
+            svg.insertBefore(rectangle, svg.firstChild)
+        }
+        
         return {
             src: `data:image/svg+xml,${encodeURIComponent(svg.outerHTML)}`,
+            html: svg.outerHTML,
             width: svg.viewBox.baseVal.width,
             height: svg.viewBox.baseVal.height,
         }
     }
 
     static useOnlyFontAwesome = async (marker) => {
-
-        function loadElement(imageURL) {
-            return new Promise((resolve) => {
-                const image = new Image()
-                image.addEventListener('load', () => {
-                    resolve(image)
-                })
-                image.src = imageURL
-            })
-        }
-
         const canvas = document.createElement('canvas')
         const context = canvas.getContext('2d')
-        const image = MarkerUtils.useFontAwesome(marker)
-        const ratio = window.devicePixelRatio || 1
-        // context.scale(ratio, ratio)
         context.imageSmoothingEnabled = true
         context.imageSmoothingQuality = 'high'
-        canvas.width = image.width * ratio * marker.size / image.height
-        canvas.height = ratio * marker.size
-        const v = await canvg.from(context)
-
-        // 1. Multiply the canvas's width and height by the devicePixelRatio
-
-
-        // 2. Force it to display at the original (logical) size with CSS or style attributes
-        // canvas.style.width = marker.size + 'px'
-        // canvas.style.height = marker.size + 'px'
-
-        // 3. Scale the context so you can draw on it without considering the ratio.
-
-        return loadElement(image.src)
-            .then((image) => {
-                var canvasW = canvas.width, canvasH = canvas.height
-                var imgW = image.naturalWidth || canvasW, imgH = image.naturalHeight || canvasH
-
-                console.log(imgW, imgH, canvasW, canvasH)
-                context.drawImage(image, 0, 0, canvasW, imgH * canvasW / imgW)
-                return canvas
-            })
-
-
+        const image = MarkerUtils.useFontAwesome(marker)
+        const ratio = image.height / image.width
+        canvas.width = marker.size * (ratio > 1 ? 1 : ratio)
+        canvas.height = marker.size * (ratio > 1 ? ratio : 1)
+        const v = Canvg.fromString(context, MarkerUtils.useFontAwesome(marker).html)
+        v.start()
+        return canvas
     }
 }

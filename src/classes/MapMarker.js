@@ -1,4 +1,4 @@
-import { MARKER_CIRCLE, MarkerUtils } from '../Utils/cesium/MarkerUtils'
+import { MarkerUtils, NO_MARKER_COLOR, PIN_CIRCLE } from '../Utils/cesium/MarkerUtils'
 
 
 export class MapMarker {
@@ -30,12 +30,12 @@ export class MapMarker {
         this.type = options.type
         this.name = options.name
         this.coordinates = options.coordinates || {}
-        this.backgroundColor = options.backgroundColor
-        this.foregroundColor = options.foregroundColor
+        this.backgroundColor = options.backgroundColor ?? NO_MARKER_COLOR
+        this.foregroundColor = options.foregroundColor ?? 'white'
         this.border = options.border ?? 0
         this.text = options.text ?? undefined
         this.icon = options.icon ?? undefined
-        this.size = options.size ?? (this.type === MARKER_CIRCLE ? 10 : 48)
+        this.size = options.size ?? (this.type === PIN_CIRCLE ? 10 : 32)
         this.description = options.description ?? undefined
         this.image = options.image ?? undefined
 
