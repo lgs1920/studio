@@ -1,9 +1,9 @@
-import { faFlagCheckered } from '@fortawesome/pro-regular-svg-icons'
-import { gpx, kml }        from '@tmcw/togeojson'
+import { faLocationDot } from '@fortawesome/pro-solid-svg-icons'
+import { gpx, kml }      from '@tmcw/togeojson'
 
 import { DateTime }                                    from 'luxon'
 import { AppUtils }                                    from '../Utils/AppUtils'
-import { MARKER_COLOR, MARKER_ICON }                   from '../Utils/cesium/MarkerUtils'
+import { JUST_ICON }                                   from '../Utils/cesium/MarkerUtils'
 import { FEATURE_COLLECTION, LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
 import { Mobility }                                    from '../Utils/Mobility'
 import { MapMarker }                                   from './MapMarker'
@@ -120,13 +120,15 @@ export class Track {
             let index = 0
             for (const feature of this.geoJson.features) {
                 if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
-                    // Add start an Stop Markers
+                    // Add start and Stop Markers
                     const start = feature.geometry.coordinates[0]
                     this.markers.set('start', new MapMarker({
                             name: 'start',
                             coordinates: [start[0], start[1]],
-                            type: MARKER_COLOR,
-                            backgroundColor: '#ff0000',
+                            type: JUST_ICON,
+                            size: 16,
+                            icon: faLocationDot,
+                            foregroundColor: '#ff0000',
                             description: 'Start point',
                         },
                     ))
@@ -134,9 +136,10 @@ export class Track {
                     this.markers.set('stop', new MapMarker({
                             name: 'stop',
                             coordinates: [stop[0], stop[1]],
-                            type: MARKER_ICON,
-                            icon: faFlagCheckered,
-                            backgroundColor: '#00ff00',
+                            type: JUST_ICON,
+                            size: 16,
+                            icon: faLocationDot,
+                            foregroundColor: '#00ff00',
                             description: 'End point',
                         },
                     ))
