@@ -128,7 +128,7 @@ export class Track {
                             type: JUST_ICON,
                             size: 16,
                             icon: faLocationDot,
-                            foregroundColor: '#ff0000',
+                            foregroundColor: vt3d.configuration.track.markers.start.color,
                             description: 'Start point',
                         },
                     ))
@@ -139,7 +139,7 @@ export class Track {
                             type: JUST_ICON,
                             size: 16,
                             icon: faLocationDot,
-                            foregroundColor: '#00ff00',
+                            foregroundColor: vt3d.configuration.track.markers.stop.color,
                             description: 'End point',
                         },
                     ))

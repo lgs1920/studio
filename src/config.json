@@ -30,7 +30,15 @@
   ],
   "track": {
     "color": "#B22222ff",
-    "thickness": 2
+    "thickness": 2,
+    "markers": {
+      "start": {
+        "color": "#DC143C"
+      },
+      "stop": {
+        "color": "#228B22"
+      }
+    }
   },
   "route": {
     "color": "#1E90FFFF",
