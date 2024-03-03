@@ -1,8 +1,8 @@
-import * as Cesium                          from 'cesium'
-import { Color, GeoJsonDataSource }         from 'cesium'
-import { INITIAL_LOADING, SIMULATE_HEIGHT } from '../../classes/Track'
-import { FileUtils }                        from '../FileUtils.js'
-import { UINotifier }                       from '../UINotifier'
+import * as Cesium                                      from 'cesium'
+import { Color, GeoJsonDataSource }                     from 'cesium'
+import { INITIAL_LOADING, RE_LOADING, SIMULATE_HEIGHT } from '../../classes/Track'
+import { FileUtils }                                    from '../FileUtils.js'
+import { UINotifier }                                   from '../UINotifier'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE = 'Feature', FEATURE_COLLECTION = 'FeatureCollection', LINE_STRING = 'LineString'
@@ -32,7 +32,7 @@ export class TrackUtils {
      *
      * return
      *
-     * @return {Promise<FileStringResult>}
+     * @return {Promise}
      *
      */
     static async loadTrackFromFile() {
@@ -44,76 +44,88 @@ export class TrackUtils {
     /**
      * Show currentTrack on the map
      *
-     * @param geoJson
-     * @param name
-     * @param line : track color and width {line,width}
-     * @param action   load | simulateHeight
-     * @return {Promise<void>}
-     *
+     * @param track
+     * @param line
+     * @param action
      */
-    static loadTrack = async (geoJson, name = '', line = null, action = 'load') => {
-        let dataSource
+    static loadTrack = async (track = '', action = INITIAL_LOADING) => {
         const configuration = vt3d.configuration
-        if (line === null) {
-            line = {
-                color: vt3d.configuration.track.color, thickness: vt3d.configuration.track.thickness,
-            }
-        }
+
         const trackStroke = {
-            color: Color.fromCssColorString(line.color), thickness: line.thickness,
+            color: Color.fromCssColorString(track.color), thickness: track.thickness,
         }
         const routeStroke = {
             color: Color.fromCssColorString(configuration.route.color), thickness: configuration.route.thickness,
         }
         const commonOptions = {
-            clampToGround: true, name: name, markerSymbol: '<i>?</i>',
+            clampToGround: true, name: track.title, markerSymbol: '?',
         }
-        try {
-            // Load Geo Json
-            const source = new GeoJsonDataSource(name)
-            dataSource = await source.load(geoJson, {
-                ...commonOptions, stroke: trackStroke.color, strokeWidth: trackStroke.thickness,
-            })
 
-            return vt3d.viewer.dataSources.add(dataSource)
-                .then(function (dataSource) {
-                    // Ok => we notify
-                    let caption = '', text = ''
-                    switch (action) {
-                        case INITIAL_LOADING: {
-                            caption = `<strong>${name}</strong> Loaded!`
-                            text = `Track loaded and displayed on the map.`
-                            break
-                        }
-                        case SIMULATE_HEIGHT : {
-                            caption = `<strong>${name}</strong> changed!`
-                            text = `Track loaded and displayed on the map.`
-                            break
-                        }
-                    }
-                    UINotifier.notifySuccess({
-                        caption: caption, text: text,
-                    })
-                    const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading), Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
-                    vt3d.viewer.zoomTo(dataSource.entities, cameraOffset)
+        // Load Geo Json
+        let source = null
+        if (action === RE_LOADING) {
+            // We get existing datasource
+            source = vt3d.viewer.dataSources.getByName(track.slug)[0]
+        } else {
+            // It's a new track
+            source = new GeoJsonDataSource(track.slug)
+        }
 
-                    // We return the entities entitiesId in order to work on it later
-                    return dataSource.entities.id
+        // console.log(track.visible)
+        // track.visible = false
+        // // Change visibility by changing it for each entity
+        // source.entities.values.forEach(entity => {
+        //     entity.show = false
+        // })
 
+        return source.load(track.geoJson, {
+            ...commonOptions,
+            stroke: trackStroke.color,
+            strokeWidth: trackStroke.thickness,
+        }).then(dataSource => {
+
+            const text = `Track loaded and displayed on the map.`
+            if (action === RE_LOADING) {
+                UINotifier.notifySuccess({
+                    caption: `<strong>${track.title}</strong> updated !`, text: text,
                 })
-                .catch(error => {
+            } else {
+                try {
+                    vt3d.viewer.dataSources.add(dataSource).then(function (dataSource) {
+                        // Ok => we notify
+                        let caption = ''
+                        switch (action) {
+                            case
+                            SIMULATE_HEIGHT : {
+                                caption = `<strong>${track.title}</strong> updated !`
+                                break
+                            }
+                            default: {
+                                caption = `<strong>${track.title}</strong> Loaded!`
+                            }
+                        }
+                        UINotifier.notifySuccess({
+                            caption: caption, text: text,
+                        })
+                        const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading), Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
+                        vt3d.viewer.zoomTo(dataSource.entities, cameraOffset)
+                    })
+                } catch (error) {
+                    console.error(error)
                     // Error => we notify
                     UINotifier.notifyError({
                         caption: `An error occurs during loading <strong>${name}<strong>!`, text: error,
                     })
-                })
-        } catch (error) {
-            console.error(error)
+                }
+            }
+        }).catch(error => {
             // Error => we notify
             UINotifier.notifyError({
                 caption: `An error occurs during loading <strong>${name}<strong>!`, text: error,
             })
-        }
+            return false
+        })
+
     }
 
     /**
@@ -121,8 +133,8 @@ export class TrackUtils {
      *
      * from https://gist.github.com/jherax/f11d669ba286f21b7a2dcff69621eb72
      *
-     * @param  {Array}  array: the array to filter
-     * @param  {Object} filters: an object with the filter criteria
+     * @param  array {Array}   the array to filter
+     * @param  filters {Object}  an object with the filter criteria
      * @return {Array}
      */
     static filterArray = (array, filters) => {
@@ -138,7 +150,7 @@ export class TrackUtils {
     }
 
     /**
-     * Prepare  geojson data to be manage by vt3d
+     * Prepare  geojson data to be managed by vt3d
      *
      * > longitude, latitude, height,time
      *
@@ -181,7 +193,7 @@ export class TrackUtils {
      * @param coordinates
      * @return {height}
      */
-    static  getElevationFromTerrain = async (coordinates) => {
+    static getElevationFromTerrain = async (coordinates) => {
         const positions = []
         coordinates.forEach(coordinate => {
             positions.push(Cesium.Cartographic.fromDegrees(coordinate[0], coordinate[1]))
@@ -214,4 +226,12 @@ export class TrackUtils {
         }
     }
 
+    static cleanTrack = (track) => {
+        // Search  data source associated tothe track
+        // const dataSource = vt3d.viewer.dataSources.getByName(track.slug)[0]
+        // // Now get the entities
+        // dataSource.entities.values.forEach(entity => {
+        //     entity.show = track.visible
+        // })
+    }
 }

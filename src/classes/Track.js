@@ -10,7 +10,8 @@ import { MapMarker }                                   from './MapMarker'
 
 export const NO_DEM_SERVER = 'none'
 export const SIMULATE_HEIGHT = 'simulate-height'
-export const INITIAL_LOADING = 'first-load'
+export const INITIAL_LOADING = 1
+export const RE_LOADING = 2
 
 const CONFIGURATION = '../config.json'
 
@@ -26,14 +27,13 @@ export class Track {
     hasHeight   // Is fail contains altitudes ?
     DEMServer   // DEM server associate if we need altitude
 
-    color       // The color associated
-    thickness   // The thickness associated
-    entitiesId  // The entities Id
+    color = vt3d.configuration.track.color            // The color associated
+    thickness = vt3d.configuration.track.thickness    // The thickness associated
+
     markers = new Map()// external markers
 
     attributes = [
         'color',
-        'entitiesId',
         'title',
         'geoJson',
         'title',
@@ -67,17 +67,16 @@ export class Track {
     }
 
     /**
-     * create an unic title
+     * create a unic title
      *
-     * if "my title" already exists as track title,
-     * let's change it to "my title (1) or ...(2) until ...(n)
-     * if new title already exists.
+     * if title = "my title" already exists as track title,
+     * let's change it to "my title (1)" or "...(2)" until the new title
+     * does not exist.
      *
      * @param title
      * @return {string}
      */
-    static
-    unicTitle = title => {
+    static defineUnicTitle = title => {
         let counter = 0
         let unic = title
 
@@ -99,8 +98,7 @@ export class Track {
      * @param options {slug}
      * @return {Track} the new track
      */
-    static
-    clone = (source, exceptions = {}) => {
+    static clone = (source, exceptions = {}) => {
         const track = new Track(source.title, source.type, exceptions)
 
         source.attributes.forEach(attribute => {
@@ -110,10 +108,14 @@ export class Track {
                 track[attribute] = source[attribute]
             }
         })
-
         return track
     }
 
+    /**
+     * Add marker at the track extremities
+     *
+     * @param coordinates
+     */
     addTipsMarkers(coordinates) {
 
         if (this.geoJson.type === FEATURE_COLLECTION) {
@@ -429,22 +431,32 @@ export class Track {
      * @return {Promise<void>}
      */
     load = async (action = INITIAL_LOADING) => {
-        this.entitiesId = TrackUtils.loadTrack(this.geoJson, this.slug, {
-            color: this.color, thickness: this.thickness,
-        }, action).then(() => {
-            this.markers.forEach(marker => {
-                marker.draw()
-            })
+
+        if (action === RE_LOADING) {
+            TrackUtils.cleanTrack(this)
+        }
+        await TrackUtils.loadTrack(this, action)
+        this.markers.forEach(marker => {
+            marker.draw()
         })
 
+
+    }
+
+    /**
+     * Toggle track visibility
+     *
+     */
+    toggleVisibility = () => {
+        this.visible = !this.visible
     }
 
     showAfterHeightSimulation = async () => {
         await this.load(SIMULATE_HEIGHT)
     }
 
-    showAfterNewSettings = async () => {
-        await this.load()
+    loadAfterNewSettings = async () => {
+        await this.load(RE_LOADING)
     }
 
     checkDataConsistency = () => {
@@ -461,10 +473,6 @@ export class Track {
                 }
             }
         }
-    }
-
-    getInternalId = () => {
-        return TrackUtils.getEntities(this.slug, this.entitiesId)
     }
 
 

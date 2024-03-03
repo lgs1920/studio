@@ -24,13 +24,15 @@ import {
 
 export const TrackSettings = function TrackSettings() {
 
+    const editorStore = vt3d.editorProxy
+    const editorSnapshot = useSnapshot(editorStore)
+
     const [ConfirmRemoveTrackDialog, confirmRemoveTrack] = useConfirm(
-        'Remove Track',
+        `Remove "${editorSnapshot.track.title}" ?`,
         'Are you sure you want to remove this track ?',
     )
 
-    const editorStore = vt3d.editorProxy
-    const editorSnapshot = useSnapshot(editorStore)
+    const dataSource = vt3d.viewer.dataSources.getByName(editorSnapshot.track.slug)[0]
 
     /**
      * Change track Color
@@ -60,7 +62,7 @@ export const TrackSettings = function TrackSettings() {
         }
         // Let's check if the next title has not been already used for
         // another track.
-        const newTitle = Track.unicTitle(title)
+        const newTitle = Track.defineUnicTitle(title)
         editorStore.track.title = newTitle
         await rebuildTrack()
 
@@ -86,8 +88,10 @@ export const TrackSettings = function TrackSettings() {
      */
     const setVisibility = (async event => {
         editorStore.track.visible = event.target.checked
-        TracksEditorUtils.reRenderTrackSettings()
-        await rebuildTrack()
+        // Change visibility by changing it for each entity
+        dataSource.entities.values.forEach(entity => {
+            entity.show = editorStore.track.visible
+        })
     })
 
     /**
@@ -105,6 +109,7 @@ export const TrackSettings = function TrackSettings() {
      * Remove track
      */
     const removeTrack = async () => {
+
         const confirmation = await confirmRemoveTrack()
         if (confirmation) {
             const store = vt3d.mainProxy.components.tracksEditor
@@ -152,12 +157,12 @@ export const TrackSettings = function TrackSettings() {
         const path = TrackUtils.getEntities(track.slug)
 
         await track.computeAll()
-        track.addTipsMarkers()
+        //track.addTipsMarkers()
         vt3d.saveTrack(track)
 
-        vt3d.viewer.dataSources.removeAll()
+        //  vt3d.viewer.dataSources.removeAll()
         if (track.visible) {
-            track.showAfterNewSettings()
+            track.loadAfterNewSettings()
         }
         return track
     }
