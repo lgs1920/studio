@@ -9,17 +9,18 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     const handleRequestClose = event => {
         event.preventDefault()
     }
-    const store = vt3d.mainProxy.components.tracksEditor
-    const snap = useSnapshot(store)
-    const editorSnapshot = useSnapshot(vt3d.editorProxy)
+    const mainStore = vt3d.mainProxy.components.tracksEditor
+    const mainSnap = useSnapshot(mainStore)
+    const editorStore = vt3d.editorProxy
+    const editorSnapshot = useSnapshot(editorStore)
 
-    const several = snap.list.length > 1
+    const several = mainSnap.list.length > 1
 
     /**
      * Get tracks from the snap that contains only slugs
      */
     let tracks = []
-    snap.list.forEach(slug => {
+    mainSnap.list.forEach(slug => {
         tracks.push(vt3d.getTrackBySlug(slug))
     })
 
@@ -42,7 +43,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     }
 
     // set Default
-    store.currentTrack = vt3d.currentTrack?.slug
+    mainStore.currentTrack = vt3d.currentTrack?.slug
 
     return (
         <>
@@ -51,7 +52,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
                 <SlSelect hoist label={props.label}
                           value={editorSnapshot.track.slug}
                           onSlChange={props.onChange}
-                          key={snap.trackListKey}
+                          key={mainSnap.trackListKey}
                 >
                     <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
