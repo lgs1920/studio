@@ -12,8 +12,8 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
     const mainStore = vt3d.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
-    const editorStore = vt3d.editorProxy
-    const snapTrack = useSnapshot(editorStore)
+    const storeEditor = vt3d.editorProxy
+    const snapEditor = useSnapshot(storeEditor)
 
     const [server, setServer] = useState(vt3d?.mainProxy.currentTrack?.DEMServer ?? NO_DEM_SERVER)
 
@@ -56,7 +56,7 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
         }
     }
     return (
-        <> {snapTrack.track &&
+        <> {snapEditor.track &&
 
             <SlDialog open={snap.modals.altitudeChoice.show}
                       style={{'--width': '50vw'}}
@@ -74,7 +74,7 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
                     </div>
                     <div className="dialog-action">
                         <DEMServerSelection
-                            default={snapTrack.track.DEMServer ?? NO_DEM_SERVER}
+                            default={snapEditor.track.DEMServer ?? NO_DEM_SERVER}
                             label={'Choose the way you wish to obtain altitude:'}
                             onChange={allowAltitudeSimulation}/>
                     </div>
