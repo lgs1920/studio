@@ -1,9 +1,9 @@
-import {faGithub}                                                       from '@fortawesome/free-brands-svg-icons'
-import {faCircleInfo}                                                   from '@fortawesome/pro-regular-svg-icons'
-import {SlButton, SlDrawer, SlIcon, SlIconButton, SlInclude, SlTooltip} from '@shoelace-style/shoelace/dist/react'
-import {forwardRef}                                                     from 'react'
-import {useSnapshot}                                                    from 'valtio'
-import {FA2SL}                                                          from '../../../Utils/FA2SL'
+import { faGithub }                                                       from '@fortawesome/free-brands-svg-icons'
+import { faCircleInfo }                                                   from '@fortawesome/pro-regular-svg-icons'
+import { SlButton, SlDrawer, SlIcon, SlIconButton, SlInclude, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { forwardRef }                                                     from 'react'
+import { useSnapshot }                                                    from 'valtio'
+import { FA2SL }                                                          from '../../../Utils/FA2SL'
 import './style.css'
 
 //read version
@@ -12,15 +12,15 @@ import info from '../../../version.json'
 
 export const CreditsUI = forwardRef(function CreditsUI() {
 
-    const store = vt3d.mainProxy.components
-    const snap = useSnapshot(store)
+    const mainStore = vt3d.mainProxy.components
+    const mainSnap = useSnapshot(mainStore)
 
     const setOpen = (open) => {
-        store.credits.show = open
+        mainStore.credits.show = open
     }
 
     return (<>
-        <SlDrawer className="ui-element transparent" id="credits-pane" open={snap.credits.show}
+        <SlDrawer className="ui-element transparent" id="credits-pane" open={mainSnap.credits.show}
                   onSlAfterHide={() => setOpen(false)}>
             <SlInclude src="/src/assets/pages/credits.html"/>
 
