@@ -1,16 +1,16 @@
-import {SlButton, SlDialog}   from '@shoelace-style/shoelace/dist/react'
-import {forwardRef, useState} from 'react'
-import {useSnapshot}          from 'valtio'
+import { SlButton, SlDialog }   from '@shoelace-style/shoelace/dist/react'
+import { forwardRef, useState } from 'react'
+import { useSnapshot }          from 'valtio'
 
 import '../../../assets/css/modals.css'
-import {NO_DEM_SERVER}        from '../../../classes/Track'
-import {DEMServerSelection}   from '../DEMServerSelection'
+import { NO_DEM_SERVER }        from '../../../classes/Track'
+import { DEMServerSelection }   from '../DEMServerSelection'
 
 
 export const AltitudeChoice = forwardRef(function AltitudeChoice() {
 
-    const store = vt3d.mainProxy
-    const snap = useSnapshot(store)
+    const mainStore = vt3d.mainProxy
+    const mainSnap = useSnapshot(mainStore)
 
     const editorStore = vt3d.editorProxy
     const snapTrack = useSnapshot(editorStore)
@@ -18,7 +18,7 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
     const [server, setServer] = useState(vt3d?.mainProxy.currentTrack?.DEMServer ?? NO_DEM_SERVER)
 
     const setOpen = (open) => {
-        store.modals.altitudeChoice.show = open
+        mainStore.modals.altitudeChoice.show = open
     }
 
     /**
