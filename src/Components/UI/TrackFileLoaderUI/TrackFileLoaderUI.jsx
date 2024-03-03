@@ -10,8 +10,8 @@ import { UINotifier }                  from '../../../Utils/UINotifier'
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
 
-    const store = vt3d.mainProxy
-    const snap = useSnapshot(store)
+    const mainStore = vt3d.mainProxy
+    const mainSnap = useSnapshot(mainStore)
 
     const uploadFile = async () => {
         const track = await TrackUtils.loadTrackFromFile()
@@ -23,7 +23,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
             if (vt3d.getTrackBySlug(currentTrack.slug)?.slug === undefined) {
                 currentTrack.checkDataConsistency()
                 if (!currentTrack.hasHeight) {
-                    store.modals.altitudeChoice.show = true
+                    mainStore.modals.altitudeChoice.show = true
                 }
                 currentTrack.addToContext()
                 vt3d.addToEditor(currentTrack)
