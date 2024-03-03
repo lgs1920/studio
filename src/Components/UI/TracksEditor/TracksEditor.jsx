@@ -14,11 +14,11 @@ import { TrackSettings }              from './TrackSettings'
 
 export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
 
-    const store = vt3d.mainProxy.components.tracksEditor
-    const snap = useSnapshot(store)
+    const mainStore = vt3d.mainProxy.components.tracksEditor
+    const mainSnap = useSnapshot(mainStore)
 
     const setOpen = (open) => {
-        store.show = open
+        mainStore.show = open
     }
 
     /**
@@ -36,7 +36,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
      */
     const closeTracksEditor = (event) => {
         if (isOK(event)) {
-            store.show = false
+            mainStore.show = false
         }
     }
 
@@ -46,31 +46,30 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
      * @param event
      */
     const openTracksEditor = (event) => {
-        store.show = true
+        mainStore.show = true
     }
 
 
     return (
         <>
-            <div id="tracks-editor-container" key={snap.key}>
+            <div id="tracks-editor-container" key={mainSnap.key}>
 
-                {snap.visible && <SlDrawer id="tracks-editor-pane" open={snap.show}
-                                           no-modal
-                                           contained
-                                           onSlRequestClose={handleRequestClose}
-                                           onSlHide={closeTracksEditor}
-                                           onSlShow={TrackUtils.prepareTrackEdition}>
+                {mainSnap.visible && <SlDrawer id="tracks-editor-pane" open={mainSnap.show}
+                                               no-modal
+                                               contained
+                                               onSlRequestClose={handleRequestClose}
+                                               onSlHide={closeTracksEditor}
+                                               onSlShow={TrackUtils.prepareTrackEdition}>
                     <TrackSelector onChange={TracksEditorUtils.prepareTrackEdition}
                                    label={'Select a track:'}/>
                     <TrackSettings/>
-                    <div id="tracks-editor-footer" slot={'footer'}>
-                    </div>
+                    <div id="tracks-editor-footer" slot={'footer'}></div>
                 </SlDrawer>}
             </div>
             {/* <SlTooltip content="Edit Tracks"> */}
             {
-                snap.visible &&
-                <SlButton size="small" id={'open-currentTrack-editor'} onClick={openTracksEditor}>
+                mainSnap.visible &&
+                <SlButton size="large" id={'open-currentTrack-editor'} onClick={openTracksEditor}>
                     <SlIcon library="fa" name={FA2SL.set(faPencil)}></SlIcon>
                 </SlButton>
             }
