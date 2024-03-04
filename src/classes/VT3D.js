@@ -127,6 +127,5 @@ export class VT3D {
 
     addToEditor = (track) => {
         this.editorProxy.track = track
-        this.editorProxy.track.entitiesId = track.entitiesId // we need this  TODO Why?
     }
 }

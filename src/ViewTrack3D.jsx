@@ -1,19 +1,19 @@
 /**
  * React
  */
-import * as Cesium                                              from 'cesium'
-import { useEffect, useRef }                                    from 'react'
+import * as Cesium                                                      from 'cesium'
+import { useEffect, useRef }                                            from 'react'
 
 /**
  * Some Cesium and Resium modules are needed
  */
-import { Camera, CameraFlyTo, Globe, Scene, useCesium, Viewer } from 'resium'
+import { Camera, CameraFlyTo, Entity, Globe, Scene, useCesium, Viewer } from 'resium'
 /**
  * We also need our owns
  */
-import { VT3D_UI }                                              from './Components/UI/VT3D_UI/VT3D_UI.jsx'
-import { AppUtils }                                             from './Utils/AppUtils.js'
-import { CameraUtils }                                          from './Utils/cesium/CameraUtils.js'
+import { VT3D_UI }                                                      from './Components/UI/VT3D_UI/VT3D_UI.jsx'
+import { AppUtils }                                                     from './Utils/AppUtils.js'
+import { CameraUtils }                                                  from './Utils/cesium/CameraUtils.js'
 
 /**
  * We are using shoelace Web Components
@@ -22,8 +22,8 @@ import '@shoelace-style/shoelace/dist/themes/light.css'
 /**
  * Then import our owns
  */
-import { UINotifier }                                           from './Utils/UINotifier'
-import { UIUtils }                                              from './Utils/UIUtils'
+import { UINotifier }                                                   from './Utils/UINotifier'
+import { UIUtils }                                                      from './Utils/UIUtils'
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 
@@ -77,6 +77,9 @@ export function ViewTrack3D() {
                     })}
                     id="viewTrack3DViewer"
                     imageryProvider={false}
+            // baseLayer={Cesium.ImageryLayer.fromWorldImagery({
+            //     style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS,
+            // })}
                     ref={viewerRef}
         >
             <Scene></Scene>
@@ -90,6 +93,7 @@ export function ViewTrack3D() {
                     onComplete={CameraUtils.turnAroundCameraTarget}
                 />
             </Camera>
+            <Entity id={'markers-group'}/>
 
             <VT3D_UI/>
 

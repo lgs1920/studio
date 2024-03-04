@@ -3,6 +3,7 @@ import { Color, GeoJsonDataSource }                     from 'cesium'
 import { INITIAL_LOADING, RE_LOADING, SIMULATE_HEIGHT } from '../../classes/Track'
 import { FileUtils }                                    from '../FileUtils.js'
 import { UINotifier }                                   from '../UINotifier'
+import { EntitiesUtils }                                from './EntitiesUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE = 'Feature', FEATURE_COLLECTION = 'FeatureCollection', LINE_STRING = 'LineString'
@@ -233,5 +234,9 @@ export class TrackUtils {
         // dataSource.entities.values.forEach(entity => {
         //     entity.show = track.visible
         // })
+    }
+
+    static getTrackChildById = (track, id) => {
+        return EntitiesUtils.getEntityById(`${track.slug}#${id}`)
     }
 }

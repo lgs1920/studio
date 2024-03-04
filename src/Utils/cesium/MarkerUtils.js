@@ -1,6 +1,7 @@
 import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { Canvg }         from 'canvg'
 import * as Cesium       from 'cesium'
+import { EntitiesUtils } from './EntitiesUtils'
 
 // Pin Marker Type
 export const PIN_ICON = 1
@@ -15,8 +16,12 @@ export const NO_MARKER_COLOR = 'transparent'
 export class MarkerUtils {
     static draw = async (marker) => {
 
+        const parent = EntitiesUtils.getGroupById('markers')
+
         let markerOptions = {
+            parent: parent,
             name: marker.name,
+            id: marker.id,
             description: marker.description,
             position: Cesium.Cartesian3.fromDegrees(marker.coordinates[0], marker.coordinates[1], marker.coordinates[2]),
         }
@@ -29,11 +34,10 @@ export class MarkerUtils {
         const backgroundColor = Cesium.Color.fromCssColorString(marker.backgroundColor)
         const foregroundColor = marker.foregroundColor ? Cesium.Color.fromCssColorString(marker.foregroundColor) : undefined
 
-        let entity
 
         switch (marker.type) {
             case PIN_CIRCLE:
-                entity = vt3d.viewer.entities.add({
+                return await vt3d.viewer.entities.add({
                     point: {
                         position: Cesium.Cartesian3.fromDegrees(marker.coordinates[0], marker.coordinates[1]),
                         backgroundPadding: Cesium.Cartesian2(8, 4),
@@ -45,30 +49,23 @@ export class MarkerUtils {
                         outlineWidth: marker.border,
                     },
                 })
-                break
             case PIN_COLOR:
                 markerOptions.billboard.image = pinBuilder.fromColor(backgroundColor, marker.size).toDataURL()
-                entity = await vt3d.viewer.entities.add(markerOptions)
-                break
+                return await vt3d.viewer.entities.add(markerOptions)
             case PIN_TEXT:
                 markerOptions.billboard.image = pinBuilder.fromText(marker.text, backgroundColor, marker.size).toDataURL()
-                entity = await vt3d.viewer.entities.add(markerOptions)
-                break
+                return await vt3d.viewer.entities.add(markerOptions)
             case PIN_ICON:
                 pinBuilder.fromUrl(MarkerUtils.useFontAwesome(marker).src, backgroundColor, marker.size).then(async image => {
                     markerOptions.billboard.image = image
-                    entity = await vt3d.viewer.entities.add(markerOptions)
+                    return await vt3d.viewer.entities.add(markerOptions)
                 })
-                break
             case JUST_ICON:
-                MarkerUtils.useOnlyFontAwesome(marker).then(async canvas => {
+                return MarkerUtils.useOnlyFontAwesome(marker).then(async canvas => {
                     markerOptions.billboard.image = canvas
-                    entity = await vt3d.viewer.entities.add(markerOptions)
+                    return await vt3d.viewer.entities.add(markerOptions)
                 })
-                break
         }
-
-        return entity
     }
     static useFontAwesome = (marker) => {
         library.add(marker.icon)
@@ -82,12 +79,12 @@ export class MarkerUtils {
             const rectangle = document.createElement('rect')
             rectangle.setAttribute('rx', 10)
             rectangle.setAttribute('ry', 10)
-            rectangle.setAttribute('width', '100%')
-            rectangle.setAttribute('height', '100%')
+            rectangle.setAttribute('width', '120%')
+            rectangle.setAttribute('height', '120%')
             rectangle.setAttribute('fill', marker.backgroundColor)
             svg.insertBefore(rectangle, svg.firstChild)
         }
-        
+
         return {
             src: `data:image/svg+xml,${encodeURIComponent(svg.outerHTML)}`,
             html: svg.outerHTML,

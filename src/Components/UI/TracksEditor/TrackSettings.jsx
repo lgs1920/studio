@@ -88,10 +88,15 @@ export const TrackSettings = function TrackSettings() {
      */
     const setVisibility = (async event => {
         editorStore.track.visible = event.target.checked
-        // Change visibility by changing it for each entity
+
+        // Change track visibility by changing it for each entity
         dataSource.entities.values.forEach(entity => {
             entity.show = editorStore.track.visible
         })
+
+        // change start and stop markers visibility
+        TrackUtils.getTrackChildById(editorStore.track, 'start').show = editorStore.track.visible
+        TrackUtils.getTrackChildById(editorStore.track, 'stop').show = editorStore.track.visible
     })
 
     /**

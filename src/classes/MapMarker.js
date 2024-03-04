@@ -29,6 +29,7 @@ export class MapMarker {
     constructor(options) {
         this.type = options.type
         this.name = options.name
+        this.id = options.id
         this.coordinates = options.coordinates || {}
         this.backgroundColor = options.backgroundColor ?? NO_MARKER_COLOR
         this.foregroundColor = options.foregroundColor ?? 'white'
@@ -40,6 +41,7 @@ export class MapMarker {
         this.image = options.image ?? undefined
 
         this.register()
+
     }
 
     /**
@@ -62,10 +64,8 @@ export class MapMarker {
         MapMarker.markers.set(this.id, this)
     }
 
-    draw = () => {
-        this.marker = MarkerUtils.draw(this)
-        this.id = this.marker.id
-
+    draw = async () => {
+        await MarkerUtils.draw(this)
     }
 
 }
