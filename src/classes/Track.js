@@ -126,6 +126,7 @@ export class Track {
                     const start = feature.geometry.coordinates[0]
                     this.markers.set('start', new MapMarker({
                             name: 'start',
+                            parent: this.slug,
                             id: `${this.slug}#start`,
                             coordinates: [start[0], start[1]],
                             type: JUST_ICON,
@@ -138,6 +139,7 @@ export class Track {
                     const stop = feature.geometry.coordinates[feature.geometry.coordinates.length - 1]
                     this.markers.set('stop', new MapMarker({
                             name: 'stop',
+                            parent: this.slug,
                             id: `${this.slug}#stop`,
                             coordinates: [stop[0], stop[1]],
                             type: JUST_ICON,
