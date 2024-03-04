@@ -18,7 +18,7 @@ export class TrackUtils {
     static checkIfDataContainsHeightOrTime = (feature => {
         let hasHeight = true
         for (const coordinate of feature.geometry.coordinates) {
-            if (coordinate.length == 2) {
+            if (coordinate.length === 2) {
                 hasHeight = false
                 break
             }
@@ -59,7 +59,9 @@ export class TrackUtils {
             color: Color.fromCssColorString(configuration.route.color), thickness: configuration.route.thickness,
         }
         const commonOptions = {
-            clampToGround: true, name: track.title, markerSymbol: '?',
+            clampToGround: true,
+            name: track.title,
+            markerSymbol: '?',
         }
 
         // Load Geo Json
@@ -71,13 +73,6 @@ export class TrackUtils {
             // It's a new track
             source = new GeoJsonDataSource(track.slug)
         }
-
-        // console.log(track.visible)
-        // track.visible = false
-        // // Change visibility by changing it for each entity
-        // source.entities.values.forEach(entity => {
-        //     entity.show = false
-        // })
 
         return source.load(track.geoJson, {
             ...commonOptions,
