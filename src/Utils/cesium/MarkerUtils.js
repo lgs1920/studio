@@ -1,7 +1,6 @@
 import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { Canvg }         from 'canvg'
 import * as Cesium       from 'cesium'
-import { EntitiesUtils } from './EntitiesUtils'
 
 // Pin Marker Type
 export const PIN_ICON = 1
@@ -16,10 +15,9 @@ export const NO_MARKER_COLOR = 'transparent'
 export class MarkerUtils {
     static draw = async (marker) => {
 
-        const parent = EntitiesUtils.getGroupById('markers')
+        const dataSource = vt3d.viewer.dataSources.getByName(marker.parent)[0]
 
         let markerOptions = {
-            parent: parent,
             name: marker.name,
             id: marker.id,
             description: marker.description,
@@ -37,7 +35,7 @@ export class MarkerUtils {
 
         switch (marker.type) {
             case PIN_CIRCLE:
-                return await vt3d.viewer.entities.add({
+                return await dataSource.entities.add({
                     point: {
                         position: Cesium.Cartesian3.fromDegrees(marker.coordinates[0], marker.coordinates[1]),
                         backgroundPadding: Cesium.Cartesian2(8, 4),
@@ -51,19 +49,19 @@ export class MarkerUtils {
                 })
             case PIN_COLOR:
                 markerOptions.billboard.image = pinBuilder.fromColor(backgroundColor, marker.size).toDataURL()
-                return await vt3d.viewer.entities.add(markerOptions)
+                return await dataSource.entities.add(markerOptions)
             case PIN_TEXT:
                 markerOptions.billboard.image = pinBuilder.fromText(marker.text, backgroundColor, marker.size).toDataURL()
-                return await vt3d.viewer.entities.add(markerOptions)
+                return await dataSource.entities.add(markerOptions)
             case PIN_ICON:
                 pinBuilder.fromUrl(MarkerUtils.useFontAwesome(marker).src, backgroundColor, marker.size).then(async image => {
                     markerOptions.billboard.image = image
-                    return await vt3d.viewer.entities.add(markerOptions)
+                    return await dataSource.entities.add(markerOptions)
                 })
             case JUST_ICON:
                 return MarkerUtils.useOnlyFontAwesome(marker).then(async canvas => {
                     markerOptions.billboard.image = canvas
-                    return await vt3d.viewer.entities.add(markerOptions)
+                    return await dataSource.entities.add(markerOptions)
                 })
         }
     }
@@ -106,4 +104,5 @@ export class MarkerUtils {
         v.start()
         return canvas
     }
+
 }
