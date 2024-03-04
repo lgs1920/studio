@@ -29,6 +29,7 @@ export class MapMarker {
     constructor(options) {
         this.type = options.type
         this.name = options.name
+        this.parent = options.parent
         this.id = options.id
         this.coordinates = options.coordinates || {}
         this.backgroundColor = options.backgroundColor ?? NO_MARKER_COLOR
@@ -39,20 +40,9 @@ export class MapMarker {
         this.size = options.size ?? (this.type === PIN_CIRCLE ? 10 : 32)
         this.description = options.description ?? undefined
         this.image = options.image ?? undefined
+        this.visible = true
 
         this.register()
-
-    }
-
-    /**
-     * Remove a marker
-     *
-     * @param markerOrId  MapMarker instance or only id
-     *
-     */
-    static remover = (markerOrId) => {
-        let id = (markerOrId instanceof MapMarker) ? markerOrId.id : markerOrId
-        MapMarker.markers.delete(id)
     }
 
     /**
