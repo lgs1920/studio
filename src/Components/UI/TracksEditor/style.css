@@ -35,7 +35,7 @@
     gap: var(--vt3d-gutter-s);
 }
 
-#track-line-settings {
+#track-line-settings > div {
     display: flex;
     gap: var(--vt3d-gutter);
     align-items: center;
@@ -50,4 +50,9 @@
 #test-line {
     width: 4rem;
     border-radius: 3px;
+}
+
+[id^="visibility-marker-"] {
+    display: flex;
+    gap: var(--vt3d-gutter-xs);
 }
