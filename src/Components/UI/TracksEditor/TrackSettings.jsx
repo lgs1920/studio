@@ -221,18 +221,17 @@ export const TrackSettings = function TrackSettings() {
             <>
                 {
                     <div id={`visibility-marker-${props.type}`}>
-                        <div style={{color: vt3d.configuration.track.markers[props.type].color}}>
-                            <SlIcon library="fa"
-                                    className={'fa-lg'}
-                                    name={FA2SL.set(faLocationDot)}/>
-                        </div>
-                        {props.label}:
                         <SlSwitch size="small"
                                   checked={editorStore.track.markers.get(props.type).visible}
                                   style={{'--thumb-size': '1rem'}}
                                   onSlChange={setMarkerVisibility}
                                   id={`switch-visibility-marker-${props.type}`}
-                        />
+                        > <span style={{color: vt3d.configuration.track.markers[props.type].color}}>
+                            <SlIcon library="fa"
+                                    className={'fa-lg'}
+                                    name={FA2SL.set(faLocationDot)}/>
+                        </span>{props.label}</SlSwitch>
+
                     </div>
                 }
             </>
