@@ -8,10 +8,15 @@ import { useSnapshot }          from 'valtio'
 import { NO_DEM_SERVER, Track } from '../../../classes/Track'
 import { FA2SL }                from '../../../Utils/FA2SL'
 import { TracksEditorUtils }    from '../../../Utils/TracksEditorUtils'
+import { UINotifier }           from '../../../Utils/UINotifier'
 import { DEMServerSelection }   from '../DEMServerSelection'
 import { useConfirm }           from '../Modals/ConfirmUI'
 
 export const TrackSettings = function TrackSettings() {
+
+    const UPDATE_TRACK_RELOAD = 1
+    const UPDATE_TRACK_NORELOAD = 2
+    const REMOVE_TRACK = 3
 
     const editorStore = vt3d.editorProxy
     const editorSnapshot = useSnapshot(editorStore)
@@ -35,7 +40,7 @@ export const TrackSettings = function TrackSettings() {
     const setColor = (async event => {
         editorStore.track.color = event.target.value
         TracksEditorUtils.reRenderTracksList()
-        await rebuildTrack()
+        await rebuildTrack(UPDATE_TRACK_RELOAD)
     })
 
     /**
@@ -56,7 +61,7 @@ export const TrackSettings = function TrackSettings() {
         // Let's check if the next title has not been already used for
         // another track.
         editorStore.track.title = Track.defineUnicTitle(title)
-        await rebuildTrack()
+        await rebuildTrack(UPDATE_TRACK_NORELOAD)
 
         TracksEditorUtils.reRenderTracksList()
     })
@@ -69,7 +74,7 @@ export const TrackSettings = function TrackSettings() {
     const setThickness = (async event => {
         editorStore.track.thickness = event.target.value
         TracksEditorUtils.reRenderTrackSettings()
-        await rebuildTrack()
+        await rebuildTrack(UPDATE_TRACK_RELOAD)
 
     })
 
@@ -101,7 +106,7 @@ export const TrackSettings = function TrackSettings() {
                 entity.show = event.target.checked
             })
         }
-        await rebuildTrack()
+        await rebuildTrack(UPDATE_TRACK_NORELOAD)
         TracksEditorUtils.reRenderTrackSettings()
         TracksEditorUtils.reRenderTracksList()
 
@@ -135,6 +140,13 @@ export const TrackSettings = function TrackSettings() {
         editorStore.track.DEMServer = event.target.value
         editorStore.longTask = editorStore.track.DEMServer !== NO_DEM_SERVER
         TracksEditorUtils.reRenderTrackSettings()
+        // await vt3d.currentTrack.computeAll()
+        // vt3d.currentTrack.addToContext()
+        // // Then we redraw the currentTrack
+        // await vt3d.currentTrack.showAfterHeightSimulation()
+
+        await rebuildTrack(UPDATE_TRACK_RELOAD)
+
     })
 
     /**
@@ -147,6 +159,7 @@ export const TrackSettings = function TrackSettings() {
         if (confirmation) {
             const mainStore = vt3d.mainProxy.components.tracksEditor
             const track = editorStore.track.slug
+            const removed = vt3d.getTrackBySlug(track)
             // get Track index
             const index = mainStore.list.findIndex((list) => list === track)
 
@@ -159,7 +172,7 @@ export const TrackSettings = function TrackSettings() {
                 // In Context context
                 vt3d.tracks.splice(index, 1)
                 // In canvas, ie remove the tracks and all markers
-                // But sometimes we loo dataSource TODO why ?
+                // But sometimes we loose dataSource TODO why ?
                 if (dataSource === undefined) {
                     dataSource = vt3d.viewer.dataSources.getByName(editorStore.track.slug)[0]
                 }
@@ -171,16 +184,26 @@ export const TrackSettings = function TrackSettings() {
              * If we have some other tracks, we'll take the first and render the editor.
              * Otherwise we close the editing.
              */
+            let text = ''
             if (mainStore.list.length >= 1) {
                 // New current is the first.
                 vt3d.currentTrack = vt3d.getTrackBySlug(mainStore.list[0])
                 TracksEditorUtils.reRenderTracksList()
                 TracksEditorUtils.reRenderTrackSettings()
-                await rebuildTrack()
             } else {
+                text = 'There are no others available.'
                 mainStore.usable = false
                 mainStore.show = false
+
             }
+
+            // Let'sinform the uer
+
+            UINotifier.notifySuccess({
+                caption: `<strong>${removed.title}</strong> removed !`,
+                text: text,
+            })
+
         }
     }
 
@@ -192,6 +215,7 @@ export const TrackSettings = function TrackSettings() {
      * @return {Track}
      */
     const rebuildTrack = async () => {
+
         // unproxify
         const unproxyfied = JSON.parse(JSON.stringify(editorStore.track))
         // We clone but keep the same slug
@@ -201,7 +225,6 @@ export const TrackSettings = function TrackSettings() {
             markers: editorStore.track.markers,
         })
         await track.computeAll()
-        //track.addTipsMarkers()
         vt3d.saveTrack(track)
 
         //  vt3d.viewer.dataSources.removeAll()
