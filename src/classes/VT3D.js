@@ -121,7 +121,7 @@ export class VT3D {
                 this.tracks.push(track)
                 this.mainProxy.components.tracksEditor.list.push(track.slug)
             }
-            this.mainProxy.components.tracksEditor.visible = true
+            this.mainProxy.components.tracksEditor.usable = true
         }
     }
 

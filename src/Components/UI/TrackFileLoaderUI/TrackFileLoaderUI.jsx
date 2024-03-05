@@ -27,7 +27,13 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                 }
                 currentTrack.addToContext()
                 vt3d.addToEditor(currentTrack)
+
+                // Force editor to close but remains usable
+                mainStore.components.tracksEditor.usable = true
+
                 await currentTrack.load()
+
+
             } else {
                 // It exists, we notify it
                 UINotifier.notifyWarning({

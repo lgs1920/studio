@@ -436,9 +436,6 @@ export class Track {
      */
     load = async (action = INITIAL_LOADING) => {
 
-        if (action === RE_LOADING) {
-            TrackUtils.cleanTrack(this)
-        }
         await TrackUtils.loadTrack(this, action)
         this.markers.forEach(marker => {
             marker.draw()

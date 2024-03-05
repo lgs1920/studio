@@ -17,9 +17,8 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
     const mainStore = vt3d.mainProxy.components.tracksEditor
     const mainSnap = useSnapshot(mainStore)
 
-    const setOpen = (open) => {
-        mainStore.show = open
-    }
+    const editorStore = vt3d.editorProxy
+    const editorSnap = useSnapshot(editorStore)
 
     /**
      * Avoid click outside drawer
@@ -49,30 +48,27 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
         mainStore.show = true
     }
 
-
-    return (
-        <>
-            <div id="tracks-editor-container" key={mainSnap.key}>
-
-                {mainSnap.visible && <SlDrawer id="tracks-editor-pane" open={mainSnap.show}
-                                               no-modal
-                                               contained
-                                               onSlRequestClose={handleRequestClose}
-                                               onSlHide={closeTracksEditor}
-                                               onSlShow={TrackUtils.prepareTrackEdition}>
-                    <TrackSelector onChange={TracksEditorUtils.prepareTrackEdition}
-                                   label={'Select a track:'}/>
-                    <TrackSettings/>
+    return (<>
+        <div id="tracks-editor-container" key={mainSnap.key}>
+            {mainSnap.usable &&
+                <SlDrawer id="tracks-editor-pane" open={mainSnap.show}
+                          no-modal
+                          contained
+                          onSlRequestClose={handleRequestClose}
+                          onSlHide={closeTracksEditor}
+                          onSlShow={TrackUtils.prepareTrackEdition}>
+                    {vt3d.tracks.length > 0 && <>
+                        <TrackSelector onChange={TracksEditorUtils.prepareTrackEdition}
+                                       label={'Select a track:'}/>
+                        <TrackSettings/>
+                    </>}
                     <div id="tracks-editor-footer" slot={'footer'}></div>
                 </SlDrawer>}
-            </div>
-            {/* <SlTooltip content="Edit Tracks"> */}
-            {
-                mainSnap.visible &&
-                <SlButton size="large" id={'open-currentTrack-editor'} onClick={openTracksEditor}>
-                    <SlIcon library="fa" name={FA2SL.set(faPencil)}></SlIcon>
-                </SlButton>
-            }
-            {/* </SlTooltip> */}
-        </>)
+        </div>
+        {/* <SlTooltip content="Edit Tracks"> */}
+        {mainSnap.usable && <SlButton size="large" id={'open-currentTrack-editor'} onClick={openTracksEditor}>
+            <SlIcon library="fa" name={FA2SL.set(faPencil)}></SlIcon>
+        </SlButton>}
+        {/* </SlTooltip> */}
+    </>)
 })
