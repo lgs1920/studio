@@ -60,7 +60,11 @@ export class CameraUtils {
             update({id: 'camera-latitude', value: position.latitude.toFixed(5)})
             update({id: 'camera-altitude', value: position.height.toFixed()})
             const cameraAngles = CameraUtils.getHeadingAndPitch(camera)
-            update({id: 'camera-heading', value: cameraAngles.heading.toFixed()})
+            let heading = cameraAngles.heading
+            if (heading === 360) {
+                heading = 0
+            }
+            update({id: 'camera-heading', value: heading.toFixed()})
             update({id: 'camera-pitch', value: (cameraAngles.pitch).toFixed(), class: 'test'})
         } catch (e) {
             console.error(e)

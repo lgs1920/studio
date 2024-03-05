@@ -52,6 +52,8 @@ export function ViewTrack3D() {
         // Set DefaultTheme
         AppUtils.setTheme()
 
+        // Update camera info
+        CameraUtils.updatePosition(vt3d?.camera)
 
         //vt3d.viewer.scene.verticalExaggeration = Number(1)
 

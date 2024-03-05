@@ -14,11 +14,15 @@ import { TextValueUI }                              from '../../UI/TextValueUI/T
 export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref) {
     vt3d.viewer = useCesium().viewer
 
-    const store = vt3d.mainProxy.components
-    const snap = useSnapshot(store)
+    const mainStore = vt3d.mainProxy.components
+    const mainSnap = useSnapshot(mainStore)
 
     const toggle = () => {
-        store.cameraPosition.show = !store.cameraPosition.show
+        mainStore.cameraPosition.show = !mainStore.cameraPosition.show
+        // Update camera info
+        if (mainStore.cameraPosition.show) {
+            CameraUtils.updatePosition(vt3d?.camera)
+        }
     }
 
 
@@ -31,10 +35,10 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
             <SlTooltip content="Show real time camera information">
                 <SlButton size="small" onClick={toggle}><FontAwesomeIcon icon={faVideo} slot={'prefix'}/></SlButton>
             </SlTooltip>
-            {snap.cameraPosition.show &&
-                <SlAnimation easing="bounceInLeft" duration={1000} iterations={1} play={snap.cameraPosition.show}
+            {mainSnap.cameraPosition.show &&
+                <SlAnimation easing="bounceInLeft" duration={1000} iterations={1} play={mainSnap.cameraPosition.show}
                              onSlFinish={() => toggle()}>
-                    <div className={'ui-element'} ref={ref} open={snap.cameraPosition.show}>
+                    <div className={'ui-element'} ref={ref} open={mainSnap.cameraPosition.show}>
                         {/*<FontAwesomeIcon icon={faCompass}/>*/}
                         <sl-icon library="fa" name={FA2SL.set(faCompass)}></sl-icon>
                         <TextValueUI ref={ref} id={'camera-longitude'} text={'Lon:'}/>
