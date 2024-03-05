@@ -78,7 +78,7 @@ export const TrackSettings = function TrackSettings() {
      *
      * @type {setThickness}
      */
-    const setVisibility = (async event => {
+    const setTrackVisibility = (async event => {
         //save state
         editorStore.track.visible = event.target.checked
 
@@ -101,6 +101,9 @@ export const TrackSettings = function TrackSettings() {
                 entity.show = event.target.checked
             })
         }
+        await rebuildTrack()
+        TracksEditorUtils.reRenderTrackSettings()
+        TracksEditorUtils.reRenderTracksList()
 
 
     })
@@ -291,7 +294,7 @@ export const TrackSettings = function TrackSettings() {
                         <SlSwitch size="small"
                                   checked={editorSnapshot.track.visible}
                                   style={{'--thumb-size': '1rem'}}
-                                  onSlChange={setVisibility}
+                                  onSlChange={setTrackVisibility}
                         />
 
                         <SlTooltip content={'Remove'}>

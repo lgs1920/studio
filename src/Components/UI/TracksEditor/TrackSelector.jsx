@@ -1,8 +1,8 @@
-import { faChevronDown }              from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
-import { forwardRef }                 from 'react'
-import { useSnapshot }                from 'valtio'
-import { FA2SL }                      from '../../../Utils/FA2SL'
+import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon, SlOption, SlSelect }       from '@shoelace-style/shoelace/dist/react'
+import { forwardRef }                       from 'react'
+import { useSnapshot }                      from 'valtio'
+import { FA2SL }                            from '../../../Utils/FA2SL'
 
 export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
 
@@ -45,6 +45,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     // set Default
     mainStore.currentTrack = vt3d.currentTrack?.slug
 
+
     return (
         <>
             {
@@ -57,7 +58,13 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
                     <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
                     {tracks.map(track =>
-                        <SlOption key={track.title} value={track.slug}>{track.title}</SlOption>,
+                        <SlOption key={track.title} value={track.slug}>
+                            {track.visible
+                             ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/>
+                             : <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEyeSlash)}/>
+                            }
+                            {track.title}
+                        </SlOption>,
                     )}
                 </SlSelect>
             }
