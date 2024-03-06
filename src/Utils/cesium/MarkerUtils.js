@@ -22,6 +22,7 @@ export class MarkerUtils {
             id: marker.id,
             description: marker.description,
             position: Cesium.Cartesian3.fromDegrees(marker.coordinates[0], marker.coordinates[1], marker.coordinates[2]),
+            show: marker.visible,
         }
         const pinBuilder = new Cesium.PinBuilder()
 
