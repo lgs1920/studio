@@ -1,5 +1,4 @@
 import { Cartesian3, HeadingPitchRange, Math, Transforms } from 'cesium'
-import { update }                                          from '../../Components/UI/TextValueUI/TextValueUI.jsx'
 
 export class CameraUtils {
 
@@ -29,17 +28,21 @@ export class CameraUtils {
     /**
      * get Camera Position in degrees
      */
-    static getPosition = (camera) => {
+    static getPosition = async (camera) => {
 
+        // If we do not have camera, we try to set one or return zeros
         if (!camera) {
             camera = vt3d.camera
+            if (camera === undefined) {
+                return {longitude: 0, latitude: 0, height: 0}
+            }
         }
 
-        const {longitude, latitude, height} = camera.positionCartographic
+        const {longitude, latitude, height} = await camera.positionCartographic
         return {
             longitude: Math.toDegrees(longitude),
             latitude: Math.toDegrees(latitude),
-            height: height,
+            altitude: height,
         }
     }
 
@@ -47,27 +50,33 @@ export class CameraUtils {
      *
      * @param camera
      */
-    static  updatePosition = (camera) => {
+    static  updatePosition = async (camera) => {
 
-
+        // If we do not have camera, we try to set one or return
         if (!camera) {
             camera = vt3d.camera
+            if (camera === undefined) {
+                return
+            }
         }
 
         try {
-            const position = CameraUtils.getPosition(camera)
-            update({id: 'camera-longitude', value: position.longitude.toFixed(5)})
-            update({id: 'camera-latitude', value: position.latitude.toFixed(5)})
-            update({id: 'camera-altitude', value: position.height.toFixed()})
-            const cameraAngles = CameraUtils.getHeadingAndPitch(camera)
+            const position = await CameraUtils.getPosition(camera)
+            const cameraAngles = await CameraUtils.getHeadingAndPitch(camera)
             let heading = cameraAngles.heading
             if (heading === 360) {
                 heading = 0
             }
-            update({id: 'camera-heading', value: heading.toFixed()})
-            update({id: 'camera-pitch', value: (cameraAngles.pitch).toFixed(), class: 'test'})
+            return {
+                longitude: position.longitude,
+                latitude: position.latitude,
+                altitude: position.altitude,
+                heading: heading,
+                pitch: cameraAngles.pitch,
+            }
         } catch (e) {
             console.error(e)
+            return undefined
         }
 
 
@@ -97,10 +106,10 @@ export class CameraUtils {
              * Let's rotate on left for PI/1000 angle
              */
             const step = Math.PI / 1000
-            vt3d.viewer.clock.onTick.addEventListener(() => {
+            vt3d.viewer.clock.onTick.addEventListener(async () => {
                 vt3d.camera.rotateLeft(step)
                 // No event on rotate, so we force update position
-                CameraUtils.updatePosition()
+                await CameraUtils.updatePosition()
             })
         }
     }

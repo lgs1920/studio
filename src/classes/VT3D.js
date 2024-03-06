@@ -22,8 +22,9 @@ export class VT3D {
         // Main is global to the app
         this.#mainProxy = proxy({
             components: {
-                cameraPosition: {
+                camera: {
                     show: false,
+                    position: {},
                 },
                 credits: {show: false},
                 tracksEditor: {

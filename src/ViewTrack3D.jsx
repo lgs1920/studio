@@ -47,13 +47,23 @@ export function ViewTrack3D() {
         roll: Cesium.Math.toRadians(center.camera.roll),
     }
 
+    const updateCameraPosition = () => {
+        const cameraStore = vt3d.mainProxy.components.camera
+        CameraUtils.updatePosition().then(data => {
+            if (data !== undefined) {
+                cameraStore.position = data
+            }
+        })
+    }
+
     useEffect(() => {
 
         // Set DefaultTheme
         AppUtils.setTheme()
 
         // Update camera info
-        CameraUtils.updatePosition(vt3d?.camera)
+        CameraUtils.updatePosition(vt3d?.camera).then(r => {
+        })
 
         //vt3d.viewer.scene.verticalExaggeration = Number(1)
 
@@ -86,7 +96,7 @@ export function ViewTrack3D() {
         >
             <Scene></Scene>
             <Globe enableLighting={false}></Globe>
-            <Camera onMoveEnd={CameraUtils.updatePosition} ref={viewerRef}>
+            <Camera onMoveStart={updateCameraPosition} onMoveEnd={updateCameraPosition} ref={viewerRef}>
                 <CameraFlyTo
                     orientation={vt3d.cameraOrientation}
                     duration={3}
