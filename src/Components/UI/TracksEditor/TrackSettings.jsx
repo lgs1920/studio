@@ -214,7 +214,7 @@ export const TrackSettings = function TrackSettings() {
      *
      * @return {Track}
      */
-    const rebuildTrack = async () => {
+    const rebuildTrack = async (action) => {
 
         // unproxify
         const unproxyfied = JSON.parse(JSON.stringify(editorStore.track))
@@ -228,7 +228,7 @@ export const TrackSettings = function TrackSettings() {
         vt3d.saveTrack(track)
 
         //  vt3d.viewer.dataSources.removeAll()
-        if (track.visible) {
+        if (track.visible && action !== UPDATE_TRACK_NORELOAD) {
             await track.loadAfterNewSettings()
         }
         return track
