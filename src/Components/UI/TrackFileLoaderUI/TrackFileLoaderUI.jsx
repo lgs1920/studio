@@ -15,7 +15,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
 
     const uploadFile = async () => {
 
-        // uploading a file exits full screen mode, so weforc the state
+        // uploading a file exits full screen mode, so we force the state
         mainStore.fullSize = false
 
         const track = await TrackUtils.loadTrackFromFile()
