@@ -43,6 +43,7 @@ export class VT3D {
                 },
             },
             currentTrack: null,
+            fullSize: false,
         })
 
         // Get the first as current currentTrack

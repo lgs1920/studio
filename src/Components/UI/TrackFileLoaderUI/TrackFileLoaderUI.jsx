@@ -14,6 +14,10 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
     const mainSnap = useSnapshot(mainStore)
 
     const uploadFile = async () => {
+
+        // uploading a file exit full screen mode, so weforc the state
+        mainStore.fullSize = false
+
         const track = await TrackUtils.loadTrackFromFile()
         // File is correct let's work with
         if (track !== undefined) {

@@ -4,6 +4,7 @@ import { useCesium }         from 'resium'
 import { CameraPositionUI }  from '../../cesium/CameraPositionUI/CameraPositionUI'
 import { CompassUI }         from '../../cesium/CompassUI/CompassUI'
 import { CreditsUI }         from '../CreditsUI/CreditsUI'
+import { FullScreenUI }      from '../FullScreenUI/FullScreenUI'
 import { TrackFileLoaderUI } from '../TrackFileLoaderUI/TrackFileLoaderUI'
 import { TracksEditor }      from '../TracksEditor/TracksEditor'
 
@@ -15,6 +16,8 @@ export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
             <div id="vt3d-main-ui" className={'ui'} ref={ref}>
                 <CameraPositionUI ref={ref}/>
                 <TrackFileLoaderUI ref={ref}/>
+                <FullScreenUI ref={ref}/>
+
                 <CompassUI ref={ref}/>
                 <CreditsUI ref={ref}/>
                 <TracksEditor ref={ref}/>
