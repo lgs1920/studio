@@ -20,7 +20,7 @@ export const CreditsUI = forwardRef(function CreditsUI() {
     }
 
     return (<>
-        <SlDrawer className="ui-element transparent" id="credits-pane" open={mainSnap.credits.show}
+        <SlDrawer className="ui-element- transparent" id="credits-pane" open={mainSnap.credits.show}
                   onSlAfterHide={() => setOpen(false)}>
             <SlInclude src="/src/assets/pages/credits.html"/>
 
@@ -37,7 +37,7 @@ export const CreditsUI = forwardRef(function CreditsUI() {
             </div>
         </SlDrawer>
         <SlTooltip content="Show Credits">
-            <SlButton size="small" id={'open-credits-pane'} onClick={() => setOpen(true)}>
+            <SlButton className={'square-icon'} size="small" id={'open-credits-pane'} onClick={() => setOpen(true)}>
                 <SlIcon library="fa" name={FA2SL.set(faCircleInfo)}></SlIcon>
             </SlButton>
         </SlTooltip>

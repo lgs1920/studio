@@ -1,14 +1,13 @@
 import './style.css'
 
-import { faAngle, faCompass, faMountains, faVideo } from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon }                          from '@fortawesome/react-fontawesome'
-import { SlAnimation, SlButton, SlTooltip }         from '@shoelace-style/shoelace/dist/react'
-import { forwardRef }                               from 'react'
-import { useCesium }                                from 'resium'
-import { useSnapshot }                              from 'valtio'
-import { CameraUtils }                              from '../../../Utils/cesium/CameraUtils'
-import { FA2SL }                                    from '../../../Utils/FA2SL'
-import { TextValueUI }                              from '../../UI/TextValueUI/TextValueUI.jsx'
+import { faAngle, faCompass, faMountains, faVideo }         from '@fortawesome/pro-regular-svg-icons'
+import { SlAnimation, SlButton, SlCard, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { forwardRef }                                       from 'react'
+import { useCesium }                                        from 'resium'
+import { useSnapshot }                                      from 'valtio'
+import { CameraUtils }                                      from '../../../Utils/cesium/CameraUtils'
+import { FA2SL }                                            from '../../../Utils/FA2SL'
+import { TextValueUI }                                      from '../../UI/TextValueUI/TextValueUI.jsx'
 
 
 export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref) {
@@ -34,15 +33,18 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
 
 
     return (
-        <div id="camera-position" className={'ui-element transparent'} ref={ref}>
+        <div id="camera-position" ref={ref}>
             <SlTooltip content="Show real time camera information">
-                <SlButton size="small" onClick={toggle}><FontAwesomeIcon icon={faVideo} slot={'prefix'}/></SlButton>
+
+                <SlButton size={'small'} className={'square-icon'} onClick={toggle}><SlIcon library="fa"
+                                                                                            name={FA2SL.set(faVideo)}></SlIcon></SlButton>
             </SlTooltip>
+
             {cameraSnap.show &&
                 <SlAnimation size="small" easing="bounceInLeft" duration={1000} iterations={1}
                              play={cameraSnap.show}
                              onSlFinish={() => toggle()}>
-                    <div className={'ui-element'} ref={ref} open={cameraSnap.show}>
+                    <SlCard id="camera-data-panel" ref={ref} open={cameraSnap.show}>
                         <sl-icon library="fa" name={FA2SL.set(faCompass)}></sl-icon>
                         <TextValueUI value={cameraSnap.position.longitude.toFixed(5)}
                                      id={'camera-longitude'}
@@ -59,7 +61,7 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
                         <TextValueUI value={cameraSnap.position.altitude.toFixed()}
                                      id={'camera-altitude'}
                                      unit={'m'}/>
-                    </div>
+                    </SlCard>
                 </SlAnimation>
             }
         </div>

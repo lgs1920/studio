@@ -1,15 +1,53 @@
 
 #vt3d-main-ui {
     display: flex;
-    gap:var(--vt3d-gutter-s);
-    padding: var(--vt3d-gutter);
-
+    gap: var(--vt3d-gutter-s);
     position: fixed;
     top: 0;
-    bottom: 100vh;
+    height: 100vh;
     left: 0;
-    right: 100vw;
+    width: 100vw;
+    pointer-events: none;
 
     z-index: var(--vt3d-ui-layer-zindex);
 
 }
+
+#vt3d-main-ui > div {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vt3d-gutter-s);
+    pointer-events: auto;
+
+
+    --top: var(--vt3d-gutter-s);
+    --left: var(--vt3d-gutter-s);
+    --bottom: var(--vt3d-gutter-s);
+    --right: var(--vt3d-gutter-s);
+}
+
+#top-left-ui {
+    position: absolute;
+    top: var(--top);
+    left: var(--left);
+}
+
+#top-right-ui {
+    position: absolute;
+    top: var(--top);
+    right: var(--right);
+}
+
+#bottom-right-ui {
+    position: absolute;
+    bottom: var(--bottom);
+    right: var(--right);
+}
+
+#bottom-left-ui {
+    position: absolute;
+    bottom: var(--bottom);
+    left: var(--left);
+}
+
+

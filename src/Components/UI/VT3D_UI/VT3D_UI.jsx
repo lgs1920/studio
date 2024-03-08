@@ -13,14 +13,23 @@ export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
 
     return (
         <>
-            <div id="vt3d-main-ui" className={'ui'} ref={ref}>
-                <CameraPositionUI ref={ref}/>
-                <TrackFileLoaderUI ref={ref}/>
-                <FullScreenUI ref={ref}/>
+            <div id="vt3d-main-ui" ref={ref}>
+                <div id={'top-left-ui'}>
+                    <CameraPositionUI ref={ref}/>
+                    <TrackFileLoaderUI ref={ref}/>
+                    <TracksEditor ref={ref}/>
+                </div>
+                <div id={'bottom-left-ui'}>
+                    <FullScreenUI ref={ref}/>
+                    <CreditsUI ref={ref}/>
+                </div>
+                <div id={'bottom-right-ui'}>
+                    <CompassUI ref={ref}/>
+                </div>
 
-                <CompassUI ref={ref}/>
-                <CreditsUI ref={ref}/>
-                <TracksEditor ref={ref}/>
+                <div id={'top-right-ui'}>
+                </div>
+
 
             </div>
         </>
