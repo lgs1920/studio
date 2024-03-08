@@ -1,9 +1,9 @@
-import * as Cesium                                      from 'cesium'
-import { Color, GeoJsonDataSource }                     from 'cesium'
-import { INITIAL_LOADING, RE_LOADING, SIMULATE_HEIGHT } from '../../classes/Track'
-import { FileUtils }                                    from '../FileUtils.js'
-import { UINotifier }                                   from '../UINotifier'
-import { EntitiesUtils }                                from './EntitiesUtils'
+import * as Cesium                                             from 'cesium'
+import { Color, GeoJsonDataSource }                            from 'cesium'
+import { INITIAL_LOADING, RE_LOADING, SIMULATE_HEIGHT, Track } from '../../classes/Track'
+import { FileUtils }                                           from '../FileUtils.js'
+import { UINotifier }                                          from '../UINotifier'
+import { EntitiesUtils }                                       from './EntitiesUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE = 'Feature', FEATURE_COLLECTION = 'FeatureCollection', LINE_STRING = 'LineString'
@@ -103,8 +103,7 @@ export class TrackUtils {
                         UINotifier.notifySuccess({
                             caption: caption, text: text,
                         })
-                        const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading), Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
-                        vt3d.viewer.zoomTo(dataSource.entities, cameraOffset)
+
                     })
                 } catch (error) {
                     console.error(error)
@@ -113,6 +112,11 @@ export class TrackUtils {
                         caption: `An error occurs during loading <strong>${name}<strong>!`, text: error,
                     })
                 }
+
+                // Focusontrack
+                TrackUtils.focus(dataSource)
+
+
             }
         }).catch(error => {
             // Error => we notify
@@ -122,6 +126,24 @@ export class TrackUtils {
             return false
         })
 
+    }
+
+    /**
+     * Focus on track
+     *
+     *
+     * @param trackOrDataSource Track or DataSource instance
+     */
+    static focus = (trackOrDataSource) => {
+        const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading),
+            Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
+
+        let dataSource = trackOrDataSource
+        // If it is a track, let'retrieve datasource
+        if (trackOrDataSource instanceof Track) {
+            dataSource = vt3d.viewer.dataSources.getByName(trackOrDataSource.slug)[0]
+        }
+        vt3d.viewer.zoomTo(dataSource.entities, cameraOffset)
     }
 
     /**

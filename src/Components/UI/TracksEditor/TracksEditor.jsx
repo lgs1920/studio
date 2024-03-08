@@ -2,7 +2,6 @@ import { faPencil }                              from '@fortawesome/pro-regular-
 import { SlButton, SlDrawer, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { forwardRef }                            from 'react'
 import { useSnapshot }                           from 'valtio'
-import { TrackUtils }                            from '../../../Utils/cesium/TrackUtils'
 import { FA2SL }                                 from '../../../Utils/FA2SL'
 import './style.css'
 import { TracksEditorUtils }                     from '../../../Utils/TracksEditorUtils'
@@ -55,7 +54,8 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                           onSlRequestClose={handleRequestClose}
                           contained
                           onSlHide={closeTracksEditor}
-                          onSlShow={TrackUtils.prepareTrackEdition}>
+                    // onSlShow={TracksEditorUtils.prepareTrackEdition}
+                >
                     {vt3d.tracks.length > 0 && <div id={'track-settings-container'}>
                         <TrackSelector onChange={TracksEditorUtils.prepareTrackEdition}
                                        label={'Select a track:'}/>
@@ -64,6 +64,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                     <div id="tracks-editor-footer" slot={'footer'}></div>
                 </SlDrawer>}
         </div>
+
         <SlTooltip placement={'right'} content="Edit Tracks">
             {mainSnap.usable && <SlButton size={'small'} className={'square-icon'} id={'open-currentTrack-editor'}
                                           onClick={toggleTracksEditor}>

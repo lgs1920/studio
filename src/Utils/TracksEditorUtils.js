@@ -1,3 +1,5 @@
+import { TrackUtils } from './cesium/TrackUtils'
+
 export class TracksEditorUtils {
 
     /**
@@ -17,6 +19,7 @@ export class TracksEditorUtils {
         if (isOK(event)) {
             vt3d.editorProxy.track = vt3d.getTrackBySlug(event.target.value)
             TracksEditorUtils.reRenderTrackSettings()
+            TrackUtils.focus(vt3d.editorProxy.track)
         }
     }
 
