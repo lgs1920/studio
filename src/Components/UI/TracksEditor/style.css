@@ -2,9 +2,9 @@
 #tracks-editor-container {
     position: absolute;
     z-index: var(--vt3d-ui-layer-zindex);
-    top: 0;
+    top: calc(var(--top) * -1);
     left: 0;
-    width: 100vw;
+    width: calc(100vw - var(--right));
     height: 100vh;
     pointer-events: none;
 }
@@ -28,18 +28,37 @@
     font-weight: normal;
 }
 
-#track-settings {
+#track-settings, #track-settings-container {
     width: 100%;
     display: flex;
     flex-direction: column;
     gap: var(--vt3d-gutter-s);
+    width: 100%;
 }
 
-#track-line-settings > div {
+#track-line-settings-global {
     display: flex;
-    gap: var(--vt3d-gutter);
+    flex-direction: column;
+    width: 100%;
+    gap: var(--vt3d-gutter-s);
     align-items: center;
     justify-content: space-between;
+}
+
+#track-line-settings-global > div {
+    width: 100%;
+}
+
+#track-line-settings, #track-line-settings > div {
+    display: flex;
+    gap: var(--vt3d-gutter-s);
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#track-line-settings {
+    flex-direction: column;
 }
 
 #track-line-settings sl-switch::part(base),

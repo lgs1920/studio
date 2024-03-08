@@ -267,74 +267,77 @@ export const TrackSettings = function TrackSettings() {
     return (<>
         {editorSnapshot.track &&
             <SlCard id="track-settings" key={vt3d.mainProxy.components.tracksEditor.trackSettingsKey}>
-                {/* Change visible name (title) */}
-                <SlInput id="track-title" label="Title:" value={editorSnapshot.track.title}
-                         onSlChange={setTitle}
-                />
-
-                {/* Add DEM server selection if we do not have height initially (ie in the track file) */
-                    !editorSnapshot.track.hasHeight &&
-                    <>
-                        <DEMServerSelection
-                            default={editorSnapshot.track?.DEMServer ?? NO_DEM_SERVER}
-                            label={'Simulate Altitude:'}
-                            onChange={setDEMServer}
-                        />
-                        {editorSnapshot.longTask && <SlProgressBar indeterminate/>}
-                    </>
-                }
-
-                {/* Track line settings */}
-                <div id="track-line-settings">
+                <div id={'track-line-settings-global'}>
+                    {/* Change visible name (title) */}
                     <div>
-                        <SlTooltip content="Color">
-                            <SlColorPicker opacity
-                                           size={'small'}
-                                           label={'Color'}
-                                           value={editorSnapshot.track.color}
-                                           swatches={vt3d.configuration.defaultTrackColors.join(';')}
-                                           onSlChange={setColor}
-                                           disabled={!editorSnapshot.track.visible}
-                            />
-                        </SlTooltip>
-                        <SlTooltip content="Thickness">
-                            <SlRange min={1} max={10} step={1}
-                                     value={editorSnapshot.track.thickness}
-                                     style={{'--thumb-size': '1rem'}}
-                                     onSlChange={setThickness}
-                                     disabled={!editorSnapshot.track.visible}
-                            />
-                        </SlTooltip>
-
-                        <SlDivider id="test-line" style={{
-                            '--color': editorSnapshot.track.visible ? editorSnapshot.track.color : 'transparent',
-                            '--width': `${editorSnapshot.track.thickness}px`,
-                            '--spacing': 0,
-                        }}
-                                   disabled={!editorSnapshot.track.visible}
+                        <SlInput id="track-title" label="Title:" value={editorSnapshot.track.title}
+                                 onSlChange={setTitle}
                         />
-
-                        <SlSwitch size="small"
-                                  checked={editorSnapshot.track.visible}
-                                  style={{'--thumb-size': '1rem'}}
-                                  onSlChange={setTrackVisibility}
-                        />
-
-                        <SlTooltip content={'Remove'}>
-                            <a onClick={removeTrack}>
-                                <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
-                            </a>
-                        </SlTooltip>
-
-                        <ConfirmRemoveTrackDialog/>
                     </div>
 
-                    {editorSnapshot.track.visible &&
+                    {/* Add DEM server selection if we do not have height initially (ie in the track file) */
+                        !editorSnapshot.track.hasHeight &&
                         <div>
-                            <MarkerVisibility type={'start'} label={'Start'}/>
-                            <MarkerVisibility type={'stop'} label={'Stop'}/>
+                            <DEMServerSelection
+                                default={editorSnapshot.track?.DEMServer ?? NO_DEM_SERVER}
+                                label={'Simulate Altitude:'}
+                                onChange={setDEMServer}
+                            />
+                            {editorSnapshot.longTask && <SlProgressBar indeterminate/>}
                         </div>
                     }
+                    {/* Track line settings */}
+                    <div id="track-line-settings">
+                        <div>
+                            <SlTooltip content="Color">
+                                <SlColorPicker opacity
+                                               size={'small'}
+                                               label={'Color'}
+                                               value={editorSnapshot.track.color}
+                                               swatches={vt3d.configuration.defaultTrackColors.join(';')}
+                                               onSlChange={setColor}
+                                               disabled={!editorSnapshot.track.visible}
+                                />
+                            </SlTooltip>
+                            <SlTooltip content="Thickness">
+                                <SlRange min={1} max={10} step={1}
+                                         value={editorSnapshot.track.thickness}
+                                         style={{'--thumb-size': '1rem'}}
+                                         onSlChange={setThickness}
+                                         disabled={!editorSnapshot.track.visible}
+                                />
+                            </SlTooltip>
+
+                            <SlDivider id="test-line" style={{
+                                '--color': editorSnapshot.track.visible ? editorSnapshot.track.color : 'transparent',
+                                '--width': `${editorSnapshot.track.thickness}px`,
+                                '--spacing': 0,
+                            }}
+                                       disabled={!editorSnapshot.track.visible}
+                            />
+
+                            <SlSwitch size="small"
+                                      checked={editorSnapshot.track.visible}
+                                      style={{'--thumb-size': '1rem'}}
+                                      onSlChange={setTrackVisibility}
+                            />
+
+                            <SlTooltip content={'Remove'}>
+                                <a onClick={removeTrack}>
+                                    <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
+                                </a>
+                            </SlTooltip>
+
+                            <ConfirmRemoveTrackDialog/>
+                        </div>
+
+                        {editorSnapshot.track.visible &&
+                            <div id={'track-tips'}>
+                                <MarkerVisibility type={'start'} label={'Start'}/>
+                                <MarkerVisibility type={'stop'} label={'Stop'}/>
+                            </div>
+                        }
+                    </div>
                 </div>
             </SlCard>
         }

@@ -1,7 +1,7 @@
 :root {
-    --vt3d-gutter: 1rem;
+    --vt3d-gutter: 0.8rem;
     --vt3d-gutter-s: 0.5rem;
-    --vt3d-gutter-xs: 0.35rem;
+    --vt3d-gutter-xs: 0.3rem;
 
     --vt3d-border-radius: 0.5rem;
     --vt3d-border-radius-s: 0.25rem;
@@ -99,9 +99,18 @@ sl-button.square-icon::part(label) {
 
 sl-drawer {
     /*--size: TODO define a default size if needed */
-    --header-spacing: var(--vt3d-gutter-s);
-    --body-spacing: var(--vt3d-gutter-s);
-    --footer-spacing: var(--vt3d-gutter-s);
+    --header-spacing: var(--vt3d-gutter-s) var(--vt3d-gutter);
+    --body-spacing: var(--vt3d-gutter);
+    --footer-spacing: var(--vt3d-gutter-s) var(--vt3d-gutter);
 
 
+}
+
+/*******************************************************************************
+ * Cards
+ */
+
+sl-card {
+    /*--size: TODO define a default size if needed */
+    --padding: var(--vt3d-gutter-s) var(--vt3d-gutter-s);
 }
