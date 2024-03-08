@@ -138,10 +138,13 @@ export class TrackUtils {
         const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading),
             Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
 
-        let dataSource = trackOrDataSource
-        // If it is a track, let'retrieve datasource
+        let dataSource
         if (trackOrDataSource instanceof Track) {
+            // If it is a track, let'retrieve datasource el
             dataSource = vt3d.viewer.dataSources.getByName(trackOrDataSource.slug)[0]
+        } else {
+            // We assume that it is a datasource
+            dataSource = trackOrDataSource
         }
         vt3d.viewer.zoomTo(dataSource.entities, cameraOffset)
     }
