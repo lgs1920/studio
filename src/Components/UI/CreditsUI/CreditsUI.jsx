@@ -36,7 +36,7 @@ export const CreditsUI = forwardRef(function CreditsUI() {
                 </SlTooltip>
             </div>
         </SlDrawer>
-        <SlTooltip content="Show Credits">
+        <SlTooltip placement={'right'} content="Show Credits">
             <SlButton className={'square-icon'} size="small" id={'open-credits-pane'} onClick={() => setOpen(true)}>
                 <SlIcon library="fa" name={FA2SL.set(faCircleInfo)}></SlIcon>
             </SlButton>

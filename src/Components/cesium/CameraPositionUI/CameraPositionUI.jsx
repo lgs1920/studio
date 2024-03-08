@@ -34,7 +34,7 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
 
     return (
         <div id="camera-position" ref={ref}>
-            <SlTooltip content="Show real time camera information">
+            <SlTooltip placement={'right'} content="Show real time camera information">
 
                 <SlButton size={'small'} className={'square-icon'} onClick={toggle}><SlIcon library="fa"
                                                                                             name={FA2SL.set(faVideo)}></SlIcon></SlButton>

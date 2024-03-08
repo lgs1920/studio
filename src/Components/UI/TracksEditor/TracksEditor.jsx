@@ -64,7 +64,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                     <div id="tracks-editor-footer" slot={'footer'}></div>
                 </SlDrawer>}
         </div>
-        <SlTooltip content="Edit Tracks">
+        <SlTooltip placement={'right'} content="Edit Tracks">
             {mainSnap.usable && <SlButton size={'small'} className={'square-icon'} id={'open-currentTrack-editor'}
                                           onClick={toggleTracksEditor}>
                 <SlIcon library="fa" name={FA2SL.set(faPencil)}></SlIcon>
