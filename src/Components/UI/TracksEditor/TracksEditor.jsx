@@ -51,8 +51,6 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
     return (<>
         <div id="tracks-editor-container" key={mainSnap.key}>
             {mainSnap.usable && <SlDrawer id="tracks-editor-pane" open={mainSnap.show}
-                                          no-modal
-                                          contained
                                           onSlRequestClose={handleRequestClose}
                                           onSlHide={closeTracksEditor}
                                           onSlShow={TrackUtils.prepareTrackEdition}>

@@ -92,3 +92,16 @@ sl-button.square-icon::part(label) {
     line-height: 1;
     font-size: var(--vt3d-dimension-s);
 }
+
+/*******************************************************************************
+ * Drawers
+ */
+
+sl-drawer {
+    /*--size: TODO define a default size if needed */
+    --header-spacing: var(--vt3d-gutter-s);
+    --body-spacing: var(--vt3d-gutter-s);
+    --footer-spacing: var(--vt3d-gutter-s);
+
+
+}
