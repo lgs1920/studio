@@ -231,6 +231,8 @@ export const TrackSettings = function TrackSettings() {
         //  vt3d.viewer.dataSources.removeAll()
         if (track.visible && action !== UPDATE_TRACK_NORELOAD) {
             await track.loadAfterNewSettings()
+        } else {
+            TrackUtils.focus(track)
         }
         return track
     }
