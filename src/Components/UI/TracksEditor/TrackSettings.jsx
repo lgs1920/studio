@@ -6,6 +6,7 @@ import {
 }                               from '@shoelace-style/shoelace/dist/react'
 import { useSnapshot }          from 'valtio'
 import { NO_DEM_SERVER, Track } from '../../../classes/Track'
+import { TrackUtils }           from '../../../Utils/cesium/TrackUtils'
 import { FA2SL }                from '../../../Utils/FA2SL'
 import { TracksEditorUtils }    from '../../../Utils/TracksEditorUtils'
 import { UINotifier }           from '../../../Utils/UINotifier'
@@ -177,7 +178,6 @@ export const TrackSettings = function TrackSettings() {
                     dataSource = vt3d.viewer.dataSources.getByName(editorStore.track.slug)[0]
                 }
                 vt3d.viewer.dataSources.remove(dataSource)
-
             }
 
             /**
@@ -188,6 +188,7 @@ export const TrackSettings = function TrackSettings() {
             if (mainStore.list.length >= 1) {
                 // New current is the first.
                 vt3d.currentTrack = vt3d.getTrackBySlug(mainStore.list[0])
+                TrackUtils.focus(vt3d.currentTrack)
                 TracksEditorUtils.reRenderTracksList()
                 TracksEditorUtils.reRenderTrackSettings()
             } else {
