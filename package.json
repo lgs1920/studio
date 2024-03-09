@@ -16,6 +16,7 @@
     "@fortawesome/pro-regular-svg-icons": "^6.5.1",
     "@fortawesome/pro-solid-svg-icons": "^6.5.1",
     "@fortawesome/react-fontawesome": "^0.2.0",
+    "@mapbox/geojson-extent": "^1.0.1",
     "@mapbox/togeojson": "^0.16.2",
     "@shoelace-style/shoelace": "^2.13.1",
     "@tmcw/togeojson": "^5.8.1",

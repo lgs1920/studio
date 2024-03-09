@@ -1,9 +1,10 @@
-import * as Cesium                                             from 'cesium'
-import { Color, GeoJsonDataSource }                            from 'cesium'
-import { INITIAL_LOADING, RE_LOADING, SIMULATE_HEIGHT, Track } from '../../classes/Track'
-import { FileUtils }                                           from '../FileUtils.js'
-import { UINotifier }                                          from '../UINotifier'
-import { EntitiesUtils }                                       from './EntitiesUtils'
+import * as extent                                      from '@mapbox/geojson-extent'
+import * as Cesium                                      from 'cesium'
+import { Color, GeoJsonDataSource }                     from 'cesium'
+import { INITIAL_LOADING, RE_LOADING, SIMULATE_HEIGHT } from '../../classes/Track'
+import { FileUtils }                                    from '../FileUtils.js'
+import { UINotifier }                                   from '../UINotifier'
+import { EntitiesUtils }                                from './EntitiesUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE = 'Feature', FEATURE_COLLECTION = 'FeatureCollection', LINE_STRING = 'LineString'
@@ -114,7 +115,7 @@ export class TrackUtils {
                 }
 
                 // Focusontrack
-                TrackUtils.focus(dataSource)
+                TrackUtils.focus(track)
 
 
             }
@@ -132,21 +133,40 @@ export class TrackUtils {
      * Focus on track
      *
      *
-     * @param trackOrDataSource Track or DataSource instance
+     * @param track Track instance
      */
-    static focus = (trackOrDataSource) => {
+    static focus = (track) => {
         const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading),
             Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
 
-        let dataSource
-        if (trackOrDataSource instanceof Track) {
-            // If it is a track, let'retrieve datasource el
-            dataSource = vt3d.viewer.dataSources.getByName(trackOrDataSource.slug)[0]
-        } else {
-            // We assume that it is a datasource
-            dataSource = trackOrDataSource
-        }
-        vt3d.viewer.zoomTo(dataSource.entities, cameraOffset)
+        const dataSource = vt3d.viewer.dataSources.getByName(track.slug)[0]
+        // ext we get the bounding box and focus on it.
+        const bbox = extent.default(track.geoJson)
+        let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
+
+        const rectCarto = Cesium.Cartographic.fromCartesian(
+            vt3d.camera.getRectangleCameraCoordinates(rectangle),
+        )
+        // zoom out 30% from whatever height camera at
+        rectCarto.height = rectCarto.height + (rectCarto.height * 0.3)
+        const destination = Cesium.Cartographic.toCartesian(rectCarto)
+
+        vt3d.camera.flyTo({
+            destination: destination,
+            duration: 3,
+            orientation: {
+                heading: 0.0,
+                pitch: -Cesium.Math.PI_OVER_TWO,
+            },
+        })
+
+        // vt3d.viewer.entities.add({
+        //     name: 'B Box',
+        //     rectangle: {
+        //         coordinates: rectangle,
+        //         material: Cesium.Color.GRAY.withAlpha(0.1),
+        //     },
+        // })
     }
 
     /**
