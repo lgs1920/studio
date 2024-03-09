@@ -4,7 +4,7 @@ import { useSnapshot }          from 'valtio'
 
 import '../../../assets/css/modals.css'
 import { NO_DEM_SERVER }        from '../../../classes/Track'
-import { DEMServerSelection }   from '../DEMServerSelection'
+import { DEMServerSelection }   from '../VT3D_UI/DEMServerSelection'
 
 
 export const AltitudeChoice = forwardRef(function AltitudeChoice() {

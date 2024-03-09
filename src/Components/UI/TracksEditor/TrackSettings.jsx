@@ -10,8 +10,8 @@ import { TrackUtils }           from '../../../Utils/cesium/TrackUtils'
 import { FA2SL }                from '../../../Utils/FA2SL'
 import { TracksEditorUtils }    from '../../../Utils/TracksEditorUtils'
 import { UINotifier }           from '../../../Utils/UINotifier'
-import { DEMServerSelection }   from '../DEMServerSelection'
 import { useConfirm }           from '../Modals/ConfirmUI'
+import { DEMServerSelection }   from '../VT3D_UI/DEMServerSelection'
 
 export const TrackSettings = function TrackSettings() {
 
