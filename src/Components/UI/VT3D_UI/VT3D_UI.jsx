@@ -7,6 +7,7 @@ import { CreditsUI }         from '../CreditsUI/CreditsUI'
 import { FullScreenUI }      from '../FullScreenUI/FullScreenUI'
 import { TrackFileLoaderUI } from '../TrackFileLoaderUI/TrackFileLoaderUI'
 import { TracksEditor }      from '../TracksEditor/TracksEditor'
+import { MouseCoordinates }  from './Coordinates/MouseCoordinates'
 
 export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
     vt3d.viewer = useCesium().viewer
@@ -30,6 +31,7 @@ export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
                 <div id={'top-right-ui'}>
                 </div>
 
+                <MouseCoordinates/>
 
             </div>
         </>

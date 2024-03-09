@@ -1,0 +1,17 @@
+#mouse-coordinates-info-container {
+    position: absolute;
+    top: 0;
+    left: -9999px;
+}
+
+#mouse-coordinates-info sl-card {
+    padding: var(--vt3d-gutter-xs);
+
+}
+
+#mouse-coordinates-info {
+    display: flex;
+    gap: var(--vt3d-gutter-s);
+    line-height: 1.2;
+    align-items: center;
+}

@@ -34,6 +34,12 @@ export class VT3D {
                     trackListKey: 0,
                     trackSettingsKey: 0,
                 },
+                mouseCoordinates: {
+                    show: true,
+                    latitude: 0,
+                    longitude: 0,
+                    altitude: 0,
+                },
 
             },
             modals: {
@@ -72,7 +78,7 @@ export class VT3D {
     }
 
     get canvas() {
-        return this?.canvas
+        return this?.scene?.canvas
     }
 
     get trackStore() {
