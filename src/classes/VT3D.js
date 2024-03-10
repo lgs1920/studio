@@ -4,7 +4,7 @@ export class VT3D {
     #mainProxy
     #editorProxy
     tracks = []
-    #trackStore
+    eventHandler
     #viewer
 
 
@@ -79,10 +79,6 @@ export class VT3D {
 
     get canvas() {
         return this?.scene?.canvas
-    }
-
-    get trackStore() {
-        return this.#trackStore
     }
 
     get tracks() {
