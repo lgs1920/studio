@@ -1,4 +1,5 @@
 import './style.css'
+import * as Cesium           from 'cesium'
 import { forwardRef }        from 'react'
 import { useCesium }         from 'resium'
 import { MouseUtils }        from '../../../Utils/cesium/MouseUtils'
@@ -12,7 +13,8 @@ import { MouseCoordinates }  from './Coordinates/MouseCoordinates'
 
 export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
     vt3d.viewer = useCesium().viewer
-    MouseUtils.setMouseEventHandler(vt3d.canvas)
+    MouseUtils.bindEvent(Cesium.ScreenSpaceEventType.LEFT_CLICK, vt3d.canvas)
+    MouseUtils.bindEvent(Cesium.ScreenSpaceEventType.RIGHT_CLICK, vt3d.canvas)
 
     return (
         <>

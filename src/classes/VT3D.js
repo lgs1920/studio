@@ -1,10 +1,11 @@
-import { proxy } from 'valtio'
+import { proxy }             from 'valtio'
+import { MouseEventHandler } from './MouseEventHandler'
 
 export class VT3D {
     #mainProxy
     #editorProxy
     tracks = []
-    eventHandler
+    mouseEventHandler = new MouseEventHandler()
     #viewer
 
 
