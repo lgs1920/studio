@@ -463,8 +463,6 @@ export class Track {
         this.markers.forEach(marker => {
             marker.draw()
         })
-
-
     }
 
     /**
