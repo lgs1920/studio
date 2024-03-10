@@ -19,12 +19,15 @@ export class MarkerUtils {
 
         const dataSource = vt3d.viewer.dataSources.getByName(marker.parent)[0]
 
+        const properties = new Cesium.PropertyBag()
+        properties.addProperty('slug', marker.id)
         let markerOptions = {
             name: marker.name,
             id: marker.id,
             description: marker.description,
             position: Cesium.Cartesian3.fromDegrees(marker.coordinates[0], marker.coordinates[1], marker.coordinates[2]),
             show: marker.visible,
+            properties: properties,
         }
         const pinBuilder = new Cesium.PinBuilder()
 
@@ -67,6 +70,8 @@ export class MarkerUtils {
                     return await dataSource.entities.add(markerOptions)
                 })
         }
+
+
     }
     static useFontAwesome = (marker) => {
         library.add(marker.icon)
