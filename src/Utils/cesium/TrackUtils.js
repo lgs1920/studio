@@ -89,6 +89,7 @@ export class TrackUtils {
             } else {
                 try {
                     vt3d.viewer.dataSources.add(dataSource).then(function (dataSource) {
+
                         // Ok => we notify
                         let caption = ''
                         switch (action) {
@@ -114,7 +115,7 @@ export class TrackUtils {
                     })
                 }
 
-                // Focusontrack
+                // Focus on track
                 TrackUtils.focus(track)
 
 
@@ -153,7 +154,7 @@ export class TrackUtils {
 
         vt3d.camera.flyTo({
             destination: destination,
-            duration: 3,
+            duration: 2,
             orientation: {
                 heading: 0.0,
                 pitch: -Cesium.Math.PI_OVER_TWO,
@@ -256,7 +257,7 @@ export class TrackUtils {
      *
      * @param name  {string|null}   name of the datasource
      */
-    static getEntities = (name) => {
+    static getEntitiesByDataSourceName = (name) => {
         // if we do not have datasource name, we'll find in all datasource
         let dataSource
         for (let i = 0; i < vt3d.viewer.dataSources.length; i++) {
@@ -266,6 +267,32 @@ export class TrackUtils {
             }
         }
     }
+
+    /**
+     * Search the datasource that contains an entity with a specific id.
+     *
+     * @param entityId the id of the required entities.
+     *
+     * @return {DataSource}
+     */
+    static getDataSourceNameByEntityId = (entityId) => {
+
+        // loop all data sources
+        for (let i = 0; i < vt3d.viewer.dataSources.length; i++) {
+            const item = vt3d.viewer.dataSources.get(i)
+            // loop all entities inside a data source
+            for (let j = 0; j < item.entities.values.length; j++) {
+                const child = item.entities.values[j]
+                // Until we found one
+                if (child.id === entityId) {
+                    return item
+                }
+            }
+        }
+        // or none
+        return undefined
+    }
+
 
     static cleanTrack = (track) => {
         // Search  data source associated tothe track
@@ -279,4 +306,5 @@ export class TrackUtils {
     static getTrackChildById = (track, id) => {
         return EntitiesUtils.getEntityById(`${track.slug}#${id}`)
     }
+
 }
