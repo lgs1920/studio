@@ -10,6 +10,8 @@ export const PIN_COLOR = 3
 export const PIN_CIRCLE = 4
 export const JUST_ICON = 5
 
+export const MARKER_SIZE = 16
+
 export const NO_MARKER_COLOR = 'transparent'
 
 export class MarkerUtils {
