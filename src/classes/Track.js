@@ -3,7 +3,7 @@ import { gpx, kml }      from '@tmcw/togeojson'
 
 import { DateTime }                                    from 'luxon'
 import { AppUtils }                                    from '../Utils/AppUtils'
-import { JUST_ICON }                                   from '../Utils/cesium/MarkerUtils'
+import { JUST_ICON, MARKER_SIZE }                      from '../Utils/cesium/MarkerUtils'
 import { FEATURE_COLLECTION, LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
 import { Mobility }                                    from '../Utils/Mobility'
 import { MapMarker }                                   from './MapMarker'
@@ -111,6 +111,28 @@ export class Track {
         return track
     }
 
+    static getMarkerInformation = (markerId) => {
+        const elements = markerId.split('#')
+        if (elements.length === 3 && elements[0] === 'marker') {
+            return {
+                track: elements[1],
+                marker: elements[2],
+            }
+        }
+        return false
+
+    }
+
+    /**
+     * Define the slug of a marker
+     *
+     * @param id {string|number}
+     * @return {`marker#${string}#${string}`}
+     */
+    setMarkerName = (id) => {
+        return `marker#${this.slug}#${AppUtils.slugify(id)}`
+    }
+
     /**
      * Add marker at the track extremities
      *
@@ -124,13 +146,14 @@ export class Track {
                 if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
                     // Add start and Stop Markers
                     const start = feature.geometry.coordinates[0]
+                    const name = `marker#${this.slug}#start`
                     this.markers.set('start', new MapMarker({
-                            name: 'start',
+                            name: 'Marker start',
                             parent: this.slug,
-                            id: `${this.slug}#start`,
+                            id: this.setMarkerName('start'),
                             coordinates: [start[0], start[1]],
                             type: JUST_ICON,
-                            size: 16,
+                            size: MARKER_SIZE,
                             icon: faLocationDot,
                             foregroundColor: vt3d.configuration.track.markers.start.color,
                             description: 'Start point',
@@ -138,12 +161,12 @@ export class Track {
                     ))
                     const stop = feature.geometry.coordinates[feature.geometry.coordinates.length - 1]
                     this.markers.set('stop', new MapMarker({
-                            name: 'stop',
+                            name: 'Marker stop',
                             parent: this.slug,
-                            id: `${this.slug}#stop`,
+                            id: this.setMarkerName('stop'),
                             coordinates: [stop[0], stop[1]],
                             type: JUST_ICON,
-                            size: 16,
+                            size: MARKER_SIZE,
                             icon: faLocationDot,
                             foregroundColor: vt3d.configuration.track.markers.stop.color,
                             description: 'End point',
