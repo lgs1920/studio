@@ -5,7 +5,7 @@ export class VT3D {
     #mainProxy
     #editorProxy
     tracks = []
-    mouseEventHandler = new MouseEventHandler()
+    eventHandler = new MouseEventHandler()
     #viewer
 
 

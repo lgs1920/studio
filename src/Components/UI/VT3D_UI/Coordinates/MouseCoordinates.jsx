@@ -19,8 +19,8 @@ export const MouseCoordinates = forwardRef(function MouseCoordinates(props, ref)
 
 
     // Add events
-    vt3d.mouseEventHandler.onClick = MouseUtils.showCoordinates
-    vt3d.mouseEventHandler.onRightClick = MouseUtils.showCoordinates
+    vt3d.eventHandler.onClick = MouseUtils.eventsManager
+    vt3d.eventHandler.onCtrClick = MouseUtils.eventsManager
 
     return (<>
             <div id="mouse-coordinates-info-container">
