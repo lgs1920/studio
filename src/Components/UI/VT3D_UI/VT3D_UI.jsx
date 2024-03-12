@@ -5,10 +5,10 @@ import { CanvasEvents }          from '../../../classes/events/CanvasEvents'
 import { CameraPositionUI }      from '../../cesium/CameraPositionUI/CameraPositionUI'
 import { CompassUI }             from '../../cesium/CompassUI/CompassUI'
 import { CreditsUI }             from '../CreditsUI/CreditsUI'
+import { FloatingMenu }          from '../FloatingMenu/FloatingMenu'
 import { FullScreenUI }          from '../FullScreenUI/FullScreenUI'
 import { TrackFileLoaderUI }     from '../TrackFileLoaderUI/TrackFileLoaderUI'
 import { TracksEditor }          from '../TracksEditor/TracksEditor'
-import { FloatingMenu }          from './FloatingMenu/FloatingMenu'
 
 
 export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {

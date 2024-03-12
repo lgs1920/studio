@@ -1,16 +1,15 @@
-import * as Cesium                 from 'cesium'
-import { SECOND }                  from '../../../../Utils/AppUtils'
-import { MARKER_TYPE, MouseUtils } from '../../../../Utils/cesium/MouseUtils'
+import * as Cesium                   from 'cesium'
+import { SECOND }                    from '../../../Utils/AppUtils'
+import { MouseUtils, NOT_AN_ENTITY } from '../../../Utils/cesium/MouseUtils'
 
-export class MarkerMenu {
+export class AnyOtherMouseCoordinates {
+
     static show = (data) => {
-
-        const menuStore = vt3d.mainProxy.components.floatingMenu
-
-
-        if (data.picked.type !== MARKER_TYPE) {
+        if (data.picked.type !== NOT_AN_ENTITY) {
             return
         }
+
+        const menuStore = vt3d.mainProxy.components.floatingMenu
 
         const offset = 5 // pixels
         /**
@@ -50,12 +49,9 @@ export class MarkerMenu {
                 MouseUtils.mouseCoordinatesInfo.style.top = `${y + offset}px`
                 MouseUtils.mouseCoordinatesInfo.style.left = `${x + offset}px`
 
-
                 MouseUtils.timer = setInterval(MouseUtils.autoRemoveCoordinatesContainer, SECOND)
             }
 
-
         }
     }
-
 }

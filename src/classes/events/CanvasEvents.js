@@ -1,6 +1,6 @@
 import * as Cesium                  from 'cesium'
-import { AnyOtherMouseCoordinates } from '../../Components/UI/VT3D_UI/FloatingMenu/AnyOtherMouseCoordinates'
-import { MarkerMenu }               from '../../Components/UI/VT3D_UI/FloatingMenu/MarkerMenu'
+import { AnyOtherMouseCoordinates } from '../../Components/UI/FloatingMenu/AnyOtherMouseCoordinates'
+import { MarkerMenu }               from '../../Components/UI/FloatingMenu/MarkerMenu'
 import { MouseUtils }               from '../../Utils/cesium/MouseUtils'
 
 export class CanvasEvents {
