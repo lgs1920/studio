@@ -13,10 +13,14 @@ export const main = {
             trackSettingsKey: 0,
         },
         floatingMenu: {
+            menu: undefined,
+            delay: 3,
+            type: undefined,
             show: true,
             latitude: 0,
             longitude: 0,
             altitude: 0,
+
         },
 
     },
