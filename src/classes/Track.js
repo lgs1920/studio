@@ -23,6 +23,7 @@ export class Track {
     geoJson     // All the data are translated into GeoJson
     metrics     // All the metrics associated to the track
     visible     // Is visible ?
+    description
 
     hasHeight   // Is fail contains altitudes ?
     DEMServer   // DEM server associate if we need altitude
@@ -42,6 +43,7 @@ export class Track {
         'DEMServer',
         'thickness',
         'markers',
+        'description',
     ]
 
     constructor(title, type, options = {}) {
@@ -156,7 +158,7 @@ export class Track {
                             size: MARKER_SIZE,
                             icon: faLocationDot,
                             foregroundColor: vt3d.configuration.track.markers.start.color,
-                            description: 'Start point',
+                            description: 'Starting point',
                         },
                     ))
                     const stop = feature.geometry.coordinates[feature.geometry.coordinates.length - 1]
@@ -169,7 +171,7 @@ export class Track {
                             size: MARKER_SIZE,
                             icon: faLocationDot,
                             foregroundColor: vt3d.configuration.track.markers.stop.color,
-                            description: 'End point',
+                            description: 'Ending point',
                         },
                     ))
                 }
