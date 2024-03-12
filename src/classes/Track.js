@@ -23,7 +23,7 @@ export class Track {
     geoJson     // All the data are translated into GeoJson
     metrics     // All the metrics associated to the track
     visible     // Is visible ?
-    description
+    description // Add any description
 
     hasHeight   // Is fail contains altitudes ?
     DEMServer   // DEM server associate if we need altitude
