@@ -19,7 +19,7 @@ export const TrackSettings = function TrackSettings() {
     const UPDATE_TRACK_NORELOAD = 2
     const REMOVE_TRACK = 3
 
-    const editorStore = vt3d.editorProxy
+    const editorStore = vt3d.trackEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
     let dataSource = vt3d.viewer.dataSources.getByName(editorStore.track.slug)[0]

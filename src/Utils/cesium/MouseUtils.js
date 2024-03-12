@@ -1,166 +1,87 @@
-import * as Cesium    from 'cesium'
 import { Track }      from '../../classes/Track'
-import { SECOND }     from '../AppUtils'
 import { TrackUtils } from './TrackUtils'
+
+export const MARKER_TYPE = 1
+export const TRACK_TYPE = 2
+export const OTHER_TYPE = 3
+export const NOT_AN_ENTITY = 0
 
 export class MouseUtils {
 
 
-    static mouseCoordinatesInfo // Mouse Coordinates container
+    static mouseCoordinatesInfo // Mouse FloatingMenu container
     static NORMAL_DELAY = 2 // seconds
     static remaining = MouseUtils.NORMAL_DELAY
     static timer = undefined
-    static coordinatesStore
 
-    /**
-     * Global canvas mouse action manager
-     *
-     * @type {boolean}
-     */
-    static eventsManager = (movement) => {
-
-        const event = window.event
-        const mousePosition = movement.position ?? movement.endPosition
-        MouseUtils.coordinatesStore = vt3d.mainProxy.components.mouseCoordinates
-
-        const MARKER = 1, TRACK = 2, ELSE = 99
-
-        let type = ELSE
-        let track
-        let marker
-        let entity = undefined
-
-        /**
-         * First, check if it is a feature
-         */
-        if (Cesium.defined(vt3d.viewer.selectedEntity)) {
-            // Stop event propagation to cesium. From now, we'll manage events on our side
-            entity = vt3d.viewer.selectedEntity
-            vt3d.viewer.selectedEntity = undefined
-        }
-
-        /**
-         * We are on entity.
-         *
-         * Let's check the entity type ie MARKER or TRACK
-         *
-         */
-        if (entity) {
-            // Check if it is marker
-            const info = Track.getMarkerInformation(entity.id)
-            if (info && info.marker) {
-                track = info.track
-                marker = info.marker
-                type = MARKER
-            } else {
-                // Should be a track
-                // Let's search the par ent DataSource then ths entity slug
-                const datasource = TrackUtils.getDataSourceNameByEntityId(entity.id)
-                if (datasource) {
-                    track = vt3d.getTrackBySlug(datasource.name)
-                    if (track) {
-                        type = TRACK
-                    }
-                }
-            }
-        }
-
-        switch (type) {
-            case MARKER:
-                switch (event.button) {
-                    case vt3d.eventHandler.buttons.LEFT: {
-                        if (event.ctrlKey) {
-                            console.log('marker ctrl left')
-                        } else {
-                            console.log('marker left')
-                        }
-                        break
-                    }
-                }
-                break
-            case TRACK:
-                switch (event.button) {
-                    case  vt3d.eventHandler.buttons.LEFT: {
-                        console.log('track left')
-                        break
-                    }
-                    case  vt3d.eventHandler.buttons.RIGHT: {
-                        console.log('track right')
-                        break
-                    }
-                }
-                break
-            default:
-                if (event.ctrlKey) {
-                    console.log('ctrl else')
-                } else {
-                    console.log('else')
-                }
-                MouseUtils.showCoordinates(movement)
-                break
-        }
-
-    }
-
-    static bindEvent = (eventType, element, key = '') => {
-        vt3d.eventHandler.subscribe(eventType, new Cesium.ScreenSpaceEventHandler(element), key)
-    }
 
     static autoRemoveCoordinatesContainer = () => {
         MouseUtils.remaining--
         if (MouseUtils.remaining < 0) {
             clearInterval(MouseUtils.timer)
             MouseUtils.remaining = MouseUtils.NORMAL_DELAY
-            MouseUtils.coordinatesStore.show = false
+            vt3d.mainProxy.components.floatingMenu.show = false
             MouseUtils.mouseCoordinatesInfo.style.left = `-9999px`
         }
     }
-    static showCoordinates = (movement) => {
 
-        const offset = 5 // pixels
-        /**
-         * Manage a delay of 3 seconds, then hides the popup
-         *
-         * @type {number}
-         */
+
+    /**
+     * Check if the user clicks on a marker or a track or elsewhere
+     *
+     * @param movement the movement data
+     *
+     * @returns {object}    {
+     *     track : the track if  MARKER_TYPE | TRACK_TYPE
+     *     marker : the marker  if  MARKER_TYPE
+     *     entity  the entity if OTHER_TYPE
+     *     type: MARKER_TYPE | TRACK_TYPE | OTHER_TYPE | NOT_AN_ENTITY
+     * }
+     *
+     */
+    static getEntityType = (movement) => {
 
         const position = movement.position ?? movement.endPosition
-        const cartesian = vt3d.viewer.camera.pickEllipsoid(position, vt3d.viewer.scene.globe.ellipsoid)
 
-        if (cartesian) {
+        const pickedObject = vt3d.viewer.scene.pick(position)
+        const entity = (pickedObject?.primitive) ? pickedObject.id : undefined
 
-            MouseUtils.coordinatesStore.show = true
-            const cartographic = Cesium.Cartographic.fromCartesian(cartesian)
-            MouseUtils.coordinatesStore.longitude = Cesium.Math.toDegrees(cartographic.longitude)
-            MouseUtils.coordinatesStore.latitude = Cesium.Math.toDegrees(cartographic.latitude)
 
-            let {x, y} = Cesium.SceneTransforms.wgs84ToWindowCoordinates(vt3d.viewer.scene, cartesian)
+        if (entity) {
 
-            // Recalculate position:
+            // If it is an entity, we stop event propagation to cesium.
+            // From now, we'll manage events on our side
+            vt3d.viewer.selectedEntity = undefined
 
-            if (MouseUtils.mouseCoordinatesInfo !== undefined) {
-                const width  = MouseUtils.mouseCoordinatesInfo.offsetWidth,
-                      height = MouseUtils.mouseCoordinatesInfo.offsetHeight
-
-                // When right side of the box goes too far...
-                if ((x + width) > document.documentElement.clientWidth + offset) {
-                    x = document.documentElement.clientWidth - width - 2 * offset
+            // Check if it is marker
+            const info = Track.getMarkerInformation(entity.id)
+            if (info && info.marker) {
+                return {
+                    track: info.track,
+                    marker: info.marker,
+                    type: MARKER_TYPE,
                 }
-                // When bottom side of the box goes too far...
-                if ((y + height) > document.documentElement.clientHeight + offset) {
-                    y = document.documentElement.clientHeight - height - 2 * offset
+            } else {
+                // Is it a track ? Let's search the parent DataSource then the entity slug
+                const datasource = TrackUtils.getDataSourceNameByEntityId(entity.id)
+                if (datasource) {
+                    const track = vt3d.getTrackBySlug(datasource.name)
+                    if (track) {
+                        return {
+                            track: track,
+                            type: TRACK_TYPE,
+                        }
+                    } else {
+                        return {
+                            entity: entity,
+                            type: OTHER_TYPE,
+                        }
+                    }
                 }
-
-                MouseUtils.mouseCoordinatesInfo.style.top = `${y + offset}px`
-                MouseUtils.mouseCoordinatesInfo.style.left = `${x + offset}px`
-
-
-                MouseUtils.timer = setInterval(MouseUtils.autoRemoveCoordinatesContainer, SECOND)
             }
-
-
+        }
+        return {
+            type: NOT_AN_ENTITY,
         }
     }
-
-
 }

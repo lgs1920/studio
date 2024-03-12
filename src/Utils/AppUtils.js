@@ -1,5 +1,9 @@
-//import { registerIconLibrary } from '@shoelace-style';
+import * as Cesium      from 'cesium'
+import { VT3D }         from '../classes/VT3D'
+import { EventEmitter } from '../libs/EventEmitter/EventEmitter'
+import { FA2SL }        from './FA2SL'
 
+export const CONFIGURATION = '../config.json'
 
 export class AppUtils {
     /**
@@ -50,13 +54,34 @@ export class AppUtils {
         return string
             .split('-')
             .map((s, index) => {
-                return (
-                    (index === 0 ? s[0].toLowerCase() : s[0].toUpperCase()) +
-                    s.slice(1).toLowerCase()
-                )
+                return ((index === 0 ? s[0].toLowerCase() : s[0].toUpperCase()) + s.slice(1).toLowerCase())
             })
             .join('')
     }
+
+    /**
+     * Application initialisation
+     *
+     * @return {Promise<void>}
+     */
+    static init = async () => {
+        // Set Context
+        window.vt3d = new VT3D()
+        vt3d.configuration = await import(/* @vite-ignore */ CONFIGURATION)
+        vt3d.events = new EventEmitter()
+
+        // Cesium ION auth
+        Cesium.Ion.defaultAccessToken = vt3d.configuration.ionToken
+
+        // Register Font Awesome icons in ShoeLace
+        FA2SL.useFontAwesomeInShoelace('fa')
+
+        // Shoelace needs to avoid bubbling events. Here's an helper
+        window.isOK = (event) => {
+            return event.eventPhase === Event.AT_TARGET
+        }
+    }
+
 
 }
 
@@ -69,7 +94,7 @@ const DAY = 24 * HOUR
 const WEEK = 7 * DAY
 const MONTH = 30 * DAY
 const YEAR = 365 * DAY
-export {MILLIS, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR}
+export { MILLIS, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR }
 
 /** Distance constants */
 const METER = 1
@@ -77,7 +102,7 @@ const FOOT = METER * 0.3048        // foot
 const KM = 1000 * METER            // meters
 
 const MILE = KM / 0.62137119223    // miles = MILE * kms
-export {KM, MILE, FOOT}
+export { KM, MILE, FOOT }
 
 /** other */
 export const WRONG = -99999999999

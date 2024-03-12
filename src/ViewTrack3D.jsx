@@ -1,19 +1,19 @@
 /**
  * React
  */
-import * as Cesium                                                      from 'cesium'
-import { useEffect, useRef }                                            from 'react'
+import * as Cesium                                           from 'cesium'
+import { useEffect, useRef }                                 from 'react'
 
 /**
  * Some Cesium and Resium modules are needed
  */
-import { Camera, CameraFlyTo, Entity, Globe, Scene, useCesium, Viewer } from 'resium'
+import { Camera, CameraFlyTo, Entity, Globe, Scene, Viewer } from 'resium'
 /**
  * We also need our owns
  */
-import { VT3D_UI }                                                      from './Components/UI/VT3D_UI/VT3D_UI.jsx'
-import { AppUtils }                                                     from './Utils/AppUtils.js'
-import { CameraUtils }                                                  from './Utils/cesium/CameraUtils.js'
+import { VT3D_UI }                                           from './Components/UI/VT3D_UI/VT3D_UI.jsx'
+import { AppUtils }                                          from './Utils/AppUtils.js'
+import { CameraUtils }                                       from './Utils/cesium/CameraUtils.js'
 
 /**
  * We are using shoelace Web Components
@@ -22,22 +22,16 @@ import '@shoelace-style/shoelace/dist/themes/light.css'
 /**
  * Then import our owns
  */
-import { UINotifier }                                                   from './Utils/UINotifier'
-import { UIUtils }                                                      from './Utils/UIUtils'
+import { UINotifier }                                        from './Utils/UINotifier'
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 
-/**
- * Let's go
- */
-await UIUtils.init()
-
+await AppUtils.init()
 
 export function ViewTrack3D() {
 
     const viewerRef = useRef(null)
 
-    vt3d.viewer = useCesium().viewer
     const center = vt3d.configuration.center
     vt3d.windowCenter = Cesium.Cartesian3.fromDegrees(center.longitude, center.latitude, center.height)
 

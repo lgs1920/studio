@@ -1,6 +1,7 @@
 export class MouseEventHandler {
 
     handlers = new Map()
+    eventManagers = new Map()
 
 
     constructor() {
@@ -21,82 +22,55 @@ export class MouseEventHandler {
             PINCH_END: 18,
             PINCH_MOVE: 19,
         }
-
         this.buttons = {
             LEFT: 0,
             MIDDLE: 1,
             RIGHT: 2,
         }
-
         this.keyboard = {
             SHIFT: 0,
             CTRL: 1,
             ALT: 2,
         }
-    }
 
-    set handler(event) {
-        return this.handlers.get(event)
     }
 
     /**
+     * Subscribe to an event manager
      *
-     * @param callback
+     * @param props     settings
+     *              name      manager name
+     *              event     event
+     *              handler   The handler used
+     *              manager   the event manager we'll use
+     *              keyboard  Additional keyboard event
+     *
      */
-    set onClick(callback) {
-        this.action = [callback, this.events.LEFT_CLICK]
+    subscribeEventManager = (props) => {
+        props.handler.setInputAction(props.manager, props.event, props.keyboard)
+        this.handlers.set(props.name, props.handler)
+        this.#addEventManager(props.target, props.name)
     }
 
-    /**
-     *
-     * @param callback
-     */
-    set onCtrlClick(callback) {
-        this.action = [callback, this.events.LEFT_CLICK, this.keyboard.CTRL]
+    getSubscriptionsTo = (eventManager) => {
+        return this.eventManagers.get(eventManager)
     }
 
-    /**
-     *
-     * @param callback
-     */
-    set onRightClick(callback) {
-        this.action = [callback, this.events.RIGHT_CLICK]
-    }
-
-    /**
-     *
-     * @param props 0 = callback, 1=event type, 2=keyboard
-     */
-    set action(props) {
-        const [action, type, keyboard] = props
-        if (keyboard === undefined) {
-            this.handlers.get(`${type}`).setInputAction(action, type)
-        } else {
-            this.handlers.get(`${type}-${keyboard}`).setInputAction(action, type, keyboard)
+    #addEventManager = (eventManager, name, context) => {
+        let manager = this.getSubscriptionsTo(eventManager)
+        if (!manager) {
+            this.eventManagers.set(eventManager, [])
+            manager = this.getSubscriptionsTo(eventManager)
         }
+        manager.push(name)
     }
 
     /**
-     * Subscribe event type
-     * @param event
-     * @param handler
-     * @param keyboard
+     * Unsubscribe an eventManager
+     * @param name
      */
-    subscribe = (event, handler, keyboard = '') => {
-        if (keyboard === '') {
-            this.handlers.set(`${event}`, handler)
-            return
-        }
-        this.handlers.set(`${event}-${keyboard}`, handler)
-    }
-
-    unSubscribe = (event, keyboard = '') => {
-        if (keyboard === '') {
-            this.handlers.delete(`${event}`)
-            return
-        }
-        this.handlers.delete(`${event}-${keyboard}`)
-
+    unSubscribeEventManager = (name) => {
+        this.handlers.delete(name)
     }
 
 }

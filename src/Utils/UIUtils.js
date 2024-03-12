@@ -1,9 +1,3 @@
-import * as Cesium from 'cesium'
-import { VT3D }    from '../classes/VT3D'
-import { FA2SL }   from './FA2SL'
-
-export const CONFIGURATION = '../config.json'
-
 export class UIUtils {
 
     /**
@@ -19,27 +13,6 @@ export class UIUtils {
         div.textContent = html
         return div.innerHTML
     })
-    static icons
-
-    static init = async () => {
-        // Set Context
-        window.vt3d = new VT3D()
-        vt3d.configuration = await import(/* @vite-ignore */ CONFIGURATION)
-
-        // Cesium ION auth
-        Cesium.Ion.defaultAccessToken = vt3d.configuration.ionToken
-
-        // Register Font Awesome icons in ShoeLace
-        FA2SL.useFontAwesomeInShoelace('fa')
-
-        // Shoelace needs to avoid bubbling events. Here's an helper
-        window.isOK = (event) => {
-            return event.eventPhase === Event.AT_TARGET
-        }
-
-
-    }
-
 }
 
 

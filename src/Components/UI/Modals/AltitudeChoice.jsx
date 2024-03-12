@@ -12,7 +12,7 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
     const mainStore = vt3d.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
-    const storeEditor = vt3d.editorProxy
+    const storeEditor = vt3d.trackEditorProxy
     const snapEditor = useSnapshot(storeEditor)
 
     const [server, setServer] = useState(vt3d?.mainProxy.currentTrack?.DEMServer ?? NO_DEM_SERVER)

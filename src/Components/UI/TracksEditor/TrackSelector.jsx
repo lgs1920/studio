@@ -11,7 +11,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     }
     const mainStore = vt3d.mainProxy.components.tracksEditor
     const mainSnap = useSnapshot(mainStore)
-    const editorStore = vt3d.editorProxy
+    const editorStore = vt3d.trackEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
     const several = mainSnap.list.length > 1

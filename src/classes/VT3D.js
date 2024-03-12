@@ -1,9 +1,11 @@
 import { proxy }             from 'valtio'
 import { MouseEventHandler } from './MouseEventHandler'
+import { main }              from './stores/main'
+import { trackEditor }       from './stores/trackEditor'
 
 export class VT3D {
     #mainProxy
-    #editorProxy
+    #trackEditorProxy
     tracks = []
     eventHandler = new MouseEventHandler()
     #viewer
@@ -14,44 +16,11 @@ export class VT3D {
 
         // Declare Stores and snapshots for states management by @valtio
 
-        // Editor store is used to manage the settings of the currentTrack in edit
-        this.#editorProxy = proxy({
-            track: null,
-            longTask: false,
-        })
+        // Track Editor store is used to manage the settings of the currentTrack in edit
+        this.#trackEditorProxy = proxy(trackEditor)
 
         // Main is global to the app
-        this.#mainProxy = proxy({
-            components: {
-                camera: {
-                    show: false,
-                    position: {},
-                },
-                credits: {show: false},
-                tracksEditor: {
-                    visible: false,
-                    show: false,
-                    list: [],
-                    trackListKey: 0,
-                    trackSettingsKey: 0,
-                },
-                mouseCoordinates: {
-                    show: true,
-                    latitude: 0,
-                    longitude: 0,
-                    altitude: 0,
-                },
-
-            },
-            modals: {
-                altitudeChoice: {
-                    show: false,
-                    model: 'terrain',
-                },
-            },
-            currentTrack: null,
-            fullSize: false,
-        })
+        this.#mainProxy = proxy(main)
 
         // Get the first as current currentTrack
         if (this.tracks.length) {
@@ -99,8 +68,8 @@ export class VT3D {
         return this.#mainProxy
     }
 
-    get editorProxy() {
-        return this.#editorProxy
+    get trackEditorProxy() {
+        return this.#trackEditorProxy
     }
 
     getTrackBySlug(slug) {
@@ -131,6 +100,6 @@ export class VT3D {
     }
 
     addToEditor = (track) => {
-        this.editorProxy.track = track
+        this.trackEditorProxy.track = track
     }
 }
