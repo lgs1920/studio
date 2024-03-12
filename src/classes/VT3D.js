@@ -10,6 +10,8 @@ export class VT3D {
     eventHandler = new MouseEventHandler()
     #viewer
 
+    floatingMenu = {}
+
 
     constructor() {
         // TODO save/read tracks in DB (local or remote)
@@ -26,6 +28,10 @@ export class VT3D {
         if (this.tracks.length) {
             this.mainProxy.currentTrack = this.tracks[0]
             this.addToEditor(this.tracks[0])
+        }
+
+        this.floatingMenu = {
+            menu: undefined,
         }
 
 

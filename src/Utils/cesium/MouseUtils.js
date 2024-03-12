@@ -79,9 +79,9 @@ export class MouseUtils {
 
         const menuStore = vt3d.mainProxy.components.floatingMenu
 
-        if (menuStore.menu !== undefined) {
-            const width  = menuStore.menu.offsetWidth,
-                  height = menuStore.menu.offsetHeight
+        if (vt3d.floatingMenu.menu !== undefined) {
+            const width  = vt3d.floatingMenu.menu.offsetWidth,
+                  height = vt3d.floatingMenu.menu.offsetHeight
 
             // When right side of the box goes too far...
             if ((x + width) > document.documentElement.clientWidth + offset) {
@@ -92,8 +92,8 @@ export class MouseUtils {
                 y = document.documentElement.clientHeight - height - 2 * offset
             }
 
-            menuStore.menu.style.top = `${y + offset}px`
-            menuStore.menu.style.left = `${x + offset}px`
+            vt3d.floatingMenu.menu.style.top = `${y + offset}px`
+            vt3d.floatingMenu.menu.style.left = `${x + offset}px`
         }
 
         return {x, y}
