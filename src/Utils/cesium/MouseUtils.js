@@ -1,29 +1,8 @@
-import { Track }      from '../../classes/Track'
-import { TrackUtils } from './TrackUtils'
-
-export const MARKER_TYPE = 1
-export const TRACK_TYPE = 2
-export const OTHER_TYPE = 3
-export const NOT_AN_ENTITY = 0
+import { Track }                                              from '../../classes/Track'
+import { MARKER_TYPE, NOT_AN_ENTITY, OTHER_TYPE, TRACK_TYPE } from './EntitiesUtils'
+import { TrackUtils }                                         from './TrackUtils'
 
 export class MouseUtils {
-
-
-    static mouseCoordinatesInfo // Mouse FloatingMenu container
-    static NORMAL_DELAY = 2 // seconds
-    static remaining = MouseUtils.NORMAL_DELAY
-    static timer = undefined
-
-
-    static autoRemoveCoordinatesContainer = () => {
-        MouseUtils.remaining--
-        if (MouseUtils.remaining < 0) {
-            clearInterval(MouseUtils.timer)
-            MouseUtils.remaining = MouseUtils.NORMAL_DELAY
-            vt3d.mainProxy.components.floatingMenu.show = false
-            MouseUtils.mouseCoordinatesInfo.style.left = `-9999px`
-        }
-    }
 
 
     /**
@@ -83,5 +62,41 @@ export class MouseUtils {
         return {
             type: NOT_AN_ENTITY,
         }
+    }
+
+    /**
+     * Recalculate a new position and relocate to it if the menu is near the right or bottom and could not be
+     * displayed.
+     *
+     * @param x   initial left value
+     * @param y   initial top value
+     * @param offset offset from the window limit
+     *
+     * @return {{x: number, y: number}} fixed coordinates
+     *
+     */
+    static recalculateMenuPosition = (x, y, offset) => {
+
+        const menuStore = vt3d.mainProxy.components.floatingMenu
+
+        if (menuStore.menu !== undefined) {
+            const width  = menuStore.menu.offsetWidth,
+                  height = menuStore.menu.offsetHeight
+
+            // When right side of the box goes too far...
+            if ((x + width) > document.documentElement.clientWidth + offset) {
+                x = document.documentElement.clientWidth - width - 2 * offset
+            }
+            // When bottom side of the box goes too far...
+            if ((y + height) > document.documentElement.clientHeight + offset) {
+                y = document.documentElement.clientHeight - height - 2 * offset
+            }
+
+            menuStore.menu.style.top = `${y + offset}px`
+            menuStore.menu.style.left = `${x + offset}px`
+        }
+
+        return {x, y}
+
     }
 }

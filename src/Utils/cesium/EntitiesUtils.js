@@ -1,3 +1,9 @@
+export const MARKER_TYPE = 1
+export const TRACK_TYPE = 2
+export const OTHER_TYPE = 3
+export const NOT_AN_ENTITY = 0
+
+
 export class EntitiesUtils {
     /**
      * Get a group of entities.
