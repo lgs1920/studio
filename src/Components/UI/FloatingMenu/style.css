@@ -1,15 +1,15 @@
-#mouse-coordinates-info-container {
+#floating-menu-container {
     position: absolute;
     top: 0;
     left: -9999px;
 }
 
-#mouse-coordinates-info sl-card {
+#floating-menu-container sl-card {
     padding: var(--vt3d-gutter-xs);
 
 }
 
-#mouse-coordinates-info {
+#floating-menu {
     display: flex;
     gap: var(--vt3d-gutter-s);
     line-height: 1.2;
