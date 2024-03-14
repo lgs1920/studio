@@ -17,8 +17,6 @@ export class MarkerMenu {
 
 
         if (cartesian) {
-
-            menuStore.show = true
             const cartographic = Cesium.Cartographic.fromCartesian(cartesian)
             menuStore.longitude = Cesium.Math.toDegrees(cartographic.longitude)
             menuStore.latitude = Cesium.Math.toDegrees(cartographic.latitude)
