@@ -1,7 +1,11 @@
+
+:root {
+    --menu-offset: 5 /* px */
+}
+
+
 #floating-menu-container {
     position: absolute;
-    top: 0;
-    left: -9999px;
 }
 
 #floating-menu-container sl-card {
