@@ -12,7 +12,6 @@ export class MarkerMenu {
             return
         }
 
-        const offset = 5 // pixels
         const position = data.positions.position ?? data.positions.position.endPosition
         const cartesian = vt3d.viewer.camera.pickEllipsoid(position, vt3d.viewer.scene.globe.ellipsoid)
 
@@ -26,7 +25,7 @@ export class MarkerMenu {
 
             let {x, y} = Cesium.SceneTransforms.wgs84ToWindowCoordinates(vt3d.viewer.scene, cartesian)
 
-            MouseUtils.recalculateMenuPosition(x, y, offset)
+            MouseUtils.showMenu(x, y)
         }
     }
 
