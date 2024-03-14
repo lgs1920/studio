@@ -8,11 +8,11 @@ import { useEffect, useRef }                                 from 'react'
  * Some Cesium and Resium modules are needed
  */
 import { Camera, CameraFlyTo, Entity, Globe, Scene, Viewer } from 'resium'
+import { VT3D }                                              from './classes/VT3D'
 /**
  * We also need our owns
  */
 import { VT3D_UI }                                           from './Components/UI/VT3D_UI/VT3D_UI.jsx'
-import { AppUtils }                                          from './Utils/AppUtils.js'
 import { CameraUtils }                                       from './Utils/cesium/CameraUtils.js'
 
 /**
@@ -25,8 +25,8 @@ import '@shoelace-style/shoelace/dist/themes/light.css'
 import { UINotifier }                                        from './Utils/UINotifier'
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
-
-await AppUtils.init()
+window.vt3d = new VT3D()
+await _utils.app.init()
 
 export function ViewTrack3D() {
 
@@ -53,7 +53,7 @@ export function ViewTrack3D() {
     useEffect(() => {
 
         // Set DefaultTheme
-        AppUtils.setTheme()
+        _utils.app.setTheme()
 
         // Update camera info
         CameraUtils.updatePosition(vt3d?.camera).then(r => {
