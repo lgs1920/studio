@@ -2,7 +2,6 @@ import { faLocationDot } from '@fortawesome/pro-solid-svg-icons'
 import { gpx, kml }      from '@tmcw/togeojson'
 
 import { DateTime }                                    from 'luxon'
-import { AppUtils }                                    from '../Utils/AppUtils'
 import { JUST_ICON, MARKER_SIZE }                      from '../Utils/cesium/MarkerUtils'
 import { FEATURE_COLLECTION, LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
 import { Mobility }                                    from '../Utils/Mobility'
@@ -50,7 +49,7 @@ export class Track {
         this.title = title
         this.type = type
 
-        this.slug = options.slug ?? AppUtils.slugify(`${title}-${type}`)
+        this.slug = options.slug ?? _utils.app.slugify(`${title}-${type}`)
         this.color = vt3d.configuration.track.color
         this.thickness = vt3d.configuration.track.thickness
         this.visible = true
@@ -132,7 +131,7 @@ export class Track {
      * @return {`marker#${string}#${string}`}
      */
     setMarkerName = (id) => {
-        return `marker#${this.slug}#${AppUtils.slugify(id)}`
+        return `marker#${this.slug}#${_utils.app.slugify(id)}`
     }
 
     /**
