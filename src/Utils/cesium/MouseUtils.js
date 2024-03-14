@@ -72,12 +72,12 @@ export class MouseUtils {
      *
      * @param x   initial left value
      * @param y   initial top value
-     * @param offset offset from the window limit
+     * @param type entity type
      *
      * @return {{x: number, y: number}} fixed coordinates
      *
      */
-    static showMenu = (x, y) => {
+    static showMenu = (x, y, type) => {
 
         const menuStore = vt3d.mainProxy.components.floatingMenu
         const offset = Number(_utils.ui.css.getCSSVariable('menu-offset'))
@@ -95,8 +95,10 @@ export class MouseUtils {
                 y = document.documentElement.clientHeight - height - 2 * offset
             }
 
+            // Set values for the component
             menuStore.coordinates.x = x + 'px'
             menuStore.coordinates.y = y + 'px'
+            menuStore.type = type
             menuStore.show = true
             menuStore.key++
         }
