@@ -23,7 +23,7 @@ export class MarkerMenu {
 
             let {x, y} = Cesium.SceneTransforms.wgs84ToWindowCoordinates(vt3d.viewer.scene, cartesian)
 
-            MouseUtils.showMenu(x, y)
+            MouseUtils.showMenu(x, y, data.picked.type)
         }
     }
 

@@ -25,7 +25,7 @@ export class AnyOtherMouseCoordinates {
 
             // Then transform them to screen coordinate in order to show the menu
             let {x, y} = Cesium.SceneTransforms.wgs84ToWindowCoordinates(vt3d.viewer.scene, cartesian)
-            MouseUtils.showMenu(x, y)
+            MouseUtils.showMenu(x, y, data.picked.type)
 
         }
     }
