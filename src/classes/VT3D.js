@@ -1,4 +1,7 @@
 import { proxy }             from 'valtio'
+import { AppUtils }          from '../Utils/AppUtils'
+import { MouseUtils }        from '../Utils/cesium/MouseUtils'
+import { CSSUtils }          from '../Utils/CSSUtils'
 import { MouseEventHandler } from './MouseEventHandler'
 import { main }              from './stores/main'
 import { trackEditor }       from './stores/trackEditor'
@@ -31,7 +34,17 @@ export class VT3D {
         }
 
         this.floatingMenu = {
+            element: undefined,
             menu: undefined,
+        }
+
+        // Utils are attached to window
+        window._utils = {
+            app: AppUtils,
+            ui: {
+                css: CSSUtils,
+                mouse: MouseUtils,
+            },
         }
 
 
