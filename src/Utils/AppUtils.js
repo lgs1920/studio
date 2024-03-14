@@ -1,5 +1,4 @@
 import * as Cesium      from 'cesium'
-import { VT3D }         from '../classes/VT3D'
 import { EventEmitter } from '../libs/EventEmitter/EventEmitter'
 import { FA2SL }        from './FA2SL'
 
@@ -66,7 +65,6 @@ export class AppUtils {
      */
     static init = async () => {
         // Set Context
-        window.vt3d = new VT3D()
         vt3d.configuration = await import(/* @vite-ignore */ CONFIGURATION)
         vt3d.events = new EventEmitter()
 
@@ -81,7 +79,6 @@ export class AppUtils {
             return event.eventPhase === Event.AT_TARGET
         }
     }
-
 
 }
 
