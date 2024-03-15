@@ -56,7 +56,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                           onSlHide={closeTracksEditor}
                     // onSlShow={TracksEditorUtils.prepareTrackEdition}
                 >
-                    {vt3d.tracks.length > 0 && <div id={'track-settings-container'}>
+                    {vt3d.tracks.size > 0 && <div id={'track-settings-container'}>
                         <TrackSelector onChange={TracksEditorUtils.prepareTrackEdition}
                                        label={'Select a track:'}/>
                         <TrackSettings/>

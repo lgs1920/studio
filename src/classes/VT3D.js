@@ -9,7 +9,10 @@ import { trackEditor }       from './stores/trackEditor'
 export class VT3D {
     #mainProxy
     #trackEditorProxy
-    tracks = []
+
+    tracks = new Map()
+    markers = new Map()
+
     eventHandler = new MouseEventHandler()
     #viewer
 
@@ -28,9 +31,10 @@ export class VT3D {
         this.#mainProxy = proxy(main)
 
         // Get the first as current currentTrack
-        if (this.tracks.length) {
-            this.mainProxy.currentTrack = this.tracks[0]
-            this.addToEditor(this.tracks[0])
+        if (this.tracks.size) {
+            const first = Array.from(this.#trackEditorProxy.tracks)[0]
+            this.mainProxy.currentTrack = first
+            this.addToEditor(this.first)
         }
 
         this.floatingMenu = {
@@ -92,9 +96,7 @@ export class VT3D {
     }
 
     getTrackBySlug(slug) {
-        return this.tracks.filter(function (track) {
-            return track.slug === slug
-        })[0]
+        return this.tracks.get(slug)
     }
 
 
@@ -105,17 +107,18 @@ export class VT3D {
      */
     saveTrack = (track) => {
         if (track) {
-            // Look if this currentTrack already exist in context
-            const index = this.tracks.findIndex(item => item.slug === track.slug)
-            if (index >= 0) {           // Found ! We replace it
-                this.tracks[index] = track
+            const index = this.mainProxy.components.tracksEditor.list.findIndex(item => item === track.slug)
+            if (index >= 0) {
+                // Look if this currentTrack already exist in context
+                this.tracks.set(track.slug, track)
                 this.mainProxy.components.tracksEditor.list[index] = track.slug
             } else {                    // Nope,we add it
-                this.tracks.push(track)
+                this.tracks.set(track.slug, track)
                 this.mainProxy.components.tracksEditor.list.push(track.slug)
             }
             this.mainProxy.components.tracksEditor.usable = true
         }
+
     }
 
     addToEditor = (track) => {

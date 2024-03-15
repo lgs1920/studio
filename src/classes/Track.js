@@ -82,16 +82,17 @@ export class Track {
         let unic = title
 
         // Vérifie si la valeur existe déjà dans le tableau
-        let valueExists = vt3d.tracks.some(obj => obj.title === unic)
+        let valueExists = vt3d.tracks.values().some(obj => obj.title === unic)
 
         while (valueExists) {
             counter++
             unic = `${title} (${counter})`
-            valueExists = vt3d.tracks.some(obj => obj.title === unic)
+            valueExists = vt3d.tracks.values().some(obj => obj.title === unic)
         }
         return unic
 
     }
+
 
     /**
      * Clone current track
