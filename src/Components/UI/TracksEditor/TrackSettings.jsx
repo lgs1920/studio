@@ -170,8 +170,8 @@ export const TrackSettings = function TrackSettings() {
             if (index >= 0) {
                 // In store
                 mainStore.list.splice(index, 1)
-                // In Context context
-                vt3d.tracks.splice(index, 1)
+                // In context
+                vt3d.tracks.delete(editorStore.track.slug)
                 // In canvas, ie remove the tracks and all markers
                 // But sometimes we loose dataSource TODO why ?
                 if (dataSource === undefined) {
@@ -198,7 +198,7 @@ export const TrackSettings = function TrackSettings() {
 
             }
 
-            // Let'sinform the uer
+            // Let's inform the user
 
             UINotifier.notifySuccess({
                 caption: `<strong>${removed.title}</strong> removed !`,
