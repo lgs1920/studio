@@ -1,4 +1,4 @@
-import {forwardRef} from 'react'
+import { forwardRef } from 'react'
 import './style.css'
 
 export const TextValueUI = forwardRef(function TextValueUI(props, ref) {
@@ -12,9 +12,11 @@ export const TextValueUI = forwardRef(function TextValueUI(props, ref) {
 
     return (
         <div id={props.id} className={classes}>
-            <span className="vt3d-tv-text">{props.text}</span><span className="vt3d-tv-value">{toShow}</span><span
-            className="vt3d-tv-unit">{props.unit}</span>
-        </div>)
+            <span className="vt3d-tv-text">{props.text}</span><span>
+            <span className="vt3d-tv-value">{toShow}</span><span className="vt3d-tv-unit">{props.unit}</span>
+        </span>
+        </div>
+    )
 })
 
 export const update = (props) => {
