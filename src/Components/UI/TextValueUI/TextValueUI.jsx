@@ -12,8 +12,10 @@ export const TextValueUI = forwardRef(function TextValueUI(props, ref) {
 
     return (
         <div id={props.id} className={classes}>
-            <span className="vt3d-tv-text">{props.text}</span><span>
-            <span className="vt3d-tv-value">{toShow}</span><span className="vt3d-tv-unit">{props.unit}</span>
+            {props.text && <span className="vt3d-tv-text">{props.text}</span>}
+            <span>
+            {toShow && <span className="vt3d-tv-value">{toShow}</span>}
+                {props.unit && <span className="vt3d-tv-unit">{props.unit}</span>}
         </span>
         </div>
     )
