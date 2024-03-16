@@ -7,10 +7,12 @@ export class MarkerMenu {
 
         const menuStore = vt3d.mainProxy.components.floatingMenu
 
-
         if (data.picked.type !== MARKER_TYPE) {
             return
         }
+
+        // Save slugs in store
+        menuStore.target = data.picked
 
         const position = data.positions.position ?? data.positions.position.endPosition
         const cartesian = vt3d.viewer.camera.pickEllipsoid(position, vt3d.viewer.scene.globe.ellipsoid)

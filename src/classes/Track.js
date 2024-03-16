@@ -24,7 +24,10 @@ export class Track {
     visible     // Is visible ?
     description // Add any description
 
-    hasHeight   // Is fail contains altitudes ?
+
+    hasHeight   // Is track contains altitudes ?
+    hasTime     // Is track contains Time information
+
     DEMServer   // DEM server associate if we need altitude
 
     color = vt3d.configuration.track.color            // The color associated
@@ -43,6 +46,8 @@ export class Track {
         'thickness',
         'markers',
         'description',
+        'hasHeight',
+        'hasTime',
     ]
 
     constructor(title, type, options = {}) {
@@ -140,7 +145,7 @@ export class Track {
      *
      * @param coordinates
      */
-    addTipsMarkers(coordinates) {
+    addTipsMarkers() {
 
         if (this.geoJson.type === FEATURE_COLLECTION) {
             let index = 0
@@ -148,12 +153,15 @@ export class Track {
                 if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
                     // Add start and Stop Markers
                     const start = feature.geometry.coordinates[0]
+
                     const name = `marker#${this.slug}#start`
                     this.markers.set('start', new MapMarker({
                             name: 'Marker start',
                             parent: this.slug,
                             id: this.setMarkerName('start'),
                             coordinates: [start[0], start[1]],
+                            altitude: start[2],
+                            time: feature?.properties?.coordinateProperties?.times[0],
                             type: JUST_ICON,
                             size: MARKER_SIZE,
                             icon: faLocationDot,
@@ -162,16 +170,21 @@ export class Track {
                         },
                     ))
                     const stop = feature.geometry.coordinates[feature.geometry.coordinates.length - 1]
+                    const timeStop = feature?.properties?.coordinatesProperties?.times[feature.geometry.coordinates.length - 1]
+
                     this.markers.set('stop', new MapMarker({
                             name: 'Marker stop',
                             parent: this.slug,
                             id: this.setMarkerName('stop'),
                             coordinates: [stop[0], stop[1]],
+                            altitude: stop[2],
+                            time: feature?.properties?.coordinateProperties?.times[feature.geometry.coordinates.length - 1],
                             type: JUST_ICON,
                             size: MARKER_SIZE,
                             icon: faLocationDot,
                             foregroundColor: vt3d.configuration.track.markers.stop.color,
                             description: 'Ending point',
+
                         },
                     ))
                 }

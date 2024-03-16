@@ -1,17 +1,15 @@
 import { MarkerUtils, NO_MARKER_COLOR, PIN_CIRCLE } from '../Utils/cesium/MarkerUtils'
 
-
 export class MapMarker {
 
 
-    static markers = new Map()
     /**
      * Get marker by ID
      *
      * @type {function(*): *}
      */
     static getMarkerById = (id => {
-        return MapMarker.markers.filter(marker => marker.id === id)[0]
+        return vt3d.markers.filter(marker => marker.id === id)[0]
     })
     type
     coordinates
@@ -32,6 +30,8 @@ export class MapMarker {
         this.parent = options.parent
         this.id = options.id
         this.coordinates = options.coordinates || {}
+        this.altitude = options.altitude || false
+        this.time = options.time || false
         this.backgroundColor = options.backgroundColor ?? NO_MARKER_COLOR
         this.foregroundColor = options.foregroundColor ?? 'white'
         this.border = options.border ?? 0
@@ -51,11 +51,12 @@ export class MapMarker {
      *
      */
     register = () => {
-        MapMarker.markers.set(this.id, this)
+        vt3d.markers.set(this.id, this)
     }
 
     draw = async () => {
         await MarkerUtils.draw(this)
     }
+
 
 }

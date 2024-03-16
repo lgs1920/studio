@@ -17,6 +17,7 @@ export const main = {
             coordinates: {x: 0, y: -9999},
             delay: 3,
             type: undefined,
+            target: undefined,
             show: true,
             latitude: 0,
             longitude: 0,

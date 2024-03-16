@@ -3,19 +3,44 @@
     --menu-offset: 5 /* px */
 }
 
-
 #floating-menu-container {
     position: absolute;
+    max-width: 15rem;
 }
 
-#floating-menu-container sl-card {
-    padding: var(--vt3d-gutter-xs);
-
+#floating-menu-container sl-card::part(base) {
+    box-shadow: var(--sl-shadow-large);
 }
 
-#floating-menu {
+#floating-menu-container sl-icon {
+    width: 1.2em;
+}
+
+
+.floating-menu-data .vt3d-tv-text {
+    width: 2rem;
+    display: inline-block;
+}
+
+.floating-menu-data .vt3d-text-value {
     display: flex;
-    gap: var(--vt3d-gutter-s);
-    line-height: 1.2;
+    justify-content: space-between;
+    margin-left: auto;
+}
+
+#floating-menu-marker-header, .floating-menu-data {
+    display: flex;
     align-items: center;
+    flex-direction: row;
+    gap: var(--vt3d-gutter-xs);
+    line-height: 1.3;
+}
+
+#floating-menu-marker-header {
+    align-items: self-start;
+    flex-direction: column;
+}
+
+.entity-description {
+    font-size: var(--vt3d-font-size-s);
 }
