@@ -15,11 +15,11 @@
     --vt3d-dimension-s: calc(var(--vt3d-dimension) * 0.625);
 
     color-scheme: light dark;
-    --vt3d-dark-ui-primary-color: #3e3232;
-    --vt3d-dark-ui-secondary-color: #503c3c;
-    --vt3d-dark-ui-3rd-color: #7e6363;
-    --vt3d-dark-ui-4th-color: #a87c7c;
-    --vt3d-dark-ui-5th-color: #9f9898;
+    --vt3d-dark-ui-primary-color: var(--sl-color-sky-800);
+    --vt3d-dark-ui-secondary-color: var(--sl-color-sky-600);
+    --vt3d-dark-ui-3rd-color: var(--sl-color-sky-400);
+    --vt3d-dark-ui-4th-color: var(--sl-color-sky-300);
+    --vt3d-dark-ui-5th-color: var(--sl-color-sky-200);
 
     --vt3d-dark-ui-bg-color: var(--vt3d-dark-ui-5th-color);
     --vt3d-dark-ui-fg-color: var(--vt3d-dark-ui-primary-color);
@@ -45,6 +45,12 @@
 
     --vt3d-compass-stroke-color: var(--vt3d-dark-ui-secondary-color);
     --vt3d-compass-fill-color: var(--vt3d-dark-ui-secondary-color);
+
+    --vt3d-card-ui-bg-color: var(--vt3d-dark-ui-secondary-color);
+    --vt3d-card-ui-color: var(--vt3d-dark-ui-5th-color);
+    --vt3d-card-ui-opacity: 0.8;
+    --vt3d-card-ui-border-color: var(--vt3d-dark-ui-primary-color);
+
 
 }
 
@@ -110,7 +116,30 @@ sl-drawer {
  * Cards
  */
 
-sl-card {
+
+sl-card[variant="primary"]::part(base) {
     /*--size: TODO define a default size if needed */
-    --padding: var(--vt3d-gutter-s) var(--vt3d-gutter-s);
+    --padding: var(--vt3d-gutter-s);
+    margin: 0;
+    background-color: var(--vt3d-card-ui-bg-color);
+    color: var(--vt3d-card-ui-color);
+    opacity: var(--vt3d-card-ui-opacity);
+    --border-color: var(--vt3d-card-ui-border-color);
+}
+
+.vt3d-card {
+    background-color: rgba(255, 255, 255, 0.15);
+    border: 1px solid transparent;
+    padding: var(--vt3d-gutter-s);
+    border-radius: var(--vt3d-border-radius-s);
+}
+
+.vt3d-card:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+.vt3d-card-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vt3d-gutter-s);
 }
