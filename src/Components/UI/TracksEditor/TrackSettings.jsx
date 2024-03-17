@@ -279,7 +279,7 @@ export const TrackSettings = function TrackSettings() {
                     </div>
 
                     {/* Add DEM server selection if we do not have height initially (ie in the track file) */
-                        !editorSnapshot.track.hasHeight &&
+                        !editorSnapshot.track.hasAltitude &&
                         <div>
                             <DEMServerSelection
                                 default={editorSnapshot.track?.DEMServer ?? NO_DEM_SERVER}

@@ -1,10 +1,10 @@
-import * as extent                                      from '@mapbox/geojson-extent'
-import * as Cesium                                      from 'cesium'
-import { Color, GeoJsonDataSource }                     from 'cesium'
-import { INITIAL_LOADING, RE_LOADING, SIMULATE_HEIGHT } from '../../classes/Track'
-import { FileUtils }                                    from '../FileUtils.js'
-import { UINotifier }                                   from '../UINotifier'
-import { EntitiesUtils }                                from './EntitiesUtils'
+import * as extent                                        from '@mapbox/geojson-extent'
+import * as Cesium                                        from 'cesium'
+import { Color, GeoJsonDataSource }                       from 'cesium'
+import { INITIAL_LOADING, RE_LOADING, SIMULATE_ALTITUDE } from '../../classes/Track'
+import { FileUtils }                                      from '../FileUtils.js'
+import { UINotifier }                                     from '../UINotifier'
+import { EntitiesUtils }                                  from './EntitiesUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE             = 'Feature',
@@ -19,16 +19,17 @@ export class TrackUtils {
         geojson: ['application/geo+json', 'application/json'],
         kml: ['vnd.google-earth.kml+xml'], // kmz: ['vnd.google-earth.kmz'], //TODO KMZ files
     }
-    static checkIfDataContainsHeightOrTime = (feature => {
-        let hasHeight = true
+    static checkIfDataContainsAltitudeOrTime = (feature => {
+        let hasAltitude = true
         for (const coordinate of feature.geometry.coordinates) {
             if (coordinate.length === 2) {
-                hasHeight = false
+                hasAltitude = false
                 break
             }
         }
+        const test = feature.properties?.coordinateProperties?.times
         return {
-            hasHeight: hasHeight, hasTime: feature.properties?.coordinateProperties?.times !== undefined,
+            hasAltitude: hasAltitude, hasTime: feature.properties?.coordinateProperties?.times !== undefined,
         }
     })
 
@@ -102,7 +103,7 @@ export class TrackUtils {
                         let caption = ''
                         switch (action) {
                             case
-                            SIMULATE_HEIGHT : {
+                            SIMULATE_ALTITUDE : {
                                 caption = `<strong>${track.title}</strong> updated !`
                                 break
                             }
@@ -202,12 +203,12 @@ export class TrackUtils {
     /**
      * Prepare  geojson data to be managed by vt3d
      *
-     * > longitude, latitude, height,time
+     * > longitude, latitude, altitude,time
      *
-     * If height is missing, we try to get it from Terrain.
+     * If altitude is missing, we try to get it from Terrain.
      *
      * @param geoJson
-     * @return {[[{longitude, latitude, height,time}]]}
+     * @return {[[{longitude, latitude, altitude,time}]]}
      *
      */
     static prepareDataForMetrics = async geoJson => {
@@ -216,13 +217,13 @@ export class TrackUtils {
             for (const feature of geoJson.features) {
                 if (feature.type === 'Feature' && feature.geometry.type === FEATURE_LINE_STRING) {
 
-                    const properties = TrackUtils.checkIfDataContainsHeightOrTime(feature)
+                    const properties = TrackUtils.checkIfDataContainsAltitudeOrTime(feature)
                     let index = 0
                     const newLine = []
 
                     for (const coordinates of feature.geometry.coordinates) {
                         let point = {
-                            longitude: coordinates[0], latitude: coordinates[1], height: coordinates[2],
+                            longitude: coordinates[0], latitude: coordinates[1], altitude: coordinates[2],
                         }
                         if (properties.hasTime) {
                             point.time = feature.properties?.coordinateProperties?.times[index]
@@ -242,7 +243,7 @@ export class TrackUtils {
      * Get elevation from Cesium Terrain
      *
      * @param coordinates
-     * @return {height}
+     * @return {altitude}
      */
     static getElevationFromTerrain = async (coordinates) => {
         const positions = []
@@ -250,14 +251,14 @@ export class TrackUtils {
             positions.push(Cesium.Cartographic.fromDegrees(coordinate[0], coordinate[1]))
         })
 
-        //TODO apply only if height is missing for some coordinates
-        const height = []
+        //TODO apply only if altitude is missing for some coordinates
+        const altitude = []
         const temp = await Cesium.sampleTerrainMostDetailed(vt3d.viewer.terrainProvider, positions)
         temp.forEach(coordinate => {
-            height.push(coordinate.height)
+            altitude.push(coordinate.altitude)
         })
 
-        return height
+        return altitude
 
     }
 

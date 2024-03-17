@@ -78,26 +78,35 @@ export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
                                  text={'Lat:'}
                                  unit={'°'}/>
                 </div>
-                {menuSnap === MARKER_TYPE && <div className={'floating-menu-data'}>
-                    <sl-icon variant="primary" library="fa" name={FA2SL.set(faMountains)}></sl-icon>
-                    <div>
-                        <TextValueUI value={sprintf('%\' 6.2f', marker.altitude)}
-                                     id={'cursor-altitude'}
-                                     text={'Alt:'}
-                                     unit={'m'}/>
+                {menuSnap.type === MARKER_TYPE && track.hasAltitude &&
+                    <div className={'floating-menu-data'}>
+                        <sl-icon variant="primary" library="fa" name={FA2SL.set(faMountains)}></sl-icon>
+                        <div>
+                            <TextValueUI value={sprintf('%\' 6.2f', marker.altitude)}
+                                         id={'cursor-altitude'}
+                                         text={'Alt:'}
+                                         unit={'m'}/>
+                        </div>
                     </div>
-                </div>}
+                }
             </div>
             {menuSnap.type === MARKER_TYPE && <MarkerPlus/>}
 
         </>)
     }
+
+    /**
+     * Display popup header if we hav name or description
+     *
+     * @return {JSX.Element}
+     * @constructor
+     */
     const Header = () => {
         let name, description
         switch (menuSnap.type) {
             case MARKER_TYPE:
-                name = marker.name
-                description = marker.description
+                name = marker?.name
+                description = marker?.description
                 break
             case TRACK_TYPE:
                 name = track.name
@@ -105,7 +114,7 @@ export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
                 break
         }
         return (<>
-            {(menuSnap.type === MARKER_TYPE || menuSnap === TRACK_TYPE) && <>
+            {(menuSnap.type === MARKER_TYPE || menuSnap.type === TRACK_TYPE) && <>
                 <div id="floating-menu-marker-header" className={'vt3d-card'}>
                     <span className={'entity-title'}>{name}</span>
                     <div className={'entity-description'}>{description}</div>
@@ -116,10 +125,12 @@ export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
 
     const MarkerPlus = () => {
 
-        const time = DateTime.fromISO(marker.time).toLocaleString(DateTime.TIME_SIMPLE)
-        const date = DateTime.fromISO(marker.time).toLocaleString(DateTime.DATE_MED)
+        if (track.hasTime && marker.time) {
+            const time = DateTime.fromISO(marker.time).toLocaleString(DateTime.TIME_SIMPLE)
+            const date = DateTime.fromISO(marker.time).toLocaleString(DateTime.DATE_MED)
+        }
         return (<>
-                {marker.time && <>
+                {track.hasTime && marker.time && <>
                     <div className={'vt3d-card'}>
                         <div className={'floating-menu-data'}>
                             <sl-icon variant="primary" library="fa" name={FA2SL.set(faCalendar)}></sl-icon>

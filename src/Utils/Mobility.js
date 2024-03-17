@@ -1,6 +1,6 @@
-import * as Cesium                from 'cesium'
-import {DateTime}                 from 'luxon'
-import {KM, MILE, MILLIS, MINUTE} from './AppUtils'
+import * as Cesium                  from 'cesium'
+import { DateTime }                 from 'luxon'
+import { KM, MILE, MILLIS, MINUTE } from './AppUtils'
 
 export class Mobility {
     /**
@@ -26,14 +26,14 @@ export class Mobility {
     /**
      * Return the elevation between  points
      *
-     * @param {Object} start should contain {height} in meters
-     * @param {Object} end   should contain {height} in meters
+     * @param {Object} start should contain {altitude} in meters
+     * @param {Object} end   should contain {altitude} in meters
      *
      * @return {undefined|number}
      */
     static elevation = (start, end) => {
-        if (start.height && end.height) {
-            return end.height - start.height
+        if (start.altitude && end.altitude) {
+            return end.altitude - start.altitude
         }
         return undefined
     }

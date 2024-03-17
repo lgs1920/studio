@@ -8,7 +8,7 @@ import { Mobility }                                                           fr
 import { MapMarker }                                                          from './MapMarker'
 
 export const NO_DEM_SERVER = 'none'
-export const SIMULATE_HEIGHT = 'simulate-height'
+export const SIMULATE_ALTITUDE = 'simulate-altitude'
 export const INITIAL_LOADING = 1
 export const RE_LOADING = 2
 
@@ -25,8 +25,8 @@ export class Track {
     description // Add any description
 
 
-    hasHeight   // Is track contains altitudes ?
-    hasTime     // Is track contains Time information
+    hasAltitude   // Is track contains altitudes ?
+    hasTime       // Is track contains Time information ?
 
     DEMServer   // DEM server associate if we need altitude
 
@@ -41,13 +41,12 @@ export class Track {
         'geoJson',
         'title',
         'visible',
-        'hasHeight',
+        'hasTime',
         'DEMServer',
         'thickness',
         'markers',
         'description',
-        'hasHeight',
-        'hasTime',
+        'hasAltitude',
     ]
 
     constructor(title, type, options = {}) {
@@ -64,7 +63,7 @@ export class Track {
         this.toGeoJson(options.content ?? '')
         this.setTrackName(this.title)
 
-        this.checkDataConsistency()
+        this.checkOtherData()
         // Let's compute all information
         this.computeAll().then(
             this.addMarkers(),
@@ -156,6 +155,7 @@ export class Track {
                             // Add start and Stop Markers
                             const start = feature.geometry.coordinates[0]
                             const name = `marker#${this.slug}#start`
+                            console.log(this)
                             const timeStart = this.hasTime ? feature.properties.coordinatesProperties.times[0] : undefined
                             this.markers.set('start', new MapMarker({
                                     name: 'Marker start',
@@ -195,7 +195,7 @@ export class Track {
                             // Add other markers
                             index++
                             const point = feature.geometry.coordinates
-                            const id = `-${index}`
+                            const id = `index-${index}`
                             const name = `marker#${this.slug}#${id}}`
                             const time = this.hasTime ? feature.properties.coordinatesProperties.times[0] : undefined
                             this.markers.set(id, new MapMarker({
@@ -305,6 +305,7 @@ export class Track {
      */
     calculateMetrics = async () => {
         return await TrackUtils.prepareDataForMetrics(this.geoJson).then(dataForMetrics => {
+            console.log(dataForMetrics)
             let metrics = []
             let index = 1
 
@@ -349,10 +350,10 @@ export class Track {
                 let global = {}, tmp = []
 
                 // Min Height
-                global.minHeight = Math.min(...dataSet.map(a => a?.height))
+                global.minHeight = Math.min(...dataSet.map(a => a?.altitude))
 
                 // Max Height
-                global.maxHeight = Math.max(...dataSet.map(a => a?.height))
+                global.maxHeight = Math.max(...dataSet.map(a => a?.altitude))
 
                 // If the first have duration time, all the data set have time
                 if (featureMetrics[0].duration) {
@@ -413,7 +414,7 @@ export class Track {
     /**
      * Prepare GeoJson
      *
-     * Simulate height, interpolate, clean data
+     * Simulate altitude, interpolate, clean data
      *
      * @param geoJson
      * @return geoJson
@@ -430,10 +431,10 @@ export class Track {
                 if (feature.type === 'Feature' && feature.geometry.type === FEATURE_LINE_STRING) {
                     let index = 0
                     /**
-                     * Have height or simulate ?
+                     * Have altitude or simulate ?
                      */
-                    if (!this.hasHeight) {
-                        // Some heights info are missing. Let's simulate them
+                    if (!this.hasAltitude) {
+                        // Some altitudes info are missing. Let's simulate them
 
                         // TODO add different plugins for DEM elevation like:
                         //        https://tessadem.com/elevation-api/  ($)
@@ -451,19 +452,19 @@ export class Track {
                                 j++
                             })
                         } else {
-                            // We have aDEM Server, so let's compute height
-                            let heights = []
+                            // We have aDEM Server, so let's compute altitude
+                            let altitudes = []
                             switch (this.DEMServer) {
                                 case NO_DEM_SERVER:
                                 case 'internal' :
-                                    heights = await TrackUtils.getElevationFromTerrain(feature.geometry.coordinates)
+                                    altitudes = await TrackUtils.getElevationFromTerrain(feature.geometry.coordinates)
                                     break
                                 case 'open-elevation' : {
                                 }
                             }
                             // Add them to data
-                            for (let j = 0; j < heights.length; j++) {
-                                feature.geometry.coordinates[j].push(heights[j])
+                            for (let j = 0; j < altitudes.length; j++) {
+                                feature.geometry.coordinates[j].push(altitudes[j])
                             }
                             // Hide progress bar
                             vt3d.trackEditorProxy.longTask = false
@@ -498,17 +499,10 @@ export class Track {
      * @return {Promise<void>}
      */
     load = async (action = INITIAL_LOADING) => {
-        let onlyTracks = Track.clone(this)
-        onlyTracks.geoJson = this.keepOnlyLines()
-        await TrackUtils.loadTrack(onlyTracks, action)
+        await TrackUtils.loadTrack(this, action)
         this.markers.forEach(marker => {
             marker.draw()
         })
-    }
-
-    keepOnlyLines = () => {
-        return this.geoJson
-        //rackUtils.filter(this.geoJson)
     }
 
     /**
@@ -520,22 +514,23 @@ export class Track {
     }
 
     showAfterHeightSimulation = async () => {
-        await this.load(SIMULATE_HEIGHT)
+        await this.load(SIMULATE_ALTITUDE)
     }
 
     loadAfterNewSettings = async () => {
         await this.load(RE_LOADING)
     }
 
-    checkDataConsistency = () => {
-        this.hasHeight = true
+    checkOtherData = () => {
+        this.altitude = true
         if (this.geoJson.type === FEATURE_COLLECTION) {
             let index = 0
             for (const feature of this.geoJson.features) {
                 if (feature.type === 'Feature' && feature.geometry.type === FEATURE_LINE_STRING) {
-                    const {hasTime, hasHeight} = TrackUtils.checkIfDataContainsHeightOrTime(feature)
-                    if (!hasHeight) {
-                        this.hasHeight = false
+                    const data = TrackUtils.checkIfDataContainsAltitudeOrTime(feature)
+                    this.hasAltitude = data.hasAltitude
+                    this.hasTime = data.hasTime
+                    if (!this.hasAltitude) {
                         break
                     }
                 }

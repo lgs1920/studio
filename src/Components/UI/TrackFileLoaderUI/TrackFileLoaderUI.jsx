@@ -25,8 +25,8 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
             // Check if the track already exists in context
             // If not we manage and show it.
             if (vt3d.getTrackBySlug(currentTrack.slug)?.slug === undefined) {
-                currentTrack.checkDataConsistency()
-                if (!currentTrack.hasHeight) {
+                currentTrack.checkOtherData()
+                if (!currentTrack.hasAltitude) {
                     mainStore.modals.altitudeChoice.show = true
                 }
                 currentTrack.addToContext()
