@@ -32,11 +32,12 @@
     "color": "#B22222ff",
     "thickness": 2,
     "markers": {
+      "color": "#1689CCff",
       "start": {
-        "color": "#DC143C"
+        "color": "#DC143Cff"
       },
       "stop": {
-        "color": "#228B22"
+        "color": "#228B22ff"
       }
     }
   },
