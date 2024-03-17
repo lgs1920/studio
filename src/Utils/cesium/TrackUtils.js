@@ -7,7 +7,10 @@ import { UINotifier }                                   from '../UINotifier'
 import { EntitiesUtils }                                from './EntitiesUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
-export const FEATURE = 'Feature', FEATURE_COLLECTION = 'FeatureCollection', LINE_STRING = 'LineString'
+export const FEATURE             = 'Feature',
+             FEATURE_COLLECTION  = 'FeatureCollection',
+             FEATURE_LINE_STRING = 'LineString',
+             FEATURE_POINT       = 'Point'
 
 export class TrackUtils {
 
@@ -62,7 +65,6 @@ export class TrackUtils {
         const commonOptions = {
             clampToGround: true,
             name: track.title,
-            markerSymbol: '?',
         }
 
         // Load Geo Json
@@ -81,6 +83,11 @@ export class TrackUtils {
             strokeWidth: trackStroke.thickness,
         }).then(dataSource => {
 
+            dataSource.entities.values.forEach(entity => {
+                if (entity.billboard && !entity.id.startsWith('marker#')) {
+                    entity.show = false
+                }
+            })
             const text = `Track loaded and displayed on the map.`
             if (action === RE_LOADING) {
                 UINotifier.notifySuccess({
@@ -89,6 +96,7 @@ export class TrackUtils {
             } else {
                 try {
                     vt3d.viewer.dataSources.add(dataSource).then(function (dataSource) {
+
 
                         // Ok => we notify
                         let caption = ''
@@ -206,7 +214,7 @@ export class TrackUtils {
         const dataExtract = [] = []
         if (geoJson.type === FEATURE_COLLECTION) {
             for (const feature of geoJson.features) {
-                if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
+                if (feature.type === 'Feature' && feature.geometry.type === FEATURE_LINE_STRING) {
 
                     const properties = TrackUtils.checkIfDataContainsHeightOrTime(feature)
                     let index = 0
@@ -228,6 +236,7 @@ export class TrackUtils {
         }
         return dataExtract
     }
+
 
     /**
      * Get elevation from Cesium Terrain

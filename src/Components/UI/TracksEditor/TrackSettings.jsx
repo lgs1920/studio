@@ -251,7 +251,7 @@ export const TrackSettings = function TrackSettings() {
                 {
                     <div id={`visibility-marker-${props.type}`}>
                         <SlSwitch size="small"
-                                  checked={editorStore.track.markers.get(props.type).visible}
+                                  checked={editorSnapshot.track.markers.get(props.type).visible}
                                   style={{'--thumb-size': '1rem'}}
                                   onSlChange={setMarkerVisibility}
                                   id={`switch-visibility-marker-${props.type}`}
@@ -334,7 +334,7 @@ export const TrackSettings = function TrackSettings() {
                             <ConfirmRemoveTrackDialog/>
                         </div>
 
-                        {editorSnapshot.track.visible &&
+                        {editorSnapshot.track.visible && editorSnapshot.track.markers.size > 1 &&
                             <div id={'track-tips'}>
                                 <MarkerVisibility type={'start'} label={'Start'}/>
                                 <MarkerVisibility type={'stop'} label={'Stop'}/>
