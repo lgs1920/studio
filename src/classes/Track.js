@@ -1,11 +1,11 @@
 import { faLocationDot } from '@fortawesome/pro-solid-svg-icons'
 import { gpx, kml }      from '@tmcw/togeojson'
 
-import { DateTime }                                    from 'luxon'
-import { JUST_ICON, MARKER_SIZE }                      from '../Utils/cesium/MarkerUtils'
-import { FEATURE_COLLECTION, LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
-import { Mobility }                                    from '../Utils/Mobility'
-import { MapMarker }                                   from './MapMarker'
+import { DateTime }                                                           from 'luxon'
+import { JUST_ICON, MARKER_SIZE }                                             from '../Utils/cesium/MarkerUtils'
+import { FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_POINT, TrackUtils } from '../Utils/cesium/TrackUtils'
+import { Mobility }                                                           from '../Utils/Mobility'
+import { MapMarker }                                                          from './MapMarker'
 
 export const NO_DEM_SERVER = 'none'
 export const SIMULATE_HEIGHT = 'simulate-height'
@@ -67,7 +67,7 @@ export class Track {
         this.checkDataConsistency()
         // Let's compute all information
         this.computeAll().then(
-            this.addTipsMarkers(),
+            this.addMarkers(),
         )
 
     }
@@ -145,50 +145,77 @@ export class Track {
      *
      * @param coordinates
      */
-    addTipsMarkers() {
+    addMarkers() {
 
         if (this.geoJson.type === FEATURE_COLLECTION) {
             let index = 0
             for (const feature of this.geoJson.features) {
-                if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
-                    // Add start and Stop Markers
-                    const start = feature.geometry.coordinates[0]
+                if (feature.type === 'Feature') {
+                    switch (feature.geometry.type) {
+                        case FEATURE_LINE_STRING: {
+                            // Add start and Stop Markers
+                            const start = feature.geometry.coordinates[0]
+                            const name = `marker#${this.slug}#start`
+                            const timeStart = this.hasTime ? feature.properties.coordinatesProperties.times[0] : undefined
+                            this.markers.set('start', new MapMarker({
+                                    name: 'Marker start',
+                                    parent: this.slug,
+                                    id: this.setMarkerName('start'),
+                                    coordinates: [start[0], start[1]],
+                                    altitude: start[2],
+                                    time: timeStart,
+                                    type: JUST_ICON,
+                                    size: MARKER_SIZE,
+                                    icon: faLocationDot,
+                                    foregroundColor: vt3d.configuration.track.markers.start.color,
+                                    description: 'Starting point',
+                                },
+                            ))
+                            const stop = feature.geometry.coordinates[feature.geometry.coordinates.length - 1]
+                            const timeStop = this.hasTime ? feature.properties.coordinatesProperties.times[feature.geometry.coordinates.length - 1] : undefined
 
-                    const name = `marker#${this.slug}#start`
-                    this.markers.set('start', new MapMarker({
-                            name: 'Marker start',
-                            parent: this.slug,
-                            id: this.setMarkerName('start'),
-                            coordinates: [start[0], start[1]],
-                            altitude: start[2],
-                            time: feature?.properties?.coordinateProperties?.times[0],
-                            type: JUST_ICON,
-                            size: MARKER_SIZE,
-                            icon: faLocationDot,
-                            foregroundColor: vt3d.configuration.track.markers.start.color,
-                            description: 'Starting point',
-                        },
-                    ))
-                    const stop = feature.geometry.coordinates[feature.geometry.coordinates.length - 1]
-                    const timeStop = feature?.properties?.coordinatesProperties?.times[feature.geometry.coordinates.length - 1]
+                            this.markers.set('stop', new MapMarker({
+                                    name: 'Marker stop',
+                                    parent: this.slug,
+                                    id: this.setMarkerName('stop'),
+                                    coordinates: [stop[0], stop[1]],
+                                    altitude: stop[2],
+                                    time: timeStop,
+                                    type: JUST_ICON,
+                                    size: MARKER_SIZE,
+                                    icon: faLocationDot,
+                                    foregroundColor: vt3d.configuration.track.markers.stop.color,
+                                    description: 'Ending point',
 
-                    this.markers.set('stop', new MapMarker({
-                            name: 'Marker stop',
-                            parent: this.slug,
-                            id: this.setMarkerName('stop'),
-                            coordinates: [stop[0], stop[1]],
-                            altitude: stop[2],
-                            time: feature?.properties?.coordinateProperties?.times[feature.geometry.coordinates.length - 1],
-                            type: JUST_ICON,
-                            size: MARKER_SIZE,
-                            icon: faLocationDot,
-                            foregroundColor: vt3d.configuration.track.markers.stop.color,
-                            description: 'Ending point',
-
-                        },
-                    ))
+                                },
+                            ))
+                            break
+                        }
+                        case FEATURE_POINT: {
+                            // Add other markers
+                            index++
+                            const point = feature.geometry.coordinates
+                            const id = `-${index}`
+                            const name = `marker#${this.slug}#${id}}`
+                            const time = this.hasTime ? feature.properties.coordinatesProperties.times[0] : undefined
+                            this.markers.set(id, new MapMarker({
+                                    name: feature.properties.name,
+                                    parent: this.slug,
+                                    id: this.setMarkerName(id),
+                                    coordinates: [point[0], point[1]],
+                                    altitude: point[2],
+                                    time: time,
+                                    type: JUST_ICON,
+                                    size: MARKER_SIZE,
+                                    icon: faLocationDot,
+                                    foregroundColor: vt3d.configuration.track.markers.color,
+                                    description: feature.properties.desc,
+                                },
+                            ))
+                            break
+                        }
+                    }
                 }
-                index++
             }
         }
     }
@@ -213,7 +240,7 @@ export class Track {
         if (this.geoJson.type === FEATURE_COLLECTION) {
             let index = 0
             for (const feature of this.geoJson.features) {
-                if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
+                if (feature.type === 'Feature' && feature.geometry.type === FEATURE_LINE_STRING) {
                     this.geoJson.features[index].properties['name'] = name
                 }
                 index++
@@ -400,7 +427,7 @@ export class Track {
         if (this.geoJson.type === FEATURE_COLLECTION) {
             let index = 0
             for (const feature of this.geoJson.features) {
-                if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
+                if (feature.type === 'Feature' && feature.geometry.type === FEATURE_LINE_STRING) {
                     let index = 0
                     /**
                      * Have height or simulate ?
@@ -457,8 +484,6 @@ export class Track {
 
 
                     }
-
-
                     index++
                 }
 
@@ -473,11 +498,17 @@ export class Track {
      * @return {Promise<void>}
      */
     load = async (action = INITIAL_LOADING) => {
-
-        await TrackUtils.loadTrack(this, action)
+        let onlyTracks = Track.clone(this)
+        onlyTracks.geoJson = this.keepOnlyLines()
+        await TrackUtils.loadTrack(onlyTracks, action)
         this.markers.forEach(marker => {
             marker.draw()
         })
+    }
+
+    keepOnlyLines = () => {
+        return this.geoJson
+        //rackUtils.filter(this.geoJson)
     }
 
     /**
@@ -501,7 +532,7 @@ export class Track {
         if (this.geoJson.type === FEATURE_COLLECTION) {
             let index = 0
             for (const feature of this.geoJson.features) {
-                if (feature.type === 'Feature' && feature.geometry.type === LINE_STRING) {
+                if (feature.type === 'Feature' && feature.geometry.type === FEATURE_LINE_STRING) {
                     const {hasTime, hasHeight} = TrackUtils.checkIfDataContainsHeightOrTime(feature)
                     if (!hasHeight) {
                         this.hasHeight = false

@@ -28,11 +28,15 @@ export class MarkerUtils {
             position: Cesium.Cartesian3.fromDegrees(marker.coordinates[0], marker.coordinates[1], marker.coordinates[2]),
             show: marker.visible,
             properties: properties,
+            disableDepthTestDistance: new Cesium.ConstantProperty(0),
         }
         const pinBuilder = new Cesium.PinBuilder()
 
         markerOptions.billboard = {
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            disableDepthTestDistance: new Cesium.ConstantProperty(0),//Number.POSITIVE_INFINITY,
+
         }
 
         const backgroundColor = Cesium.Color.fromCssColorString(marker.backgroundColor)
