@@ -150,12 +150,13 @@ export class Track {
             let index = 0
             for (const feature of this.geoJson.features) {
                 if (feature.type === 'Feature') {
+                    const hasTime = feature?.properties?.coordinateProperties?.times !== undefined
                     switch (feature.geometry.type) {
                         case FEATURE_LINE_STRING: {
                             // Add start  marker
                             const start = feature.geometry.coordinates[0]
                             const name = `marker#${this.slug}#start`
-                            const timeStart = feature?.properties?.coordinateProperties?.times[0] ?? undefined
+                            const timeStart = hasTime ? feature.properties.coordinateProperties.times[0] : undefined
                             this.markers.set('start', new MapMarker({
                                     name: 'Marker start',
                                     parent: this.slug,
@@ -173,7 +174,7 @@ export class Track {
 
                             // Add stop marker
                             const stop = feature.geometry.coordinates[feature.geometry.coordinates.length - 1]
-                            const timeStop = feature.properties?.coordinateProperties?.times[feature.geometry.coordinates.length - 1] ?? undefined
+                            const timeStop = hasTime ? feature.properties.coordinateProperties.times[feature.geometry.coordinates.length - 1] : undefined
 
                             this.markers.set('stop', new MapMarker({
                                     name: 'Marker stop',
@@ -198,7 +199,7 @@ export class Track {
                             const point = feature.geometry.coordinates
                             const id = `index-${index}`
                             const name = `marker#${this.slug}#${id}}`
-                            const time = feature.properties?.coordinatesProperties?.times[0] ?? undefined
+                            const time = hasTime ? feature.properties.coordinateProperties.times[0] : undefined
                             this.markers.set(id, new MapMarker({
                                     name: feature.properties.name,
                                     parent: this.slug,
