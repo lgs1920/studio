@@ -11,10 +11,8 @@ export class TrackMenu {
             return
         }
 
-        // Save slugs in store
+        // Save track in store
         menuStore.target = data.picked
-
-        console.log(data.picked)
 
         const position = data.positions.position ?? data.positions.position.endPosition
         const cartesian = vt3d.viewer.camera.pickEllipsoid(position, vt3d.viewer.scene.globe.ellipsoid)
