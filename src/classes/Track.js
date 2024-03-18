@@ -144,19 +144,21 @@ export class Track {
      *
      * @param coordinates
      */
-    addMarkers() {
+    async addMarkers() {
 
         if (this.geoJson.type === FEATURE_COLLECTION) {
             let index = 0
             for (const feature of this.geoJson.features) {
                 if (feature.type === 'Feature') {
+                    const timex = feature?.properties?.coordinateProperties?.times[0] ?? undefined
+                    console.log(timex)
                     switch (feature.geometry.type) {
                         case FEATURE_LINE_STRING: {
-                            // Add start and Stop Markers
+                            // Add start  marker
+                            console.log(feature)
                             const start = feature.geometry.coordinates[0]
                             const name = `marker#${this.slug}#start`
-                            console.log(this)
-                            const timeStart = this.hasTime ? feature.properties.coordinatesProperties.times[0] : undefined
+                            const timeStart = feature?.properties?.coordinateProperties?.times[0] ?? undefined
                             this.markers.set('start', new MapMarker({
                                     name: 'Marker start',
                                     parent: this.slug,
@@ -171,8 +173,10 @@ export class Track {
                                     description: 'Starting point',
                                 },
                             ))
+
+                            // Add stop marker
                             const stop = feature.geometry.coordinates[feature.geometry.coordinates.length - 1]
-                            const timeStop = this.hasTime ? feature.properties.coordinatesProperties.times[feature.geometry.coordinates.length - 1] : undefined
+                            const timeStop = feature.properties?.coordinateProperties?.times[feature.geometry.coordinates.length - 1] ?? undefined
 
                             this.markers.set('stop', new MapMarker({
                                     name: 'Marker stop',
@@ -197,7 +201,7 @@ export class Track {
                             const point = feature.geometry.coordinates
                             const id = `index-${index}`
                             const name = `marker#${this.slug}#${id}}`
-                            const time = this.hasTime ? feature.properties.coordinatesProperties.times[0] : undefined
+                            const time = feature.properties?.coordinatesProperties?.times[0] ?? undefined
                             this.markers.set(id, new MapMarker({
                                     name: feature.properties.name,
                                     parent: this.slug,

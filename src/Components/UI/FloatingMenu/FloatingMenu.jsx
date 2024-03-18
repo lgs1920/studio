@@ -65,8 +65,8 @@ export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
      * @return {JSX.Element}
      */
     const Coordinates = () => {
-        return (<>
-            <div id={'floating-menu-coordinates'} className={'floating-menu-data vt3d-card'}>
+        return (<div className={'vt3d-card'}>
+            <div id={'floating-menu-coordinates'} className={'floating-menu-data'}>
                 <sl-icon variant="primary" library="fa" name={FA2SL.set(faLocationDot)}></sl-icon>
                 <div>
                     <TextValueUI value={sprintf('%\' 2.5f', menuSnap.longitude)}
@@ -78,8 +78,11 @@ export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
                                  text={'Lat:'}
                                  unit={'°'}/>
                 </div>
+            </div>
+            <div className={'floating-menu-data'}>
+
                 {menuSnap.type === MARKER_TYPE && track.hasAltitude &&
-                    <div className={'floating-menu-data'}>
+                    <>
                         <sl-icon variant="primary" library="fa" name={FA2SL.set(faMountains)}></sl-icon>
                         <div>
                             <TextValueUI value={sprintf('%\' 6.2f', marker.altitude)}
@@ -87,12 +90,12 @@ export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
                                          text={'Alt:'}
                                          unit={'m'}/>
                         </div>
-                    </div>
+                    </>
                 }
             </div>
             {menuSnap.type === MARKER_TYPE && <MarkerPlus/>}
 
-        </>)
+        </div>)
     }
 
     /**
@@ -125,26 +128,25 @@ export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
 
     const MarkerPlus = () => {
 
+        let time, date
         if (track.hasTime && marker.time) {
-            const time = DateTime.fromISO(marker.time).toLocaleString(DateTime.TIME_SIMPLE)
-            const date = DateTime.fromISO(marker.time).toLocaleString(DateTime.DATE_MED)
+            time = DateTime.fromISO(marker.time).toLocaleString(DateTime.TIME_SIMPLE)
+            date = DateTime.fromISO(marker.time).toLocaleString(DateTime.DATE_MED)
         }
         return (<>
                 {track.hasTime && marker.time && <>
-                    <div className={'vt3d-card'}>
-                        <div className={'floating-menu-data'}>
-                            <sl-icon variant="primary" library="fa" name={FA2SL.set(faCalendar)}></sl-icon>
-                            <div>
-                                <TextValueUI value={date}
-                                             id={'cursor-date'}/>
-                            </div>
+                    <div className={'floating-menu-data add-top-space'}>
+                        <sl-icon variant="primary" library="fa" name={FA2SL.set(faCalendar)}></sl-icon>
+                        <div>
+                            <TextValueUI value={date}
+                                         id={'cursor-date'}/>
                         </div>
-                        <div className={'floating-menu-data'}>
-                            <sl-icon variant="primary" library="fa" name={FA2SL.set(faClock)}></sl-icon>
-                            <div>
-                                <TextValueUI value={time}
-                                             id={'cursor-time'}/>
-                            </div>
+                    </div>
+                    <div className={'floating-menu-data'}>
+                        <sl-icon variant="primary" library="fa" name={FA2SL.set(faClock)}></sl-icon>
+                        <div>
+                            <TextValueUI value={time}
+                                         id={'cursor-time'}/>
                         </div>
                     </div>
                 </>}
