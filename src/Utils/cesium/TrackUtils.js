@@ -19,6 +19,12 @@ export class TrackUtils {
         geojson: ['application/geo+json', 'application/json'],
         kml: ['vnd.google-earth.kml+xml'], // kmz: ['vnd.google-earth.kmz'], //TODO KMZ files
     }
+
+    /**
+     * Check if the current feature contains times and altitudes
+     *
+     * @return  {hasAltitude: boolean, hasTime: boolean}
+     */
     static checkIfDataContainsAltitudeOrTime = (feature => {
         let hasAltitude = true
         for (const coordinate of feature.geometry.coordinates) {
@@ -238,7 +244,6 @@ export class TrackUtils {
         return dataExtract
     }
 
-
     /**
      * Get elevation from Cesium Terrain
      *
@@ -303,7 +308,6 @@ export class TrackUtils {
         return undefined
     }
 
-
     static cleanTrack = (track) => {
         // Search  data source associated tothe track
         // const dataSource = vt3d.viewer.dataSources.getByName(track.slug)[0]
@@ -315,6 +319,10 @@ export class TrackUtils {
 
     static getTrackChildById = (track, id) => {
         return EntitiesUtils.getEntityById(`${track.slug}#${id}`)
+    }
+
+    static getDescription(feature) {
+        return feature?.properties?.desc ?? undefined
     }
 
 }

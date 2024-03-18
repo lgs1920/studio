@@ -57,6 +57,7 @@ export class Track {
         this.color = vt3d.configuration.track.color
         this.thickness = vt3d.configuration.track.thickness
         this.visible = true
+        this.description = options.description ?? undefined
 
         this.DEMServer = NO_DEM_SERVER
         // get GeoJson
@@ -529,6 +530,8 @@ export class Track {
             for (const feature of this.geoJson.features) {
                 if (feature.type === 'Feature' && feature.geometry.type === FEATURE_LINE_STRING) {
                     const data = TrackUtils.checkIfDataContainsAltitudeOrTime(feature)
+                    this.description = TrackUtils.getDescription(feature)
+
                     this.hasAltitude = data.hasAltitude
                     this.hasTime = data.hasTime
                     if (!this.hasAltitude) {
@@ -536,6 +539,7 @@ export class Track {
                     }
                 }
             }
+
         }
     }
 
