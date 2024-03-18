@@ -2,7 +2,7 @@ import './style.css'
 import { faCalendar, faClock, faLocationDot, faMountains } from '@fortawesome/pro-regular-svg-icons'
 import { SlCard }                                          from '@shoelace-style/shoelace/dist/react'
 import { DateTime }                                        from 'luxon'
-import { forwardRef, useEffect }                           from 'react'
+import { useLayoutEffect, useRef }                         from 'react'
 import { sprintf }                                         from 'sprintf-js'
 import { useSnapshot }                                     from 'valtio'
 import { SECOND }                                          from '../../../Utils/AppUtils'
@@ -10,10 +10,11 @@ import { MARKER_TYPE, TRACK_TYPE }                         from '../../../Utils/
 import { FA2SL }                                           from '../../../Utils/FA2SL'
 import { TextValueUI }                                     from '../TextValueUI/TextValueUI'
 
-export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
+export const FloatingMenu = function FloatingMenu() {
 
     const menuStore = vt3d.mainProxy.components.floatingMenu
     const menuSnap = useSnapshot(menuStore)
+    const element = useRef(null)
 
     let track = undefined, marker = undefined
 
@@ -27,6 +28,9 @@ export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
         }
     }
 
+    /**
+     * Reset timeout
+     */
     let timeout
     const reset = () => {
         menuStore.show = false
@@ -43,21 +47,45 @@ export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
         if (menuStore.show) {
             timeout = setTimeout(reset, menuStore.delay * SECOND)
             // 'on menu' event
-            vt3d.floatingMenu.element.addEventListener('mouseover', event => {
+            element.current.addEventListener('mouseover', event => {
                 clearTimeout(timeout)
             })
             // 'out of menu' event
-            vt3d.floatingMenu.element.addEventListener('mouseleave', event => {
+            element.current.addEventListener('mouseleave', event => {
                 timeout = setTimeout(reset, menuStore.delay * SECOND)
             })
         }
     }
 
+    /**
+     * Fix coordinate to force the menu to stay in screen
+     *
+     * @type {number}
+     */
+    const offset = Number(_utils.ui.css.getCSSVariable('menu-offset'))
+    const fixCoordinates = () => {
+        if (element.current !== undefined) {
+            const width  = element.current.offsetWidth,
+                  height = element.current.offsetHeight
 
-    useEffect(() => {
-        vt3d.floatingMenu.element = document.getElementById('floating-menu-container')
+            // When right side of the box goes too far...
+            if ((menuSnap.coordinates.x + width + offset) > document.documentElement.clientWidth) {
+                menuStore.coordinates.x = document.documentElement.clientWidth - width - 2 * offset
+            }
+            // When bottom side of the box goes too far...
+            if ((menuSnap.coordinates.y + height + offset) > document.documentElement.clientHeight) {
+                menuStore.coordinates.y = document.documentElement.clientHeight - height - 2 * offset
+            }
+        }
+    }
+
+    /**
+     * Once the popup has been rendered
+     */
+    useLayoutEffect(() => {
+        fixCoordinates()
         visibility()
-    }, [menuSnap.key])
+    }, [menuSnap])
 
     /**
      * Display longitude and latitude
@@ -80,7 +108,6 @@ export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
                 </div>
             </div>
             <div className={'floating-menu-data'}>
-
                 {menuSnap.type === MARKER_TYPE && track.hasAltitude &&
                     <>
                         <sl-icon variant="primary" library="fa" name={FA2SL.set(faMountains)}></sl-icon>
@@ -126,6 +153,12 @@ export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
         </>)
     }
 
+    /**
+     * Add additional informatio for the marker
+     *
+     * @return {JSX.Element}
+     * @constructor
+     */
     const MarkerPlus = () => {
 
         let time, date
@@ -154,10 +187,15 @@ export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
 
         )
     }
+
+    /**
+     * Render the popup
+     */
     return (
 
-        <div id="floating-menu-container" key={menuSnap.key}
+        <div id="floating-menu-container" key={menuSnap.key} ref={element}
              style={{top: menuSnap.coordinates.y, left: menuSnap.coordinates.x}}>
+
             {menuSnap.show &&
                 <SlCard variant={'primary'}>
                     <div className={'vt3d-card-wrapper'}>
@@ -166,8 +204,6 @@ export const FloatingMenu = forwardRef(function FloatingMenu(props, ref) {
                     </div>
                 </SlCard>}
         </div>
-
-
     )
-})
+}
 

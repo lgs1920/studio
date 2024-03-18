@@ -150,12 +150,9 @@ export class Track {
             let index = 0
             for (const feature of this.geoJson.features) {
                 if (feature.type === 'Feature') {
-                    const timex = feature?.properties?.coordinateProperties?.times[0] ?? undefined
-                    console.log(timex)
                     switch (feature.geometry.type) {
                         case FEATURE_LINE_STRING: {
                             // Add start  marker
-                            console.log(feature)
                             const start = feature.geometry.coordinates[0]
                             const name = `marker#${this.slug}#start`
                             const timeStart = feature?.properties?.coordinateProperties?.times[0] ?? undefined
@@ -309,7 +306,6 @@ export class Track {
      */
     calculateMetrics = async () => {
         return await TrackUtils.prepareDataForMetrics(this.geoJson).then(dataForMetrics => {
-            console.log(dataForMetrics)
             let metrics = []
             let index = 1
 

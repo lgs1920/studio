@@ -13,9 +13,10 @@ export const main = {
             trackSettingsKey: 0,
         },
         floatingMenu: {
+            element: undefined,
             key: 0,
             coordinates: {x: 0, y: -9999},
-            delay: 3,
+            delay: 3000,
             type: undefined,
             target: undefined,
             show: true,

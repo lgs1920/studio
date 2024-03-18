@@ -24,8 +24,10 @@ export class MarkerMenu {
             menuStore.latitude = Cesium.Math.toDegrees(cartographic.latitude)
 
             let {x, y} = Cesium.SceneTransforms.wgs84ToWindowCoordinates(vt3d.viewer.scene, cartesian)
+            menuStore.coordinates.x = x
+            menuStore.coordinates.y = y
 
-            MouseUtils.showMenu(x, y, data.picked.type)
+            MouseUtils.showMenu(data.picked.type)
         }
     }
 

@@ -65,44 +65,18 @@ export class MouseUtils {
     }
 
     /**
-     * Recalculate a new position and relocate to it if the menu is near the right or bottom and could not be
-     * displayed.
+     * Change settings to show menu
      *
-     * Then display it
-     *
-     * @param x   initial left value
-     * @param y   initial top value
      * @param type entity type
      *
      * @return {{x: number, y: number}} fixed coordinates
      *
      */
-    static showMenu = (x, y, type) => {
+    static showMenu = (type) => {
 
         const menuStore = vt3d.mainProxy.components.floatingMenu
-        const offset = Number(_utils.ui.css.getCSSVariable('menu-offset'))
-
-        if (vt3d.floatingMenu.element !== undefined) {
-            const width  = vt3d.floatingMenu.element.offsetWidth,
-                  height = vt3d.floatingMenu.element.offsetHeight
-
-            // When right side of the box goes too far...
-            if ((x + width + offset) > document.documentElement.clientWidth) {
-                x = document.documentElement.clientWidth - width - 2 * offset
-            }
-            // When bottom side of the box goes too far...
-            if ((y + height + offset) > document.documentElement.clientHeight) {
-                y = document.documentElement.clientHeight - height - 2 * offset
-            }
-
-            // Set values for the component
-            menuStore.coordinates.x = x + 'px'
-            menuStore.coordinates.y = y + 'px'
-            menuStore.type = type
-            menuStore.show = true
-            menuStore.key++
-        }
-
-
+        menuStore.type = type
+        menuStore.show = true
+        //   menuStore.key++
     }
 }
