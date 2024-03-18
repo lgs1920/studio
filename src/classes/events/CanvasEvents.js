@@ -1,6 +1,7 @@
 import * as Cesium                  from 'cesium'
 import { AnyOtherMouseCoordinates } from '../../Components/UI/FloatingMenu/AnyOtherMouseCoordinates'
 import { MarkerMenu }               from '../../Components/UI/FloatingMenu/MarkerMenu'
+import { TrackMenu }                from '../../Components/UI/FloatingMenu/TrackMenu'
 import { MouseUtils }               from '../../Utils/cesium/MouseUtils'
 
 export class CanvasEvents {
@@ -37,6 +38,7 @@ export class CanvasEvents {
         // Add events
         vt3d.events.on('canvas/click', AnyOtherMouseCoordinates.show)
         vt3d.events.on('canvas/click', MarkerMenu.show)
+        vt3d.events.on('canvas/click', TrackMenu.show)
 
         vt3d.events.on('canvas/rightClick', AnyOtherMouseCoordinates.show)
         vt3d.events.on('canvas/ctrlClick', AnyOtherMouseCoordinates.show)
