@@ -77,6 +77,5 @@ export class MouseUtils {
         const menuStore = vt3d.mainProxy.components.floatingMenu
         menuStore.type = type
         menuStore.show = true
-        //   menuStore.key++
     }
 }

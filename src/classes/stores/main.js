@@ -14,7 +14,6 @@ export const main = {
         },
         floatingMenu: {
             element: undefined,
-            key: 0,
             coordinates: {x: 0, y: -9999},
             delay: 3000,
             type: undefined,
