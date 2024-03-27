@@ -83,9 +83,9 @@ export function ViewTrack3D() {
                     })}
                     id="viewTrack3DViewer"
                     imageryProvider={false}
-            // baseLayer={Cesium.ImageryLayer.fromWorldImagery({
-            //     style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS,
-            // })}
+                    baseLayer={Cesium.ImageryLayer.fromWorldImagery({
+                        style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS,
+                    })}
                     ref={viewerRef}
         >
             <Scene></Scene>

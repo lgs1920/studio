@@ -21,6 +21,13 @@
     margin-top: var(--vt3d-font-size-s);
 }
 
+.floating-menu-data {
+    display: flex;
+    flex-direction: column;
+    row-gap: var(--vt3d-gutter-xs);
+    line-height: 1.4;
+}
+
 .floating-menu-data .vt3d-tv-text {
     width: 2rem;
     display: inline-block;
@@ -32,13 +39,21 @@
     margin-left: auto;
 }
 
-#floating-menu-marker-header, .floating-menu-data {
-    display: flex;
+.floating-menu-title {
+    font-weight: bold;
+    display: inline-flex;
     align-items: center;
-    flex-direction: row;
-    row-gap: var(--vt3d-gutter-xs);
-    line-height: 1.4;
+    justify-content: flex-start;
+    border-bottom: 1px solid;
+    width: 100%;
 }
+
+.floating-menu-data.one-line {
+    display: flex;
+    flex-direction: row;
+    gap: var(--vt3d-gutter-s)
+}
+
 
 #floating-menu-marker-header {
     align-items: self-start;

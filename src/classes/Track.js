@@ -315,7 +315,6 @@ export class Track {
              * GeoJson is a Feature Collection, so we iterate on each.
              */
             dataForMetrics.forEach((dataSet) => {
-
                 let featureMetrics = []
                 /**
                  * 1st step : Metrics per points
@@ -324,8 +323,8 @@ export class Track {
                  * If we have time information, we can also compute
                  *  - duration, speed, pace
                  */
-                for (const current of dataSet) {
-                    const prev = dataSet[index]
+                for (const prev of dataSet) {
+                    const current = dataSet[index]
                     const data = {}
                     if (index < dataSet.length) {
                         data.distance = Mobility.distance(prev, current)
@@ -337,6 +336,7 @@ export class Track {
                             //TODO Add idle time duration
                         }
                         data.elevation = Mobility.elevation(prev, current)
+                        console.log(data.elevation, prev.altitude, current.altitude)
                         data.slope = data.elevation / data.distance * 100
                     }
                     index++
@@ -382,20 +382,21 @@ export class Track {
                 global.maxSlope = Math.max(...featureMetrics.map(a => a?.slope))
 
                 // Positive elevation
-                global.positiveElevation = featureMetrics.reduce((s, o) => {
-                    if (o.elevation > 0) {
-                        return s + o.elevation
+                global.positiveElevation = 0
+                console.log(featureMetrics)
+                featureMetrics.forEach((point, index) => {
+                    if (point.elevation > 0) {
+                        global.positiveElevation += point.elevation
                     }
-                    return s
-                }, 0)
+                })
 
                 // Negative elevation
-                global.negativeElevation = featureMetrics.reduce((s, o) => {
-                    if (o.elevation < 0) {
-                        return s + o.elevation
+                global.negativeElevation = 0
+                featureMetrics.forEach((point, index) => {
+                    if (point.elevation < 0) {
+                        global.negativeElevation += point.elevation
                     }
-                    return s
-                }, 0)
+                })
 
                 // Total duration
                 global.duration = featureMetrics.reduce((s, o) => {

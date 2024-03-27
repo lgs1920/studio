@@ -1,14 +1,17 @@
 import './style.css'
-import { faCalendar, faClock, faLocationDot, faMountains } from '@fortawesome/pro-regular-svg-icons'
-import { SlCard }                                          from '@shoelace-style/shoelace/dist/react'
-import { DateTime }                                        from 'luxon'
-import { useLayoutEffect, useRef }                         from 'react'
-import { sprintf }                                         from 'sprintf-js'
-import { useSnapshot }                                     from 'valtio'
-import { SECOND }                                          from '../../../Utils/AppUtils'
-import { MARKER_TYPE, TRACK_TYPE }                         from '../../../Utils/cesium/EntitiesUtils'
-import { FA2SL }                                           from '../../../Utils/FA2SL'
-import { TextValueUI }                                     from '../TextValueUI/TextValueUI'
+import {
+    faArrowTrendUp, faCalendarClock, faLocationDot, faMap, faMountains, faRulerHorizontal, faStopwatch,
+}                                  from '@fortawesome/pro-regular-svg-icons'
+import { SlCard }                  from '@shoelace-style/shoelace/dist/react'
+import { DateTime, Duration }      from 'luxon'
+import { useLayoutEffect, useRef } from 'react'
+import { sprintf }                 from 'sprintf-js'
+import { useSnapshot }             from 'valtio'
+import { Track }                   from '../../../classes/Track'
+import { DAY, HOUR, SECOND }       from '../../../Utils/AppUtils'
+import { MARKER_TYPE, TRACK_TYPE } from '../../../Utils/cesium/EntitiesUtils'
+import { FA2SL }                   from '../../../Utils/FA2SL'
+import { TextValueUI }             from '../TextValueUI/TextValueUI'
 
 export const FloatingMenu = function FloatingMenu() {
 
@@ -22,7 +25,13 @@ export const FloatingMenu = function FloatingMenu() {
      * Get information about Track and Marker (optional)
      */
     if (menuSnap.type === MARKER_TYPE || menuSnap.type === TRACK_TYPE) {
-        track = vt3d.getTrackBySlug(menuSnap.target.track)
+        let slug = menuSnap.target.track
+        // fix for track where we send the object
+        if (slug instanceof Track) {
+            slug = menuSnap.target.track.slug
+        }
+        track = vt3d.getTrackBySlug(slug)
+        vt3d.currentTrack = track
         if (menuSnap.type === MARKER_TYPE) {
             marker = track.markers.get(menuSnap.target.marker)
         }
@@ -95,8 +104,11 @@ export const FloatingMenu = function FloatingMenu() {
     const Coordinates = () => {
         return (<div className={'vt3d-card'}>
             <div id={'floating-menu-coordinates'} className={'floating-menu-data'}>
-                <sl-icon variant="primary" library="fa" name={FA2SL.set(faLocationDot)}></sl-icon>
-                <div>
+                <div className={'floating-menu-title'}>
+                    <sl-icon variant="primary" library="fa" name={FA2SL.set(faLocationDot)}></sl-icon>
+                    Position
+                </div>
+                <div className={'floating-menu-item'}>
                     <TextValueUI value={sprintf('%\' 2.5f', menuSnap.longitude)}
                                  id={'cursor-longitude'}
                                  text={'Lon:'}
@@ -109,18 +121,18 @@ export const FloatingMenu = function FloatingMenu() {
             </div>
             <div className={'floating-menu-data'}>
                 {menuSnap.type === MARKER_TYPE && track.hasAltitude &&
-                    <>
-                        <sl-icon variant="primary" library="fa" name={FA2SL.set(faMountains)}></sl-icon>
+                    <div className={'floating-menu-item'}>
                         <div>
                             <TextValueUI value={sprintf('%\' 6.2f', marker.altitude)}
                                          id={'cursor-altitude'}
                                          text={'Alt:'}
                                          unit={'m'}/>
                         </div>
-                    </>
+                    </div>
                 }
             </div>
             {menuSnap.type === MARKER_TYPE && <MarkerPlus/>}
+            {menuSnap.type === TRACK_TYPE && <TrackPlus/>}
 
         </div>)
     }
@@ -139,7 +151,7 @@ export const FloatingMenu = function FloatingMenu() {
                 description = marker?.description
                 break
             case TRACK_TYPE:
-                name = track.name
+                name = track.title
                 description = track.description
                 break
         }
@@ -168,24 +180,117 @@ export const FloatingMenu = function FloatingMenu() {
         }
         return (<>
                 {track.hasTime && marker.time && <>
-                    <div className={'floating-menu-data add-top-space'}>
-                        <sl-icon variant="primary" library="fa" name={FA2SL.set(faCalendar)}></sl-icon>
-                        <div>
-                            <TextValueUI value={date}
-                                         id={'cursor-date'}/>
-                        </div>
+                    <div className={'floating-menu-title'}>
+                        <sl-icon variant="primary" library="fa" name={FA2SL.set(faCalendarClock)}></sl-icon>
+                        Time
                     </div>
-                    <div className={'floating-menu-data'}>
-                        <sl-icon variant="primary" library="fa" name={FA2SL.set(faClock)}></sl-icon>
-                        <div>
-                            <TextValueUI value={time}
-                                         id={'cursor-time'}/>
-                        </div>
+                    <div className={'floating-menu-data one-line'}>
+                        <TextValueUI value={date}
+                                     id={'cursor-date'}/>
+                        <TextValueUI value={time}
+                                     id={'cursor-time'}/>
                     </div>
+
                 </>}
             </>
 
         )
+    }
+
+    const TrackPlus = () => {
+        const metrics = track.metrics[0].global
+        const duration = Duration.fromObject({seconds: metrics.duration})
+        const format = () => {
+            let fmt = metrics.duration >= DAY / 1000
+                      ? `dd \day} ` : ''
+            fmt += metrics.duration >= HOUR / 1000 ? 'hh:' : ''
+            fmt += 'mm'
+            return fmt
+        }
+
+        return (<>
+            {metrics && <>
+                <div className={'floating-menu-title'}>
+                    <sl-icon variant="primary" library="fa" name={FA2SL.set(faMap)}></sl-icon>
+                    Track
+                </div>
+                <div className={'floating-menu-data one-line'}>
+                    <sl-icon variant="primary" library="fa" name={FA2SL.set(faRulerHorizontal)}></sl-icon>
+                    <div>
+                        <TextValueUI value={sprintf('%\' .2f', metrics.distance / 1000)} //TODO units KM or ...
+                            // text={'Distance:'}
+                                     id={'cursor-distance'}
+                                     unit={'kms'}/>
+                    </div>
+                </div>
+                {metrics.duration &&
+                    <div className={'floating-menu-data one-line'}>
+                        <sl-icon variant="primary" library="fa" name={FA2SL.set(faStopwatch)}></sl-icon>
+                        <div>
+                            <TextValueUI value={duration.toFormat(format())}
+                                         id={'cursor-duration'}/>
+                        </div>
+                    </div>
+                }
+
+                {metrics.minHeight && metrics.maxHeight &&
+                    <div className={'floating-menu-title'}>
+                        <sl-icon variant="primary" library="fa" name={FA2SL.set(faMountains)}></sl-icon>
+                        Altitude
+                    </div>
+                }
+
+                {metrics.minHeight &&
+                    <div className={'floating-menu-data'}>
+                        <div>
+                            <TextValueUI value={metrics.minHeight}
+                                         text={'min.'}
+                                         unit={'m'}
+                            />
+                        </div>
+                    </div>
+                }
+                {metrics.maxHeight &&
+                    <div className={'floating-menu-data'}>
+                        <div>
+                            <TextValueUI value={metrics.maxHeight}
+                                         text={'max.'}
+                                         unit={'m'}
+                            />
+                        </div>
+                    </div>
+                }
+
+                {metrics.negativeElevation && metrics.positiveElevation &&
+                    <div className={'floating-menu-title'}>
+                        <sl-icon variant="primary" library="fa" name={FA2SL.set(faArrowTrendUp)}></sl-icon>
+                        Elevation
+                    </div>
+                }
+                {metrics.positiveElevation &&
+                    <div className={'floating-menu-data'}>
+                        <div>
+                            <TextValueUI value={sprintf('%\' .1f', metrics.positiveElevation)}
+                                         text={'Gain'}
+                                         unit={'m'}
+                            />
+                        </div>
+                    </div>
+                }
+                {metrics.negativeElevation &&
+                    <div className={'floating-menu-data'}>
+                        <div>
+                            <TextValueUI value={sprintf('%\' .1f', metrics.negativeElevation)}
+                                         text={'Loss'}
+                                         unit={'m'}
+                            />
+                        </div>
+                    </div>
+                }
+
+            </>}
+        </>)
+
     }
 
     /**
