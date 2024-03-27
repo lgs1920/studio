@@ -2,6 +2,7 @@ import { proxy }             from 'valtio'
 import { AppUtils }          from '../Utils/AppUtils'
 import { MouseUtils }        from '../Utils/cesium/MouseUtils'
 import { CSSUtils }          from '../Utils/CSSUtils'
+import { LocalDB }           from './db/LocalDB'
 import { MouseEventHandler } from './MouseEventHandler'
 import { main }              from './stores/main'
 import { trackEditor }       from './stores/trackEditor'
@@ -51,6 +52,21 @@ export class VT3D {
             },
         }
 
+        //Init DBs
+        this.db = {
+            tracks: new LocalDB({
+                name: `${APP_KEY}-${TRACK_DB}`,
+                store: [TRACK_DB_CURRENT, TRACK_DB_ORIGIN],
+                manageTransients: true,
+                version: null,
+            }),
+            settings: new LocalDB({
+                name: `${APP_KEY}-${SETTINGS_DB}`,
+                store: [TRACK_DB_CURRENT, SETTINGS_DB],
+                manageTransients: true,
+                version: null,
+            }),
+        }
 
     }
 
@@ -84,6 +100,7 @@ export class VT3D {
 
     set currentTrack(track) {
         this.#mainProxy.currentTrack = track
+        this.db.settings.put(CURRENT_TRACK, track.slug, TRACK_DB_CURRENT).then()
         this.addToEditor(track)
     }
 
@@ -125,3 +142,10 @@ export class VT3D {
         this.trackEditorProxy.track = track
     }
 }
+
+export const APP_KEY = 'VT3D'
+export const TRACK_DB = 'tracks'
+export const SETTINGS_DB = 'settings'
+export const TRACK_DB_CURRENT = 'current'
+export const TRACK_DB_ORIGIN = 'origin'
+export const CURRENT_TRACK = 'current-track'

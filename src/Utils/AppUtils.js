@@ -26,6 +26,8 @@ export class AppUtils {
             .replace(/-+$/, '') // Trim - from end of text
     })
 
+    static Map2Object = map => Object.fromEntries(map.entries())
+
     static setTheme = (theme = null) => {
         if (!theme) {
             theme = vt3d.configuration.theme
@@ -78,6 +80,7 @@ export class AppUtils {
         window.isOK = (event) => {
             return event.eventPhase === Event.AT_TARGET
         }
+
     }
 
 }

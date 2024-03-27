@@ -58,5 +58,9 @@ export class MapMarker {
         await MarkerUtils.draw(this)
     }
 
+    extractObject = () => {
+        return JSON.parse(JSON.stringify(this))
+
+    }
 
 }

@@ -108,9 +108,9 @@ export const TrackSettings = function TrackSettings() {
             })
         }
         await rebuildTrack(UPDATE_TRACK_NORELOAD)
+
         TracksEditorUtils.reRenderTrackSettings()
         TracksEditorUtils.reRenderTracksList()
-
 
     })
 
@@ -119,7 +119,7 @@ export const TrackSettings = function TrackSettings() {
      *
      * @type {setMarkerVisibility}
      */
-    const setMarkerVisibility = (event => {
+    const setMarkerVisibility = (async event => {
         // Which marker ?
         const type = event.target.id.endsWith('start') ? 'start' : 'stop'
         // Save state
@@ -130,6 +130,9 @@ export const TrackSettings = function TrackSettings() {
                 entity.show = event.target.checked
             }
         })
+        // As there's no rebuild, let's save to DB now
+        await editorStore.track.toDB()
+
     })
 
     /**
@@ -147,7 +150,6 @@ export const TrackSettings = function TrackSettings() {
         // await vt3d.currentTrack.showAfterHeightSimulation()
 
         await rebuildTrack(UPDATE_TRACK_RELOAD)
-
     })
 
     /**
@@ -178,7 +180,12 @@ export const TrackSettings = function TrackSettings() {
                     dataSource = vt3d.viewer.dataSources.getByName(editorStore.track.slug)[0]
                 }
                 vt3d.viewer.dataSources.remove(dataSource)
+
+
             }
+
+            // Remove track in DB
+            await editorStore.track.removeFromDB()
 
             /**
              * If we have some other tracks, we'll take the first and render the editor.
@@ -227,6 +234,9 @@ export const TrackSettings = function TrackSettings() {
         })
         await track.computeAll()
         vt3d.saveTrack(track)
+
+        // save toDB
+        await track.toDB()
 
         //  vt3d.viewer.dataSources.removeAll()
         if (track.visible && action !== UPDATE_TRACK_NORELOAD) {

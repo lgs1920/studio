@@ -29,20 +29,21 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                 if (!currentTrack.hasAltitude) {
                     mainStore.modals.altitudeChoice.show = true
                 }
+                
                 currentTrack.addToContext()
                 vt3d.addToEditor(currentTrack)
+                await currentTrack.toDB()
+                await currentTrack.originToDB()
 
                 // Force editor to close but remains usable
                 mainStore.components.tracksEditor.usable = true
-
-                await currentTrack.load()
-
+                await currentTrack.draw()
 
             } else {
                 // It exists, we notify it
                 UINotifier.notifyWarning({
                     caption: `This track has already been loaded!`,
-                    text: 'You can load another one !',
+                    text: 'You can draw another one !',
                 })
             }
         }

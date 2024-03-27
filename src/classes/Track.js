@@ -6,6 +6,7 @@ import { JUST_ICON, MARKER_SIZE }                                             fr
 import { FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_POINT, TrackUtils } from '../Utils/cesium/TrackUtils'
 import { Mobility }                                                           from '../Utils/Mobility'
 import { MapMarker }                                                          from './MapMarker'
+import { TRACK_DB_CURRENT, TRACK_DB_ORIGIN }                                  from './VT3D'
 
 export const NO_DEM_SERVER = 'none'
 export const SIMULATE_ALTITUDE = 'simulate-altitude'
@@ -34,6 +35,8 @@ export class Track {
     thickness = vt3d.configuration.track.thickness    // The thickness associated
 
     markers = new Map()// external markers
+
+    origin      // original GeoJson
 
     attributes = [
         'color',
@@ -127,6 +130,19 @@ export class Track {
             }
         }
         return false
+
+    }
+
+    static readAllTracksFromDB = () => {
+
+    }
+
+    static saveAllTracksToDB = () => {
+
+    }
+
+    extractObject = () => {
+        return JSON.parse(JSON.stringify(this))
 
     }
 
@@ -336,7 +352,6 @@ export class Track {
                             //TODO Add idle time duration
                         }
                         data.elevation = Mobility.elevation(prev, current)
-                        console.log(data.elevation, prev.altitude, current.altitude)
                         data.slope = data.elevation / data.distance * 100
                     }
                     index++
@@ -383,7 +398,6 @@ export class Track {
 
                 // Positive elevation
                 global.positiveElevation = 0
-                console.log(featureMetrics)
                 featureMetrics.forEach((point, index) => {
                     if (point.elevation > 0) {
                         global.positiveElevation += point.elevation
@@ -497,11 +511,11 @@ export class Track {
     }
 
     /**
-     * Load the Track on the globe
+     * Draws the Track on the globe
      *
      * @return {Promise<void>}
      */
-    load = async (action = INITIAL_LOADING) => {
+    draw = async (action = INITIAL_LOADING) => {
         await TrackUtils.loadTrack(this, action)
         this.markers.forEach(marker => {
             marker.draw()
@@ -517,11 +531,11 @@ export class Track {
     }
 
     showAfterHeightSimulation = async () => {
-        await this.load(SIMULATE_ALTITUDE)
+        await this.draw(SIMULATE_ALTITUDE)
     }
 
     loadAfterNewSettings = async () => {
-        await this.load(RE_LOADING)
+        await this.draw(RE_LOADING)
     }
 
     checkOtherData = () => {
@@ -544,5 +558,51 @@ export class Track {
         }
     }
 
+    /**
+     * Read a track from DB
+     *
+     * @param store
+     * @return {Promise<void>}
+     */
+    fromDB = async (store = '') => {
+        // TODO read data and add origine
+    }
 
+    /**
+     * Save a track ta DB
+     *
+     * @return {Promise<void>}
+     */
+    toDB = async () => {
+        // Markers are transformed to objects
+        let temp = Track.clone(this)
+        let markers = temp.markers
+        temp.markers = []
+        markers.forEach((marker, key) => {
+            temp.markers.push(marker.extractObject())
+        })
+        await vt3d.db.tracks.put(this.slug, temp.extractObject(), TRACK_DB_CURRENT)
+    }
+
+    /**
+     * Save track original data to DB
+     *
+     * @type {boolean}
+     */
+    originToDB = async () => {
+        await vt3d.db.tracks.put(this.slug, this.geoJson, TRACK_DB_ORIGIN)
+    }
+
+    /**
+     * Remove a track fromDB
+     *
+     * @return {Promise<void>}
+     */
+    removeFromDB = async () => {
+        if (this.origin === undefined) {
+            await vt3d.db.tracks.delete(this.slug, TRACK_DB_ORIGIN)
+        }
+
+        await vt3d.db.tracks.delete(this.slug, TRACK_DB_CURRENT)
+    }
 }

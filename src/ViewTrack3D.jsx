@@ -8,6 +8,7 @@ import { useEffect, useRef }                                 from 'react'
  * Some Cesium and Resium modules are needed
  */
 import { Camera, CameraFlyTo, Entity, Globe, Scene, Viewer } from 'resium'
+import { Track }                                             from './classes/Track'
 import { VT3D }                                              from './classes/VT3D'
 /**
  * We also need our owns
@@ -40,6 +41,9 @@ export function ViewTrack3D() {
         pitch: Cesium.Math.toRadians(center.camera.pitch),
         roll: Cesium.Math.toRadians(center.camera.roll),
     }
+
+    // Let's read tracks in DB
+    Track.readAllTracksFromDB()
 
     const updateCameraPosition = () => {
         const cameraStore = vt3d.mainProxy.components.camera
