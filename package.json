@@ -25,6 +25,7 @@
     "easy-file-picker": "^1.0.4",
     "fs": "^0.0.1-security",
     "fs.promises": "^0.1.2",
+    "idb": "^8.0.0",
     "luxon": "^3.4.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
