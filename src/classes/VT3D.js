@@ -21,13 +21,9 @@ export class VT3D {
 
 
     constructor() {
-        // TODO save/read tracks in DB (local or remote)
-
         // Declare Stores and snapshots for states management by @valtio
-
         // Track Editor store is used to manage the settings of the currentTrack in edit
         this.#trackEditorProxy = proxy(trackEditor)
-
         // Main is global to the app
         this.#mainProxy = proxy(main)
 
@@ -55,16 +51,10 @@ export class VT3D {
         //Init DBs
         this.db = {
             tracks: new LocalDB({
-                name: `${APP_KEY}-${TRACK_DB}`,
-                store: [TRACK_DB_CURRENT, TRACK_DB_ORIGIN],
+                name: `${APP_KEY}`,
+                store: [TRACKS_STORE, CURRENT_STORE, ORIGIN_STORE, SETTINGS_STORE],
                 manageTransients: true,
-                version: null,
-            }),
-            settings: new LocalDB({
-                name: `${APP_KEY}-${SETTINGS_DB}`,
-                store: [TRACK_DB_CURRENT, SETTINGS_DB],
-                manageTransients: true,
-                version: null,
+                version: '0.1',
             }),
         }
 
@@ -100,8 +90,8 @@ export class VT3D {
 
     set currentTrack(track) {
         this.#mainProxy.currentTrack = track
-        this.db.settings.put(CURRENT_TRACK, track.slug, TRACK_DB_CURRENT).then()
-        this.addToEditor(track)
+        this.db.tracks.put(CURRENT_TRACK, track.slug, CURRENT_STORE).then(this.addToEditor(track),
+        )
     }
 
     get mainProxy() {
@@ -144,8 +134,8 @@ export class VT3D {
 }
 
 export const APP_KEY = 'VT3D'
-export const TRACK_DB = 'tracks'
-export const SETTINGS_DB = 'settings'
-export const TRACK_DB_CURRENT = 'current'
-export const TRACK_DB_ORIGIN = 'origin'
+export const SETTINGS_STORE = 'settings'
+export const CURRENT_STORE = 'current'
+export const TRACKS_STORE = 'tracks'
+export const ORIGIN_STORE = 'origin'
 export const CURRENT_TRACK = 'current-track'
