@@ -26,6 +26,7 @@ export class MapMarker {
 
     constructor(options) {
         this.type = options.type
+        this.slug = options.slug
         this.name = options.name
         this.parent = options.parent
         this.id = options.id
@@ -60,7 +61,6 @@ export class MapMarker {
 
     extractObject = () => {
         return JSON.parse(JSON.stringify(this))
-
     }
 
 }
