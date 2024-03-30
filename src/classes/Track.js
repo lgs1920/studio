@@ -6,12 +6,14 @@ import { JUST_ICON, MARKER_SIZE }                                             fr
 import { FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_POINT, TrackUtils } from '../Utils/cesium/TrackUtils'
 import { Mobility }                                                           from '../Utils/Mobility'
 import { MapMarker }                                                          from './MapMarker'
-import { TRACK_DB_CURRENT, TRACK_DB_ORIGIN }                                  from './VT3D'
+import { ORIGIN_STORE, TRACKS_STORE }                                         from './VT3D'
 
 export const NO_DEM_SERVER = 'none'
 export const SIMULATE_ALTITUDE = 'simulate-altitude'
 export const INITIAL_LOADING = 1
 export const RE_LOADING = 2
+export const DRAW_ANIMATE = 1
+export const DRAW_SILENT = 2
 
 const CONFIGURATION = '../config.json'
 
@@ -69,10 +71,9 @@ export class Track {
 
         this.checkOtherData()
         // Let's compute all information
-        this.computeAll().then(
-            this.addMarkers(),
-        )
-
+        this.computeAll().then(() => {
+            this.addMarkers()
+        })
     }
 
     /**
@@ -113,8 +114,19 @@ export class Track {
 
         source.attributes.forEach(attribute => {
             if (exceptions[attribute]) {
+                // TODO manage exceptions for markers
                 track[attribute] = exceptions[attribute]
             } else {
+                //Specific case for markers, we need to rebuild the Map
+                if (attribute === 'markers') {
+                    if (source[attribute] instanceof Array) {
+                        const tmpMarkers = new Map()
+                        source[attribute].forEach(marker => {
+                            tmpMarkers.set(marker.slug, marker)
+                        })
+                        source[attribute] = tmpMarkers
+                    }
+                }
                 track[attribute] = source[attribute]
             }
         })
@@ -133,17 +145,34 @@ export class Track {
 
     }
 
-    static readAllTracksFromDB = () => {
-
-    }
-
-    static saveAllTracksToDB = () => {
+    /**
+     * Get all tracks from DB
+     *
+     * Each track is added to the global context
+     *
+     * @return {Promise<Awaited<unknown>[]|*[]>}
+     */
+    static allFromDB = async () => {
+        try {
+            // get all slugs
+            const slugs = await vt3d.db.tracks.keys(TRACKS_STORE)
+            // Get each track content
+            const trackPromises = slugs.map(async (slug) => {
+                const object = await vt3d.db.tracks.get(slug, TRACKS_STORE)
+                const track = Track.clone(object)
+                track.addToContext()
+                return track
+            })
+            return await Promise.all(trackPromises)
+        } catch (error) {
+            console.error('Error when trying to get tracks from browser database :', error)
+            return []
+        }
 
     }
 
     extractObject = () => {
         return JSON.parse(JSON.stringify(this))
-
     }
 
     /**
@@ -163,6 +192,15 @@ export class Track {
      */
     async addMarkers() {
 
+        // Sometimes, we got an Array of markers, instead of a Map.
+        // Lets change it to Map   TODO Why Such Array ?
+        if (this.markers instanceof Array) {
+            const tmp = this.markers
+            this.markers = new Map()
+            tmp.forEach(marker => {
+                this.markers.set(marker.slug, marker)
+            })
+        }
         if (this.geoJson.type === FEATURE_COLLECTION) {
             let index = 0
             for (const feature of this.geoJson.features) {
@@ -176,6 +214,7 @@ export class Track {
                             const timeStart = hasTime ? feature.properties.coordinateProperties.times[0] : undefined
                             this.markers.set('start', new MapMarker({
                                     name: 'Marker start',
+                                    slug: 'start',
                                     parent: this.slug,
                                     id: this.setMarkerName('start'),
                                     coordinates: [start[0], start[1]],
@@ -195,6 +234,7 @@ export class Track {
 
                             this.markers.set('stop', new MapMarker({
                                     name: 'Marker stop',
+                                    slug: 'stop',
                                     parent: this.slug,
                                     id: this.setMarkerName('stop'),
                                     coordinates: [stop[0], stop[1]],
@@ -219,6 +259,7 @@ export class Track {
                             const time = hasTime ? feature.properties.coordinateProperties.times[0] : undefined
                             this.markers.set(id, new MapMarker({
                                     name: feature.properties.name,
+                                    slug: id,
                                     parent: this.slug,
                                     id: this.setMarkerName(id),
                                     coordinates: [point[0], point[1]],
@@ -515,8 +556,8 @@ export class Track {
      *
      * @return {Promise<void>}
      */
-    draw = async (action = INITIAL_LOADING) => {
-        await TrackUtils.loadTrack(this, action)
+    draw = async (action = INITIAL_LOADING, mode = DRAW_ANIMATE) => {
+        await TrackUtils.loadTrack(this, action, mode)
         this.markers.forEach(marker => {
             marker.draw()
         })
@@ -569,7 +610,7 @@ export class Track {
     }
 
     /**
-     * Save a track ta DB
+     * Save a track to DB
      *
      * @return {Promise<void>}
      */
@@ -581,7 +622,7 @@ export class Track {
         markers.forEach((marker, key) => {
             temp.markers.push(marker.extractObject())
         })
-        await vt3d.db.tracks.put(this.slug, temp.extractObject(), TRACK_DB_CURRENT)
+        await vt3d.db.tracks.put(this.slug, temp.extractObject(), TRACKS_STORE)
     }
 
     /**
@@ -590,7 +631,7 @@ export class Track {
      * @type {boolean}
      */
     originToDB = async () => {
-        await vt3d.db.tracks.put(this.slug, this.geoJson, TRACK_DB_ORIGIN)
+        await vt3d.db.tracks.put(this.slug, this.geoJson, ORIGIN_STORE)
     }
 
     /**
@@ -600,9 +641,9 @@ export class Track {
      */
     removeFromDB = async () => {
         if (this.origin === undefined) {
-            await vt3d.db.tracks.delete(this.slug, TRACK_DB_ORIGIN)
+            await vt3d.db.tracks.delete(this.slug, ORIGIN_STORE)
         }
 
-        await vt3d.db.tracks.delete(this.slug, TRACK_DB_CURRENT)
+        await vt3d.db.tracks.delete(this.slug, TRACKS_STORE)
     }
 }
