@@ -8,7 +8,6 @@ import { useEffect, useRef }                                 from 'react'
  * Some Cesium and Resium modules are needed
  */
 import { Camera, CameraFlyTo, Entity, Globe, Scene, Viewer } from 'resium'
-import { Track }                                             from './classes/Track'
 import { VT3D }                                              from './classes/VT3D'
 /**
  * We also need our owns
@@ -20,6 +19,7 @@ import { CameraUtils }                                       from './Utils/cesiu
  * We are using shoelace Web Components
  */
 import '@shoelace-style/shoelace/dist/themes/light.css'
+import { TrackUtils }                                        from './Utils/cesium/TrackUtils'
 /**
  * Then import our owns
  */
@@ -42,8 +42,6 @@ export function ViewTrack3D() {
         roll: Cesium.Math.toRadians(center.camera.roll),
     }
 
-    // Let's read tracks in DB
-    Track.readAllTracksFromDB()
 
     const updateCameraPosition = () => {
         const cameraStore = vt3d.mainProxy.components.camera
@@ -63,8 +61,9 @@ export function ViewTrack3D() {
         CameraUtils.updatePosition(vt3d?.camera).then(r => {
         })
 
-        //vt3d.viewer.scene.verticalExaggeration = Number(1)
+        TrackUtils.readAllFromDB()
 
+        //vt3d.viewer.scene.verticalExaggeration = Number(1)
 
         // Ready
         UINotifier.notifySuccess({
