@@ -1,10 +1,11 @@
-import * as extent                                        from '@mapbox/geojson-extent'
-import * as Cesium                                        from 'cesium'
-import { Color, GeoJsonDataSource }                       from 'cesium'
-import { INITIAL_LOADING, RE_LOADING, SIMULATE_ALTITUDE } from '../../classes/Track'
-import { FileUtils }                                      from '../FileUtils.js'
-import { UINotifier }                                     from '../UINotifier'
-import { EntitiesUtils }                                  from './EntitiesUtils'
+import * as extent                                                                          from '@mapbox/geojson-extent'
+import * as Cesium                                                                          from 'cesium'
+import { Color, GeoJsonDataSource }                                                         from 'cesium'
+import { DRAW_ANIMATE, DRAW_SILENT, INITIAL_LOADING, RE_LOADING, SIMULATE_ALTITUDE, Track } from '../../classes/Track'
+import { CURRENT_STORE, CURRENT_TRACK }                                                     from '../../classes/VT3D'
+import { FileUtils }                                                                        from '../FileUtils.js'
+import { UINotifier }                                                                       from '../UINotifier'
+import { EntitiesUtils }                                                                    from './EntitiesUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE             = 'Feature',
@@ -57,10 +58,10 @@ export class TrackUtils {
      * Show currentTrack on the map
      *
      * @param track
-     * @param line
      * @param action
+     * @param mode
      */
-    static loadTrack = async (track = '', action = INITIAL_LOADING) => {
+    static loadTrack = async (track = '', action = INITIAL_LOADING, mode = DRAW_ANIMATE) => {
         const configuration = vt3d.configuration
 
         const trackStroke = {
@@ -131,7 +132,9 @@ export class TrackUtils {
                 }
 
                 // Focus on track
-                TrackUtils.focus(track)
+                if (mode === DRAW_ANIMATE) {
+                    TrackUtils.focus(track)
+                }
 
 
             }
@@ -323,6 +326,30 @@ export class TrackUtils {
 
     static getDescription(feature) {
         return feature?.properties?.desc ?? undefined
+    }
+
+    /**
+     * Read tracks from DB and draw them.
+     *
+     */
+    static readAllFromDB = async () => {
+        // Let's read tracks in DB
+        const tracks = await Track.allFromDB()
+
+        // Current track slug
+        let current = await vt3d.db.tracks.get(CURRENT_TRACK, CURRENT_STORE)
+        // Set current if it exists in tracks. If not, let's use the first track or null
+        if (tracks.filter(value => value.slug === current).length === 0 && tracks.length > 0) {
+            current = tracks[0]
+        }
+        if (current) {
+            vt3d.currentTrack = vt3d.tracks.get(current)
+        }
+        // Draw all tracks but show only the current one
+        vt3d.tracks.forEach(track => {
+            track.draw(INITIAL_LOADING, track.slug === current ? DRAW_ANIMATE : DRAW_SILENT)
+        })
+
     }
 
 }
