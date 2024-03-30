@@ -1,4 +1,5 @@
-import { TrackUtils } from './cesium/TrackUtils'
+import { CURRENT_STORE, CURRENT_TRACK } from '../classes/VT3D'
+import { TrackUtils }                   from './cesium/TrackUtils'
 
 export class TracksEditorUtils {
 
@@ -19,7 +20,13 @@ export class TracksEditorUtils {
         if (isOK(event)) {
             vt3d.trackEditorProxy.track = vt3d.getTrackBySlug(event.target.value)
             TracksEditorUtils.reRenderTrackSettings()
-            TrackUtils.focus(vt3d.trackEditorProxy.track)
+            vt3d.db.tracks.put(CURRENT_TRACK, event.target.value, CURRENT_STORE).then(
+                () => {
+                    if (vt3d.trackEditorProxy.track.visible) {
+                        TrackUtils.focus(vt3d.trackEditorProxy.track)
+                    }
+                },
+            )
         }
     }
 
