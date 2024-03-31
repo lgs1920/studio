@@ -81,8 +81,9 @@ export class TrackUtils {
             // We get existing datasource
             source = vt3d.viewer.dataSources.getByName(track.slug)[0]
         } else {
-            // It's a new track
-            source = new GeoJsonDataSource(track.slug)
+            // It's a new track... But with strict mode, in developermode, we got twice, so let's
+            // check to have only one
+            source = /*vt3d.viewer.dataSources.getByName(track.slug)[0] ??*/ new GeoJsonDataSource(track.slug)
         }
 
         return source.load(track.geoJson, {
@@ -92,7 +93,7 @@ export class TrackUtils {
         }).then(dataSource => {
 
             dataSource.entities.values.forEach(entity => {
-                // Masks  the legacy POIs then for all oher entities, visibility is
+                // Masks  the legacy POIs then for all other entities, visibility is
                 // based ontrack visibility
                 if (entity.billboard) {
                     if (!entity.id.startsWith('marker#')) {

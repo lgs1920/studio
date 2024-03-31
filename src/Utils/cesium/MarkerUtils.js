@@ -78,7 +78,6 @@ export class MarkerUtils {
                     return await dataSource.entities.add(markerOptions)
                 })
             case JUST_ICON:
-                console.log(markerOptions)
                 return MarkerUtils.useOnlyFontAwesome(marker).then(async canvas => {
                     markerOptions.billboard.image = canvas
                     return await dataSource.entities.add(markerOptions)

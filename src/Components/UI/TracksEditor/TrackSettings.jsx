@@ -255,7 +255,7 @@ export const TrackSettings = function TrackSettings() {
         // unproxify
         const unproxyfied = JSON.parse(JSON.stringify(editorStore.track))
 
-        // We clone but keep the same slug
+        // We clone but keep the same slug and markers
         const track = Track.clone(unproxyfied, {
             slug: editorStore.track.slug,
             markers: editorStore.track.markers,
