@@ -365,7 +365,6 @@ export const TrackSettings = function TrackSettings() {
 
                             <ConfirmRemoveTrackDialog/>
                         </div>
-                        <span>={editorSnapshot.track.markers.size}</span>
                         {editorSnapshot.track.visible &&
                             <div id={'track-tips'}>
                                 <MarkerVisibility type={'start'} label={'Start'}/>
