@@ -16,8 +16,17 @@ export const NO_MARKER_COLOR = 'transparent'
 
 export class MarkerUtils {
     static draw = async (marker) => {
-
         const dataSource = vt3d.viewer.dataSources.getByName(marker.parent)[0]
+
+        // If an entity with the same name already exists, bail early , we do not recreate it
+        // dataSource.entities.values.forEach((item) => {
+        //     console.log(`${item.id}/${marker.id}`)
+        //     if (item.id === marker.id) {
+        //         console.log('egal')
+        //         return new Promise()
+        //     }
+        // })
+
 
         const properties = new Cesium.PropertyBag()
         properties.addProperty('slug', marker.id)
@@ -69,14 +78,15 @@ export class MarkerUtils {
                     return await dataSource.entities.add(markerOptions)
                 })
             case JUST_ICON:
+                console.log(markerOptions)
                 return MarkerUtils.useOnlyFontAwesome(marker).then(async canvas => {
                     markerOptions.billboard.image = canvas
                     return await dataSource.entities.add(markerOptions)
                 })
         }
 
-
     }
+
     static useFontAwesome = (marker) => {
         library.add(marker.icon)
         const html = icon(marker.icon).html[0]

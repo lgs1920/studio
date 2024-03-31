@@ -90,8 +90,11 @@ export class VT3D {
 
     set currentTrack(track) {
         this.#mainProxy.currentTrack = track
-        this.db.tracks.put(CURRENT_TRACK, track.slug, CURRENT_STORE).then(this.addToEditor(track),
-        )
+        if (track === null) {
+            this.db.tracks.delete(CURRENT_TRACK, CURRENT_STORE).then()
+            return
+        }
+        this.db.tracks.put(CURRENT_TRACK, track.slug, CURRENT_STORE).then(this.addToEditor(track))
     }
 
     get mainProxy() {

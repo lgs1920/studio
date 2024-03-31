@@ -92,9 +92,17 @@ export class TrackUtils {
         }).then(dataSource => {
 
             dataSource.entities.values.forEach(entity => {
-                if (entity.billboard && !entity.id.startsWith('marker#')) {
-                    entity.show = false
+                // Masks  the legacy POIs then for all oher entities, visibility is
+                // based ontrack visibility
+                if (entity.billboard) {
+                    if (!entity.id.startsWith('marker#')) {
+                        // Masks all legacy POI
+                        entity.show = false
+                    }
+                } else {
+                    entity.show = track.visible
                 }
+
             })
             const text = `Track loaded and displayed on the map.`
             if (action === RE_LOADING) {
@@ -335,15 +343,19 @@ export class TrackUtils {
     static readAllFromDB = async () => {
         // Let's read tracks in DB
         const tracks = await Track.allFromDB()
-
+        if (tracks.length === 0) {
+            vt3d.currentTrack = null
+            return
+        }
         // Current track slug
         let current = await vt3d.db.tracks.get(CURRENT_TRACK, CURRENT_STORE)
         // Set current if it exists in tracks. If not, let's use the first track or null
-        if (tracks.filter(value => value.slug === current).length === 0 && tracks.length > 0) {
-            current = tracks[0]
-        }
+        const tmp = tracks.filter(value => value.slug === current)
+        current = (tmp.length > 0) ? tmp[0].slug : tracks[0].slug
+
         if (current) {
             vt3d.currentTrack = vt3d.tracks.get(current)
+            vt3d.addToEditor(vt3d.currentTrack)
         }
         // Draw all tracks but show only the current one
         vt3d.tracks.forEach(track => {

@@ -72,7 +72,7 @@ export class Track {
         this.checkOtherData()
         // Let's compute all information
         this.computeAll().then(() => {
-            this.addMarkers()
+            this.addMarkers(this.markers.size !== 0)
         })
     }
 
@@ -122,7 +122,7 @@ export class Track {
                     if (source[attribute] instanceof Array) {
                         const tmpMarkers = new Map()
                         source[attribute].forEach(marker => {
-                            tmpMarkers.set(marker.slug, marker)
+                            tmpMarkers.set(marker.slug, MapMarker.clone(marker))
                         })
                         source[attribute] = tmpMarkers
                     }
@@ -159,7 +159,7 @@ export class Track {
             // Get each track content
             const trackPromises = slugs.map(async (slug) => {
                 const object = await vt3d.db.tracks.get(slug, TRACKS_STORE)
-                const track = Track.clone(object)
+                const track = Track.clone(object, {slug: slug})
                 track.addToContext()
                 return track
             })
@@ -190,7 +190,7 @@ export class Track {
      *
      * @param coordinates
      */
-    async addMarkers() {
+    async addMarkers(exist) {
 
         // Sometimes, we got an Array of markers, instead of a Map.
         // Lets change it to Map   TODO Why Such Array ?
@@ -200,6 +200,9 @@ export class Track {
             tmp.forEach(marker => {
                 this.markers.set(marker.slug, marker)
             })
+        }
+        if (exist) {
+            return
         }
         if (this.geoJson.type === FEATURE_COLLECTION) {
             let index = 0
@@ -245,7 +248,6 @@ export class Track {
                                     icon: faLocationDot,
                                     foregroundColor: vt3d.configuration.track.markers.stop.color,
                                     description: 'Ending point',
-
                                 },
                             ))
                             break
@@ -558,8 +560,9 @@ export class Track {
      */
     draw = async (action = INITIAL_LOADING, mode = DRAW_ANIMATE) => {
         await TrackUtils.loadTrack(this, action, mode)
-        this.markers.forEach(marker => {
-            marker.draw()
+        this.markers.forEach(async marker => {
+            const tmp = MapMarker.clone(marker)
+            await tmp.draw()
         })
     }
 
@@ -575,8 +578,8 @@ export class Track {
         await this.draw(SIMULATE_ALTITUDE)
     }
 
-    loadAfterNewSettings = async () => {
-        await this.draw(RE_LOADING)
+    loadAfterNewSettings = async (mode) => {
+        await this.draw(RE_LOADING, mode)
     }
 
     checkOtherData = () => {
@@ -616,11 +619,11 @@ export class Track {
      */
     toDB = async () => {
         // Markers are transformed to objects
-        let temp = Track.clone(this)
+        let temp = Track.clone(this, {slug: this.slug})
         let markers = temp.markers
         temp.markers = []
         markers.forEach((marker, key) => {
-            temp.markers.push(marker.extractObject())
+            temp.markers.push(MapMarker.extractObject(marker))
         })
         await vt3d.db.tracks.put(this.slug, temp.extractObject(), TRACKS_STORE)
     }

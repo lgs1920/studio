@@ -41,9 +41,17 @@ export class MapMarker {
         this.size = options.size ?? (this.type === PIN_CIRCLE ? 10 : 32)
         this.description = options.description ?? undefined
         this.image = options.image ?? undefined
-        this.visible = true
+        this.visible = options.visible ?? true
 
         this.register()
+    }
+
+    static clone = (source, exceptions = {}) => {
+        return new MapMarker(MapMarker.extractObject(source))
+    }
+
+    static extractObject = (source) => {
+        return JSON.parse(JSON.stringify(source))
     }
 
     /**
@@ -57,10 +65,6 @@ export class MapMarker {
 
     draw = async () => {
         await MarkerUtils.draw(this)
-    }
-
-    extractObject = () => {
-        return JSON.parse(JSON.stringify(this))
     }
 
 }
