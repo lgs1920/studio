@@ -29,7 +29,8 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                 if (!currentTrack.hasAltitude) {
                     mainStore.modals.altitudeChoice.show = true
                 }
-                
+
+                currentTrack.addMarkers(false)
                 currentTrack.addToContext()
                 vt3d.addToEditor(currentTrack)
                 await currentTrack.toDB()
