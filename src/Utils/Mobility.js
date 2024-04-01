@@ -1,5 +1,7 @@
-import * as Cesium                  from 'cesium'
+import * as turfDistance from '@turf/distance'
+
 import { DateTime }                 from 'luxon'
+import * as turfPoint               from 'turf-point'
 import { KM, MILE, MILLIS, MINUTE } from './AppUtils'
 
 export class Mobility {
@@ -14,14 +16,12 @@ export class Mobility {
      *
      */
     static distance = (start, end) => {
-        const R = 6371e3  //Earth average radius in meter
-        const p1 = Cesium.Math.toRadians(start.latitude)
-        const p2 = Cesium.Math.toRadians(end.latitude)
-        const fp = Math.pow(Math.sin((p2 - p1) / 2), 2)
-        const fl = Math.pow(Math.sin(Cesium.Math.toRadians(end.longitude - start.longitude) / 2), 2)
-
-        const a = fp + Math.cos(p1) * Math.cos(p2) * fl
-        return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        const distance = turfDistance.default(
+            turfPoint.default([start.longitude, start.latitude]),
+            turfPoint.default([end.longitude, end.latitude]),
+        )
+        console.log(distance)
+        return distance * 1000
     }
     /**
      * Return the elevation between  points
