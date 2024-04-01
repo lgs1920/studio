@@ -12,7 +12,7 @@ export class Mobility {
      * @param start {Object} should contain {latitude,longitude} in degrees
      * @param end {Object}  should contain {latitude,longitude} in degrees
      *
-     * @return {number} the distance
+     * @return {number} the distance in meters
      *
      */
     static distance = (start, end) => {
@@ -21,7 +21,7 @@ export class Mobility {
             turfPoint.default([end.longitude, end.latitude]),
         )
         console.log(distance)
-        return distance * 1000
+        return distance * KM
     }
     /**
      * Return the elevation between  points
