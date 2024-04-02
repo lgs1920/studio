@@ -20,7 +20,6 @@ export class Mobility {
             turfPoint.default([start.longitude, start.latitude]),
             turfPoint.default([end.longitude, end.latitude]),
         )
-        console.log(distance)
         return distance * KM
     }
     /**
