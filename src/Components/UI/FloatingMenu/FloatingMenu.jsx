@@ -199,7 +199,8 @@ export const FloatingMenu = function FloatingMenu() {
 
     const TrackPlus = () => {
         const metrics = track.metrics[0].global
-        const duration = Duration.fromObject({seconds: metrics.duration})
+
+        const duration = metrics.duration ? Duration.fromObject({seconds: metrics.duration}) : undefined
         const format = () => {
             let fmt = metrics.duration >= DAY / 1000
                       ? `dd \day} ` : ''
@@ -223,7 +224,7 @@ export const FloatingMenu = function FloatingMenu() {
                                      unit={'kms'}/>
                     </div>
                 </div>
-                {metrics.duration &&
+                {!isNaN(metrics.duration) &&
                     <div className={'floating-menu-data one-line'}>
                         <sl-icon variant="primary" library="fa" name={FA2SL.set(faStopwatch)}></sl-icon>
                         <div>
@@ -233,14 +234,14 @@ export const FloatingMenu = function FloatingMenu() {
                     </div>
                 }
 
-                {metrics.minHeight && metrics.maxHeight &&
+                {!isNaN(metrics.minHeight) && !isNaN(metrics.maxHeight) &&
                     <div className={'floating-menu-title'}>
                         <sl-icon variant="primary" library="fa" name={FA2SL.set(faMountains)}></sl-icon>
                         Altitude
                     </div>
                 }
 
-                {metrics.minHeight &&
+                {!isNaN(metrics.minHeight) &&
                     <div className={'floating-menu-data'}>
                         <div>
                             <TextValueUI value={metrics.minHeight}
@@ -250,7 +251,7 @@ export const FloatingMenu = function FloatingMenu() {
                         </div>
                     </div>
                 }
-                {metrics.maxHeight &&
+                {!isNaN(metrics.maxHeight) &&
                     <div className={'floating-menu-data'}>
                         <div>
                             <TextValueUI value={metrics.maxHeight}
@@ -261,13 +262,13 @@ export const FloatingMenu = function FloatingMenu() {
                     </div>
                 }
 
-                {metrics.negativeElevation && metrics.positiveElevation &&
+                {metrics.negativeElevation < 0 && metrics.positiveElevation > 0 &&
                     <div className={'floating-menu-title'}>
                         <sl-icon variant="primary" library="fa" name={FA2SL.set(faArrowTrendUp)}></sl-icon>
                         Elevation
                     </div>
                 }
-                {metrics.positiveElevation &&
+                {metrics.positiveElevation > 0 &&
                     <div className={'floating-menu-data'}>
                         <div>
                             <TextValueUI value={sprintf('%\' .1f', metrics.positiveElevation)}
@@ -277,7 +278,7 @@ export const FloatingMenu = function FloatingMenu() {
                         </div>
                     </div>
                 }
-                {metrics.negativeElevation &&
+                {metrics.negativeElevation < 0 &&
                     <div className={'floating-menu-data'}>
                         <div>
                             <TextValueUI value={sprintf('%\' .1f', metrics.negativeElevation)}
