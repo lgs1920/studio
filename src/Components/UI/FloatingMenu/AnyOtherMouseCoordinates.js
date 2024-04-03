@@ -4,7 +4,7 @@ import { MouseUtils }    from '../../../Utils/cesium/MouseUtils'
 
 export class AnyOtherMouseCoordinates {
 
-    /** Tapstheclick then show themnu at this location
+    /** Tapstheclick then show the menu at this location
      *
      * @param data
      */
