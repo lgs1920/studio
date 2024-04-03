@@ -67,4 +67,8 @@ export class MapMarker {
         await MarkerUtils.draw(this)
     }
 
+    remove = async () => {
+        await MarkerUtils.remove(this)
+    }
+
 }
