@@ -57,7 +57,7 @@ export class MarkerUtils {
                 return await dataSource.entities.add({
                     point: {
                         position: Cesium.Cartesian3.fromDegrees(marker.coordinates[0], marker.coordinates[1]),
-                        backgroundPadding: Cesium.Cartesian2(8, 4),
+                        //backgroundPadding: Cesium.Cartesian2(8, 4),
                         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                         color: marker.backgroundColor,
@@ -124,6 +124,16 @@ export class MarkerUtils {
         const v = Canvg.fromString(context, MarkerUtils.useFontAwesome(marker).html)
         v.start()
         return canvas
+    }
+
+    static remove = async (marker) => {
+        const dataSource = vt3d.viewer.dataSources.getByName(marker.parent)[0]
+        dataSource.entities.values.forEach(entity => {
+            if (entity.id === marker.id) {
+                dataSource.entities.remove(entity)
+            }
+        })
+
     }
 
 }
