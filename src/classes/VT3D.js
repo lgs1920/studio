@@ -58,6 +58,9 @@ export class VT3D {
             }),
         }
 
+        //wander mode
+        this.wanderMode = false
+
     }
 
     get viewer() {

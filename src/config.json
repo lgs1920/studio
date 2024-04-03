@@ -32,6 +32,10 @@
     "color": "#B22222ff",
     "thickness": 2,
     "markers": {
+      "wanderer": {
+        "color": "#1689CCff",
+        "border": "#FFF"
+      },
       "color": "#1689CCff",
       "start": {
         "color": "#DC143Cff"

@@ -3,6 +3,7 @@ import { AnyOtherMouseCoordinates } from '../../Components/UI/FloatingMenu/AnyOt
 import { MarkerMenu }               from '../../Components/UI/FloatingMenu/MarkerMenu'
 import { TrackMenu }                from '../../Components/UI/FloatingMenu/TrackMenu'
 import { MouseUtils }               from '../../Utils/cesium/MouseUtils'
+import { Wander }                   from '../../Utils/cesium/Wander'
 
 export class CanvasEvents {
     static manager = (movement) => {
@@ -42,6 +43,8 @@ export class CanvasEvents {
 
         vt3d.events.on('canvas/rightClick', AnyOtherMouseCoordinates.show)
         vt3d.events.on('canvas/ctrlClick', AnyOtherMouseCoordinates.show)
+
+        vt3d.events.on('wander/drawPoint', Wander.drawPoint)
     }
 
     /**
