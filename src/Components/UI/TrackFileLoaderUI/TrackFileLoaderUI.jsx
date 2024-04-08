@@ -3,7 +3,7 @@ import { faMapLocation }               from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { forwardRef }                  from 'react'
 import { useSnapshot }                 from 'valtio'
-import { Track }                       from '../../../classes/Track'
+import { Journey }                     from '../../../classes/Journey'
 import { TrackUtils }                  from '../../../Utils/cesium/TrackUtils'
 import { FA2SL }                       from '../../../Utils/FA2SL'
 import { UINotifier }                  from '../../../Utils/UINotifier'
@@ -18,10 +18,11 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
         // uploading a file exits full screen mode, so we force the state
         mainStore.fullSize = false
 
-        const track = await TrackUtils.loadTrackFromFile()
+        const journey = await TrackUtils.loadJourneyFromFile()
         // File is correct let's work with
-        if (track !== undefined) {
-            let currentTrack = new Track(track.name, track.extension, {content: track.content})
+        if (journey !== undefined) {
+            let currentTrack = new Journey(journey.name, journey.extension, {content: journey.content})
+            console.log(currentTrack)
             // Check if the track already exists in context
             // If not we manage and show it.
             if (vt3d.getTrackBySlug(currentTrack.slug)?.slug === undefined) {

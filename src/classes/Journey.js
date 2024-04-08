@@ -1,5 +1,5 @@
-import { getGeom }                      from ''
 import { gpx, kml }                     from '@tmcw/togeojson'
+import { getGeom }                      from '@turf/invariant'
 import {
     JUST_ICON, MARKER_SIZE,
 }                                       from '../Utils/cesium/MarkerUtils'
@@ -14,7 +14,7 @@ export class Journey {
 
     tracks = new Map()          // LIst of tracks
     pois = new Map()            // List of pois
-    globalEndPoints = false           // false = each track
+    poisOnLimits = true               // Add POIs start/stop on journey limits or on each track
     type                                       // File type  GPX,KML,GEOJSON  //TODO KMZ
 
     visible = true                    // All is visible or hidden
@@ -55,8 +55,7 @@ export class Journey {
         // Get all POIs
         this.extractPOIs()
 
-        this.db = new JourneyDB(this)
-        this.db.save()
+        // this.save()
     }
 
     /**
@@ -123,7 +122,7 @@ export class Journey {
      *
      */
     singleTitle = title => {
-        return _utils.singleTitle(title, vt3d.journeys)
+        return _utils.app.singleTitle(title, vt3d.journeys)
     }
 
     /**
@@ -180,14 +179,15 @@ export class Journey {
                     const parameters = {
                         parent: this.slug,
                         name: feature.properties.name,
-                        slug: _utils.app.slugify(`${feature.properties.name}-${index}`),
+                        slug: _utils.app.slugify(`${feature.properties.name}`),
                         hasTime: this.#hasTime(feature.properties),
                         hasAltitude: this.#hasAltitude(geometry.coordinates),
                         description: feature.properties.desc,
                         segments: geometry.coordinates.length,
                         content: feature,
+                        visible: true,
                     }
-                    this.tracks.set(parameters.slug, new Track(title, type, parameters))
+                    this.tracks.set(parameters.slug, new Track(title, geometry.type, parameters))
                 }
             })
         }
@@ -209,15 +209,19 @@ export class Journey {
      */
     extractPOIs = () => {
         if (this.geoJson.type === FEATURE_COLLECTION) {
+            const justTracks = []
+            // Extracts all POIs from FEATURE_POINT data and adds
+            // POI on track limits
             this.geoJson.features.forEach((feature, index) => {
+                const geometry = getGeom(feature)
                 const common = {
                     description: feature.properties.desc,
                     parent: this.slug,
                     type: JUST_ICON,
                     size: MARKER_SIZE,
                     foregroundColor: vt3d.configuration.track.markers.color,
+                    visible: true,
                 }
-
                 switch (geometry.type) {
                     case FEATURE_POINT: {
                         // Create a POI
@@ -233,7 +237,7 @@ export class Journey {
                                 symbol: feature.properties?.sym,
                             },
                         }
-                        this.markers.set(parameters.slug, new POI({...common, ...parameters}))
+                        this.pois.set(parameters.slug, new POI({...common, ...parameters}))
                         break
                     }
                     case FEATURE_MULTILINE_STRING:
@@ -243,34 +247,49 @@ export class Journey {
                         const timeStart = this.hasTime ? feature.properties.coordinateProperties.times[0] : undefined
                         const startParameters = {
                             name: 'Track start',
-                            slug: this.#setMarkerSlug(`start-${index}`),
+                            slug: this.#setMarkerSlug(`${FLAG_START}-${index}`),
                             coordinates: [start[0], start[1]],
                             altitude: start[2] ?? undefined,
                             time: timeStart,
                             icon: {
-                                symbol: 'start',
+                                symbol: FLAG_START,
                             },
                         }
-                        this.markers.set(startParameters.slug, new POI({...common, ...startParameters}))
+                        this.pois.set(startParameters.slug, new POI({...common, ...startParameters}))
+                        justTracks.push(startParameters.slug)
 
                         // Create Track Stop Flag
                         const stop = feature.geometry.coordinates[0]
-                        const timeStop = hasTime ? feature.properties.coordinateProperties.times[geometry.coordinates.length - 1] : undefined
+                        const timeStop = this.hasTime ? feature.properties.coordinateProperties.times[geometry.coordinates.length - 1] : undefined
                         const stopParameters = {
                             name: 'Track stop',
-                            slug: this.#setMarkerSlug(`stop-${index}`),
+                            slug: this.#setMarkerSlug(`${FLAG_STOP}-${index}`),
                             coordinates: [stop[0], stop[1]],
                             altitude: stop[2] ?? undefined,
                             time: timeStop,
                             icon: {
-                                symbol: 'stop',
+                                symbol: FLAG_START,
                             },
                         }
-                        this.markers.set(stopParameters.slug, new POI({...common, ...stopParameters}))
-
+                        this.pois.set(stopParameters.slug, new POI({...common, ...stopParameters}))
+                        justTracks.push(stopParameters.slug)
                         break
                 }
+
             })
+
+            // If we need to have POIs on limits only (ie first on first track, last of last track)
+            // we adapt the visibility
+
+            if (this.poisOnLimits) {
+                justTracks.forEach((poi, index) => {
+                    const last = poi.split('#')[2]
+                    if (last.startsWith(FLAG_START) || last.startsWith(FLAG_STOP)) {
+                        this.pois.get(poi).visible = index === 0 || index === justTracks.length - 1
+                    }
+                })
+
+            }
         }
     }
 
@@ -281,7 +300,7 @@ export class Journey {
      * @return {`marker#${string}#${string}`}
      */
     #setMarkerSlug = (id) => {
-        return `marker#${this.slug}#${_utils.app.slugify(id)}`
+        return `poi#${this.slug}#${_utils.app.slugify(id)}`
     }
 
     /**
@@ -337,3 +356,6 @@ export const GPX = 'gpx'
 export const KML = 'kml'
 export const KMZ = 'kmz'
 export const GEOJSON = 'geojson'
+
+export const FLAG_START = 'start'
+export const FLAG_STOP = 'stop'

@@ -16,7 +16,6 @@ export const DRAW_ANIMATE = 1
 export const DRAW_SILENT = 2
 
 const CONFIGURATION = '../config.json'
-geome
 
 export class Track {
 
@@ -69,19 +68,19 @@ export class Track {
         this.slug = options.slug ?? _utils.app.slugify(`${title}-${type}`)
         this.color = vt3d.configuration.track.color
         this.thickness = vt3d.configuration.track.thickness
-        this.visible = true
+        this.visible = options.visible ?? true
         this.description = options.description ?? undefined
 
         this.DEMServer = NO_DEM_SERVER
         // get GeoJson
-        this.toGeoJson(options.content ?? '')
-        this.setTrackName(this.title)
-
-        this.checkOtherData()
-        // Let's compute all information
-        this.computeAll().then(() => {
-            this.addMarkers(this.markers.size !== 0)
-        })
+        // this.toGeoJson(options.content ?? '')
+        //  this.setTrackName(this.title)
+        //
+        //  this.checkOtherData()
+        //  // Let's compute all information
+        //  this.computeAll().then(() => {
+        //      this.addMarkers(this.markers.size !== 0)
+        // })
     }
 
     /**
