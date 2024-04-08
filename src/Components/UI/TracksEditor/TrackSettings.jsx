@@ -20,7 +20,7 @@ export const TrackSettings = function TrackSettings() {
     const UPDATE_TRACK_SILENTLY = 2
     const REMOVE_TRACK = 3
 
-    const editorStore = vt3d.trackEditorProxy
+    const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
     let dataSource = vt3d.viewer.dataSources.getByName(editorStore.track.slug)[0]
@@ -189,7 +189,7 @@ export const TrackSettings = function TrackSettings() {
         const confirmation = await confirmRemoveTrack()
 
         if (confirmation) {
-            const mainStore = vt3d.mainProxy.components.tracksEditor
+            const mainStore = vt3d.mainProxy.components.journeyEditor
             const track = editorStore.track.slug
             const removed = vt3d.getTrackBySlug(track)
             // get Track index
@@ -303,7 +303,7 @@ export const TrackSettings = function TrackSettings() {
 
     return (<>
         {editorSnapshot.track &&
-            <SlCard id="track-settings" key={vt3d.mainProxy.components.tracksEditor.trackSettingsKey}>
+            <SlCard id="track-settings" key={vt3d.mainProxy.components.journeyEditor.journeySettingsKey}>
                 <div id={'track-line-settings-global'}>
                     {/* Change visible name (title) */}
                     <div>

@@ -13,10 +13,10 @@ import { TrackSettings }                         from './TrackSettings'
 
 export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
 
-    const mainStore = vt3d.mainProxy.components.tracksEditor
+    const mainStore = vt3d.mainProxy.components.journeyEditor
     const mainSnap = useSnapshot(mainStore)
 
-    const editorStore = vt3d.trackEditorProxy
+    const editorStore = vt3d.theJourneyEditorProxy
     const editorSnap = useSnapshot(editorStore)
 
     /**

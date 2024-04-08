@@ -5,12 +5,12 @@ export const main = {
             position: {},
         },
         credits: {show: false},
-        tracksEditor: {
+        journeyEditor: {
             visible: false,
             show: false,
             list: [],
-            trackListKey: 0,
-            trackSettingsKey: 0,
+            journeyListKey: 0,
+            journeySettingsKey: 0,
         },
         floatingMenu: {
             coordinates: {x: 0, y: -9999},

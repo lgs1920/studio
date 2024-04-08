@@ -509,7 +509,7 @@ export class Track {
                                 feature.geometry.coordinates[j].push(altitudes[j])
                             }
                             // Hide progress bar
-                            vt3d.trackEditorProxy.longTask = false
+                            vt3d.theJourneyEditorProxy.longTask = false
                         }
 
                         /**

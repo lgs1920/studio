@@ -5,11 +5,11 @@ import { CSSUtils }          from '../Utils/CSSUtils'
 import { LocalDB }           from './db/LocalDB'
 import { MouseEventHandler } from './MouseEventHandler'
 import { main }              from './stores/main'
-import { trackEditor }       from './stores/trackEditor'
+import { theJourneyEditor }  from './stores/theJourneyEditor'
 
 export class VT3D {
     #mainProxy
-    #trackEditorProxy
+    #theJourneyEditorProxy
 
     tracks = new Map()
     markers = new Map()
@@ -24,13 +24,13 @@ export class VT3D {
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
         // Track Editor store is used to manage the settings of the theJourney in edit
-        this.#trackEditorProxy = proxy(trackEditor)
+        this.#theJourneyEditorProxy = proxy(theJourneyEditor)
         // Main is global to the app
         this.#mainProxy = proxy(main)
 
         // Get the first as current theJourney
         if (this.tracks.size) {
-            const first = Array.from(this.#trackEditorProxy.tracks)[0]
+            const first = Array.from(this.#theJourneyEditorProxy.tracks)[0]
             this.mainProxy.theJourney = first
             this.addToEditor(this.first)
         }
@@ -105,8 +105,8 @@ export class VT3D {
         return this.#mainProxy
     }
 
-    get trackEditorProxy() {
-        return this.#trackEditorProxy
+    get theJourneyEditorProxy() {
+        return this.#theJourneyEditorProxy
     }
 
     getTrackBySlug(slug) {
@@ -121,22 +121,22 @@ export class VT3D {
      */
     saveTrack = (track) => {
         if (track) {
-            const index = this.mainProxy.components.tracksEditor.list.findIndex(item => item === track.slug)
+            const index = this.mainProxy.components.journeyEditor.list.findIndex(item => item === track.slug)
             if (index >= 0) {
                 // Look if this theJourney already exist in context
                 this.tracks.set(track.slug, track)
-                this.mainProxy.components.tracksEditor.list[index] = track.slug
+                this.mainProxy.components.journeyEditor.list[index] = track.slug
             } else {                    // Nope,we add it
                 this.tracks.set(track.slug, track)
-                this.mainProxy.components.tracksEditor.list.push(track.slug)
+                this.mainProxy.components.journeyEditor.list.push(track.slug)
             }
-            this.mainProxy.components.tracksEditor.usable = true
+            this.mainProxy.components.journeyEditor.usable = true
         }
 
     }
 
     addToEditor = (track) => {
-        this.trackEditorProxy.track = track
+        this.theJourneyEditorProxy.track = track
     }
 }
 

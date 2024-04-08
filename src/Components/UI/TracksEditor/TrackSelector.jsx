@@ -9,9 +9,9 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     const handleRequestClose = event => {
         event.preventDefault()
     }
-    const mainStore = vt3d.mainProxy.components.tracksEditor
+    const mainStore = vt3d.mainProxy.components.journeyEditor
     const mainSnap = useSnapshot(mainStore)
-    const editorStore = vt3d.trackEditorProxy
+    const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
     const several = mainSnap.list.length > 1
@@ -53,7 +53,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
                 <SlSelect hoist label={props.label}
                           value={editorSnapshot.track.slug}
                           onSlChange={props.onChange}
-                          key={mainSnap.trackListKey}
+                          key={mainSnap.journeyListKey}
                 >
                     <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
