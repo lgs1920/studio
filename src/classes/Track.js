@@ -265,13 +265,13 @@ export class Track {
     }
 
     /**
-     * Add this currentTrack to the application context
+     * Add this theJourney to the application context
      *
      */
     addToContext = (setToCurrent = true) => {
         vt3d.saveTrack(this)
         if (setToCurrent) {
-            vt3d.currentTrack = this
+            vt3d.theJourney = this
         }
     }
 
@@ -305,9 +305,9 @@ export class Track {
     }
 
     /**
-     * Get the currentTrack data and set the GeoJson Structure
+     * Get the theJourney data and set the GeoJson Structure
      *
-     * @param content content of the currentTrack file
+     * @param content content of the theJourney file
      *
      * @exception {any} in case of ay error, we return undefined
      */
@@ -343,7 +343,7 @@ export class Track {
     }
 
     /**
-     * Compute all metrics from a currentTrack
+     * Compute all metrics from a theJourney
      *
      * set metrics as  {[metrics/all points,global]}
      */

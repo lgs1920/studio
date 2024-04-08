@@ -31,6 +31,6 @@ export const main = {
             model: 'terrain',
         },
     },
-    currentTrack: null,
+    theJourney: null,
     fullSize: false,
 }

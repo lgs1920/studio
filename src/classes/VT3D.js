@@ -23,15 +23,15 @@ export class VT3D {
 
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
-        // Track Editor store is used to manage the settings of the currentTrack in edit
+        // Track Editor store is used to manage the settings of the theJourney in edit
         this.#trackEditorProxy = proxy(trackEditor)
         // Main is global to the app
         this.#mainProxy = proxy(main)
 
-        // Get the first as current currentTrack
+        // Get the first as current theJourney
         if (this.tracks.size) {
             const first = Array.from(this.#trackEditorProxy.tracks)[0]
-            this.mainProxy.currentTrack = first
+            this.mainProxy.theJourney = first
             this.addToEditor(this.first)
         }
 
@@ -88,12 +88,12 @@ export class VT3D {
         return this.tracks
     }
 
-    get currentTrack() {
-        return this.#mainProxy.currentTrack
+    get theJourney() {
+        return this.#mainProxy.theJourney
     }
 
-    set currentTrack(track) {
-        this.#mainProxy.currentTrack = track
+    set theJourney(track) {
+        this.#mainProxy.theJourney = track
         if (track === null) {
             this.db.tracks.delete(CURRENT_JOURNEY, CURRENT_STORE).then()
             return
@@ -123,7 +123,7 @@ export class VT3D {
         if (track) {
             const index = this.mainProxy.components.tracksEditor.list.findIndex(item => item === track.slug)
             if (index >= 0) {
-                // Look if this currentTrack already exist in context
+                // Look if this theJourney already exist in context
                 this.tracks.set(track.slug, track)
                 this.mainProxy.components.tracksEditor.list[index] = track.slug
             } else {                    // Nope,we add it

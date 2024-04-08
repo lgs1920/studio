@@ -174,9 +174,9 @@ export const TrackSettings = function TrackSettings() {
         editorStore.track.DEMServer = event.target.value
         editorStore.longTask = editorStore.track.DEMServer !== NO_DEM_SERVER
         TracksEditorUtils.reRenderTrackSettings()
-        // await vt3d.currentTrack.computeAll()
-        // // Then we redraw the currentTrack
-        // await vt3d.currentTrack.showAfterHeightSimulation()
+        // await vt3d.theJourney.computeAll()
+        // // Then we redraw the theJourney
+        // await vt3d.theJourney.showAfterHeightSimulation()
 
         await rebuildTrack(UPDATE_TRACK_THEN_DRAW)
     })
@@ -223,8 +223,8 @@ export const TrackSettings = function TrackSettings() {
             let text = ''
             if (mainStore.list.length >= 1) {
                 // New current is the first.
-                vt3d.currentTrack = vt3d.getTrackBySlug(mainStore.list[0])
-                TrackUtils.focus(vt3d.currentTrack)
+                vt3d.theJourney = vt3d.getTrackBySlug(mainStore.list[0])
+                TrackUtils.focus(vt3d.theJourney)
                 TracksEditorUtils.reRenderTracksList()
                 TracksEditorUtils.reRenderTrackSettings()
             } else {

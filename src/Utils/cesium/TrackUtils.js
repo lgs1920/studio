@@ -41,7 +41,7 @@ export class TrackUtils {
     })
 
     /**
-     * Load a currentTrack file
+     * Load a theJourney file
      *
      * return
      *
@@ -55,7 +55,7 @@ export class TrackUtils {
     }
 
     /**
-     * Show currentTrack on the map
+     * Show theJourney on the map
      *
      * @param track
      * @param action
@@ -336,7 +336,7 @@ export class TrackUtils {
         // // Let's read tracks in DB
         // const tracks = await Track.allFromDB()
         // if (tracks.length === 0) {
-        //     vt3d.currentTrack = null
+        //     vt3d.theJourney = null
         //     return
         // }
         // // Current track slug
@@ -346,8 +346,8 @@ export class TrackUtils {
         // current = (tmp.length > 0) ? tmp[0].slug : tracks[0].slug
         //
         // if (current) {
-        //     vt3d.currentTrack = vt3d.tracks.get(current)
-        //     vt3d.addToEditor(vt3d.currentTrack)
+        //     vt3d.theJourney = vt3d.tracks.get(current)
+        //     vt3d.addToEditor(vt3d.theJourney)
         // }
         // // Draw all tracks but show only the current one
         // vt3d.tracks.forEach(track => {

@@ -15,7 +15,7 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
     const storeEditor = vt3d.trackEditorProxy
     const snapEditor = useSnapshot(storeEditor)
 
-    const [server, setServer] = useState(vt3d?.mainProxy.currentTrack?.DEMServer ?? NO_DEM_SERVER)
+    const [server, setServer] = useState(vt3d?.mainProxy.theJourney?.DEMServer ?? NO_DEM_SERVER)
 
     const setOpen = (open) => {
         mainStore.modals.altitudeChoice.show = open
@@ -46,12 +46,12 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
     const closeDialog = async (event) => {
         if (isOK(event)) {
             event.preventDefault()
-            vt3d.currentTrack.DEMServer = server
+            vt3d.theJourney.DEMServer = server
             if (server !== NO_DEM_SERVER) {
-                await vt3d.currentTrack.computeAll()
-                vt3d.currentTrack.addToContext()
-                // Then we redraw the currentTrack
-                await vt3d.currentTrack.showAfterHeightSimulation()
+                await vt3d.theJourney.computeAll()
+                vt3d.theJourney.addToContext()
+                // Then we redraw the theJourney
+                await vt3d.theJourney.showAfterHeightSimulation()
             }
         }
     }

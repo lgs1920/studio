@@ -31,7 +31,7 @@ export const FloatingMenu = function FloatingMenu() {
             slug = menuSnap.target.track.slug
         }
         track = vt3d.getTrackBySlug(slug)
-        vt3d.currentTrack = track
+        vt3d.theJourney = track
         if (menuSnap.type === MARKER_TYPE) {
             marker = track.markers.get(menuSnap.target.marker)
         }

@@ -12,7 +12,7 @@ import { JOURNEYS_STORE, ORIGIN_STORE } from './VT3D'
 
 export class Journey {
 
-    tracks = new Map()          // LIst of tracks
+    tracks = new Map()          // List of tracks
     pois = new Map()            // List of pois
     poisOnLimits = true               // Add POIs start/stop on journey limits or on each track
     type                                       // File type  GPX,KML,GEOJSON  //TODO KMZ
@@ -22,7 +22,7 @@ export class Journey {
     slug = ''                           // Journey slug
     description                                // Journey description
 
-    geojson                                    // geoJson
+    geoJson                                    // geoJson
     origin                                     // initial geoJson
 
     geoJson                                    // All data are translated to GeoJson
@@ -126,9 +126,9 @@ export class Journey {
     }
 
     /**
-     * Get the currentTrack data and set the GeoJson Structure
+     * Get the theJourney data and set the GeoJson Structure
      *
-     * @param content content of the currentTrack file
+     * @param content content of the theJourney file
      *
      * @exception {any} in case of ay error, we return undefined
      */

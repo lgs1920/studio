@@ -21,25 +21,25 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
         const journey = await TrackUtils.loadJourneyFromFile()
         // File is correct let's work with
         if (journey !== undefined) {
-            let currentTrack = new Journey(journey.name, journey.extension, {content: journey.content})
-            console.log(currentTrack)
+            let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
+            console.log(theJourney)
             // Check if the track already exists in context
             // If not we manage and show it.
-            if (vt3d.getTrackBySlug(currentTrack.slug)?.slug === undefined) {
-                currentTrack.checkOtherData()
-                if (!currentTrack.hasAltitude) {
+            if (vt3d.getTrackBySlug(theJourney.slug)?.slug === undefined) {
+                theJourney.checkOtherData()
+                if (!theJourney.hasAltitude) {
                     mainStore.modals.altitudeChoice.show = true
                 }
 
-                currentTrack.addMarkers(false)
-                currentTrack.addToContext()
-                vt3d.addToEditor(currentTrack)
-                await currentTrack.toDB()
-                await currentTrack.originToDB()
+                theJourney.addMarkers(false)
+                theJourney.addToContext()
+                vt3d.addToEditor(theJourney)
+                await theJourney.toDB()
+                await theJourney.originToDB()
 
                 // Force editor to close but remains usable
                 mainStore.components.tracksEditor.usable = true
-                await currentTrack.draw()
+                await theJourney.draw()
 
             } else {
                 // It exists, we notify it

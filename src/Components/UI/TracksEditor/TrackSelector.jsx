@@ -43,7 +43,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     }
 
     // set Default
-    mainStore.currentTrack = vt3d.currentTrack?.slug
+    mainStore.theJourney = vt3d.theJourney?.slug
 
 
     return (
