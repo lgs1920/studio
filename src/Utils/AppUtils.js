@@ -82,6 +82,32 @@ export class AppUtils {
         }
 
     }
+    /**
+     * create a single title for objects in Map
+     *
+     * if for the attribute title, title = "my title" already exists as title,
+     * let's change it to "my title (1)" or "...(2)" until the new title
+     * does not exist.
+     *
+     * @param title         title to check
+     * @param list          Map that contains objects with title attributes
+     *
+     * @return {string}     The single title
+     *
+     */
+    static singleTitle = (title, list) => {
+        let counter = 0
+        let single = title
+
+        // Vérifie si la valeur existe déjà dans le tableau
+        let valueExists = list.values().some(obj => obj.title === single)
+        while (valueExists) {
+            counter++
+            single = `${title} (${counter})`
+            valueExists = list.values().some(obj => obj.title === single)
+        }
+        return single
+    }
 
 }
 

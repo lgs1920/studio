@@ -5,7 +5,7 @@ import {
     SlCard, SlColorPicker, SlDivider, SlIcon, SlInput, SlProgressBar, SlRange, SlSwitch, SlTooltip,
 }                               from '@shoelace-style/shoelace/dist/react'
 import { useSnapshot }          from 'valtio'
-import { MapMarker }            from '../../../classes/MapMarker'
+import { POI }                  from '../../../classes/POI'
 import { NO_DEM_SERVER, Track } from '../../../classes/Track'
 import { TrackUtils }           from '../../../Utils/cesium/TrackUtils'
 import { FA2SL }                from '../../../Utils/FA2SL'
@@ -124,7 +124,7 @@ export const TrackSettings = function TrackSettings() {
             if (!(editorSnapshot.track.markers instanceof Map)) {
                 for (const marker of editorSnapshot.track.markers) {
                     if (marker.slug === type) {
-                        return MapMarker.clone(marker)
+                        return POI.clone(marker)
                     }
                 }
             }

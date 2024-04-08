@@ -22,6 +22,7 @@
     "@tmcw/togeojson": "^5.8.1",
     "@turf/distance": "^6.5.0",
     "@turf/helpers": "^6.5.0",
+    "@turf/invariant": "^6.5.0",
     "@turf/nearest-point": "^6.5.0",
     "@turf/nearest-point-on-line": "^6.5.0",
     "@turf/point-to-line-distance": "^6.5.0",
