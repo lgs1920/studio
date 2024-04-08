@@ -2,16 +2,17 @@ import * as extent                                                              
 import * as Cesium                                                                          from 'cesium'
 import { Color, GeoJsonDataSource }                                                         from 'cesium'
 import { DRAW_ANIMATE, DRAW_SILENT, INITIAL_LOADING, RE_LOADING, SIMULATE_ALTITUDE, Track } from '../../classes/Track'
-import { CURRENT_STORE, CURRENT_TRACK }                                                     from '../../classes/VT3D'
+import { CURRENT_JOURNEY, CURRENT_STORE }                                                   from '../../classes/VT3D'
 import { FileUtils }                                                                        from '../FileUtils.js'
 import { UINotifier }                                                                       from '../UINotifier'
 import { EntitiesUtils }                                                                    from './EntitiesUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
-export const FEATURE             = 'Feature',
-             FEATURE_COLLECTION  = 'FeatureCollection',
-             FEATURE_LINE_STRING = 'LineString',
-             FEATURE_POINT       = 'Point'
+export const FEATURE                  = 'Feature',
+             FEATURE_COLLECTION       = 'FeatureCollection',
+             FEATURE_LINE_STRING      = 'LineString',
+             FEATURE_MULTILINE_STRING = 'MultiLineString',
+             FEATURE_POINT            = 'Point'
 
 export class TrackUtils {
 
@@ -71,8 +72,7 @@ export class TrackUtils {
             color: Color.fromCssColorString(configuration.route.color), thickness: configuration.route.thickness,
         }
         const commonOptions = {
-            clampToGround: true,
-            name: track.title,
+            clampToGround: true, name: track.title,
         }
 
         // Load Geo Json
@@ -87,9 +87,7 @@ export class TrackUtils {
         }
 
         return source.load(track.geoJson, {
-            ...commonOptions,
-            stroke: trackStroke.color,
-            strokeWidth: trackStroke.thickness,
+            ...commonOptions, stroke: trackStroke.color, strokeWidth: trackStroke.thickness,
         }).then(dataSource => {
 
             dataSource.entities.values.forEach(entity => {
@@ -164,27 +162,21 @@ export class TrackUtils {
      * @param track Track instance
      */
     static focus = (track) => {
-        const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading),
-            Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
+        const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading), Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
 
         const dataSource = vt3d.viewer.dataSources.getByName(track.slug)[0]
         // ext we get the bounding box and focus on it.
         const bbox = extent.default(track.geoJson)
         let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
 
-        const rectCarto = Cesium.Cartographic.fromCartesian(
-            vt3d.camera.getRectangleCameraCoordinates(rectangle),
-        )
+        const rectCarto = Cesium.Cartographic.fromCartesian(vt3d.camera.getRectangleCameraCoordinates(rectangle))
         // zoom out 30% from whatever height camera at
         rectCarto.height = rectCarto.height + (rectCarto.height * 0.3)
         const destination = Cesium.Cartographic.toCartesian(rectCarto)
 
         vt3d.camera.flyTo({
-            destination: destination,
-            duration: 2,
-            orientation: {
-                heading: 0.0,
-                pitch: -Cesium.Math.PI_OVER_TWO,
+            destination: destination, duration: 2, orientation: {
+                heading: 0.0, pitch: -Cesium.Math.PI_OVER_TWO,
             },
         })
 
@@ -349,7 +341,7 @@ export class TrackUtils {
             return
         }
         // Current track slug
-        let current = await vt3d.db.tracks.get(CURRENT_TRACK, CURRENT_STORE)
+        let current = await vt3d.db.tracks.get(CURRENT_JOURNEY, CURRENT_STORE)
         // Set current if it exists in tracks. If not, let's use the first track or null
         const tmp = tracks.filter(value => value.slug === current)
         current = (tmp.length > 0) ? tmp[0].slug : tracks[0].slug

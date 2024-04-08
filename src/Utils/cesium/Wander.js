@@ -1,5 +1,5 @@
 import { faLocationDot }          from '@fortawesome/pro-solid-svg-icons'
-import { MapMarker }              from '../../classes/MapMarker'
+import { POI }                    from '../../classes/POI'
 import { JUST_ICON, MARKER_SIZE } from './MarkerUtils'
 
 export const WANDER_MODE_MARKER = 'wander-mode'
@@ -16,7 +16,7 @@ export class Wander {
 
         // If no wander marker exists, let's create it
         if (!vt3d.markers.has(WANDER_MODE_MARKER)) {
-            marker = new MapMarker({
+            marker = new POI({
                     name: WANDER_MODE_MARKER,
                     slug: _utils.app.slugify(WANDER_MODE_MARKER),
                     parent: data.picked.track.slug,

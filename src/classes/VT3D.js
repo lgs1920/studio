@@ -18,6 +18,7 @@ export class VT3D {
     #viewer
 
     floatingMenu = {}
+    journeys = new Map()
 
 
     constructor() {
@@ -50,9 +51,9 @@ export class VT3D {
 
         //Init DBs
         this.db = {
-            tracks: new LocalDB({
+            journeys: new LocalDB({
                 name: `${APP_KEY}`,
-                store: [TRACKS_STORE, CURRENT_STORE, ORIGIN_STORE, SETTINGS_STORE],
+                store: [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, SETTINGS_STORE],
                 manageTransients: true,
                 version: '0.1',
             }),
@@ -94,10 +95,10 @@ export class VT3D {
     set currentTrack(track) {
         this.#mainProxy.currentTrack = track
         if (track === null) {
-            this.db.tracks.delete(CURRENT_TRACK, CURRENT_STORE).then()
+            this.db.tracks.delete(CURRENT_JOURNEY, CURRENT_STORE).then()
             return
         }
-        this.db.tracks.put(CURRENT_TRACK, track.slug, CURRENT_STORE).then(this.addToEditor(track))
+        this.db.tracks.put(CURRENT_JOURNEY, track.slug, CURRENT_STORE).then(this.addToEditor(track))
     }
 
     get mainProxy() {
@@ -142,6 +143,6 @@ export class VT3D {
 export const APP_KEY = 'VT3D'
 export const SETTINGS_STORE = 'settings'
 export const CURRENT_STORE = 'current'
-export const TRACKS_STORE = 'tracks'
+export const JOURNEYS_STORE = 'journeys'
 export const ORIGIN_STORE = 'origin'
-export const CURRENT_TRACK = 'current-track'
+export const CURRENT_JOURNEY = 'current-journey'
