@@ -1,6 +1,6 @@
 import { MarkerUtils, NO_MARKER_COLOR, PIN_CIRCLE } from '../Utils/cesium/MarkerUtils'
 
-export class MapMarker {
+export class POI {
 
 
     /**
@@ -34,7 +34,7 @@ export class MapMarker {
         this.altitude = options.altitude || false
         this.time = options.time || false
         this.backgroundColor = options.backgroundColor ?? NO_MARKER_COLOR
-        this.foregroundColor = options.foregroundColor ?? 'white'
+        this.foregroundColor = options.foregroundColor ?? 'transparent'
         this.border = options.border ?? 0
         this.text = options.text ?? undefined
         this.icon = options.icon ?? undefined
@@ -47,7 +47,7 @@ export class MapMarker {
     }
 
     static clone = (source, exceptions = {}) => {
-        return new MapMarker(MapMarker.extractObject(source))
+        return new POI(POI.extractObject(source))
     }
 
     static extractObject = (source) => {
