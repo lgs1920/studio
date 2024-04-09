@@ -6,21 +6,19 @@ import {
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT,
 }                                       from '../Utils/cesium/TrackUtils'
+import { MapElement }                   from './MapElement'
 import { POI }                          from './POI'
 import { NO_DEM_SERVER, Track }         from './Track'
 import { JOURNEYS_STORE, ORIGIN_STORE } from './VT3D'
 
-export class Journey {
+export class Journey extends MapElement {
 
     tracks = new Map()          // List of tracks
     pois = new Map()            // List of pois
     poisOnLimits = true               // Add POIs start/stop on journey limits or on each track
     type                                       // File type  GPX,KML,GEOJSON  //TODO KMZ
 
-    visible = true                    // All is visible or hidden
     title = ''                          // Journey Title
-    slug = ''                           // Journey slug
-    description                                // Journey description
 
     geoJson                                    // geoJson
     origin                                     // initial geoJson
@@ -35,12 +33,13 @@ export class Journey {
     ]
 
     constructor(title, type, options) {
+        super()
         this.title = this.singleTitle(title)
         this.type = type
 
         // If options property exists, we get them, else
         // we set the value to a default.
-        this.slug = options.slug ?? _utils.app.slugify(`${title}-${type}`)
+        this.slug = options.slug ?? _.app.slugify(`${title}-${type}`)
         this.visible = options.visible ?? true
         this.description = options.description ?? 'This is a journey'
 
@@ -55,7 +54,8 @@ export class Journey {
         // Get all POIs
         this.extractPOIs()
 
-        // this.save()
+        //Finally save it in B
+        this.save()
     }
 
     /**
@@ -85,36 +85,6 @@ export class Journey {
     }
 
     /**
-     * Clone a Journey Instance
-     *
-     * @param options {slug}
-     * @return {Journey} the new journey
-     */
-    static clone = (source, exceptions = {}) => {
-        const journey = new Journey(source.title, source.type, exceptions)
-
-        source.attributes.forEach(attribute => {
-            if (exceptions[attribute]) {
-                // TODO manage exceptions for markers
-                journey[attribute] = exceptions[attribute]
-            } else {
-                //Specific case for markers, we need to rebuild the Map
-                if (attribute === 'markers') {
-                    if (source[attribute] instanceof Array) {
-                        const tmpMarkers = new Map()
-                        source[attribute].forEach(marker => {
-                            tmpMarkers.set(marker.slug, POI.clone(marker))
-                        })
-                        source[attribute] = tmpMarkers
-                    }
-                }
-                journey[attribute] = source[attribute]
-            }
-        })
-        return journey
-    }
-
-    /**
      * create a single title for the journey
      *
      * @param title       the titleto check
@@ -122,7 +92,7 @@ export class Journey {
      *
      */
     singleTitle = title => {
-        return _utils.app.singleTitle(title, vt3d.journeys)
+        return _.app.singleTitle(title, vt3d.journeys)
     }
 
     /**
@@ -179,7 +149,7 @@ export class Journey {
                     const parameters = {
                         parent: this.slug,
                         name: feature.properties.name,
-                        slug: _utils.app.slugify(`${feature.properties.name}`),
+                        slug: _.app.slugify(`${feature.properties.name}`),
                         hasTime: this.#hasTime(feature.properties),
                         hasAltitude: this.#hasAltitude(geometry.coordinates),
                         description: feature.properties.desc,
@@ -228,7 +198,7 @@ export class Journey {
                         const point = geometry.coordinates
                         const parameters = {
                             name: feature.properties.name,
-                            slug: this.#setMarkerSlug(index),
+                            slug: this.#setPOISlug(index),
                             coordinates: [point[0], point[1]],
                             altitude: point[2] ?? undefined,
                             time: feature.properties?.time ?? undefined,
@@ -247,7 +217,7 @@ export class Journey {
                         const timeStart = this.hasTime ? feature.properties.coordinateProperties.times[0] : undefined
                         const startParameters = {
                             name: 'Track start',
-                            slug: this.#setMarkerSlug(`${FLAG_START}-${index}`),
+                            slug: this.#setPOISlug(`${FLAG_START}-${index}`),
                             coordinates: [start[0], start[1]],
                             altitude: start[2] ?? undefined,
                             time: timeStart,
@@ -263,7 +233,7 @@ export class Journey {
                         const timeStop = this.hasTime ? feature.properties.coordinateProperties.times[geometry.coordinates.length - 1] : undefined
                         const stopParameters = {
                             name: 'Track stop',
-                            slug: this.#setMarkerSlug(`${FLAG_STOP}-${index}`),
+                            slug: this.#setPOISlug(`${FLAG_STOP}-${index}`),
                             coordinates: [stop[0], stop[1]],
                             altitude: stop[2] ?? undefined,
                             time: timeStop,
@@ -299,8 +269,8 @@ export class Journey {
      * @param id {string|number}
      * @return {`marker#${string}#${string}`}
      */
-    #setMarkerSlug = (id) => {
-        return `poi#${this.slug}#${_utils.app.slugify(id)}`
+    #setPOISlug = (id) => {
+        return `poi#${this.slug}#${_.app.slugify(id)}`
     }
 
     /**
@@ -319,14 +289,7 @@ export class Journey {
      * @return {Promise<void>}
      */
     save = async () => {
-        // Markers are transformed to objects
-        let temp = Journey.clone(this, {slug: this.slug})
-        let markers = temp.markers
-        temp.markers = []
-        markers.forEach((marker, key) => {
-            temp.markers.push(POI.extractObject(marker))
-        })
-        await vt3d.db.journeys.put(this.slug, temp.extractObject(), JOURNEYS_STORE)
+        await vt3d.db.journeys.put(this.slug, this.serialize(), JOURNEYS_STORE)
     }
 
     /**
