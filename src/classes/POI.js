@@ -34,7 +34,7 @@ export class POI {
         this.altitude = options.altitude || false
         this.time = options.time || false
         this.backgroundColor = options.backgroundColor ?? NO_MARKER_COLOR
-        this.foregroundColor = options.foregroundColor ?? 'transparent'
+        this.foregroundColor = options.foregroundColor ?? vt3d.configuration.poi.color
         this.border = options.border ?? 0
         this.text = options.text ?? undefined
         this.icon = options.icon ?? undefined

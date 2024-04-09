@@ -85,7 +85,7 @@ export class TrackUtils {
             source = /*vt3d.viewer.dataSources.getByName(track.slug)[0] ??*/ new GeoJsonDataSource(track.slug)
         }
 
-        return source.load(track.geoJson, {
+        return source.load(track.content, {
             ...commonOptions, stroke: trackStroke.color, strokeWidth: trackStroke.thickness,
         }).then(dataSource => {
 

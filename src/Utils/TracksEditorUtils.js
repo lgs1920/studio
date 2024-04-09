@@ -23,7 +23,7 @@ export class TracksEditorUtils {
             vt3d.db.tracks.put(CURRENT_JOURNEY, event.target.value, CURRENT_STORE).then(
                 () => {
                     if (vt3d.theJourneyEditorProxy.track.visible) {
-                        TrackUtils.focus(vt3d.theJourneyEditorProxy.track)
+                        TrackUtils.focus(vt3d.theJourneyEditorProxy.journey)
                     }
                 },
             )

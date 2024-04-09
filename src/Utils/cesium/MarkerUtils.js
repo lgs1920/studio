@@ -1,4 +1,5 @@
 import { icon, library } from '@fortawesome/fontawesome-svg-core'
+import { faLocation }    from '@fortawesome/pro-regular-svg-icons'
 import { Canvg }         from 'canvg'
 import * as Cesium       from 'cesium'
 
@@ -16,17 +17,15 @@ export const NO_MARKER_COLOR = 'transparent'
 
 export class MarkerUtils {
     static draw = async (marker) => {
-        const dataSource = vt3d.viewer.dataSources.getByName(marker.parent)[0]
 
-        // If an entity with the same name already exists, bail early , we do not recreate it
-        // dataSource.entities.values.forEach((item) => {
-        //     console.log(`${item.id}/${marker.id}`)
-        //     if (item.id === marker.id) {
-        //         console.log('egal')
-        //         return new Promise()
-        //     }
-        // })
-
+        // Check data source
+        let dataSource = vt3d.viewer.dataSources.getByName(marker.parent)[0]
+        // If undefined, it's for free POIs so we create a new one
+        // using journey slug in order to group all of them
+        if (dataSource === undefined) {
+            dataSource = new Cesium.CustomDataSource(marker.parent)
+            vt3d.viewer.dataSources.add(dataSource)
+        }
 
         const properties = new Cesium.PropertyBag()
         properties.addProperty('slug', marker.id)
@@ -87,8 +86,12 @@ export class MarkerUtils {
     }
 
     static useFontAwesome = (marker) => {
-        library.add(marker.icon)
-        const html = icon(marker.icon).html[0]
+        // TODO library.add(marker.icon)
+        library.add(faLocation)
+
+        // TODO const html = icon(marker.icon).html[0]
+        const html = icon(faLocation).html[0]
+
         // Get SVG
         const svg = (new DOMParser()).parseFromString(html, 'image/svg+xml').querySelector('svg')
         // add foreground

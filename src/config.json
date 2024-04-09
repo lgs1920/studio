@@ -28,10 +28,10 @@
       "url": "https://github.com/Jorl17/open-elevation/blob/master/docs/api.md"
     }
   ],
-  "track": {
+  "journey": {
     "color": "#B22222ff",
     "thickness": 2,
-    "markers": {
+    "pois": {
       "wanderer": {
         "color": "#1689CCff",
         "border": "#FFF"

@@ -51,7 +51,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
             {
                 several &&
                 <SlSelect hoist label={props.label}
-                          value={editorSnapshot.track.slug}
+                          value={editorSnapshot.journey.slug}
                           onSlChange={props.onChange}
                           key={mainSnap.journeyListKey}
                 >

@@ -1,52 +1,45 @@
 import { DateTime }                                            from 'luxon'
 import { FEATURE_COLLECTION, FEATURE_LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
 import { Mobility }                                            from '../Utils/Mobility'
-import { POI }                                                 from './POI'
-import { ORIGIN_STORE }                                        from './VT3D'
 
 
 const CONFIGURATION = '../config.json'
 
 export class Track {
 
-    slug        // unic Id for the track
     title       // Track title
-    geoJson     // All the data are translated into GeoJson
+    slug        // unic Id for the track
+
+    parent = undefined
+    name
+
+
+    color       // Line color
+    thickness   // Line thickness
     metrics     // All the metrics associated to the track
     visible     // Is visible ?
     description // Add any description
+    hasTime
+    hasAltitude
+    content     // GEo JSON
 
-    color = vt3d.configuration.track.color            // The color associated
-    thickness = vt3d.configuration.track.thickness    // The thickness associated
-
-    parent = undefined
-
-    origin      // original GeoJson
-
-    attributes = [
-        'color',
-        'title',
-        'geoJson',
-        'title',
-        'visible',
-        'hasTime',
-        'DEMServer',
-        'thickness',
-        'description',
-        'hasAltitude',
-        'parent',
-        'children',
-    ]
 
     constructor(title, options = {}) {
         this.title = title
         this.parent = options.parent
         this.slug = options.slug
 
-        this.color = vt3d.configuration.track.color
-        this.thickness = vt3d.configuration.track.thickness
+        this.color = options.color ?? vt3d.configuration.journey.color
+        this.thickness = options.thickness ?? vt3d.configuration.journey.thickness
         this.visible = options.visible ?? true
         this.description = options.description ?? undefined
+
+        this.name = options.name
+        this.hasTime = options.hasTime ?? false
+        this.hasAltitude = options.hasAltitude ?? false
+        this.segments = options.segments ?? 0
+        this.content = options.content
+
 
     }
 
@@ -60,35 +53,6 @@ export class Track {
         }
         return false
 
-    }
-
-
-    /**
-     * Add this theTrackto the application context
-     *
-     */
-    addToContext = (setToCurrent = true) => {
-        //vt3d.saveTrack(this)
-        if (setToCurrent) {
-            vt3d.theJourney = this
-        }
-    }
-
-    /**
-     * Set Geo Json feature name
-     *
-     * @param name
-     */
-    setTrackName(name) {
-        if (this.geoJson.type === FEATURE_COLLECTION) {
-            let index = 0
-            for (const feature of this.geoJson.features) {
-                if (feature.type === 'Feature' && feature.geometry.type === FEATURE_LINE_STRING) {
-                    this.geoJson.features[index].properties['name'] = name
-                }
-                index++
-            }
-        }
     }
 
     /**
@@ -303,10 +267,6 @@ export class Track {
      */
     draw = async (action = INITIAL_LOADING, mode = DRAW_ANIMATE) => {
         await TrackUtils.loadTrack(this, action, mode)
-        this.markers.forEach(async marker => {
-            const tmp = POI.clone(marker)
-            await tmp.draw()
-        })
     }
 
     /**
@@ -323,49 +283,5 @@ export class Track {
 
     loadAfterNewSettings = async (mode) => {
         await this.draw(RE_LOADING, mode)
-    }
-
-    checkOtherData = () => {
-        this.altitude = true
-        if (this.geoJson.type === FEATURE_COLLECTION) {
-            let index = 0
-            for (const feature of this.geoJson.features) {
-                if (feature.type === 'Feature' && feature.geometry.type === FEATURE_LINE_STRING) {
-                    const data = TrackUtils.checkIfDataContainsAltitudeOrTime(feature)
-                    this.description = TrackUtils.getDescription(feature)
-
-                    this.hasAltitude = data.hasAltitude
-                    this.hasTime = data.hasTime
-                    if (!this.hasAltitude) {
-                        break
-                    }
-                }
-            }
-
-        }
-    }
-
-    /**
-     * Read a track from DB
-     *
-     * @param store
-     * @return {Promise<void>}
-     */
-    fromDB = async (store = '') => {
-        // TODO read data and add origine
-    }
-
-
-    /**
-     * Remove a track fromDB
-     *
-     * @return {Promise<void>}
-     */
-    removeFromDB = async () => {
-        if (this.origin === undefined) {
-            await vt3d.db.tracks.delete(this.slug, ORIGIN_STORE)
-        }
-
-        await vt3d.db.tracks.delete(this.slug, JOURNEY_STORE)
     }
 }

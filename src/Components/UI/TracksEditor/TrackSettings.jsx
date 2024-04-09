@@ -24,12 +24,12 @@ export const TrackSettings = function TrackSettings() {
     const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
-    let dataSource = vt3d.viewer.dataSources.getByName(editorStore.track.slug)[0]
+    let dataSource = vt3d.viewer.dataSources.getByName(editorStore.journey.slug)[0]
 
     /**
      * Remove track confirmation
      */
-    const [ConfirmRemoveTrackDialog, confirmRemoveTrack] = useConfirm(`Remove "${editorSnapshot.track.title}" ?`, 'Are you sure you want to remove this track ?')
+    const [ConfirmRemoveTrackDialog, confirmRemoveTrack] = useConfirm(`Remove "${editorSnapshot.journey.title}" ?`, 'Are you sure you want to remove this track ?')
 
     /**
      * Change track Color
@@ -37,7 +37,7 @@ export const TrackSettings = function TrackSettings() {
      * @type {setColor}
      */
     const setColor = (async event => {
-        editorStore.track.color = event.target.value
+        editorStore.journey.color = event.target.value
         TracksEditorUtils.reRenderTracksList()
         await rebuildTrack(UPDATE_TRACK_THEN_DRAW)
     })
@@ -54,12 +54,12 @@ export const TrackSettings = function TrackSettings() {
         // Title is empty, we force the former value
         if (title === '') {
             const field = document.getElementById('track-title')
-            field.value = editorStore.track.title
+            field.value = editorStore.journey.title
             return
         }
         // Let's check if the next title has not been already used for
         // another track.
-        editorStore.track.title = Journey.defineUnicTitle(title)
+        editorStore.journey.title = Journey.defineUnicTitle(title)
         await rebuildTrack(UPDATE_TRACK_SILENTLY)
 
         TracksEditorUtils.reRenderTracksList()
@@ -71,7 +71,7 @@ export const TrackSettings = function TrackSettings() {
      * @type {setThickness}
      */
     const setThickness = (async event => {
-        editorStore.track.thickness = event.target.value
+        editorStore.journey.thickness = event.target.value
         TracksEditorUtils.reRenderTrackSettings()
         await rebuildTrack(UPDATE_TRACK_THEN_DRAW)
     })
@@ -83,28 +83,28 @@ export const TrackSettings = function TrackSettings() {
      */
     const setTrackVisibility = (async event => {
         //save state
-        editorStore.track.visible = event.target.checked
+        editorStore.journey.visible = event.target.checked
 
         // Change track visibility by changing it for each entity
         if (event.target.checked) {
-            // We show all tracks and created markers Except for start and stop,
+            // We show all tracks and created pois Except for start and stop,
             // for which the pre-masking status is maintained.
             dataSource.entities.values.forEach(entity => {
-                if (entity.id.startsWith('marker')) {
+                if (entity.id.startsWith('poi')) {
                     if (entity.id.endsWith('start')) {
-                        entity.show = marker.snap('start').visible
+                        entity.show = poi.snap('start').visible
                     } else if (entity.id.endsWith('stop')) {
-                        entity.show = marker.snap('stop').visible
+                        entity.show = poi.snap('stop').visible
                     } else {
                         entity.show = true
                     }
                 } else if (!entity.billboard) {
-                    // Only tracks, not legacy markers
+                    // Only tracks, not legacy pois
                     entity.show = true
                 }
             })
         } else {
-            // We hide all tracks and markers
+            // We hide all tracks and pois
             dataSource.entities.values.forEach(entity => {
                 entity.show = event.target.checked
             })
@@ -117,46 +117,46 @@ export const TrackSettings = function TrackSettings() {
     })
 
     /**
-     * Select the right marker whatever markers ie Array or Map
+     * Select the right poi whatever pois ie Array or Map
      *
      */
-    const marker = {
+    const poi = {
         snap: (type) => {
-            if (!(editorSnapshot.track.markers instanceof Map)) {
-                for (const marker of editorSnapshot.track.markers) {
-                    if (marker.slug === type) {
-                        return POI.clone(marker)
+            if (!(editorSnapshot.journey.pois instanceof Map)) {
+                for (const poi of editorSnapshot.journey.pois) {
+                    if (poi.slug === type) {
+                        return POI.clone(poi)
                     }
                 }
             }
-            return editorSnapshot.track.markers.get(type)
+            return editorSnapshot.journey.pois.get(type)
         }, store: (type) => {
-            if (editorStore.track.markers instanceof Map) {
-                return editorStore.track.markers.get(type)
+            if (editorStore.journey.pois instanceof Map) {
+                return editorStore.journey.pois.get(type)
             }
-            const marker = editorStore.track.markers.filter(m => m.slug === type)
-            if (marker.length > 0) {
-                return marker[0]
+            const poi = editorStore.journey.pois.filter(m => m.slug === type)
+            if (poi.length > 0) {
+                return poi[0]
             }
             return null
         },
     }
 
     /**
-     * Change marker visibility
+     * Change poi visibility
      *
      * @type {setMarkerVisibility}
      */
     const setMarkerVisibility = (async event => {
-        // Which marker ?
+        // Which poi ?
         const type = event.target.id.endsWith('start') ? 'start' : 'stop'
-        const poi = marker.store(type)
+        const poi = poi.store(type)
 
 
         // Save state
-        marker.store(type).visible = event.target.checked
+        poi.store(type).visible = event.target.checked
 
-        // Toggle marker visibility
+        // Toggle poi visibility
         dataSource.entities.values.forEach(entity => {
             if (entity.id.endsWith(type)) {
                 entity.show = event.target.checked
@@ -172,8 +172,8 @@ export const TrackSettings = function TrackSettings() {
      * @type {setDEMServer}
      */
     const setDEMServer = (async event => {
-        editorStore.track.DEMServer = event.target.value
-        editorStore.longTask = editorStore.track.DEMServer !== NO_DEM_SERVER
+        editorStore.journey.DEMServer = event.target.value
+        editorStore.longTask = editorStore.journey.DEMServer !== NO_DEM_SERVER
         TracksEditorUtils.reRenderTrackSettings()
         // await vt3d.theJourney.computeAll()
         // // Then we redraw the theJourney
@@ -191,7 +191,7 @@ export const TrackSettings = function TrackSettings() {
 
         if (confirmation) {
             const mainStore = vt3d.mainProxy.components.journeyEditor
-            const track = editorStore.track.slug
+            const track = editorStore.journey.slug
             const removed = vt3d.getJourneyBySlug(track)
             // get Journey index
             const index = mainStore.list.findIndex((list) => list === track)
@@ -203,11 +203,11 @@ export const TrackSettings = function TrackSettings() {
                 // In store
                 mainStore.list.splice(index, 1)
                 // In context
-                vt3d.journeys.delete(editorStore.track.slug)
-                // In canvas, ie remove the tracks and all markers
+                vt3d.journeys.delete(editorStore.journey.slug)
+                // In canvas, ie remove the tracks and all pois
                 // But sometimes we loose dataSource TODO why ?
                 if (dataSource === undefined) {
-                    dataSource = vt3d.viewer.dataSources.getByName(editorStore.track.slug)[0]
+                    dataSource = vt3d.viewer.dataSources.getByName(editorStore.journey.slug)[0]
                 }
                 vt3d.viewer.dataSources.remove(dataSource)
 
@@ -215,7 +215,7 @@ export const TrackSettings = function TrackSettings() {
             }
 
             // Remove track in DB
-            await editorStore.track.removeFromDB()
+            await editorStore.journey.removeFromDB()
 
             /**
              * If we have some other tracks, we'll take the first and render the editor.
@@ -254,12 +254,12 @@ export const TrackSettings = function TrackSettings() {
     const rebuildTrack = async (action) => {
 
         // unproxify
-        const unproxyfied = JSON.parse(JSON.stringify(editorStore.track))
+        const unproxyfied = JSON.parse(JSON.stringify(editorStore.journey))
 
-        // We clone but keep the same slug and markers
+        // We clone but keep the same slug and pois
         const track = Journey.clone(unproxyfied, {
-            slug: editorStore.track.slug,
-            markers: editorStore.track.markers,
+            slug: editorStore.journey.slug,
+            pois: editorStore.journey.pois,
         })
         await track.computeAll()
         vt3d.saveTrack(track)
@@ -286,13 +286,13 @@ export const TrackSettings = function TrackSettings() {
     const MarkerVisibility = (props) => {
 
         return (<>
-            <div id={`visibility-marker-${props.type}`}>
+            <div id={`visibility-poi-${props.type}`}>
                 <SlSwitch size="small"
-                          checked={marker.snap(props.type)?.visible}
+                          checked={poi.snap(props.type)?.visible}
                           style={{'--thumb-size': '1rem'}}
                           onSlChange={setMarkerVisibility}
-                          id={`switch-visibility-marker-${props.type}`}
-                > <span style={{color: vt3d.configuration.track.markers[props.type].color}}>
+                          id={`switch-visibility-poi-${props.type}`}
+                > <span style={{color: vt3d.configuration.journey.pois[props.type].color}}>
                             <SlIcon library="fa"
                                     className={'fa-lg'}
                                     name={FA2SL.set(faLocationDot)}/>
@@ -303,20 +303,20 @@ export const TrackSettings = function TrackSettings() {
 
 
     return (<>
-        {editorSnapshot.track &&
+        {editorSnapshot.journey &&
             <SlCard id="track-settings" key={vt3d.mainProxy.components.journeyEditor.journeySettingsKey}>
                 <div id={'track-line-settings-global'}>
                     {/* Change visible name (title) */}
                     <div>
-                        <SlInput id="track-title" label="Title:" value={editorSnapshot.track.title}
+                        <SlInput id="track-title" label="Title:" value={editorSnapshot.journey.title}
                                  onSlChange={setTitle}
                         />
                     </div>
 
                     {/* Add DEM server selection if we do not have height initially (ie in the track file) */
-                        !editorSnapshot.track.hasAltitude && <div>
+                        !editorSnapshot.journey.hasAltitude && <div>
                             <DEMServerSelection
-                                default={editorSnapshot.track?.DEMServer ?? NO_DEM_SERVER}
+                                default={editorSnapshot.journey?.DEMServer ?? NO_DEM_SERVER}
                                 label={'Simulate Altitude:'}
                                 onChange={setDEMServer}
                             />
@@ -329,31 +329,31 @@ export const TrackSettings = function TrackSettings() {
                                 <SlColorPicker opacity
                                                size={'small'}
                                                label={'Color'}
-                                               value={editorSnapshot.track.color}
+                                               value={editorSnapshot.journey.color}
                                                swatches={vt3d.configuration.defaultTrackColors.join(';')}
                                                onSlChange={setColor}
-                                               disabled={!editorSnapshot.track.visible}
+                                               disabled={!editorSnapshot.journey.visible}
                                 />
                             </SlTooltip>
                             <SlTooltip content="Thickness">
                                 <SlRange min={1} max={10} step={1}
-                                         value={editorSnapshot.track.thickness}
+                                         value={editorSnapshot.journey.thickness}
                                          style={{'--thumb-size': '1rem'}}
                                          onSlChange={setThickness}
-                                         disabled={!editorSnapshot.track.visible}
+                                         disabled={!editorSnapshot.journey.visible}
                                 />
                             </SlTooltip>
 
                             <SlDivider id="test-line" style={{
-                                '--color': editorSnapshot.track.visible ? editorSnapshot.track.color : 'transparent',
-                                '--width': `${editorSnapshot.track.thickness}px`,
+                                '--color': editorSnapshot.journey.visible ? editorSnapshot.journey.color : 'transparent',
+                                '--width': `${editorSnapshot.journey.thickness}px`,
                                 '--spacing': 0,
                             }}
-                                       disabled={!editorSnapshot.track.visible}
+                                       disabled={!editorSnapshot.journey.visible}
                             />
 
                             <SlSwitch size="small"
-                                      checked={editorSnapshot.track.visible}
+                                      checked={editorSnapshot.journey.visible}
                                       style={{'--thumb-size': '1rem'}}
                                       onSlChange={setTrackVisibility}
                             />
@@ -366,7 +366,7 @@ export const TrackSettings = function TrackSettings() {
 
                             <ConfirmRemoveTrackDialog/>
                         </div>
-                        {editorSnapshot.track.visible &&
+                        {editorSnapshot.journey.visible &&
                             <div id={'track-tips'}>
                                 <MarkerVisibility type={'start'} label={'Start'}/>
                                 <MarkerVisibility type={'stop'} label={'Stop'}/>

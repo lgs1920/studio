@@ -1,16 +1,12 @@
 import { gpx, kml }                     from '@tmcw/togeojson'
-import {
-    getGeom,
-}                                       from '@turf/invariant'
+import { getGeom }                      from '@turf/invariant'
 import {
     JUST_ICON, MARKER_SIZE,
 }                                       from '../Utils/cesium/MarkerUtils'
 import {
-    FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
+    FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT,
 }                                       from '../Utils/cesium/TrackUtils'
-import {
-    MapElement,
-}                                       from './MapElement'
+import { MapElement }                   from './MapElement'
 import { POI }                          from './POI'
 import { Track }                        from './Track'
 import { JOURNEYS_STORE, ORIGIN_STORE } from './VT3D'
@@ -24,10 +20,8 @@ export class Journey extends MapElement {
 
     title = ''                          // Journey Title
 
-    geoJson                                    // geoJson
     origin                                     // initial geoJson
 
-    geoJson                                    // All data are translated to GeoJson
 
     constructor(title, type, options) {
         super()
@@ -43,13 +37,13 @@ export class Journey extends MapElement {
         this.DEMServer = options.DEMServer ?? NO_DEM_SERVER
 
         // Transform content to GeoJson
-        this.extractGeoJson(options.content ?? '')
+        this.getGeoJson(options.content ?? '')
 
         // Get all tracks
-        this.extractTracks()
+        this.getTracks()
 
         // Get all POIs
-        this.extractPOIs()
+        this.getPOIs()
 
         //Finally save it in DB
         this.save()
@@ -99,7 +93,7 @@ export class Journey extends MapElement {
      *
      * @exception {any} in case of ay error, we return undefined
      */
-    extractGeoJson = (content) => {
+    getGeoJson = (content) => {
         // We translate kml and gpx to GeoJson format in order to manipulate json
         // instead of XML
         try {
@@ -136,7 +130,7 @@ export class Journey extends MapElement {
      * Populate this.tracks
      *
      */
-    extractTracks = () => {
+    getTracks = () => {
         if (this.geoJson.type === FEATURE_COLLECTION) {
             this.geoJson.features.forEach((feature, index) => {
                 const geometry = getGeom(feature)
@@ -153,6 +147,7 @@ export class Journey extends MapElement {
                         segments: geometry.coordinates.length,
                         content: feature,
                         visible: true,
+                        geoJson: feature,
                     }
                     this.tracks.set(parameters.slug, new Track(title, parameters))
                 }
@@ -174,7 +169,7 @@ export class Journey extends MapElement {
      * Populate this.pois
      *
      */
-    extractPOIs = () => {
+    getPOIs = () => {
         if (this.geoJson.type === FEATURE_COLLECTION) {
             const justTracks = []
             // Extracts all POIs from FEATURE_POINT data and adds
@@ -183,10 +178,8 @@ export class Journey extends MapElement {
                 const geometry = getGeom(feature)
                 const common = {
                     description: feature.properties.desc,
-                    parent: this.slug,
-                    type: JUST_ICON,
                     size: MARKER_SIZE,
-                    foregroundColor: vt3d.configuration.track.markers.color,
+                    foregroundColor: vt3d.configuration.journey.pois.color,
                     visible: true,
                 }
                 switch (geometry.type) {
@@ -194,49 +187,52 @@ export class Journey extends MapElement {
                         // Create a POI
                         const point = geometry.coordinates
                         const parameters = {
+                            parent: this.slug,
                             name: feature.properties.name,
                             slug: this.#setPOISlug(index),
                             coordinates: [point[0], point[1]],
                             altitude: point[2] ?? undefined,
                             time: feature.properties?.time ?? undefined,
-                            icon: {
-                                type: feature.properties?.type,
-                                symbol: feature.properties?.sym,
-                            },
+                            type: JUST_ICON,
+                            icon: feature.properties?.sym ?? feature.properties?.type,
                         }
                         this.pois.set(parameters.slug, new POI({...common, ...parameters}))
                         break
                     }
-                    case FEATURE_MULTILINE_STRING:
                     case FEATURE_LINE_STRING :
+                        geometry.coordinates = [geometry.coordinates]
+                    case FEATURE_MULTILINE_STRING:
                         // Create Track Start Flag
-                        const start = geometry.coordinates[0]
+                        const start = geometry.coordinates[0][0]
                         const timeStart = this.hasTime ? feature.properties.coordinateProperties.times[0] : undefined
                         const startParameters = {
+                            parent: this.#setTrackSlug(feature.properties.name),
                             name: 'Track start',
                             slug: this.#setPOISlug(`${FLAG_START}-${index}`),
                             coordinates: [start[0], start[1]],
                             altitude: start[2] ?? undefined,
                             time: timeStart,
-                            icon: {
-                                symbol: FLAG_START,
-                            },
+                            type: JUST_ICON,
+                            icon: FLAG_START,
                         }
                         this.pois.set(startParameters.slug, new POI({...common, ...startParameters}))
                         justTracks.push(startParameters.slug)
 
                         // Create Track Stop Flag
-                        const stop = feature.geometry.coordinates[0]
+                        const length = geometry.coordinates.length - 1
+                        const last = geometry.coordinates[length].length - 1
+                        const stop = feature.geometry.coordinates[length][last]
+
                         const timeStop = this.hasTime ? feature.properties.coordinateProperties.times[geometry.coordinates.length - 1] : undefined
                         const stopParameters = {
+                            parent: this.#setTrackSlug(feature.properties.name),
                             name: 'Track stop',
                             slug: this.#setPOISlug(`${FLAG_STOP}-${index}`),
                             coordinates: [stop[0], stop[1]],
                             altitude: stop[2] ?? undefined,
                             time: timeStop,
-                            icon: {
-                                symbol: FLAG_START,
-                            },
+                            type: JUST_ICON,
+                            icon: FLAG_START,
                         }
                         this.pois.set(stopParameters.slug, new POI({...common, ...stopParameters}))
                         justTracks.push(stopParameters.slug)
@@ -335,13 +331,14 @@ export class Journey extends MapElement {
     draw = async (action = INITIAL_LOADING, mode = DRAW_ANIMATE) => {
         const tracks = []
         for (const track of this.tracks.values()) {
-            tracks.push(await TrackUtils.loadTrack(track, action, mode))
+            tracks.push(await track.draw(action, mode))
         }
         await Promise.all(tracks)
 
-        const pois = this.pois(async map => {
-            return await TrackUtils.loadTrack(track, action, mode)
-        })
+        const pois = []
+        for (const poi of this.pois.values()) {
+            pois.push(await poi.draw())
+        }
         await Promise.all(pois)
 
     }
