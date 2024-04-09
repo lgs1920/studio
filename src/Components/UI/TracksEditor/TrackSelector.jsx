@@ -21,7 +21,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
      */
     let tracks = []
     mainSnap.list.forEach(slug => {
-        tracks.push(vt3d.getTrackBySlug(slug))
+        tracks.push(vt3d.getJourneyBySlug(slug))
     })
 
     /**

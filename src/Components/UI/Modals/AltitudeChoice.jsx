@@ -3,7 +3,7 @@ import { forwardRef, useState } from 'react'
 import { useSnapshot }          from 'valtio'
 
 import '../../../assets/css/modals.css'
-import { NO_DEM_SERVER }        from '../../../classes/Track'
+import { NO_DEM_SERVER }        from '../../../classes/Journey'
 import { DEMServerSelection }   from '../VT3D_UI/DEMServerSelection'
 
 

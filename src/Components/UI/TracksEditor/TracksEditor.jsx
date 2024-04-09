@@ -48,20 +48,20 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
     }
 
     return (<>
-        <div id="tracks-editor-container" key={mainSnap.key}>
+        <div id="journeys-editor-container" key={mainSnap.key}>
             {mainSnap.usable &&
-                <SlDrawer id="tracks-editor-pane" open={mainSnap.show}
+                <SlDrawer id="journeys-editor-pane" open={mainSnap.show}
                           onSlRequestClose={handleRequestClose}
                           contained
                           onSlHide={closeTracksEditor}
                     // onSlShow={TracksEditorUtils.prepareTrackEdition}
                 >
-                    {vt3d.tracks.size > 0 && <div id={'track-settings-container'}>
+                    {vt3d.journeys.size > 0 && <div id={'track-settings-container'}>
                         <TrackSelector onChange={TracksEditorUtils.prepareTrackEdition}
                                        label={'Select a track:'}/>
                         <TrackSettings/>
                     </div>}
-                    <div id="tracks-editor-footer" slot={'footer'}></div>
+                    <div id="journeys-editor-footer" slot={'footer'}></div>
                 </SlDrawer>}
         </div>
 

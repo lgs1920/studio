@@ -27,7 +27,7 @@ import { UINotifier }                                        from './Utils/UINot
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 window.vt3d = new VT3D()
-await _utils.app.init()
+await _.app.init()
 
 export function ViewTrack3D() {
 
@@ -55,7 +55,7 @@ export function ViewTrack3D() {
     useEffect(() => {
 
         // Set DefaultTheme
-        _utils.app.setTheme()
+        _.app.setTheme()
 
         // Update camera info
         CameraUtils.updatePosition(vt3d?.camera).then(r => {

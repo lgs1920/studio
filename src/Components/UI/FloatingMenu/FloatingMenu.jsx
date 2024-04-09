@@ -30,7 +30,7 @@ export const FloatingMenu = function FloatingMenu() {
         if (slug instanceof Track) {
             slug = menuSnap.target.track.slug
         }
-        track = vt3d.getTrackBySlug(slug)
+        track = vt3d.getJourneyBySlug(slug)
         vt3d.theJourney = track
         if (menuSnap.type === MARKER_TYPE) {
             marker = track.markers.get(menuSnap.target.marker)
@@ -71,7 +71,7 @@ export const FloatingMenu = function FloatingMenu() {
      *
      * @type {number}
      */
-    const offset = Number(_utils.ui.css.getCSSVariable('menu-offset'))
+    const offset = Number(_.ui.css.getCSSVariable('menu-offset'))
     const fixCoordinates = () => {
         if (element.current !== undefined) {
             const width  = element.current.offsetWidth,

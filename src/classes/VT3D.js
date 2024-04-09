@@ -11,16 +11,12 @@ export class VT3D {
     #mainProxy
     #theJourneyEditorProxy
 
-    tracks = new Map()
-    markers = new Map()
-
     eventHandler = new MouseEventHandler()
     #viewer
 
     floatingMenu = {}
     journeys = new Map()
-
-
+    
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
         // Track Editor store is used to manage the settings of the theJourney in edit
@@ -29,8 +25,8 @@ export class VT3D {
         this.#mainProxy = proxy(main)
 
         // Get the first as current theJourney
-        if (this.tracks.size) {
-            const first = Array.from(this.#theJourneyEditorProxy.tracks)[0]
+        if (this.journeys.size) {
+            const first = Array.from(this.#theJourneyEditorProxy.journeys)[0]
             this.mainProxy.theJourney = first
             this.addToEditor(this.first)
         }
@@ -41,7 +37,7 @@ export class VT3D {
         }
 
         // Utils are attached to window
-        window._utils = {
+        window._ = {
             app: AppUtils,
             ui: {
                 css: CSSUtils,
@@ -84,21 +80,21 @@ export class VT3D {
         return this?.scene?.canvas
     }
 
-    get tracks() {
-        return this.tracks
+    get journeys() {
+        return this.journeys
     }
 
     get theJourney() {
         return this.#mainProxy.theJourney
     }
 
-    set theJourney(track) {
-        this.#mainProxy.theJourney = track
-        if (track === null) {
-            this.db.tracks.delete(CURRENT_JOURNEY, CURRENT_STORE).then()
+    set theJourney(journey) {
+        this.#mainProxy.theJourney = journey
+        if (journey === null) {
+            this.db.journeys.delete(CURRENT_JOURNEY, CURRENT_STORE).then()
             return
         }
-        this.db.tracks.put(CURRENT_JOURNEY, track.slug, CURRENT_STORE).then(this.addToEditor(track))
+        this.db.journeys.put(CURRENT_JOURNEY, journey.slug, CURRENT_STORE).then(this.addToEditor(journey))
     }
 
     get mainProxy() {
@@ -109,34 +105,45 @@ export class VT3D {
         return this.#theJourneyEditorProxy
     }
 
-    getTrackBySlug(slug) {
-        return this.tracks.get(slug)
+    getJourneyBySlug(slug) {
+        return this.journeys.get(slug)
     }
 
 
     /**
-     * Save or replace track in context
+     * Save or replace journey in context
      *
-     * @param track
+     * @param journey
      */
-    saveTrack = (track) => {
-        if (track) {
-            const index = this.mainProxy.components.journeyEditor.list.findIndex(item => item === track.slug)
+    saveJourney = (journey) => {
+        if (journey) {
+            const index = this.mainProxy.components.journeyEditor.list.findIndex(item => item === journey.slug)
             if (index >= 0) {
                 // Look if this theJourney already exist in context
-                this.tracks.set(track.slug, track)
-                this.mainProxy.components.journeyEditor.list[index] = track.slug
+                this.journeys.set(journey.slug, journey)
+                this.mainProxy.components.journeyEditor.list[index] = journey.slug
             } else {                    // Nope,we add it
-                this.tracks.set(track.slug, track)
-                this.mainProxy.components.journeyEditor.list.push(track.slug)
+                this.journeys.set(journey.slug, journey)
+                this.mainProxy.components.journeyEditor.list.push(journey.slug)
             }
             this.mainProxy.components.journeyEditor.usable = true
         }
 
     }
+    /**
+     * Add this theJourney to the application context
+     *
+     */
+    addToContext = (setToCurrent = true) => {
+        vt3d.saveJourney(this)
+        if (setToCurrent) {
+            vt3d.theJourney = this
+        }
+    }
 
-    addToEditor = (track) => {
-        this.theJourneyEditorProxy.track = track
+
+    addToEditor = (journey) => {
+        this.theJourneyEditorProxy.journey = journey
     }
 }
 

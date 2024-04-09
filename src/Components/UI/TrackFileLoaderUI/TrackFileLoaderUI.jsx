@@ -22,20 +22,18 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
         // File is correct let's work with
         if (journey !== undefined) {
             let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
-            console.log(theJourney)
             // Check if the track already exists in context
             // If not we manage and show it.
-            if (vt3d.getTrackBySlug(theJourney.slug)?.slug === undefined) {
-                theJourney.checkOtherData()
+            if (vt3d.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
                 if (!theJourney.hasAltitude) {
                     mainStore.modals.altitudeChoice.show = true
                 }
 
-                theJourney.addMarkers(false)
+                // we need to save some information
                 theJourney.addToContext()
                 vt3d.addToEditor(theJourney)
-                await theJourney.toDB()
-                await theJourney.originToDB()
+                await theJourney.save()
+                await theJourney.saveOrigin()
 
                 // Force editor to close but remains usable
                 mainStore.components.journeyEditor.usable = true

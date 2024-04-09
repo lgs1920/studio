@@ -44,7 +44,7 @@ export class MouseUtils {
                 // Is it a track ? Let's search the parent DataSource then the entity slug
                 const datasource = TrackUtils.getDataSourceNameByEntityId(entity.id)
                 if (datasource) {
-                    const track = vt3d.getTrackBySlug(datasource.name)
+                    const track = vt3d.getJourneyBySlug(datasource.name)
                     if (track) {
                         return {
                             track: track,

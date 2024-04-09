@@ -42,8 +42,6 @@ export class POI {
         this.description = options.description ?? undefined
         this.image = options.image ?? undefined
         this.visible = options.visible ?? true
-
-        this.register()
     }
 
     static clone = (source, exceptions = {}) => {
@@ -52,15 +50,6 @@ export class POI {
 
     static extractObject = (source) => {
         return JSON.parse(JSON.stringify(source))
-    }
-
-    /**
-     * Add a marker to the registry
-     *
-     *
-     */
-    register = () => {
-        vt3d.markers.set(this.id, this)
     }
 
     draw = async () => {

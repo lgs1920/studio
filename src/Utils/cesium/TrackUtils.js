@@ -1,7 +1,7 @@
 import * as extent                                                      from '@mapbox/geojson-extent'
 import * as Cesium                                                      from 'cesium'
 import { Color, GeoJsonDataSource }                                     from 'cesium'
-import { DRAW_ANIMATE, INITIAL_LOADING, RE_LOADING, SIMULATE_ALTITUDE } from '../../classes/Track'
+import { DRAW_ANIMATE, INITIAL_LOADING, RE_LOADING, SIMULATE_ALTITUDE } from '../../classes/Journey'
 import { FileUtils }                                                    from '../FileUtils.js'
 import { UINotifier }                                                   from '../UINotifier'
 import { EntitiesUtils }                                                from './EntitiesUtils'
@@ -57,11 +57,11 @@ export class TrackUtils {
     /**
      * Show theJourney on the map
      *
-     * @param track
+     * @param {Track} track
      * @param action
      * @param mode
      */
-    static loadTrack = async (track = '', action = INITIAL_LOADING, mode = DRAW_ANIMATE) => {
+    static loadTrack = async (track, action = INITIAL_LOADING, mode = DRAW_ANIMATE) => {
         const configuration = vt3d.configuration
 
         const trackStroke = {

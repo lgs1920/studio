@@ -18,7 +18,7 @@ export class TracksEditorUtils {
     static prepareTrackEdition = (event) => {
         // SUbscribe to change  https://valtio.pmnd.rs/docs/api/advanced/subscribe
         if (isOK(event)) {
-            vt3d.theJourneyEditorProxy.track = vt3d.getTrackBySlug(event.target.value)
+            vt3d.theJourneyEditorProxy.track = vt3d.getJourneyBySlug(event.target.value)
             TracksEditorUtils.reRenderTrackSettings()
             vt3d.db.tracks.put(CURRENT_JOURNEY, event.target.value, CURRENT_STORE).then(
                 () => {

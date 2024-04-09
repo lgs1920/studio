@@ -25,6 +25,20 @@ export class AppUtils {
             .replace(/^-+/, '') // Trim - from start of text
             .replace(/-+$/, '') // Trim - from end of text
     })
+    static deepClone = ((obj, parent) => {
+        if (obj === null) return null
+        let clone = Object.assign({}, obj, parent)
+        Object.keys(clone).forEach(
+            key =>
+                (clone[key] =
+                    typeof obj[key] === 'object' ? AppUtils.deepClone(obj[key]) : obj[key]),
+        )
+        if (Array.isArray(obj)) {
+            clone.length = obj.length
+            return Array.from(clone)
+        }
+        return clone
+    })
 
     static Map2Object = map => Object.fromEntries(map.entries())
 
@@ -82,6 +96,7 @@ export class AppUtils {
         }
 
     }
+
     /**
      * create a single title for objects in Map
      *
@@ -107,21 +122,6 @@ export class AppUtils {
             valueExists = list.values().some(obj => obj.title === single)
         }
         return single
-    }
-
-    static deepClone = obj => {
-        if (obj === null) return null
-        let clone = Object.assign({}, obj)
-        Object.keys(clone).forEach(
-            key =>
-                (clone[key] =
-                    typeof obj[key] === 'object' ? AppUtils.deepClone(obj[key]) : obj[key]),
-        )
-        if (Array.isArray(obj)) {
-            clone.length = obj.length
-            return Array.from(clone)
-        }
-        return clone
     }
 
 

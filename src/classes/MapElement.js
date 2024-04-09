@@ -5,7 +5,6 @@ export class MapElement {
     visible
     description
 
-
     constructor(props) {
     }
 
@@ -13,14 +12,19 @@ export class MapElement {
      * Clone an object
      *
      * @param properties are forced to the clone object
+     * @param Class
      */
     clone = (properties) => {
         // we deep clone the object
         let cloned = _.app.deepClone(this)
+        // If a property class exists we us it for prototyping the new class
+        if (properties.class) {
+            Object.setPrototypeOf(cloned, properties.class)
+        }
 
         // then add props
         for (const property in properties) {
-            if (properties.hasOwnProperty(property)) {
+            if (properties.hasOwnProperty(property) && property !== 'class') {
                 cloned[property] = properties[property]
             }
         }
@@ -33,11 +37,11 @@ export class MapElement {
      * @param {boolean} json return json string if true else object
      * @return {Object | string} JSON
      */
-    serialize(json = false) {
-        let result = this
-        for (let prop in result) {
+    serialize = (json = false) => {
+        let result = {}
+        for (let prop in this) {
             if (result[prop] instanceof Map) {
-                result[prop] = Object.fromEntries(result[prop])
+                result[prop] = Object.fromEntries(this[prop])
                 result[prop]['__type'] = 'Map'
             }
         }
@@ -52,7 +56,7 @@ export class MapElement {
      *                        transform the properties in the right type.
      * @return {Object}
      */
-    deserialize(object, full = true) {
+    deserialize = (object, full = true) => {
         if (typeof object === 'string') {
             object = JSON.parse(object)
         }

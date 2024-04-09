@@ -1,19 +1,9 @@
-import { faLocationDot } from '@fortawesome/pro-solid-svg-icons'
-import { gpx, kml }      from '@tmcw/togeojson'
+import { DateTime }                                            from 'luxon'
+import { FEATURE_COLLECTION, FEATURE_LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
+import { Mobility }                                            from '../Utils/Mobility'
+import { POI }                                                 from './POI'
+import { ORIGIN_STORE }                                        from './VT3D'
 
-import { DateTime }                                                           from 'luxon'
-import { JUST_ICON, MARKER_SIZE }                                             from '../Utils/cesium/MarkerUtils'
-import { FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_POINT, TrackUtils } from '../Utils/cesium/TrackUtils'
-import { Mobility }                                                           from '../Utils/Mobility'
-import { POI }                                                                from './POI'
-import { ORIGIN_STORE }                                                       from './VT3D'
-
-export const NO_DEM_SERVER = 'none'
-export const SIMULATE_ALTITUDE = 'simulate-altitude'
-export const INITIAL_LOADING = 1
-export const RE_LOADING = 2
-export const DRAW_ANIMATE = 1
-export const DRAW_SILENT = 2
 
 const CONFIGURATION = '../config.json'
 
@@ -21,26 +11,14 @@ export class Track {
 
     slug        // unic Id for the track
     title       // Track title
-    type        // gpx,kml,geojson  //TODO kmz
     geoJson     // All the data are translated into GeoJson
     metrics     // All the metrics associated to the track
     visible     // Is visible ?
     description // Add any description
 
-
-    hasAltitude   // Is track contains altitudes ?
-    hasTime       // Is track contains Time information ?
-
-    DEMServer   // DEM server associate if we need altitude
-
     color = vt3d.configuration.track.color            // The color associated
     thickness = vt3d.configuration.track.thickness    // The thickness associated
 
-    markers = new Map()// external markers
-
-    startAndSTopMarkerAttachment = false
-
-    children = []
     parent = undefined
 
     origin      // original GeoJson
@@ -54,90 +32,22 @@ export class Track {
         'hasTime',
         'DEMServer',
         'thickness',
-        'markers',
         'description',
         'hasAltitude',
         'parent',
         'children',
     ]
 
-    constructor(title, type, options = {}) {
+    constructor(title, options = {}) {
         this.title = title
-        this.type = type
+        this.parent = options.parent
+        this.slug = options.slug
 
-        this.slug = options.slug ?? _utils.app.slugify(`${title}-${type}`)
         this.color = vt3d.configuration.track.color
         this.thickness = vt3d.configuration.track.thickness
         this.visible = options.visible ?? true
         this.description = options.description ?? undefined
 
-        this.DEMServer = NO_DEM_SERVER
-        // get GeoJson
-        // this.toGeoJson(options.content ?? '')
-        //  this.setTrackName(this.title)
-        //
-        //  this.checkOtherData()
-        //  // Let's compute all information
-        //  this.computeAll().then(() => {
-        //      this.addMarkers(this.markers.size !== 0)
-        // })
-    }
-
-    /**
-     * create a unic title
-     *
-     * if title = "my title" already exists as track title,
-     * let's change it to "my title (1)" or "...(2)" until the new title
-     * does not exist.
-     *
-     * @param title
-     * @return {string}
-     */
-    static defineUnicTitle = title => {
-        let counter = 0
-        let unic = title
-
-        // Vérifie si la valeur existe déjà dans le tableau
-        let valueExists = vt3d.tracks.values().some(obj => obj.title === unic)
-
-        while (valueExists) {
-            counter++
-            unic = `${title} (${counter})`
-            valueExists = vt3d.tracks.values().some(obj => obj.title === unic)
-        }
-        return unic
-
-    }
-
-
-    /**
-     * Clone current track
-     *
-     * @param options {slug}
-     * @return {Track} the new track
-     */
-    static clone = (source, exceptions = {}) => {
-        const track = new Track(source.title, source.type, exceptions)
-
-        source.attributes.forEach(attribute => {
-            if (exceptions[attribute]) {
-                // TODO manage exceptions for markers
-                track[attribute] = exceptions[attribute]
-            } else {
-                //Specific case for markers, we need to rebuild the Map
-                if (attribute === 'markers') {
-                    if (source[attribute] instanceof Array) {
-                        const tmpMarkers = new Map()
-                        source[attribute].forEach(marker => {
-                            tmpMarkers.set(marker.slug, POI.clone(marker))
-                        })
-                        source[attribute] = tmpMarkers
-                    }
-                }
-                track[attribute] = source[attribute]
-            }
-        })
-        return track
     }
 
     static getMarkerInformation = (markerId) => {
@@ -153,123 +63,12 @@ export class Track {
     }
 
 
-    extractObject = () => {
-        return JSON.parse(JSON.stringify(this))
-    }
-
     /**
-     * Define the slug of a marker
-     *
-     * @param id {string|number}
-     * @return {`marker#${string}#${string}`}
-     */
-    setMarkerName = (id) => {
-        return `marker#${this.slug}#${_utils.app.slugify(id)}`
-    }
-
-    /**
-     * Add marker at the track extremities
-     *
-     * @param coordinates
-     */
-    async addMarkers(exist) {
-
-        // Sometimes, we got an Array of markers, instead of a Map.
-        // Lets change it to Map   TODO Why Such Array ?
-        if (this.markers instanceof Array) {
-            const tmp = this.markers
-            this.markers = new Map()
-            tmp.forEach(marker => {
-                this.markers.set(marker.slug, marker)
-            })
-        }
-        if (exist) {
-            return
-        }
-        if (this.geoJson.type === FEATURE_COLLECTION) {
-            let index = 0
-            for (const feature of this.geoJson.features) {
-                if (feature.type === 'Feature') {
-                    const hasTime = feature?.properties?.coordinateProperties?.times !== undefined
-                    switch (feature.geometry.type) {
-                        case FEATURE_LINE_STRING: {
-                            // Add start  marker
-                            const start = feature.geometry.coordinates[0]
-                            const name = `marker#${this.slug}#start`
-                            const timeStart = hasTime ? feature.properties.coordinateProperties.times[0] : undefined
-                            this.markers.set('start', new POI({
-                                    name: 'Marker start',
-                                    slug: 'start',
-                                    parent: this.slug,
-                                    id: this.setMarkerName('start'),
-                                    coordinates: [start[0], start[1]],
-                                    altitude: start[2],
-                                    time: timeStart,
-                                    type: JUST_ICON,
-                                    size: MARKER_SIZE,
-                                    icon: faLocationDot,
-                                    foregroundColor: vt3d.configuration.track.markers.start.color,
-                                    description: 'Starting point',
-                                },
-                            ))
-
-                            // Add stop marker
-                            const stop = feature.geometry.coordinates[feature.geometry.coordinates.length - 1]
-                            const timeStop = hasTime ? feature.properties.coordinateProperties.times[feature.geometry.coordinates.length - 1] : undefined
-
-                            this.markers.set('stop', new POI({
-                                    name: 'Marker stop',
-                                    slug: 'stop',
-                                    parent: this.slug,
-                                    id: this.setMarkerName('stop'),
-                                    coordinates: [stop[0], stop[1]],
-                                    altitude: stop[2],
-                                    time: timeStop,
-                                    type: JUST_ICON,
-                                    size: MARKER_SIZE,
-                                    icon: faLocationDot,
-                                    foregroundColor: vt3d.configuration.track.markers.stop.color,
-                                    description: 'Ending point',
-                                },
-                            ))
-                            break
-                        }
-                        case FEATURE_POINT: {
-                            // Add other markers
-                            index++
-                            const point = feature.geometry.coordinates
-                            const id = `index-${index}`
-                            const name = `marker#${this.slug}#${id}}`
-                            const time = hasTime ? feature.properties.coordinateProperties.times[0] : undefined
-                            this.markers.set(id, new POI({
-                                    name: feature.properties.name,
-                                    slug: id,
-                                    parent: this.slug,
-                                    id: this.setMarkerName(id),
-                                    coordinates: [point[0], point[1]],
-                                    altitude: point[2],
-                                    time: time,
-                                    type: JUST_ICON,
-                                    size: MARKER_SIZE,
-                                    icon: faLocationDot,
-                                    foregroundColor: vt3d.configuration.track.markers.color,
-                                    description: feature.properties.desc,
-                                },
-                            ))
-                            break
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Add this theJourney to the application context
+     * Add this theTrackto the application context
      *
      */
     addToContext = (setToCurrent = true) => {
-        vt3d.saveTrack(this)
+        //vt3d.saveTrack(this)
         if (setToCurrent) {
             vt3d.theJourney = this
         }
@@ -302,44 +101,6 @@ export class Track {
         await this.prepareGeoJson()
         await this.calculateMetrics()
         this.addToContext()
-    }
-
-    /**
-     * Get the theJourney data and set the GeoJson Structure
-     *
-     * @param content content of the theJourney file
-     *
-     * @exception {any} in case of ay error, we return undefined
-     */
-    toGeoJson = (content) => {
-        /**
-         * We translate kml and gpx to GeoJson format in order to manipulate json
-         * instead of XML
-         */
-        try {
-            let geoJson
-            switch (this.type) {
-                case 'gpx':
-                    this.geoJson = gpx(new DOMParser().parseFromString(content, 'text/xml'))
-                    break
-                case 'kmz' :
-                    // TODO unzip to get kml. but what to do with the assets files that are sometimes embedded
-                    break
-                case 'kml':
-                    this.geoJson = kml(new DOMParser().parseFromString(content, 'text/xml'))
-                    break
-                case 'geojson' :
-                    this.geoJson = JSON.parse(content)
-            }
-
-        } catch (error) {
-            console.error(error)
-            // Error => we notify
-            UINotifier.notifyError({
-                caption: `An error occurs during loading <strong>${trackFile.title}<strong>!`, text: error,
-            })
-            this.geoJson = undefined
-        }
     }
 
     /**
@@ -594,30 +355,6 @@ export class Track {
         // TODO read data and add origine
     }
 
-    /**
-     * Save a track to DB
-     *
-     * @return {Promise<void>}
-     */
-    toDB = async () => {
-        // Markers are transformed to objects
-        let temp = Track.clone(this, {slug: this.slug})
-        let markers = temp.markers
-        temp.markers = []
-        markers.forEach((marker, key) => {
-            temp.markers.push(POI.extractObject(marker))
-        })
-        await vt3d.db.tracks.put(this.slug, temp.extractObject(), JOURNEY_STORE)
-    }
-
-    /**
-     * Save track original data to DB
-     *
-     * @type {boolean}
-     */
-    originToDB = async () => {
-        await vt3d.db.tracks.put(this.slug, this.geoJson, ORIGIN_STORE)
-    }
 
     /**
      * Remove a track fromDB

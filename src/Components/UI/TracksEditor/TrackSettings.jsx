@@ -3,16 +3,17 @@ import { faLocationDot } from '@fortawesome/pro-solid-svg-icons'
 
 import {
     SlCard, SlColorPicker, SlDivider, SlIcon, SlInput, SlProgressBar, SlRange, SlSwitch, SlTooltip,
-}                               from '@shoelace-style/shoelace/dist/react'
-import { useSnapshot }          from 'valtio'
-import { POI }                  from '../../../classes/POI'
-import { NO_DEM_SERVER, Track } from '../../../classes/Track'
-import { TrackUtils }           from '../../../Utils/cesium/TrackUtils'
-import { FA2SL }                from '../../../Utils/FA2SL'
-import { TracksEditorUtils }    from '../../../Utils/TracksEditorUtils'
-import { UINotifier }           from '../../../Utils/UINotifier'
-import { useConfirm }           from '../Modals/ConfirmUI'
-import { DEMServerSelection }   from '../VT3D_UI/DEMServerSelection'
+}                        from '@shoelace-style/shoelace/dist/react'
+import { useSnapshot }   from 'valtio'
+import { NO_DEM_SERVER } from '../../../classes/Journey'
+
+import { POI }                from '../../../classes/POI'
+import { TrackUtils }         from '../../../Utils/cesium/TrackUtils'
+import { FA2SL }              from '../../../Utils/FA2SL'
+import { TracksEditorUtils }  from '../../../Utils/TracksEditorUtils'
+import { UINotifier }         from '../../../Utils/UINotifier'
+import { useConfirm }         from '../Modals/ConfirmUI'
+import { DEMServerSelection } from '../VT3D_UI/DEMServerSelection'
 
 export const TrackSettings = function TrackSettings() {
 
@@ -42,7 +43,7 @@ export const TrackSettings = function TrackSettings() {
     })
 
     /**
-     * Change Track Title
+     * Change Journey Title
      *
      * The selection box is then synchronised
      *
@@ -58,7 +59,7 @@ export const TrackSettings = function TrackSettings() {
         }
         // Let's check if the next title has not been already used for
         // another track.
-        editorStore.track.title = Track.defineUnicTitle(title)
+        editorStore.track.title = Journey.defineUnicTitle(title)
         await rebuildTrack(UPDATE_TRACK_SILENTLY)
 
         TracksEditorUtils.reRenderTracksList()
@@ -191,8 +192,8 @@ export const TrackSettings = function TrackSettings() {
         if (confirmation) {
             const mainStore = vt3d.mainProxy.components.journeyEditor
             const track = editorStore.track.slug
-            const removed = vt3d.getTrackBySlug(track)
-            // get Track index
+            const removed = vt3d.getJourneyBySlug(track)
+            // get Journey index
             const index = mainStore.list.findIndex((list) => list === track)
 
             /**
@@ -202,7 +203,7 @@ export const TrackSettings = function TrackSettings() {
                 // In store
                 mainStore.list.splice(index, 1)
                 // In context
-                vt3d.tracks.delete(editorStore.track.slug)
+                vt3d.journeys.delete(editorStore.track.slug)
                 // In canvas, ie remove the tracks and all markers
                 // But sometimes we loose dataSource TODO why ?
                 if (dataSource === undefined) {
@@ -223,7 +224,7 @@ export const TrackSettings = function TrackSettings() {
             let text = ''
             if (mainStore.list.length >= 1) {
                 // New current is the first.
-                vt3d.theJourney = vt3d.getTrackBySlug(mainStore.list[0])
+                vt3d.theJourney = vt3d.getJourneyBySlug(mainStore.list[0])
                 TrackUtils.focus(vt3d.theJourney)
                 TracksEditorUtils.reRenderTracksList()
                 TracksEditorUtils.reRenderTrackSettings()
@@ -248,7 +249,7 @@ export const TrackSettings = function TrackSettings() {
      * Re build the track object,
      * Re compute metrix //TODO voir one peut paseprendre le anciens(tant que DEM n'a pa change)
      *
-     * @return {Track}
+     * @return {Journey}
      */
     const rebuildTrack = async (action) => {
 
@@ -256,7 +257,7 @@ export const TrackSettings = function TrackSettings() {
         const unproxyfied = JSON.parse(JSON.stringify(editorStore.track))
 
         // We clone but keep the same slug and markers
-        const track = Track.clone(unproxyfied, {
+        const track = Journey.clone(unproxyfied, {
             slug: editorStore.track.slug,
             markers: editorStore.track.markers,
         })
@@ -321,7 +322,7 @@ export const TrackSettings = function TrackSettings() {
                             />
                             {editorSnapshot.longTask && <SlProgressBar indeterminate/>}
                         </div>}
-                    {/* Track line settings */}
+                    {/* Journey line settings */}
                     <div id="track-line-settings">
                         <div>
                             <SlTooltip content="Color">

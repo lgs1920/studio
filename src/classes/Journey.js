@@ -1,14 +1,18 @@
 import { gpx, kml }                     from '@tmcw/togeojson'
-import { getGeom }                      from '@turf/invariant'
+import {
+    getGeom,
+}                                       from '@turf/invariant'
 import {
     JUST_ICON, MARKER_SIZE,
 }                                       from '../Utils/cesium/MarkerUtils'
 import {
-    FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT,
+    FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
 }                                       from '../Utils/cesium/TrackUtils'
-import { MapElement }                   from './MapElement'
+import {
+    MapElement,
+}                                       from './MapElement'
 import { POI }                          from './POI'
-import { NO_DEM_SERVER, Track }         from './Track'
+import { Track }                        from './Track'
 import { JOURNEYS_STORE, ORIGIN_STORE } from './VT3D'
 
 export class Journey extends MapElement {
@@ -24,13 +28,6 @@ export class Journey extends MapElement {
     origin                                     // initial geoJson
 
     geoJson                                    // All data are translated to GeoJson
-    attributes = [
-        'title',
-        'visible',
-        'pois',
-        'tracks',
-        'type',
-    ]
 
     constructor(title, type, options) {
         super()
@@ -54,7 +51,7 @@ export class Journey extends MapElement {
         // Get all POIs
         this.extractPOIs()
 
-        //Finally save it in B
+        //Finally save it in DB
         this.save()
     }
 
@@ -149,7 +146,7 @@ export class Journey extends MapElement {
                     const parameters = {
                         parent: this.slug,
                         name: feature.properties.name,
-                        slug: _.app.slugify(`${feature.properties.name}`),
+                        slug: this.#setTrackSlug(feature.properties.name),
                         hasTime: this.#hasTime(feature.properties),
                         hasAltitude: this.#hasAltitude(geometry.coordinates),
                         description: feature.properties.desc,
@@ -157,7 +154,7 @@ export class Journey extends MapElement {
                         content: feature,
                         visible: true,
                     }
-                    this.tracks.set(parameters.slug, new Track(title, geometry.type, parameters))
+                    this.tracks.set(parameters.slug, new Track(title, parameters))
                 }
             })
         }
@@ -264,13 +261,23 @@ export class Journey extends MapElement {
     }
 
     /**
-     * Define the slug of a marker
+     * Define the slug of a POI
      *
      * @param id {string|number}
-     * @return {`marker#${string}#${string}`}
+     * @return {`poi#${string}#${string}`}
      */
     #setPOISlug = (id) => {
         return `poi#${this.slug}#${_.app.slugify(id)}`
+    }
+
+    /**
+     * Define the slug of a track
+     *
+     * @param id {string|number}
+     * @return {`track#${string}#${string}`}
+     */
+    #setTrackSlug = (id) => {
+        return `track#${this.slug}#${_.app.slugify(id)}`
     }
 
     /**
@@ -313,6 +320,36 @@ export class Journey extends MapElement {
 
         await vt3d.db.journeys.delete(this.slug, JOURNEYS_STORE)
     }
+
+    /**
+     * Add this theJourney to the application context
+     *
+     */
+    addToContext = (setToCurrent = true) => {
+        vt3d.saveJourney(this)
+        if (setToCurrent) {
+            vt3d.theJourney = this
+        }
+    }
+
+    draw = async (action = INITIAL_LOADING, mode = DRAW_ANIMATE) => {
+        const tracks = []
+        for (const track of this.tracks.values()) {
+            tracks.push(await TrackUtils.loadTrack(track, action, mode))
+        }
+        await Promise.all(tracks)
+
+        const pois = this.pois(async map => {
+            return await TrackUtils.loadTrack(track, action, mode)
+        })
+        await Promise.all(pois)
+
+    }
+
+    serialize(json = false) {
+        return super.serialize(json)
+    }
+
 }
 
 export const GPX = 'gpx'
@@ -322,3 +359,10 @@ export const GEOJSON = 'geojson'
 
 export const FLAG_START = 'start'
 export const FLAG_STOP = 'stop'
+
+export const NO_DEM_SERVER = 'none'
+export const SIMULATE_ALTITUDE = 'simulate-altitude'
+export const INITIAL_LOADING = 1
+export const RE_LOADING = 2
+export const DRAW_ANIMATE = 1
+export const DRAW_SILENT = 2

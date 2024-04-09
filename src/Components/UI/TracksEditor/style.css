@@ -1,5 +1,5 @@
 
-#tracks-editor-container {
+#journeys-editor-container {
     position: absolute;
     z-index: var(--vt3d-ui-layer-zindex);
     top: calc(var(--top) * -1);
@@ -9,7 +9,7 @@
     pointer-events: none;
 }
 
-#tracks-editor-pane {
+#journeys-editor-pane {
     position: fixed;
     bottom: var(--vt3d-gutter);
     left: var(--vt3d-gutter);
@@ -17,13 +17,13 @@
     right: auto;
 }
 
-#tracks-editor-footer {
+#journeys-editor-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-#tracks-editor-footer strong:after {
+#journeys-editor-footer strong:after {
     content: ' - ';
     font-weight: normal;
 }
