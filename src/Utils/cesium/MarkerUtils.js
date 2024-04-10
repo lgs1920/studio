@@ -16,70 +16,70 @@ export const MARKER_SIZE = 16
 export const NO_MARKER_COLOR = 'transparent'
 
 export class MarkerUtils {
-    static draw = async (marker) => {
+    static draw = async (poi) => {
 
         // Check data source
-        let dataSource = vt3d.viewer.dataSources.getByName(marker.parent)[0]
+        let dataSource = vt3d.viewer.dataSources.getByName(poi.parent)[0]
         // If undefined, it's for free POIs so we create a new one
         // using journey slug in order to group all of them
         if (dataSource === undefined) {
-            dataSource = new Cesium.CustomDataSource(marker.parent)
+            dataSource = new Cesium.CustomDataSource(poi.parent)
             vt3d.viewer.dataSources.add(dataSource)
         }
 
         const properties = new Cesium.PropertyBag()
-        properties.addProperty('slug', marker.id)
-        let markerOptions = {
-            name: marker.name,
-            id: marker.id,
-            description: marker.description,
-            position: Cesium.Cartesian3.fromDegrees(marker.coordinates[0], marker.coordinates[1], marker.coordinates[2]),
-            show: marker.visible,
+        properties.addProperty('slug', poi.id)
+        let poiOptions = {
+            name: poi.name,
+            id: poi.id,
+            description: poi.description,
+            position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1], poi.coordinates[2]),
+            show: poi.visible,
             properties: properties,
             disableDepthTestDistance: new Cesium.ConstantProperty(0),
         }
         const pinBuilder = new Cesium.PinBuilder()
 
-        markerOptions.billboard = {
+        poiOptions.billboard = {
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
             disableDepthTestDistance: new Cesium.ConstantProperty(0),//Number.POSITIVE_INFINITY,
 
         }
 
-        const backgroundColor = Cesium.Color.fromCssColorString(marker.backgroundColor)
-        const foregroundColor = marker.foregroundColor ? Cesium.Color.fromCssColorString(marker.foregroundColor) : undefined
+        const backgroundColor = Cesium.Color.fromCssColorString(poi.backgroundColor)
+        const foregroundColor = poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : undefined
 
 
-        switch (marker.type) {
+        switch (poi.type) {
             case PIN_CIRCLE:
                 return await dataSource.entities.add({
                     point: {
-                        position: Cesium.Cartesian3.fromDegrees(marker.coordinates[0], marker.coordinates[1]),
+                        position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1]),
                         //backgroundPadding: Cesium.Cartesian2(8, 4),
                         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                        color: marker.backgroundColor,
-                        pixelSize: marker.size,
-                        outlineColor: marker.foregroundColor,
-                        outlineWidth: marker.border,
+                        color: poi.backgroundColor,
+                        pixelSize: poi.size,
+                        outlineColor: poi.foregroundColor,
+                        outlineWidth: poi.border,
                     },
                 })
             case PIN_COLOR:
-                markerOptions.billboard.image = pinBuilder.fromColor(backgroundColor, marker.size).toDataURL()
-                return await dataSource.entities.add(markerOptions)
+                poiOptions.billboard.image = pinBuilder.fromColor(backgroundColor, poi.size).toDataURL()
+                return await dataSource.entities.add(poiOptions)
             case PIN_TEXT:
-                markerOptions.billboard.image = pinBuilder.fromText(marker.text, backgroundColor, marker.size).toDataURL()
-                return await dataSource.entities.add(markerOptions)
+                poiOptions.billboard.image = pinBuilder.fromText(poi.text, backgroundColor, poi.size).toDataURL()
+                return await dataSource.entities.add(poiOptions)
             case PIN_ICON:
-                pinBuilder.fromUrl(MarkerUtils.useFontAwesome(marker).src, backgroundColor, marker.size).then(async image => {
-                    markerOptions.billboard.image = image
-                    return await dataSource.entities.add(markerOptions)
+                pinBuilder.fromUrl(MarkerUtils.useFontAwesome(poi).src, backgroundColor, poi.size).then(async image => {
+                    poiOptions.billboard.image = image
+                    return await dataSource.entities.add(poiOptions)
                 })
             case JUST_ICON:
-                return MarkerUtils.useOnlyFontAwesome(marker).then(async canvas => {
-                    markerOptions.billboard.image = canvas
-                    return await dataSource.entities.add(markerOptions)
+                return MarkerUtils.useOnlyFontAwesome(poi).then(async canvas => {
+                    poiOptions.billboard.image = canvas
+                    return await dataSource.entities.add(poiOptions)
                 })
         }
 
