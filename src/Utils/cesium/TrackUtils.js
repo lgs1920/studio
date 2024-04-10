@@ -1,10 +1,15 @@
-import { default as extent }                                                from '@mapbox/geojson-extent'
-import * as Cesium                                                          from 'cesium'
-import { Color, GeoJsonDataSource }                                         from 'cesium'
-import { FOCUS_ON_FEATURE, INITIAL_LOADING, RE_LOADING, SIMULATE_ALTITUDE } from '../../classes/Journey'
-import { FileUtils }                                                        from '../FileUtils.js'
-import { UINotifier }                                                       from '../UINotifier'
-import { EntitiesUtils }                                                    from './EntitiesUtils'
+import { default as extent }        from '@mapbox/geojson-extent'
+import * as Cesium                  from 'cesium'
+import { Color, GeoJsonDataSource } from 'cesium'
+import {
+    FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, RE_LOADING, SIMULATE_ALTITUDE,
+}                                   from '../../classes/Journey'
+import {
+    CURRENT_JOURNEY, CURRENT_STORE,
+}                                   from '../../classes/VT3D'
+import { FileUtils }                from '../FileUtils.js'
+import { UINotifier }               from '../UINotifier'
+import { EntitiesUtils }            from './EntitiesUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -351,26 +356,26 @@ export class TrackUtils {
      *
      */
     static readAllFromDB = async () => {
-        // // Let's read tracks in DB
-        // const tracks = await Track.allFromDB()
-        // if (tracks.length === 0) {
-        //     vt3d.theJourney = null
-        //     return
-        // }
-        // // Current track slug
-        // let current = await vt3d.db.tracks.get(CURRENT_JOURNEY, CURRENT_STORE)
-        // // Set current if it exists in tracks. If not, let's use the first track or null
-        // const tmp = tracks.filter(value => value.slug === current)
-        // current = (tmp.length > 0) ? tmp[0].slug : tracks[0].slug
-        //
-        // if (current) {
-        //     vt3d.theJourney = vt3d.tracks.get(current)
-        //     vt3d.addToEditor(vt3d.theJourney)
-        // }
-        // // Draw all tracks but show only the current one
-        // vt3d.tracks.forEach(track => {
-        //     track.draw(INITIAL_LOADING, track.slug === current ? FOCUS_ON_FEATURE : NO_FOCUS)
-        // })
+        // Let's read tracks in DB
+        const journeys = await Journey.readAllFromDB()
+        if (journeys.length === 0) {
+            vt3d.theJourney = null
+            return
+        }
+        // Current track slug
+        let current = await vt3d.db.journeys.get(CURRENT_JOURNEY, CURRENT_STORE)
+        // Set current if it exists in tracks. If not, let's use the first track or null
+        const tmp = journeys.filter(value => value.slug === current)
+        current = (tmp.length > 0) ? tmp[0].slug : journeys[0].slug
+
+        if (current) {
+            vt3d.theJourney = vt3d.journeys.get(current)
+            vt3d.addToEditor(vt3d.theJourney)
+        }
+        // Draw all tracks but show only the current one
+        await vt3d.journeys.forEach(async journey => {
+            await journey.draw(INITIAL_LOADING, journey.slug === current ? FOCUS_ON_FEATURE : NO_FOCUS)
+        })
 
     }
 

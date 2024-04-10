@@ -25,28 +25,30 @@ export class Journey extends MapElement {
 
     constructor(title, type, options) {
         super()
-        this.title = this.singleTitle(title)
-        this.type = type
+        if (title) {
+            this.title = this.singleTitle(title)
+            this.type = type
 
-        // If options property exists, we get them, else
-        // we set the value to a default.
-        this.slug = options.slug ?? _.app.slugify(`${title}-${type}`)
-        this.visible = options.visible ?? true
-        this.description = options.description ?? 'This is a journey'
+            // If options property exists, we get them, else
+            // we set the value to a default.
+            this.slug = options.slug ?? _.app.slugify(`${title}-${type}`)
+            this.visible = options.visible ?? true
+            this.description = options.description ?? 'This is a journey'
 
-        this.DEMServer = options.DEMServer ?? NO_DEM_SERVER
+            this.DEMServer = options.DEMServer ?? NO_DEM_SERVER
 
-        // Transform content to GeoJson
-        this.getGeoJson(options.content ?? '')
+            // Transform content to GeoJson
+            this.getGeoJson(options.content ?? '')
 
-        // Get all tracks
-        this.getTracks()
+            // Get all tracks
+            this.getTracks()
 
-        // Get all POIs
-        this.getPOIs()
+            // Get all POIs
+            this.getPOIs()
 
-        //Finally save it in DB
-        this.save()
+            //Finally save it in DB
+            this.save()
+        }
     }
 
     /**
@@ -56,14 +58,14 @@ export class Journey extends MapElement {
      *
      * @return {Promise<Awaited<unknown>[]|*[]>}
      */
-    static readAll = async () => {
+    static readAllFromDB = async () => {
         try {
             // get all slugs
             const slugs = await vt3d.db.journeys.keys(JOURNEYS_STORE)
             // Get each journey content
             const journeyPromises = slugs.map(async (slug) => {
                 const object = await vt3d.db.journeys.get(slug, JOURNEYS_STORE)
-                const journey = Journey.clone(object, {slug: slug})
+                const journey = Journey.deserialize({object: object})
                 journey.addToContext()
                 return journey
             })
@@ -73,6 +75,26 @@ export class Journey extends MapElement {
             return []
         }
 
+    }
+
+    static deserialize = (props) => {
+        props.instance = new Journey()
+        let instance = super.deserialize(props)
+
+        // Transform POIs from object to class
+        instance.pois.forEach((poi, slug) => {
+            instance.pois.set(slug, new POI(poi))
+        })
+        // Transform Tracks from object to class
+        instance.tracks.forEach((track, slug) => {
+            instance.tracks.set(slug, new Track(track.title, track))
+        })
+        return instance
+
+    }
+
+    serialize(json = false) {
+        return super.serialize(json)
     }
 
     /**
@@ -366,10 +388,6 @@ export class Journey extends MapElement {
             tracks.push(await track.draw(action))
         }
         await Promise.all(tracks)
-    }
-
-    serialize(json = false) {
-        return super.serialize(json)
     }
 
 }

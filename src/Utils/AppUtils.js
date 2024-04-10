@@ -40,7 +40,7 @@ export class AppUtils {
         return clone
     })
 
-    static Map2Object = map => Object.fromEntries(map.entries())
+    static MapToObject = map => Object.fromEntries(map.entries())
 
     static setTheme = (theme = null) => {
         if (!theme) {
