@@ -29,11 +29,11 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                     mainStore.modals.altitudeChoice.show = true
                 }
 
-                // we need to save some information
+                // we need to saveToDB some information
                 theJourney.addToContext()
                 vt3d.addToEditor(theJourney)
-                await theJourney.save()
-                await theJourney.saveOrigin()
+                await theJourney.saveToDB()
+                await theJourney.saveOriginDataToDB()
 
                 // Force editor to close but remains usable
                 mainStore.components.journeyEditor.usable = true

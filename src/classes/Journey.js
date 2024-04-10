@@ -41,13 +41,13 @@ export class Journey extends MapElement {
             this.getGeoJson(options.content ?? '')
 
             // Get all tracks
-            this.getTracks()
+            this.getTracksFromGeoJson()
 
             // Get all POIs
-            this.getPOIs()
+            this.getPOIsFromGeoJson()
 
-            //Finally save it in DB
-            this.save()
+            //Finally saveToDB it in DB
+            this.saveToDB()
         }
     }
 
@@ -152,7 +152,7 @@ export class Journey extends MapElement {
      * Populate this.tracks
      *
      */
-    getTracks = () => {
+    getTracksFromGeoJson = () => {
         if (this.geoJson.type === FEATURE_COLLECTION) {
             this.geoJson.features.forEach((feature, index) => {
                 const geometry = getGeom(feature)
@@ -191,7 +191,7 @@ export class Journey extends MapElement {
      * Populate this.pois
      *
      */
-    getPOIs = () => {
+    getPOIsFromGeoJson = () => {
         if (this.geoJson.type === FEATURE_COLLECTION) {
             const justTracks = []
             // Extracts all POIs from FEATURE_POINT data and adds
@@ -319,7 +319,7 @@ export class Journey extends MapElement {
      * @param store
      * @return {Promise<void>}
      */
-    read = async (store = '') => {
+    readFromDB = async (store = '') => {
         // TODO read data and add origine
     }
 
@@ -328,7 +328,7 @@ export class Journey extends MapElement {
      *
      * @return {Promise<void>}
      */
-    save = async () => {
+    saveToDB = async () => {
         await vt3d.db.journeys.put(this.slug, this.serialize(), JOURNEYS_STORE)
     }
 
@@ -337,7 +337,7 @@ export class Journey extends MapElement {
      *
      * @type {boolean}
      */
-    saveOrigin = async () => {
+    saveOriginDataToDB = async () => {
         await vt3d.db.journeys.put(this.slug, this.geoJson, ORIGIN_STORE)
     }
 
@@ -346,7 +346,7 @@ export class Journey extends MapElement {
      *
      * @return {Promise<void>}
      */
-    remove = async () => {
+    removeFromDB = async () => {
         if (this.origin === undefined) {
             await vt3d.db.journeys.delete(this.slug, ORIGIN_STORE)
         }

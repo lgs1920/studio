@@ -29,7 +29,7 @@ export const TrackSettings = function TrackSettings() {
     /**
      * Remove track confirmation
      */
-    const [ConfirmRemoveTrackDialog, confirmRemoveTrack] = useConfirm(`Remove "${editorSnapshot.journey.title}" ?`, 'Are you sure you want to remove this track ?')
+    const [ConfirmRemoveTrackDialog, confirmRemoveTrack] = useConfirm(`Remove "${editorSnapshot.journey.title}" ?`, 'Are you sure you want to removeFromDB this track ?')
 
     /**
      * Change track Color
@@ -82,7 +82,7 @@ export const TrackSettings = function TrackSettings() {
      * @type {setThickness}
      */
     const setTrackVisibility = (async event => {
-        //save state
+        //saveToDB state
         editorStore.journey.visible = event.target.checked
 
         // Change track visibility by changing it for each entity
@@ -162,7 +162,7 @@ export const TrackSettings = function TrackSettings() {
                 entity.show = event.target.checked
             }
         })
-        // As there's no rebuild, let's save to DB now
+        // As there's no rebuild, let's saveToDB to DB now
         await rebuildTrack(UPDATE_TRACK_SILENTLY)
     })
 
@@ -204,7 +204,7 @@ export const TrackSettings = function TrackSettings() {
                 mainStore.list.splice(index, 1)
                 // In context
                 vt3d.journeys.delete(editorStore.journey.slug)
-                // In canvas, ie remove the tracks and all pois
+                // In canvas, ie removeFromDB the tracks and all pois
                 // But sometimes we loose dataSource TODO why ?
                 if (dataSource === undefined) {
                     dataSource = vt3d.viewer.dataSources.getByName(editorStore.journey.slug)[0]
@@ -263,7 +263,7 @@ export const TrackSettings = function TrackSettings() {
         })
         await track.computeAll()
         vt3d.saveTrack(track)
-        // save toDB
+        // saveToDB toDB
         await track.toDB()
 
         //  vt3d.viewer.dataSources.removeAll()
