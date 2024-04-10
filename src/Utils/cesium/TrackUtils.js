@@ -1,10 +1,10 @@
-import * as extent                                                      from '@mapbox/geojson-extent'
-import * as Cesium                                                      from 'cesium'
-import { Color, GeoJsonDataSource }                                     from 'cesium'
-import { DRAW_ANIMATE, INITIAL_LOADING, RE_LOADING, SIMULATE_ALTITUDE } from '../../classes/Journey'
-import { FileUtils }                                                    from '../FileUtils.js'
-import { UINotifier }                                                   from '../UINotifier'
-import { EntitiesUtils }                                                from './EntitiesUtils'
+import { default as extent }                                                from '@mapbox/geojson-extent'
+import * as Cesium                                                          from 'cesium'
+import { Color, GeoJsonDataSource }                                         from 'cesium'
+import { FOCUS_ON_FEATURE, INITIAL_LOADING, RE_LOADING, SIMULATE_ALTITUDE } from '../../classes/Journey'
+import { FileUtils }                                                        from '../FileUtils.js'
+import { UINotifier }                                                       from '../UINotifier'
+import { EntitiesUtils }                                                    from './EntitiesUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -41,7 +41,7 @@ export class TrackUtils {
     })
 
     /**
-     * Load a theJourney file
+     * Load a Journey file
      *
      * return
      *
@@ -61,7 +61,7 @@ export class TrackUtils {
      * @param action
      * @param mode
      */
-    static loadTrack = async (track, action = INITIAL_LOADING, mode = DRAW_ANIMATE) => {
+    static loadTrack = async (track, action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE) => {
         const configuration = vt3d.configuration
 
         const trackStroke = {
@@ -138,7 +138,7 @@ export class TrackUtils {
                 }
 
                 // Focus on track
-                if (mode === DRAW_ANIMATE) {
+                if (mode === FOCUS_ON_FEATURE) {
                     TrackUtils.focus(track)
                 }
 
@@ -154,39 +154,57 @@ export class TrackUtils {
 
     }
 
+
     /**
-     * Focus on track
+     * Focus on a track
      *
      *
-     * @param track Track instance
+     * @param {boolean }track Track instance
      */
-    static focus = (track) => {
+    static focus = (track, showBbox = false) => {
         const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading), Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
 
+        // Let's focus on the right datasource
         const dataSource = vt3d.viewer.dataSources.getByName(track.slug)[0]
-        // ext we get the bounding box and focus on it.
-        const bbox = extent.default(track.geoJson)
-        let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
 
+        // We calculateth Bounding Box and enlarge it by 30%
+        const bbox = TrackUtils.extendBbox(extent(track.content), 30)
+        // Then we map it to the camera view
+        let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
         const rectCarto = Cesium.Cartographic.fromCartesian(vt3d.camera.getRectangleCameraCoordinates(rectangle))
-        // zoom out 30% from whatever height camera at
-        rectCarto.height = rectCarto.height + (rectCarto.height * 0.3)
         const destination = Cesium.Cartographic.toCartesian(rectCarto)
 
         vt3d.camera.flyTo({
-            destination: destination, duration: 2, orientation: {
+            destination: destination, duration: 1, orientation: {
                 heading: 0.0, pitch: -Cesium.Math.PI_OVER_TWO,
             },
         })
 
-        // vt3d.viewer.entities.add({
-        //     name: 'B Box',
-        //     rectangle: {
-        //         coordinates: rectangle,
-        //         material: Cesium.Color.GRAY.withAlpha(0.1),
-        //     },
-        // })
+        //Show BBox if requested
+        if (showBbox) {
+            vt3d.viewer.entities.add({
+                name: 'B Box',
+                rectangle: {
+                    coordinates: rectangle,
+                    material: Cesium.Color.WHITE.withAlpha(0.05),
+                },
+            })
+        }
     }
+
+    static extendBbox = (bbox, x, y = undefined) => {
+        if (!y) {
+            y = x
+        }
+        x /= 100
+        y /= 100
+
+        const w = bbox[2] - bbox[0]
+        const h = bbox[3] - bbox[1]
+
+        return [bbox[0] - x * w, bbox[1] - y * h, bbox[2] + x * w, bbox[3] + y * h]
+    }
+
 
     /**
      * Filters an array of objects using custom predicates.
@@ -351,7 +369,7 @@ export class TrackUtils {
         // }
         // // Draw all tracks but show only the current one
         // vt3d.tracks.forEach(track => {
-        //     track.draw(INITIAL_LOADING, track.slug === current ? DRAW_ANIMATE : DRAW_SILENT)
+        //     track.draw(INITIAL_LOADING, track.slug === current ? FOCUS_ON_FEATURE : NO_FOCUS)
         // })
 
     }

@@ -328,19 +328,29 @@ export class Journey extends MapElement {
         }
     }
 
-    draw = async (action = INITIAL_LOADING, mode = DRAW_ANIMATE) => {
-        const tracks = []
-        for (const track of this.tracks.values()) {
-            tracks.push(await track.draw(action, mode))
-        }
-        await Promise.all(tracks)
+    /**
+     * Draw the full Journey (all Tracks and POIs)
+     *
+     *
+     * @param action
+     * @param mode
+     * @return {Promise<void>}
+     */
+    draw = async (action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE) => {
 
+        //Draw POIs
         const pois = []
         for (const poi of this.pois.values()) {
             pois.push(await poi.draw())
         }
-        await Promise.all(pois)
 
+        await Promise.all(pois)
+        // Draw Tracks
+        const tracks = []
+        for (const track of this.tracks.values()) {
+            tracks.push(await track.draw(action))
+        }
+        await Promise.all(tracks)
     }
 
     serialize(json = false) {
@@ -361,5 +371,5 @@ export const NO_DEM_SERVER = 'none'
 export const SIMULATE_ALTITUDE = 'simulate-altitude'
 export const INITIAL_LOADING = 1
 export const RE_LOADING = 2
-export const DRAW_ANIMATE = 1
-export const DRAW_SILENT = 2
+export const FOCUS_ON_FEATURE = 1
+export const NO_FOCUS = 2

@@ -1,6 +1,7 @@
 import { DateTime }                                            from 'luxon'
 import { FEATURE_COLLECTION, FEATURE_LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
 import { Mobility }                                            from '../Utils/Mobility'
+import { FOCUS_ON_FEATURE }                                    from './Journey'
 
 
 const CONFIGURATION = '../config.json'
@@ -265,8 +266,12 @@ export class Track {
      *
      * @return {Promise<void>}
      */
-    draw = async (action = INITIAL_LOADING, mode = DRAW_ANIMATE) => {
+    draw = async (action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE) => {
         await TrackUtils.loadTrack(this, action, mode)
+        // Focus on track
+        if (mode === FOCUS_ON_FEATURE) {
+            TrackUtils.focus(this)
+        }
     }
 
     /**

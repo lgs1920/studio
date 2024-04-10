@@ -1,3 +1,4 @@
+import { NO_FOCUS }      from '../classes/Journey'
 import { CURRENT_STORE } from '../classes/VT3D'
 import { TrackUtils }    from './cesium/TrackUtils'
 
@@ -22,8 +23,8 @@ export class TracksEditorUtils {
             TracksEditorUtils.reRenderTrackSettings()
             vt3d.db.tracks.put(CURRENT_JOURNEY, event.target.value, CURRENT_STORE).then(
                 () => {
-                    if (vt3d.theJourneyEditorProxy.track.visible) {
-                        TrackUtils.focus(vt3d.theJourneyEditorProxy.journey)
+                    if (vt3d.theJourneyEditorProxy.journey.visible) {
+                        TrackUtils.focus(vt3d.theJourneyEditorProxy.journey, NO_FOCUS)
                     }
                 },
             )
