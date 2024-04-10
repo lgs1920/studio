@@ -182,6 +182,22 @@ export class Journey extends MapElement {
                     foregroundColor: vt3d.configuration.journey.pois.color,
                     visible: true,
                 }
+
+                // We need to change coordinates array if it is a line string
+                let coordinates = []
+                let times = []
+                switch (geometry.type) {
+                    case FEATURE_LINE_STRING :
+                        coordinates = [geometry.coordinates]
+                        times = [feature.properties.coordinateProperties.times]
+                        break
+                    case FEATURE_MULTILINE_STRING :
+                        coordinates = geometry.coordinates
+                        times = feature.properties.coordinateProperties.times
+                        break
+                }
+
+                // We build the POI
                 switch (geometry.type) {
                     case FEATURE_POINT: {
                         // Create a POI
@@ -200,11 +216,10 @@ export class Journey extends MapElement {
                         break
                     }
                     case FEATURE_LINE_STRING :
-                        geometry.coordinates = [geometry.coordinates]
                     case FEATURE_MULTILINE_STRING:
                         // Create Track Start Flag
-                        const start = geometry.coordinates[0][0]
-                        const timeStart = this.hasTime ? feature.properties.coordinateProperties.times[0] : undefined
+                        const start = coordinates[0][0]
+                        const timeStart = this.#hasTime(feature.properties) ? times[0][0] : undefined
                         const startParameters = {
                             parent: this.#setTrackSlug(feature.properties.name),
                             name: 'Track start',
@@ -219,11 +234,11 @@ export class Journey extends MapElement {
                         justTracks.push(startParameters.slug)
 
                         // Create Track Stop Flag
-                        const length = geometry.coordinates.length - 1
-                        const last = geometry.coordinates[length].length - 1
-                        const stop = feature.geometry.coordinates[length][last]
+                        const length = coordinates.length - 1
+                        const last = coordinates[length].length - 1
+                        const stop = coordinates[length][last]
 
-                        const timeStop = this.hasTime ? feature.properties.coordinateProperties.times[geometry.coordinates.length - 1] : undefined
+                        const timeStop = this.#hasTime(feature.properties) ? times[length][last] : undefined
                         const stopParameters = {
                             parent: this.#setTrackSlug(feature.properties.name),
                             name: 'Track stop',
