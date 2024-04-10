@@ -191,10 +191,10 @@ export const TrackSettings = function TrackSettings() {
 
         if (confirmation) {
             const mainStore = vt3d.mainProxy.components.journeyEditor
-            const track = editorStore.journey.slug
-            const removed = vt3d.getJourneyBySlug(track)
+            const journey = editorStore.journey.slug
+            const removed = vt3d.getJourneyBySlug(journey)
             // get Journey index
-            const index = mainStore.list.findIndex((list) => list === track)
+            const index = mainStore.list.findIndex((list) => list === journey)
 
             /**
              * Do some cleaning
@@ -204,14 +204,11 @@ export const TrackSettings = function TrackSettings() {
                 mainStore.list.splice(index, 1)
                 // In context
                 vt3d.journeys.delete(editorStore.journey.slug)
-                // In canvas, ie removeFromDB the tracks and all pois
-                // But sometimes we loose dataSource TODO why ?
-                if (dataSource === undefined) {
-                    dataSource = vt3d.viewer.dataSources.getByName(editorStore.journey.slug)[0]
-                }
-                vt3d.viewer.dataSources.remove(dataSource)
 
-
+                const dataSources = TrackUtils.getDataSourcesByName(editorStore.journey.slug)
+                dataSources.forEach(dataSource => {
+                    vt3d.viewer.dataSources.remove(dataSource)
+                })
             }
 
             // Remove track in DB
@@ -225,7 +222,7 @@ export const TrackSettings = function TrackSettings() {
             if (mainStore.list.length >= 1) {
                 // New current is the first.
                 vt3d.theJourney = vt3d.getJourneyBySlug(mainStore.list[0])
-                TrackUtils.focus(vt3d.theJourney)
+                TrackUtils.focus(Array.from(vt3d.theJourney.tracks.values())[0])
                 TracksEditorUtils.reRenderTracksList()
                 TracksEditorUtils.reRenderTrackSettings()
             } else {

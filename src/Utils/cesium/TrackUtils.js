@@ -169,10 +169,10 @@ export class TrackUtils {
     static focus = (track, showBbox = false) => {
         const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading), Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
 
-        // Let's focus on the right datasource
-        const dataSource = vt3d.viewer.dataSources.getByName(track.slug)[0]
+        // Let's focus on one of the right datasource
+        const dataSource = TrackUtils.getDataSourcesByName(track.parent)[0]
 
-        // We calculateth Bounding Box and enlarge it by 30%
+        // We calculate the Bounding Box and enlarge it by 30%
         const bbox = TrackUtils.extendBbox(extent(track.content), 30)
         // Then we map it to the camera view
         let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
@@ -377,6 +377,28 @@ export class TrackUtils {
             await journey.draw(INITIAL_LOADING, journey.slug === current ? FOCUS_ON_FEATURE : NO_FOCUS)
         })
 
+    }
+
+    /**
+     * Get data source by name
+     *
+     * @param {string} name  name or part of name
+     * @param {boolean} strict true find the name, else find all those whose name contains a part of name
+     *
+     * @return {Array} array of DataSource
+     */
+    static getDataSourcesByName(name, strict = false) {
+        if (strict) {
+            return vt3d.viewer.dataSources.getByName(name)
+        }
+        const dataSources = []
+        for (let i = 0; i < vt3d.viewer.dataSources.length; i++) {
+            const item = vt3d.viewer.dataSources.get(i)
+            if (item.name.includes(name)) {
+                dataSources.push(item)
+            }
+        }
+        return dataSources
     }
 
 }

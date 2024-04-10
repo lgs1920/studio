@@ -368,12 +368,18 @@ export class Journey extends MapElement {
     /**
      * Draw the full Journey (all Tracks and POIs)
      *
+     * Tracks are first drawn the we add POIs (some are attached Tracks)
      *
      * @param action
      * @param mode
      * @return {Promise<void>}
      */
     draw = async (action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE) => {
+        // Draw Tracks
+        const tracks = []
+        for (const track of this.tracks.values()) {
+            tracks.push(await track.draw(action))
+        }
 
         //Draw POIs
         const pois = []
@@ -382,11 +388,6 @@ export class Journey extends MapElement {
         }
 
         await Promise.all(pois)
-        // Draw Tracks
-        const tracks = []
-        for (const track of this.tracks.values()) {
-            tracks.push(await track.draw(action))
-        }
         await Promise.all(tracks)
     }
 
