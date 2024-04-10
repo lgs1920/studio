@@ -226,6 +226,8 @@ export const TrackSettings = function TrackSettings() {
                 TracksEditorUtils.reRenderTracksList()
                 TracksEditorUtils.reRenderTrackSettings()
             } else {
+                vt3d.theJourney = null
+                vt3d.cleanEditor()
                 text = 'There are no others available.'
                 mainStore.usable = false
                 mainStore.show = false

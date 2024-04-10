@@ -16,7 +16,7 @@ export class VT3D {
 
     floatingMenu = {}
     journeys = new Map()
-    
+
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
         // Track Editor store is used to manage the settings of the theJourney in edit
@@ -141,9 +141,12 @@ export class VT3D {
         }
     }
 
-
     addToEditor = (journey) => {
         this.theJourneyEditorProxy.journey = journey
+    }
+
+    cleanEditor = () => {
+        this.theJourneyEditorProxy = null
     }
 }
 
