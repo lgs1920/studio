@@ -9,8 +9,16 @@ export const main = {
             visible: false,
             show: false,
             list: [],
-            journeyListKey: 0,
-            journeySettingsKey: 0,
+            keys: {
+                journey: {
+                    list: 0,
+                    settings: 0,
+                },
+                track: {
+                    list: 5000,
+                    settings: 0,
+                },
+            },
         },
         floatingMenu: {
             coordinates: {x: 0, y: -9999},

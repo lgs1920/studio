@@ -10,17 +10,17 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
         event.preventDefault()
     }
     const mainStore = vt3d.mainProxy.components.journeyEditor
-    const mainSnap = useSnapshot(mainStore)
+    const mainSnapshot = useSnapshot(mainStore)
     const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
-    const several = mainSnap.list.length > 1
+    const several = mainSnapshot.list.length > 1
 
     /**
      * Get tracks from the snap that contains only slugs
      */
     let tracks = []
-    mainSnap.list.forEach(slug => {
+    mainSnapshot.list.forEach(slug => {
         tracks.push(vt3d.getJourneyBySlug(slug))
     })
 
@@ -53,7 +53,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
                 <SlSelect hoist label={props.label}
                           value={editorSnapshot.journey.slug}
                           onSlChange={props.onChange}
-                          key={mainSnap.journeyListKey}
+                          key={mainSnapshot.keys.track.list}
                 >
                     <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
