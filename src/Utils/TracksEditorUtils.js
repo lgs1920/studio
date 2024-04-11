@@ -1,34 +1,46 @@
-import { NO_FOCUS }      from '../classes/Journey'
-import { CURRENT_STORE } from '../classes/VT3D'
-import { TrackUtils }    from './cesium/TrackUtils'
+import { CURRENT_JOURNEY, CURRENT_STORE } from '../classes/VT3D'
 
 export class TracksEditorUtils {
+
+    static renderjourney
 
     /**
      * We change its key to rerender the list component
      */
-    static reRenderTracksList = () => {
-        vt3d.mainProxy.components.journeyEditor.journeyListKey++
+    static renderJourneysList = () => {
+        vt3d.mainProxy.components.journeyEditor.keys.journey.list++
     }
 
-    static reRenderTrackSettings = () => {
-        vt3d.mainProxy.components.journeyEditor.journeySettingsKey++
+    static renderTracksList = () => {
+        vt3d.mainProxy.components.journeyEditor.keys.track.list++
+    }
+    static renderJourneySettings = () => {
+        vt3d.mainProxy.components.journeyEditor.keys.journey.settings++
     }
 
+    static renderTrackSettings = () => {
+        vt3d.mainProxy.components.journeyEditor.keys.track.settings++
+    }
 
-    static prepareTrackEdition = (event) => {
+    static setJourneyEdition = (event) => {
         // SUbscribe to change  https://valtio.pmnd.rs/docs/api/advanced/subscribe
         if (isOK(event)) {
-            vt3d.theJourneyEditorProxy.track = vt3d.getJourneyBySlug(event.target.value)
-            TracksEditorUtils.reRenderTrackSettings()
-            vt3d.db.tracks.put(CURRENT_JOURNEY, event.target.value, CURRENT_STORE).then(
+
+            vt3d.theJourneyEditorProxy.journey = vt3d.getJourneyBySlug(event.target.value)
+            vt3d.theJourneyEditorProxy.journey.addToContext()
+            TracksEditorUtils.renderJourneySettings()
+            vt3d.db.journeys.put(CURRENT_JOURNEY, event.target.value, CURRENT_STORE).then(
                 () => {
                     if (vt3d.theJourneyEditorProxy.journey.visible) {
-                        TrackUtils.focus(vt3d.theJourneyEditorProxy.journey, NO_FOCUS)
+                        vt3d.theJourney.focus()
                     }
                 },
             )
         }
+    }
+
+    settings = () => {
+        vt3d.mainProxy.components.journeyEditor.keys.journey.settings++
     }
 
 }

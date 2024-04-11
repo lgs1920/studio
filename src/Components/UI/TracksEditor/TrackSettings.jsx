@@ -2,7 +2,7 @@ import { faTrashCan }    from '@fortawesome/pro-regular-svg-icons'
 import { faLocationDot } from '@fortawesome/pro-solid-svg-icons'
 
 import {
-    SlCard, SlColorPicker, SlDivider, SlIcon, SlInput, SlProgressBar, SlRange, SlSwitch, SlTooltip,
+    SlCard, SlColorPicker, SlDivider, SlIcon, SlInput, SlProgressBar, SlSwitch, SlTooltip,
 }                        from '@shoelace-style/shoelace/dist/react'
 import { useSnapshot }   from 'valtio'
 import { NO_DEM_SERVER } from '../../../classes/Journey'
@@ -38,7 +38,7 @@ export const TrackSettings = function TrackSettings() {
      */
     const setColor = (async event => {
         editorStore.journey.color = event.target.value
-        TracksEditorUtils.reRenderTracksList()
+        TracksEditorUtils.renderJourneysList()
         await rebuildTrack(UPDATE_TRACK_THEN_DRAW)
     })
 
@@ -62,7 +62,7 @@ export const TrackSettings = function TrackSettings() {
         editorStore.journey.title = Journey.defineUnicTitle(title)
         await rebuildTrack(UPDATE_TRACK_SILENTLY)
 
-        TracksEditorUtils.reRenderTracksList()
+        TracksEditorUtils.renderJourneysList()
     })
 
     /**
@@ -72,7 +72,7 @@ export const TrackSettings = function TrackSettings() {
      */
     const setThickness = (async event => {
         editorStore.journey.thickness = event.target.value
-        TracksEditorUtils.reRenderTrackSettings()
+        TracksEditorUtils.renderjourney.settings()
         await rebuildTrack(UPDATE_TRACK_THEN_DRAW)
     })
 
@@ -111,8 +111,8 @@ export const TrackSettings = function TrackSettings() {
         }
         await rebuildTrack(UPDATE_TRACK_SILENTLY)
 
-        TracksEditorUtils.reRenderTrackSettings()
-        TracksEditorUtils.reRenderTracksList()
+        TracksEditorUtils.renderjourney.settings()
+        TracksEditorUtils.renderJourneysList()
 
     })
 
@@ -174,7 +174,7 @@ export const TrackSettings = function TrackSettings() {
     const setDEMServer = (async event => {
         editorStore.journey.DEMServer = event.target.value
         editorStore.longTask = editorStore.journey.DEMServer !== NO_DEM_SERVER
-        TracksEditorUtils.reRenderTrackSettings()
+        TracksEditorUtils.renderjourney.settings()
         // await vt3d.theJourney.computeAll()
         // // Then we redraw the theJourney
         // await vt3d.theJourney.showAfterHeightSimulation()
@@ -223,8 +223,8 @@ export const TrackSettings = function TrackSettings() {
                 // New current is the first.
                 vt3d.theJourney = vt3d.getJourneyBySlug(mainStore.list[0])
                 TrackUtils.focus(Array.from(vt3d.theJourney.tracks.values())[0])
-                TracksEditorUtils.reRenderTracksList()
-                TracksEditorUtils.reRenderTrackSettings()
+                TracksEditorUtils.renderJourneysList()
+                TracksEditorUtils.renderjourney.settings()
             } else {
                 vt3d.theJourney = null
                 vt3d.cleanEditor()
@@ -303,7 +303,7 @@ export const TrackSettings = function TrackSettings() {
 
     return (<>
         {editorSnapshot.journey &&
-            <SlCard id="track-settings" key={vt3d.mainProxy.components.journeyEditor.journeySettingsKey}>
+            <SlCard id="track-settings" key={vt3d.mainProxy.components.journeyEditor.keys.journey.track}>
                 <div id={'track-line-settings-global'}>
                     {/* Change visible name (title) */}
                     <div>
@@ -335,12 +335,12 @@ export const TrackSettings = function TrackSettings() {
                                 />
                             </SlTooltip>
                             <SlTooltip content="Thickness">
-                                <SlRange min={1} max={10} step={1}
-                                         value={editorSnapshot.journey.thickness}
-                                         style={{'--thumb-size': '1rem'}}
-                                         onSlChange={setThickness}
-                                         disabled={!editorSnapshot.journey.visible}
-                                />
+                                {/* <SlRange min={1} max={10} step={1} */}
+                                {/*          value={editorSnapshot.journey.thickness} */}
+                                {/*          style={{'--thumb-size': '1rem'}} */}
+                                {/*          onSlChange={setThickness} */}
+                                {/*          disabled={!editorSnapshot.journey.visible} */}
+                                {/* /> */}
                             </SlTooltip>
 
                             <SlDivider id="test-line" style={{
