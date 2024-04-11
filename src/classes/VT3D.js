@@ -80,10 +80,6 @@ export class VT3D {
         return this?.scene?.canvas
     }
 
-    get journeys() {
-        return this.journeys
-    }
-
     get theJourney() {
         return this.#mainProxy.theJourney
     }
