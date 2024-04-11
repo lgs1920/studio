@@ -161,10 +161,12 @@ export class TrackUtils {
 
 
     /**
-     * Focus on a track
+     * Focus on a geometry
      *
-     *
-     * @param {boolean }track Track instance
+     * @param {Object } track Feature or Feature collection to focus on.
+     *                        Should contains at least 2 properties :
+     *                              - content : the geo json
+     *                              - slug : the slug of the element
      */
     static focus = (track, showBbox = false) => {
         const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading), Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
@@ -188,7 +190,7 @@ export class TrackUtils {
         //Show BBox if requested
         if (showBbox) {
             vt3d.viewer.entities.add({
-                name: 'B Box',
+                name: `BBox#${track.slug}`,
                 rectangle: {
                     coordinates: rectangle,
                     material: Cesium.Color.WHITE.withAlpha(0.05),
