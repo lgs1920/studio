@@ -1,12 +1,19 @@
 import { gpx, kml }                     from '@tmcw/togeojson'
-import { getGeom }                      from '@turf/invariant'
+import {
+    default as flatten,
+}                                       from '@turf/flatten'
+import {
+    getGeom,
+}                                       from '@turf/invariant'
 import {
     JUST_ICON, MARKER_SIZE,
 }                                       from '../Utils/cesium/MarkerUtils'
 import {
-    FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT,
+    FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
 }                                       from '../Utils/cesium/TrackUtils'
-import { MapElement }                   from './MapElement'
+import {
+    MapElement,
+}                                       from './MapElement'
 import { POI }                          from './POI'
 import { Track }                        from './Track'
 import { JOURNEYS_STORE, ORIGIN_STORE } from './VT3D'
@@ -21,7 +28,6 @@ export class Journey extends MapElement {
     title = ''                          // Journey Title
 
     origin                                     // initial geoJson
-
 
     constructor(title, type, options) {
         super()
@@ -378,7 +384,7 @@ export class Journey extends MapElement {
         // Draw Tracks
         const tracks = []
         for (const track of this.tracks.values()) {
-            tracks.push(await track.draw(action))
+            tracks.push(await track.draw(action, NO_FOCUS))
         }
 
         //Draw POIs
@@ -389,7 +395,16 @@ export class Journey extends MapElement {
 
         await Promise.all(pois)
         await Promise.all(tracks)
+
+        if (mode === FOCUS_ON_FEATURE) {
+            this.focus()
+        }
     }
+
+    focus = () => {
+        TrackUtils.focus({content: flatten(this.geoJson), slug: this.slug})
+    }
+
 
 }
 
