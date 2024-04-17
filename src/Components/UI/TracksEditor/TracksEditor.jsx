@@ -5,6 +5,8 @@ import { useSnapshot }                           from 'valtio'
 import { FA2SL }                                 from '../../../Utils/FA2SL'
 import './style.css'
 import { TracksEditorUtils }                     from '../../../Utils/TracksEditorUtils'
+import { JourneySelector }                       from './JourneySelector'
+import { JourneySettings }                       from './JourneySettings'
 import { TrackSelector }                         from './TrackSelector'
 import { TrackSettings }                         from './TrackSettings'
 
@@ -54,11 +56,14 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                           onSlRequestClose={handleRequestClose}
                           contained
                           onSlHide={closeTracksEditor}
-                    // onSlShow={TracksEditorUtils.prepareTrackEdition}
+                    // onSlShow={TracksEditorUtils.initJourneyEdition}
                 >
                     {vt3d.journeys.size > 0 && <div id={'track-settings-container'}>
-                        <TrackSelector onChange={TracksEditorUtils.prepareTrackEdition}
-                                       label={'Select a track:'}/>
+                        <JourneySelector onChange={TracksEditorUtils.initJourneyEdition}
+                                         label={'Select a Journey:'}/>
+                        <JourneySettings/>
+                        <TrackSelector onChange={TracksEditorUtils.initTrackEdition}
+                                       label={'Select one of the tracks:'}/>
                         <TrackSettings/>
                     </div>}
                     <div id="journeys-editor-footer" slot={'footer'}></div>

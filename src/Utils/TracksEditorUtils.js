@@ -1,4 +1,4 @@
-import { CURRENT_JOURNEY, CURRENT_STORE } from '../classes/VT3D'
+import { TrackUtils } from './cesium/TrackUtils'
 
 export class TracksEditorUtils {
 
@@ -22,20 +22,53 @@ export class TracksEditorUtils {
         vt3d.mainProxy.components.journeyEditor.keys.track.settings++
     }
 
-    static setJourneyEdition = (event) => {
+    static initJourneyEdition = (event) => {
         // SUbscribe to change  https://valtio.pmnd.rs/docs/api/advanced/subscribe
-        if (isOK(event)) {
 
+        if (isOK(event)) {
             vt3d.theJourneyEditorProxy.journey = vt3d.getJourneyBySlug(event.target.value)
             vt3d.theJourneyEditorProxy.journey.addToContext()
+            // Force Track and POI in editor
+            vt3d.theJourneyEditorProxy.track = null
+            vt3d.theJourneyEditorProxy.poi = null
+            // Force rerender
             TracksEditorUtils.renderJourneySettings()
-            vt3d.db.journeys.put(CURRENT_JOURNEY, event.target.value, CURRENT_STORE).then(
-                () => {
+            // Save information
+            TrackUtils.saveCurrentJourneyToDB(event.target.value).then(
+                async () => {
                     if (vt3d.theJourneyEditorProxy.journey.visible) {
                         vt3d.theJourney.focus()
                     }
+
+                    await TrackUtils.saveCurrentTrackToDB(null)
+                    await TrackUtils.saveCurrentPOIToDB(null)
                 },
             )
+
+        }
+    }
+    static initTrackEdition = (event) => {
+        // SUbscribe to change  https://valtio.pmnd.rs/docs/api/advanced/subscribe
+
+        if (isOK(event)) {
+            vt3d.theJourneyEditorProxy.track = vt3d.getTrackBySlug(event.target.value)
+            vt3d.theJourneyEditorProxy.track.addToContext()
+            // Force POI in editor
+            vt3d.theJourneyEditorProxy.poi = null
+
+            // Force rerender
+            TracksEditorUtils.renderJourneySettings()
+            // Save information
+            TrackUtils.saveCurrentTrackToDB(event.target.value).then(
+                async () => {
+                    if (vt3d.theJourneyEditorProxy.track.visible) {
+                        vt3d.theJourneyEditorProxy.track.focus()
+                    }
+
+                    await TrackUtils.saveCurrentPOIToDB(null)
+                },
+            )
+
         }
     }
 

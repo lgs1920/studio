@@ -1,6 +1,6 @@
-import { Track }                                              from '../../classes/Track'
-import { MARKER_TYPE, NOT_AN_ENTITY, OTHER_TYPE, TRACK_TYPE } from './EntitiesUtils'
-import { TrackUtils }                                         from './TrackUtils'
+import { Track }                                           from '../../classes/Track'
+import { NOT_AN_ENTITY, OTHER_TYPE, POI_TYPE, TRACK_TYPE } from './EntitiesUtils'
+import { TrackUtils }                                      from './TrackUtils'
 
 export class MouseUtils {
 
@@ -11,10 +11,10 @@ export class MouseUtils {
      * @param movement the movement data
      *
      * @returns {object}    {
-     *     track : the track if  MARKER_TYPE | TRACK_TYPE
-     *     marker : the marker  if  MARKER_TYPE
+     *     track : the track if  POI_TYPE | TRACK_TYPE
+     *     marker : the marker  if  POI_TYPE
      *     entity  the entity if OTHER_TYPE
-     *     type: MARKER_TYPE | TRACK_TYPE | OTHER_TYPE | NOT_AN_ENTITY
+     *     type: POI_TYPE | TRACK_TYPE | OTHER_TYPE | NOT_AN_ENTITY
      * }
      *
      */
@@ -38,7 +38,7 @@ export class MouseUtils {
                 return {
                     track: info.track,
                     marker: info.marker,
-                    type: MARKER_TYPE,
+                    type: POI_TYPE,
                 }
             } else {
                 // Is it a track ? Let's search the parent DataSource then the entity slug

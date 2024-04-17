@@ -1,13 +1,13 @@
-import * as Cesium     from 'cesium'
-import { MARKER_TYPE } from '../../../Utils/cesium/EntitiesUtils'
-import { MouseUtils }  from '../../../Utils/cesium/MouseUtils'
+import * as Cesium    from 'cesium'
+import { POI_TYPE }   from '../../../Utils/cesium/EntitiesUtils'
+import { MouseUtils } from '../../../Utils/cesium/MouseUtils'
 
 export class MarkerMenu {
     static show = (data) => {
 
         const menuStore = vt3d.mainProxy.components.floatingMenu
 
-        if (data.picked.type !== MARKER_TYPE) {
+        if (data.picked.type !== POI_TYPE) {
             return
         }
 

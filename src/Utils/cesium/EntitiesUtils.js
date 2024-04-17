@@ -1,5 +1,6 @@
-export const MARKER_TYPE = 1
+export const POI_TYPE = 1
 export const TRACK_TYPE = 2
+export const JOURNEY_TYPE = 4
 export const OTHER_TYPE = 3
 export const NOT_AN_ENTITY = 0
 

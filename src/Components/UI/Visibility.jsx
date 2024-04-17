@@ -14,8 +14,8 @@ export const Visibility = ({change: change, initial = true, icons = {shown: faEy
     return (
         <a className="visibility-button" onClick={toggleVisibility}>
             {visibility
-             ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(icons.shown)}/>
-             : <SlIcon slot="suffix" library="fa" name={FA2SL.set(icons.hidden)}/>
+             ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(icons.hidden)}/>
+             : <SlIcon slot="suffix" library="fa" name={FA2SL.set(icons.shown)}/>
             }
         </a>
     )

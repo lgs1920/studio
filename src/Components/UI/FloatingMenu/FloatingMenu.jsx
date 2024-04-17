@@ -9,7 +9,7 @@ import { sprintf }                 from 'sprintf-js'
 import { useSnapshot }             from 'valtio'
 import { Track }                   from '../../../classes/Track'
 import { DAY, HOUR, SECOND }       from '../../../Utils/AppUtils'
-import { MARKER_TYPE, TRACK_TYPE } from '../../../Utils/cesium/EntitiesUtils'
+import { POI_TYPE, TRACK_TYPE }    from '../../../Utils/cesium/EntitiesUtils'
 import { FA2SL }                   from '../../../Utils/FA2SL'
 import { TextValueUI }             from '../TextValueUI/TextValueUI'
 
@@ -24,7 +24,7 @@ export const FloatingMenu = function FloatingMenu() {
     /**
      * Get information about Track and Marker (optional)
      */
-    if (menuSnap.type === MARKER_TYPE || menuSnap.type === TRACK_TYPE) {
+    if (menuSnap.type === POI_TYPE || menuSnap.type === TRACK_TYPE) {
         let slug = menuSnap.target.track
         // fix for track where we send the object
         if (slug instanceof Track) {
@@ -32,7 +32,7 @@ export const FloatingMenu = function FloatingMenu() {
         }
         track = vt3d.getJourneyBySlug(slug)
         vt3d.theJourney = track
-        if (menuSnap.type === MARKER_TYPE) {
+        if (menuSnap.type === POI_TYPE) {
             marker = track.markers.get(menuSnap.target.marker)
         }
     }
@@ -120,7 +120,7 @@ export const FloatingMenu = function FloatingMenu() {
                 </div>
             </div>
             <div className={'floating-menu-data'}>
-                {menuSnap.type === MARKER_TYPE && track.hasAltitude &&
+                {menuSnap.type === POI_TYPE && track.hasAltitude &&
                     <div className={'floating-menu-item'}>
                         <div>
                             <TextValueUI value={sprintf('%\' 6.2f', marker.altitude)}
@@ -131,7 +131,7 @@ export const FloatingMenu = function FloatingMenu() {
                     </div>
                 }
             </div>
-            {menuSnap.type === MARKER_TYPE && <MarkerPlus/>}
+            {menuSnap.type === POI_TYPE && <MarkerPlus/>}
             {menuSnap.type === TRACK_TYPE && <TrackPlus/>}
 
         </div>)
@@ -146,7 +146,7 @@ export const FloatingMenu = function FloatingMenu() {
     const Header = () => {
         let name, description
         switch (menuSnap.type) {
-            case MARKER_TYPE:
+            case POI_TYPE:
                 name = marker?.name
                 description = marker?.description
                 break
@@ -156,7 +156,7 @@ export const FloatingMenu = function FloatingMenu() {
                 break
         }
         return (<>
-            {(menuSnap.type === MARKER_TYPE || menuSnap.type === TRACK_TYPE) && <>
+            {(menuSnap.type === POI_TYPE || menuSnap.type === TRACK_TYPE) && <>
                 <div id="floating-menu-marker-header" className={'vt3d-card'}>
                     <span className={'entity-title'}>{name}</span>
                     <div className={'entity-description'}>{description}</div>

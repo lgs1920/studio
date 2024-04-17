@@ -15,8 +15,12 @@
   },
   "DEMServers": [
     {
-      "name": "I confirm, no Altitude",
+      "name": "No Altitude",
       "value": "none"
+    },
+    {
+      "name": "Use Given Data",
+      "value": "from-file"
     },
     {
       "name": "Internal catcher",

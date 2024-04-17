@@ -29,7 +29,6 @@ export class POI {
         this.slug = options.slug
         this.name = options.name
         this.parent = options.parent
-        this.id = options.id
         this.coordinates = options.coordinates || {}
         this.altitude = options.altitude || false
         this.time = options.time || false
@@ -37,11 +36,12 @@ export class POI {
         this.foregroundColor = options.foregroundColor ?? vt3d.configuration.poi.color
         this.border = options.border ?? 0
         this.text = options.text ?? undefined
-        this.icon = options.icon ?? undefined
+        this.icon = this.defineIcon(options.icon ?? undefined)
         this.size = options.size ?? (this.type === PIN_CIRCLE ? 10 : 32)
         this.description = options.description ?? undefined
         this.image = options.image ?? undefined
         this.visible = options.visible ?? true
+        this.vertical = options.vertical ?? POI_VERTICAL_ALIGN_CENTER
     }
 
     static clone = (source, exceptions = {}) => {
@@ -52,12 +52,19 @@ export class POI {
         return JSON.parse(JSON.stringify(source))
     }
 
-    draw = async () => {
-        await MarkerUtils.draw(this)
+    defineIcon = (icon) => {
+        return MarkerUtils.setIcon(icon)
     }
 
+    draw = async (forcedToHide = false) => {
+        await MarkerUtils.draw(this, forcedToHide)
+    }
     remove = async () => {
         await MarkerUtils.remove(this)
     }
 
 }
+
+export const POI_VERTICAL_ALIGN_TOP = 'top'
+export const POI_VERTICAL_ALIGN_BOTTOM = 'bottom'
+export const POI_VERTICAL_ALIGN_CENTER = 'center'

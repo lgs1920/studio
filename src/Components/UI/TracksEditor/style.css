@@ -28,6 +28,22 @@
     font-weight: normal;
 }
 
+#journey-visibility-global {
+    display: flex;
+    gap: var(--vt3d-gutter-s);
+}
+
+#journey-visibility {
+    display: flex;
+    gap: var(--vt3d-gutter-s);
+    align-self: flex-end;
+    margin-bottom: var(--vt3d-gutter-xs);
+}
+
+#journey-title {
+    width: 100%;
+}
+
 #track-settings, #track-settings-container {
     width: 100%;
     display: flex;

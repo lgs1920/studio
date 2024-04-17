@@ -1,15 +1,23 @@
-import { default as extent }        from '@mapbox/geojson-extent'
-import * as Cesium                  from 'cesium'
-import { Color, GeoJsonDataSource } from 'cesium'
+import { default as extent } from '@mapbox/geojson-extent'
+import * as Cesium           from 'cesium'
 import {
-    FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, RE_LOADING, SIMULATE_ALTITUDE,
-}                                   from '../../classes/Journey'
+    Color, GeoJsonDataSource,
+}                            from 'cesium'
 import {
-    CURRENT_JOURNEY, CURRENT_STORE,
-}                                   from '../../classes/VT3D'
-import { FileUtils }                from '../FileUtils.js'
-import { UINotifier }               from '../UINotifier'
-import { EntitiesUtils }            from './EntitiesUtils'
+    FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD, RE_LOADING, SIMULATE_ALTITUDE,
+}                            from '../../classes/Journey'
+import {
+    CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK,
+}                            from '../../classes/VT3D'
+import {
+    FileUtils,
+}                            from '../FileUtils.js'
+import {
+    UINotifier,
+}                            from '../UINotifier'
+import {
+    EntitiesUtils,
+}                            from './EntitiesUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -65,8 +73,9 @@ export class TrackUtils {
      * @param {Track} track
      * @param action
      * @param mode
+     * @param forcedToHide
      */
-    static loadTrack = async (track, action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE) => {
+    static draw = async (track, {action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
         const configuration = vt3d.configuration
 
         const trackStroke = {
@@ -77,6 +86,7 @@ export class TrackUtils {
         }
         const commonOptions = {
             clampToGround: true, name: track.title,
+            show: forcedToHide ? false : track.visible,
         }
 
         // Load Geo Json
@@ -85,28 +95,17 @@ export class TrackUtils {
             // We get existing datasource
             source = vt3d.viewer.dataSources.getByName(track.slug)[0]
         } else {
-            // It's a new track... But with strict mode, in developermode, we got twice, so let's
+            // It's a new track... But with strict mode, in developer mode, we got twice, so let's
             // check to have only one
-            source = /*vt3d.viewer.dataSources.getByName(track.slug)[0] ??*/ new GeoJsonDataSource(track.slug)
+            source = new GeoJsonDataSource(track.slug, {
+                id: track.slug,
+            })
         }
 
         return source.load(track.content, {
             ...commonOptions, stroke: trackStroke.color, strokeWidth: trackStroke.thickness,
         }).then(dataSource => {
 
-            dataSource.entities.values.forEach(entity => {
-                // Masks  the legacy POIs then for all other entities, visibility is
-                // based ontrack visibility
-                if (entity.billboard) {
-                    if (!entity.id.startsWith('marker#')) {
-                        // Masks all legacy POI
-                        entity.show = false
-                    }
-                } else {
-                    entity.show = track.visible
-                }
-
-            })
             const text = `Track loaded and displayed on the map.`
             if (action === RE_LOADING) {
                 UINotifier.notifySuccess({
@@ -114,8 +113,7 @@ export class TrackUtils {
                 })
             } else {
                 try {
-                    vt3d.viewer.dataSources.add(dataSource).then(function (dataSource) {
-
+                    vt3d.viewer.dataSources.add(dataSource).then(() => {
 
                         // Ok => we notify
                         let caption = ''
@@ -403,4 +401,79 @@ export class TrackUtils {
         return dataSources
     }
 
+    /**
+     * Save the current journey into DB
+     *
+     * @param value
+     * @return {Promise<void>}
+     */
+    static saveCurrentJourneyToDB = async (current) => {
+        await vt3d.db.journeys.put(CURRENT_JOURNEY, current, CURRENT_STORE)
+    }
+
+    /**
+     * Save the current Track into DB
+     *
+     * @param value
+     * @return {Promise<void>}
+     */
+    static saveCurrentTrackToDB = async (current) => {
+        await vt3d.db.journeys.put(CURRENT_TRACK, current, CURRENT_STORE)
+    }
+
+    /**
+     * Save the current POI into DB
+     *
+     * @param value
+     * @return {Promise<void>}
+     */
+    static saveCurrentPOIToDB = async (current) => {
+        await vt3d.db.journeys.put(CURRENT_POI, current, CURRENT_STORE)
+    }
+
+    /**
+     * Update POI visibility
+     * @param journey
+     * @param visibility
+     */
+    static  updatePOIsVisibility = (journey, visibility) => {
+        // Get all associated datasource
+        const dataSources = TrackUtils.getDataSourcesByName(journey.slug, true)
+        if (!dataSources) {
+            return
+        }
+        dataSources.forEach(dataSource => {
+            dataSource.entities.values.forEach(entity => {
+                if (entity.id.startsWith(POI_STD)) {
+                    const poi = journey.pois.get(entity.id)
+                    entity.show = visibility ? poi.visible : false
+                }
+            })
+        })
+    }
+
+    static updateTracksVisibility = (journey, visibility) => {
+        // Get all associated datasource
+        const dataSources = TrackUtils.getDataSourcesByName(journey.slug)
+        if (!dataSources) {
+            return
+        }
+
+        dataSources.forEach(dataSource => {
+            dataSource.entities.values.forEach(entity => {
+                console.log(entity.id)
+                if (entity.id.startsWith(POI_FLAG)) {
+                    const poi = journey.pois.get(entity.id)
+                    entity.show = visibility ? poi.visible : false
+                } else if (!entity.billboard) {
+                    // Only journeys, not legacy pois
+                    entity.show = visibility
+                }
+            })
+        })
+
+    }
+
+    static updateTrackVisibility = (track, visibility) => {
+    }
 }

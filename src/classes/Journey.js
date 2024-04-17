@@ -6,6 +6,9 @@ import {
     getGeom,
 }                                       from '@turf/invariant'
 import {
+    JOURNEY_TYPE, TRACK_TYPE,
+}                                       from '../Utils/cesium/EntitiesUtils'
+import {
     JUST_ICON, MARKER_SIZE,
 }                                       from '../Utils/cesium/MarkerUtils'
 import {
@@ -14,7 +17,7 @@ import {
 import {
     MapElement,
 }                                       from './MapElement'
-import { POI }                          from './POI'
+import { POI, POI_VERTICAL_ALIGN_TOP }  from './POI'
 import { Track }                        from './Track'
 import { JOURNEYS_STORE, ORIGIN_STORE } from './VT3D'
 
@@ -28,6 +31,7 @@ export class Journey extends MapElement {
     title = ''                          // Journey Title
 
     origin                                     // initial geoJson
+    allPOISVisible = true
 
     constructor(title, type, options) {
         super()
@@ -125,18 +129,17 @@ export class Journey extends MapElement {
         // We translate kml and gpx to GeoJson format in order to manipulate json
         // instead of XML
         try {
-            let geoJson
             switch (this.type) {
-                case 'gpx':
+                case GPX:
                     this.geoJson = gpx(new DOMParser().parseFromString(content, 'text/xml'))
                     break
-                case 'kmz' :
+                case KMZ :
                     // TODO unzip to get kml. but what to do with the assets files that are sometimes embedded
                     break
-                case 'kml':
+                case KML:
                     this.geoJson = kml(new DOMParser().parseFromString(content, 'text/xml'))
                     break
-                case 'geojson' :
+                case GEOJSON :
                     this.geoJson = JSON.parse(content)
             }
             //Save original data
@@ -198,6 +201,7 @@ export class Journey extends MapElement {
      *
      */
     getPOIsFromGeoJson = () => {
+
         if (this.geoJson.type === FEATURE_COLLECTION) {
             const justTracks = []
             // Extracts all POIs from FEATURE_POINT data and adds
@@ -207,7 +211,6 @@ export class Journey extends MapElement {
                 const common = {
                     description: feature.properties.desc,
                     size: MARKER_SIZE,
-                    foregroundColor: vt3d.configuration.journey.pois.color,
                     visible: true,
                 }
 
@@ -231,7 +234,9 @@ export class Journey extends MapElement {
                         // Create a POI
                         const point = geometry.coordinates
                         const parameters = {
-                            parent: this.slug,
+                            parent: {
+                                slug: this.slug, type: JOURNEY_TYPE,
+                            },
                             name: feature.properties.name,
                             slug: this.#setPOISlug(index),
                             coordinates: [point[0], point[1]],
@@ -239,24 +244,28 @@ export class Journey extends MapElement {
                             time: feature.properties?.time ?? undefined,
                             type: JUST_ICON,
                             icon: feature.properties?.sym ?? feature.properties?.type,
+                            foregroundColor: vt3d.configuration.journey.pois.color,
                         }
                         this.pois.set(parameters.slug, new POI({...common, ...parameters}))
                         break
                     }
                     case FEATURE_LINE_STRING :
                     case FEATURE_MULTILINE_STRING:
+                        const parentSlug = this.#setTrackSlug(feature.properties.name)
                         // Create Track Start Flag
                         const start = coordinates[0][0]
                         const timeStart = this.#hasTime(feature.properties) ? times[0][0] : undefined
                         const startParameters = {
-                            parent: this.#setTrackSlug(feature.properties.name),
+                            parent: {slug: parentSlug, type: TRACK_TYPE},
                             name: 'Track start',
-                            slug: this.#setPOISlug(`${FLAG_START}-${index}`),
+                            slug: this.#setPOISlug(`${_.app.slugify(feature.properties.name)}#${FLAG_START}`, POI_FLAG),
                             coordinates: [start[0], start[1]],
                             altitude: start[2] ?? undefined,
                             time: timeStart,
                             type: JUST_ICON,
                             icon: FLAG_START,
+                            verticalOrigin: POI_VERTICAL_ALIGN_TOP,
+                            foregroundColor: vt3d.configuration.journey.pois.start.color,
                         }
                         this.pois.set(startParameters.slug, new POI({...common, ...startParameters}))
                         justTracks.push(startParameters.slug)
@@ -268,15 +277,18 @@ export class Journey extends MapElement {
 
                         const timeStop = this.#hasTime(feature.properties) ? times[length][last] : undefined
                         const stopParameters = {
-                            parent: this.#setTrackSlug(feature.properties.name),
+                            parent: {slug: parentSlug, type: TRACK_TYPE},
                             name: 'Track stop',
-                            slug: this.#setPOISlug(`${FLAG_STOP}-${index}`),
+                            slug: this.#setPOISlug(`#${_.app.slugify(feature.properties.name)}#${FLAG_STOP}`, POI_FLAG),
                             coordinates: [stop[0], stop[1]],
                             altitude: stop[2] ?? undefined,
                             time: timeStop,
                             type: JUST_ICON,
-                            icon: FLAG_START,
+                            icon: FLAG_STOP,
+                            verticalOrigin: POI_VERTICAL_ALIGN_TOP,
+                            foregroundColor: vt3d.configuration.journey.pois.stop.color,
                         }
+                        console.log(stopParameters)
                         this.pois.set(stopParameters.slug, new POI({...common, ...stopParameters}))
                         justTracks.push(stopParameters.slug)
                         break
@@ -284,39 +296,54 @@ export class Journey extends MapElement {
 
             })
 
-            // If we need to have POIs on limits only (ie first on first track, last of last track)
-            // we adapt the visibility
-
+            // If we need to have Flags  on limits only (ie first on first track, last of last track)
+            // we adapt the visibility for the flagged POIs
             if (this.poisOnLimits) {
                 justTracks.forEach((poi, index) => {
-                    const last = poi.split('#')[2]
-                    if (last.startsWith(FLAG_START) || last.startsWith(FLAG_STOP)) {
-                        this.pois.get(poi).visible = index === 0 || index === justTracks.length - 1
+                    if (poi.startsWith(POI_FLAG)) {
+                        this.pois.get(poi).visible = (index === 0 || index === (justTracks.length - 1))
                     }
                 })
 
             }
+            let index = 0
         }
     }
 
     /**
      * Define the slug of a POI
      *
-     * @param id {string|number}
-     * @return {`poi#${string}#${string}`}
+     * @param suffix {string|number}
+     * @param prefix  {string|number} optional (default = poi)
+     *
+     * @return {string}
      */
-    #setPOISlug = (id) => {
-        return `poi#${this.slug}#${_.app.slugify(id)}`
+    #setPOISlug = (suffix, prefix = 'poi') => {
+        return this.#setSlug(suffix, prefix)
     }
 
     /**
      * Define the slug of a track
+     **
+     * @param suffix {string|number}
+     * @param prefix {string|number}
      *
-     * @param id {string|number}
-     * @return {`track#${string}#${string}`}
+     * @return {string}
      */
-    #setTrackSlug = (id) => {
-        return `track#${this.slug}#${_.app.slugify(id)}`
+    #setTrackSlug = (suffix, prefix = 'track') => {
+        return this.#setSlug(suffix, prefix)
+    }
+
+    /**
+     * Define ageneric slug
+     *
+     * @param suffix {string|number}
+     * @param prefix {string|number}
+     *
+     * @return {string}
+     */
+    #setSlug = (suffix, prefix = '') => {
+        return `${_.app.slugify(prefix)}#${this.slug}#${_.app.slugify(suffix)}`
     }
 
     /**
@@ -380,17 +407,27 @@ export class Journey extends MapElement {
      * @param mode
      * @return {Promise<void>}
      */
-    draw = async (action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE) => {
-        // Draw Tracks
+    draw = async ({action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE}) => {
         const tracks = []
+        const pois = []
+
+        // Draw Tracks
         for (const track of this.tracks.values()) {
-            tracks.push(await track.draw(action, NO_FOCUS))
+            tracks.push(await track.draw({action: action, mode: NO_FOCUS, forcedToHide: !this.visible}))
+            // Draw Flags
+            for (const poi of this.pois.values()) {
+                if (poi.parent.slug === track.slug) {
+                    pois.push(await poi.draw(!track.visible))
+                }
+            }
         }
 
         //Draw POIs
-        const pois = []
         for (const poi of this.pois.values()) {
-            pois.push(await poi.draw())
+            console.log(poi)
+            if (poi.parent.slug === this.slug) {
+                pois.push(await poi.draw(!this.visible))
+            }
         }
 
         await Promise.all(pois)
@@ -399,6 +436,8 @@ export class Journey extends MapElement {
         if (mode === FOCUS_ON_FEATURE) {
             this.focus()
         }
+
+
     }
 
     focus = () => {
@@ -415,6 +454,8 @@ export const GEOJSON = 'geojson'
 
 export const FLAG_START = 'start'
 export const FLAG_STOP = 'stop'
+export const POI_FLAG = 'flag'
+export const POI_STD = 'poi'
 
 export const NO_DEM_SERVER = 'none'
 export const SIMULATE_ALTITUDE = 'simulate-altitude'

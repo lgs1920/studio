@@ -37,13 +37,13 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
 
                 // Force editor to close but remains usable
                 mainStore.components.journeyEditor.usable = true
-                await theJourney.draw()
+                await theJourney.draw({})
 
             } else {
                 // It exists, we notify it
                 UINotifier.notifyWarning({
-                    caption: `This track has already been loaded!`,
-                    text: 'You can draw another one !',
+                    caption: `This journey has already been loaded!`,
+                    text: 'Please select another one !',
                 })
             }
         }

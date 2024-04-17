@@ -1,5 +1,6 @@
 import { faLocationDot }          from '@fortawesome/pro-solid-svg-icons'
 import { POI }                    from '../../classes/POI'
+import { NOT_AN_ENTITY }          from './EntitiesUtils'
 import { JUST_ICON, MARKER_SIZE } from './MarkerUtils'
 
 export const WANDER_MODE_MARKER = 'wander-mode'
@@ -19,7 +20,10 @@ export class Wander {
             marker = new POI({
                     name: WANDER_MODE_MARKER,
                     slug: _.app.slugify(WANDER_MODE_MARKER),
-                    parent: data.picked.track.slug,
+                    parent: {
+                        slug: data.picked.track.slug,
+                        type: NOT_AN_ENTITY,
+                    },
                     id: WANDER_MODE_MARKER,
                     coordinates: [data.picked.longitude, data.picked.latitude],
                     altitude: 0,

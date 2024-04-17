@@ -14,50 +14,25 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
-    const several = mainSnapshot.list.length > 1
+    const tracks = vt3d.theJourney.tracks
+    const several = tracks.size > 1
 
-    /**
-     * Get tracks from the snap that contains only slugs
-     */
-    let tracks = []
-    mainSnapshot.list.forEach(slug => {
-        tracks.push(vt3d.getJourneyBySlug(slug))
-    })
-
-    /**
-     * Sort the list
-     *
-     * //TODO other criterias
-     */
-    if (several) {
-        // sort list alphabetically
-        tracks.sort(function (a, b) {
-            if (a.title < b.title) {
-                return 1
-            }
-            if (a.title > b.title) {
-                return -1
-            }
-            return 0
-        })
-    }
-
-    // set Default
-    mainStore.theJourney = vt3d.theJourney?.slug
-
-
+    // if (several) {
+    // We do not sort the list
+    // TODO : Check if it right to take tracks in the order in which they were created.
+    // }
+    
     return (
         <>
             {
                 several &&
                 <SlSelect hoist label={props.label}
-                          value={editorSnapshot.journey.slug}
+                          value={editorSnapshot.track ?? Array.from(tracks.values())[0].slug}
                           onSlChange={props.onChange}
                           key={mainSnapshot.keys.track.list}
                 >
                     <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
-
-                    {tracks.map(track =>
+                    {Array.from(tracks.values()).map(track =>
                         <SlOption key={track.title} value={track.slug}>
                             {track.visible
                              ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/>

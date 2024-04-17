@@ -1,7 +1,7 @@
 import { DateTime }                                            from 'luxon'
 import { FEATURE_COLLECTION, FEATURE_LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
 import { Mobility }                                            from '../Utils/Mobility'
-import { FOCUS_ON_FEATURE }                                    from './Journey'
+import { FOCUS_ON_FEATURE, INITIAL_LOADING }                   from './Journey'
 
 
 const CONFIGURATION = '../config.json'
@@ -23,7 +23,8 @@ export class Track {
     hasTime
     hasAltitude
     content     // GEo JSON
-
+    flags = new Map()
+    pois
 
     constructor(title, options = {}) {
         this.title = title
@@ -41,7 +42,7 @@ export class Track {
         this.segments = options.segments ?? 0
         this.content = options.content
 
-
+        this.getAllFlags()
     }
 
     static getMarkerInformation = (markerId) => {
@@ -53,6 +54,9 @@ export class Track {
             }
         }
         return false
+    }
+
+    getAllFlags = () => {
 
     }
 
@@ -266,8 +270,8 @@ export class Track {
      *
      * @return {Promise<void>}
      */
-    draw = async (action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE) => {
-        await TrackUtils.loadTrack(this, action, mode)
+    draw = async ({action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
+        await TrackUtils.draw(this, {action: action, mode: mode, forcedToHide: forcedToHide})
         // Focus on track
         if (mode === FOCUS_ON_FEATURE) {
             TrackUtils.focus(this)
