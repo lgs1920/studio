@@ -424,7 +424,6 @@ export class Journey extends MapElement {
 
         //Draw POIs
         for (const poi of this.pois.values()) {
-            console.log(poi)
             if (poi.parent.slug === this.slug) {
                 pois.push(await poi.draw(!this.visible))
             }
