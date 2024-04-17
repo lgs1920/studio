@@ -372,10 +372,13 @@ export class TrackUtils {
             vt3d.theJourney = vt3d.journeys.get(current)
             vt3d.addToEditor(vt3d.theJourney)
         }
-        // Draw all tracks but show only the current one
-        await vt3d.journeys.forEach(async journey => {
-            await journey.draw(INITIAL_LOADING, journey.slug === current ? FOCUS_ON_FEATURE : NO_FOCUS)
-        })
+
+        // Draw all journeys but show only the current one
+        const items = []
+        for (const journey of vt3d.journeys.values()) {
+            items.push(journey.draw({mode: journey.slug === current ? FOCUS_ON_FEATURE : NO_FOCUS}))
+        }
+        await Promise.all(items)
 
     }
 
