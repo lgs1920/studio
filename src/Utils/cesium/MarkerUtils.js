@@ -76,7 +76,7 @@ export class MarkerUtils {
         const backgroundColor = Cesium.Color.fromCssColorString(poi.backgroundColor)
         const foregroundColor = poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : undefined
 
-
+        console.log(poi)
         switch (poi.type) {
             case PIN_CIRCLE:
                 return await dataSource.entities.add({
