@@ -379,7 +379,6 @@ export class TrackUtils {
             items.push(journey.draw({mode: journey.slug === current ? FOCUS_ON_FEATURE : NO_FOCUS}))
         }
         await Promise.all(items)
-
     }
 
     /**
