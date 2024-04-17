@@ -52,8 +52,20 @@ export class POI {
         return JSON.parse(JSON.stringify(source))
     }
 
+    /**
+     * Get the icon identifier and return the icon definition
+     *
+     * If the icon is not a string, we assume that it is the
+     * icon definition already saved in DB
+     *
+     * @param icon
+     * @return {*}
+     */
     defineIcon = (icon) => {
-        return MarkerUtils.setIcon(icon)
+        if (typeof icon === 'string') {
+            return MarkerUtils.setIcon(icon)
+        }
+        return icon
     }
 
     draw = async (forcedToHide = false) => {
