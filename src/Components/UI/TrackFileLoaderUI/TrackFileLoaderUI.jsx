@@ -31,7 +31,11 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
 
                 // we need to saveToDB some information
                 theJourney.addToContext()
-                vt3d.addToEditor(theJourney)
+                theJourney.addToEditor()
+
+                const theTrack = vt3d.theJourney.tracks.entries().next().value[1]
+                theTrack.addToEditor()
+
                 await theJourney.saveToDB()
                 await theJourney.saveOriginDataToDB()
 

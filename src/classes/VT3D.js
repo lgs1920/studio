@@ -27,8 +27,8 @@ export class VT3D {
         // Get the first as current theJourney
         if (this.journeys.size) {
             const first = Array.from(this.#theJourneyEditorProxy.journeys)[0]
-            this.mainProxy.theJourney = first
-            this.addToEditor(this.first)
+            this.mainProxytheJourney = first
+            first.addToEditor()
         }
 
         this.floatingMenu = {
@@ -90,7 +90,20 @@ export class VT3D {
             this.db.journeys.delete(CURRENT_JOURNEY, CURRENT_STORE).then()
             return
         }
-        this.db.journeys.put(CURRENT_JOURNEY, journey.slug, CURRENT_STORE).then(this.addToEditor(journey))
+        this.db.journeys.put(CURRENT_JOURNEY, journey.slug, CURRENT_STORE).then(journey.addToEditor())
+    }
+
+    get theTrack() {
+        return this.#mainProxy.theTrack
+    }
+
+    set theTrack(track) {
+        this.#mainProxy.theTrack = track
+        if (track === null) {
+            this.db.journeys.delete(CURRENT_TRACK, CURRENT_STORE).then()
+            return
+        }
+        this.db.journeys.put(CURRENT_TRACK, track.slug, CURRENT_STORE).then(track.addToEditor())
     }
 
     get mainProxy() {
@@ -101,10 +114,26 @@ export class VT3D {
         return this.#theJourneyEditorProxy
     }
 
+    /**
+     * Get a journey by its slug
+     *
+     * @param slug
+     * @return {Journey}
+     */
     getJourneyBySlug(slug) {
         return this.journeys.get(slug)
     }
 
+    /**
+     * Get a track from the current Journey
+     *                      -------
+     *
+     * @param slug
+     * @return {Track}
+     */
+    getTrackBySlug(slug) {
+        return this.theJourney.tracks.get(slug)
+    }
 
     /**
      * Save or replace journey in context
@@ -126,6 +155,7 @@ export class VT3D {
         }
 
     }
+
     /**
      * Add this theJourney to the application context
      *

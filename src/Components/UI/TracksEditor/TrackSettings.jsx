@@ -2,18 +2,17 @@ import { faTrashCan }    from '@fortawesome/pro-regular-svg-icons'
 import { faLocationDot } from '@fortawesome/pro-solid-svg-icons'
 
 import {
-    SlCard, SlColorPicker, SlDivider, SlIcon, SlInput, SlProgressBar, SlSwitch, SlTooltip,
-}                        from '@shoelace-style/shoelace/dist/react'
-import { useSnapshot }   from 'valtio'
-import { NO_DEM_SERVER } from '../../../classes/Journey'
+    SlCard, SlColorPicker, SlDivider, SlIcon, SlInput, SlRange, SlSwitch, SlTooltip,
+}                      from '@shoelace-style/shoelace/dist/react'
+import { useSnapshot } from 'valtio'
+import { Journey }     from '../../../classes/Journey'
 
-import { POI }                from '../../../classes/POI'
-import { TrackUtils }         from '../../../Utils/cesium/TrackUtils'
-import { FA2SL }              from '../../../Utils/FA2SL'
-import { TracksEditorUtils }  from '../../../Utils/TracksEditorUtils'
-import { UINotifier }         from '../../../Utils/UINotifier'
-import { useConfirm }         from '../Modals/ConfirmUI'
-import { DEMServerSelection } from '../VT3D_UI/DEMServerSelection'
+import { POI }               from '../../../classes/POI'
+import { TrackUtils }        from '../../../Utils/cesium/TrackUtils'
+import { FA2SL }             from '../../../Utils/FA2SL'
+import { TracksEditorUtils } from '../../../Utils/TracksEditorUtils'
+import { UINotifier }        from '../../../Utils/UINotifier'
+import { useConfirm }        from '../Modals/ConfirmUI'
 
 export const TrackSettings = function TrackSettings() {
 
@@ -166,21 +165,6 @@ export const TrackSettings = function TrackSettings() {
         await rebuildTrack(UPDATE_TRACK_SILENTLY)
     })
 
-    /**
-     * Change DEM server
-     *
-     * @type {setDEMServer}
-     */
-    const setDEMServer = (async event => {
-        editorStore.journey.DEMServer = event.target.value
-        editorStore.longTask = editorStore.journey.DEMServer !== NO_DEM_SERVER
-        TracksEditorUtils.renderjourney.settings()
-        // await vt3d.theJourney.computeAll()
-        // // Then we redraw the theJourney
-        // await vt3d.theJourney.showAfterHeightSimulation()
-
-        await rebuildTrack(UPDATE_TRACK_THEN_DRAW)
-    })
 
     /**
      * Remove track
@@ -252,26 +236,19 @@ export const TrackSettings = function TrackSettings() {
      */
     const rebuildTrack = async (action) => {
 
-        // unproxify
-        const unproxyfied = JSON.parse(JSON.stringify(editorStore.journey))
-
-        // We clone but keep the same slug and pois
-        const track = Journey.clone(unproxyfied, {
-            slug: editorStore.journey.slug,
-            pois: editorStore.journey.pois,
-        })
-        await track.computeAll()
-        vt3d.saveTrack(track)
+        const journey = Journey.deserialize(editorStore.journey.serialize())
+        await journey.computeAll()
+        vt3d.saveJourney(journey)
         // saveToDB toDB
-        await track.toDB()
+        await journey.toDB()
 
         //  vt3d.viewer.dataSources.removeAll()
         if (action !== UPDATE_TRACK_SILENTLY) {
-            await track.loadAfterNewSettings(action)
+            await journey.loadAfterNewSettings(action)
         } else {
             TrackUtils.focus(track)
         }
-        return track
+        return journey
     }
 
     /**
@@ -302,25 +279,16 @@ export const TrackSettings = function TrackSettings() {
 
 
     return (<>
-        {editorSnapshot.journey &&
+        {editorSnapshot.track &&
             <SlCard id="track-settings" key={vt3d.mainProxy.components.journeyEditor.keys.journey.track}>
                 <div id={'track-line-settings-global'}>
                     {/* Change visible name (title) */}
                     <div>
-                        <SlInput id="track-title" label="Title:" value={editorSnapshot.journey.title}
+                        <SlInput id="track-title" label="Title:" value={editorSnapshot.track.title}
                                  onSlChange={setTitle}
                         />
                     </div>
 
-                    {/* Add DEM server selection if we do not have height initially (ie in the track file) */
-                        !editorSnapshot.journey.hasAltitude && <div>
-                            <DEMServerSelection
-                                default={editorSnapshot.journey?.DEMServer ?? NO_DEM_SERVER}
-                                label={'Simulate Altitude:'}
-                                onChange={setDEMServer}
-                            />
-                            {editorSnapshot.longTask && <SlProgressBar indeterminate/>}
-                        </div>}
                     {/* Journey line settings */}
                     <div id="track-line-settings">
                         <div>
@@ -335,12 +303,12 @@ export const TrackSettings = function TrackSettings() {
                                 />
                             </SlTooltip>
                             <SlTooltip content="Thickness">
-                                {/* <SlRange min={1} max={10} step={1} */}
-                                {/*          value={editorSnapshot.journey.thickness} */}
-                                {/*          style={{'--thumb-size': '1rem'}} */}
-                                {/*          onSlChange={setThickness} */}
-                                {/*          disabled={!editorSnapshot.journey.visible} */}
-                                {/* /> */}
+                                <SlRange min={1} max={10} step={1}
+                                         value={editorSnapshot.journey.thickness}
+                                         style={{'--thumb-size': '1rem'}}
+                                         onSlChange={setThickness}
+                                         disabled={!editorSnapshot.journey.visible}
+                                />
                             </SlTooltip>
 
                             <SlDivider id="test-line" style={{

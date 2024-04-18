@@ -360,23 +360,36 @@ export class TrackUtils {
         const journeys = await Journey.readAllFromDB()
         if (journeys.length === 0) {
             vt3d.theJourney = null
+            vt3d.theTrack = null
+            vt3d.thePOI = null
             return
         }
-        // Current track slug
-        let current = await vt3d.db.journeys.get(CURRENT_JOURNEY, CURRENT_STORE)
-        // Set current if it exists in tracks. If not, let's use the first track or null
-        const tmp = journeys.filter(value => value.slug === current)
-        current = (tmp.length > 0) ? tmp[0].slug : journeys[0].slug
+        // Current Journey
+        let currentJourney = await vt3d.db.journeys.get(CURRENT_JOURNEY, CURRENT_STORE)
+        // Set current if it exists in journeys. If not, let's use the first track or null
+        const tmp = journeys.filter(value => value.slug === currentJourney)
+        currentJourney = (tmp.length > 0) ? tmp[0].slug : journeys[0].slug
 
-        if (current) {
-            vt3d.theJourney = vt3d.journeys.get(current)
-            vt3d.addToEditor(vt3d.theJourney)
+        if (currentJourney) {
+            vt3d.theJourney = vt3d.journeys.get(currentJourney)
+            vt3d.theJourney.addToEditor()
         }
+
+        // Current Track
+        let currentTrack = await vt3d.db.journeys.get(CURRENT_TRACK, CURRENT_STORE)
+        // Get the current track or the first
+        if (vt3d.theJourney.tracks.has(currentTrack)) {
+            vt3d.theTrack = vt3d.theJourney.tracks.get(currentTrack)
+        } else {
+            vt3d.theTrack = vt3d.theJourney.tracks.entries().next().value[1]
+        }
+        vt3d.theTrack.addToEditor()
+
 
         // Draw all journeys but show only the current one
         const items = []
         for (const journey of vt3d.journeys.values()) {
-            items.push(journey.draw({mode: journey.slug === current ? FOCUS_ON_FEATURE : NO_FOCUS}))
+            items.push(journey.draw({mode: journey.slug === currentJourney ? FOCUS_ON_FEATURE : NO_FOCUS}))
         }
         await Promise.all(items)
     }

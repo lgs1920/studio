@@ -1,7 +1,7 @@
-import { DateTime }                                            from 'luxon'
-import { FEATURE_COLLECTION, FEATURE_LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
-import { Mobility }                                            from '../Utils/Mobility'
-import { FOCUS_ON_FEATURE, INITIAL_LOADING }                   from './Journey'
+import { DateTime }                                             from 'luxon'
+import { FEATURE_COLLECTION, FEATURE_LINE_STRING, TrackUtils }  from '../Utils/cesium/TrackUtils'
+import { Mobility }                                             from '../Utils/Mobility'
+import { FOCUS_ON_FEATURE, INITIAL_LOADING, SIMULATE_ALTITUDE } from './Journey'
 
 
 const CONFIGURATION = '../config.json'
@@ -293,4 +293,35 @@ export class Track {
     loadAfterNewSettings = async (mode) => {
         await this.draw(RE_LOADING, mode)
     }
+
+    addToEditor = () => {
+        vt3d.theJourneyEditorProxy.track = this
+    }
+
+    /**
+     * Save or replace journey in context
+     *
+     * @param journey
+     */
+    saveInContext = () => {
+        const index = this.mainProxy.components.journeyEditor.list.findIndex(item => item === journey.slug)
+        if (index >= 0) {
+            // Look if this theJourney already exist in context
+            this.journeys.set(journey.slug, journey)
+            this.mainProxy.components.journeyEditor.list[index] = journey.slug
+        } else {                    // Nope,we add it
+            this.journeys.set(journey.slug, journey)
+            this.mainProxy.components.journeyEditor.list.push(journey.slug)
+        }
+        this.mainProxy.components.journeyEditor.usable = true
+
+    }
+    addToContext = (setToCurrent = true) => {
+        // vt3d.saveJourney(this)
+        if (setToCurrent) {
+            vt3d.theTrack = this
+        }
+    }
+
+
 }

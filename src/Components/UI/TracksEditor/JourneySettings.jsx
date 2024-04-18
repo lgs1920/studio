@@ -1,20 +1,19 @@
 import { faLocationPin, faLocationPinSlash, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
 
-import { SlIcon, SlInput, SlProgressBar, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { sprintf }                                   from 'sprintf-js'
-import { useSnapshot }                               from 'valtio'
-import { NO_DEM_SERVER }                             from '../../../classes/Journey'
+import { SlIcon, SlInput, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { sprintf }                    from 'sprintf-js'
+import { useSnapshot }                from 'valtio'
+import { NO_DEM_SERVER }              from '../../../classes/Journey'
 
-import { POI }                from '../../../classes/POI'
-import { TrackUtils }         from '../../../Utils/cesium/TrackUtils'
+import { POI }               from '../../../classes/POI'
+import { TrackUtils }        from '../../../Utils/cesium/TrackUtils'
 //import { JourneyUtils }        from '../../../Utils/cesium/JourneyUtils'
-import { FA2SL }              from '../../../Utils/FA2SL'
-import { TracksEditorUtils }  from '../../../Utils/TracksEditorUtils'
+import { FA2SL }             from '../../../Utils/FA2SL'
+import { TracksEditorUtils } from '../../../Utils/TracksEditorUtils'
 //import { TracksEditorUtils } from '../../../Utils/TracksEditorUtils'
-import { UINotifier }         from '../../../Utils/UINotifier'
-import { useConfirm }         from '../Modals/ConfirmUI'
-import { Visibility }         from '../Visibility'
-import { DEMServerSelection } from '../VT3D_UI/DEMServerSelection'
+import { UINotifier }        from '../../../Utils/UINotifier'
+import { useConfirm }        from '../Modals/ConfirmUI'
+import { Visibility }        from '../Visibility'
 
 export const JourneySettings = function JourneySettings() {
 
@@ -224,14 +223,7 @@ export const JourneySettings = function JourneySettings() {
      */
     const rebuildJourney = async (action) => {
 
-        // unproxify
-        const unproxyfied = JSON.parse(JSON.stringify(editorStore.journey))
-
-        // We clone but keep the same slug and pois
-        const journey = Journey.clone(unproxyfied, {
-            slug: editorStore.journey.slug,
-            pois: editorStore.journey.pois,
-        })
+        const journey = Journey.deserialize(editorStore.journey.serialize())
         await journey.computeAll()
         vt3d.saveJourney(journey)
         // saveToDB toDB
@@ -274,14 +266,14 @@ export const JourneySettings = function JourneySettings() {
                 </div>
 
                 {/* Add DEM server selection if we do not have height initially (ie in the journey file) */}
-                <div>
-                    <DEMServerSelection
-                        default={editorSnapshot.journey?.DEMServer ?? NO_DEM_SERVER}
-                        label={'Elevation:'}
-                        onChange={setDEMServer}
-                    />
-                    {editorSnapshot.longTask && <SlProgressBar indeterminate/>}
-                </div>
+                {/* <div> */}
+                {/*     <DEMServerSelection */}
+                {/*         default={editorSnapshot.journey?.DEMServer ?? NO_DEM_SERVER} */}
+                {/*         label={'Elevation:'} */}
+                {/*         onChange={setDEMServer} */}
+                {/*     /> */}
+                {/*     {editorSnapshot.longTask && <SlProgressBar indeterminate/>} */}
+                {/* </div> */}
                 {/* Journey line settings */}
 
 

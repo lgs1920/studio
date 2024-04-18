@@ -288,7 +288,6 @@ export class Journey extends MapElement {
                             verticalOrigin: POI_VERTICAL_ALIGN_TOP,
                             foregroundColor: vt3d.configuration.journey.pois.stop.color,
                         }
-                        console.log(stopParameters)
                         this.pois.set(stopParameters.slug, new POI({...common, ...stopParameters}))
                         justTracks.push(stopParameters.slug)
                         break
@@ -396,6 +395,10 @@ export class Journey extends MapElement {
         if (setToCurrent) {
             vt3d.theJourney = this
         }
+    }
+
+    addToEditor = () => {
+        vt3d.theJourneyEditorProxy.journey = this
     }
 
     /**
