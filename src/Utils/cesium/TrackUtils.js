@@ -476,7 +476,6 @@ export class TrackUtils {
 
         dataSources.forEach(dataSource => {
             dataSource.entities.values.forEach(entity => {
-                console.log(entity.id)
                 if (entity.id.startsWith(POI_FLAG)) {
                     const poi = journey.pois.get(entity.id)
                     entity.show = visibility ? poi.visible : false
