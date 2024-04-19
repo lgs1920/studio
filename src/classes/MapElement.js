@@ -13,13 +13,11 @@ export class MapElement {
      *
      * If an instance has been given, we return the instance updated.
      *
-     * @param {Object|string} object
      * @param {boolean} full  if true it takes into account __type to
      *                        transform the properties in the right type.
      * @return {Object}
      */
     static deserialize = (props) => {
-
         let object = props.object
         const full = props.full ?? true
         let instance = props.instance ?? {}
@@ -29,9 +27,15 @@ export class MapElement {
         }
 
         for (let prop in object) {
-            if (full && object[prop]['__type'] === 'Map') {
-                const myMap = new Map(Object.entries(object[prop]))
-                myMap.delete('__type')
+            if (full && object[prop] instanceof Array && object[prop].some(function (item) {
+                return item['__type'] === 'Map'
+            })) {
+                const myMap = new Map()
+                object[prop].forEach((item) => {
+                    if (item.key) { // avoid __type
+                        myMap.set(item.key, item.value)
+                    }
+                })
                 instance[prop] = myMap
             } else {
                 instance[prop] = object[prop]
@@ -42,46 +46,22 @@ export class MapElement {
     }
 
     /**
-     * Clone an object
-     *
-     * @param properties are forced to the clone object
-     * @param Class
-     */
-    clone = (properties) => {
-        // we deep clone the object
-        let cloned = _.app.deepClone(this)
-        // If a property __class exists we us it for prototyping the new class
-        if (properties.__class) {
-            Object.setPrototypeOf(cloned, properties.__class)
-        }
-
-        // then add props
-        for (const property in properties) {
-            if (properties.hasOwnProperty(property) && property !== '__class') {
-                cloned[property] = properties[property]
-            }
-        }
-        return cloned
-    }
-
-    /**
      * Serialize an object
      *
+     * @param object
      * @param {boolean} json return json string if true else object
      * @return {Object | string} JSON
      */
-    serialize = (json = false) => {
-        let result = {}
-        for (let prop in this) {
-            if (this[prop] instanceof Map) {
-                result[prop] = Object.fromEntries(this[prop])
-                result[prop]['__type'] = 'Map'
-            } else {
-                result[prop] = this[prop]
+    static serialize = (object, json = false) => {
+        const result = _.app.deepClone(object)
+        for (let prop in object) {
+            if (object[prop] instanceof Map) {
+                result[prop] = Array.from(object[prop], ([key, value]) => {
+                    return {key, value}
+                })
+                result[prop].push({__type: 'Map'})
             }
         }
-        result['__class'] = this.constructor.name
         return json ? JSON.stringify(result) : JSON.parse(JSON.stringify(result))
     }
-
 }
