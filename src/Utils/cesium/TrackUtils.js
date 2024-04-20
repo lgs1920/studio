@@ -7,6 +7,9 @@ import {
     FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD, RE_LOADING, SIMULATE_ALTITUDE,
 }                            from '../../classes/Journey'
 import {
+    Track,
+}                            from '../../classes/Track'
+import {
     CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK,
 }                            from '../../classes/VT3D'
 import {

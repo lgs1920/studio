@@ -1,4 +1,4 @@
-import { MarkerUtils, NO_MARKER_COLOR, PIN_CIRCLE } from '../Utils/cesium/MarkerUtils'
+import { MarkerUtils, PIN_CIRCLE } from '../Utils/cesium/MarkerUtils'
 
 export class POI {
 
@@ -32,8 +32,8 @@ export class POI {
         this.coordinates = options.coordinates || {}
         this.altitude = options.altitude || false
         this.time = options.time || false
-        this.backgroundColor = options.backgroundColor ?? NO_MARKER_COLOR
-        this.foregroundColor = options.foregroundColor ?? vt3d.configuration.poi.color
+        this.backgroundColor = options.backgroundColor ?? vt3d.POI_TRANSPARENT_COLOR
+        this.foregroundColor = options.foregroundColor ?? vt3d.POI_DEFAULT_COLOR
         this.border = options.border ?? 0
         this.text = options.text ?? undefined
         this.icon = this.defineIcon(options.icon ?? undefined)

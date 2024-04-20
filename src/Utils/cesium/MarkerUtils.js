@@ -14,10 +14,6 @@ export const PIN_COLOR = 3
 export const PIN_CIRCLE = 4
 export const JUST_ICON = 5
 
-export const MARKER_SIZE = 16
-
-export const NO_MARKER_COLOR = 'transparent'
-
 export class MarkerUtils {
     static verticalOrigin = (origin => {
         const location = {
@@ -119,7 +115,7 @@ export class MarkerUtils {
         const svg = (new DOMParser()).parseFromString(html, 'image/svg+xml').querySelector('svg')
         // add foreground
         svg.querySelector('path').setAttribute('fill', marker.foregroundColor)
-        if (marker.backgroundColor !== NO_MARKER_COLOR) {
+        if (marker.backgroundColor !== vt3d.POI_TRANSPARENT_COLOR) {
             // add background
             const rectangle = document.createElement('rect')
             rectangle.setAttribute('rx', 10)

@@ -9,7 +9,7 @@ import {
     JOURNEY_TYPE, TRACK_TYPE,
 }                                       from '../Utils/cesium/EntitiesUtils'
 import {
-    JUST_ICON, MARKER_SIZE,
+    JUST_ICON,
 }                                       from '../Utils/cesium/MarkerUtils'
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
@@ -95,6 +95,7 @@ export class Journey extends MapElement {
         instance.pois.forEach((poi, slug) => {
             instance.pois.set(slug, new POI(poi))
         })
+
         // Transform Tracks from object to class
         instance.tracks.forEach((track, slug) => {
             instance.tracks.set(slug, new Track(track.title, track))
@@ -103,8 +104,8 @@ export class Journey extends MapElement {
 
     }
 
-    serialize(json = false) {
-        return super.serialize(json)
+    static unproxify = (object) => {
+        return super.serialize({...object, ...{__class: Journey}})
     }
 
     /**
@@ -174,7 +175,7 @@ export class Journey extends MapElement {
                         slug: this.#setTrackSlug(feature.properties.name),
                         hasTime: this.#hasTime(feature.properties),
                         hasAltitude: this.#hasAltitude(geometry.coordinates),
-                        description: feature.properties.desc,
+                        description: feature.properties.desc ?? '',
                         segments: geometry.coordinates.length,
                         content: feature,
                         visible: true,
@@ -210,7 +211,7 @@ export class Journey extends MapElement {
                 const geometry = getGeom(feature)
                 const common = {
                     description: feature.properties.desc,
-                    size: MARKER_SIZE,
+                    size: vt3d.POI_DEFAULT_SIZE,
                     visible: true,
                 }
 
@@ -361,7 +362,7 @@ export class Journey extends MapElement {
      * @return {Promise<void>}
      */
     saveToDB = async () => {
-        await vt3d.db.journeys.put(this.slug, this.serialize(), JOURNEYS_STORE)
+        await vt3d.db.journeys.put(this.slug, Journey.unproxify(this), JOURNEYS_STORE)
     }
 
     /**
@@ -446,6 +447,17 @@ export class Journey extends MapElement {
         TrackUtils.focus({content: flatten(this.geoJson), slug: this.slug})
     }
 
+    computeAll = () => {
+        //TODO
+    }
+
+    showAfterHeightSimulation = async () => {
+        await this.draw(SIMULATE_ALTITUDE)
+    }
+
+    loadAfterNewSettings = async (mode) => {
+        await this.draw({action: RE_LOADING, mode: mode})
+    }
 
 }
 

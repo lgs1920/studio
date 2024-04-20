@@ -1,18 +1,12 @@
-import { faTrashCan }    from '@fortawesome/pro-regular-svg-icons'
-import { faLocationDot } from '@fortawesome/pro-solid-svg-icons'
-
-import {
-    SlCard, SlColorPicker, SlDivider, SlIcon, SlInput, SlRange, SlSwitch, SlTooltip,
-}                      from '@shoelace-style/shoelace/dist/react'
-import { useSnapshot } from 'valtio'
-import { Journey }     from '../../../classes/Journey'
-
-import { POI }               from '../../../classes/POI'
-import { TrackUtils }        from '../../../Utils/cesium/TrackUtils'
-import { FA2SL }             from '../../../Utils/FA2SL'
-import { TracksEditorUtils } from '../../../Utils/TracksEditorUtils'
-import { UINotifier }        from '../../../Utils/UINotifier'
-import { useConfirm }        from '../Modals/ConfirmUI'
+import { faLocationPin, faLocationPinSlash }        from '@fortawesome/pro-solid-svg-icons'
+import { SlInput, SlTextarea, SlTooltip }           from '@shoelace-style/shoelace/dist/react'
+import { useSnapshot }                              from 'valtio'
+import { FLAG_START, FLAG_STOP, Journey, POI_FLAG } from '../../../classes/Journey'
+import { Track }                                    from '../../../classes/Track'
+import { TrackUtils }                               from '../../../Utils/cesium/TrackUtils'
+import { TracksEditorUtils }                        from '../../../Utils/TracksEditorUtils'
+import { useConfirm }                               from '../Modals/ConfirmUI'
+import { SwitchStateIcon }                          from '../SwitchStateIcon'
 
 export const TrackSettings = function TrackSettings() {
 
@@ -28,7 +22,7 @@ export const TrackSettings = function TrackSettings() {
     /**
      * Remove track confirmation
      */
-    const [ConfirmRemoveTrackDialog, confirmRemoveTrack] = useConfirm(`Remove "${editorSnapshot.journey.title}" ?`, 'Are you sure you want to removeFromDB this track ?')
+    const [ConfirmRemoveTrackDialog, confirmRemoveTrack] = useConfirm(`Remove "${editorSnapshot.journey.title}" ?`, 'Are you sure you want to remove this track ?')
 
     /**
      * Change track Color
@@ -36,9 +30,12 @@ export const TrackSettings = function TrackSettings() {
      * @type {setColor}
      */
     const setColor = (async event => {
-        editorStore.journey.color = event.target.value
-        TracksEditorUtils.renderJourneysList()
-        await rebuildTrack(UPDATE_TRACK_THEN_DRAW)
+        editorStore.track.color = event.target.value
+        await updateTrack(UPDATE_TRACK_THEN_DRAW)
+    })
+
+    const setDescription = (async event => {
+
     })
 
     /**
@@ -53,15 +50,18 @@ export const TrackSettings = function TrackSettings() {
         // Title is empty, we force the former value
         if (title === '') {
             const field = document.getElementById('track-title')
-            field.value = editorStore.journey.title
+            field.value = editorStore.track.title
             return
         }
         // Let's check if the next title has not been already used for
         // another track.
-        editorStore.journey.title = Journey.defineUnicTitle(title)
-        await rebuildTrack(UPDATE_TRACK_SILENTLY)
 
-        TracksEditorUtils.renderJourneysList()
+        editorStore.track.title = _.app.singleTitle(title, Array.from(editorStore.journey.tracks.values()).map(track => {
+            return track.title
+        }))
+
+        await updateTrack(UPDATE_TRACK_THEN_DRAW)
+        TracksEditorUtils.renderTracksList()
     })
 
     /**
@@ -70,9 +70,9 @@ export const TrackSettings = function TrackSettings() {
      * @type {setThickness}
      */
     const setThickness = (async event => {
-        editorStore.journey.thickness = event.target.value
-        TracksEditorUtils.renderjourney.settings()
-        await rebuildTrack(UPDATE_TRACK_THEN_DRAW)
+        editorStore.track.thickness = event.target.value
+        await updateTrack(UPDATE_TRACK_THEN_DRAW)
+        TracksEditorUtils.renderTrackSettings()
     })
 
     /**
@@ -80,16 +80,16 @@ export const TrackSettings = function TrackSettings() {
      *
      * @type {setThickness}
      */
-    const setTrackVisibility = (async event => {
+    const setTrackVisibility = async visibility => {
         //saveToDB state
-        editorStore.journey.visible = event.target.checked
+        editorStore.track.visible = visibility
 
         // Change track visibility by changing it for each entity
-        if (event.target.checked) {
+        if (visibility) {
             // We show all tracks and created pois Except for start and stop,
             // for which the pre-masking status is maintained.
             dataSource.entities.values.forEach(entity => {
-                if (entity.id.startsWith('poi')) {
+                if (entity.id.startsWith(POI_FLAG)) {
                     if (entity.id.endsWith('start')) {
                         entity.show = poi.snap('start').visible
                     } else if (entity.id.endsWith('stop')) {
@@ -105,41 +105,21 @@ export const TrackSettings = function TrackSettings() {
         } else {
             // We hide all tracks and pois
             dataSource.entities.values.forEach(entity => {
-                entity.show = event.target.checked
+                entity.show = false
             })
         }
-        await rebuildTrack(UPDATE_TRACK_SILENTLY)
+        await updateTrack(UPDATE_TRACK_SILENTLY)
+        TracksEditorUtils.renderTrackSettings()
+    }
 
-        TracksEditorUtils.renderjourney.settings()
-        TracksEditorUtils.renderJourneysList()
+    const setStartFlagVisibility = (visibility) => {
+
+    }
+
+    const setStopFlagVisibility = (visibility => {
 
     })
 
-    /**
-     * Select the right poi whatever pois ie Array or Map
-     *
-     */
-    const poi = {
-        snap: (type) => {
-            if (!(editorSnapshot.journey.pois instanceof Map)) {
-                for (const poi of editorSnapshot.journey.pois) {
-                    if (poi.slug === type) {
-                        return POI.clone(poi)
-                    }
-                }
-            }
-            return editorSnapshot.journey.pois.get(type)
-        }, store: (type) => {
-            if (editorStore.journey.pois instanceof Map) {
-                return editorStore.journey.pois.get(type)
-            }
-            const poi = editorStore.journey.pois.filter(m => m.slug === type)
-            if (poi.length > 0) {
-                return poi[0]
-            }
-            return null
-        },
-    }
 
     /**
      * Change poi visibility
@@ -148,9 +128,7 @@ export const TrackSettings = function TrackSettings() {
      */
     const setMarkerVisibility = (async event => {
         // Which poi ?
-        const type = event.target.id.endsWith('start') ? 'start' : 'stop'
-        const poi = poi.store(type)
-
+        const type = event.target.id.endsWith(FLAG_START) ? FLAG_START : FLAG_STOP
 
         // Save state
         poi.store(type).visible = event.target.checked
@@ -162,71 +140,10 @@ export const TrackSettings = function TrackSettings() {
             }
         })
         // As there's no rebuild, let's saveToDB to DB now
-        await rebuildTrack(UPDATE_TRACK_SILENTLY)
+        await updateTrack(UPDATE_TRACK_SILENTLY)
+        TracksEditorUtils.renderTrackSettings()
+
     })
-
-
-    /**
-     * Remove track
-     */
-    const removeTrack = async () => {
-
-        const confirmation = await confirmRemoveTrack()
-
-        if (confirmation) {
-            const mainStore = vt3d.mainProxy.components.journeyEditor
-            const journey = editorStore.journey.slug
-            const removed = vt3d.getJourneyBySlug(journey)
-            // get Journey index
-            const index = mainStore.list.findIndex((list) => list === journey)
-
-            /**
-             * Do some cleaning
-             */
-            if (index >= 0) {
-                // In store
-                mainStore.list.splice(index, 1)
-                // In context
-                vt3d.journeys.delete(editorStore.journey.slug)
-
-                const dataSources = TrackUtils.getDataSourcesByName(editorStore.journey.slug)
-                dataSources.forEach(dataSource => {
-                    vt3d.viewer.dataSources.remove(dataSource)
-                })
-            }
-
-            // Remove track in DB
-            await editorStore.journey.removeFromDB()
-
-            /**
-             * If we have some other tracks, we'll take the first and render the editor.
-             * Otherwise we close the editing.
-             */
-            let text = ''
-            if (mainStore.list.length >= 1) {
-                // New current is the first.
-                vt3d.theJourney = vt3d.getJourneyBySlug(mainStore.list[0])
-                TrackUtils.focus(Array.from(vt3d.theJourney.tracks.values())[0])
-                TracksEditorUtils.renderJourneysList()
-                TracksEditorUtils.renderjourney.settings()
-            } else {
-                vt3d.theJourney = null
-                vt3d.cleanEditor()
-                text = 'There are no others available.'
-                mainStore.usable = false
-                mainStore.show = false
-
-            }
-
-            // Let's inform the user
-
-            UINotifier.notifySuccess({
-                caption: `<strong>${removed.title}</strong> removed !`, text: text,
-            })
-
-        }
-    }
-
 
     /**
      * Re build the track object,
@@ -234,25 +151,30 @@ export const TrackSettings = function TrackSettings() {
      *
      * @return {Journey}
      */
-    const rebuildTrack = async (action) => {
+    const updateTrack = async (action) => {
+        const journey = Journey.deserialize({object: Journey.unproxify(editorStore.journey)})
+        const track = Track.deserialize({object: Track.unproxify(editorStore.track)})
+        console.log(track.title)
+        // Update the journey
+        journey.tracks.set(track.slug, track)
 
-        const journey = Journey.deserialize(editorStore.journey.serialize())
-        await journey.computeAll()
+        // Prepare to draw
+        // await journey.computeAll()
         vt3d.saveJourney(journey)
-        // saveToDB toDB
-        await journey.toDB()
 
-        //  vt3d.viewer.dataSources.removeAll()
-        if (action !== UPDATE_TRACK_SILENTLY) {
-            await journey.loadAfterNewSettings(action)
-        } else {
-            TrackUtils.focus(track)
-        }
-        return journey
+        // saveToDB toDB
+        await journey.saveToDB()
+
+        // Show the journey
+        journey.loadAfterNewSettings(action).then(() => {
+            if (action !== UPDATE_TRACK_SILENTLY) {
+                TrackUtils.focus(track)
+            }
+        })
     }
 
     /**
-     * Marker Visibility component
+     * Marker SwitchStateIcon component
      * @param props
      *
      * @return {JSX.Element}
@@ -262,78 +184,74 @@ export const TrackSettings = function TrackSettings() {
     const MarkerVisibility = (props) => {
 
         return (<>
-            <div id={`visibility-poi-${props.type}`}>
-                <SlSwitch size="small"
-                          checked={poi.snap(props.type)?.visible}
-                          style={{'--thumb-size': '1rem'}}
-                          onSlChange={setMarkerVisibility}
-                          id={`switch-visibility-poi-${props.type}`}
-                > <span style={{color: vt3d.configuration.journey.pois[props.type].color}}>
-                            <SlIcon library="fa"
-                                    className={'fa-lg'}
-                                    name={FA2SL.set(faLocationDot)}/>
-                        </span>{props.label}</SlSwitch>
-            </div>
+            {/* <div id={`visibility-poi-${props.type}`}> */}
+            {/*     <SlSwitch size="small" */}
+            {/*               checked={poi.snap(props.type)?.visible} */}
+            {/*               style={{'--thumb-size': '1rem'}} */}
+            {/*               onSlChange={setMarkerVisibility} */}
+            {/*               id={`switch-visibility-poi-${props.type}`} */}
+            {/*     > <span style={{color: vt3d.configuration.journey.pois[props.type].color}}> */}
+            {/*                 <SlIcon library="fa" */}
+            {/*                         className={'fa-lg'} */}
+            {/*                         name={FA2SL.set(faLocationDot)}/> */}
+            {/*             </span>{props.label}</SlSwitch> */}
+            {/* </div> */}
         </>)
     }
 
+    const textVisibilityTrack = sprintf('%s Track', editorSnapshot.track.visible ? 'Hide' : 'Show')
+    const textVisibilityStartFlag = 'test'//sprintf('%s Flag', editorSnapshot.track.flags.start.visibility ? 'Hide' :
+                                          // 'Show')
+    const textVisibilityStopFlag = 'test'//sprintf('%s Flag', editorSnapshot.track.flags.stop.visibility ? 'Hide' :
+                                         // 'Show')
+
 
     return (<>
-        {editorSnapshot.track &&
-            <SlCard id="track-settings" key={vt3d.mainProxy.components.journeyEditor.keys.journey.track}>
-                <div id={'track-line-settings-global'}>
-                    {/* Change visible name (title) */}
-                    <div>
-                        <SlInput id="track-title" label="Title:" value={editorSnapshot.track.title}
-                                 onSlChange={setTitle}
-                        />
+            {editorSnapshot.track &&
+                <div id={'track-line-settings-global'} key={vt3d.mainProxy.components.journeyEditor.keys.journey.track}>
+                    <div id={'track-text-description'}>
+                        {/* Change visible name (title) */}
+                        <SlTooltip content={'Title'}>
+                            <SlInput id="track-title"
+                                     value={editorSnapshot.track.title}
+                                     onSlChange={setTitle}
+                            />
+                        </SlTooltip>
+                        {/* Change description */}
+                        <SlTooltip content={'Description'}>
+                            <SlTextarea row={2}
+                                        size={'small'}
+                                        id="track-description"
+                                        value={editorSnapshot.track.description}
+                                        onSlChange={setDescription}
+                            />
+                        </SlTooltip>
                     </div>
-
-                    {/* Journey line settings */}
-                    <div id="track-line-settings">
-                        <div>
-                            <SlTooltip content="Color">
-                                <SlColorPicker opacity
-                                               size={'small'}
-                                               label={'Color'}
-                                               value={editorSnapshot.journey.color}
-                                               swatches={vt3d.configuration.defaultTrackColors.join(';')}
-                                               onSlChange={setColor}
-                                               disabled={!editorSnapshot.journey.visible}
-                                />
-                            </SlTooltip>
-                            <SlTooltip content="Thickness">
-                                <SlRange min={1} max={10} step={1}
-                                         value={editorSnapshot.journey.thickness}
-                                         style={{'--thumb-size': '1rem'}}
-                                         onSlChange={setThickness}
-                                         disabled={!editorSnapshot.journey.visible}
-                                />
-                            </SlTooltip>
-
-                            <SlDivider id="test-line" style={{
-                                '--color': editorSnapshot.journey.visible ? editorSnapshot.journey.color : 'transparent',
-                                '--width': `${editorSnapshot.journey.thickness}px`,
-                                '--spacing': 0,
-                            }}
-                                       disabled={!editorSnapshot.journey.visible}
-                            />
-
-                            <SlSwitch size="small"
-                                      checked={editorSnapshot.journey.visible}
-                                      style={{'--thumb-size': '1rem'}}
-                                      onSlChange={setTrackVisibility}
-                            />
-
-                            <SlTooltip content={'Remove'}>
-                                <a onClick={removeTrack}>
-                                    <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
-                                </a>
-                            </SlTooltip>
-
-                            <ConfirmRemoveTrackDialog/>
-                        </div>
-                        {editorSnapshot.journey.visible &&
+                    <div id="track-visibility" className={'editor-vertical-menu'}>
+                        <SlTooltip content={textVisibilityTrack}>
+                            <SwitchStateIcon change={setTrackVisibility} initial={editorStore.track.visible}/>
+                        </SlTooltip>
+                        <SlTooltip content={textVisibilityStartFlag}>
+                            <SwitchStateIcon change={setStartFlagVisibility}
+                                             id={'start-visibility'}
+                                             icons={{
+                                                 shown: faLocationPin,
+                                                 hidden: faLocationPinSlash,
+                                             }}
+                                             style={{color: vt3d.configuration.journey.pois.start.color}}
+                                             initial={false /* TODO editorStore.track.visible*/}/>
+                        </SlTooltip>
+                        <SlTooltip content={textVisibilityStopFlag}>
+                            <SwitchStateIcon change={setStopFlagVisibility}
+                                             id={'stop-visibility'}
+                                             icons={{
+                                                 shown: faLocationPin,
+                                                 hidden: faLocationPinSlash,
+                                             }}
+                                             style={{color: vt3d.configuration.journey.pois.stop.color}}
+                                             initial={false /* TODO editorStore.track.visible*/}/>
+                        </SlTooltip>
+                        {editorSnapshot.track.visible &&
                             <div id={'track-tips'}>
                                 <MarkerVisibility type={'start'} label={'Start'}/>
                                 <MarkerVisibility type={'stop'} label={'Stop'}/>
@@ -341,6 +259,38 @@ export const TrackSettings = function TrackSettings() {
                         }
                     </div>
                 </div>
-            </SlCard>}
-    </>)
+                //
+                //     {/* Journey line settings */}
+                //     <div id="track-line-settings">
+                //         <SlTooltip content="Color">
+                //             <SlColorPicker opacity
+                //                            size={'small'}
+                //                            label={'Color'}
+                //                            value={editorSnapshot.journey.color}
+                //                            swatches={vt3d.configuration.defaultTrackColors.join(';')}
+                //                            onSlChange={setColor}
+                //                            disabled={!editorSnapshot.journey.visible}
+                //             />
+                //         </SlTooltip>
+                //         <SlTooltip content="Thickness">
+                //             <SlRange min={1} max={10} step={1}
+                //                      value={editorSnapshot.track.thickness}
+                //                      style={{'--thumb-size': '1rem'}}
+                //                      onSlChange={setThickness}
+                //                      disabled={!editorSnapshot.track.visible}
+                //             />
+                //         </SlTooltip>
+                //
+                //         <SlDivider id="test-line" style={{
+                //             '--color': editorSnapshot.track.visible ? editorSnapshot.track.color : 'transparent',
+                //             '--width': `${editorSnapshot.track.thickness}px`,
+                //             '--spacing': 0,
+                //         }}
+                //                    disabled={!editorSnapshot.track.visible}
+                //         />
+                // </div>
+
+            }
+        </>
+    )
 }

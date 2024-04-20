@@ -23,16 +23,24 @@ export class TracksEditorUtils {
     }
 
     static initJourneyEdition = (event) => {
-
         if (isOK(event)) {
             const editorStore = vt3d.theJourneyEditorProxy
             editorStore.journey = vt3d.getJourneyBySlug(event.target.value)
             editorStore.journey.addToContext()
             // Force Track and POI in editor
-            editorStore.track = null
+            if (editorStore.track === null || editorStore.track === undefined) {
+                editorStore.track = Array.from(editorStore.journey.tracks)[0]
+                editorStore.track.addToContext()
+                editorStore.track.addToEditor()
+            }
             editorStore.poi = null
             // Force rerender
+            TracksEditorUtils.renderJourneysList()
             TracksEditorUtils.renderJourneySettings()
+            TracksEditorUtils.renderTracksList()
+            TracksEditorUtils.renderTrackSettings()
+
+
             // Save information
             TrackUtils.saveCurrentJourneyToDB(event.target.value).then(
                 async () => {
@@ -48,16 +56,19 @@ export class TracksEditorUtils {
         }
     }
     static initTrackEdition = (event) => {
+        console.log(isOK(event))
 
         if (isOK(event)) {
             const editorStore = vt3d.theJourneyEditorProxy
             editorStore.track = vt3d.getTrackBySlug(event.target.value)
             editorStore.track.addToContext()
+            editorStore.track.addToEditor()
             // Force POI in editor
             editorStore.poi = null
 
             // Force rerender
-            TracksEditorUtils.renderJourneySettings()
+            TracksEditorUtils.renderTracksList()
+            TracksEditorUtils.renderTrackSettings()
             // Save information
             TrackUtils.saveCurrentTrackToDB(event.target.value).then(
                 async () => {

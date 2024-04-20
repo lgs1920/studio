@@ -54,6 +54,10 @@ export function ViewTrack3D() {
 
     useEffect(() => {
 
+        const readAllFromDB = async () => {
+            await TrackUtils.readAllFromDB()
+        }
+
         // Set DefaultTheme
         _.app.setTheme()
 
@@ -61,7 +65,8 @@ export function ViewTrack3D() {
         CameraUtils.updatePosition(vt3d?.camera).then(r => {
         })
 
-        TrackUtils.readAllFromDB()
+
+        readAllFromDB()
 
         //vt3d.viewer.scene.verticalExaggeration = Number(1)
 

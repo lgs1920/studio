@@ -1,25 +1,29 @@
-import { DateTime }                                             from 'luxon'
-import { FEATURE_COLLECTION, FEATURE_LINE_STRING, TrackUtils }  from '../Utils/cesium/TrackUtils'
-import { Mobility }                                             from '../Utils/Mobility'
-import { FOCUS_ON_FEATURE, INITIAL_LOADING, SIMULATE_ALTITUDE } from './Journey'
+import { DateTime }                                            from 'luxon'
+import { FEATURE_COLLECTION, FEATURE_LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
+import { Mobility }                                            from '../Utils/Mobility'
+import { FOCUS_ON_FEATURE, INITIAL_LOADING }                   from './Journey'
+import { MapElement }                                          from './MapElement'
 
 
-const CONFIGURATION = '../config.json'
-
-export class Track {
+export class Track extends MapElement {
 
     title       // Track title
-    slug        // unic Id for the track
-
     parent = undefined
-    name
-
-
     color       // Line color
     thickness   // Line thickness
     metrics     // All the metrics associated to the track
-    visible     // Is visible ?
     description // Add any description
+
+    static deserialize(props) {
+        props.instance = new Track()
+        let instance = super.deserialize(props)
+        return instance
+    }
+
+    name
+
+    slug        // unic Id for the track
+    visible     // Is visible ?
     hasTime
     hasAltitude
     content     // GEo JSON
@@ -27,6 +31,7 @@ export class Track {
     pois
 
     constructor(title, options = {}) {
+        super()
         this.title = title
         this.parent = options.parent
         this.slug = options.slug
@@ -41,8 +46,6 @@ export class Track {
         this.hasAltitude = options.hasAltitude ?? false
         this.segments = options.segments ?? 0
         this.content = options.content
-
-        this.getAllFlags()
     }
 
     static getMarkerInformation = (markerId) => {
@@ -56,8 +59,9 @@ export class Track {
         return false
     }
 
-    getAllFlags = () => {
-
+    static unproxify = (object) => {
+        console.log(super.serialize({...object, ...{__class: Track}}))
+        return super.serialize({...object, ...{__class: Track}})
     }
 
     /**
@@ -286,14 +290,6 @@ export class Track {
         this.visible = !this.visible
     }
 
-    showAfterHeightSimulation = async () => {
-        await this.draw(SIMULATE_ALTITUDE)
-    }
-
-    loadAfterNewSettings = async (mode) => {
-        await this.draw(RE_LOADING, mode)
-    }
-
     addToEditor = () => {
         vt3d.theJourneyEditorProxy.track = this
     }
@@ -314,14 +310,13 @@ export class Track {
             this.mainProxy.components.journeyEditor.list.push(journey.slug)
         }
         this.mainProxy.components.journeyEditor.usable = true
-
     }
+
     addToContext = (setToCurrent = true) => {
-        // vt3d.saveJourney(this)
+        vt3d.saveJourney(vt3d.getJourneyBySlug(this.parent))
         if (setToCurrent) {
             vt3d.theTrack = this
         }
     }
-
 
 }

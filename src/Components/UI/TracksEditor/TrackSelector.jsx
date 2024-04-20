@@ -16,18 +16,21 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
 
     const tracks = vt3d.theJourney.tracks
     const several = tracks.size > 1
+    if (editorSnapshot.track === null || editorSnapshot.track === undefined) {
+        editorStore.track = Array.from(tracks.values())[0]
+    }
 
     // if (several) {
     // We do not sort the list
     // TODO : Check if it right to take tracks in the order in which they were created.
     // }
-    
+
     return (
         <>
             {
-                several &&
+                several && editorSnapshot.track &&
                 <SlSelect hoist label={props.label}
-                          value={editorSnapshot.track ?? Array.from(tracks.values())[0].slug}
+                          value={editorSnapshot.track.slug}
                           onSlChange={props.onChange}
                           key={mainSnapshot.keys.track.list}
                 >

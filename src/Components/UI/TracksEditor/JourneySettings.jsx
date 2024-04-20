@@ -1,9 +1,9 @@
-import { faLocationPin, faLocationPinSlash, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
+import { faLocationDot, faLocationDotSlash, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
 
-import { SlIcon, SlInput, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { sprintf }                    from 'sprintf-js'
-import { useSnapshot }                from 'valtio'
-import { NO_DEM_SERVER }              from '../../../classes/Journey'
+import { SlIcon, SlInput, SlTextarea, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { sprintf }                                from 'sprintf-js'
+import { useSnapshot }                            from 'valtio'
+import { Journey, NO_DEM_SERVER }                 from '../../../classes/Journey'
 
 import { POI }               from '../../../classes/POI'
 import { TrackUtils }        from '../../../Utils/cesium/TrackUtils'
@@ -13,7 +13,7 @@ import { TracksEditorUtils } from '../../../Utils/TracksEditorUtils'
 //import { TracksEditorUtils } from '../../../Utils/TracksEditorUtils'
 import { UINotifier }        from '../../../Utils/UINotifier'
 import { useConfirm }        from '../Modals/ConfirmUI'
-import { Visibility }        from '../Visibility'
+import { SwitchStateIcon }   from '../SwitchStateIcon'
 
 export const JourneySettings = function JourneySettings() {
 
@@ -38,6 +38,27 @@ export const JourneySettings = function JourneySettings() {
         editorStore.journey.color = event.target.value
         TracksEditorUtils.renderJourneysList()
         await rebuildJourney(UPDATE_JOURNEY_THEN_DRAW)
+    })
+
+    /**
+     * Change journey description
+     *
+     * @type {(function(*): Promise<*>)|*}
+     */
+    const setDescription = (async event => {
+        const description = event.target.value
+        // Title is empty, we force the former value
+        if (description === '') {
+            const field = document.getElementById('journey-title')
+            field.value = editorStore.journey.title
+            return
+        }
+        // Let's check if the next title has not been already used for
+        // another journey.
+        editorStore.journey.description = description
+        await rebuildJourney(UPDATE_JOURNEY_SILENTLY)
+
+        TracksEditorUtils.renderJourneysList()
     })
 
     /**
@@ -98,8 +119,6 @@ export const JourneySettings = function JourneySettings() {
      */
     const setAllPOIsVisibility = (async visibility => {
         //save state
-        editorStore.allPOIs = visibility
-
         TrackUtils.updatePOIsVisibility(vt3d.theJourney, visibility)
         await rebuildJourney(UPDATE_JOURNEY_SILENTLY)
 
@@ -211,7 +230,7 @@ export const JourneySettings = function JourneySettings() {
         }
     }
 
-    const textVisibilityJourney = sprintf('%s Tracks', editorSnapshot.journey.visible ? 'Hide' : 'Show')
+    const textVisibilityJourney = sprintf('%s Journey', editorSnapshot.journey.visible ? 'Hide' : 'Show')
     const textVisibilityPOIs = sprintf('%s POIs', editorSnapshot.allPOIs ? 'Hide' : 'Show')
 
 
@@ -223,18 +242,18 @@ export const JourneySettings = function JourneySettings() {
      */
     const rebuildJourney = async (action) => {
 
-        const journey = Journey.deserialize(editorStore.journey.serialize())
+        const journey = Journey.deserialize({object: Journey.unproxify(editorStore.journey)})
         await journey.computeAll()
         vt3d.saveJourney(journey)
         // saveToDB toDB
         await journey.saveToDB()
 
         //  vt3d.viewer.dataSources.removeAll()
-        if (action !== UPDATE_JOURNEY_SILENTLY) {
-            await journey.loadAfterNewSettings(action)
-        } else {
-            JourneyUtils.focus(journey)
-        }
+        //if (action !== UPDATE_JOURNEY_SILENTLY) {
+        await journey.loadAfterNewSettings(action)
+        // } else {
+        //     JourneyUtils.focus(journey)
+        //  }
         return journey
     }
 
@@ -243,20 +262,38 @@ export const JourneySettings = function JourneySettings() {
         {editorSnapshot.journey &&
             <div id="journey-settings" key={vt3d.mainProxy.components.journeyEditor.keys.journey.journey}>
                 <div id={'journey-visibility-global'}>
-                    {/* Change visible name (title) */}
-                    <SlInput id="journey-title" value={editorSnapshot.journey.title}
-                             onSlChange={setTitle}
-                    />
-                    <div id="journey-visibility">
-                        <SlTooltip content={textVisibilityPOIs}>
-                            <Visibility change={setAllPOIsVisibility} initial={editorStore.allPOIs} icons={{
-                                shown: faLocationPin,
-                                hidden: faLocationPinSlash,
-                            }}/>
+                    <div id={'journey-text-description'}>
+                        {/* Change visible name (title) */}
+                        <SlTooltip content={'Title'}>
+                            <SlInput id="journey-title" value={editorSnapshot.journey.title}
+                                     onSlChange={setTitle}
+                            />
                         </SlTooltip>
+
+                        {/* Change description */}
+                        <SlTooltip content={'Description'}>
+                            <SlTextarea row={2}
+                                        size={'small'}
+                                        id="journey-description"
+                                        value={editorSnapshot.journey.description}
+                                        onSlChange={setDescription}
+                            />
+                        </SlTooltip>
+                    </div>
+                    <div id="journey-visibility" className={'editor-vertical-menu'}>
                         <SlTooltip content={textVisibilityJourney}>
-                            <Visibility change={setJourneyVisibility} initial={editorStore.journey.visible}/>
+                            <SwitchStateIcon change={setJourneyVisibility} initial={editorStore.journey.visible}/>
                         </SlTooltip>
+                        <SlTooltip content={textVisibilityPOIs}>
+                            <SwitchStateIcon
+                                change={setAllPOIsVisibility}
+                                initial={editorStore.allPOIs}
+                                icons={{
+                                    shown: faLocationDot,
+                                    hidden: faLocationDotSlash,
+                                }}/>
+                        </SlTooltip>
+
                         <SlTooltip content={'Remove'}>
                             <a onClick={removeJourney}>
                                 <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>

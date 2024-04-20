@@ -82,6 +82,7 @@ export class AppUtils {
     static init = async () => {
         // Set Context
         vt3d.configuration = await import(/* @vite-ignore */ CONFIGURATION)
+        vt3d.setDefaultConfiguration()
         vt3d.events = new EventEmitter()
 
         // Cesium ION auth

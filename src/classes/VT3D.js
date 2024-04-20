@@ -103,7 +103,7 @@ export class VT3D {
             this.db.journeys.delete(CURRENT_TRACK, CURRENT_STORE).then()
             return
         }
-        this.db.journeys.put(CURRENT_TRACK, track.slug, CURRENT_STORE).then(track.addToEditor())
+        this.db.journeys.put(CURRENT_TRACK, track.slug, CURRENT_STORE)
     }
 
     get mainProxy() {
@@ -112,6 +112,14 @@ export class VT3D {
 
     get theJourneyEditorProxy() {
         return this.#theJourneyEditorProxy
+    }
+
+    setDefaultConfiguration = () => {
+        // Defaults
+        this.POI_DEFAULT_SIZE = this.configuration.journey.pois.size
+        this.POI_DEFAULT_COLOR = this.configuration.journey.pois.color
+        this.POI_TRANSPARENT_COLOR = 'transparent'
+
     }
 
     /**
@@ -153,7 +161,6 @@ export class VT3D {
             }
             this.mainProxy.components.journeyEditor.usable = true
         }
-
     }
 
     /**

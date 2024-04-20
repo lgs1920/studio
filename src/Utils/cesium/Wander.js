@@ -1,7 +1,7 @@
-import { faLocationDot }          from '@fortawesome/pro-solid-svg-icons'
-import { POI }                    from '../../classes/POI'
-import { NOT_AN_ENTITY }          from './EntitiesUtils'
-import { JUST_ICON, MARKER_SIZE } from './MarkerUtils'
+import { faLocationDot } from '@fortawesome/pro-solid-svg-icons'
+import { POI }           from '../../classes/POI'
+import { NOT_AN_ENTITY } from './EntitiesUtils'
+import { JUST_ICON }     from './MarkerUtils'
 
 export const WANDER_MODE_MARKER = 'wander-mode'
 
@@ -28,7 +28,7 @@ export class Wander {
                     coordinates: [data.picked.longitude, data.picked.latitude],
                     altitude: 0,
                     type: JUST_ICON,
-                    size: MARKER_SIZE,
+                    size: vt3d.POI_DEFAULT_SIZE,
                     icon: faLocationDot,
 
                     backgroundColor: vt3d.configuration.track.markers.wanderer.color,
