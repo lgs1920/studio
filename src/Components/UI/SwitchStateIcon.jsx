@@ -3,16 +3,25 @@ import { SlIcon }            from '@shoelace-style/shoelace/dist/react'
 import React, { useState }   from 'react'
 import { FA2SL }             from '../../Utils/FA2SL'
 
-export const Visibility = ({change: change, initial = true, icons = {shown: faEye, hidden: faEyeSlash}}) => {
-    const [visibility, setVisibility] = useState(initial)
+export const SwitchStateIcon = (props) => {
 
+    const change = props.change
+    const initial = props.initial ?? true
+    const icons = props.icons ?? {shown: faEye, hidden: faEyeSlash}
+    const id = props.id ?? ''
+    const style = props.style ?? ''
+
+    const [visibility, setVisibility] = useState(initial)
     const toggleVisibility = () => {
         setVisibility(!visibility)
         change(!visibility)
     }
 
     return (
-        <a className="visibility-button" onClick={toggleVisibility}>
+        <a className="visibility-button"
+           {...(props.id && {id})}
+           {...(props.style && {style})}
+           onClick={toggleVisibility}>
             {visibility
              ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(icons.hidden)}/>
              : <SlIcon slot="suffix" library="fa" name={FA2SL.set(icons.shown)}/>
