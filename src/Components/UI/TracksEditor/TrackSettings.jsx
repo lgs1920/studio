@@ -1,9 +1,14 @@
-import { faLocationPin, faLocationPinSlash }        from '@fortawesome/pro-solid-svg-icons'
-import { SlInput, SlTextarea, SlTooltip }           from '@shoelace-style/shoelace/dist/react'
+import { faMemoCircleInfo, faPenPaintbrush, faRectangleList } from '@fortawesome/pro-regular-svg-icons'
+import { faLocationPin, faLocationPinSlash }                  from '@fortawesome/pro-solid-svg-icons'
+
+import {
+    SlColorPicker, SlDivider, SlIcon, SlInput, SlRange, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
+}                                                   from '@shoelace-style/shoelace/dist/react'
 import { useSnapshot }                              from 'valtio'
 import { FLAG_START, FLAG_STOP, Journey, POI_FLAG } from '../../../classes/Journey'
 import { Track }                                    from '../../../classes/Track'
 import { TrackUtils }                               from '../../../Utils/cesium/TrackUtils'
+import { FA2SL }                                    from '../../../Utils/FA2SL'
 import { TracksEditorUtils }                        from '../../../Utils/TracksEditorUtils'
 import { useConfirm }                               from '../Modals/ConfirmUI'
 import { SwitchStateIcon }                          from '../SwitchStateIcon'
@@ -71,6 +76,9 @@ export const TrackSettings = function TrackSettings() {
      */
     const setThickness = (async event => {
         editorStore.track.thickness = event.target.value
+        if (event.type === 'sl-input') {
+            return
+        }
         await updateTrack(UPDATE_TRACK_THEN_DRAW)
         TracksEditorUtils.renderTrackSettings()
     })
@@ -204,93 +212,122 @@ export const TrackSettings = function TrackSettings() {
                                           // 'Show')
     const textVisibilityStopFlag = 'test'//sprintf('%s Flag', editorSnapshot.track.flags.stop.visibility ? 'Hide' :
                                          // 'Show')
+    const severalTracks = editorStore.journey.tracks.size > 1
 
 
     return (<>
-            {editorSnapshot.track &&
-                <div id={'track-line-settings-global'} key={vt3d.mainProxy.components.journeyEditor.keys.journey.track}>
+            {editorSnapshot.track && <>
+                <div id={'editor-track-settings-panel'}
+                     key={vt3d.mainProxy.components.journeyEditor.keys.journey.track}>
+
+
                     <div id={'track-text-description'}>
-                        {/* Change visible name (title) */}
-                        <SlTooltip content={'Title'}>
-                            <SlInput id="track-title"
-                                     value={editorSnapshot.track.title}
-                                     onSlChange={setTitle}
-                            />
-                        </SlTooltip>
-                        {/* Change description */}
-                        <SlTooltip content={'Description'}>
-                            <SlTextarea row={2}
-                                        size={'small'}
-                                        id="track-description"
-                                        value={editorSnapshot.track.description}
-                                        onSlChange={setDescription}
-                            />
-                        </SlTooltip>
+                        {severalTracks && <>
+                            {/* Change visible name (title) */}
+                            <SlTooltip content={'Title'}>
+                                <SlInput id="track-title"
+                                         value={editorSnapshot.track.title}
+                                         onSlChange={setTitle}
+                                />
+                            </SlTooltip>
+                            {/* Change description */}
+                            <SlTooltip content={'Description'}>
+                                <SlTextarea row={2}
+                                            size={'small'}
+                                            id="track-description"
+                                            value={editorSnapshot.track.description}
+                                            onSlChange={setDescription}
+                                />
+                            </SlTooltip>
+                        </>}
+                        {editorSnapshot.track.visible && <SlTabGroup id={'track-menu-panel'}>
+                            <SlTab slot="nav" panel="style">
+                                <SlIcon library="fa" name={FA2SL.set(faPenPaintbrush)}/>&nbsp;Style
+                            </SlTab>
+                            <SlTab slot="nav" panel="info">
+                                <SlIcon library="fa" name={FA2SL.set(faMemoCircleInfo)}/>&nbsp;Data
+                            </SlTab>
+                            <SlTab slot="nav" panel="coordinates">
+                                <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>&nbsp;Coords.
+                            </SlTab>
+                            {/**
+                             * Style Tab Panel
+                             */}
+                            <SlTabPanel name="style">
+                                {/* Journey line settings */}
+                                <div id="track-line-settings">
+                                    <SlTooltip content="Color">
+                                        <SlColorPicker opacity
+                                                       size={'small'}
+                                                       label={'Color'}
+                                                       value={editorSnapshot.journey.color}
+                                                       swatches={vt3d.configuration.defaultTrackColors.join(';')}
+                                                       onSlChange={setColor}
+                                                       disabled={!editorSnapshot.journey.visible}
+                                        />
+                                    </SlTooltip>
+                                    <SlTooltip content="Thickness">
+                                        <SlRange min={1} max={10} step={1}
+                                                 value={editorSnapshot.track.thickness}
+                                                 style={{'--thumb-size': '1rem'}}
+                                                 onSlInput={setThickness}
+                                                 onSlChange={setThickness}
+                                                 disabled={!editorSnapshot.track.visible}
+                                                 tooltip={'bottom'}
+                                        />
+                                    </SlTooltip>
+
+                                    <SlDivider id="test-line" style={{
+                                        '--color': editorSnapshot.track.visible ? editorSnapshot.track.color : 'transparent',
+                                        '--width': `${editorSnapshot.track.thickness}px`,
+                                        '--spacing': 0,
+                                    }}
+                                               disabled={!editorSnapshot.track.visible}
+                                    />
+                                </div>
+                            </SlTabPanel>
+                            {/**
+                             * Edit Data Tab Panel
+                             */}
+                            <SlTabPanel name="info">Not Yet !</SlTabPanel>
+
+                            {/**
+                             * Edit Coordinates Tab Panel
+                             */}
+                            <SlTabPanel name="coordinates">Not Yet!</SlTabPanel>
+
+                        </SlTabGroup>}
                     </div>
                     <div id="track-visibility" className={'editor-vertical-menu'}>
-                        <SlTooltip content={textVisibilityTrack}>
+                        {severalTracks && <SlTooltip content={textVisibilityTrack}>
                             <SwitchStateIcon change={setTrackVisibility} initial={editorStore.track.visible}/>
-                        </SlTooltip>
-                        <SlTooltip content={textVisibilityStartFlag}>
-                            <SwitchStateIcon change={setStartFlagVisibility}
-                                             id={'start-visibility'}
-                                             icons={{
-                                                 shown: faLocationPin,
-                                                 hidden: faLocationPinSlash,
-                                             }}
-                                             style={{color: vt3d.configuration.journey.pois.start.color}}
-                                             initial={false /* TODO editorStore.track.visible*/}/>
-                        </SlTooltip>
-                        <SlTooltip content={textVisibilityStopFlag}>
-                            <SwitchStateIcon change={setStopFlagVisibility}
-                                             id={'stop-visibility'}
-                                             icons={{
-                                                 shown: faLocationPin,
-                                                 hidden: faLocationPinSlash,
-                                             }}
-                                             style={{color: vt3d.configuration.journey.pois.stop.color}}
-                                             initial={false /* TODO editorStore.track.visible*/}/>
-                        </SlTooltip>
-                        {editorSnapshot.track.visible &&
-                            <div id={'track-tips'}>
-                                <MarkerVisibility type={'start'} label={'Start'}/>
-                                <MarkerVisibility type={'stop'} label={'Stop'}/>
-                            </div>
-                        }
+                        </SlTooltip>}
+                        {editorSnapshot.track.visible && <>
+                            <SlTooltip content={textVisibilityStartFlag}>
+                                <SwitchStateIcon change={setStartFlagVisibility}
+                                                 id={'start-visibility'}
+                                                 icons={{
+                                                     shown: faLocationPin, hidden: faLocationPinSlash,
+                                                 }}
+                                                 style={{color: vt3d.configuration.journey.pois.start.color}}
+                                                 initial={false /* TODO editorStore.track.visible*/}/>
+                            </SlTooltip>
+                            <SlTooltip content={textVisibilityStopFlag}>
+                                <SwitchStateIcon change={setStopFlagVisibility}
+                                                 id={'stop-visibility'}
+                                                 icons={{
+                                                     shown: faLocationPin, hidden: faLocationPinSlash,
+                                                 }}
+                                                 style={{color: vt3d.configuration.journey.pois.stop.color}}
+                                                 initial={false /* TODO editorStore.track.visible*/}/>
+                            </SlTooltip>
+                        </>}
                     </div>
                 </div>
-                //
-                //     {/* Journey line settings */}
-                //     <div id="track-line-settings">
-                //         <SlTooltip content="Color">
-                //             <SlColorPicker opacity
-                //                            size={'small'}
-                //                            label={'Color'}
-                //                            value={editorSnapshot.journey.color}
-                //                            swatches={vt3d.configuration.defaultTrackColors.join(';')}
-                //                            onSlChange={setColor}
-                //                            disabled={!editorSnapshot.journey.visible}
-                //             />
-                //         </SlTooltip>
-                //         <SlTooltip content="Thickness">
-                //             <SlRange min={1} max={10} step={1}
-                //                      value={editorSnapshot.track.thickness}
-                //                      style={{'--thumb-size': '1rem'}}
-                //                      onSlChange={setThickness}
-                //                      disabled={!editorSnapshot.track.visible}
-                //             />
-                //         </SlTooltip>
-                //
-                //         <SlDivider id="test-line" style={{
-                //             '--color': editorSnapshot.track.visible ? editorSnapshot.track.color : 'transparent',
-                //             '--width': `${editorSnapshot.track.thickness}px`,
-                //             '--spacing': 0,
-                //         }}
-                //                    disabled={!editorSnapshot.track.visible}
-                //         />
-                // </div>
 
-            }
+
+            </>}
         </>
+
     )
 }

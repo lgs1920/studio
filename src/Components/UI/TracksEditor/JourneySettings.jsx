@@ -1,9 +1,8 @@
-import { faLocationDot, faLocationDotSlash, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
-
-import { SlIcon, SlInput, SlTextarea, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { sprintf }                                from 'sprintf-js'
-import { useSnapshot }                            from 'valtio'
-import { Journey, NO_DEM_SERVER }                 from '../../../classes/Journey'
+import { faDownload, faLocationDot, faLocationDotSlash, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon, SlInput, SlTextarea, SlTooltip }                    from '@shoelace-style/shoelace/dist/react'
+import { sprintf }                                                   from 'sprintf-js'
+import { useSnapshot }                                               from 'valtio'
+import { Journey, NO_DEM_SERVER }                                    from '../../../classes/Journey'
 
 import { POI }               from '../../../classes/POI'
 import { TrackUtils }        from '../../../Utils/cesium/TrackUtils'
@@ -23,22 +22,6 @@ export const JourneySettings = function JourneySettings() {
 
     const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
-
-    /**
-     * Remove journey confirmation
-     */
-    const [ConfirmRemoveJourneyDialog, confirmRemoveJourney] = useConfirm(`Remove "${editorSnapshot.journey.title}" ?`, 'Are you sure you want to remove this journey ?')
-
-    /**
-     * Change journey Color
-     *
-     * @type {setColor}
-     */
-    const setColor = (async event => {
-        editorStore.journey.color = event.target.value
-        TracksEditorUtils.renderJourneysList()
-        await rebuildJourney(UPDATE_JOURNEY_THEN_DRAW)
-    })
 
     /**
      * Change journey description
@@ -82,17 +65,6 @@ export const JourneySettings = function JourneySettings() {
         await rebuildJourney(UPDATE_JOURNEY_SILENTLY)
 
         TracksEditorUtils.renderJourneysList()
-    })
-
-    /**
-     * Change journey thickness
-     *
-     * @type {setThickness}
-     */
-    const setThickness = (async event => {
-        editorStore.journey.thickness = event.target.value
-        TracksEditorUtils.renderjourney.settings()
-        await rebuildJourney(UPDATE_JOURNEY_THEN_DRAW)
     })
 
     /**
@@ -168,6 +140,24 @@ export const JourneySettings = function JourneySettings() {
 
         await rebuildJourney(UPDATE_JOURNEY_THEN_DRAW)
     })
+    /**
+     * Export journey confirmation
+     */
+    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export "${editorSnapshot.journey.title}" ?`, 'Not Yet. Sorry.')
+
+    /**
+     * Export Journey
+     */
+    const exportJourney = async () => {
+        const confirmation = await confirmExportJourney()
+        if (confirmation) {
+
+        }
+    }
+    /**
+     * Remove journey confirmation
+     */
+    const [ConfirmRemoveJourneyDialog, confirmRemoveJourney] = useConfirm(`Remove "${editorSnapshot.journey.title}" ?`, 'Are you sure you want to remove this journey ?')
 
     /**
      * Remove journey
@@ -257,11 +247,12 @@ export const JourneySettings = function JourneySettings() {
         return journey
     }
 
+    const severalPOIs = (editorStore.journey.pois.size - editorStore.journey.tracks.size * 2) > 1
 
     return (<>
         {editorSnapshot.journey &&
             <div id="journey-settings" key={vt3d.mainProxy.components.journeyEditor.keys.journey.journey}>
-                <div id={'journey-visibility-global'}>
+                <div id={'editor-journey-settings-panel'}>
                     <div id={'journey-text-description'}>
                         {/* Change visible name (title) */}
                         <SlTooltip content={'Title'}>
@@ -281,24 +272,33 @@ export const JourneySettings = function JourneySettings() {
                         </SlTooltip>
                     </div>
                     <div id="journey-visibility" className={'editor-vertical-menu'}>
+                        <span>
                         <SlTooltip content={textVisibilityJourney}>
                             <SwitchStateIcon change={setJourneyVisibility} initial={editorStore.journey.visible}/>
                         </SlTooltip>
-                        <SlTooltip content={textVisibilityPOIs}>
-                            <SwitchStateIcon
-                                change={setAllPOIsVisibility}
-                                initial={editorStore.allPOIs}
-                                icons={{
-                                    shown: faLocationDot,
-                                    hidden: faLocationDotSlash,
-                                }}/>
+                            {severalPOIs &&
+                                <SlTooltip content={textVisibilityPOIs}>
+                                    <SwitchStateIcon
+                                        change={setAllPOIsVisibility}
+                                        initial={editorStore.allPOIs}
+                                        icons={{
+                                            shown: faLocationDot, hidden: faLocationDotSlash,
+                                        }}/>
+                                </SlTooltip>
+                            }
+                        </span>
+                        <span>
+                        <SlTooltip content={'Export'}>
+                            <a onClick={exportJourney}>
+                                <SlIcon library="fa" name={FA2SL.set(faDownload)}/>
+                            </a>
                         </SlTooltip>
-
                         <SlTooltip content={'Remove'}>
                             <a onClick={removeJourney}>
                                 <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
                             </a>
                         </SlTooltip>
+                        </span>
                     </div>
                 </div>
 
@@ -315,7 +315,8 @@ export const JourneySettings = function JourneySettings() {
 
 
                 <ConfirmRemoveJourneyDialog/>
-            </div>
-        }
+                <ConfirmExportJourneyDialog/>
+
+            </div>}
     </>)
 }

@@ -28,7 +28,7 @@
     font-weight: normal;
 }
 
-#journey-visibility-global {
+#editor-journey-settings-panel {
     display: flex;
     gap: var(--vt3d-gutter-s);
 }
@@ -46,7 +46,13 @@
     flex-direction: column;
     gap: 0;
     margin-bottom: var(--vt3d-gutter-xs);
+    width: 1.5rem;
 }
+
+#editor-journey-settings-panel .editor-vertical-menu {
+    justify-content: space-between;
+}
+
 
 #journey-text-description {
     gap: var(--vt3d-gutter-xs);
@@ -65,7 +71,7 @@
     width: 100%;
 }
 
-#track-line-settings-global {
+#editor-track-settings-panel {
     display: flex;
     width: 100%;
     gap: var(--vt3d-gutter-s);
@@ -89,11 +95,11 @@
 }
 
 #test-line {
-    width: 4rem;
+    width: 6rem;
     border-radius: 3px;
+    transition: all ease-in-out;
 }
 
-[id^="visibility-marker-"] {
-    display: flex;
-    gap: var(--vt3d-gutter-xs);
+sl-tab-panel {
+    overflow-y: hidden;
 }
