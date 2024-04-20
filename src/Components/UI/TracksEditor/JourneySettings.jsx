@@ -32,8 +32,8 @@ export const JourneySettings = function JourneySettings() {
         const description = event.target.value
         // Title is empty, we force the former value
         if (description === '') {
-            const field = document.getElementById('journey-title')
-            field.value = editorStore.journey.title
+            const field = document.getElementById('journey-decription')
+            field.value = editorStore.journey.description
             return
         }
         // Let's check if the next title has not been already used for
@@ -265,7 +265,7 @@ export const JourneySettings = function JourneySettings() {
                         <SlTooltip content={'Description'}>
                             <SlTextarea row={2}
                                         size={'small'}
-                                        id="journey-description"
+                                        id={'journey-description'}
                                         value={editorSnapshot.journey.description}
                                         onSlChange={setDescription}
                             />
