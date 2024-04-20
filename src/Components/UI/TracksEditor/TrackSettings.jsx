@@ -264,6 +264,7 @@ export const TrackSettings = function TrackSettings() {
                                                        swatches={vt3d.configuration.defaultTrackColors.join(';')}
                                                        onSlChange={setColor}
                                                        disabled={!editorSnapshot.journey.visible}
+                                                       noFormatToggle
                                         />
                                     </SlTooltip>
                                     <SlTooltip content="Thickness">
