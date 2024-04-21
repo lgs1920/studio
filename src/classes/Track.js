@@ -60,7 +60,6 @@ export class Track extends MapElement {
     }
 
     static unproxify = (object) => {
-        console.log(super.serialize({...object, ...{__class: Track}}))
         return super.serialize({...object, ...{__class: Track}})
     }
 
