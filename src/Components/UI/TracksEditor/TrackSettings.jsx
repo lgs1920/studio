@@ -7,11 +7,10 @@ import {
 import { useSnapshot }                              from 'valtio'
 import { FLAG_START, FLAG_STOP, Journey, POI_FLAG } from '../../../classes/Journey'
 import { Track }                                    from '../../../classes/Track'
-import { TrackUtils }                               from '../../../Utils/cesium/TrackUtils'
 import { FA2SL }                                    from '../../../Utils/FA2SL'
 import { TracksEditorUtils }                        from '../../../Utils/TracksEditorUtils'
 import { useConfirm }                               from '../Modals/ConfirmUI'
-import { SwitchStateIcon }                          from '../SwitchStateIcon'
+import { ToggleStateIcon }                          from '../ToggleStateIcon'
 
 export const TrackSettings = function TrackSettings() {
 
@@ -173,16 +172,16 @@ export const TrackSettings = function TrackSettings() {
         // saveToDB toDB
         await journey.saveToDB()
 
-        // Show the journey
-        journey.loadAfterNewSettings(action).then(() => {
-            if (action !== UPDATE_TRACK_SILENTLY) {
-                TrackUtils.focus(track)
-            }
-        })
+        // // Show the journey
+        // journey.loadAfterNewSettings(action).then(() => {
+        //     if (action !== UPDATE_TRACK_SILENTLY) {
+        //         TrackUtils.focus(track)
+        //     }
+        // })
     }
 
     /**
-     * Marker SwitchStateIcon component
+     * Marker ToggleStateIcon component
      * @param props
      *
      * @return {JSX.Element}
@@ -301,11 +300,11 @@ export const TrackSettings = function TrackSettings() {
                     </div>
                     <div id="track-visibility" className={'editor-vertical-menu'}>
                         {severalTracks && <SlTooltip content={textVisibilityTrack}>
-                            <SwitchStateIcon change={setTrackVisibility} initial={editorStore.track.visible}/>
+                            <ToggleStateIcon change={setTrackVisibility} initial={editorStore.track.visible}/>
                         </SlTooltip>}
                         {editorSnapshot.track.visible && <>
                             <SlTooltip content={textVisibilityStartFlag}>
-                                <SwitchStateIcon change={setStartFlagVisibility}
+                                <ToggleStateIcon change={setStartFlagVisibility}
                                                  id={'start-visibility'}
                                                  icons={{
                                                      shown: faLocationPin, hidden: faLocationPinSlash,
@@ -314,7 +313,7 @@ export const TrackSettings = function TrackSettings() {
                                                  initial={false /* TODO editorStore.track.visible*/}/>
                             </SlTooltip>
                             <SlTooltip content={textVisibilityStopFlag}>
-                                <SwitchStateIcon change={setStopFlagVisibility}
+                                <ToggleStateIcon change={setStopFlagVisibility}
                                                  id={'stop-visibility'}
                                                  icons={{
                                                      shown: faLocationPin, hidden: faLocationPinSlash,

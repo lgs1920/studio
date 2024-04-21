@@ -274,7 +274,10 @@ export class Track extends MapElement {
      * @return {Promise<void>}
      */
     draw = async ({action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
-        await TrackUtils.draw(this, {action: action, mode: mode, forcedToHide: forcedToHide})
+        TrackUtils.draw(this, {action: action, mode: mode, forcedToHide: forcedToHide}).then(result => {
+
+        })
+
         // Focus on track
         if (mode === FOCUS_ON_FEATURE) {
             TrackUtils.focus(this)

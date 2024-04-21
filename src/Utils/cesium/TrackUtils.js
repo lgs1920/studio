@@ -71,7 +71,7 @@ export class TrackUtils {
     }
 
     /**
-     * Show theJourney on the map
+     * Show the TRack on the map
      *
      * @param {Track} track
      * @param action
@@ -92,15 +92,15 @@ export class TrackUtils {
             show: forcedToHide ? false : track.visible,
         }
 
-        // Load Geo Json
+        // Load Geo Json for track
         let source = null
         if (action === RE_LOADING) {
-            // We get existing datasource
+            // We get existing datasources
             source = vt3d.viewer.dataSources.getByName(track.slug)[0]
         } else {
             // It's a new track... But with strict mode, in developer mode, we got twice, so let's
             // check to have only one
-            source = new GeoJsonDataSource(track.slug, {
+            source = await new GeoJsonDataSource(track.slug, {
                 id: track.slug,
             })
         }
@@ -108,7 +108,6 @@ export class TrackUtils {
         return source.load(track.content, {
             ...commonOptions, stroke: trackStroke.color, strokeWidth: trackStroke.thickness,
         }).then(dataSource => {
-
             const text = `Track loaded and displayed on the map.`
             if (action === RE_LOADING) {
                 UINotifier.notifySuccess({
@@ -151,10 +150,6 @@ export class TrackUtils {
 
             }
         }).catch(error => {
-            // Error => we notify
-            UINotifier.notifyError({
-                caption: `An error occurs during loading <strong>${name}<strong>!`, text: error,
-            })
             return false
         })
 
@@ -357,39 +352,53 @@ export class TrackUtils {
     /**
      * Read tracks from DB and draw them.
      *
+     * Set
+     * - vt3d.theJourney
+     * - vt3d.theTrack
+     *
+     * Add information to the editor.
+     *
      */
     static readAllFromDB = async () => {
         // Let's read tracks in DB
         const journeys = await Journey.readAllFromDB()
+
+        // Bail early if ther'snothing to read
         if (journeys.length === 0) {
             vt3d.theJourney = null
             vt3d.theTrack = null
             vt3d.thePOI = null
             return
         }
-        // Current Journey
+
+        // Get the Current Journey. Then we Set current if it exists in journeys.
+        // If not, let's use the first track or null.
         let currentJourney = await vt3d.db.journeys.get(CURRENT_JOURNEY, CURRENT_STORE)
-        // Set current if it exists in journeys. If not, let's use the first track or null
         const tmp = journeys.filter(value => value.slug === currentJourney)
         currentJourney = (tmp.length > 0) ? tmp[0].slug : journeys[0].slug
 
+        // If we have a current Journey, instantiate some contexts
         if (currentJourney) {
             vt3d.theJourney = vt3d.journeys.get(currentJourney)
             vt3d.theJourney.addToEditor()
+        } else {
+            // Something's wrong. exit
+            return
         }
 
-        // Current Track
+        // Same for current Track. If wehav one, we get it then check if it's part
+        // of the current journey. Else we use the first of the list and ad it
+        // to the app context.
         let currentTrack = await vt3d.db.journeys.get(CURRENT_TRACK, CURRENT_STORE)
-        // Get the current track or the first
         if (vt3d.theJourney.tracks.has(currentTrack)) {
             vt3d.theTrack = vt3d.theJourney.tracks.get(currentTrack)
         } else {
             vt3d.theTrack = vt3d.theJourney.tracks.entries().next().value[1]
         }
+        // Add it to editor context
         vt3d.theTrack.addToEditor()
 
-
-        // Draw all journeys but show only the current one
+        // Now it's time for the show. Draw all journeys but focus on the current one
         const items = []
         for (const journey of vt3d.journeys.values()) {
             items.push(journey.draw({mode: journey.slug === currentJourney ? FOCUS_ON_FEATURE : NO_FOCUS}))

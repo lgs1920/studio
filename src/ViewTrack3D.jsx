@@ -65,10 +65,9 @@ export function ViewTrack3D() {
         CameraUtils.updatePosition(vt3d?.camera).then(r => {
         })
 
-
+        // Read DB
         readAllFromDB()
 
-        //vt3d.viewer.scene.verticalExaggeration = Number(1)
 
         // Ready
         UINotifier.notifySuccess({
@@ -76,6 +75,8 @@ export function ViewTrack3D() {
             text: 'We\'re ready to assist you !',
         })
         console.log('ViewTrack3D has been loaded and is ready !')
+
+
     })
 
     return (<Viewer full

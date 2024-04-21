@@ -405,7 +405,7 @@ export class Journey extends MapElement {
     /**
      * Draw the full Journey (all Tracks and POIs)
      *
-     * Tracks are first drawn the we add POIs (some are attached Tracks)
+     * Tracks with attached flags are first drawn then we add all POIs
      *
      * @param action
      * @param mode
@@ -414,27 +414,27 @@ export class Journey extends MapElement {
     draw = async ({action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE}) => {
         const tracks = []
         const pois = []
-
-        // Draw Tracks
+        // Draw Tracks and flags
         for (const track of this.tracks.values()) {
+            // If track is not visible, we force tracks to be hidden, whatever their visibility
+            // else we use their status.
             tracks.push(await track.draw({action: action, mode: NO_FOCUS, forcedToHide: !this.visible}))
-            // Draw Flags
             for (const poi of this.pois.values()) {
-                if (poi.parent.slug === track.slug) {
+                if (poi.slug.startsWith(POI_FLAG)) {
                     pois.push(await poi.draw(!track.visible))
                 }
             }
         }
+        await Promise.all(tracks)
 
-        //Draw POIs
+        // Draw POIs
         for (const poi of this.pois.values()) {
-            if (poi.parent.slug === this.slug) {
+            // Same for POIs 
+            if (poi.slug.startsWith(POI_STD)) {
                 pois.push(await poi.draw(!this.visible))
             }
         }
-
         await Promise.all(pois)
-        await Promise.all(tracks)
 
         if (mode === FOCUS_ON_FEATURE) {
             this.focus()
@@ -455,8 +455,8 @@ export class Journey extends MapElement {
         await this.draw(SIMULATE_ALTITUDE)
     }
 
-    loadAfterNewSettings = async (mode) => {
-        await this.draw({action: RE_LOADING, mode: mode})
+    updateVisibility = (visibility) => {
+        TrackUtils.updateJourneyVisibility(this, visibility)
     }
 
 }

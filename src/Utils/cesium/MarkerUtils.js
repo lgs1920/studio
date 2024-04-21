@@ -74,6 +74,7 @@ export class MarkerUtils {
 
         switch (poi.type) {
             case PIN_CIRCLE:
+                // TODO manque des options id, name ....
                 return await dataSource.entities.add({
                     point: {
                         position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1]),

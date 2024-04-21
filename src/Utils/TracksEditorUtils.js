@@ -2,8 +2,6 @@ import { TrackUtils } from './cesium/TrackUtils'
 
 export class TracksEditorUtils {
 
-    static renderjourney
-
     /**
      * We change its key to rerender the list component
      */
@@ -22,7 +20,7 @@ export class TracksEditorUtils {
         vt3d.mainProxy.components.journeyEditor.keys.track.settings++
     }
 
-    static initJourneyEdition = (event) => {
+    static initJourneyEdition = (event = undefined) => {
         if (isOK(event)) {
             const editorStore = vt3d.theJourneyEditorProxy
             editorStore.journey = vt3d.getJourneyBySlug(event.target.value)
@@ -56,8 +54,6 @@ export class TracksEditorUtils {
         }
     }
     static initTrackEdition = (event) => {
-        console.log(isOK(event))
-
         if (isOK(event)) {
             const editorStore = vt3d.theJourneyEditorProxy
             editorStore.track = vt3d.getTrackBySlug(event.target.value)
