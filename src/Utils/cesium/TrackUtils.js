@@ -470,17 +470,28 @@ export class TrackUtils {
         })
     }
 
-    static updateTracksVisibility = (journey, visibility) => {
+    /**
+     * Update journey visibility
+     *
+     * There's no redraw, we force the entity.show value to <visibility>
+     *
+     * We focus here on tracks and associated flags, not on POIs
+     *
+     * @param journey       the journey to hide or show
+     * @param visibility    the visibility value (true = hide)
+     */
+    static updateJourneyVisibility = (journey, visibility) => {
         // Get all associated datasource
         const dataSources = TrackUtils.getDataSourcesByName(journey.slug)
         if (!dataSources) {
             return
         }
-
+        // We loop on all associated data sources
         dataSources.forEach(dataSource => {
             dataSource.entities.values.forEach(entity => {
                 if (entity.id.startsWith(POI_FLAG)) {
                     const poi = journey.pois.get(entity.id)
+                    // The flag remains hidden if so decided beforehand
                     entity.show = visibility ? poi.visible : false
                 } else if (!entity.billboard) {
                     // Only journeys, not legacy pois
