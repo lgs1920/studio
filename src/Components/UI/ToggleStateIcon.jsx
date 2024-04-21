@@ -3,7 +3,7 @@ import { SlIcon }            from '@shoelace-style/shoelace/dist/react'
 import React, { useState }   from 'react'
 import { FA2SL }             from '../../Utils/FA2SL'
 
-export const SwitchStateIcon = (props) => {
+export const ToggleStateIcon = (props) => {
 
     const change = props.change
     const initial = props.initial ?? true
