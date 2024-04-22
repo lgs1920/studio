@@ -39,11 +39,19 @@ export const TrackSettings = function TrackSettings() {
     })
 
     const setDescription = (async event => {
-
+        const description = event.target.value
+        // Title is empty, we force the former value
+        if (description === '') {
+            const field = document.getElementById('track-description')
+            field.value = editorStore.track.description
+            return
+        }
+        editorStore.track.description = description
+        await updateTrack(UPDATE_TRACK_SILENTLY)
     })
 
     /**
-     * Change Journey Title
+     * Change Track Title
      *
      * The selection box is then synchronised
      *
@@ -64,7 +72,7 @@ export const TrackSettings = function TrackSettings() {
             return track.title
         }))
 
-        await updateTrack(UPDATE_TRACK_THEN_DRAW)
+        await updateTrack(UPDATE_TRACK_SILENTLY)
         TracksEditorUtils.renderTracksList()
     })
 
@@ -159,11 +167,12 @@ export const TrackSettings = function TrackSettings() {
      * @return {Journey}
      */
     const updateTrack = async (action) => {
+
+        // Update the journey
+        editorStore.journey.tracks.set(editorStore.track.slug, editorStore.track)
+
         const journey = Journey.deserialize({object: Journey.unproxify(editorStore.journey)})
         const track = Track.deserialize({object: Track.unproxify(editorStore.track)})
-        console.log(track.title)
-        // Update the journey
-        journey.tracks.set(track.slug, track)
 
         // Prepare to draw
         // await journey.computeAll()
@@ -300,7 +309,7 @@ export const TrackSettings = function TrackSettings() {
                     </div>
                     <div id="track-visibility" className={'editor-vertical-menu'}>
                         {severalTracks && <SlTooltip content={textVisibilityTrack}>
-                            <ToggleStateIcon change={setTrackVisibility} initial={editorStore.track.visible}/>
+                            <ToggleStateIcon change={setTrackVisibility} initial={editorSnapshot.track.visible}/>
                         </SlTooltip>}
                         {editorSnapshot.track.visible && <>
                             <SlTooltip content={textVisibilityStartFlag}>
