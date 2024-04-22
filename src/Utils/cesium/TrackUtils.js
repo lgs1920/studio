@@ -537,18 +537,24 @@ export class TrackUtils {
      * We force the track datasource and the dedicated flags entities
      * to <visibility>
      *
-     * @param journey       the journey to hide or show
-     * @param visibility    the visibility value (true = hide)
+     * @param {Journey} journey     The journey
+     * @param {Track} track         The track to hide or show
+     * @param {boolean} visibility  The visibility value (true = hide)
      *
      */
-    static updateTrackVisibility = (track, visibility) => {
+    static updateTrackVisibility = (journey, track, visibility) => {
         // Update the track visibility
-        TrackUtils.getDataSourcesByName(track.slug, true).show = 0
+        TrackUtils.getDataSourcesByName(track.slug).forEach(dataSource => {
+            dataSource.show = visibility
+        })
         // Update the associated flags
-        TrackUtils.getDataSourcesByName(track.parent, true).entities.values.forEach(entity => {
+        TrackUtils.getDataSourcesByName(track.parent, true)[0].entities.values.forEach(entity => {
             // Filter flags
             if (entity.id.startsWith(POI_FLAG)) {
-                entity.show = POIUtils.updatePOIVisibility(journey.pois.get(entity.id), visibility)
+                const poi = journey.pois.get(entity.id)
+                if (poi.track === track.slug) {
+                    entity.show = POIUtils.updatePOIVisibility(poi, visibility)
+                }
             }
         })
 

@@ -3,14 +3,15 @@ import { faLocationPin, faLocationPinSlash }                  from '@fortawesome
 
 import {
     SlColorPicker, SlDivider, SlIcon, SlInput, SlRange, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                                                   from '@shoelace-style/shoelace/dist/react'
-import { useSnapshot }                              from 'valtio'
-import { FLAG_START, FLAG_STOP, Journey, POI_FLAG } from '../../../classes/Journey'
-import { Track }                                    from '../../../classes/Track'
-import { FA2SL }                                    from '../../../Utils/FA2SL'
-import { TracksEditorUtils }                        from '../../../Utils/TracksEditorUtils'
-import { useConfirm }                               from '../Modals/ConfirmUI'
-import { ToggleStateIcon }                          from '../ToggleStateIcon'
+}                                         from '@shoelace-style/shoelace/dist/react'
+import { useSnapshot }                    from 'valtio'
+import { FLAG_START, FLAG_STOP, Journey } from '../../../classes/Journey'
+import { Track }                          from '../../../classes/Track'
+import { TrackUtils }                     from '../../../Utils/cesium/TrackUtils'
+import { FA2SL }                          from '../../../Utils/FA2SL'
+import { TracksEditorUtils }              from '../../../Utils/TracksEditorUtils'
+import { useConfirm }                     from '../Modals/ConfirmUI'
+import { ToggleStateIcon }                from '../ToggleStateIcon'
 
 export const TrackSettings = function TrackSettings() {
 
@@ -99,30 +100,7 @@ export const TrackSettings = function TrackSettings() {
         //saveToDB state
         editorStore.track.visible = visibility
 
-        // Change track visibility by changing it for each entity
-        if (visibility) {
-            // We show all tracks and created pois Except for start and stop,
-            // for which the pre-masking status is maintained.
-            dataSource.entities.values.forEach(entity => {
-                if (entity.id.startsWith(POI_FLAG)) {
-                    if (entity.id.endsWith('start')) {
-                        entity.show = poi.snap('start').visible
-                    } else if (entity.id.endsWith('stop')) {
-                        entity.show = poi.snap('stop').visible
-                    } else {
-                        entity.show = true
-                    }
-                } else if (!entity.billboard) {
-                    // Only tracks, not legacy pois
-                    entity.show = true
-                }
-            })
-        } else {
-            // We hide all tracks and pois
-            dataSource.entities.values.forEach(entity => {
-                entity.show = false
-            })
-        }
+        TrackUtils.updateTrackVisibility(editorStore.journey, editorStore.track, visibility)
         await updateTrack(UPDATE_TRACK_SILENTLY)
         TracksEditorUtils.renderTrackSettings()
     }
