@@ -232,7 +232,7 @@ export const JourneySettings = function JourneySettings() {
                         <span>
                         <SlTooltip content={textVisibilityJourney}>
                             <ToggleStateIcon change={setJourneyVisibility}
-                                             initial={editorStore.journey.visible}/>
+                                             initial={editorSnapshot.journey.visible}/>
                         </SlTooltip>
                             {severalPOIs &&
                                 <SlTooltip content={textVisibilityPOIs}>
