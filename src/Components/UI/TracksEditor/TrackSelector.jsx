@@ -13,12 +13,11 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     const mainSnapshot = useSnapshot(mainStore)
     const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
-    const tracks = vt3d.theJourney.tracks
+    const tracks = editorStore.journey.tracks
     const several = tracks.size > 1
     if (editorStore.track === null || editorStore.track === undefined) {
         editorStore.track = Array.from(tracks.values())[0]
     }
-
     // if (several) {
     // We do not sort the list
     // TODO : Check if it right to take tracks in the order in which they were created.
@@ -34,7 +33,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
                           key={mainSnapshot.keys.track.list}
                 >
                     <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
-                    {Array.from(tracks.values()).map(track =>
+                    {Array.from(editorSnapshot.journey.tracks.values()).map(track =>
                         <SlOption key={track.title} value={track.slug}>
                             {track.visible
                              ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/>
