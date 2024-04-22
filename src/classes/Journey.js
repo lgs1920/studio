@@ -6,9 +6,6 @@ import {
     getGeom,
 }                                       from '@turf/invariant'
 import {
-    JOURNEY_TYPE, TRACK_TYPE,
-}                                       from '../Utils/cesium/EntitiesUtils'
-import {
     JUST_ICON,
 }                                       from '../Utils/cesium/MarkerUtils'
 import {
@@ -31,7 +28,7 @@ export class Journey extends MapElement {
     title = ''                          // Journey Title
 
     origin                                     // initial geoJson
-    allPOISVisible = true
+    POIsVisible = true
 
     constructor(title, type, options) {
         super()
@@ -43,7 +40,9 @@ export class Journey extends MapElement {
             // we set the value to a default.
             this.slug = options.slug ?? _.app.slugify(`${title}-${type}`)
             this.visible = options.visible ?? true
-            this.description = options.description ?? 'This is a journey'
+            this.POIsVisible = options.POIsVisible ?? true
+
+            this.description = options.description ?? ''
 
             this.DEMServer = options.DEMServer ?? NO_DEM_SERVER
 
@@ -56,8 +55,18 @@ export class Journey extends MapElement {
             // Get all POIs
             this.getPOIsFromGeoJson()
 
-            //Finally saveToDB it in DB
-            this.saveToDB()
+            // Finally saveToDB
+            const save = async () => {
+                await this.saveToDB()
+            }
+
+            save()
+            const prepare = async () => {
+                await this.prepareDrawing()
+                console.log('inside')
+            }
+            prepare()
+
         }
     }
 
@@ -106,6 +115,10 @@ export class Journey extends MapElement {
 
     static unproxify = (object) => {
         return super.serialize({...object, ...{__class: Journey}})
+    }
+
+    prepareDrawing = async () => {
+        await TrackUtils.prepareDrawing(this)
     }
 
     /**
@@ -235,9 +248,7 @@ export class Journey extends MapElement {
                         // Create a POI
                         const point = geometry.coordinates
                         const parameters = {
-                            parent: {
-                                slug: this.slug, type: JOURNEY_TYPE,
-                            },
+                            journey: this.slug,
                             name: feature.properties.name,
                             slug: this.#setPOISlug(index),
                             coordinates: [point[0], point[1]],
@@ -257,9 +268,10 @@ export class Journey extends MapElement {
                         const start = coordinates[0][0]
                         const timeStart = this.#hasTime(feature.properties) ? times[0][0] : undefined
                         const startParameters = {
-                            parent: {slug: parentSlug, type: TRACK_TYPE},
+                            track: parentSlug,
+                            journey: this.slug,
                             name: 'Track start',
-                            slug: this.#setPOISlug(`${_.app.slugify(feature.properties.name)}#${FLAG_START}`, POI_FLAG),
+                            slug: this.#setPOISlug(`${_.app.slugify(feature.properties.name)}-${FLAG_START}`, POI_FLAG),
                             coordinates: [start[0], start[1]],
                             altitude: start[2] ?? undefined,
                             time: timeStart,
@@ -278,9 +290,10 @@ export class Journey extends MapElement {
 
                         const timeStop = this.#hasTime(feature.properties) ? times[length][last] : undefined
                         const stopParameters = {
-                            parent: {slug: parentSlug, type: TRACK_TYPE},
+                            track: parentSlug,
+                            journey: this.slug,
                             name: 'Track stop',
-                            slug: this.#setPOISlug(`#${_.app.slugify(feature.properties.name)}#${FLAG_STOP}`, POI_FLAG),
+                            slug: this.#setPOISlug(`#${_.app.slugify(feature.properties.name)}-${FLAG_STOP}`, POI_FLAG),
                             coordinates: [stop[0], stop[1]],
                             altitude: stop[2] ?? undefined,
                             time: timeStop,
@@ -414,26 +427,31 @@ export class Journey extends MapElement {
     draw = async ({action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE}) => {
         const tracks = []
         const pois = []
-        // Draw Tracks and flags
-        for (const track of this.tracks.values()) {
-            // If track is not visible, we force tracks to be hidden, whatever their visibility
-            // else we use their status.
-            tracks.push(await track.draw({action: action, mode: NO_FOCUS, forcedToHide: !this.visible}))
-            for (const poi of this.pois.values()) {
-                if (poi.slug.startsWith(POI_FLAG)) {
-                    pois.push(await poi.draw(!track.visible))
-                }
-            }
-        }
-        await Promise.all(tracks)
 
+        // Draw Tracks and flags
+        this.tracks.forEach(track => {
+            // If journey is not visible, we force tracks to be hidden, whatever their visibility
+            // else we use their status.
+            tracks.push(track.draw({
+                action: action,
+                mode: NO_FOCUS,
+                forcedToHide: !this.visible,
+            }))
+            this.pois.forEach(poi => {
+                if (poi.slug === track.slug && poi.slug.startsWith(POI_FLAG)) {
+                    pois.push(poi.draw(!track.visible))
+                }
+            })
+        })
         // Draw POIs
-        for (const poi of this.pois.values()) {
-            // Same for POIs 
+        this.pois.forEach(poi => {
+            // Same for POIs
             if (poi.slug.startsWith(POI_STD)) {
-                pois.push(await poi.draw(!this.visible))
+                pois.push(poi.draw(!this.visible))
             }
-        }
+        })
+
+        await Promise.all(tracks)
         await Promise.all(pois)
 
         if (mode === FOCUS_ON_FEATURE) {

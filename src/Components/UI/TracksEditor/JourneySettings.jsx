@@ -62,11 +62,9 @@ export const JourneySettings = function JourneySettings() {
     /**
      * Change journey visibility
      *
-     * @type {setThickness}
      */
     const setJourneyVisibility = (async visibility => {
         //save state
-        console.log(editorStore.journey.visible, visibility)
         editorStore.journey.visible = visibility
         vt3d.theJourney.updateVisibility(visibility)
 
@@ -78,16 +76,11 @@ export const JourneySettings = function JourneySettings() {
     /**
      * Change journey visibility
      *
-     * @type {setThickness}
      */
     const setAllPOIsVisibility = (async visibility => {
         //save state
-        // TrackUtils.updatePOIsVisibility(vt3d.theJourney, visibility)
-        await updateJourney(UPDATE_JOURNEY_SILENTLY)
-
+        TrackUtils.updatePOIsVisibility(vt3d.theJourney, visibility)
         TracksEditorUtils.renderJourneySettings()
-        TracksEditorUtils.renderJourneysList()
-
     })
 
     /**

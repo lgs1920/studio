@@ -42,6 +42,8 @@ export class POI {
         this.image = options.image ?? undefined
         this.visible = options.visible ?? true
         this.vertical = options.vertical ?? POI_VERTICAL_ALIGN_CENTER
+        this.track = options.track ?? undefined
+        this.journey = options.journey ?? undefined
     }
 
     static clone = (source, exceptions = {}) => {

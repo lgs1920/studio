@@ -2,9 +2,9 @@ import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 
-import { Canvg }                 from 'canvg'
-import * as Cesium               from 'cesium'
-import { FLAG_START, FLAG_STOP } from '../../classes/Journey'
+import { Canvg }                          from 'canvg'
+import * as Cesium                        from 'cesium'
+import { FLAG_START, FLAG_STOP, POI_STD } from '../../classes/Journey'
 
 // Pin Marker Type
 export const PIN_ICON = 1
@@ -44,15 +44,6 @@ export class MarkerUtils {
      */
     static draw = async (poi, forcedToHide) => {
 
-        // Check data source
-        let dataSource = vt3d.viewer.dataSources.getByName(poi.parent.slug)[0]
-        // If undefined, it's for  POIs so we create a new one
-        // using journey slug in order to group all of them
-        if (dataSource === undefined) {
-            dataSource = new Cesium.CustomDataSource(poi.parent.slug)
-            vt3d.viewer.dataSources.add(dataSource)
-        }
-
         let poiOptions = {
             name: poi.name,
             id: poi.slug,
@@ -71,6 +62,10 @@ export class MarkerUtils {
 
         const backgroundColor = Cesium.Color.fromCssColorString(poi.backgroundColor)
         const foregroundColor = poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : undefined
+
+
+        // Check data source
+        let dataSource = vt3d.viewer.dataSources.getByName(poi.slug.startsWith(POI_STD) ? poi.journey : poi.track)[0]
 
         switch (poi.type) {
             case PIN_CIRCLE:
@@ -150,7 +145,7 @@ export class MarkerUtils {
     }
 
     static remove = async (poi) => {
-        const dataSource = vt3d.viewer.dataSources.getByName(poi.parent)[0]
+        const dataSource = vt3d.viewer.dataSources.getByName(poi.slug.startsWith(POI_STD) ? poi.journey : poi.track)[0]
         dataSource.entities.values.forEach(entity => {
             if (entity.id === poi.id) {
                 dataSource.entities.remove(entity)

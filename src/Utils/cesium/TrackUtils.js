@@ -1,26 +1,24 @@
-import { default as extent } from '@mapbox/geojson-extent'
-import * as Cesium           from 'cesium'
+import { default as extent }                          from '@mapbox/geojson-extent'
+import * as Cesium                                    from 'cesium'
+import { Color, CustomDataSource, GeoJsonDataSource } from 'cesium'
 import {
-    Color, GeoJsonDataSource,
-}                            from 'cesium'
-import {
-    FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD, RE_LOADING, SIMULATE_ALTITUDE,
-}                            from '../../classes/Journey'
+    FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_STD, RE_LOADING, SIMULATE_ALTITUDE,
+}                                                     from '../../classes/Journey'
 import {
     Track,
-}                            from '../../classes/Track'
+}                                                     from '../../classes/Track'
 import {
     CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK,
-}                            from '../../classes/VT3D'
+}                                                     from '../../classes/VT3D'
 import {
     FileUtils,
-}                            from '../FileUtils.js'
+}                                                     from '../FileUtils.js'
 import {
     UINotifier,
-}                            from '../UINotifier'
+}                                                     from '../UINotifier'
 import {
     EntitiesUtils,
-}                            from './EntitiesUtils'
+}                                                     from './EntitiesUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -55,6 +53,23 @@ export class TrackUtils {
             hasAltitude: hasAltitude, hasTime: feature.properties?.coordinateProperties?.times !== undefined,
         }
     })
+    static prepareDrawing = async journey => {
+
+        const dataSources = []
+        journey.tracks.forEach(track => {
+            dataSources.push(
+                vt3d.viewer.dataSources.add(new GeoJsonDataSource(track.slug, {
+                    id: track.slug,
+                })))
+        })
+        dataSources.push(
+            vt3d.viewer.dataSources.add(new CustomDataSource(journey.slug, {
+                id: journey.slug,
+            })))
+
+        await Promise.all(dataSources)
+
+    }
 
     /**
      * Load a Journey file
@@ -82,32 +97,27 @@ export class TrackUtils {
         const configuration = vt3d.configuration
 
         const trackStroke = {
-            color: Color.fromCssColorString(track.color), thickness: track.thickness,
+            color: Color.fromCssColorString(track.color),
+            thickness: track.thickness,
         }
         const routeStroke = {
-            color: Color.fromCssColorString(configuration.route.color), thickness: configuration.route.thickness,
+            color: Color.fromCssColorString(configuration.route.color),
+            thickness: configuration.route.thickness,
         }
         const commonOptions = {
-            clampToGround: true, name: track.title,
-            show: forcedToHide ? false : track.visible,
+            clampToGround: true,
+            name: track.title,
         }
 
         // Load Geo Json for track
-        let source = null
-        if (action === RE_LOADING) {
-            // We get existing datasources
-            source = vt3d.viewer.dataSources.getByName(track.slug)[0]
-        } else {
-            // It's a new track... But with strict mode, in developer mode, we got twice, so let's
-            // check to have only one
-            source = await new GeoJsonDataSource(track.slug, {
-                id: track.slug,
-            })
-        }
-
+        const source = vt3d.viewer.dataSources.getByName(track.slug)[0]
         return source.load(track.content, {
-            ...commonOptions, stroke: trackStroke.color, strokeWidth: trackStroke.thickness,
+            ...commonOptions,
+            stroke: trackStroke.color,
+            strokeWidth: trackStroke.thickness,
         }).then(dataSource => {
+            // Visibility ?
+            dataSource.show = forcedToHide ? false : track.visible
             const text = `Track loaded and displayed on the map.`
             if (action === RE_LOADING) {
                 UINotifier.notifySuccess({
@@ -115,25 +125,22 @@ export class TrackUtils {
                 })
             } else {
                 try {
-                    vt3d.viewer.dataSources.add(dataSource).then(() => {
-
-                        // Ok => we notify
-                        let caption = ''
-                        switch (action) {
-                            case
-                            SIMULATE_ALTITUDE : {
-                                caption = `<strong>${track.title}</strong> updated !`
-                                break
-                            }
-                            default: {
-                                caption = `<strong>${track.title}</strong> Loaded!`
-                            }
+                    let caption = ''
+                    switch (action) {
+                        case
+                        SIMULATE_ALTITUDE : {
+                            caption = `<strong>${track.title}</strong> updated !`
+                            break
                         }
-                        UINotifier.notifySuccess({
-                            caption: caption, text: text,
-                        })
-
+                        default: {
+                            caption = `<strong>${track.title}</strong> Loaded!`
+                        }
+                    }
+                    UINotifier.notifySuccess({
+                        caption: caption, text: text,
                     })
+
+
                 } catch (error) {
                     console.error(error)
                     // Error => we notify
@@ -386,6 +393,11 @@ export class TrackUtils {
             return
         }
 
+        // Now prepare drawing
+        journeys.forEach(journey => {
+            journey.prepareDrawing()
+        })
+
         // Same for current Track. If wehav one, we get it then check if it's part
         // of the current journey. Else we use the first of the list and ad it
         // to the app context.
@@ -400,9 +412,9 @@ export class TrackUtils {
 
         // Now it's time for the show. Draw all journeys but focus on the current one
         const items = []
-        for (const journey of vt3d.journeys.values()) {
+        vt3d.journeys.forEach(journey => {
             items.push(journey.draw({mode: journey.slug === currentJourney ? FOCUS_ON_FEATURE : NO_FOCUS}))
-        }
+        })
         await Promise.all(items)
     }
 
@@ -482,31 +494,14 @@ export class TrackUtils {
     /**
      * Update journey visibility
      *
-     * There's no redraw, we force the entity.show value to <visibility>
-     *
-     * We focus here on tracks and associated flags, not on POIs
+     * There's no redraw, we force the datasource to <visibility>
      *
      * @param journey       the journey to hide or show
      * @param visibility    the visibility value (true = hide)
      */
     static updateJourneyVisibility = (journey, visibility) => {
-        // Get all associated datasource
-        const dataSources = TrackUtils.getDataSourcesByName(journey.slug)
-        if (!dataSources) {
-            return
-        }
-        // We loop on all associated data sources
-        dataSources.forEach(dataSource => {
-            dataSource.entities.values.forEach(entity => {
-                if (entity.id.startsWith(POI_FLAG)) {
-                    const poi = journey.pois.get(entity.id)
-                    // The flag remains hidden if so decided beforehand
-                    entity.show = visibility ? poi.visible : false
-                } else if (!entity.billboard) {
-                    // Only journeys, not legacy pois
-                    entity.show = visibility
-                }
-            })
+        TrackUtils.getDataSourcesByName(journey.slug).forEach(dataSource => {
+            dataSource.show = visibility
         })
 
     }
