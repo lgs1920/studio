@@ -63,7 +63,6 @@ export class Journey extends MapElement {
             save()
             const prepare = async () => {
                 await this.prepareDrawing()
-                console.log('inside')
             }
             prepare()
 
