@@ -8,7 +8,9 @@ import { main }              from './stores/main'
 import { theJourneyEditor }  from './stores/theJourneyEditor'
 
 export class VT3D {
+    /** @type {Proxy} */
     #mainProxy
+    /** @type {Proxy} */
     #theJourneyEditorProxy
 
     eventHandler = new MouseEventHandler()
@@ -80,10 +82,18 @@ export class VT3D {
         return this?.scene?.canvas
     }
 
+    /**
+     * @return {Journey}
+     */
     get theJourney() {
         return this.#mainProxy.theJourney
     }
 
+    /**
+     *
+     * @param journey
+     *
+     */
     set theJourney(journey) {
         this.#mainProxy.theJourney = journey
         if (journey === null) {
@@ -93,6 +103,10 @@ export class VT3D {
         this.db.journeys.put(CURRENT_JOURNEY, journey.slug, CURRENT_STORE).then(journey.addToEditor())
     }
 
+    /**
+     *
+     * @return {Proxy}
+     */
     get theTrack() {
         return this.#mainProxy.theTrack
     }

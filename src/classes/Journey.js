@@ -438,8 +438,8 @@ export class Journey extends MapElement {
                 forcedToHide: !this.visible,
             }))
             this.pois.forEach(poi => {
-                if (poi.slug === track.slug && poi.slug.startsWith(POI_FLAG)) {
-                    pois.push(poi.draw(!track.visible))
+                if (poi.track === track.slug && poi.slug.startsWith(POI_FLAG)) {
+                    pois.push(poi.draw())
                 }
             })
         })
@@ -447,7 +447,7 @@ export class Journey extends MapElement {
         this.pois.forEach(poi => {
             // Same for POIs
             if (poi.slug.startsWith(POI_STD)) {
-                pois.push(poi.draw(!this.visible))
+                pois.push(poi.draw())
             }
         })
 

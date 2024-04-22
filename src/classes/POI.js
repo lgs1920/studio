@@ -71,7 +71,7 @@ export class POI {
     }
 
     draw = async (forcedToHide = false) => {
-        await MarkerUtils.draw(this, forcedToHide)
+        await MarkerUtils.draw(this)
     }
     remove = async () => {
         await MarkerUtils.remove(this)

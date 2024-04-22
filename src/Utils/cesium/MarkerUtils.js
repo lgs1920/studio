@@ -39,17 +39,16 @@ export class MarkerUtils {
     /**
      *
      * @param poi
-     * @param forcedToHide         if forced, we show the poi according to its visible property
      * @return {Promise<*>}
      */
-    static draw = async (poi, forcedToHide) => {
+    static draw = async (poi) => {
 
         let poiOptions = {
             name: poi.name,
             id: poi.slug,
             description: poi.description,
             position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1], poi.coordinates[2]),
-            show: forcedToHide ? false : poi.visible,
+            show: poi.visible,
             disableDepthTestDistance: new Cesium.ConstantProperty(0),
         }
         const pinBuilder = new Cesium.PinBuilder()
@@ -65,8 +64,7 @@ export class MarkerUtils {
 
 
         // Check data source
-        let dataSource = vt3d.viewer.dataSources.getByName(poi.slug.startsWith(POI_STD) ? poi.journey : poi.track)[0]
-
+        let dataSource = vt3d.viewer.dataSources.getByName(poi.journey, true)[0]
         switch (poi.type) {
             case PIN_CIRCLE:
                 // TODO manque des options id, name ....
@@ -152,6 +150,22 @@ export class MarkerUtils {
             }
         })
 
+    }
+
+    /**
+     * Manage POI visibility
+     *
+     * Whatever its visibility, we hide the POI, but we take into account th visibility status
+     * when we show it (ie if it is marked a hidden, we do not show it)
+     *
+     * @param poi
+     * @param visibility
+     *
+     * @returns {Boolean}
+     *
+     */
+    static updatePOIVisibility = (poi, visibility) => {
+        return visibility ? poi.visible : false
     }
 
 }

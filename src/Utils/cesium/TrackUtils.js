@@ -1,24 +1,29 @@
-import { default as extent }                          from '@mapbox/geojson-extent'
-import * as Cesium                                    from 'cesium'
-import { Color, CustomDataSource, GeoJsonDataSource } from 'cesium'
+import { default as extent } from '@mapbox/geojson-extent'
+import * as Cesium           from 'cesium'
 import {
-    FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_STD, RE_LOADING, SIMULATE_ALTITUDE,
-}                                                     from '../../classes/Journey'
+    Color, CustomDataSource, GeoJsonDataSource,
+}                            from 'cesium'
+import {
+    FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD, RE_LOADING, SIMULATE_ALTITUDE,
+}                            from '../../classes/Journey'
 import {
     Track,
-}                                                     from '../../classes/Track'
+}                            from '../../classes/Track'
 import {
     CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK,
-}                                                     from '../../classes/VT3D'
+}                            from '../../classes/VT3D'
 import {
     FileUtils,
-}                                                     from '../FileUtils.js'
+}                            from '../FileUtils.js'
 import {
     UINotifier,
-}                                                     from '../UINotifier'
+}                            from '../UINotifier'
 import {
     EntitiesUtils,
-}                                                     from './EntitiesUtils'
+}                            from './EntitiesUtils'
+import {
+    MarkerUtils,
+}                            from './MarkerUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -53,19 +58,29 @@ export class TrackUtils {
             hasAltitude: hasAltitude, hasTime: feature.properties?.coordinateProperties?.times !== undefined,
         }
     })
+
+    /**
+     * Prepare all the Datasources for the tacks and POIs drawings for aJourney
+     *
+     * For Each Track we create a GeoJson Data source, named with the track slug
+     * For all the POIs, flags included, we create a Custom Data Source named with journey slug.
+     *
+     * @param journey
+     * @return {Promise<void>}
+     */
     static prepareDrawing = async journey => {
 
         const dataSources = []
+
+        // Manage Tracks
         journey.tracks.forEach(track => {
             dataSources.push(
-                vt3d.viewer.dataSources.add(new GeoJsonDataSource(track.slug, {
-                    id: track.slug,
-                })))
+                vt3d.viewer.dataSources.add(new GeoJsonDataSource(track.slug)))
         })
+
+        // Manage POIs
         dataSources.push(
-            vt3d.viewer.dataSources.add(new CustomDataSource(journey.slug, {
-                id: journey.slug,
-            })))
+            vt3d.viewer.dataSources.add(new CustomDataSource(journey.slug)))
 
         await Promise.all(dataSources)
 
@@ -424,7 +439,7 @@ export class TrackUtils {
      * @param {string} name  name or part of name
      * @param {boolean} strict true find the name, else find all those whose name contains a part of name
      *
-     * @return {Array} array of DataSource
+     * @return {[DataSource]} array of DataSource
      */
     static getDataSourcesByName(name, strict = false) {
         if (strict) {
@@ -469,43 +484,74 @@ export class TrackUtils {
     static saveCurrentPOIToDB = async (current) => {
         await vt3d.db.journeys.put(CURRENT_POI, current, CURRENT_STORE)
     }
-
     /**
-     * Update POI visibility
-     * @param journey
-     * @param visibility
+     * Update POIs visibility
+     *
+     * For each POI entity in the dedicated data source
+     * Dedicated flags are excluded.
+     *
+     * @param {Journey} journey       the journey on which points are to be hidden or displayed
+     * @param {Boolean} visibility    the visibility value (true = hide)
      */
     static  updatePOIsVisibility = (journey, visibility) => {
-        // Get all associated datasource
-        const dataSources = TrackUtils.getDataSourcesByName(journey.slug, true)
-        if (!dataSources) {
-            return
-        }
-        dataSources.forEach(dataSource => {
-            dataSource.entities.values.forEach(entity => {
-                if (entity.id.startsWith(POI_STD)) {
-                    const poi = journey.pois.get(entity.id)
-                    entity.show = visibility ? poi.visible : false
-                }
-            })
+        TrackUtils.getDataSourcesByName(journey.slug, true)[0]?.entities.values.forEach(entity => {
+            if (entity.id.startsWith(POI_STD)) {
+                entity.show = MarkerUtils.updatePOIVisibility(journey.pois.get(entity.id), visibility)
+            }
         })
+
     }
 
     /**
      * Update journey visibility
      *
-     * There's no redraw, we force the datasource to <visibility>
+     * We force all the tracks datasource and the dedicated flags entities
+     * to <visibility>
      *
-     * @param journey       the journey to hide or show
-     * @param visibility    the visibility value (true = hide)
+     * @param {Journey} journey       the journey to hide or show
+     * @param {Boolean} visibility    the visibility value (true = hide)
+     *
      */
     static updateJourneyVisibility = (journey, visibility) => {
+        // We get all data sources associated to the journey
         TrackUtils.getDataSourcesByName(journey.slug).forEach(dataSource => {
-            dataSource.show = visibility
+            // For flags, we need to manage entities.
+            if (dataSource.name === journey.slug) {
+                dataSource.entities.values.forEach(entity => {
+                    // Filter flags
+                    if (entity.id.startsWith(POI_FLAG)) {
+                        entity.show = MarkerUtils.updatePOIVisibility(journey.pois.get(entity.id), visibility)
+                    }
+                })
+            } else {
+                // We set the datasource with all entities.
+                dataSource.show = visibility
+            }
         })
 
     }
 
+    /**
+     * Update Track visibility
+     *
+     * We force the track datasource and the dedicated flags entities
+     * to <visibility>
+     *
+     * @param journey       the journey to hide or show
+     * @param visibility    the visibility value (true = hide)
+     *
+     */
     static updateTrackVisibility = (track, visibility) => {
+        // Update the track visibility
+        TrackUtils.getDataSourcesByName(track.slug, true).show = 0
+        // Update the associated flags
+        TrackUtils.getDataSourcesByName(track.parent, true).entities.values.forEach(entity => {
+            // Filter flags
+            if (entity.id.startsWith(POI_FLAG)) {
+                entity.show = MarkerUtils.updatePOIVisibility(journey.pois.get(entity.id), visibility)
+            }
+        })
+
+
     }
 }
