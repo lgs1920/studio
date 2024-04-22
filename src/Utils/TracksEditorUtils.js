@@ -23,14 +23,15 @@ export class TracksEditorUtils {
     static initJourneyEdition = (event = undefined) => {
         if (isOK(event)) {
             const editorStore = vt3d.theJourneyEditorProxy
+            vt3d.saveJourney(editorStore.journey)
+
             editorStore.journey = vt3d.getJourneyBySlug(event.target.value)
             editorStore.journey.addToContext()
             // Force Track and POI in editor
-            if (editorStore.track === null || editorStore.track === undefined) {
-                editorStore.track = Array.from(editorStore.journey.tracks)[0]
-                editorStore.track.addToContext()
-                editorStore.track.addToEditor()
-            }
+            editorStore.track = Array.from(editorStore.journey.tracks.values())[0]
+            editorStore.track.addToContext()
+            editorStore.track.addToEditor()
+
             editorStore.poi = null
             // Force rerender
             TracksEditorUtils.renderJourneysList()

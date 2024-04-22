@@ -13,10 +13,9 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     const mainSnapshot = useSnapshot(mainStore)
     const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
-
     const tracks = vt3d.theJourney.tracks
     const several = tracks.size > 1
-    if (editorSnapshot.track === null || editorSnapshot.track === undefined) {
+    if (editorStore.track === null || editorStore.track === undefined) {
         editorStore.track = Array.from(tracks.values())[0]
     }
 

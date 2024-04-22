@@ -1,4 +1,4 @@
-import { MarkerUtils, PIN_CIRCLE } from '../Utils/cesium/MarkerUtils'
+import { PIN_CIRCLE, POIUtils } from '../Utils/cesium/POIUtils'
 
 export class POI {
 
@@ -65,16 +65,16 @@ export class POI {
      */
     defineIcon = (icon) => {
         if (typeof icon === 'string') {
-            return MarkerUtils.setIcon(icon)
+            return POIUtils.setIcon(icon)
         }
         return icon
     }
 
-    draw = async (forcedToHide = false) => {
-        await MarkerUtils.draw(this)
+    draw = async (parentVisibility = true) => {
+        await POIUtils.draw(this, parentVisibility)
     }
     remove = async () => {
-        await MarkerUtils.remove(this)
+        await POIUtils.remove(this)
     }
 
 }

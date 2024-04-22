@@ -55,7 +55,6 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                                           onSlRequestClose={handleRequestClose}
                                           contained
                                           onSlHide={closeTracksEditor}
-                // onSlShow={TracksEditorUtils.initJourneyEdition}
             >
                 {vt3d.journeys.size > 0 && <div id={'track-settings-container'}>
                     <JourneySelector onChange={TracksEditorUtils.initJourneyEdition}

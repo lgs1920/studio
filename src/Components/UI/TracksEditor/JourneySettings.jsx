@@ -54,9 +54,10 @@ export const JourneySettings = function JourneySettings() {
             field.value = editorStore.journey.title
             return
         }
-        // Let's check if the next title has not been already used for
-        // another journey.
+        // title should not been already used for another journey.
         editorStore.journey.title = editorStore.journey.singleTitle(title)
+        // Then use it
+        await updateJourney(UPDATE_JOURNEY_SILENTLY)
         TracksEditorUtils.renderJourneysList()
     })
 
@@ -65,22 +66,19 @@ export const JourneySettings = function JourneySettings() {
      *
      */
     const setJourneyVisibility = (async visibility => {
-        //save state
         editorStore.journey.visible = visibility
         vt3d.theJourney.updateVisibility(visibility)
-
         await updateJourney(UPDATE_JOURNEY_SILENTLY)
-
         TracksEditorUtils.renderJourneySettings()
-
     })
     /**
-     * Change journey visibility
+     * Change POIs visibility
      *
      */
     const setAllPOIsVisibility = (async visibility => {
-        //save state
+        editorStore.journey.POIsVisible = visibility
         TrackUtils.updatePOIsVisibility(vt3d.theJourney, visibility)
+        await updateJourney(UPDATE_JOURNEY_SILENTLY)
         TracksEditorUtils.renderJourneySettings()
     })
 
@@ -180,7 +178,7 @@ export const JourneySettings = function JourneySettings() {
     }
 
     const textVisibilityJourney = sprintf('%s Journey', editorSnapshot.journey.visible ? 'Hide' : 'Show')
-    const textVisibilityPOIs = sprintf('%s POIs', editorSnapshot.allPOIs ? 'Hide' : 'Show')
+    const textVisibilityPOIs = sprintf('%s POIs', editorSnapshot.journey.allPOIs ? 'Hide' : 'Show')
 
 
     /**
@@ -198,7 +196,6 @@ export const JourneySettings = function JourneySettings() {
         // saveToDB toDB
         await journey.saveToDB()
 
-        //  vt3d.viewer.dataSources.removeAll()
         if (action !== UPDATE_JOURNEY_SILENTLY) {
             await journey.draw(action)
         } else {
@@ -209,7 +206,6 @@ export const JourneySettings = function JourneySettings() {
 
     // check pois other than flags (2 flags per track)
     const severalPOIs = (editorStore.journey.pois.size - editorStore.journey.tracks.size * 2) > 1
-
     return (<>
         {editorSnapshot.journey &&
             <div id="journey-settings" key={vt3d.mainProxy.components.journeyEditor.keys.journey.journey}>
@@ -235,13 +231,14 @@ export const JourneySettings = function JourneySettings() {
                     <div id="journey-visibility" className={'editor-vertical-menu'}>
                         <span>
                         <SlTooltip content={textVisibilityJourney}>
-                            <ToggleStateIcon change={setJourneyVisibility} initial={editorSnapshot.journey.visible}/>
+                            <ToggleStateIcon change={setJourneyVisibility}
+                                             initial={editorStore.journey.visible}/>
                         </SlTooltip>
                             {severalPOIs &&
                                 <SlTooltip content={textVisibilityPOIs}>
                                     <ToggleStateIcon
                                         change={setAllPOIsVisibility}
-                                        initial={editorStore.allPOIs}
+                                        initial={editorStore.journey.POIsVisible}
                                         icons={{
                                             shown: faLocationDot, hidden: faLocationDotSlash,
                                         }}/>

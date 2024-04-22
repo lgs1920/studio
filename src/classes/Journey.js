@@ -7,7 +7,7 @@ import {
 }                                       from '@turf/invariant'
 import {
     JUST_ICON,
-}                                       from '../Utils/cesium/MarkerUtils'
+}                                       from '../Utils/cesium/POIUtils'
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
 }                                       from '../Utils/cesium/TrackUtils'
@@ -438,7 +438,7 @@ export class Journey extends MapElement {
             }))
             this.pois.forEach(poi => {
                 if (poi.track === track.slug && poi.slug.startsWith(POI_FLAG)) {
-                    pois.push(poi.draw())
+                    pois.push(poi.draw(this.visible ? track.visible : false))
                 }
             })
         })
@@ -446,7 +446,7 @@ export class Journey extends MapElement {
         this.pois.forEach(poi => {
             // Same for POIs
             if (poi.slug.startsWith(POI_STD)) {
-                pois.push(poi.draw())
+                pois.push(poi.draw(this.POIsVisible))
             }
         })
 

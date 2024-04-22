@@ -14,7 +14,7 @@ export const PIN_COLOR = 3
 export const PIN_CIRCLE = 4
 export const JUST_ICON = 5
 
-export class MarkerUtils {
+export class POIUtils {
     static verticalOrigin = (origin => {
         const location = {
             top: Cesium.VerticalOrigin.TOP,
@@ -41,21 +41,21 @@ export class MarkerUtils {
      * @param poi
      * @return {Promise<*>}
      */
-    static draw = async (poi) => {
+    static draw = async (poi, parentVisibility = true) => {
 
         let poiOptions = {
             name: poi.name,
             id: poi.slug,
             description: poi.description,
             position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1], poi.coordinates[2]),
-            show: poi.visible,
+            show: POIUtils.updatePOIVisibility(poi, parentVisibility),
             disableDepthTestDistance: new Cesium.ConstantProperty(0),
         }
         const pinBuilder = new Cesium.PinBuilder()
 
         poiOptions.billboard = {
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-            verticalOrigin: MarkerUtils.verticalOrigin(poi.vertical ?? 'center'),
+            verticalOrigin: POIUtils.verticalOrigin(poi.vertical ?? 'center'),
             disableDepthTestDistance: new Cesium.ConstantProperty(0),//Number.POSITIVE_INFINITY,
         }
 
@@ -87,12 +87,12 @@ export class MarkerUtils {
                 poiOptions.billboard.image = pinBuilder.fromText(poi.text, backgroundColor, poi.size).toDataURL()
                 return await dataSource.entities.add(poiOptions)
             case PIN_ICON:
-                pinBuilder.fromUrl(MarkerUtils.useFontAwesome(poi).src, backgroundColor, poi.size).then(async image => {
+                pinBuilder.fromUrl(POIUtils.useFontAwesome(poi).src, backgroundColor, poi.size).then(async image => {
                     poiOptions.billboard.image = image
                     return await dataSource.entities.add(poiOptions)
                 })
             case JUST_ICON:
-                return MarkerUtils.useOnlyFontAwesome(poi).then(async canvas => {
+                return POIUtils.useOnlyFontAwesome(poi).then(async canvas => {
                     poiOptions.billboard.image = canvas
                     return await dataSource.entities.add(poiOptions)
                 })
@@ -133,11 +133,11 @@ export class MarkerUtils {
         const context = canvas.getContext('2d')
         context.imageSmoothingEnabled = true
         context.imageSmoothingQuality = 'high'
-        const image = MarkerUtils.useFontAwesome(poi)
+        const image = POIUtils.useFontAwesome(poi)
         const ratio = image.height / image.width
         canvas.width = poi.size * (ratio > 1 ? 1 : ratio)
         canvas.height = poi.size * (ratio > 1 ? ratio : 1)
-        const v = Canvg.fromString(context, MarkerUtils.useFontAwesome(poi).html)
+        const v = Canvg.fromString(context, POIUtils.useFontAwesome(poi).html)
         v.start()
         return canvas
     }

@@ -22,8 +22,8 @@ import {
     EntitiesUtils,
 }                            from './EntitiesUtils'
 import {
-    MarkerUtils,
-}                            from './MarkerUtils'
+    POIUtils,
+}                            from './POIUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -496,7 +496,7 @@ export class TrackUtils {
     static  updatePOIsVisibility = (journey, visibility) => {
         TrackUtils.getDataSourcesByName(journey.slug, true)[0]?.entities.values.forEach(entity => {
             if (entity.id.startsWith(POI_STD)) {
-                entity.show = MarkerUtils.updatePOIVisibility(journey.pois.get(entity.id), visibility)
+                entity.show = POIUtils.updatePOIVisibility(journey.pois.get(entity.id), visibility)
             }
         })
 
@@ -520,7 +520,7 @@ export class TrackUtils {
                 dataSource.entities.values.forEach(entity => {
                     // Filter flags
                     if (entity.id.startsWith(POI_FLAG)) {
-                        entity.show = MarkerUtils.updatePOIVisibility(journey.pois.get(entity.id), visibility)
+                        entity.show = POIUtils.updatePOIVisibility(journey.pois.get(entity.id), visibility)
                     }
                 })
             } else {
@@ -548,7 +548,7 @@ export class TrackUtils {
         TrackUtils.getDataSourcesByName(track.parent, true).entities.values.forEach(entity => {
             // Filter flags
             if (entity.id.startsWith(POI_FLAG)) {
-                entity.show = MarkerUtils.updatePOIVisibility(journey.pois.get(entity.id), visibility)
+                entity.show = POIUtils.updatePOIVisibility(journey.pois.get(entity.id), visibility)
             }
         })
 

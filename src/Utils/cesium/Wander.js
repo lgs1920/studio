@@ -1,7 +1,7 @@
 import { faLocationDot } from '@fortawesome/pro-solid-svg-icons'
 import { POI }           from '../../classes/POI'
 import { NOT_AN_ENTITY } from './EntitiesUtils'
-import { JUST_ICON }     from './MarkerUtils'
+import { JUST_ICON }     from './POIUtils'
 
 export const WANDER_MODE_MARKER = 'wander-mode'
 
