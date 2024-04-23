@@ -197,7 +197,7 @@ export const JourneySettings = function JourneySettings() {
         await journey.saveToDB()
 
         if (action !== UPDATE_JOURNEY_SILENTLY) {
-            await journey.draw(action)
+            await journey.draw({action: action})
         } else {
             journey.focus()
         }

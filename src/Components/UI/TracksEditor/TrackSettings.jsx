@@ -32,13 +32,20 @@ export const TrackSettings = function TrackSettings() {
     /**
      * Change track Color
      *
-     * @type {setColor}
+     * @param {CustomEvent} event
+     *
      */
     const setColor = (async event => {
         editorStore.track.color = event.target.value
         await updateTrack(UPDATE_TRACK_THEN_DRAW)
     })
 
+    /**
+     * Change the track description
+     *
+     * @param {CustomEvent} event
+     *
+     */
     const setDescription = (async event => {
         const description = event.target.value
         // Title is empty, we force the former value
@@ -84,9 +91,10 @@ export const TrackSettings = function TrackSettings() {
      */
     const setThickness = (async event => {
         editorStore.track.thickness = event.target.value
-        if (event.type === 'sl-input') {
-            return
-        }
+        console.log(event.type)
+        // if (event.type === 'sl-input') {
+        //     return
+        // }
         await updateTrack(UPDATE_TRACK_THEN_DRAW)
         TracksEditorUtils.renderTrackSettings()
     })
@@ -135,6 +143,8 @@ export const TrackSettings = function TrackSettings() {
         // Prepare to draw
         // await journey.computeAll()
         vt3d.saveJourney(journey)
+
+        track.draw({action: action})
 
         // saveToDB toDB
         await journey.saveToDB()
@@ -189,10 +199,12 @@ export const TrackSettings = function TrackSettings() {
                                         <SlColorPicker opacity
                                                        size={'small'}
                                                        label={'Color'}
-                                                       value={editorSnapshot.journey.color}
+                                                       value={editorSnapshot.track.color}
                                                        swatches={vt3d.configuration.defaultTrackColors.join(';')}
                                                        onSlChange={setColor}
-                                                       disabled={!editorSnapshot.journey.visible}
+                                                       onSlInput={setColor}
+
+                                                       disabled={!editorSnapshot.track.visible}
                                                        noFormatToggle
                                         />
                                     </SlTooltip>
