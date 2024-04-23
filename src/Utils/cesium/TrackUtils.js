@@ -1,29 +1,15 @@
-import { default as extent } from '@mapbox/geojson-extent'
-import * as Cesium           from 'cesium'
+import { default as extent }                                          from '@mapbox/geojson-extent'
+import * as Cesium                                                    from 'cesium'
+import { Color, CustomDataSource, GeoJsonDataSource }                 from 'cesium'
 import {
-    Color, CustomDataSource, GeoJsonDataSource,
-}                            from 'cesium'
-import {
-    FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD, RE_LOADING, SIMULATE_ALTITUDE,
-}                            from '../../classes/Journey'
-import {
-    Track,
-}                            from '../../classes/Track'
-import {
-    CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK,
-}                            from '../../classes/VT3D'
-import {
-    FileUtils,
-}                            from '../FileUtils.js'
-import {
-    UINotifier,
-}                            from '../UINotifier'
-import {
-    EntitiesUtils,
-}                            from './EntitiesUtils'
-import {
-    POIUtils,
-}                            from './POIUtils'
+    FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD, RE_LOADING, SIMULATE_ALTITUDE,
+}                                                                     from '../../classes/Journey'
+import { Track }                                                      from '../../classes/Track'
+import { CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../classes/VT3D'
+import { FileUtils }                                                  from '../FileUtils.js'
+import { UINotifier }                                                 from '../UINotifier'
+import { EntitiesUtils }                                              from './EntitiesUtils'
+import { POIUtils }                                                   from './POIUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -520,7 +506,12 @@ export class TrackUtils {
                 dataSource.entities.values.forEach(entity => {
                     // Filter flags
                     if (entity.id.startsWith(POI_FLAG)) {
-                        entity.show = POIUtils.updatePOIVisibility(journey.pois.get(entity.id), visibility)
+                        const track = TrackUtils.getTrackFromFlag(journey, entity.id)
+                        entity.show = POIUtils.updatePOIVisibility(
+                            track.flags[entity.id.endsWith(FLAG_START) ? 'start' : 'stop'], visibility,
+                        )
+                        const tmp = track.flags[entity.id.endsWith(FLAG_START) ? 'start' : 'stop']
+                        console.log(tmp.slug, visibility, tmp.visible)
                     }
                 })
             } else {
@@ -528,8 +519,27 @@ export class TrackUtils {
                 dataSource.show = visibility
             }
         })
-
     }
+
+    /**
+     * Get the track that contains a flag with given slug
+     *
+     * @param {Journey} journey       the journey
+     * @param {string}  flagSlug      the flag slug
+     *
+     * @return {Track}
+     */
+    static getTrackFromFlag = (journey, flagSlug) => {
+        for (const track of journey.tracks.values()) {
+            // We check if track slug contains the track
+            // Track slug is : track#<journey>#<track>
+            // flag slug is  flag#<journey>#<track>-<start|stop>
+            if (flagSlug.includes(track.slug.split('#')[2])) {
+                return track
+            }
+        }
+    }
+
 
     /**
      * Update Track visibility

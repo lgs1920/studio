@@ -45,6 +45,7 @@ export class POIUtils {
 
         let poiOptions = {
             name: poi.name,
+            parent: poi.parent,
             id: poi.slug,
             description: poi.description,
             position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1], poi.coordinates[2]),
@@ -158,10 +159,10 @@ export class POIUtils {
      * Whatever its visibility, we hide the POI, but we take into account th visibility status
      * when we show it (ie if it is marked a hidden, we do not show it)
      *
-     * @param poi
-     * @param visibility
+     * @param {POI} poi
+     * @param {boolean} visibility
      *
-     * @returns {Boolean}
+     * @returns {boolean}
      *
      */
     static updatePOIVisibility = (poi, visibility) => {
