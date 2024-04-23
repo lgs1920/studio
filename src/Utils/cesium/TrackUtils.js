@@ -476,16 +476,38 @@ export class TrackUtils {
      * For each POI entity in the dedicated data source
      * Dedicated flags are excluded.
      *
-     * @param {Journey} journey       the journey on which points are to be hidden or displayed
+     * @param {Journey} journey       the journey on which POIs are to be hidden or displayed
      * @param {Boolean} visibility    the visibility value (true = hide)
      */
     static  updatePOIsVisibility = (journey, visibility) => {
         TrackUtils.getDataSourcesByName(journey.slug, true)[0]?.entities.values.forEach(entity => {
             if (entity.id.startsWith(POI_STD)) {
-                entity.show = POIUtils.updatePOIVisibility(journey.pois.get(entity.id), visibility)
+                entity.show = POIUtils.setPOIVisibility(journey.pois.get(entity.id), visibility)
             }
         })
 
+    }
+    /**
+     * Update Flags visibility
+     *
+     * For each Flag entity in the dedicated data source
+     *
+     * @param {Journey}  journey        the track on which flags are to be hidden or displayed
+     * @param {Track}  track            the track on which flags are to be hidden or displayed
+     * @param {string} type             flag type (start | stop)
+     * @param {Boolean} visibility      the visibility value (true = hide)
+     *
+     */
+    static  updateFlagsVisibility = (journey, track, type = 'start', visibility) => {
+        TrackUtils.getDataSourcesByName(journey.slug, true)[0].entities.values.forEach(entity => {
+            // Filter flags on the right track
+            const current = TrackUtils.getTrackFromEntityId(journey, entity.id)
+            if (entity.id.startsWith(POI_FLAG) && entity.id.endsWith(type) && current.slug === track.slug) {
+                entity.show = POIUtils.setPOIVisibility(
+                    track.flags[entity.id.endsWith(FLAG_START) ? 'start' : 'stop'], visibility,
+                )
+            }
+        })
     }
 
     /**
@@ -507,7 +529,7 @@ export class TrackUtils {
                     // Filter flags
                     if (entity.id.startsWith(POI_FLAG)) {
                         const track = TrackUtils.getTrackFromEntityId(journey, entity.id)
-                        entity.show = POIUtils.updatePOIVisibility(
+                        entity.show = POIUtils.setPOIVisibility(
                             track.flags[entity.id.endsWith(FLAG_START) ? 'start' : 'stop'], visibility,
                         )
                     }
@@ -556,17 +578,8 @@ export class TrackUtils {
             dataSource.show = visibility ? journey.tracks.get(dataSource.name).visible : false
         })
         // Update the associated flags
-        TrackUtils.getDataSourcesByName(track.parent, true)[0].entities.values.forEach(entity => {
-            // Filter flags
-            if (entity.id.startsWith(POI_FLAG)) {
-
-                const track = TrackUtils.getTrackFromEntityId(journey, entity.id)
-                entity.show = POIUtils.updatePOIVisibility(
-                    track.flags[entity.id.endsWith(FLAG_START) ? 'start' : 'stop'], visibility,
-                )
-            }
-        })
-
+        TrackUtils.updateFlagsVisibility(journey, track, 'start', visibility)
+        TrackUtils.updateFlagsVisibility(journey, track, 'stop', visibility)
 
     }
 

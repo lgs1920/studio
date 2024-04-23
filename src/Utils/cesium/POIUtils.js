@@ -49,7 +49,7 @@ export class POIUtils {
             id: poi.slug,
             description: poi.description,
             position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1], poi.coordinates[2]),
-            show: POIUtils.updatePOIVisibility(poi, parentVisibility),
+            show: POIUtils.setPOIVisibility(poi, parentVisibility),
             disableDepthTestDistance: new Cesium.ConstantProperty(0),
         }
         const pinBuilder = new Cesium.PinBuilder()
@@ -165,7 +165,7 @@ export class POIUtils {
      * @returns {boolean}
      *
      */
-    static updatePOIVisibility = (poi, visibility) => {
+    static setPOIVisibility = (poi, visibility) => {
         return visibility ? poi.visible : false
     }
 }

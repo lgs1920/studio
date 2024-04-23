@@ -3,15 +3,15 @@ import { faLocationPin, faLocationPinSlash }                  from '@fortawesome
 
 import {
     SlColorPicker, SlDivider, SlIcon, SlInput, SlRange, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                                         from '@shoelace-style/shoelace/dist/react'
-import { useSnapshot }                    from 'valtio'
-import { FLAG_START, FLAG_STOP, Journey } from '../../../classes/Journey'
-import { Track }                          from '../../../classes/Track'
-import { TrackUtils }                     from '../../../Utils/cesium/TrackUtils'
-import { FA2SL }                          from '../../../Utils/FA2SL'
-import { TracksEditorUtils }              from '../../../Utils/TracksEditorUtils'
-import { useConfirm }                     from '../Modals/ConfirmUI'
-import { ToggleStateIcon }                from '../ToggleStateIcon'
+}                            from '@shoelace-style/shoelace/dist/react'
+import { useSnapshot }       from 'valtio'
+import { Journey }           from '../../../classes/Journey'
+import { Track }             from '../../../classes/Track'
+import { TrackUtils }        from '../../../Utils/cesium/TrackUtils'
+import { FA2SL }             from '../../../Utils/FA2SL'
+import { TracksEditorUtils } from '../../../Utils/TracksEditorUtils'
+import { useConfirm }        from '../Modals/ConfirmUI'
+import { ToggleStateIcon }   from '../ToggleStateIcon'
 
 export const TrackSettings = function TrackSettings() {
 
@@ -105,38 +105,18 @@ export const TrackSettings = function TrackSettings() {
         TracksEditorUtils.renderTrackSettings()
     }
 
-    const setStartFlagVisibility = (visibility) => {
+    const setStartFlagVisibility = async visibility => {
+        editorStore.track.flags.start.visible = visibility
+        TrackUtils.updateFlagsVisibility(editorStore.journey, editorStore.track, 'start', visibility)
+        await updateTrack(UPDATE_TRACK_SILENTLY)
 
     }
 
-    const setStopFlagVisibility = (visibility => {
-
-    })
-
-
-    /**
-     * Change poi visibility
-     *
-     * @type {setMarkerVisibility}
-     */
-    const setMarkerVisibility = (async event => {
-        // Which poi ?
-        const type = event.target.id.endsWith(FLAG_START) ? FLAG_START : FLAG_STOP
-
-        // Save state
-        poi.store(type).visible = event.target.checked
-
-        // Toggle poi visibility
-        dataSource.entities.values.forEach(entity => {
-            if (entity.id.endsWith(type)) {
-                entity.show = event.target.checked
-            }
-        })
-        // As there's no rebuild, let's saveToDB to DB now
+    const setStopFlagVisibility = async visibility => {
+        editorStore.track.flags.stop.visible = visibility
+        TrackUtils.updateFlagsVisibility(editorStore.journey, editorStore.track, 'stop', visibility)
         await updateTrack(UPDATE_TRACK_SILENTLY)
-        TracksEditorUtils.renderTrackSettings()
-
-    })
+    }
 
     /**
      * Re build the track object,
@@ -158,47 +138,12 @@ export const TrackSettings = function TrackSettings() {
 
         // saveToDB toDB
         await journey.saveToDB()
-
-        // // Show the journey
-        // journey.loadAfterNewSettings(action).then(() => {
-        //     if (action !== UPDATE_TRACK_SILENTLY) {
-        //         TrackUtils.focus(track)
-        //     }
-        // })
-    }
-
-    /**
-     * Marker ToggleStateIcon component
-     * @param props
-     *
-     * @return {JSX.Element}
-     *
-     * @constructor
-     */
-    const MarkerVisibility = (props) => {
-
-        return (<>
-            {/* <div id={`visibility-poi-${props.type}`}> */}
-            {/*     <SlSwitch size="small" */}
-            {/*               checked={poi.snap(props.type)?.visible} */}
-            {/*               style={{'--thumb-size': '1rem'}} */}
-            {/*               onSlChange={setMarkerVisibility} */}
-            {/*               id={`switch-visibility-poi-${props.type}`} */}
-            {/*     > <span style={{color: vt3d.configuration.journey.pois[props.type].color}}> */}
-            {/*                 <SlIcon library="fa" */}
-            {/*                         className={'fa-lg'} */}
-            {/*                         name={FA2SL.set(faLocationDot)}/> */}
-            {/*             </span>{props.label}</SlSwitch> */}
-            {/* </div> */}
-        </>)
     }
 
     const textVisibilityTrack = sprintf('%s Track', editorSnapshot.track.visible ? 'Hide' : 'Show')
-
     const textVisibilityStartFlag = sprintf('%s Flag', editorStore.track?.flags?.start?.visible ? 'Hide' : 'Show')
     const textVisibilityStopFlag = sprintf('%s Flag', editorStore.track?.flags?.stop?.visible ? 'Hide' : 'Show')
     const severalTracks = editorStore.journey.tracks.size > 1
-
 
     return (<>
             {editorSnapshot.track && <>
@@ -295,7 +240,7 @@ export const TrackSettings = function TrackSettings() {
                                                      shown: faLocationPin, hidden: faLocationPinSlash,
                                                  }}
                                                  style={{color: vt3d.configuration.journey.pois.start.color}}
-                                                 initial={editorSnapshot?.flags?.start?.visible}/>
+                                                 initial={editorSnapshot?.track.flags.start.visible}/>
                             </SlTooltip>
                             <SlTooltip content={textVisibilityStopFlag}>
                                 <ToggleStateIcon change={setStopFlagVisibility}
@@ -304,7 +249,7 @@ export const TrackSettings = function TrackSettings() {
                                                      shown: faLocationPin, hidden: faLocationPinSlash,
                                                  }}
                                                  style={{color: vt3d.configuration.journey.pois.stop.color}}
-                                                 initial={editorSnapshot?.flags?.stop?.visible}/>
+                                                 initial={editorSnapshot?.track.flags.stop.visible}/>
                             </SlTooltip>
                         </>}
                     </div>
