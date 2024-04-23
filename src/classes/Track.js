@@ -16,8 +16,7 @@ export class Track extends MapElement {
 
     static deserialize(props) {
         props.instance = new Track()
-        let instance = super.deserialize(props)
-        return instance
+        return super.deserialize(props)
     }
 
     name
@@ -27,7 +26,7 @@ export class Track extends MapElement {
     hasTime
     hasAltitude
     content     // GEo JSON
-    flags = new Map()
+    flags = {start: undefined, stop: undefined}
     pois
 
     constructor(title, options = {}) {
@@ -46,6 +45,7 @@ export class Track extends MapElement {
         this.hasAltitude = options.hasAltitude ?? false
         this.segments = options.segments ?? 0
         this.content = options.content
+        this.flags = options.flags ?? {start: undefined, stop: undefined}
     }
 
     static getMarkerInformation = (markerId) => {
@@ -66,7 +66,6 @@ export class Track extends MapElement {
     /**
      * Prepare it an extract all metrics
      *
-     * @param content
      */
     computeAll = async () => {
         // Maybe we have some changes to operate
@@ -156,7 +155,7 @@ export class Track extends MapElement {
 
                 // Positive elevation
                 global.positiveElevation = 0
-                featureMetrics.forEach((point, index) => {
+                featureMetrics.forEach((point) => {
                     if (point.elevation > 0) {
                         global.positiveElevation += point.elevation
                     }
@@ -191,7 +190,6 @@ export class Track extends MapElement {
      *
      * Simulate altitude, interpolate, clean data
      *
-     * @param geoJson
      * @return geoJson
      *
      */
@@ -201,7 +199,6 @@ export class Track extends MapElement {
          * Only for Feature Collections
          */
         if (this.geoJson.type === FEATURE_COLLECTION) {
-            let index = 0
             for (const feature of this.geoJson.features) {
                 if (feature.type === 'Feature' && feature.geometry.type === FEATURE_LINE_STRING) {
                     let index = 0
@@ -275,7 +272,12 @@ export class Track extends MapElement {
      */
     draw = async ({action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
         TrackUtils.draw(this, {action: action, mode: mode, forcedToHide: forcedToHide}).then(result => {
-
+            if (this.flags.start) {
+                this.flags.start.draw(!forcedToHide)
+            }
+            if (this.flags.stop) {
+                this.flags.stop.draw(!forcedToHide)
+            }
         })
 
         // Focus on track
@@ -299,7 +301,6 @@ export class Track extends MapElement {
     /**
      * Save or replace journey in context
      *
-     * @param journey
      */
     saveInContext = () => {
         const index = this.mainProxy.components.journeyEditor.list.findIndex(item => item === journey.slug)

@@ -204,8 +204,7 @@ export const JourneySettings = function JourneySettings() {
         return journey
     }
 
-    // check pois other than flags (2 flags per track)
-    const severalPOIs = (editorStore.journey.pois.size - editorStore.journey.tracks.size * 2) > 1
+    const severalPOIs = (editorStore.journey.pois.size) > 1
     return (<>
         {editorSnapshot.journey &&
             <div id="journey-settings" key={vt3d.mainProxy.components.journeyEditor.keys.journey.journey}>
