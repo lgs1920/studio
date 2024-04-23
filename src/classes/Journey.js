@@ -483,6 +483,7 @@ export const FLAG_START = 'start'
 export const FLAG_STOP = 'stop'
 export const POI_FLAG = 'flag'
 export const POI_STD = 'poi'
+export const TRACK_SLUG = 'track'
 
 export const NO_DEM_SERVER = 'none'
 export const SIMULATE_ALTITUDE = 'simulate-altitude'

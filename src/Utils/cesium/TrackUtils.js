@@ -506,17 +506,15 @@ export class TrackUtils {
                 dataSource.entities.values.forEach(entity => {
                     // Filter flags
                     if (entity.id.startsWith(POI_FLAG)) {
-                        const track = TrackUtils.getTrackFromFlag(journey, entity.id)
+                        const track = TrackUtils.getTrackFromEntityId(journey, entity.id)
                         entity.show = POIUtils.updatePOIVisibility(
                             track.flags[entity.id.endsWith(FLAG_START) ? 'start' : 'stop'], visibility,
                         )
-                        const tmp = track.flags[entity.id.endsWith(FLAG_START) ? 'start' : 'stop']
-                        console.log(tmp.slug, visibility, tmp.visible)
                     }
                 })
             } else {
                 // We set the datasource with all entities.
-                dataSource.show = visibility
+                dataSource.show = visibility ? journey.tracks.get(dataSource.name).visible : false
             }
         })
     }
@@ -525,16 +523,16 @@ export class TrackUtils {
      * Get the track that contains a flag with given slug
      *
      * @param {Journey} journey       the journey
-     * @param {string}  flagSlug      the flag slug
+     * @param {string}  entityId      the id
      *
      * @return {Track}
      */
-    static getTrackFromFlag = (journey, flagSlug) => {
+    static getTrackFromEntityId = (journey, entityId) => {
         for (const track of journey.tracks.values()) {
-            // We check if track slug contains the track
+            // Entity id = <track|flag>#<journey>#<track>[-<start|stop>]
             // Track slug is : track#<journey>#<track>
             // flag slug is  flag#<journey>#<track>-<start|stop>
-            if (flagSlug.includes(track.slug.split('#')[2])) {
+            if (entityId.includes(track.slug.split('#')[2])) {
                 return track
             }
         }
@@ -555,16 +553,17 @@ export class TrackUtils {
     static updateTrackVisibility = (journey, track, visibility) => {
         // Update the track visibility
         TrackUtils.getDataSourcesByName(track.slug).forEach(dataSource => {
-            dataSource.show = visibility
+            dataSource.show = visibility ? journey.tracks.get(dataSource.name).visible : false
         })
         // Update the associated flags
         TrackUtils.getDataSourcesByName(track.parent, true)[0].entities.values.forEach(entity => {
             // Filter flags
             if (entity.id.startsWith(POI_FLAG)) {
-                const poi = journey.pois.get(entity.id)
-                if (poi.track === track.slug) {
-                    entity.show = POIUtils.updatePOIVisibility(poi, visibility)
-                }
+
+                const track = TrackUtils.getTrackFromEntityId(journey, entity.id)
+                entity.show = POIUtils.updatePOIVisibility(
+                    track.flags[entity.id.endsWith(FLAG_START) ? 'start' : 'stop'], visibility,
+                )
             }
         })
 
