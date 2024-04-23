@@ -167,5 +167,4 @@ export class POIUtils {
     static updatePOIVisibility = (poi, visibility) => {
         return visibility ? poi.visible : false
     }
-
 }

@@ -194,10 +194,9 @@ export const TrackSettings = function TrackSettings() {
     }
 
     const textVisibilityTrack = sprintf('%s Track', editorSnapshot.track.visible ? 'Hide' : 'Show')
-    const textVisibilityStartFlag = 'test'//sprintf('%s Flag', editorSnapshot.track.flags.start.visibility ? 'Hide' :
-                                          // 'Show')
-    const textVisibilityStopFlag = 'test'//sprintf('%s Flag', editorSnapshot.track.flags.stop.visibility ? 'Hide' :
-                                         // 'Show')
+
+    const textVisibilityStartFlag = sprintf('%s Flag', editorStore.track?.flags?.start?.visible ? 'Hide' : 'Show')
+    const textVisibilityStopFlag = sprintf('%s Flag', editorStore.track?.flags?.stop?.visible ? 'Hide' : 'Show')
     const severalTracks = editorStore.journey.tracks.size > 1
 
 
@@ -205,7 +204,6 @@ export const TrackSettings = function TrackSettings() {
             {editorSnapshot.track && <>
                 <div id={'editor-track-settings-panel'}
                      key={vt3d.mainProxy.components.journeyEditor.keys.journey.track}>
-
 
                     <div id={'track-text-description'}>
                         {severalTracks && <>
@@ -297,7 +295,7 @@ export const TrackSettings = function TrackSettings() {
                                                      shown: faLocationPin, hidden: faLocationPinSlash,
                                                  }}
                                                  style={{color: vt3d.configuration.journey.pois.start.color}}
-                                                 initial={false /* TODO editorStore.track.visible*/}/>
+                                                 initial={editorSnapshot?.flags?.start?.visible}/>
                             </SlTooltip>
                             <SlTooltip content={textVisibilityStopFlag}>
                                 <ToggleStateIcon change={setStopFlagVisibility}
@@ -306,7 +304,7 @@ export const TrackSettings = function TrackSettings() {
                                                      shown: faLocationPin, hidden: faLocationPinSlash,
                                                  }}
                                                  style={{color: vt3d.configuration.journey.pois.stop.color}}
-                                                 initial={false /* TODO editorStore.track.visible*/}/>
+                                                 initial={editorSnapshot?.flags?.stop?.visible}/>
                             </SlTooltip>
                         </>}
                     </div>

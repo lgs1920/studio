@@ -106,8 +106,12 @@ export class Journey extends MapElement {
 
         // Transform Tracks from object to class
         instance.tracks.forEach((track, slug) => {
+            const object = new Track(track.title, track)
+            object.flags.start = new POI(object.flags.start)
+            object.flags.stop = new POI(object.flags.stop)
             instance.tracks.set(slug, new Track(track.title, track))
         })
+
         return instance
 
     }
@@ -194,6 +198,7 @@ export class Journey extends MapElement {
                         geoJson: feature,
                     }
                     this.tracks.set(parameters.slug, new Track(title, parameters))
+
                 }
             })
         }
@@ -216,7 +221,7 @@ export class Journey extends MapElement {
     getPOIsFromGeoJson = () => {
 
         if (this.geoJson.type === FEATURE_COLLECTION) {
-            const justTracks = []
+            const flags = []
             // Extracts all POIs from FEATURE_POINT data and adds
             // POI on track limits
             this.geoJson.features.forEach((feature, index) => {
@@ -279,8 +284,9 @@ export class Journey extends MapElement {
                             verticalOrigin: POI_VERTICAL_ALIGN_TOP,
                             foregroundColor: vt3d.configuration.journey.pois.start.color,
                         }
-                        this.pois.set(startParameters.slug, new POI({...common, ...startParameters}))
-                        justTracks.push(startParameters.slug)
+                        const startFlag = new POI({...common, ...startParameters})
+                        this.tracks.get(parentSlug).flags.start = startFlag
+                        flags.push(startFlag)
 
                         // Create Track Stop Flag
                         const length = coordinates.length - 1
@@ -301,8 +307,10 @@ export class Journey extends MapElement {
                             verticalOrigin: POI_VERTICAL_ALIGN_TOP,
                             foregroundColor: vt3d.configuration.journey.pois.stop.color,
                         }
-                        this.pois.set(stopParameters.slug, new POI({...common, ...stopParameters}))
-                        justTracks.push(stopParameters.slug)
+                        const stopFlag = new POI({...common, ...stopParameters})
+                        this.tracks.get(parentSlug).flags.stop = stopFlag
+                        flags.push(stopFlag)
+
                         break
                 }
 
@@ -311,14 +319,10 @@ export class Journey extends MapElement {
             // If we need to have Flags  on limits only (ie first on first track, last of last track)
             // we adapt the visibility for the flagged POIs
             if (this.poisOnLimits) {
-                justTracks.forEach((poi, index) => {
-                    if (poi.startsWith(POI_FLAG)) {
-                        this.pois.get(poi).visible = (index === 0 || index === (justTracks.length - 1))
-                    }
+                flags.forEach((poi, index) => {
+                    this.tracks.get(poi.track).flags[(poi.slug.endsWith(FLAG_START)) ? 'start' : 'stop'].visible = (index === 0 || index === (flags.length - 1))
                 })
-
             }
-            let index = 0
         }
     }
 
@@ -436,18 +440,10 @@ export class Journey extends MapElement {
                 mode: NO_FOCUS,
                 forcedToHide: !this.visible,
             }))
-            this.pois.forEach(poi => {
-                if (poi.track === track.slug && poi.slug.startsWith(POI_FLAG)) {
-                    pois.push(poi.draw(this.visible ? track.visible : false))
-                }
-            })
         })
         // Draw POIs
         this.pois.forEach(poi => {
-            // Same for POIs
-            if (poi.slug.startsWith(POI_STD)) {
-                pois.push(poi.draw(this.POIsVisible))
-            }
+            pois.push(poi.draw(this.POIsVisible))
         })
 
         await Promise.all(tracks)
