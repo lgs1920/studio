@@ -139,7 +139,7 @@ export const JourneySettings = function JourneySettings() {
                 // In context
                 vt3d.journeys.delete(editorStore.journey.slug)
 
-                const dataSources = JourneyUtils.getDataSourcesByName(editorStore.journey.slug)
+                const dataSources = TrackUtils.getDataSourcesByName(editorStore.journey.slug)
                 dataSources.forEach(dataSource => {
                     vt3d.viewer.dataSources.remove(dataSource)
                 })
