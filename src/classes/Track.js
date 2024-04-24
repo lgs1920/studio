@@ -3,6 +3,7 @@ import { FEATURE_COLLECTION, FEATURE_LINE_STRING, TrackUtils } from '../Utils/ce
 import { Mobility }                                            from '../Utils/Mobility'
 import { FOCUS_ON_FEATURE, INITIAL_LOADING }                   from './Journey'
 import { MapElement }                                          from './MapElement'
+import { POI }                                                 from './POI'
 
 
 export class Track extends MapElement {
@@ -16,7 +17,13 @@ export class Track extends MapElement {
 
     static deserialize(props) {
         props.instance = new Track()
-        return super.deserialize(props)
+        let instance = super.deserialize(props)
+
+        // Transform Flags from object to class
+        instance.flags.start = new POI(instance.flags.start)
+        instance.flags.stop = new POI(instance.flags.stop)
+
+        return instance
     }
 
     name

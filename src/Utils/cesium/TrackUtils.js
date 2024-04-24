@@ -1,15 +1,18 @@
-import { default as extent }                                          from '@mapbox/geojson-extent'
-import * as Cesium                                                    from 'cesium'
-import { Color, CustomDataSource, GeoJsonDataSource }                 from 'cesium'
+import { default as extent }                          from '@mapbox/geojson-extent'
+import * as Cesium                                    from 'cesium'
+import { Color, CustomDataSource, GeoJsonDataSource } from 'cesium'
 import {
-    FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD, RE_LOADING, SIMULATE_ALTITUDE,
-}                                                                     from '../../classes/Journey'
-import { Track }                                                      from '../../classes/Track'
-import { CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../classes/VT3D'
-import { FileUtils }                                                  from '../FileUtils.js'
-import { UINotifier }                                                 from '../UINotifier'
-import { EntitiesUtils }                                              from './EntitiesUtils'
-import { POIUtils }                                                   from './POIUtils'
+    FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
+}                                                     from '../../classes/Journey'
+import {
+    Track,
+}                                                     from '../../classes/Track'
+import {
+    CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK,
+}                                                     from '../../classes/VT3D'
+import { FileUtils }                                  from '../FileUtils.js'
+import { EntitiesUtils }                              from './EntitiesUtils'
+import { POIUtils }                                   from './POIUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -95,72 +98,19 @@ export class TrackUtils {
      * @param forcedToHide
      */
     static draw = async (track, {action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
-        const configuration = vt3d.configuration
-
-        const trackStroke = {
-            color: Color.fromCssColorString(track.color),
-            thickness: track.thickness,
-        }
-        const routeStroke = {
-            color: Color.fromCssColorString(configuration.route.color),
-            thickness: configuration.route.thickness,
-        }
-        const commonOptions = {
-            clampToGround: true,
-            name: track.title,
-        }
-
-        // Load Geo Json for track
+        // Load Geo Json for track then set visibility
         const source = vt3d.viewer.dataSources.getByName(track.slug)[0]
-        return source.load(track.content, {
-            ...commonOptions,
-            stroke: trackStroke.color,
-            strokeWidth: trackStroke.thickness,
-        }).then(dataSource => {
-            // Visibility ?
+        return source.load(track.content,
+            {
+                stroke: Color.fromCssColorString(track.color),
+                strokeWidth: track.thickness,
+                // Common options
+                clampToGround: true,
+                name: track.title,
+            },
+        ).then(dataSource => {
             dataSource.show = forcedToHide ? false : track.visible
-            const text = `Track loaded and displayed on the map.`
-            if (action === RE_LOADING) {
-                UINotifier.notifySuccess({
-                    caption: `<strong>${track.title}</strong> updated !`, text: text,
-                })
-            } else {
-                try {
-                    let caption = ''
-                    switch (action) {
-                        case
-                        SIMULATE_ALTITUDE : {
-                            caption = `<strong>${track.title}</strong> updated !`
-                            break
-                        }
-                        default: {
-                            caption = `<strong>${track.title}</strong> Loaded!`
-                        }
-                    }
-                    UINotifier.notifySuccess({
-                        caption: caption, text: text,
-                    })
-
-
-                } catch (error) {
-                    console.error(error)
-                    // Error => we notify
-                    UINotifier.notifyError({
-                        caption: `An error occurs during loading <strong>${name}<strong>!`, text: error,
-                    })
-                }
-
-                // Focus on track
-                if (mode === FOCUS_ON_FEATURE) {
-                    TrackUtils.focus(track)
-                }
-
-
-            }
-        }).catch(error => {
-            return false
         })
-
     }
 
 

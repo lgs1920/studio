@@ -5,7 +5,7 @@ import {
     SlColorPicker, SlDivider, SlIcon, SlInput, SlRange, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
 }                            from '@shoelace-style/shoelace/dist/react'
 import { useSnapshot }       from 'valtio'
-import { Journey }           from '../../../classes/Journey'
+import { Journey, NO_FOCUS } from '../../../classes/Journey'
 import { Track }             from '../../../classes/Track'
 import { TrackUtils }        from '../../../Utils/cesium/TrackUtils'
 import { FA2SL }             from '../../../Utils/FA2SL'
@@ -15,9 +15,9 @@ import { ToggleStateIcon }   from '../ToggleStateIcon'
 
 export const TrackSettings = function TrackSettings() {
 
-    const UPDATE_TRACK_THEN_DRAW = 1
-    const UPDATE_TRACK_SILENTLY = 2
-    const REMOVE_TRACK = 3
+    const DRAW_THEN_SAVE = 1
+    const DRAW_WITHOUT_SAVE = 2
+    const JUST_SAVE = 3
 
     const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
@@ -37,7 +37,7 @@ export const TrackSettings = function TrackSettings() {
      */
     const setColor = (async event => {
         editorStore.track.color = event.target.value
-        await updateTrack(UPDATE_TRACK_THEN_DRAW)
+        await updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
     })
 
     /**
@@ -55,7 +55,7 @@ export const TrackSettings = function TrackSettings() {
             return
         }
         editorStore.track.description = description
-        await updateTrack(UPDATE_TRACK_SILENTLY)
+        await updateTrack(JUST_SAVE)
     })
 
     /**
@@ -63,7 +63,6 @@ export const TrackSettings = function TrackSettings() {
      *
      * The selection box is then synchronised
      *
-     * @type {setTitle}
      */
     const setTitle = (async event => {
         const title = event.target.value
@@ -73,57 +72,45 @@ export const TrackSettings = function TrackSettings() {
             field.value = editorStore.track.title
             return
         }
-        // Let's check if the next title has not been already used for
-        // another track.
-
+        // Let's check if the next title has not been already used for another track.
         editorStore.track.title = _.app.singleTitle(title, Array.from(editorStore.journey.tracks.values()).map(track => {
             return track.title
         }))
 
-        await updateTrack(UPDATE_TRACK_SILENTLY)
+        await updateTrack(JUST_SAVE)
         TracksEditorUtils.renderTracksList()
     })
 
     /**
      * Change track thickness
      *
-     * @type {setThickness}
      */
     const setThickness = (async event => {
         editorStore.track.thickness = event.target.value
-        console.log(event.type)
-        // if (event.type === 'sl-input') {
-        //     return
-        // }
-        await updateTrack(UPDATE_TRACK_THEN_DRAW)
-        TracksEditorUtils.renderTrackSettings()
+        await updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
     })
 
     /**
      * Change track visibility
-     *
-     * @type {setThickness}
      */
     const setTrackVisibility = async visibility => {
         //saveToDB state
         editorStore.track.visible = visibility
-
         TrackUtils.updateTrackVisibility(editorStore.journey, editorStore.track, visibility)
-        await updateTrack(UPDATE_TRACK_SILENTLY)
-        TracksEditorUtils.renderTrackSettings()
+        await updateTrack(JUST_SAVE)
     }
 
     const setStartFlagVisibility = async visibility => {
         editorStore.track.flags.start.visible = visibility
         TrackUtils.updateFlagsVisibility(editorStore.journey, editorStore.track, 'start', visibility)
-        await updateTrack(UPDATE_TRACK_SILENTLY)
+        await updateTrack(JUST_SAVE)
 
     }
 
     const setStopFlagVisibility = async visibility => {
         editorStore.track.flags.stop.visible = visibility
         TrackUtils.updateFlagsVisibility(editorStore.journey, editorStore.track, 'stop', visibility)
-        await updateTrack(UPDATE_TRACK_SILENTLY)
+        await updateTrack(JUST_SAVE)
     }
 
     /**
@@ -134,20 +121,22 @@ export const TrackSettings = function TrackSettings() {
      */
     const updateTrack = async (action) => {
 
-        // Update the journey
+        // Update the track
         editorStore.journey.tracks.set(editorStore.track.slug, editorStore.track)
-
         const journey = Journey.deserialize({object: Journey.unproxify(editorStore.journey)})
         const track = Track.deserialize({object: Track.unproxify(editorStore.track)})
-
-        // Prepare to draw
         // await journey.computeAll()
-        vt3d.saveJourney(journey)
 
-        track.draw({action: action})
+        if (action === DRAW_THEN_SAVE || action === JUST_SAVE) {
+            vt3d.saveJourney(journey)
+            // saveToDB toDB
+            await journey.saveToDB()
+        }
 
-        // saveToDB toDB
-        await journey.saveToDB()
+        if (action === DRAW_WITHOUT_SAVE || action === DRAW_THEN_SAVE) {
+            await track.draw({mode: NO_FOCUS})
+        }
+
     }
 
     const textVisibilityTrack = sprintf('%s Track', editorSnapshot.track.visible ? 'Hide' : 'Show')
