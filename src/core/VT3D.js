@@ -128,6 +128,10 @@ export class VT3D {
         return this.#theJourneyEditorProxy
     }
 
+    set theJourneyEditorProxy(proxy) {
+        this.#theJourneyEditorProxy = proxy
+    }
+
     setDefaultConfiguration = () => {
         // Defaults
         this.POI_DEFAULT_SIZE = this.configuration.journey.pois.size
@@ -193,7 +197,7 @@ export class VT3D {
     }
 
     cleanEditor = () => {
-        this.theJourneyEditorProxy = null
+        this.theJourneyEditorProxy = proxy(theJourneyEditor)
     }
 }
 
