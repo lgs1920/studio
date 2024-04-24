@@ -279,11 +279,14 @@ export class Track extends MapElement {
      */
     draw = async ({action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
         TrackUtils.draw(this, {action: action, mode: mode, forcedToHide: forcedToHide}).then(result => {
-            if (this.flags.start) {
-                this.flags.start.draw(!forcedToHide)
-            }
-            if (this.flags.stop) {
-                this.flags.stop.draw(!forcedToHide)
+            // Let's draw flags for the first time.
+            if (action === INITIAL_LOADING) {
+                if (this.flags.start) {
+                    this.flags.start.draw(!forcedToHide)
+                }
+                if (this.flags.stop) {
+                    this.flags.stop.draw(!forcedToHide)
+                }
             }
         })
 

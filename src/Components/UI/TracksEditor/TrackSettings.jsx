@@ -3,15 +3,15 @@ import { faLocationPin, faLocationPinSlash }                  from '@fortawesome
 
 import {
     SlColorPicker, SlDivider, SlIcon, SlInput, SlRange, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                            from '@shoelace-style/shoelace/dist/react'
-import { useSnapshot }       from 'valtio'
-import { Journey, NO_FOCUS } from '../../../core/Journey'
-import { Track }             from '../../../core/Track'
-import { TrackUtils }        from '../../../Utils/cesium/TrackUtils'
-import { FA2SL }             from '../../../Utils/FA2SL'
-import { TracksEditorUtils } from '../../../Utils/TracksEditorUtils'
-import { useConfirm }        from '../Modals/ConfirmUI'
-import { ToggleStateIcon }   from '../ToggleStateIcon'
+}                                        from '@shoelace-style/shoelace/dist/react'
+import { useSnapshot }                   from 'valtio'
+import { Journey, NO_FOCUS, RE_LOADING } from '../../../core/Journey'
+import { Track }                         from '../../../core/Track'
+import { TrackUtils }                    from '../../../Utils/cesium/TrackUtils'
+import { FA2SL }                         from '../../../Utils/FA2SL'
+import { TracksEditorUtils }             from '../../../Utils/TracksEditorUtils'
+import { useConfirm }                    from '../Modals/ConfirmUI'
+import { ToggleStateIcon }               from '../ToggleStateIcon'
 
 export const TrackSettings = function TrackSettings() {
 
@@ -134,7 +134,7 @@ export const TrackSettings = function TrackSettings() {
         }
 
         if (action === DRAW_WITHOUT_SAVE || action === DRAW_THEN_SAVE) {
-            await track.draw({mode: NO_FOCUS})
+            await track.draw({action: RE_LOADING, mode: NO_FOCUS})
         }
 
     }
