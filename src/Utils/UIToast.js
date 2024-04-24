@@ -20,11 +20,7 @@ export class UIToast {
         [VT3D_ERROR_TOAST]: faHexagonExclamation,
     }
 
-    static icon = (type) => {
-        return FA2SL.set(UIToast.VT3D_TOAST_ICONS[type])
-    }
-
-    static #notify = (message, type = VT3D_INFORMATION_TOAST, duration = UIToast.DURATION) => {
+    static #notify = (message, type = VT3D_INFORMATION_TOAST, duration = UINotifier.DURATION) => {
         if (typeof message === 'string') {
             message = {caption: message}
         }
@@ -33,7 +29,7 @@ export class UIToast {
             closable: true,
             duration: duration,
             innerHTML: `
-              <sl-icon slot='icon' library="fa" name={UIToast.icon(type)}></sl-icon>
+              <sl-icon slot='icon' library="fa" name="${FA2SL.set(UIToast.VT3D_TOAST_ICONS[type])}"></sl-icon>
 
         ${(UIToast.#setNotificationContent(message))}
       
