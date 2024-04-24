@@ -1,5 +1,5 @@
 import { faLocationDot } from '@fortawesome/pro-solid-svg-icons'
-import { POI }           from '../../classes/POI'
+import { POI }           from '../../core/POI'
 import { NOT_AN_ENTITY } from './EntitiesUtils'
 import { JUST_ICON }     from './POIUtils'
 

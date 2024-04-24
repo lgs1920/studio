@@ -4,7 +4,7 @@ import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 
 import { Canvg }                          from 'canvg'
 import * as Cesium                        from 'cesium'
-import { FLAG_START, FLAG_STOP, POI_STD } from '../../classes/Journey'
+import { FLAG_START, FLAG_STOP, POI_STD } from '../../core/Journey'
 
 // Pin Marker Type
 export const PIN_ICON = 1

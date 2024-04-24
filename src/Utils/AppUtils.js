@@ -1,5 +1,5 @@
 import * as Cesium      from 'cesium'
-import { EventEmitter } from '../libs/EventEmitter/EventEmitter'
+import { EventEmitter } from '../assets/libs/EventEmitter/EventEmitter'
 import { FA2SL }        from './FA2SL'
 
 export const CONFIGURATION = '../config.json'

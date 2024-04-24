@@ -2,7 +2,7 @@ import { faDownload, faLocationDot, faLocationDotSlash, faTrashCan } from '@fort
 import { SlIcon, SlInput, SlTextarea, SlTooltip }                    from '@shoelace-style/shoelace/dist/react'
 import { sprintf }                                                   from 'sprintf-js'
 import { useSnapshot }                                               from 'valtio'
-import { Journey, NO_DEM_SERVER }                                    from '../../../classes/Journey'
+import { Journey, NO_DEM_SERVER }                                    from '../../../core/Journey'
 import { TrackUtils }                                                from '../../../Utils/cesium/TrackUtils'
 //import { JourneyUtils }        from '../../../Utils/cesium/JourneyUtils'
 import { FA2SL }                                                     from '../../../Utils/FA2SL'

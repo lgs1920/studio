@@ -1,7 +1,7 @@
 import './style.css'
 import { forwardRef, useEffect } from 'react'
 import { useCesium }             from 'resium'
-import { CanvasEvents }          from '../../../classes/events/CanvasEvents'
+import { CanvasEvents }          from '../../../core/events/CanvasEvents'
 import { CameraPositionUI }      from '../../cesium/CameraPositionUI/CameraPositionUI'
 import { CompassUI }             from '../../cesium/CompassUI/CompassUI'
 import { CreditsUI }             from '../CreditsUI/CreditsUI'

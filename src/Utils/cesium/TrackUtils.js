@@ -1,18 +1,14 @@
-import { default as extent }                          from '@mapbox/geojson-extent'
-import * as Cesium                                    from 'cesium'
-import { Color, CustomDataSource, GeoJsonDataSource } from 'cesium'
+import { default as extent }                                           from '@mapbox/geojson-extent'
+import * as Cesium                                                     from 'cesium'
+import { Color, CustomDataSource, GeoJsonDataSource }                  from 'cesium'
 import {
     FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
-}                                                     from '../../classes/Journey'
-import {
-    Track,
-}                                                     from '../../classes/Track'
-import {
-    CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK,
-}                                                     from '../../classes/VT3D'
-import { FileUtils }                                  from '../FileUtils.js'
-import { EntitiesUtils }                              from './EntitiesUtils'
-import { POIUtils }                                   from './POIUtils'
+}                                                                      from '../../core/Journey'
+import { Track }                                                      from '../../core/Track'
+import { CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/VT3D'
+import { FileUtils }                                                   from '../FileUtils.js'
+import { EntitiesUtils }                                               from './EntitiesUtils'
+import { POIUtils }                                                    from './POIUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE                  = 'Feature',

@@ -8,11 +8,11 @@ import { useEffect, useRef }                                 from 'react'
  * Some Cesium and Resium modules are needed
  */
 import { Camera, CameraFlyTo, Entity, Globe, Scene, Viewer } from 'resium'
-import { VT3D }                                              from './classes/VT3D'
 /**
  * We also need our owns
  */
 import { VT3D_UI }                                           from './Components/UI/VT3D_UI/VT3D_UI.jsx'
+import { VT3D }                                              from './core/VT3D'
 import { CameraUtils }                                       from './Utils/cesium/CameraUtils.js'
 
 /**

@@ -5,8 +5,8 @@ import {
     SlColorPicker, SlDivider, SlIcon, SlInput, SlRange, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
 }                            from '@shoelace-style/shoelace/dist/react'
 import { useSnapshot }       from 'valtio'
-import { Journey, NO_FOCUS } from '../../../classes/Journey'
-import { Track }             from '../../../classes/Track'
+import { Journey, NO_FOCUS } from '../../../core/Journey'
+import { Track }             from '../../../core/Track'
 import { TrackUtils }        from '../../../Utils/cesium/TrackUtils'
 import { FA2SL }             from '../../../Utils/FA2SL'
 import { TracksEditorUtils } from '../../../Utils/TracksEditorUtils'
