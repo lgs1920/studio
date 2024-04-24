@@ -9,9 +9,14 @@ export class AppUtils {
      * Slugification
      *
      * from https://gist.github.com/hagemann/382adfc57adbd5af078dc93feef01fe1
-     * @param string
+     *
+     * @param {string} string
      */
     static  slugify = (string => {
+
+        if (string === undefined || string === null) {
+            return ''
+        }
         const a = 'àáâäæãåāăąçćčđďèéêëēėęěğǵḧîïíīįìıİłḿñńǹňôöòóœøōõőṕŕřßśšşșťțûüùúūǘůűųẃẍÿýžźż·/_,:;'
         const b = 'aaaaaaaaaacccddeeeeeeeegghiiiiiiiilmnnnnoooooooooprrsssssttuuuuuuuuuwxyyzzz------'
         const p = new RegExp(a.split('').join('|'), 'g')
@@ -25,6 +30,7 @@ export class AppUtils {
             .replace(/^-+/, '') // Trim - from start of text
             .replace(/-+$/, '') // Trim - from end of text
     })
+
     static deepClone = ((obj, parent) => {
         if (obj === null) return null
         let clone = Object.assign({}, obj, parent)
