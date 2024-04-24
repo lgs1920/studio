@@ -1,5 +1,5 @@
-import { faMemoCircleInfo, faPenPaintbrush, faRectangleList } from '@fortawesome/pro-regular-svg-icons'
-import { faLocationPin, faLocationPinSlash }                  from '@fortawesome/pro-solid-svg-icons'
+import { faMemoCircleInfo, faRectangleList } from '@fortawesome/pro-regular-svg-icons'
+import { faLocationPin, faLocationPinSlash } from '@fortawesome/pro-solid-svg-icons'
 
 import {
     SlColorPicker, SlDivider, SlIcon, SlInput, SlRange, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
@@ -47,22 +47,14 @@ export const TrackSettings = function TrackSettings() {
      *
      */
     const setDescription = (async event => {
-        const description = event.target.value
-        // Title is empty, we force the former value
-        if (description === '') {
-            const field = document.getElementById('track-description')
-            field.value = editorStore.track.description
-            return
-        }
-        editorStore.track.description = description
+        editorStore.track.description = event.target.value
         await updateTrack(JUST_SAVE)
     })
 
     /**
      * Change Track Title
      *
-     * The selection box is then synchronised
-     *
+     * @param {CustomEvent} event
      */
     const setTitle = (async event => {
         const title = event.target.value
@@ -84,6 +76,7 @@ export const TrackSettings = function TrackSettings() {
     /**
      * Change track thickness
      *
+     * @param {CustomEvent} event
      */
     const setThickness = (async event => {
         editorStore.track.thickness = event.target.value
@@ -92,6 +85,8 @@ export const TrackSettings = function TrackSettings() {
 
     /**
      * Change track visibility
+     *
+     * @param {CustomEvent} event
      */
     const setTrackVisibility = async visibility => {
         //saveToDB state
@@ -100,13 +95,25 @@ export const TrackSettings = function TrackSettings() {
         await updateTrack(JUST_SAVE)
     }
 
+    /**
+     * Change Start flag visibility
+     *
+     * @param visibility
+     *
+     */
     const setStartFlagVisibility = async visibility => {
         editorStore.track.flags.start.visible = visibility
         TrackUtils.updateFlagsVisibility(editorStore.journey, editorStore.track, 'start', visibility)
         await updateTrack(JUST_SAVE)
-
     }
 
+    /**
+     *
+     * Change Stop flag visibility
+     *
+     * @param visibility
+     *
+     */
     const setStopFlagVisibility = async visibility => {
         editorStore.track.flags.stop.visible = visibility
         TrackUtils.updateFlagsVisibility(editorStore.journey, editorStore.track, 'stop', visibility)
@@ -139,6 +146,47 @@ export const TrackSettings = function TrackSettings() {
 
     }
 
+    /**
+     * Track Style sub-component
+     *
+     * @return {JSX.Element}
+     * @constructor
+     */
+    const Style = () => {
+        return (<div id="track-line-settings">
+            <SlTooltip content="Color">
+                <SlColorPicker opacity
+                               size={'small'}
+                               label={'Color'}
+                               value={editorSnapshot.track.color}
+                               swatches={vt3d.configuration.defaultTrackColors.join(';')}
+                               onSlChange={setColor}
+                               onSlInput={setColor}
+                               disabled={!editorSnapshot.track.visible}
+                               noFormatToggle
+                />
+            </SlTooltip>
+            <SlTooltip content="Thickness">
+                <SlRange min={1} max={10} step={1}
+                         value={editorSnapshot.track.thickness}
+                         style={{'--thumb-size': '1rem'}}
+                         onSlInput={setThickness}
+                         onSlChange={setThickness}
+                         disabled={!editorSnapshot.track.visible}
+                         tooltip={'bottom'}
+                />
+            </SlTooltip>
+
+            <SlDivider id="test-line" style={{
+                '--color': editorSnapshot.track.visible ? editorSnapshot.track.color : 'transparent',
+                '--width': `${editorSnapshot.track.thickness}px`,
+                '--spacing': 0,
+            }}
+                       disabled={!editorSnapshot.track.visible}
+            />
+        </div>)
+    }
+
     const textVisibilityTrack = sprintf('%s Track', editorSnapshot.track.visible ? 'Hide' : 'Show')
     const textVisibilityStartFlag = sprintf('%s Flag', editorStore.track?.flags?.start?.visible ? 'Hide' : 'Show')
     const textVisibilityStopFlag = sprintf('%s Flag', editorStore.track?.flags?.stop?.visible ? 'Hide' : 'Show')
@@ -165,58 +213,20 @@ export const TrackSettings = function TrackSettings() {
                                             id="track-description"
                                             value={editorSnapshot.track.description}
                                             onSlChange={setDescription}
+                                            placeholder={'Track description'}
                                 />
                             </SlTooltip>
+                            {/* Track style */}
+                            <Style/>
                         </>}
                         {editorSnapshot.track.visible && <SlTabGroup id={'track-menu-panel'}>
-                            <SlTab slot="nav" panel="style">
-                                <SlIcon library="fa" name={FA2SL.set(faPenPaintbrush)}/>&nbsp;Style
-                            </SlTab>
                             <SlTab slot="nav" panel="info">
                                 <SlIcon library="fa" name={FA2SL.set(faMemoCircleInfo)}/>&nbsp;Data
                             </SlTab>
                             <SlTab slot="nav" panel="coordinates">
                                 <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>&nbsp;Coords.
                             </SlTab>
-                            {/**
-                             * Style Tab Panel
-                             */}
-                            <SlTabPanel name="style">
-                                {/* Journey line settings */}
-                                <div id="track-line-settings">
-                                    <SlTooltip content="Color">
-                                        <SlColorPicker opacity
-                                                       size={'small'}
-                                                       label={'Color'}
-                                                       value={editorSnapshot.track.color}
-                                                       swatches={vt3d.configuration.defaultTrackColors.join(';')}
-                                                       onSlChange={setColor}
-                                                       onSlInput={setColor}
 
-                                                       disabled={!editorSnapshot.track.visible}
-                                                       noFormatToggle
-                                        />
-                                    </SlTooltip>
-                                    <SlTooltip content="Thickness">
-                                        <SlRange min={1} max={10} step={1}
-                                                 value={editorSnapshot.track.thickness}
-                                                 style={{'--thumb-size': '1rem'}}
-                                                 onSlInput={setThickness}
-                                                 onSlChange={setThickness}
-                                                 disabled={!editorSnapshot.track.visible}
-                                                 tooltip={'bottom'}
-                                        />
-                                    </SlTooltip>
-
-                                    <SlDivider id="test-line" style={{
-                                        '--color': editorSnapshot.track.visible ? editorSnapshot.track.color : 'transparent',
-                                        '--width': `${editorSnapshot.track.thickness}px`,
-                                        '--spacing': 0,
-                                    }}
-                                               disabled={!editorSnapshot.track.visible}
-                                    />
-                                </div>
-                            </SlTabPanel>
                             {/**
                              * Edit Data Tab Panel
                              */}
