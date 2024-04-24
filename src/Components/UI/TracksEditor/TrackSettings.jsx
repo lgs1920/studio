@@ -218,9 +218,11 @@ export const TrackSettings = function TrackSettings() {
                                             placeholder={'Track description'}
                                 />
                             </SlTooltip>
-                            {/* Track style */}
-                            <Style/>
+
                         </>}
+                        {/* Track style */}
+                        <Style/>
+                        
                         {editorSnapshot.track.visible && <SlTabGroup id={'track-menu-panel'}>
                             <SlTab slot="nav" panel="info">
                                 <SlIcon library="fa" name={FA2SL.set(faMemoCircleInfo)}/>&nbsp;Data
