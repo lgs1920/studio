@@ -65,9 +65,11 @@ export const TrackSettings = function TrackSettings() {
             return
         }
         // Let's check if the next title has not been already used for another track.
-        editorStore.track.title = _.app.singleTitle(title, Array.from(editorStore.journey.tracks.values()).map(track => {
-            return track.title
-        }))
+        const titles = []
+        editorStore.journey.tracks.forEach(track => {
+            titles.push(track)
+        })
+        editorStore.track.title = _.app.singleTitle(title, titles)
 
         await updateTrack(JUST_SAVE)
         TracksEditorUtils.renderTracksList()
