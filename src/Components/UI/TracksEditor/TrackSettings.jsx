@@ -10,7 +10,6 @@ import { Track }                         from '../../../core/Track'
 import { TrackUtils }                    from '../../../Utils/cesium/TrackUtils'
 import { FA2SL }                         from '../../../Utils/FA2SL'
 import { TracksEditorUtils }             from '../../../Utils/TracksEditorUtils'
-import { useConfirm }                    from '../Modals/ConfirmUI'
 import { ToggleStateIcon }               from '../ToggleStateIcon'
 
 export const TrackSettings = function TrackSettings() {
@@ -23,11 +22,6 @@ export const TrackSettings = function TrackSettings() {
     const editorSnapshot = useSnapshot(editorStore)
 
     let dataSource = vt3d.viewer.dataSources.getByName(editorStore.journey.slug)[0]
-
-    /**
-     * Remove track confirmation
-     */
-    const [ConfirmRemoveTrackDialog, confirmRemoveTrack] = useConfirm(`Remove "${editorSnapshot.journey.title}" ?`, 'Are you sure you want to remove this track ?')
 
     /**
      * Change track Color
@@ -222,7 +216,7 @@ export const TrackSettings = function TrackSettings() {
                         </>}
                         {/* Track style */}
                         <Style/>
-                        
+
                         {editorSnapshot.track.visible && <SlTabGroup id={'track-menu-panel'}>
                             <SlTab slot="nav" panel="info">
                                 <SlIcon library="fa" name={FA2SL.set(faMemoCircleInfo)}/>&nbsp;Data

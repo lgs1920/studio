@@ -1,29 +1,21 @@
 /**
  * React
  */
-import * as Cesium                                           from 'cesium'
-import { useEffect, useRef }                                 from 'react'
+import * as Cesium           from 'cesium'
+import { useEffect, useRef } from 'react'
 
-/**
- * Some Cesium and Resium modules are needed
- */
 import { Camera, CameraFlyTo, Entity, Globe, Scene, Viewer } from 'resium'
-/**
- * We also need our owns
- */
-import { VT3D_UI }                                           from './Components/UI/VT3D_UI/VT3D_UI.jsx'
-import { VT3D }                                              from './core/VT3D'
-import { CameraUtils }                                       from './Utils/cesium/CameraUtils.js'
+
+import { VT3D_UI }     from './Components/UI/VT3D_UI/VT3D_UI.jsx'
+import { VT3D }        from './core/VT3D'
+import { CameraUtils } from './Utils/cesium/CameraUtils.js'
+import { TrackUtils }  from './Utils/cesium/TrackUtils'
+import { UIToast }     from './Utils/UIToast'
 
 /**
  * We are using shoelace Web Components
  */
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { TrackUtils }                                        from './Utils/cesium/TrackUtils'
-/**
- * Then import our owns
- */
-import { UINotifier }                                        from './Utils/UINotifier'
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 window.vt3d = new VT3D()
@@ -42,7 +34,6 @@ export function ViewTrack3D() {
         roll: Cesium.Math.toRadians(center.camera.roll),
     }
 
-
     const updateCameraPosition = () => {
         const cameraStore = vt3d.mainProxy.components.camera
         CameraUtils.updatePosition().then(data => {
@@ -51,6 +42,7 @@ export function ViewTrack3D() {
             }
         })
     }
+
 
     useEffect(() => {
 
@@ -68,34 +60,36 @@ export function ViewTrack3D() {
         // Read DB
         readAllFromDB()
 
-
-        // Ready
-        UINotifier.notifySuccess({
+        //Ready
+        UIToast.notifySuccess({
             caption: `Welcome on ${vt3d.configuration.applicationName}!`,
             text: 'We\'re ready to assist you !',
         })
+
         console.log('ViewTrack3D has been loaded and is ready !')
 
 
     })
 
-    return (<Viewer full
-                    timeline={false}
-                    animation={false}
-                    homeButton={false}
-                    navigationHelpButton={false}
-                    fullscreenButton={false}
-                    baseLayerPicker={false}
-                    sceneModePicker={false}
-                    terrain={Cesium.Terrain.fromWorldTerrain({
-                        requestVertexNormals: false,
-                    })}
-                    id="viewTrack3DViewer"
-                    imageryProvider={false}
+
+    return (<>
+        <Viewer full
+                timeline={false}
+                animation={false}
+                homeButton={false}
+                navigationHelpButton={false}
+                fullscreenButton={false}
+                baseLayerPicker={false}
+                sceneModePicker={false}
+                terrain={Cesium.Terrain.fromWorldTerrain({
+                    requestVertexNormals: false,
+                })}
+                id="viewTrack3DViewer"
+                imageryProvider={false}
             // baseLayer={Cesium.ImageryLayer.fromWorldImagery({
             //     style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS,
             // })}
-                    ref={viewerRef}
+                ref={viewerRef}
         >
             <Scene pickTranslucentDepth={true} useDepthPicking={true}></Scene>
             <Globe enableLighting={false}></Globe>
@@ -109,13 +103,8 @@ export function ViewTrack3D() {
                 />
             </Camera>
             <Entity id={'markers-group'}/>
-
             <VT3D_UI/>
-
         </Viewer>
-    )
-    //
-
-    //
+    </>)
 }
 

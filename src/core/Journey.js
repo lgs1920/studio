@@ -165,7 +165,7 @@ export class Journey extends MapElement {
         } catch (error) {
             console.error(error)
             // Error => we notify
-            UINotifier.notifyError({
+            UIToast.notifyError({
                 caption: `An error occurs during loading <strong>${trackFile.title}<strong>!`, text: error,
             })
             this.geoJson = undefined

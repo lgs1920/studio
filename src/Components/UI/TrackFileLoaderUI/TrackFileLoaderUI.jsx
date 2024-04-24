@@ -6,7 +6,7 @@ import { useSnapshot }                 from 'valtio'
 import { Journey }                     from '../../../core/Journey'
 import { TrackUtils }                  from '../../../Utils/cesium/TrackUtils'
 import { FA2SL }                       from '../../../Utils/FA2SL'
-import { UINotifier }                  from '../../../Utils/UINotifier'
+import { UIToast }                     from '../../../Utils/UIToast'
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
 
@@ -45,7 +45,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
 
             } else {
                 // It exists, we notify it
-                UINotifier.notifyWarning({
+                UIToast.notifyWarning({
                     caption: `This journey has already been loaded!`,
                     text: 'Please select another one !',
                 })

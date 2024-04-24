@@ -8,7 +8,7 @@ import { TrackUtils }                                                from '../..
 import { FA2SL }                                                     from '../../../Utils/FA2SL'
 import { TracksEditorUtils }                                         from '../../../Utils/TracksEditorUtils'
 //import { TracksEditorUtils } from '../../../Utils/TracksEditorUtils'
-import { UINotifier }                                                from '../../../Utils/UINotifier'
+import { UIToast }                                                   from '../../../Utils/UIToast'
 import { useConfirm }                                                from '../Modals/ConfirmUI'
 import { ToggleStateIcon }                                           from '../ToggleStateIcon'
 
@@ -170,7 +170,7 @@ export const JourneySettings = function JourneySettings() {
 
             // Let's inform the user
 
-            UINotifier.notifySuccess({
+            UIToast.notifySuccess({
                 caption: `<strong>${removed.title}</strong> removed !`, text: text,
             })
 
