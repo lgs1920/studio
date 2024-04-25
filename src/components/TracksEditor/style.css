@@ -17,6 +17,10 @@
     right: auto;
 }
 
+#journeys-editor-pane sl-icon {
+    margin-right: var(--vt3d-gutter-xs);
+}
+
 #journeys-editor-footer {
     display: flex;
     justify-content: space-between;
@@ -26,6 +30,10 @@
 #journeys-editor-footer strong:after {
     content: ' - ';
     font-weight: normal;
+}
+
+.menu-panel {
+    width: 100%;
 }
 
 #editor-journey-settings-panel {
@@ -63,15 +71,7 @@
     width: 100%;
 }
 
-#track-settings, #track-settings-container {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: var(--vt3d-gutter-s);
-    width: 100%;
-}
-
-#editor-track-settings-panel {
+.settings-panel {
     display: flex;
     width: 100%;
     gap: var(--vt3d-gutter-s);

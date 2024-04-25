@@ -1,23 +1,24 @@
-import { Journey, NO_DEM_SERVER }                                    from '@Core/Journey'
-import { faDownload, faLocationDot, faLocationDotSlash, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon, SlInput, SlTextarea, SlTooltip }                    from '@shoelace-style/shoelace/dist/react'
-import { TrackUtils }                                                from '@Utils/cesium/TrackUtils'
-//import { JourneyUtils }        from '@Utils/cesium/JourneyUtils'
-import { FA2SL }                                                     from '@Utils/FA2SL'
-import { TracksEditorUtils }                                         from '@Utils/TracksEditorUtils'
-//import { TracksEditorUtils } from '@Utils/TracksEditorUtils'
-import { UIToast }                                                   from '@Utils/UIToast'
-import { sprintf }                                                   from 'sprintf-js'
-import { useSnapshot }                                               from 'valtio'
-import { useConfirm }                                                from '../Modals/ConfirmUI'
-import { ToggleStateIcon }                                           from '../ToggleStateIcon'
+import { useConfirm }             from '@Components/Modals/ConfirmUI'
+import { ToggleStateIcon }        from '@Components/ToggleStateIcon'
+import { Journey, NO_DEM_SERVER } from '@Core/Journey'
+import {
+    faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList, faTelescope, faTrashCan,
+}                                 from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlIcon, SlInput, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
+}                                 from '@shoelace-style/shoelace/dist/react'
+import { TrackUtils }             from '@Utils/cesium/TrackUtils'
+import { FA2SL }                  from '@Utils/FA2SL'
+import { TracksEditorUtils }      from '@Utils/TracksEditorUtils'
+import { UIToast }                from '@Utils/UIToast'
+import { sprintf }                from 'sprintf-js'
+import { useSnapshot }            from 'valtio'
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2
 export const REMOVE_JOURNEY = 3
 
 export const JourneySettings = function JourneySettings() {
-
 
     const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
@@ -206,28 +207,61 @@ export const JourneySettings = function JourneySettings() {
     }
 
     const severalPOIs = (editorStore.journey.pois.size) > 1
+    const numberOfPois = severalPOIs
+                         ? 'Some POIs exist. Wait a next version to see them!'
+                         : 'No POIs !'
     return (<>
         {editorSnapshot.journey &&
             <div id="journey-settings" key={vt3d.mainProxy.components.journeyEditor.keys.journey.journey}>
-                <div id={'editor-journey-settings-panel'}>
-                    <div id={'journey-text-description'}>
-                        {/* Change visible name (title) */}
-                        <SlTooltip content={'Title'}>
-                            <SlInput id="journey-title" value={editorSnapshot.journey.title}
-                                     onSlChange={setTitle}
-                            />
-                        </SlTooltip>
+                <div className={'settings-panel'} id={'editor-journey-settings-panel'}>
+                    <SlTabGroup className={'menu-panel'}>
+                        <SlTab slot="nav" panel="data">
+                            <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>Data
+                        </SlTab>
+                        <SlTab slot="nav" panel="edit">
+                            <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
+                        </SlTab>
+                        <SlTab slot="nav" panel="pois">
+                            <SlIcon library="fa" name={FA2SL.set(faTelescope)}/>POIs
+                        </SlTab>
+                        {/**
+                         * Data Tab Panel
+                         */}
+                        <SlTabPanel name="data">Not Yet !</SlTabPanel>
+                        {/**
+                         * Edit  Tab Panel
+                         */}
+                        <SlTabPanel name="edit">
+                            <div id={'journey-text-description'}>
+                                {/* Change visible name (title) */}
+                                <SlTooltip content={'Title'}>
+                                    <SlInput id="journey-title"
+                                             value={editorSnapshot.journey.title}
+                                             onSlChange={setTitle}
+                                    />
+                                </SlTooltip>
 
-                        {/* Change description */}
-                        <SlTooltip content={'Description'}>
-                            <SlTextarea row={2}
-                                        size={'small'}
-                                        id={'journey-description'}
-                                        value={editorSnapshot.journey.description}
-                                        onSlChange={setDescription}
-                            />
-                        </SlTooltip>
-                    </div>
+                                {/* Change description */}
+                                <SlTooltip content={'Description'}>
+                                    <SlTextarea row={2}
+                                                size={'small'}
+                                                id={'journey-description'}
+                                                value={editorSnapshot.journey.description}
+                                                onSlChange={setDescription}
+                                    />
+                                </SlTooltip>
+
+                            </div>
+                        </SlTabPanel>
+                        {/**
+                         * POIs Tab Panel
+                         */}
+                        <SlTabPanel name="pois">
+                            <span>{numberOfPois}</span>
+                        </SlTabPanel>
+                    </SlTabGroup>
+
+
                     <div id="journey-visibility" className={'editor-vertical-menu'}>
                         <span>
                         <SlTooltip content={textVisibilityJourney}>
