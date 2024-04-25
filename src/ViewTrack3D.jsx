@@ -61,7 +61,7 @@ export function ViewTrack3D() {
         readAllFromDB()
 
         //Ready
-        UIToast.notifySuccess({
+        UIToast.success({
             caption: `Welcome on ${vt3d.configuration.applicationName}!`,
             text: 'We\'re ready to assist you !',
         })

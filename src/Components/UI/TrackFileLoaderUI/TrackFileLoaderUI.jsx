@@ -45,7 +45,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
 
             } else {
                 // It exists, we notify it
-                UIToast.notifyWarning({
+                UIToast.warning({
                     caption: `This journey has already been loaded!`,
                     text: 'Please select another one !',
                 })
