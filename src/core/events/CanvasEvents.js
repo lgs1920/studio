@@ -1,9 +1,9 @@
+import { AnyOtherMouseCoordinates } from '@Components/FloatingMenu/AnyOtherMouseCoordinates'
+import { MarkerMenu }               from '@Components/FloatingMenu/MarkerMenu'
+import { TrackMenu }                from '@Components/FloatingMenu/TrackMenu'
+import { MouseUtils }               from '@Utils/cesium/MouseUtils'
+import { Wander }                   from '@Utils/cesium/Wander'
 import * as Cesium                  from 'cesium'
-import { AnyOtherMouseCoordinates } from '../../Components/UI/FloatingMenu/AnyOtherMouseCoordinates'
-import { MarkerMenu }               from '../../Components/UI/FloatingMenu/MarkerMenu'
-import { TrackMenu }                from '../../Components/UI/FloatingMenu/TrackMenu'
-import { MouseUtils }               from '../../Utils/cesium/MouseUtils'
-import { Wander }                   from '../../Utils/cesium/Wander'
 
 export class CanvasEvents {
     static manager = (movement) => {

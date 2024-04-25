@@ -1,8 +1,8 @@
 import { faArrowsMaximize, faArrowsMinimize } from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip }        from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                              from '@Utils/FA2SL'
 import { forwardRef }                         from 'react'
 import { useSnapshot }                        from 'valtio'
-import { FA2SL }                              from '../../../Utils/FA2SL'
 
 //read version
 

@@ -1,19 +1,18 @@
 /**
  * React
  */
+import { VT3D_UI }           from '@Components/VT3D_UI/VT3D_UI.jsx'
+import { VT3D }              from '@Core/VT3D'
+import { CameraUtils }       from '@Utils/cesium/CameraUtils.js'
+import { TrackUtils }        from '@Utils/cesium/TrackUtils'
+import { UIToast }           from '@Utils/UIToast'
 import * as Cesium           from 'cesium'
 import { useEffect, useRef } from 'react'
 
 import { Camera, CameraFlyTo, Entity, Globe, Scene, Viewer } from 'resium'
 
-import { VT3D_UI }     from './Components/UI/VT3D_UI/VT3D_UI.jsx'
-import { VT3D }        from './core/VT3D'
-import { CameraUtils } from './Utils/cesium/CameraUtils.js'
-import { TrackUtils }  from './Utils/cesium/TrackUtils'
-import { UIToast }     from './Utils/UIToast'
-
 /**
- * We are using shoelace Web Components
+ * We are using shoelace Web components
  */
 import '@shoelace-style/shoelace/dist/themes/light.css'
 

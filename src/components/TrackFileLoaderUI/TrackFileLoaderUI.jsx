@@ -1,12 +1,12 @@
 import './style.css'
+import { Journey }                     from '@Core/Journey'
 import { faMapLocation }               from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
+import { FA2SL }                       from '@Utils/FA2SL'
+import { UIToast }                     from '@Utils/UIToast'
 import { forwardRef }                  from 'react'
 import { useSnapshot }                 from 'valtio'
-import { Journey }                     from '../../../core/Journey'
-import { TrackUtils }                  from '../../../Utils/cesium/TrackUtils'
-import { FA2SL }                       from '../../../Utils/FA2SL'
-import { UIToast }                     from '../../../Utils/UIToast'
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
 

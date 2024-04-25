@@ -1,10 +1,10 @@
 import { point }                         from '@turf/helpers'
 import { default as nearestPointOnLine } from '@turf/nearest-point-on-line'
+import { TRACK_TYPE }                    from '@Utils/cesium/EntitiesUtils'
+import { MouseUtils }                    from '@Utils/cesium/MouseUtils'
 
 import * as Cesium               from 'cesium'
 import { default as lineString } from 'turf-linestring'
-import { TRACK_TYPE }            from '../../../Utils/cesium/EntitiesUtils'
-import { MouseUtils }            from '../../../Utils/cesium/MouseUtils'
 
 export class TrackMenu {
     static show = (data) => {

@@ -1,4 +1,4 @@
-import { PIN_CIRCLE, POIUtils } from '../Utils/cesium/POIUtils'
+import { PIN_CIRCLE, POIUtils } from '@Utils/cesium/POIUtils'
 
 export class POI {
 

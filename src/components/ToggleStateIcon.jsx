@@ -1,7 +1,7 @@
 import { faEye, faEyeSlash }          from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon }                     from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                      from '@Utils/FA2SL'
 import React, { useEffect, useState } from 'react'
-import { FA2SL }                      from '../../Utils/FA2SL'
 
 export const ToggleStateIcon = (props) => {
 

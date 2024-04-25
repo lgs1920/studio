@@ -1,13 +1,13 @@
+//read version
 import { faGithub }                                                       from '@fortawesome/free-brands-svg-icons'
 import { faCircleInfo }                                                   from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDrawer, SlIcon, SlIconButton, SlInclude, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                          from '@Utils/FA2SL'
 import { forwardRef }                                                     from 'react'
 import { useSnapshot }                                                    from 'valtio'
-import { FA2SL }                                                          from '../../../Utils/FA2SL'
-import './style.css'
 
-//read version
-import info from '../../../version.json'
+import info from '../../version.json'
+import './style.css'
 
 
 export const CreditsUI = forwardRef(function CreditsUI() {

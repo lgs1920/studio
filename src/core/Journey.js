@@ -7,13 +7,13 @@ import {
 }                                       from '@turf/invariant'
 import {
     JUST_ICON,
-}                                       from '../Utils/cesium/POIUtils'
+}                                       from '@Utils/cesium/POIUtils'
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                                       from '../Utils/cesium/TrackUtils'
+}                                       from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
-}                                       from '../Utils/UIToast'
+}                                       from '@Utils/UIToast'
 import {
     MapElement,
 }                                       from './MapElement'

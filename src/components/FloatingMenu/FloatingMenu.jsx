@@ -1,17 +1,35 @@
 import './style.css'
+import { Track } from '@Core/Track'
 import {
     faArrowTrendUp, faCalendarClock, faLocationDot, faMap, faMountains, faRulerHorizontal, faStopwatch,
-}                                  from '@fortawesome/pro-regular-svg-icons'
-import { SlCard }                  from '@shoelace-style/shoelace/dist/react'
-import { DateTime, Duration }      from 'luxon'
-import { useLayoutEffect, useRef } from 'react'
-import { sprintf }                 from 'sprintf-js'
-import { useSnapshot }             from 'valtio'
-import { Track }                   from '../../../core/Track'
-import { DAY, HOUR, SECOND }       from '../../../Utils/AppUtils'
-import { POI_TYPE, TRACK_TYPE }    from '../../../Utils/cesium/EntitiesUtils'
-import { FA2SL }                   from '../../../Utils/FA2SL'
-import { TextValueUI }             from '../TextValueUI/TextValueUI'
+}                from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlCard,
+}                from '@shoelace-style/shoelace/dist/react'
+import {
+    DAY, HOUR, SECOND,
+}                from '@Utils/AppUtils'
+import {
+    POI_TYPE, TRACK_TYPE,
+}                from '@Utils/cesium/EntitiesUtils'
+import {
+    FA2SL,
+}                from '@Utils/FA2SL'
+import {
+    DateTime, Duration,
+}                from 'luxon'
+import {
+    useLayoutEffect, useRef,
+}                from 'react'
+import {
+    sprintf,
+}                from 'sprintf-js'
+import {
+    useSnapshot,
+}                from 'valtio'
+import {
+    TextValueUI,
+}                from '../TextValueUI/TextValueUI'
 
 export const FloatingMenu = function FloatingMenu() {
 

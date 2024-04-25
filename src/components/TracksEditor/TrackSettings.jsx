@@ -1,16 +1,16 @@
+import { Journey, NO_FOCUS, RE_LOADING }     from '@Core/Journey'
+import { Track }                             from '@Core/Track'
 import { faMemoCircleInfo, faRectangleList } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin, faLocationPinSlash } from '@fortawesome/pro-solid-svg-icons'
 
 import {
     SlColorPicker, SlDivider, SlIcon, SlInput, SlRange, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                                        from '@shoelace-style/shoelace/dist/react'
-import { useSnapshot }                   from 'valtio'
-import { Journey, NO_FOCUS, RE_LOADING } from '../../../core/Journey'
-import { Track }                         from '../../../core/Track'
-import { TrackUtils }                    from '../../../Utils/cesium/TrackUtils'
-import { FA2SL }                         from '../../../Utils/FA2SL'
-import { TracksEditorUtils }             from '../../../Utils/TracksEditorUtils'
-import { ToggleStateIcon }               from '../ToggleStateIcon'
+}                            from '@shoelace-style/shoelace/dist/react'
+import { TrackUtils }        from '@Utils/cesium/TrackUtils'
+import { FA2SL }             from '@Utils/FA2SL'
+import { TracksEditorUtils } from '@Utils/TracksEditorUtils'
+import { useSnapshot }       from 'valtio'
+import { ToggleStateIcon }   from '../ToggleStateIcon'
 
 export const TrackSettings = function TrackSettings() {
 

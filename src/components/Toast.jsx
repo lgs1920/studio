@@ -1,6 +1,6 @@
 import { SlAlert, SlIcon } from '@shoelace-style/shoelace/dist/react'
+import { UIToast }         from '@Utils/UIToast'
 import { useState }        from 'react'
-import { UIToast }         from '../../Utils/UIToast'
 
 /**
  * Toast
