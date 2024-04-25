@@ -1,7 +1,8 @@
-import { Journey, NO_FOCUS, RE_LOADING }     from '@Core/Journey'
-import { Track }                             from '@Core/Track'
-import { faMemoCircleInfo, faRectangleList } from '@fortawesome/pro-regular-svg-icons'
-import { faLocationPin, faLocationPinSlash } from '@fortawesome/pro-solid-svg-icons'
+import { ToggleStateIcon }                                                    from '@Components/ToggleStateIcon'
+import { Journey, NO_FOCUS, RE_LOADING }                                      from '@Core/Journey'
+import { Track }                                                              from '@Core/Track'
+import { faRectangleList }                                                    from '@fortawesome/pro-regular-svg-icons'
+import { faCircleDot, faLocationPin, faLocationPinSlash, faPaintbrushPencil } from '@fortawesome/pro-solid-svg-icons'
 
 import {
     SlColorPicker, SlDivider, SlIcon, SlInput, SlRange, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
@@ -10,7 +11,6 @@ import { TrackUtils }        from '@Utils/cesium/TrackUtils'
 import { FA2SL }             from '@Utils/FA2SL'
 import { TracksEditorUtils } from '@Utils/TracksEditorUtils'
 import { useSnapshot }       from 'valtio'
-import { ToggleStateIcon }   from '../ToggleStateIcon'
 
 export const TrackSettings = function TrackSettings() {
 
@@ -190,53 +190,63 @@ export const TrackSettings = function TrackSettings() {
 
     return (<>
             {editorSnapshot.track && <>
-                <div id={'editor-track-settings-panel'}
+                <div className={'settings-panel'} id={'editor-track-settings-panel'}
                      key={vt3d.mainProxy.components.journeyEditor.keys.journey.track}>
-
-                    <div id={'track-text-description'}>
-                        {severalTracks && <>
-                            {/* Change visible name (title) */}
-                            <SlTooltip content={'Title'}>
-                                <SlInput id="track-title"
-                                         value={editorSnapshot.track.title}
-                                         onSlChange={setTitle}
-                                />
-                            </SlTooltip>
-                            {/* Change description */}
-                            <SlTooltip content={'Description'}>
-                                <SlTextarea row={2}
-                                            size={'small'}
-                                            id="track-description"
-                                            value={editorSnapshot.track.description}
-                                            onSlChange={setDescription}
-                                            placeholder={'Track description'}
-                                />
-                            </SlTooltip>
-
-                        </>}
-                        {/* Track style */}
-                        <Style/>
-
-                        {editorSnapshot.track.visible && <SlTabGroup id={'track-menu-panel'}>
-                            <SlTab slot="nav" panel="info">
-                                <SlIcon library="fa" name={FA2SL.set(faMemoCircleInfo)}/>&nbsp;Data
+                    {editorSnapshot.track.visible &&
+                        <SlTabGroup id={'track-menu-panel'} className={'menu-panel'}>
+                            <SlTab slot="nav" panel="data">
+                                <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>Data
                             </SlTab>
-                            <SlTab slot="nav" panel="coordinates">
-                                <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>&nbsp;Coords.
+                            <SlTab slot="nav" panel="edit">
+                                <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
+                            </SlTab>
+                            <SlTab slot="nav" panel="points">
+                                <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points
                             </SlTab>
 
-                            {/**
-                             * Edit Data Tab Panel
-                             */}
-                            <SlTabPanel name="info">Not Yet !</SlTabPanel>
 
                             {/**
-                             * Edit Coordinates Tab Panel
+                             * Data Tab Panel
                              */}
-                            <SlTabPanel name="coordinates">Not Yet!</SlTabPanel>
+                            <SlTabPanel name="data">Not Yet !</SlTabPanel>
+
+                            {/**
+                             * Edit Tab Panel
+                             */}
+                            <SlTabPanel name="edit">
+                                <div id={'track-text-description'}>
+                                    {severalTracks && <>
+                                        {/* Change visible name (title) */}
+                                        <SlTooltip content={'Title'}>
+                                            <SlInput id="track-title"
+                                                     value={editorSnapshot.track.title}
+                                                     onSlChange={setTitle}
+                                            />
+                                        </SlTooltip>
+                                        {/* Change description */}
+                                        <SlTooltip content={'Description'}>
+                                            <SlTextarea row={2}
+                                                        size={'small'}
+                                                        id="track-description"
+                                                        value={editorSnapshot.track.description}
+                                                        onSlChange={setDescription}
+                                                        placeholder={'Track description'}
+                                            />
+                                        </SlTooltip>
+
+                                    </>}
+                                    {/* Track style */}
+                                    <Style/>
+                                </div>
+                            </SlTabPanel>
+
+                            {/**
+                             * Points Tab Panel
+                             */}
+                            <SlTabPanel name="points">Not Yet!</SlTabPanel>
 
                         </SlTabGroup>}
-                    </div>
+
                     <div id="track-visibility" className={'editor-vertical-menu'}>
                         {severalTracks && <SlTooltip content={textVisibilityTrack}>
                             <ToggleStateIcon change={setTrackVisibility} initial={editorSnapshot.track.visible}/>
@@ -263,8 +273,6 @@ export const TrackSettings = function TrackSettings() {
                         </>}
                     </div>
                 </div>
-
-
             </>}
         </>
 
