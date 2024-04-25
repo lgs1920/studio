@@ -24,7 +24,8 @@ body {
     left: 0;
     right: auto;
     bottom: 0;
-    top: auto
+    top: auto;
+    overflow: hidden;
 }
 
 .toast-caption {
