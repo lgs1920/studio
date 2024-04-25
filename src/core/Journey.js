@@ -12,6 +12,9 @@ import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
 }                                       from '../Utils/cesium/TrackUtils'
 import {
+    UIToast,
+}                                       from '../Utils/UIToast'
+import {
     MapElement,
 }                                       from './MapElement'
 import { POI, POI_VERTICAL_ALIGN_TOP }  from './POI'
@@ -165,7 +168,7 @@ export class Journey extends MapElement {
         } catch (error) {
             console.error(error)
             // Error => we notify
-            UIToast.notifyError({
+            UIToast.error({
                 caption: `An error occurs during loading <strong>${trackFile.title}<strong>!`, text: error,
             })
             this.geoJson = undefined
@@ -227,9 +230,7 @@ export class Journey extends MapElement {
             this.geoJson.features.forEach((feature, index) => {
                 const geometry = getGeom(feature)
                 const common = {
-                    description: feature.properties.desc,
-                    size: vt3d.POI_DEFAULT_SIZE,
-                    visible: true,
+                    description: feature.properties.desc, size: vt3d.POI_DEFAULT_SIZE, visible: true,
                 }
 
                 // We need to change coordinates array if it is a line string
@@ -428,26 +429,27 @@ export class Journey extends MapElement {
      * @return {Promise<void>}
      */
     draw = async ({action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE}) => {
-        const tracks = []
-        const pois = []
+        const promises = []
 
         // Draw Tracks and flags
         this.tracks.forEach(track => {
             // If journey is not visible, we force tracks to be hidden, whatever their visibility
             // else we use their status.
-            tracks.push(track.draw({
-                action: action,
-                mode: NO_FOCUS,
-                forcedToHide: !this.visible,
+            promises.push(track.draw({
+                action: action, mode: NO_FOCUS, forcedToHide: !this.visible,
             }))
         })
         // Draw POIs
         this.pois.forEach(poi => {
-            pois.push(poi.draw(this.POIsVisible))
+            promises.push(poi.draw(this.POIsVisible))
         })
 
-        await Promise.all(tracks)
-        await Promise.all(pois)
+        await Promise.all(promises)
+
+        //Ready
+        UIToast.success({
+            caption: `${this.title}`, text: 'loaded succesfully!',
+        })
 
         if (mode === FOCUS_ON_FEATURE) {
             this.focus()

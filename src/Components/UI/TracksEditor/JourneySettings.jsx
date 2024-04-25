@@ -170,8 +170,9 @@ export const JourneySettings = function JourneySettings() {
 
             // Let's inform the user
 
-            UIToast.notifySuccess({
-                caption: `<strong>${removed.title}</strong> removed !`, text: text,
+            UIToast.success({
+                caption: `${removed.title}</strong>`,
+                text: `removed successfully!<br>${text}`,
             })
 
         }
