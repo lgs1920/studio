@@ -4,8 +4,8 @@ import {
 import { slideInUp }    from '@shoelace-style/animations/dist/sliding_entrances/slideInUp'
 import { slideOutLeft } from '@shoelace-style/animations/dist/sliding_exits/slideOutLeft'
 import { setAnimation } from '@shoelace-style/shoelace/dist/utilities/animation-registry'
-import { SECOND }       from './AppUtils'
-import { FA2SL }        from './FA2SL'
+import { SECOND }       from '@Utils/AppUtils'
+import { FA2SL }        from '@Utils/FA2SL'
 
 export const VT3D_INFORMATION_TOAST = 'information'
 export const VT3D_SUCCESS_TOAST = 'success'

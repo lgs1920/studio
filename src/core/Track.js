@@ -1,9 +1,9 @@
+import { FOCUS_ON_FEATURE, INITIAL_LOADING }                   from '@/Core/Journey'
+import { MapElement }                                          from '@/Core/MapElement'
+import { POI }                                                 from '@/Core/POI'
+import { FEATURE_COLLECTION, FEATURE_LINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
+import { Mobility }                                            from '@Utils/Mobility'
 import { DateTime }                                            from 'luxon'
-import { FEATURE_COLLECTION, FEATURE_LINE_STRING, TrackUtils } from '../Utils/cesium/TrackUtils'
-import { Mobility }                                            from '../Utils/Mobility'
-import { FOCUS_ON_FEATURE, INITIAL_LOADING }                   from './Journey'
-import { MapElement }                                          from './MapElement'
-import { POI }                                                 from './POI'
 
 
 export class Track extends MapElement {
@@ -14,20 +14,7 @@ export class Track extends MapElement {
     thickness   // Line thickness
     metrics     // All the metrics associated to the track
     description // Add any description
-
-    static deserialize(props) {
-        props.instance = new Track()
-        let instance = super.deserialize(props)
-
-        // Transform Flags from object to class
-        instance.flags.start = new POI(instance.flags.start)
-        instance.flags.stop = new POI(instance.flags.stop)
-
-        return instance
-    }
-
     name
-
     slug        // unic Id for the track
     visible     // Is visible ?
     hasTime
@@ -53,6 +40,17 @@ export class Track extends MapElement {
         this.segments = options.segments ?? 0
         this.content = options.content
         this.flags = options.flags ?? {start: undefined, stop: undefined}
+    }
+
+    static deserialize(props) {
+        props.instance = new Track()
+        let instance = super.deserialize(props)
+
+        // Transform Flags from object to class
+        instance.flags.start = new POI(instance.flags.start)
+        instance.flags.stop = new POI(instance.flags.stop)
+
+        return instance
     }
 
     static getMarkerInformation = (markerId) => {

@@ -7,5 +7,22 @@ export default defineConfig({
     plugins: [react(), cesium()],
     build: {
         target: 'esnext'
+    },
+    resolve: {
+        alias: [
+
+            {
+                find: '@Utils',
+                replacement: Bun.fileURLToPath(new URL('./src/Utils', import.meta.url))
+            },
+            {
+                find: '@Components',
+                replacement: Bun.fileURLToPath(new URL('./src/components', import.meta.url))
+            },
+            {
+                find: '@Core',
+                replacement: Bun.fileURLToPath(new URL('./src/core', import.meta.url))
+            },
+        ]
     }
 })
