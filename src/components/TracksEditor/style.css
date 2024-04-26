@@ -17,7 +17,7 @@
     right: auto;
 }
 
-#journeys-editor-pane sl-icon {
+sl-tab sl-icon {
     margin-right: var(--vt3d-gutter-xs);
 }
 
@@ -55,6 +55,8 @@
     gap: 0;
     margin-bottom: var(--vt3d-gutter-xs);
     width: 1.5rem;
+    align-items: center;
+    margin-left: auto
 }
 
 #editor-journey-settings-panel .editor-vertical-menu {
