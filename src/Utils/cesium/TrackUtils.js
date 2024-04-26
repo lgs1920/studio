@@ -1,14 +1,14 @@
-import { default as extent }                                           from '@mapbox/geojson-extent'
-import * as Cesium                                                     from 'cesium'
-import { Color, CustomDataSource, GeoJsonDataSource }                  from 'cesium'
+import { default as extent }                                          from '@mapbox/geojson-extent'
+import * as Cesium                                                    from 'cesium'
+import { Color, CustomDataSource, GeoJsonDataSource }                 from 'cesium'
 import {
     FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
-}                                                                      from '../../core/Journey'
+}                                                                     from '../../core/Journey'
 import { Track }                                                      from '../../core/Track'
 import { CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/VT3D'
-import { FileUtils }                                                   from '../FileUtils.js'
-import { EntitiesUtils }                                               from './EntitiesUtils'
-import { POIUtils }                                                    from './POIUtils'
+import { FileUtils }                                                  from '../FileUtils.js'
+import { EntitiesUtils }                                              from './EntitiesUtils'
+import { POIUtils }                                                   from './POIUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -345,17 +345,7 @@ export class TrackUtils {
             journey.prepareDrawing()
         })
 
-        // Same for current Track. If wehav one, we get it then check if it's part
-        // of the current journey. Else we use the first of the list and ad it
-        // to the app context.
-        let currentTrack = await vt3d.db.journeys.get(CURRENT_TRACK, CURRENT_STORE)
-        if (vt3d.theJourney.tracks.has(currentTrack)) {
-            vt3d.theTrack = vt3d.theJourney.tracks.get(currentTrack)
-        } else {
-            vt3d.theTrack = vt3d.theJourney.tracks.entries().next().value[1]
-        }
-        // Add it to editor context
-        vt3d.theTrack.addToEditor()
+        await TrackUtils.setTheTrack()
 
         // Now it's time for the show. Draw all journeys but focus on the current one
         const items = []
@@ -363,6 +353,24 @@ export class TrackUtils {
             items.push(journey.draw({mode: journey.slug === currentJourney ? FOCUS_ON_FEATURE : NO_FOCUS}))
         })
         await Promise.all(items)
+    }
+
+    static setTheTrack = async (fromDB = true) => {
+        // Same for current Track.
+        // If wehav one, we get it then check if it's part
+        // of the current journey. Else we use the first of the list and ad it
+        // to the app context.
+        let currentTrack = 'nothing'
+        if (fromDB) {
+            currentTrack = await vt3d.db.journeys.get(CURRENT_TRACK, CURRENT_STORE)
+        }
+        if (vt3d.theJourney.tracks.has(currentTrack)) {
+            vt3d.theTrack = vt3d.theJourney.tracks.get(currentTrack)
+        } else {
+            vt3d.theTrack = vt3d.theJourney.tracks.entries().next().value[1]
+        }
+        // Add it to editor context
+        vt3d.theTrack.addToEditor()
     }
 
     /**

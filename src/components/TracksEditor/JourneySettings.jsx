@@ -1,18 +1,20 @@
-import { useConfirm }             from '@Components/Modals/ConfirmUI'
-import { ToggleStateIcon }        from '@Components/ToggleStateIcon'
-import { Journey, NO_DEM_SERVER } from '@Core/Journey'
+import { useConfirm }         from '@Components/Modals/ConfirmUI'
+import { ToggleStateIcon }    from '@Components/ToggleStateIcon'
+import { NO_DEM_SERVER }      from '@Core/Journey'
 import {
     faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList, faTelescope, faTrashCan,
-}                                 from '@fortawesome/pro-regular-svg-icons'
+}                             from '@fortawesome/pro-regular-svg-icons'
 import {
     SlIcon, SlInput, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                                 from '@shoelace-style/shoelace/dist/react'
-import { TrackUtils }             from '@Utils/cesium/TrackUtils'
-import { FA2SL }                  from '@Utils/FA2SL'
-import { TracksEditorUtils }      from '@Utils/TracksEditorUtils'
-import { UIToast }                from '@Utils/UIToast'
-import { sprintf }                from 'sprintf-js'
-import { useSnapshot }            from 'valtio'
+}                             from '@shoelace-style/shoelace/dist/react'
+import { TrackUtils }         from '@Utils/cesium/TrackUtils'
+import { FA2SL }              from '@Utils/FA2SL'
+import { TracksEditorUtils }  from '@Utils/TracksEditorUtils'
+import { UIToast }            from '@Utils/UIToast'
+import { sprintf }            from 'sprintf-js'
+import { useSnapshot }        from 'valtio'
+import { updateJourney }      from './tools'
+import { TrackStyleSettings } from './TrackStyleSettings'
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2
@@ -183,30 +185,8 @@ export const JourneySettings = function JourneySettings() {
     const textVisibilityPOIs = sprintf('%s POIs', editorSnapshot.journey.allPOIs ? 'Hide' : 'Show')
 
 
-    /**
-     * Re build the journey object,
-     * Re compute metrix //TODO voir one peut paseprendre le anciens(tant que DEM n'a pa change)
-     *
-     * @param {Number} action
-     * @return {Journey}
-     */
-    const updateJourney = async action => {
-
-        const journey = Journey.deserialize({object: Journey.unproxify(editorStore.journey)})
-        await journey.computeAll()
-        vt3d.saveJourney(journey)
-        // saveToDB toDB
-        await journey.saveToDB()
-
-        if (action !== UPDATE_JOURNEY_SILENTLY) {
-            await journey.draw({action: action})
-        } else {
-            journey.focus()
-        }
-        return journey
-    }
-
-    const severalPOIs = (editorStore.journey.pois.size) > 1
+    const severalPOIs = editorStore.journey.pois.size > 1
+    const onlyOneTrack = editorStore.journey.tracks.size === 1
     const numberOfPois = severalPOIs
                          ? 'Some POIs exist. Wait a next version to see them!'
                          : 'No POIs !'
@@ -250,6 +230,11 @@ export const JourneySettings = function JourneySettings() {
                                                 onSlChange={setDescription}
                                     />
                                 </SlTooltip>
+
+
+                                { // if there only one track, the track style is here.
+                                    onlyOneTrack && <TrackStyleSettings/>
+                                }
 
                             </div>
                         </SlTabPanel>

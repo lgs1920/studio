@@ -209,3 +209,7 @@ export const ORIGIN_STORE = 'origin'
 export const CURRENT_JOURNEY = 'journey'
 export const CURRENT_TRACK = 'track'
 export const CURRENT_POI = 'poi'
+
+export const DRAW_THEN_SAVE = 1
+export const DRAW_WITHOUT_SAVE = 2
+export const JUST_SAVE = 3

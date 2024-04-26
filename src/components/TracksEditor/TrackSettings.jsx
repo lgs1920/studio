@@ -1,27 +1,22 @@
 import { ToggleStateIcon }                                                    from '@Components/ToggleStateIcon'
-import { Journey, NO_FOCUS, RE_LOADING }                                      from '@Core/Journey'
-import { Track }                                                              from '@Core/Track'
 import { faRectangleList }                                                    from '@fortawesome/pro-regular-svg-icons'
 import { faCircleDot, faLocationPin, faLocationPinSlash, faPaintbrushPencil } from '@fortawesome/pro-solid-svg-icons'
 
 import {
-    SlColorPicker, SlDivider, SlIcon, SlInput, SlRange, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                            from '@shoelace-style/shoelace/dist/react'
-import { TrackUtils }        from '@Utils/cesium/TrackUtils'
-import { FA2SL }             from '@Utils/FA2SL'
-import { TracksEditorUtils } from '@Utils/TracksEditorUtils'
-import { useSnapshot }       from 'valtio'
+    SlIcon, SlInput, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
+}                                                       from '@shoelace-style/shoelace/dist/react'
+import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
+import { FA2SL }                                        from '@Utils/FA2SL'
+import { TracksEditorUtils }                            from '@Utils/TracksEditorUtils'
+import { useSnapshot }                                  from 'valtio'
+import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE } from '../../core/VT3D'
+import { updateTrack }                                  from './tools'
+import { TrackStyleSettings }                           from './TrackStyleSettings'
 
 export const TrackSettings = function TrackSettings() {
 
-    const DRAW_THEN_SAVE = 1
-    const DRAW_WITHOUT_SAVE = 2
-    const JUST_SAVE = 3
-
     const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
-
-    let dataSource = vt3d.viewer.dataSources.getByName(editorStore.journey.slug)[0]
 
     /**
      * Change track Color
@@ -116,136 +111,68 @@ export const TrackSettings = function TrackSettings() {
         await updateTrack(JUST_SAVE)
     }
 
-    /**
-     * Re build the track object,
-     * Re compute metrix //TODO voir one peut paseprendre le anciens(tant que DEM n'a pa change)
-     *
-     * @return {Journey}
-     */
-    const updateTrack = async (action) => {
-
-        // Update the track
-        editorStore.journey.tracks.set(editorStore.track.slug, editorStore.track)
-        const journey = Journey.deserialize({object: Journey.unproxify(editorStore.journey)})
-        const track = Track.deserialize({object: Track.unproxify(editorStore.track)})
-        // await journey.computeAll()
-
-        if (action === DRAW_THEN_SAVE || action === JUST_SAVE) {
-            vt3d.saveJourney(journey)
-            // saveToDB toDB
-            await journey.saveToDB()
-        }
-
-        if (action === DRAW_WITHOUT_SAVE || action === DRAW_THEN_SAVE) {
-            await track.draw({action: RE_LOADING, mode: NO_FOCUS})
-        }
-
-    }
-
-    /**
-     * Track Style sub-component
-     *
-     * @return {JSX.Element}
-     * @constructor
-     */
-    const Style = () => {
-        return (<div id="track-line-settings">
-            <SlTooltip content="Color">
-                <SlColorPicker opacity
-                               size={'small'}
-                               label={'Color'}
-                               value={editorSnapshot.track.color}
-                               swatches={vt3d.configuration.defaultTrackColors.join(';')}
-                               onSlChange={setColor}
-                               onSlInput={setColor}
-                               disabled={!editorSnapshot.track.visible}
-                               noFormatToggle
-                />
-            </SlTooltip>
-            <SlTooltip content="Thickness">
-                <SlRange min={1} max={10} step={1}
-                         value={editorSnapshot.track.thickness}
-                         style={{'--thumb-size': '1rem'}}
-                         onSlInput={setThickness}
-                         onSlChange={setThickness}
-                         disabled={!editorSnapshot.track.visible}
-                         tooltip={'bottom'}
-                />
-            </SlTooltip>
-
-            <SlDivider id="test-line" style={{
-                '--color': editorSnapshot.track.visible ? editorSnapshot.track.color : 'transparent',
-                '--width': `${editorSnapshot.track.thickness}px`,
-                '--spacing': 0,
-            }}
-                       disabled={!editorSnapshot.track.visible}
-            />
-        </div>)
-    }
-
     const textVisibilityTrack = sprintf('%s Track', editorSnapshot.track.visible ? 'Hide' : 'Show')
     const textVisibilityStartFlag = sprintf('%s Flag', editorStore.track?.flags?.start?.visible ? 'Hide' : 'Show')
     const textVisibilityStopFlag = sprintf('%s Flag', editorStore.track?.flags?.stop?.visible ? 'Hide' : 'Show')
     const severalTracks = editorStore.journey.tracks.size > 1
 
     return (<>
-            {editorSnapshot.track && <>
+            {editorSnapshot.track && severalTracks && <>
                 <div className={'settings-panel'} id={'editor-track-settings-panel'}
                      key={vt3d.mainProxy.components.journeyEditor.keys.journey.track}>
-                    {editorSnapshot.track.visible &&
-                        <SlTabGroup id={'track-menu-panel'} className={'menu-panel'}>
-                            <SlTab slot="nav" panel="data">
-                                <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>Data
-                            </SlTab>
-                            <SlTab slot="nav" panel="edit">
-                                <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
-                            </SlTab>
-                            <SlTab slot="nav" panel="points">
-                                <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points
-                            </SlTab>
+                    {editorSnapshot.track.visible && <SlTabGroup id={'track-menu-panel'} className={'menu-panel'}>
+                        <SlTab slot="nav" panel="data">
+                            <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>Data
+                        </SlTab>
+                        <SlTab slot="nav" panel="edit">
+                            <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
+                        </SlTab>
+                        <SlTab slot="nav" panel="points">
+                            <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points
+                        </SlTab>
 
 
-                            {/**
-                             * Data Tab Panel
-                             */}
-                            <SlTabPanel name="data">Not Yet !</SlTabPanel>
+                        {/**
+                         * Data Tab Panel
+                         */}
+                        <SlTabPanel name="data">Not Yet !</SlTabPanel>
 
-                            {/**
-                             * Edit Tab Panel
-                             */}
-                            <SlTabPanel name="edit">
-                                <div id={'track-text-description'}>
-                                    {severalTracks && <>
-                                        {/* Change visible name (title) */}
-                                        <SlTooltip content={'Title'}>
-                                            <SlInput id="track-title"
-                                                     value={editorSnapshot.track.title}
-                                                     onSlChange={setTitle}
-                                            />
-                                        </SlTooltip>
-                                        {/* Change description */}
-                                        <SlTooltip content={'Description'}>
-                                            <SlTextarea row={2}
-                                                        size={'small'}
-                                                        id="track-description"
-                                                        value={editorSnapshot.track.description}
-                                                        onSlChange={setDescription}
-                                                        placeholder={'Track description'}
-                                            />
-                                        </SlTooltip>
+                        {/**
+                         * Edit Tab Panel
+                         */}
+                        <SlTabPanel name="edit">
+                            <div id={'track-text-description'}>
+                                {severalTracks && <>
+                                    {/* Change visible name (title) */}
+                                    <SlTooltip content={'Title'}>
+                                        <SlInput id="track-title"
+                                                 value={editorSnapshot.track.title}
+                                                 onSlChange={setTitle}
+                                        />
+                                    </SlTooltip>
+                                    {/* Change description */}
+                                    <SlTooltip content={'Description'}>
+                                        <SlTextarea row={2}
+                                                    size={'small'}
+                                                    id="track-description"
+                                                    value={editorSnapshot.track.description}
+                                                    onSlChange={setDescription}
+                                                    placeholder={'Track description'}
+                                        />
+                                    </SlTooltip>
 
-                                    </>}
-                                    {/* Track style */}
-                                    <Style/>
-                                </div>
-                            </SlTabPanel>
+                                </>}
+                                {/* Track style */}
+                                <TrackStyleSettings/>
+                            </div>
+                        </SlTabPanel>
 
-                            {/**
-                             * Points Tab Panel
-                             */}
-                            <SlTabPanel name="points">Not Yet!</SlTabPanel>
+                        {/**
+                         * Points Tab Panel
+                         */}
+                        <SlTabPanel name="points">Not Yet!</SlTabPanel>
 
-                        </SlTabGroup>}
+                    </SlTabGroup>}
 
                     <div id="track-visibility" className={'editor-vertical-menu'}>
                         {severalTracks && <SlTooltip content={textVisibilityTrack}>
