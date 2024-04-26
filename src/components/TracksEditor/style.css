@@ -105,3 +105,7 @@ sl-tab sl-icon {
 sl-tab-panel {
     overflow-y: hidden;
 }
+
+.track-points, .journey-POIs {
+    margin-top: var(--vt3d-gutter-s);
+}

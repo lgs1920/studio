@@ -15,6 +15,7 @@ import { TracksEditorUtils }  from '@Utils/TracksEditorUtils'
 import { useSnapshot }        from 'valtio'
 import { updateTrack }        from './tools'
 import { TrackFlagsSettings } from './TrackFlagsSettings'
+import { TrackPoints }        from './TrackPoints'
 import { TrackStyleSettings } from './TrackStyleSettings'
 
 export const TrackSettings = function TrackSettings() {
@@ -126,7 +127,9 @@ export const TrackSettings = function TrackSettings() {
                         {/**
                          * Points Tab Panel
                          */}
-                        <SlTabPanel name="points">Not Yet!</SlTabPanel>
+                        <SlTabPanel name="points">
+                            <TrackPoints/>
+                        </SlTabPanel>
 
                     </SlTabGroup>}
 

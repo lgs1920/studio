@@ -2,7 +2,8 @@ import { useConfirm }         from '@Components/Modals/ConfirmUI'
 import { ToggleStateIcon }    from '@Components/ToggleStateIcon'
 import { NO_DEM_SERVER }      from '@Core/Journey'
 import {
-    faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList, faTelescope, faTrashCan,
+    faCircleDot, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList, faTelescope,
+    faTrashCan,
 }                             from '@fortawesome/pro-regular-svg-icons'
 import {
     SlIcon, SlInput, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
@@ -13,8 +14,10 @@ import { TracksEditorUtils }  from '@Utils/TracksEditorUtils'
 import { UIToast }            from '@Utils/UIToast'
 import { sprintf }            from 'sprintf-js'
 import { useSnapshot }        from 'valtio'
+import { JourneyPOIs }        from './JourneyPOIs'
 import { updateJourney }      from './tools'
 import { TrackFlagsSettings } from './TrackFlagsSettings'
+import { TrackPoints }        from './TrackPoints'
 import { TrackStyleSettings } from './TrackStyleSettings'
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
@@ -202,9 +205,15 @@ export const JourneySettings = function JourneySettings() {
                         <SlTab slot="nav" panel="edit">
                             <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
                         </SlTab>
+                        {onlyOneTrack &&
+                            <SlTab slot="nav" panel="points">
+                                <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points
+                            </SlTab>
+                        }
                         <SlTab slot="nav" panel="pois">
                             <SlIcon library="fa" name={FA2SL.set(faTelescope)}/>POIs
                         </SlTab>
+
                         {/**
                          * Data Tab Panel
                          */}
@@ -243,7 +252,14 @@ export const JourneySettings = function JourneySettings() {
                          * POIs Tab Panel
                          */}
                         <SlTabPanel name="pois">
-                            <span>{numberOfPois}</span>
+                            <JourneyPOIs/>
+                        </SlTabPanel>
+
+                        {/**
+                         * Points Tab Panel
+                         */}
+                        <SlTabPanel name="points">
+                            <TrackPoints/>
                         </SlTabPanel>
                     </SlTabGroup>
 
