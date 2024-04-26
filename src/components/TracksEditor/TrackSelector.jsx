@@ -1,8 +1,8 @@
-import { faChevronDown, faEye, faEyeSlash }      from '@fortawesome/pro-regular-svg-icons'
-import { SlDivider, SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                 from '@Utils/FA2SL'
-import { forwardRef }                            from 'react'
-import { useSnapshot }                           from 'valtio'
+import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon, SlOption, SlSelect }       from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                            from '@Utils/FA2SL'
+import { forwardRef }                       from 'react'
+import { useSnapshot }                      from 'valtio'
 
 export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
 
@@ -14,11 +14,11 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
     const tracks = editorStore.journey.tracks
-    const several = tracks.size > 1
+
     if (editorStore.track === null || editorStore.track === undefined) {
         editorStore.track = Array.from(tracks.values())[0]
     }
-    // if (several) {
+    // if (tracks.size > 1) {
     // We do not sort the list
     // TODO : Check if it right to take tracks in the order in which they were created.
     // }
@@ -26,7 +26,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     return (
         <>
             {
-                several && editorSnapshot.track &&
+                tracks.size > 1 && editorSnapshot.track &&
                 <SlSelect hoist label={props.label}
                           value={editorSnapshot.track.slug}
                           onSlChange={props.onChange}
@@ -43,9 +43,6 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
                         </SlOption>,
                     )}
                 </SlSelect>
-            }
-            {!several &&
-                <SlDivider style={{'--width': '1px'}}/>
             }
         </>
     )

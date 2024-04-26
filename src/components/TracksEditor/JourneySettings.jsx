@@ -10,15 +10,14 @@ import {
 }                             from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }         from '@Utils/cesium/TrackUtils'
 import { FA2SL }              from '@Utils/FA2SL'
-import { TracksEditorUtils }  from '@Utils/TracksEditorUtils'
 import { UIToast }            from '@Utils/UIToast'
 import { sprintf }            from 'sprintf-js'
 import { useSnapshot }        from 'valtio'
 import { JourneyPOIs }        from './JourneyPOIs'
-import { updateJourney }      from './tools'
 import { TrackFlagsSettings } from './TrackFlagsSettings'
 import { TrackPoints }        from './TrackPoints'
 import { TrackStyleSettings } from './TrackStyleSettings'
+import { Utils }              from './Utils'
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2
@@ -43,7 +42,7 @@ export const JourneySettings = function JourneySettings() {
             return
         }
         editorStore.journey.description = description
-        await updateJourney(UPDATE_JOURNEY_SILENTLY)
+        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
     })
 
     /**
@@ -65,7 +64,7 @@ export const JourneySettings = function JourneySettings() {
         editorStore.journey.title = editorStore.journey.singleTitle(title)
         // Then use it
         await updateJourney(UPDATE_JOURNEY_SILENTLY)
-        TracksEditorUtils.renderJourneysList()
+        Utils.renderJourneysList()
     })
 
     /**
@@ -76,7 +75,7 @@ export const JourneySettings = function JourneySettings() {
         editorStore.journey.visible = visibility
         vt3d.theJourney.updateVisibility(visibility)
         await updateJourney(UPDATE_JOURNEY_SILENTLY)
-        TracksEditorUtils.renderJourneySettings()
+        Utils.renderJourneySettings()
     })
     /**
      * Change POIs visibility
@@ -86,7 +85,7 @@ export const JourneySettings = function JourneySettings() {
         editorStore.journey.POIsVisible = visibility
         TrackUtils.updatePOIsVisibility(vt3d.theJourney, visibility)
         await updateJourney(UPDATE_JOURNEY_SILENTLY)
-        TracksEditorUtils.renderJourneySettings()
+        Utils.renderJourneySettings()
     })
 
     /**
@@ -97,7 +96,7 @@ export const JourneySettings = function JourneySettings() {
     const setDEMServer = (async event => {
         editorStore.journey.DEMServer = event.target.value
         editorStore.longTask = editorStore.journey.DEMServer !== NO_DEM_SERVER
-        TracksEditorUtils.renderJourneySettings()
+        Utils.renderJourneySettings()
         // await vt3d.theJourney.computeAll()
         // // Then we redraw the theJourney
         // await vt3d.theJourney.showAfterHeightSimulation()
@@ -164,8 +163,8 @@ export const JourneySettings = function JourneySettings() {
                 // New current is the first.
                 vt3d.theJourney = vt3d.getJourneyBySlug(mainStore.list[0])
                 vt3d.theJourney.focus()
-                TracksEditorUtils.renderJourneysList()
-                TracksEditorUtils.renderJourneySettings()
+                Utils.renderJourneysList()
+                Utils.renderJourneySettings()
             } else {
                 vt3d.theJourney = null
                 vt3d.cleanEditor()
@@ -188,29 +187,23 @@ export const JourneySettings = function JourneySettings() {
     const textVisibilityJourney = sprintf('%s Journey', editorSnapshot.journey.visible ? 'Hide' : 'Show')
     const textVisibilityPOIs = sprintf('%s POIs', editorSnapshot.journey.allPOIs ? 'Hide' : 'Show')
 
-
-    const severalPOIs = editorStore.journey.pois.size > 1
-    const onlyOneTrack = editorStore.journey.tracks.size === 1
-    const numberOfPois = severalPOIs
-                         ? 'Some POIs exist. Wait a next version to see them!'
-                         : 'No POIs !'
     return (<>
         {editorSnapshot.journey &&
             <div id="journey-settings" key={vt3d.mainProxy.components.journeyEditor.keys.journey.journey}>
                 <div className={'settings-panel'} id={'editor-journey-settings-panel'}>
                     <SlTabGroup className={'menu-panel'}>
-                        <SlTab slot="nav" panel="data">
+                        <SlTab slot="nav" panel="data" id="tab-journey-data" active={editorSnapshot.tabs.journey.data}>
                             <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>Data
                         </SlTab>
-                        <SlTab slot="nav" panel="edit">
+                        <SlTab slot="nav" panel="edit" active={editorSnapshot.tabs.journey.edit}>
                             <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
                         </SlTab>
-                        {onlyOneTrack &&
-                            <SlTab slot="nav" panel="points">
+                        {editorSnapshot.journey.tracks.size === 1 &&
+                            <SlTab slot="nav" panel="points" active={editorSnapshot.tabs.journey.points}>
                                 <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points
                             </SlTab>
                         }
-                        <SlTab slot="nav" panel="pois">
+                        <SlTab slot="nav" panel="pois" active={editorSnapshot.tabs.journey.pois}>
                             <SlIcon library="fa" name={FA2SL.set(faTelescope)}/>POIs
                         </SlTab>
 
@@ -238,12 +231,14 @@ export const JourneySettings = function JourneySettings() {
                                                 id={'journey-description'}
                                                 value={editorSnapshot.journey.description}
                                                 onSlChange={setDescription}
+                                                placeholder={'Journey description'}
+
                                     />
                                 </SlTooltip>
 
 
                                 { // if there only one track, the track style is here.
-                                    onlyOneTrack && <TrackStyleSettings/>
+                                    editorSnapshot.journey.tracks.size === 1 && <TrackStyleSettings/>
                                 }
 
                             </div>
@@ -270,18 +265,18 @@ export const JourneySettings = function JourneySettings() {
                             <ToggleStateIcon change={setJourneyVisibility}
                                              initial={editorSnapshot.journey.visible}/>
                         </SlTooltip>
-                            {severalPOIs &&
+                            {editorSnapshot.journey.pois.size > 1 &&
                                 <SlTooltip content={textVisibilityPOIs}>
                                     <ToggleStateIcon
                                         change={setAllPOIsVisibility}
-                                        initial={editorStore.journey.POIsVisible}
+                                        initial={editorSnapshot.journey.POIsVisible}
                                         icons={{
                                             shown: faLocationDot, hidden: faLocationDotSlash,
                                         }}/>
                                 </SlTooltip>
                             }
 
-                            {onlyOneTrack && <TrackFlagsSettings/>}
+                            {editorSnapshot.journey.tracks.size === 1 && <TrackFlagsSettings/>}
                         </span>
 
                         <span>

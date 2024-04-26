@@ -1,22 +1,22 @@
-import { ToggleStateIcon }    from '@Components/ToggleStateIcon'
-import { JUST_SAVE }          from '@Core/VT3D'
+import { ToggleStateIcon } from '@Components/ToggleStateIcon'
+import { JUST_SAVE }       from '@Core/VT3D'
 import {
     faRectangleList,
-}                             from '@fortawesome/pro-regular-svg-icons'
+}                          from '@fortawesome/pro-regular-svg-icons'
 import {
     faCircleDot, faPaintbrushPencil,
-}                             from '@fortawesome/pro-solid-svg-icons'
+}                          from '@fortawesome/pro-solid-svg-icons'
 import {
     SlIcon, SlInput, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                             from '@shoelace-style/shoelace/dist/react'
+}                          from '@shoelace-style/shoelace/dist/react'
+
 import { TrackUtils }         from '@Utils/cesium/TrackUtils'
 import { FA2SL }              from '@Utils/FA2SL'
-import { TracksEditorUtils }  from '@Utils/TracksEditorUtils'
 import { useSnapshot }        from 'valtio'
-import { updateTrack }        from './tools'
 import { TrackFlagsSettings } from './TrackFlagsSettings'
 import { TrackPoints }        from './TrackPoints'
 import { TrackStyleSettings } from './TrackStyleSettings'
+import { Utils }              from './Utils'
 
 export const TrackSettings = function TrackSettings() {
 
@@ -31,7 +31,7 @@ export const TrackSettings = function TrackSettings() {
      */
     const setDescription = (async event => {
         editorStore.track.description = event.target.value
-        await updateTrack(JUST_SAVE)
+        await Utils.updateTrack(JUST_SAVE)
     })
 
     /**
@@ -54,8 +54,8 @@ export const TrackSettings = function TrackSettings() {
         })
         editorStore.track.title = _.app.singleTitle(title, titles)
 
-        await updateTrack(JUST_SAVE)
-        TracksEditorUtils.renderTracksList()
+        await Utils.updateTrack(JUST_SAVE)
+        Utils.renderTracksList()
     })
 
     /**
@@ -67,24 +67,29 @@ export const TrackSettings = function TrackSettings() {
         //saveToDB state
         editorStore.track.visible = visibility
         TrackUtils.updateTrackVisibility(editorStore.journey, editorStore.track, visibility)
-        await updateTrack(JUST_SAVE)
+        await Utils.updateTrack(JUST_SAVE)
     }
 
     const textVisibilityTrack = sprintf('%s Track', editorSnapshot.track.visible ? 'Hide' : 'Show')
-    const severalTracks = editorStore.journey.tracks.size > 1
 
     return (<>
-            {editorSnapshot.track && severalTracks && <>
+            {editorSnapshot.track && editorSnapshot.journey.tracks.size > 1 && <>
                 <div className={'settings-panel'} id={'editor-track-settings-panel'}
                      key={vt3d.mainProxy.components.journeyEditor.keys.journey.track}>
                     {editorSnapshot.track.visible && <SlTabGroup id={'track-menu-panel'} className={'menu-panel'}>
-                        <SlTab slot="nav" panel="data">
+                        <SlTab slot="nav"
+                               panel="data" id="tab-tracks-data"
+                               active={editorSnapshot.tabs.track.data}>
                             <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>Data
                         </SlTab>
-                        <SlTab slot="nav" panel="edit">
+                        <SlTab slot="nav"
+                               panel="edit"
+                               active={editorSnapshot.tabs.track.edit}>
                             <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
                         </SlTab>
-                        <SlTab slot="nav" panel="points">
+                        <SlTab slot="nav"
+                               panel="points"
+                               active={editorSnapshot.tabs.track.points}>
                             <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points
                         </SlTab>
 
@@ -99,7 +104,7 @@ export const TrackSettings = function TrackSettings() {
                          */}
                         <SlTabPanel name="edit">
                             <div id={'track-text-description'}>
-                                {severalTracks && <>
+                                {editorSnapshot.journey.tracks.size > 1 && <>
                                     {/* Change visible name (title) */}
                                     <SlTooltip content={'Title'}>
                                         <SlInput id="track-title"
@@ -134,7 +139,7 @@ export const TrackSettings = function TrackSettings() {
                     </SlTabGroup>}
 
                     <div id="track-visibility" className={'editor-vertical-menu'}>
-                        {severalTracks && <SlTooltip content={textVisibilityTrack}>
+                        {editorStore.journey.tracks.size > 1 && <SlTooltip content={textVisibilityTrack}>
                             <ToggleStateIcon change={setTrackVisibility} initial={editorSnapshot.track.visible}/>
                         </SlTooltip>}
                         <TrackFlagsSettings/>

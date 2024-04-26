@@ -4,7 +4,6 @@ import { faLocationPin, faLocationPinSlash } from '@fortawesome/pro-solid-svg-ic
 import { SlTooltip }                         from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                        from '@Utils/cesium/TrackUtils'
 import { useSnapshot }                       from 'valtio'
-import { updateTrack }                       from './tools'
 
 export const TrackFlagsSettings = function TrackSettings() {
 
@@ -26,7 +25,7 @@ export const TrackFlagsSettings = function TrackSettings() {
     const setStartFlagVisibility = async visibility => {
         editorStore.track.flags.start.visible = visibility
         TrackUtils.updateFlagsVisibility(editorStore.journey, editorStore.track, 'start', visibility)
-        await updateTrack(JUST_SAVE)
+        await Utils.updateTrack(JUST_SAVE)
     }
 
     /**
@@ -39,7 +38,7 @@ export const TrackFlagsSettings = function TrackSettings() {
     const setStopFlagVisibility = async visibility => {
         editorStore.track.flags.stop.visible = visibility
         TrackUtils.updateFlagsVisibility(editorStore.journey, editorStore.track, 'stop', visibility)
-        await updateTrack(JUST_SAVE)
+        await Utils.updateTrack(JUST_SAVE)
     }
 
     const textVisibilityStartFlag = sprintf('%s Flag', editorStore.track?.flags?.start?.visible ? 'Hide' : 'Show')

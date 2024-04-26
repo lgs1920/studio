@@ -2,7 +2,7 @@ import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE }            from '@Core/VT3D'
 import { SlColorPicker, SlDivider, SlRange, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { useSnapshot }                                  from 'valtio'
 import { TrackUtils }                                   from '../../Utils/cesium/TrackUtils'
-import { updateTrack }                                  from './tools'
+import { Utils }                                        from './Utils'
 
 export const TrackStyleSettings = function TrackSettings() {
 
@@ -23,7 +23,7 @@ export const TrackStyleSettings = function TrackSettings() {
      */
     const setColor = (async event => {
         editorStore.track.color = event.target.value
-        await updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
+        await Utils.updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
     })
 
 
@@ -34,7 +34,7 @@ export const TrackStyleSettings = function TrackSettings() {
      */
     const setThickness = (async event => {
         editorStore.track.thickness = event.target.value
-        await updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
+        await Utils.updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
     })
 
     return (
