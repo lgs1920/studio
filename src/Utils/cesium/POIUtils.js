@@ -24,7 +24,7 @@ export class POIUtils {
         return location[origin]
     })
 
-    static setIcon = (icon => {
+    static setIcon = (icon = '') => {
         switch (icon) {
             case FLAG_START:
             case FLAG_STOP:
@@ -34,7 +34,7 @@ export class POIUtils {
                 return faLocationDot
 
         }
-    })
+    }
 
     /**
      *

@@ -64,6 +64,7 @@ export class POI {
      * @return {*}
      */
     defineIcon = (icon) => {
+        icon = icon ?? POIUtils.setIcon()
         if (typeof icon === 'string') {
             return POIUtils.setIcon(icon)
         }
