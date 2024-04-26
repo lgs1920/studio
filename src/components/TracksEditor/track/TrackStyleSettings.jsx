@@ -1,8 +1,8 @@
 import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE }            from '@Core/VT3D'
 import { SlColorPicker, SlDivider, SlRange, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { useSnapshot }                                  from 'valtio'
-import { TrackUtils }                                   from '../../Utils/cesium/TrackUtils'
-import { Utils }                                        from './Utils'
+import { TrackUtils }                                   from '../../../Utils/cesium/TrackUtils'
+import { Utils }                                        from '../Utils'
 
 export const TrackStyleSettings = function TrackSettings() {
 

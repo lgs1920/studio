@@ -13,11 +13,11 @@ import { FA2SL }              from '@Utils/FA2SL'
 import { UIToast }            from '@Utils/UIToast'
 import { sprintf }            from 'sprintf-js'
 import { useSnapshot }        from 'valtio'
+import { TrackFlagsSettings } from '../track/TrackFlagsSettings'
+import { TrackPoints }        from '../track/TrackPoints'
+import { TrackStyleSettings } from '../track/TrackStyleSettings'
+import { Utils }              from '../Utils'
 import { JourneyPOIs }        from './JourneyPOIs'
-import { TrackFlagsSettings } from './TrackFlagsSettings'
-import { TrackPoints }        from './TrackPoints'
-import { TrackStyleSettings } from './TrackStyleSettings'
-import { Utils }              from './Utils'
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2
