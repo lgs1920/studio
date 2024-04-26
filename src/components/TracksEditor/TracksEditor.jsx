@@ -2,13 +2,13 @@ import { faPencil }                              from '@fortawesome/pro-regular-
 import { SlButton, SlDrawer, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                 from '@Utils/FA2SL'
 import './style.css'
-import { TracksEditorUtils }                     from '@Utils/TracksEditorUtils'
 import { forwardRef }                            from 'react'
 import { useSnapshot }                           from 'valtio'
 import { JourneySelector }                       from './JourneySelector'
 import { JourneySettings }                       from './JourneySettings'
 import { TrackSelector }                         from './TrackSelector'
 import { TrackSettings }                         from './TrackSettings'
+import { Utils }                                 from './Utils'
 
 //read version
 
@@ -19,7 +19,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
     const mainSnap = useSnapshot(mainStore)
 
     const editorStore = vt3d.theJourneyEditorProxy
-    const editorSnap = useSnapshot(editorStore)
+    const editorSnapshot = useSnapshot(editorStore)
 
     /**
      * Avoid click outside drawer
@@ -57,12 +57,12 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                                           onSlHide={closeTracksEditor}
             >
                 {vt3d.journeys.size > 0 && <div id={'track-settings-container'}>
-                    <JourneySelector onChange={TracksEditorUtils.initJourneyEdition}
+                    <JourneySelector onChange={Utils.initJourneyEdition}
                                      label={'Select a Journey:'}/>
                     <JourneySettings/>
 
-                    {editorStore.journey.visible && <>
-                        <TrackSelector onChange={TracksEditorUtils.initTrackEdition}
+                    {editorSnapshot.journey.visible && <>
+                        <TrackSelector onChange={Utils.initTrackEdition}
                                        label={'Select one of the tracks:'}/>
                         <TrackSettings/>
                     </>}

@@ -14,8 +14,6 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
     const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
-    const several = mainSnapshot.list.length > 1
-
     /**
      * Get journeys from the snap that contains only slugs
      */
@@ -29,7 +27,7 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
      *
      * //TODO other criterias
      */
-    if (several) {
+    if (mainSnapshot.list.length > 1) {
         // sort list alphabetically
         journeys.sort(function (a, b) {
             if (a.title < b.title) {
@@ -47,7 +45,7 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
     return (
         <>
             {
-                several &&
+                mainSnapshot.list.length > 1 &&
                 <SlSelect hoist label={props.label}
                           value={editorSnapshot.journey.slug}
                           onSlChange={props.onChange}
