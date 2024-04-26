@@ -4,30 +4,19 @@ import { faCircleDot, faLocationPin, faLocationPinSlash, faPaintbrushPencil } fr
 
 import {
     SlIcon, SlInput, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                                                       from '@shoelace-style/shoelace/dist/react'
-import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
-import { FA2SL }                                        from '@Utils/FA2SL'
-import { TracksEditorUtils }                            from '@Utils/TracksEditorUtils'
-import { useSnapshot }                                  from 'valtio'
-import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE } from '../../core/VT3D'
-import { updateTrack }                                  from './tools'
-import { TrackStyleSettings }                           from './TrackStyleSettings'
+}                             from '@shoelace-style/shoelace/dist/react'
+import { TrackUtils }         from '@Utils/cesium/TrackUtils'
+import { FA2SL }              from '@Utils/FA2SL'
+import { TracksEditorUtils }  from '@Utils/TracksEditorUtils'
+import { useSnapshot }        from 'valtio'
+import { JUST_SAVE }          from '../../core/VT3D'
+import { updateTrack }        from './tools'
+import { TrackStyleSettings } from './TrackStyleSettings'
 
 export const TrackSettings = function TrackSettings() {
 
     const editorStore = vt3d.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
-
-    /**
-     * Change track Color
-     *
-     * @param {CustomEvent} event
-     *
-     */
-    const setColor = (async event => {
-        editorStore.track.color = event.target.value
-        await updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
-    })
 
     /**
      * Change the track description
@@ -62,16 +51,6 @@ export const TrackSettings = function TrackSettings() {
 
         await updateTrack(JUST_SAVE)
         TracksEditorUtils.renderTracksList()
-    })
-
-    /**
-     * Change track thickness
-     *
-     * @param {CustomEvent} event
-     */
-    const setThickness = (async event => {
-        editorStore.track.thickness = event.target.value
-        await updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
     })
 
     /**
