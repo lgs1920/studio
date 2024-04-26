@@ -13,10 +13,11 @@ import {
 import { TrackUtils }         from '@Utils/cesium/TrackUtils'
 import { FA2SL }              from '@Utils/FA2SL'
 import { useSnapshot }        from 'valtio'
+import { Utils }              from '../Utils'
+import { TrackData }          from './TrackData'
 import { TrackFlagsSettings } from './TrackFlagsSettings'
 import { TrackPoints }        from './TrackPoints'
 import { TrackStyleSettings } from './TrackStyleSettings'
-import { Utils }              from './Utils'
 
 export const TrackSettings = function TrackSettings() {
 
@@ -97,7 +98,7 @@ export const TrackSettings = function TrackSettings() {
                         {/**
                          * Data Tab Panel
                          */}
-                        <SlTabPanel name="data">Not Yet !</SlTabPanel>
+                        <SlTabPanel name="data"><TrackData/></SlTabPanel>
 
                         {/**
                          * Edit Tab Panel
