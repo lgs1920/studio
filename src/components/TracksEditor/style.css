@@ -102,6 +102,10 @@ sl-tab sl-icon {
     transition: all ease-in-out;
 }
 
+sl-tab::part(base) {
+    padding: var(--vt3d-gutter-s);
+}
+
 sl-tab-panel {
     overflow-y: hidden;
 }
