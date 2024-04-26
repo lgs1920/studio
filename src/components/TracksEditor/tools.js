@@ -33,7 +33,7 @@ export const updateTrack = async (action) => {
  */
 export const updateJourney = async action => {
 
-    const journey = Journey.deserialize({object: Journey.unproxify(editorStore.journey)})
+    const journey = Journey.deserialize({object: Journey.unproxify(vt3d.theJourneyEditorProxy.journey)})
     await journey.computeAll()
     vt3d.saveJourney(journey)
     // saveToDB toDB

@@ -14,6 +14,7 @@ import { UIToast }            from '@Utils/UIToast'
 import { sprintf }            from 'sprintf-js'
 import { useSnapshot }        from 'valtio'
 import { updateJourney }      from './tools'
+import { TrackFlagsSettings } from './TrackFlagsSettings'
 import { TrackStyleSettings } from './TrackStyleSettings'
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
@@ -263,7 +264,10 @@ export const JourneySettings = function JourneySettings() {
                                         }}/>
                                 </SlTooltip>
                             }
+
+                            {onlyOneTrack && <TrackFlagsSettings/>}
                         </span>
+
                         <span>
                         <SlTooltip content={'Export'}>
                             <a onClick={exportJourney}>
