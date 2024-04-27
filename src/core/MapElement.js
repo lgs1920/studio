@@ -1,9 +1,14 @@
 export class MapElement {
 
-    slug
-    name
-    visible
-    description
+    /** @type {string} */
+    description // Add any description
+    /** @type {string} */
+    name        // name of the MapElement
+    /** @type {string} */
+    slug        // unic identifier
+    /** @type {boolean} */
+    visible    // Is it visible ?
+
 
     constructor(props) {
     }
