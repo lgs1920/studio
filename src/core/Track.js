@@ -17,14 +17,6 @@ export class Track extends MapElement {
     thickness   // Line thickness
     /** @type {object} */
     metrics     // All the metrics associated to the track
-    /** @type {string} */
-    description // Add any description
-    /** @type {string} */
-    name
-    /** @type {string} */
-    slug        // unic Id for the track
-    /** @type {boolean} */
-    visible     // Is visible ?
     /** @type {boolean} */
     hasTime
     /** @type {boolean} */
