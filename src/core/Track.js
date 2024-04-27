@@ -75,9 +75,9 @@ export class Track extends MapElement {
      * Prepare it an extract all metrics
      *
      */
-    extractMetrics = async () => {        // Maybe we have some changes to operate
-        await this.prepareContent()
-        await this.calculateMetrics()
+    extractMetrics = () => {        // Maybe we have some changes to operate
+        this.prepareContent()
+        this.calculateMetrics()
     }
 
     /**
@@ -130,7 +130,7 @@ export class Track extends MapElement {
      *
      * set metrics as  {[metrics/all points,global]}
      */
-    calculateMetrics = async () => {
+    calculateMetrics = () => {
 
         let metrics = []
         let featureMetrics = []
@@ -243,7 +243,6 @@ export class Track extends MapElement {
         metrics.push({points: featureMetrics, global: global})
 
         this.metrics = metrics
-
     }
 
     /**
@@ -254,7 +253,7 @@ export class Track extends MapElement {
      * @return geoJson
      *
      */
-    prepareContent = async () => {
+    prepareContent = () => {
 
         // Only for Feature Collections that are Line or multi line string typ
         const type = this.content.geometry.type
