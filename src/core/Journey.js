@@ -33,6 +33,8 @@ export class Journey extends MapElement {
     origin                                     // initial geoJson
     POIsVisible = true
 
+    metrics = {}
+
     constructor(title, type, options) {
         super()
         if (title) {
@@ -193,7 +195,7 @@ export class Journey extends MapElement {
                         name: feature.properties.name,
                         slug: this.#setTrackSlug(feature.properties.name),
                         hasTime: this.#hasTime(feature.properties),
-                        hasAltitude: this.#hasAltitude(geometry.coordinates),
+                        hasAltitude: this.#hasAltitude(geometry),
                         description: feature.properties.desc ?? '',
                         segments: geometry.coordinates.length,
                         content: feature,
@@ -201,18 +203,35 @@ export class Journey extends MapElement {
                         geoJson: feature,
                     }
                     this.tracks.set(parameters.slug, new Track(title, parameters))
-
                 }
             })
         }
     }
 
+    /**
+     * Check if data contains time information
+     *
+     * @param properties
+     * @return {boolean}
+     */
     #hasTime = (properties) => {
         return properties?.coordinateProperties?.times !== undefined
     }
 
-    #hasAltitude = (coordinates) => {
-        return coordinates[0][0].length === 3
+    /**
+     * Check if data contains altitude
+     *
+     * @param geometry
+     * @return {boolean}
+     */
+    #hasAltitude = (geometry) => {
+        switch (geometry.type) {
+            // We check the length of the points coordinates
+            case FEATURE_LINE_STRING:
+                return geometry.coordinates[0].length === 3
+            case FEATURE_MULTILINE_STRING:
+                return geometry.coordinates[0][0].length === 3
+        }
     }
 
     /**
@@ -472,6 +491,18 @@ export class Journey extends MapElement {
 
     updateVisibility = (visibility) => {
         TrackUtils.updateJourneyVisibility(this, visibility)
+    }
+
+    setGlobalMetrics = () => {
+        // Does the um of track metrics
+    }
+    extractMetrics = () => {
+        this.tracks.forEach(track => {
+            track.extractMetrics()
+        })
+
+        this.metrics = this.setGlobalMetrics()
+
     }
 
 }

@@ -96,7 +96,9 @@ export class Utils {
         vt3d.theJourneyEditorProxy.journey.tracks.set(vt3d.theJourneyEditorProxy.track.slug, vt3d.theJourneyEditorProxy.track)
         const journey = Journey.deserialize({object: Journey.unproxify(vt3d.theJourneyEditorProxy.journey)})
         const track = Track.deserialize({object: Track.unproxify(vt3d.theJourneyEditorProxy.track)})
-        // await journey.computeAll()
+        //TODO compute only if it is necessary
+        //await track.computeAll()
+
 
         if (action === DRAW_THEN_SAVE || action === JUST_SAVE) {
             vt3d.saveJourney(journey)

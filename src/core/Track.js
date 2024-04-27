@@ -1,27 +1,38 @@
-import { FOCUS_ON_FEATURE, INITIAL_LOADING }                   from '@Core/Journey'
-import { MapElement }                                          from '@Core/MapElement'
-import { POI }                                                 from '@Core/POI'
-import { FEATURE_COLLECTION, FEATURE_LINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
-import { Mobility }                                            from '@Utils/Mobility'
-import { DateTime }                                            from 'luxon'
+import { FOCUS_ON_FEATURE, INITIAL_LOADING } from '@Core/Journey'
+import { MapElement }                        from '@Core/MapElement'
+import { POI }                               from '@Core/POI'
+import { FEATURE_LINE_STRING, TrackUtils }   from '@Utils/cesium/TrackUtils'
+import { Mobility }                          from '@Utils/Mobility'
+import { DateTime }                          from 'luxon'
+import { FEATURE, FEATURE_MULTILINE_STRING } from '../Utils/cesium/TrackUtils'
 
 
 export class Track extends MapElement {
 
+    /** @type {string} */
     title       // Track title
+    /** @type {Journey |undefined} */
     parent = undefined
     color       // Line color
     thickness   // Line thickness
+    /** @type {object} */
     metrics     // All the metrics associated to the track
+    /** @type {string} */
     description // Add any description
+    /** @type {string} */
     name
+    /** @type {string} */
     slug        // unic Id for the track
+    /** @type {boolean} */
     visible     // Is visible ?
+    /** @type {boolean} */
     hasTime
+    /** @type {boolean} */
     hasAltitude
+    /** @type {[]} */
     content     // GEo JSON
+    /** @type {{start:POI|undefined,stop:POI|undefined}} */
     flags = {start: undefined, stop: undefined}
-    pois
 
     constructor(title, options = {}) {
         super()
@@ -72,201 +83,249 @@ export class Track extends MapElement {
      * Prepare it an extract all metrics
      *
      */
-    computeAll = async () => {
-        // Maybe we have some changes to operate
-        await this.prepareGeoJson()
+    extractMetrics = async () => {        // Maybe we have some changes to operate
+        await this.prepareContent()
         await this.calculateMetrics()
-        this.addToContext()
     }
 
     /**
-     * Compute all metrics from a theJourney
+     * Aggregate Geo Json data in order to have longitude, latitude, altitude,time
+     * for each point (altitude and time may not exist)
+     *
+     * @param geoJson
+     * @return {[[{longitude, latitude, altitude,time}]]}  This is  multi segment format
+     *         ie [[segment][[segment]]] event if it is a line string
+     *
+     */
+    aggregateDataForMetrics = () => {
+        const aggregateData = []
+        // Only for Feature Collections that are Line or multi line string typ
+        const type = this.content.geometry.type
+
+        if (this.content.type === FEATURE &&
+            [FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING].includes(type)) {
+            // According to type (Line or multiline), we transform the
+            // coordinates in order to be  in (real or simulated) multiline mode
+            const segments = type === FEATURE_LINE_STRING
+                             ? [this.content.geometry.coordinates]
+                             : this.content.geometry.coordinates
+
+            // Same for times data if exists
+            const times = type === FEATURE_LINE_STRING
+                          ? [this.content.properties.coordinateProperties?.times]
+                          : this.content.properties.coordinateProperties?.times
+
+            segments.forEach((segment, index) => {
+                const segmentAggregate = []
+                segment.forEach((coordinates, ptIndex) => {
+                    let point = {longitude: coordinates[0], latitude: coordinates[1]}
+                    if (this.hasAltitude) {
+                        point.altitude = coordinates[2]
+                    }
+                    if (this.hasTime) {
+                        point.time = times[index][ptIndex]
+                    }
+                    segmentAggregate.push(point)
+                })
+                aggregateData.push(segmentAggregate)
+            })
+        }
+        return aggregateData
+    }
+
+    /**
+     * Compute all metrics from a track
      *
      * set metrics as  {[metrics/all points,global]}
      */
     calculateMetrics = async () => {
-        return await TrackUtils.prepareDataForMetrics(this.geoJson).then(dataForMetrics => {
-            let metrics = []
+
+        let metrics = []
+        let featureMetrics = []
+
+        // 1st step : Metrics per points
+        // we iterate on all points to compute
+        //  - distance
+        // If we have altitude we can compute
+        //  - elevation, slope
+        // If we have time information, we can also compute
+        //  - duration, speed, pace
+
+        this.aggregateDataForMetrics().forEach((aggregate) => {
+            const segmentData = []
             let index = 1
+            for (const prev of aggregate) {
+                const current = aggregate[index]
+                const pointData = {}
+                if (index <= aggregate.length) {
+                    pointData.distance = Mobility.distance(prev, current)
+                    if (this.hasTime && current?.time && prev?.time) {
+                        pointData.duration = Mobility.duration(DateTime.fromISO(prev.time), DateTime.fromISO(current.time))
+                        pointData.speed = Mobility.speed(pointData.distance, pointData.duration)
+                        pointData.pace = Mobility.pace(pointData.distance, pointData.duration)
 
-            /**
-             * GeoJson is a Feature Collection, so we iterate on each.
-             */
-            dataForMetrics.forEach((dataSet) => {
-                let featureMetrics = []
-                /**
-                 * 1st step : Metrics per points
-                 * we iterate on all points to compute
-                 *  - distance, elevation, slope
-                 * If we have time information, we can also compute
-                 *  - duration, speed, pace
-                 */
-                for (const prev of dataSet) {
-                    const current = dataSet[index]
-                    const data = {}
-                    if (index < dataSet.length) {
-                        data.distance = Mobility.distance(prev, current)
-                        if (current.time && prev.time) {
-                            data.duration = Mobility.duration(DateTime.fromISO(prev.time), DateTime.fromISO(current.time))
-                            data.speed = Mobility.speed(data.distance, data.duration)
-                            data.pace = Mobility.pace(data.distance, data.duration)
-
-                            //TODO Add idle time duration
-                        }
-                        data.elevation = Mobility.elevation(prev, current)
-                        data.slope = data.elevation / data.distance * 100
+                        //TODO Add idle time duration
                     }
-                    index++
-                    featureMetrics.push(data)
+                    if (this.hasAltitude) {
+                        pointData.elevation = Mobility.elevation(prev, current)
+                        pointData.slope = pointData.elevation / pointData.distance * 100
+                    }
                 }
-                featureMetrics = featureMetrics.slice(0, -1)
-
-                /**
-                 * Step 2: Globals
-                 *
-                 * Now we can compute globals, ie some min max, average + total information(distance, time, D+/D- )
-                 */
-                let global = {}, tmp = []
-
-                // Min Height
-                global.minHeight = Math.min(...dataSet.map(a => a?.altitude))
-
-                // Max Height
-                global.maxHeight = Math.max(...dataSet.map(a => a?.altitude))
-
-                // If the first have duration time, all the data set have time
-                if (featureMetrics[0].duration) {
-                    // Max speed
-                    tmp = TrackUtils.filterArray(featureMetrics, {
-                        speed: speed => speed !== 0 && speed !== undefined,
-                    })
-                    global.maxSpeed = Math.max(...tmp.map(a => a?.speed))
-
-                    // Average speed (we exclude 0 and undefined values)
-                    global.averageSpeed = tmp.reduce((s, o) => {
-                        return s + o.speed
-                    }, 0) / tmp.length
-
-                    // Todo  Add average speed in motion
-
-                    // Max Pace
-                    global.maxPace = Math.max(...featureMetrics.map(a => a?.pace))
-
-                    // Todo  Add average pace in motion
-                }
-
-                // Max Slope
-                global.maxSlope = Math.max(...featureMetrics.map(a => a?.slope))
-
-                // Positive elevation
-                global.positiveElevation = 0
-                featureMetrics.forEach((point) => {
-                    if (point.elevation > 0) {
-                        global.positiveElevation += point.elevation
-                    }
-                })
-
-                // Negative elevation
-                global.negativeElevation = 0
-                featureMetrics.forEach((point, index) => {
-                    if (point.elevation < 0) {
-                        global.negativeElevation += point.elevation
-                    }
-                })
-
-                // Total duration
-                global.duration = featureMetrics.reduce((s, o) => {
-                    return s + o.duration
-                }, 0)
-
-                // Total Distance
-                global.distance = featureMetrics.reduce((s, o) => {
-                    return s + o.distance
-                }, 0)
-
-                metrics.push({points: featureMetrics, global: global})
-            })
-            this.metrics = metrics
+                index++
+                segmentData.push({...current, ...pointData})
+            }
+            featureMetrics.push(segmentData.slice(0, -1))
         })
+
+        featureMetrics = featureMetrics.flat()
+        //
+
+        /**
+         * Step 2: Globals
+         *
+         * Now we can compute globals, ie some min max, average + total information(distance, time, D+/D- )
+         */
+        let global = {}, tmp = []
+
+        // Min Height
+        global.minHeight = this.hasAltitude ? Math.min(...featureMetrics.map(a => a?.altitude)) : undefined
+
+        // Max Height
+        global.maxHeight = this.hasAltitude ? Math.max(...featureMetrics.map(a => a?.altitude)) : undefined
+
+        // If the first have duration time, all the data set have time
+        if (this.hasTime) {
+            // Max speed
+            tmp = TrackUtils.filterArray(featureMetrics, {
+                speed: speed => speed !== 0 && speed !== undefined,
+            })
+            global.maxSpeed = Math.max(...tmp.map(a => a?.speed))
+
+            // Average speed (we exclude 0 and undefined values)
+            global.averageSpeed = tmp.reduce((s, o) => {
+                return s + o.speed
+            }, 0) / tmp.length
+
+            // Todo  Add average speed in motion
+
+            // Max Pace
+            global.maxPace = Math.max(...featureMetrics.map(a => a?.pace))
+
+            // Todo  Add average pace in motion
+        }
+
+        if (this.hasAltitude) {
+            // Max Slope
+            global.maxSlope = this.hasAltitude ? Math.max(...featureMetrics.map(a => a?.slope)) : undefined
+
+            // Positive elevation and distance
+            global.positiveElevation = 0
+            global.positiveDistance = 0
+            featureMetrics.forEach((point) => {
+                if (point.elevation > 0) {
+                    global.positiveElevation += point.elevation
+                    global.positiveDistance += point.distance
+                }
+            })
+
+            // Negative elevation
+            global.negativeElevation = 0
+            global.negativeDistance = 0
+            featureMetrics.forEach((point, index) => {
+                if (point.elevation < 0) {
+                    global.negativeElevation += point.elevation
+                    global.negativeDistance += point.distance
+                }
+            })
+        }
+        // Total duration
+        global.duration = featureMetrics.reduce((s, o) => {
+            return s + o.duration
+        }, 0)
+
+        // Total Distance
+        global.distance = featureMetrics.reduce((s, o) => {
+            return s + o.distance
+        }, 0)
+
+        metrics.push({points: featureMetrics, global: global})
+
+        this.metrics = metrics
+
     }
 
     /**
-     * Prepare GeoJson
+     * Prepare GeoJson content
      *
      * Simulate altitude, interpolate, clean data
      *
      * @return geoJson
      *
      */
-    prepareGeoJson = async () => {
+    prepareContent = async () => {
 
-        /**
-         * Only for Feature Collections
-         */
-        if (this.geoJson.type === FEATURE_COLLECTION) {
-            for (const feature of this.geoJson.features) {
-                if (feature.type === 'Feature' && feature.geometry.type === FEATURE_LINE_STRING) {
-                    let index = 0
-                    /**
-                     * Have altitude or simulate ?
-                     */
-                    if (!this.hasAltitude) {
-                        // Some altitudes info are missing. Let's simulate them
+        // Only for Feature Collections that are Line or multi line string typ
+        const type = this.content.geometry.type
 
-                        // TODO add different plugins for DEM elevation like:
-                        //        https://tessadem.com/elevation-api/  ($)
-                        //     or https://github.com/Jorl17/open-elevation/blob/master/docs/api.md
+        if (this.content.type === FEATURE &&
+            [FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING].includes(type)) {
+            // According to type (Line or multiline), we transform the
+            // coordinates in order to be  in (real or simulated) multiline mode.
+            // This allows to work with segments
+            const segments = type === FEATURE_LINE_STRING
+                             ? [this.content.geometry.coordinates]
+                             : this.content.geometry.coordinates
 
+            segments.forEach((segment, index) => {
+                // Some altitudes info are missing. Let's simulate them
+                // TODO do this only for the first time (ie hasAltitude = 0, SIMULATED,CLEANED ...)
+                if (!this.hasAltitude) {
+                    // TODO add different plugins for DEM elevation like:
+                    //        https://tessadem.com/elevation-api/  ($)
+                    //     or https://github.com/Jorl17/open-elevation/blob/master/docs/api.md
 
-                        if (this.DEMServer === NO_DEM_SERVER) {
-                            // May be, some computations have been done before, so we cleaned them
-                            // use case : any DEM server -> no DEM server
-                            let j = 0
-                            feature.geometry.coordinates.forEach(coordinate => {
-                                if (coordinate.length === 3) {
-                                    feature.geometry.coordinates[j] = coordinate.splice(2, 1)
-                                }
-                                j++
-                            })
-                        } else {
-                            // We have aDEM Server, so let's compute altitude
-                            let altitudes = []
-                            switch (this.DEMServer) {
-                                case NO_DEM_SERVER:
-                                case 'internal' :
-                                    altitudes = await TrackUtils.getElevationFromTerrain(feature.geometry.coordinates)
-                                    break
-                                case 'open-elevation' : {
-                                }
-                            }
-                            // Add them to data
-                            for (let j = 0; j < altitudes.length; j++) {
-                                feature.geometry.coordinates[j].push(altitudes[j])
-                            }
-                            // Hide progress bar
-                            vt3d.theJourneyEditorProxy.longTask = false
-                        }
-
-                        /**
-                         * Use title as feature name
-                         */
-                        feature.properties.name = this.title
-
-
-                        // TODO interpolate points to avoid GPS errors (Kalman Filter ?)
-                        // TODO Clean
-
-
-                        // Add Current GeoJson
-                        this.geoJson.features[index] = feature
-
-
-                    }
-                    index++
+                    // if (this.DEMServer === NO_DEM_SERVER) {
+                    //     // May be, some computations have been done before, so we cleaned them
+                    //     // use case : any DEM server -> no DEM server
+                    //     let j = 0
+                    //     segment.geometry.coordinates.forEach(coordinate => {
+                    //         if (coordinate.length === 3) {
+                    //             segment.geometry.coordinates[j] = coordinate.splice(2, 1)
+                    //         }
+                    //         j++
+                    //     })
+                    // } else {
+                    //     // We have aDEM Server, so let's compute altitude
+                    //     let altitudes = []
+                    //     switch (this.DEMServer) {
+                    //         case NO_DEM_SERVER:
+                    //             break
+                    //         case 'internal' :
+                    //             // altitudes = await
+                    //             // TrackUtils.getElevationFromTerrain(segment.geometry.coordinates)
+                    //             break
+                    //         case 'open-elevation' : {
+                    //         }
+                    //     }
+                    //     // Add them to data
+                    //     for (let j = 0; j < altitudes.length; j++) {
+                    //         segment.geometry.coordinates[j].push(altitudes[j])
+                    //     }
+                    //     // Hide progress bar
+                    //     vt3d.theJourneyEditorProxy.longTask = false
+                    // }
                 }
+                // Use title as feature name
+                this.content.properties.name = this.title
 
+                // TODO interpolate points to avoid GPS errors (Kalman Filter ?)
+                // TODO Clean
 
-            }
+            })
+
+            // Update the content according the feature type
+            this.content.geometry.coordinates = type === FEATURE_LINE_STRING
+                                                ? segments[0] : segments
         }
     }
 

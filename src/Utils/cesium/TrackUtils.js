@@ -184,43 +184,6 @@ export class TrackUtils {
         })
     }
 
-    /**
-     * Prepare  geojson data to be managed by vt3d
-     *
-     * > longitude, latitude, altitude,time
-     *
-     * If altitude is missing, we try to get it from Terrain.
-     *
-     * @param geoJson
-     * @return {[[{longitude, latitude, altitude,time}]]}
-     *
-     */
-    static prepareDataForMetrics = async geoJson => {
-        const dataExtract = [] = []
-        if (geoJson.type === FEATURE_COLLECTION) {
-            for (const feature of geoJson.features) {
-                if (feature.type === 'Feature' && feature.geometry.type === FEATURE_LINE_STRING) {
-
-                    const properties = TrackUtils.checkIfDataContainsAltitudeOrTime(feature)
-                    let index = 0
-                    const newLine = []
-
-                    for (const coordinates of feature.geometry.coordinates) {
-                        let point = {
-                            longitude: coordinates[0], latitude: coordinates[1], altitude: coordinates[2],
-                        }
-                        if (properties.hasTime) {
-                            point.time = feature.properties?.coordinateProperties?.times[index]
-                        }
-                        newLine.push(point)
-                        index++
-                    }
-                    dataExtract.push(newLine)
-                }
-            }
-        }
-        return dataExtract
-    }
 
     /**
      * Get elevation from Cesium Terrain
@@ -317,7 +280,7 @@ export class TrackUtils {
         // Let's read tracks in DB
         const journeys = await Journey.readAllFromDB()
 
-        // Bail early if ther'snothing to read
+        // Bail early if there's nothing to read
         if (journeys.length === 0) {
             vt3d.theJourney = null
             vt3d.theTrack = null

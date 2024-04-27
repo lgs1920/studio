@@ -16,11 +16,14 @@ export class Mobility {
      *
      */
     static distance = (start, end) => {
-        const distance = turfDistance.default(
-            turfPoint.default([start.longitude, start.latitude]),
-            turfPoint.default([end.longitude, end.latitude]),
-        )
-        return distance * KM
+        if (start && end) {
+            const distance = turfDistance.default(
+                turfPoint.default([start.longitude, start.latitude]),
+                turfPoint.default([end.longitude, end.latitude]),
+            )
+            return distance * KM
+        }
+        return 0
     }
     /**
      * Return the elevation between  points
@@ -31,10 +34,10 @@ export class Mobility {
      * @return {undefined|number}
      */
     static elevation = (start, end) => {
-        if (start.altitude && end.altitude) {
+        if (start && end && start.altitude && end.altitude) {
             return end.altitude - start.altitude
         }
-        return undefined
+        return 0
     }
 
     /**
@@ -48,7 +51,7 @@ export class Mobility {
      */
     static speed = (distance, duration, kms = true) => {
         if (duration === 0) {
-            return undefined
+            return 0
         }
         return distance / duration * 3.6 / (kms ? KM : MILE) * 1000
     }
@@ -64,7 +67,7 @@ export class Mobility {
      */
     static pace = (distance, duration, km = true) => {
         if (distance === 0) {
-            return undefined
+            return 0
         }
         return duration / MINUTE / distance * (km ? KM : MILE) * 1000
     }
@@ -76,7 +79,10 @@ export class Mobility {
      * @return {number} duration in seconds
      */
     static duration(start, stop) {
-        return Math.abs(DateTime.fromISO(stop).diff(DateTime.fromISO(start)).toMillis()) / MILLIS
+        if (start && stop) {
+            return Math.abs(DateTime.fromISO(stop).diff(DateTime.fromISO(start)).toMillis()) / MILLIS
+        }
+        return 0
     }
 
 }

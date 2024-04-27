@@ -1,9 +1,10 @@
 import { TextValueUI } from '@Components/TextValueUI/TextValueUI'
 import { DAY, HOUR }   from '@Utils/AppUtils'
+import { useSnapshot } from 'valtio'
 
 
 export const TrackData = function TrackData() {
-
+    return (<></>)
     const editorStore = vt3d.theJourneyEditorProxy
 
     // If we're editing a single track journey, we need
