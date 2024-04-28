@@ -295,7 +295,7 @@ export class Journey extends MapElement {
                             track: parentSlug,
                             journey: this.slug,
                             name: 'Track start',
-                            slug: this.#setPOISlug(`${_.app.slugify(feature.properties.name)}-${FLAG_START}`, POI_FLAG),
+                            slug: this.#setPOISlug(`${__.app.slugify(feature.properties.name)}-${FLAG_START}`, POI_FLAG),
                             coordinates: [start[0], start[1]],
                             altitude: start[2] ?? undefined,
                             time: timeStart,
@@ -318,7 +318,7 @@ export class Journey extends MapElement {
                             track: parentSlug,
                             journey: this.slug,
                             name: 'Track stop',
-                            slug: this.#setPOISlug(`#${_.app.slugify(feature.properties.name)}-${FLAG_STOP}`, POI_FLAG),
+                            slug: this.#setPOISlug(`#${__.app.slugify(feature.properties.name)}-${FLAG_STOP}`, POI_FLAG),
                             coordinates: [stop[0], stop[1]],
                             altitude: stop[2] ?? undefined,
                             time: timeStop,
@@ -379,7 +379,7 @@ export class Journey extends MapElement {
      * @return {string}
      */
     #setSlug = (suffix, prefix = '') => {
-        return `${_.app.slugify(prefix)}#${this.slug}#${_.app.slugify(suffix)}`
+        return `${__.app.slugify(prefix)}#${this.slug}#${__.app.slugify(suffix)}`
     }
 
     /**
@@ -571,7 +571,6 @@ export class Journey extends MapElement {
         this.tracks.forEach(track => {
             track.extractMetrics()
         })
-
 
         if (this.tracks.size === 1) {
             this.metrics = this.tracks.entries().next().value[1].metrics
