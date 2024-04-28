@@ -61,5 +61,15 @@
     "#B22222ff",
     "#1E90FFFF",
     "#f2c55c"
-  ]
+  ],
+  "unitSystems": {
+    "metric": 1,
+    "Imperial/US": 2
+  },
+  "units": 1,
+  "metrics": {
+    "minSlope": 2,
+    "stopDuration": 60,
+    "stopSpeedLimit": 0.2
+  }
 }

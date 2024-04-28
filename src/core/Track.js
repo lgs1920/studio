@@ -132,7 +132,6 @@ export class Track extends MapElement {
      */
     calculateMetrics = () => {
 
-        let metrics = []
         let featureMetrics = []
 
         // 1st step : Metrics per points
@@ -155,8 +154,17 @@ export class Track extends MapElement {
                         pointData.duration = Mobility.duration(DateTime.fromISO(prev.time), DateTime.fromISO(current.time))
                         pointData.speed = Mobility.speed(pointData.distance, pointData.duration)
                         pointData.pace = Mobility.pace(pointData.distance, pointData.duration)
+                        // IdleTime
+                        console.log(pointData.speed, vt3d.configuration.metrics.stopSpeedLimit)
+                        console.log(pointData.duration, vt3d.configuration.metrics.stopDuration)
 
-                        //TODO Add idle time duration
+                        if (pointData.speed < vt3d.configuration.metrics.stopSpeedLimit
+                            && pointData.duration < vt3d.configuration.metrics.stopDuration) {
+                            pointData.idleTime = pointData.duration
+                            console.log('idle')
+                        } else {
+                            pointData.idleTime = 0
+                        }
                     }
                     if (this.hasAltitude) {
                         pointData.elevation = Mobility.elevation(prev, current)
@@ -207,42 +215,75 @@ export class Track extends MapElement {
         }
 
         if (this.hasAltitude) {
+
             // Max Slope
             global.maxSlope = this.hasAltitude ? Math.max(...featureMetrics.map(a => a?.slope)) : undefined
 
-            // Positive elevation and distance
-            global.positiveElevation = 0
-            global.positiveDistance = 0
+            // Data relative to elevation
+            global.positive = {elevation: 0, distance: 0, duration: 0, pace: 0, speed: 0, points: 0}
+            global.negative = {elevation: 0, distance: 0, duration: 0, pace: 0, speed: 0, points: 0}
+            global.flat = {elevation: 0, distance: 0, duration: 0, pace: 0, speed: 0, points: 0}
+
             featureMetrics.forEach((point) => {
-                if (point.elevation > 0) {
-                    global.positiveElevation += point.elevation
-                    global.positiveDistance += point.distance
+                if (point.slope > vt3d.configuration.metrics.minSlope) {
+                    // We sum all data when we get a positive slope
+                    global.positive.elevation += point.elevation
+                    global.positive.distance += point.distance
+                    global.positive.duration += point.duration
+                    global.positive.speed += point.speed
+                    global.positive.pace += point.pace
+                    global.positive.points++
+                } else if (point.slope < -vt3d.configuration.metrics.minSlope) {
+                    // We sum all data when we get a negative slope
+                    global.negative.elevation += point.elevation
+                    global.negative.distance += point.distance
+                    global.negative.duration += point.duration
+                    global.negative.speed += point.speed
+                    global.negative.pace += point.pace
+                    global.negative.points++
+                } else {
+                    // And then when we consider it is flat
+                    global.flat.elevation += point.elevation
+                    global.flat.distance += point.distance
+                    global.flat.duration += point.duration
+                    global.flat.pace += point.pace
+                    global.flat.speed += point.speed
+                    global.flat.points++
                 }
             })
 
-            // Negative elevation
-            global.negativeElevation = 0
-            global.negativeDistance = 0
-            featureMetrics.forEach((point, index) => {
-                if (point.elevation < 0) {
-                    global.negativeElevation += point.elevation
-                    global.negativeDistance += point.distance
-                }
-            })
+            // Some average
+            if (global.positive.points) {
+                global.positive.speed /= global.positive.points
+                global.positive.pace /= global.positive.points
+            }
+            if (global.negative.points) {
+                global.negative.speed /= global.negative.points
+                global.negative.pace /= global.negative.points
+            }
+            if (global.flat.points) {
+                global.flat.speed /= global.flat.points
+                global.flat.pace /= global.flat.points
+            }
+
         }
-        // Total duration
-        global.duration = featureMetrics.reduce((s, o) => {
-            return s + o.duration
-        }, 0)
+        if (this.hasTime) {
+            // Total duration
+            global.duration = featureMetrics.reduce((s, o) => {
+                return s + o.duration
+            }, 0)
+
+            // Total duration
+            global.idleTime = featureMetrics.reduce((s, o) => {
+                return s + o.idleTime
+            }, 0)
+        }
 
         // Total Distance
         global.distance = featureMetrics.reduce((s, o) => {
             return s + o.distance
         }, 0)
-
-        metrics.push({points: featureMetrics, global: global})
-
-        this.metrics = metrics
+        this.metrics = {points: featureMetrics, global: global}
     }
 
     /**

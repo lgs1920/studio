@@ -97,7 +97,7 @@ export class Utils {
         const journey = Journey.deserialize({object: Journey.unproxify(vt3d.theJourneyEditorProxy.journey)})
         const track = Track.deserialize({object: Track.unproxify(vt3d.theJourneyEditorProxy.track)})
         //TODO compute only if it is necessary
-        //await track.computeAll()
+        await track.extractMetrics()
 
 
         if (action === DRAW_THEN_SAVE || action === JUST_SAVE) {
@@ -122,7 +122,7 @@ export class Utils {
     static updateJourney = async action => {
 
         const journey = Journey.deserialize({object: Journey.unproxify(vt3d.theJourneyEditorProxy.journey)})
-        await journey.computeAll()
+        await journey.extractMetrics()
         vt3d.saveJourney(journey)
         // saveToDB toDB
         await journey.saveToDB()

@@ -1,8 +1,8 @@
 import * as turfDistance from '@turf/distance'
 
-import { DateTime }                 from 'luxon'
-import * as turfPoint               from 'turf-point'
-import { KM, MILE, MILLIS, MINUTE } from './AppUtils'
+import { DateTime }   from 'luxon'
+import * as turfPoint from 'turf-point'
+import { KM, MILLIS } from './AppUtils'
 
 export class Mobility {
     /**
@@ -17,11 +17,10 @@ export class Mobility {
      */
     static distance = (start, end) => {
         if (start && end) {
-            const distance = turfDistance.default(
+            return turfDistance.default(
                 turfPoint.default([start.longitude, start.latitude]),
                 turfPoint.default([end.longitude, end.latitude]),
-            )
-            return distance * KM
+            ) * KM
         }
         return 0
     }
@@ -53,7 +52,7 @@ export class Mobility {
         if (duration === 0) {
             return 0
         }
-        return distance / duration * 3.6 / (kms ? KM : MILE) * 1000
+        return distance / duration
     }
 
     /**
@@ -69,7 +68,7 @@ export class Mobility {
         if (distance === 0) {
             return 0
         }
-        return duration / MINUTE / distance * (km ? KM : MILE) * 1000
+        return duration / distance
     }
 
     /**

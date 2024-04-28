@@ -48,7 +48,7 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
             event.preventDefault()
             vt3d.theJourney.DEMServer = server
             if (server !== NO_DEM_SERVER) {
-                await vt3d.theJourney.computeAll()
+                await vt3d.theJourney.extractMetrics()
                 vt3d.theJourney.addToContext()
                 // Then we redraw the theJourney
                 await vt3d.theJourney.showAfterHeightSimulation()

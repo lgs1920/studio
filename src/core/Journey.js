@@ -481,10 +481,6 @@ export class Journey extends MapElement {
         TrackUtils.focus({content: flatten(this.geoJson), slug: this.slug})
     }
 
-    computeAll = () => {
-        //TODO
-    }
-
     showAfterHeightSimulation = async () => {
         await this.draw(SIMULATE_ALTITUDE)
     }
@@ -494,15 +490,94 @@ export class Journey extends MapElement {
     }
 
     setGlobalMetrics = () => {
-        // Does the um of track metrics
+
+        const allMetrics = []
+
+        this.tracks.forEach(track => allMetrics.push(track.metrics.global))
+
+        let global = {}, tmp = []
+
+        // Min Height
+        global.minHeight = this.hasAltitude ? Math.min(...allMetrics.map(a => a?.altitude)) : undefined
+
+        // Max Height
+        global.maxHeight = this.hasAltitude ? Math.max(...allMetrics.map(a => a?.altitude)) : undefined
+
+        // If the first have duration time, all the data set have time
+        if (this.hasTime) {
+            // Max speed
+            tmp = TrackUtils.filterArray(allMetrics, {
+                speed: speed => speed !== 0 && speed !== undefined,
+            })
+            global.maxSpeed = Math.max(...tmp.map(a => a?.speed))
+
+            // Average speed (we exclude 0 and undefined values)
+            global.averageSpeed = tmp.reduce((s, o) => {
+                return s + o.speed
+            }, 0) / tmp.length
+
+            // Todo  Add average speed in motion
+
+            // Max Pace
+            global.maxPace = Math.max(...allMetrics.map(a => a?.pace))
+
+            // Todo  Add average pace in motion
+        }
+
+        if (this.hasAltitude) {
+            // Max Slope
+            global.maxSlope = this.hasAltitude ? Math.max(...allMetrics.map(a => a?.slope)) : undefined
+
+            // Positive elevation and distance
+            global.positiveElevation = 0
+            global.positiveDistance = 0
+            allMetrics.forEach((point) => {
+                if (point.elevation > 0) {
+                    global.positiveElevation += point.elevation
+                    global.positiveDistance += point.distance
+                }
+            })
+
+            // Negative elevation
+            global.negativeElevation = 0
+            global.negativeDistance = 0
+            allMetrics.forEach((point, index) => {
+                if (point.elevation < 0) {
+                    global.negativeElevation += point.elevation
+                    global.negativeDistance += point.distance
+                }
+            })
+        }
+        // Total duration
+        global.duration = allMetrics.reduce((s, o) => {
+            return s + o.duration
+        }, 0)
+
+        // Total Distance
+        global.distance = allMetrics.reduce((s, o) => {
+            return s + o.distance
+        }, 0)
+
+        this.metrics = global
+
     }
+
+    /**
+     * Extract the Metrics
+     *
+     * We loop over tracks to compute tracks metrics
+     */
     extractMetrics = () => {
         this.tracks.forEach(track => {
             track.extractMetrics()
         })
 
-        this.metrics = this.setGlobalMetrics()
 
+        if (this.tracks.size === 1) {
+            this.metrics = this.tracks.entries().next().value[1].metrics
+            return
+        }
+        this.metrics = this.setGlobalMetrics()
     }
 
 }
