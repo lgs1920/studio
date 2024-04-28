@@ -27,6 +27,10 @@ export class UnitUtils {
                         return input * FOOT
                     case inc:
                         return input * INCHES
+                    case hour:
+                        return Duration.fromMillis(input * MILLIS).toFormat('hh:mm:ss')
+                    case min:
+                        return Duration.fromMillis(input * MILLIS).toFormat('mm:ss')
                 }
             },
         }
@@ -36,11 +40,17 @@ export class UnitUtils {
 /** Units */
 export const km = 'km'
 export const kmh = 'km/h'
+export const hkm = 'h/km'
+export const mkm = 'm/km'
+export const ms = 'm/s'
+export const sm = 's/m'
 export const mph = 'mph'
 export const ft = 'ft'
 export const yd = 'yd'
 export const inc = 'in'
-
+export const hour = 'h'
+export const minute = 'm'
+export const second = 's'
 
 /** Distance constants to convert from meter */
 export const METER = 1
