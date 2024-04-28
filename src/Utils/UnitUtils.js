@@ -4,6 +4,8 @@ export class UnitUtils {
     /**
      * Converter to metric unit (ie m,s) to other unit.
      *
+     * How to use :   convert(myValue).to(KM) to convert myValue from meter to kilometers
+     *
      * @param input  always in metric based unit
      *
      * @return {{source, to: data.to}}
@@ -31,6 +33,8 @@ export class UnitUtils {
                         return Duration.fromMillis(input * MILLIS).toFormat('hh:mm:ss')
                     case min:
                         return Duration.fromMillis(input * MILLIS).toFormat('mm:ss')
+                    default:
+                        return unit
                 }
             },
         }
