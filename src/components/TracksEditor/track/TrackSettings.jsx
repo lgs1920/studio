@@ -53,7 +53,7 @@ export const TrackSettings = function TrackSettings() {
         editorStore.journey.tracks.forEach(track => {
             titles.push(track)
         })
-        editorStore.track.title = _.app.singleTitle(title, titles)
+        editorStore.track.title = __.app.singleTitle(title, titles)
 
         await Utils.updateTrack(JUST_SAVE)
         Utils.renderTracksList()

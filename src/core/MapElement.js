@@ -58,7 +58,7 @@ export class MapElement {
      * @return {Object | string} JSON
      */
     static serialize = (object, json = false) => {
-        const result = _.app.deepClone(object)
+        const result = __.app.deepClone(object)
         for (let prop in object) {
             if (object[prop] instanceof Map) {
                 result[prop] = Array.from(object[prop], ([key, value]) => {

@@ -18,7 +18,7 @@ import '@shoelace-style/shoelace/dist/themes/light.css'
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 window.vt3d = new VT3D()
-await _.app.init()
+await __.app.init()
 
 export function ViewTrack3D() {
 
@@ -50,7 +50,7 @@ export function ViewTrack3D() {
         }
 
         // Set DefaultTheme
-        _.app.setTheme()
+        __.app.setTheme()
 
         // Update camera info
         CameraUtils.updatePosition(vt3d?.camera).then(r => {

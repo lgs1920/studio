@@ -19,7 +19,7 @@ export class Wander {
         if (!vt3d.markers.has(WANDER_MODE_MARKER)) {
             marker = new POI({
                     name: WANDER_MODE_MARKER,
-                    slug: _.app.slugify(WANDER_MODE_MARKER),
+                    slug: __.app.slugify(WANDER_MODE_MARKER),
                     parent: {
                         slug: data.picked.track.slug,
                         type: NOT_AN_ENTITY,

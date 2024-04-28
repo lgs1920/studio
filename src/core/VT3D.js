@@ -2,6 +2,7 @@ import { AppUtils }          from '@Utils/AppUtils'
 import { MouseUtils }        from '@Utils/cesium/MouseUtils'
 import { CSSUtils }          from '@Utils/CSSUtils'
 import { proxy }             from 'valtio'
+import { UnitUtils }         from '../Utils/UnitUtils'
 import { LocalDB }           from './db/LocalDB'
 import { MouseEventHandler } from './MouseEventHandler'
 import { main }              from './stores/main'
@@ -39,12 +40,13 @@ export class VT3D {
         }
 
         // Utils are attached to window
-        window._ = {
+        window.__ = {
             app: AppUtils,
             ui: {
                 css: CSSUtils,
                 mouse: MouseUtils,
             },
+            convert: UnitUtils.convert,
         }
 
         //Init DBs

@@ -43,7 +43,7 @@ export class Journey extends MapElement {
 
             // If options property exists, we get them, else
             // we set the value to a default.
-            this.slug = options.slug ?? _.app.slugify(`${title}-${type}`)
+            this.slug = options.slug ?? __.app.slugify(`${title}-${type}`)
             this.visible = options.visible ?? true
             this.POIsVisible = options.POIsVisible ?? true
 
@@ -137,7 +137,7 @@ export class Journey extends MapElement {
      *
      */
     singleTitle = title => {
-        return _.app.singleTitle(title, vt3d.journeys)
+        return __.app.singleTitle(title, vt3d.journeys)
     }
 
     /**
