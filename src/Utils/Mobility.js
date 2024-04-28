@@ -2,7 +2,8 @@ import * as turfDistance from '@turf/distance'
 
 import { DateTime }   from 'luxon'
 import * as turfPoint from 'turf-point'
-import { KM, MILLIS } from './AppUtils'
+import { MILLIS }     from './AppUtils'
+import { KM }         from './UnitUtils'
 
 export class Mobility {
     /**

@@ -146,13 +146,5 @@ const MONTH = 30 * DAY
 const YEAR = 365 * DAY
 export { MILLIS, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR }
 
-/** Distance constants */
-const METER = 1
-const FOOT = METER * 0.3048        // foot
-const KM = 1000 * METER            // meters
-
-const MILE = KM / 0.62137119223    // miles = MILE * kms
-export { KM, MILE, FOOT }
-
 /** other */
 export const WRONG = -99999999999
