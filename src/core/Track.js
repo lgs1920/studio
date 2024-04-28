@@ -155,13 +155,10 @@ export class Track extends MapElement {
                         pointData.speed = Mobility.speed(pointData.distance, pointData.duration)
                         pointData.pace = Mobility.pace(pointData.distance, pointData.duration)
                         // IdleTime
-                        console.log(pointData.speed, vt3d.configuration.metrics.stopSpeedLimit)
-                        console.log(pointData.duration, vt3d.configuration.metrics.stopDuration)
 
                         if (pointData.speed < vt3d.configuration.metrics.stopSpeedLimit
                             && pointData.duration < vt3d.configuration.metrics.stopDuration) {
                             pointData.idleTime = pointData.duration
-                            console.log('idle')
                         } else {
                             pointData.idleTime = 0
                         }
@@ -395,23 +392,6 @@ export class Track extends MapElement {
 
     addToEditor = () => {
         vt3d.theJourneyEditorProxy.track = this
-    }
-
-    /**
-     * Save or replace journey in context
-     *
-     */
-    saveInContext = () => {
-        const index = this.mainProxy.components.journeyEditor.list.findIndex(item => item === journey.slug)
-        if (index >= 0) {
-            // Look if this theJourney already exist in context
-            this.journeys.set(journey.slug, journey)
-            this.mainProxy.components.journeyEditor.list[index] = journey.slug
-        } else {                    // Nope,we add it
-            this.journeys.set(journey.slug, journey)
-            this.mainProxy.components.journeyEditor.list.push(journey.slug)
-        }
-        this.mainProxy.components.journeyEditor.usable = true
     }
 
     addToContext = (setToCurrent = true) => {
