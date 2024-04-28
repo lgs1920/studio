@@ -89,7 +89,7 @@ export const FloatingMenu = function FloatingMenu() {
      *
      * @type {number}
      */
-    const offset = Number(_.ui.css.getCSSVariable('menu-offset'))
+    const offset = Number(__.ui.css.getCSSVariable('menu-offset'))
     const fixCoordinates = () => {
         if (element.current !== undefined) {
             const width  = element.current.offsetWidth,
