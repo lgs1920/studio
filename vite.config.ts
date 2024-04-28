@@ -16,6 +16,10 @@ export default defineConfig({
                 replacement: Bun.fileURLToPath(new URL('./src/Utils', import.meta.url))
             },
             {
+                find: '@Editor',
+                replacement: Bun.fileURLToPath(new URL('./src/components/TracksEditor', import.meta.url))
+            },
+            {
                 find: '@Components',
                 replacement: Bun.fileURLToPath(new URL('./src/components', import.meta.url))
             },

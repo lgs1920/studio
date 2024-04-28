@@ -1,23 +1,28 @@
-import { useConfirm }         from '@Components/Modals/ConfirmUI'
-import { ToggleStateIcon }    from '@Components/ToggleStateIcon'
-import { NO_DEM_SERVER }      from '@Core/Journey'
+import { useConfirm }      from '@Components/Modals/ConfirmUI'
+import { ToggleStateIcon } from '@Components/ToggleStateIcon'
+import { NO_DEM_SERVER }   from '@Core/Journey'
+import { TrackData }       from '@Editor/track/TrackData'
+import {
+    TrackFlagsSettings,
+}                          from '@Editor/track/TrackFlagsSettings'
+import { TrackPoints }     from '@Editor/track/TrackPoints'
+import {
+    TrackStyleSettings,
+}                          from '@Editor/track/TrackStyleSettings'
+import { Utils }           from '@Editor/Utils'
 import {
     faCircleDot, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList, faTelescope,
     faTrashCan,
-}                             from '@fortawesome/pro-regular-svg-icons'
+}                          from '@fortawesome/pro-regular-svg-icons'
 import {
     SlIcon, SlInput, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                             from '@shoelace-style/shoelace/dist/react'
-import { TrackUtils }         from '@Utils/cesium/TrackUtils'
-import { FA2SL }              from '@Utils/FA2SL'
-import { UIToast }            from '@Utils/UIToast'
-import { sprintf }            from 'sprintf-js'
-import { useSnapshot }        from 'valtio'
-import { TrackFlagsSettings } from '../track/TrackFlagsSettings'
-import { TrackPoints }        from '../track/TrackPoints'
-import { TrackStyleSettings } from '../track/TrackStyleSettings'
-import { Utils }              from '../Utils'
-import { JourneyPOIs }        from './JourneyPOIs'
+}                          from '@shoelace-style/shoelace/dist/react'
+import { TrackUtils }      from '@Utils/cesium/TrackUtils'
+import { FA2SL }           from '@Utils/FA2SL'
+import { UIToast }         from '@Utils/UIToast'
+import { sprintf }         from 'sprintf-js'
+import { useSnapshot }     from 'valtio'
+import { JourneyPOIs }     from './JourneyPOIs'
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2
@@ -210,7 +215,11 @@ export const JourneySettings = function JourneySettings() {
                         {/**
                          * Data Tab Panel
                          */}
-                        <SlTabPanel name="data">Not Yet !</SlTabPanel>
+                        <SlTabPanel name="data">
+                            {editorSnapshot.journey.tracks.size === 1 && <TrackData/>}
+                            {editorSnapshot.journey.tracks.size > 1 && <JourneyData/>}
+
+                        </SlTabPanel>
                         {/**
                          * Edit  Tab Panel
                          */}
