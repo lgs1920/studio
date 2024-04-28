@@ -13,25 +13,33 @@ export class UnitUtils {
             source: input,
             to: (unit) => {
                 switch (unit) {
-                    case 'km':
+                    case km:
                         return input * KM
-                    case 'km/h':
+                    case kmh:
                         return input * KMH
-                    case 'mph':
+                    case mph:
                         return input * MPH
-                    case 'ft':
+                    case ft:
                         return input * FOOT
-                    case 'yd':
+                    case yd:
                         return input * YARD
-                    case 'ft':
+                    case ft:
                         return input * FOOT
-                    case 'in':
+                    case inc:
                         return input * INCHES
                 }
             },
         }
     }
 }
+
+/** Units */
+export const km = 'km'
+export const kmh = 'km/h'
+export const mph = 'mph'
+export const ft = 'ft'
+export const yd = 'yd'
+export const inc = 'in'
 
 
 /** Distance constants to convert from meter */
