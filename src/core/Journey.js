@@ -57,6 +57,9 @@ export class Journey extends MapElement {
             // Get all tracks
             this.getTracksFromGeoJson()
 
+            // Get Metrics
+            this.metrics = options.metrics ?? {}
+
             // Get all POIs
             this.getPOIsFromGeoJson()
 
@@ -89,7 +92,6 @@ export class Journey extends MapElement {
             const journeyPromises = slugs.map(async (slug) => {
                 const object = await vt3d.db.journeys.get(slug, JOURNEYS_STORE)
                 const journey = Journey.deserialize({object: object})
-                journey.addToContext()
                 return journey
             })
             return await Promise.all(journeyPromises)

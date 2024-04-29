@@ -325,39 +325,50 @@ export class TrackUtils {
             return
         }
 
+
         // Get the Current Journey. Then we Set current if it exists in journeys.
         // If not, let's use the first track or null.
         let currentJourney = await vt3d.db.journeys.get(CURRENT_JOURNEY, CURRENT_STORE)
         const tmp = journeys.filter(value => value.slug === currentJourney)
-        currentJourney = (tmp.length > 0) ? tmp[0].slug : journeys[0].slug
+        currentJourney = (tmp.length > 0) ? tmp[0] : journeys[0]
 
-        // If we have a current Journey, instantiate some contexts
         if (currentJourney) {
-            vt3d.theJourney = vt3d.journeys.get(currentJourney)
-            vt3d.theJourney.addToEditor()
+            vt3d.theJourney = currentJourney
+            await TrackUtils.setTheTrack()
+
         } else {
             // Something's wrong. exit
             return
         }
 
-        // Now prepare drawing
+        // We're ready for rendering so let's ave joueneys
         journeys.forEach(journey => {
-            journey.prepareDrawing()
+            vt3d.saveJourney(journey)
         })
 
-        await TrackUtils.setTheTrack()
+        // Now instantiate some contexts
+        vt3d.theJourney.addToContext()
+        vt3d.theJourney.addToEditor()
+        vt3d.theTrack.addToContext()
+        vt3d.theTrack.addToEditor()
+
+        // One step further, let's prepare the drawings
+        for (const journey of journeys) {
+            await journey.prepareDrawing()
+        }
+
 
         // Now it's time for the show. Draw all journeys but focus on the current one
         const items = []
         vt3d.journeys.forEach(journey => {
-            items.push(journey.draw({mode: journey.slug === currentJourney ? FOCUS_ON_FEATURE : NO_FOCUS}))
+            items.push(journey.draw({mode: journey.slug === currentJourney.slug ? FOCUS_ON_FEATURE : NO_FOCUS}))
         })
         await Promise.all(items)
     }
 
     static setTheTrack = async (fromDB = true) => {
         // Same for current Track.
-        // If wehav one, we get it then check if it's part
+        // If we have one, we get it then check if it's part
         // of the current journey. Else we use the first of the list and ad it
         // to the app context.
         let currentTrack = 'nothing'

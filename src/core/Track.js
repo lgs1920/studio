@@ -43,6 +43,7 @@ export class Track extends MapElement {
         this.segments = options.segments ?? 0
         this.content = options.content
         this.flags = options.flags ?? {start: undefined, stop: undefined}
+        this.metrics = options.metrics ?? {}
     }
 
     static deserialize(props) {
