@@ -33,16 +33,15 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                 // Prepare the contexts and current values
                 theJourney.addToContext()
                 theJourney.addToEditor()
+
                 const theTrack = vt3d.theJourney.tracks.entries().next().value[1]
                 theTrack.addToEditor()
 
-                // we need to saveToDB some information
                 await theJourney.saveToDB()
                 await theJourney.saveOriginDataToDB()
 
+                // Force editor to close but remains usable
                 mainStore.components.journeyEditor.usable = true
-
-
                 await theJourney.draw({})
 
             } else {

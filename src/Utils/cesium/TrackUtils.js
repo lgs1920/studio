@@ -184,6 +184,43 @@ export class TrackUtils {
         })
     }
 
+    /**
+     * Aggregate Geo Json data in order to have longitude, latitude, altitude,time
+     * for each point (altitude and time
+     *
+     * @param geoJson
+     * @return {[[{longitude, latitude, altitude,time}]]}
+     *
+     */
+    static prepareDataForMetrics = async geoJson => {
+        const dataExtract = [] = []
+        // Only for Feature Collections that are Line or multi line string typ
+        const type = this.content.geometry.type
+        if (this.content.type === FEATURE &&
+            [FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING].includes(type)) {
+            // According to type (Line or multiline), we transform the
+            // coordinates in order to be  in (real or simulated) multiline mode
+            const segments = type === FEATURE_LINE_STRING
+                             ? [this.content.geometry.coordinates]
+                             : this.content.geometry.coordinates
+            segments.forEach((segment, index) => {
+                const properties = TrackUtils.checkIfDataContainsAltitudeOrTime(feature)
+                const newLine = []
+                //
+                // for (const coordinates of feature.geometry.coordinates) {
+                //     let point = {
+                //         longitude: coordinates[0], latitude: coordinates[1], altitude: coordinates[2],
+                //     }
+                //     if (properties.hasTime) {
+                //         point.time = feature.properties?.coordinateProperties?.times[index]
+                //     }
+                //     newLine.push(point)
+                // }
+                dataExtract.push(newLine)
+            })
+        }
+        return dataExtract
+    }
 
     /**
      * Get elevation from Cesium Terrain

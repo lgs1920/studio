@@ -23,6 +23,7 @@ import { UIToast }         from '@Utils/UIToast'
 import { sprintf }         from 'sprintf-js'
 import { useSnapshot }     from 'valtio'
 import { JourneyPOIs }     from './JourneyPOIs'
+import { JourneyData }     from './JourneyData'
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2

@@ -1,4 +1,4 @@
-
-.vt3d-text-value .vt3d-tv-unit,
-.vt3d-text-value .vt3d-tv-value {
+.vt3d-text-value {
+    display: flex;
+    gap: var(--vt3d-gutter-s);
 }

@@ -7,7 +7,6 @@ export const TextValueUI = forwardRef(function TextValueUI(props, ref) {
         toShow = props.formatter(toShow)
     }
 
-
     const classes = (props.class) ? props.class + ' ' : '' + 'vt3d-text-value'
 
     return (

@@ -156,11 +156,13 @@ export class Track extends MapElement {
                         pointData.pace = Mobility.pace(pointData.distance, pointData.duration)
                         // IdleTime
 
-                        if (pointData.speed < vt3d.configuration.metrics.stopSpeedLimit
-                            && pointData.duration < vt3d.configuration.metrics.stopDuration) {
+                        if (pointData.speed > vt3d.configuration.metrics.stopSpeedLimit
+                            || pointData.duration > vt3d.configuration.metrics.stopDuration) {
                             pointData.idleTime = pointData.duration
+
                         } else {
                             pointData.idleTime = 0
+
                         }
                     }
                     if (this.hasAltitude) {
@@ -193,6 +195,7 @@ export class Track extends MapElement {
         // If the first have duration time, all the data set have time
         if (this.hasTime) {
             // Max speed
+            //TODO fixe this e ne prenant pas en compte les idleTime
             tmp = TrackUtils.filterArray(featureMetrics, {
                 speed: speed => speed !== 0 && speed !== undefined,
             })

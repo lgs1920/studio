@@ -110,6 +110,42 @@ sl-tab-panel {
     overflow-y: hidden;
 }
 
+sl-tab-panel sl-icon {
+    margin-right: var(--vt3d-gutter-xs);
+    width: 1rem;
+}
+
+sl-tab-panel sl-icon::part(svg) {
+    width: 1.1rem;
+}
+
+
+.element-data {
+    width: 100%;
+    --padding: var(--vt3d-gutter-s);
+}
+
+.element-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.element-item {
+    display: flex;
+    align-items: center;
+    --width: 33.33%;
+    width: var(--width);
+}
+
+.element-item.title {
+    font-weight: 700;
+}
+
+.element-item.indented {
+    margin-left: var(--width);
+}
+
 .track-points, .journey-POIs {
     margin-top: var(--vt3d-gutter-s);
 }

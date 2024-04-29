@@ -49,8 +49,7 @@ export class VT3D {
             convert: UnitUtils.convert,
         }
 
-        console.log(__.convert(10).to('km/h'))
-        console.log(__.convert(60).to('km/h'))
+        __.convert(100).to('kmh')
 
         //Init DBs
         this.db = {
