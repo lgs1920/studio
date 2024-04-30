@@ -260,11 +260,11 @@ export class Journey extends MapElement {
                 switch (geometry.type) {
                     case FEATURE_LINE_STRING :
                         coordinates = [geometry.coordinates]
-                        times = [feature.properties.coordinateProperties.times]
+                        times = [feature?.properties?.coordinateProperties?.times]
                         break
                     case FEATURE_MULTILINE_STRING :
                         coordinates = geometry.coordinates
-                        times = feature.properties.coordinateProperties.times
+                        times = feature?.properties?.coordinateProperties?.times
                         break
                 }
 
@@ -521,7 +521,7 @@ export class Journey extends MapElement {
             // Todo  Add average speed in motion
 
             // Max Pace
-            global.maxPace = Math.max(...allMetrics.map(a => a?.pace))
+            global.maxPace = Math.max(...tmp.map(a => a?.pace))
 
             // Todo  Add average pace in motion
         }
