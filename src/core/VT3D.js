@@ -136,6 +136,10 @@ export class VT3D {
         this.#theJourneyEditorProxy = proxy
     }
 
+    get units() {
+        return vt3d.configuration.units
+    }
+
     setDefaultConfiguration = () => {
         // Defaults
         this.POI_DEFAULT_SIZE = this.configuration.journey.pois.size
