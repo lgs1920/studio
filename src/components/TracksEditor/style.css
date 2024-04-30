@@ -142,16 +142,18 @@ sl-tab-panel sl-icon::part(svg) {
 .element-item {
     display: flex;
     align-items: center;
-    --width: 33.33%;
+    --width: 38%;
+    --indent: 24%;
     width: var(--width);
 }
 
 .element-item.title {
+    width: var(--indent);
     font-weight: 700;
 }
 
 .element-item.indented {
-    margin-left: var(--width);
+    margin-left: var(--indent);
 }
 
 .track-points, .journey-POIs {
