@@ -3,7 +3,6 @@ import * as turfDistance from '@turf/distance'
 import { DateTime }   from 'luxon'
 import * as turfPoint from 'turf-point'
 import { MILLIS }     from './AppUtils'
-import { KM }         from './UnitUtils'
 
 export class Mobility {
     /**
@@ -21,7 +20,7 @@ export class Mobility {
             return turfDistance.default(
                 turfPoint.default([start.longitude, start.latitude]),
                 turfPoint.default([end.longitude, end.latitude]),
-            ) * KM
+            ) * 1000
         }
         return 0
     }
