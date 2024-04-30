@@ -1,4 +1,5 @@
 import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-icons'
+import { faRoute }                          from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlOption, SlSelect }       from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                            from '@Utils/FA2SL'
 import { forwardRef }                       from 'react'
@@ -41,29 +42,27 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
     }
     // set Default
     mainStore.theJourney = vt3d.theJourney?.slug
+    console.log(mainSnapshot.list.length)
+    return (<>
+        {mainSnapshot.list.length > 1 && <SlSelect hoist label={props.label}
+                                                   value={editorSnapshot.journey.slug}
+                                                   onSlChange={props.onChange}
+                                                   key={mainSnapshot.keys.journey.list}
+        >
+            <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
-    return (
-        <>
-            {
-                mainSnapshot.list.length > 1 &&
-                <SlSelect hoist label={props.label}
-                          value={editorSnapshot.journey.slug}
-                          onSlChange={props.onChange}
-                          key={mainSnapshot.keys.journey.list}
-                >
-                    <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
+            {journeys.map(journey => <SlOption key={journey.title} value={journey.slug}>
+                {journey.visible ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/> : <SlIcon
+                    slot="suffix" library="fa" name={FA2SL.set(faEyeSlash)}/>}
+                {journey.title}
+            </SlOption>)}
+        </SlSelect>}
+        {mainSnapshot.list.length === 1 && <>
+            <span className={'journey-title'}>
+            <SlIcon className={'journey-title-icon'} library="fa" name={FA2SL.set(faRoute)} slot={'expand-icon'}/>
+                {vt3d.theJourney.title}
+                </span>
+        </>}
 
-                    {journeys.map(journey =>
-                        <SlOption key={journey.title} value={journey.slug}>
-                            {journey.visible
-                             ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/>
-                             : <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEyeSlash)}/>
-                            }
-                            {journey.title}
-                        </SlOption>,
-                    )}
-                </SlSelect>
-            }
-        </>
-    )
+    </>)
 })

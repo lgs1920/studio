@@ -69,8 +69,16 @@ sl-tab sl-icon {
     width: 100%;
 }
 
-#journey-title {
+.journey-title {
+    display: inline-flex;
     width: 100%;
+    font-weight: 700;
+    align-items: center;
+    margin-right: var(--vt3d-gutter-s);
+}
+
+.journey-title-icon {
+    width: 1.2rem;
 }
 
 .settings-panel {
