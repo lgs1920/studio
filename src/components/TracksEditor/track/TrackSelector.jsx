@@ -23,27 +23,22 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     // TODO : Check if it right to take tracks in the order in which they were created.
     // }
 
-    return (
-        <>
-            {
-                tracks.size > 1 && editorSnapshot.track &&
-                <SlSelect hoist label={props.label}
-                          value={editorSnapshot.track.slug}
-                          onSlChange={props.onChange}
-                          key={mainSnapshot.keys.track.list}
+    return (<>
+            { // Several tracks : we add a selection widget
+                tracks.size > 1 && <SlSelect hoist label={props.label}
+                                             value={editorSnapshot.track.slug}
+                                             onSlChange={props.onChange}
+                                             key={mainSnapshot.keys.track.list}
                 >
                     <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
                     {Array.from(editorSnapshot.journey.tracks.values()).map(track =>
                         <SlOption key={track.title} value={track.slug}>
-                            {track.visible
-                             ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/>
-                             : <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEyeSlash)}/>
-                            }
+                            {track.visible ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/> : <SlIcon
+                                slot="suffix" library="fa" name={FA2SL.set(faEyeSlash)}/>}
                             {track.title}
-                        </SlOption>,
-                    )}
-                </SlSelect>
-            }
+                        </SlOption>)}
+                </SlSelect>}
         </>
+
     )
 })
