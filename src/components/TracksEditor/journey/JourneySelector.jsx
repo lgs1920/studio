@@ -42,7 +42,7 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
     }
     // set Default
     mainStore.theJourney = vt3d.theJourney?.slug
-    console.log(mainSnapshot.list.length)
+
     return (<>
         {mainSnapshot.list.length > 1 && <SlSelect hoist label={props.label}
                                                    value={editorSnapshot.journey.slug}
