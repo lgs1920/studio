@@ -155,16 +155,9 @@ export class Track extends MapElement {
                         pointData.duration = Mobility.duration(DateTime.fromISO(prev.time), DateTime.fromISO(current.time))
                         pointData.speed = Mobility.speed(pointData.distance, pointData.duration)
                         pointData.pace = Mobility.pace(pointData.distance, pointData.duration)
-                        // IdleTime
-
-                        if (pointData.speed > vt3d.configuration.metrics.stopSpeedLimit
-                            || pointData.duration > vt3d.configuration.metrics.stopDuration) {
-                            pointData.idleTime = pointData.duration
-
-                        } else {
-                            pointData.idleTime = 0
-
-                        }
+                        pointData.activity =
+                            pointData.speed > vt3d.configuration.metrics.stopSpeedLimit ||
+                            pointData.duration > vt3d.configuration.metrics.stopDuration
                     }
                     if (this.hasAltitude) {
                         pointData.elevation = Mobility.elevation(prev, current)
@@ -177,8 +170,8 @@ export class Track extends MapElement {
             featureMetrics.push(segmentData.slice(0, -1))
         })
 
+        // Do not work with segment any more
         featureMetrics = featureMetrics.flat()
-        //
 
         /**
          * Step 2: Globals
@@ -195,24 +188,52 @@ export class Track extends MapElement {
 
         // If the first have duration time, all the data set have time
         if (this.hasTime) {
-            // Max speed
-            //TODO fixe this e ne prenant pas en compte les idleTime
+            // Select all speeds
             tmp = TrackUtils.filterArray(featureMetrics, {
                 speed: speed => speed !== 0 && speed !== undefined,
             })
-            global.maxSpeed = Math.max(...tmp.map(a => a?.speed))
 
-            // Average speed (we exclude 0 and undefined values)
+            // Average speed
             global.averageSpeed = tmp.reduce((s, o) => {
                 return s + o.speed
             }, 0) / tmp.length
 
-            // Todo  Add average speed in motion
+            // Average pace (we exclude 0 and undefined values)
+            global.averagePace = tmp.reduce((s, o) => {
+                return s + o.pace
+            }, 0) / tmp.length
 
-            // Max Pace
-            global.maxPace = Math.max(...featureMetrics.map(a => a?.pace))
+            // Select all speeds where activity has been found
+            tmp = TrackUtils.filterArray(featureMetrics, {
+                speed: speed => speed !== 0 && speed !== undefined,
+                activity: activity => activity === true,
+            })
 
-            // Todo  Add average pace in motion
+            // Average speed in moving
+            global.averageSpeedMoving = tmp.reduce((s, o) => {
+                return s + o.speed
+            }, 0) / tmp.length
+
+            // Min speed
+            global.minSpeed = Math.min(...tmp.map(a => a?.speed))
+
+            // Max speed
+            global.maxSpeed = Math.max(...tmp.map(a => a?.speed))
+
+            // Min Pace (the fastest pace is the minimum)
+            global.minPace = Math.min(...tmp.map(a => a?.pace))
+
+            // Max Pace (the fastest pace is the minimum)
+            global.maxPace = Math.max(...tmp.map(a => a?.pace))
+
+            // Average pace in moving
+            tmp = TrackUtils.filterArray(featureMetrics, {
+                pace: pace => pace !== 0 && pace !== undefined,
+                activity: activity => activity === true,
+            })
+            global.averagePaceMoving = tmp.reduce((s, o) => {
+                return s + o.pace
+            }, 0) / tmp.length
         }
 
         if (this.hasAltitude) {
@@ -274,10 +295,11 @@ export class Track extends MapElement {
                 return s + o.duration
             }, 0)
 
-            // Total duration
+            // Total idleTime
             global.idleTime = featureMetrics.reduce((s, o) => {
-                return s + o.idleTime
-            }, 0)
+                return s + !o.activity ? o.duration : 0
+            }, 0.0)
+
         }
 
         // Total Distance

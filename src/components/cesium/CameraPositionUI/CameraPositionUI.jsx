@@ -8,6 +8,7 @@ import { FA2SL }                                            from '@Utils/FA2SL'
 import { forwardRef }                                       from 'react'
 import { useCesium }                                        from 'resium'
 import { useSnapshot }                                      from 'valtio'
+import { meter, mile }                                      from '../../../Utils/UnitUtils'
 
 
 export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref) {
@@ -54,13 +55,13 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
                                      text={'Lat:'}/>
                         <sl-icon library="fa" name={FA2SL.set(faAngle)}></sl-icon>
                         <TextValueUI value={cameraSnap.position.heading.toFixed()}
-                                     id={'camera-heading'} text={'Heading:'} unit={'°'}/>
+                                     id={'camera-heading'} text={'Heading:'} units={'°'}/>
                         <TextValueUI value={(cameraSnap.position.pitch).toFixed()}
-                                     id={'camera-pitch'} text={'Pitch:'} unit={'°'}/>
+                                     id={'camera-pitch'} text={'Pitch:'} units={'°'}/>
                         <sl-icon library="fa" name={FA2SL.set(faMountains)}></sl-icon>
                         <TextValueUI value={cameraSnap.position.altitude.toFixed()}
                                      id={'camera-altitude'}
-                                     unit={'m'}/>
+                                     units={[meter, mile]}/>
                     </SlCard>
                 </SlAnimation>
             }

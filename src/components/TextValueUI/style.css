@@ -2,3 +2,7 @@
     display: flex;
     gap: var(--vt3d-gutter-s);
 }
+
+.vt3d-tv-unit {
+    margin-left: 3px;
+}

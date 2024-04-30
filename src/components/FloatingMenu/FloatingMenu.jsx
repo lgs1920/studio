@@ -28,6 +28,9 @@ import {
     useSnapshot,
 }                from 'valtio'
 import {
+    km, meter, mile, mph,
+}                from '../../Utils/UnitUtils'
+import {
     TextValueUI,
 }                from '../TextValueUI/TextValueUI'
 
@@ -130,11 +133,11 @@ export const FloatingMenu = function FloatingMenu() {
                     <TextValueUI value={sprintf('%\' 2.5f', menuSnap.longitude)}
                                  id={'cursor-longitude'}
                                  text={'Lon:'}
-                                 unit={'°'}/>
+                                 units={'°'}/>
                     <TextValueUI value={sprintf('%2.5f', menuSnap.latitude)}
                                  id={'cursor-latitude'}
                                  text={'Lat:'}
-                                 unit={'°'}/>
+                                 units={'°'}/>
                 </div>
             </div>
             <div className={'floating-menu-data'}>
@@ -144,7 +147,7 @@ export const FloatingMenu = function FloatingMenu() {
                             <TextValueUI value={sprintf('%\' 6.2f', marker.altitude)}
                                          id={'cursor-altitude'}
                                          text={'Alt:'}
-                                         unit={'m'}/>
+                                         units={[meter, mile]}/>
                         </div>
                     </div>
                 }
@@ -236,10 +239,9 @@ export const FloatingMenu = function FloatingMenu() {
                 <div className={'floating-menu-data one-line'}>
                     <sl-icon variant="primary" library="fa" name={FA2SL.set(faRulerHorizontal)}></sl-icon>
                     <div>
-                        <TextValueUI value={sprintf('%\' .2f', metrics.distance / 1000)} //TODO units KM or ...
-                            // text={'Distance:'}
+                        <TextValueUI value={metrics.distance} //TODO units KM or ...
                                      id={'cursor-distance'}
-                                     unit={'kms'}/>
+                                     units={[km, mph]}/>
                     </div>
                 </div>
                 {!isNaN(metrics.duration) &&
@@ -264,7 +266,7 @@ export const FloatingMenu = function FloatingMenu() {
                         <div>
                             <TextValueUI value={metrics.minHeight}
                                          text={'min.'}
-                                         unit={'m'}
+                                         units={meter}
                             />
                         </div>
                     </div>
@@ -274,7 +276,7 @@ export const FloatingMenu = function FloatingMenu() {
                         <div>
                             <TextValueUI value={metrics.maxHeight}
                                          text={'max.'}
-                                         unit={'m'}
+                                         units={meter}
                             />
                         </div>
                     </div>
@@ -291,7 +293,7 @@ export const FloatingMenu = function FloatingMenu() {
                         <div>
                             <TextValueUI value={sprintf('%\' .1f', metrics.positiveElevation)}
                                          text={'Gain'}
-                                         unit={'m'}
+                                         units={meter}
                             />
                         </div>
                     </div>
@@ -301,7 +303,7 @@ export const FloatingMenu = function FloatingMenu() {
                         <div>
                             <TextValueUI value={sprintf('%\' .1f', metrics.negativeElevation)}
                                          text={'Loss'}
-                                         unit={'m'}
+                                         units={meter}
                             />
                         </div>
                     </div>

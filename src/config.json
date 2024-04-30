@@ -63,10 +63,10 @@
     "#f2c55c"
   ],
   "unitSystems": {
-    "metric": 1,
-    "Imperial/US": 2
+    "international": 0,
+    "imperial": 1
   },
-  "units": 1,
+  "unitsSystem": 0,
   "metrics": {
     "minSlope": 2,
     "stopDuration": 60,
