@@ -28,6 +28,7 @@
     "@turf/nearest-point": "^6.5.0",
     "@turf/nearest-point-on-line": "^6.5.0",
     "@turf/point-to-line-distance": "^6.5.0",
+    "apexcharts": "^3.49.0",
     "babel-plugin-module-resolver": "^5.0.2",
     "canvg": "^4.0.1",
     "cesium": "^1.113.0",
