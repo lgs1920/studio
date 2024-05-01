@@ -1,15 +1,14 @@
 
-
 cesium-compass {
-    --vr3d-compass-size : 95px;
-    --cesium-compass-fill-color:var(--vt3d-dark-ui-bg-color);
-    --cesium-compass-stroke-color:var(--vt3d-dark-ui-fg-color);
+    height: var(--vt3d-compass-size);
+    width: var(--vt3d-compass-size);
     position: fixed;
-    bottom: var(--vr3d-compass-size);
     right: 0;
+    bottom: 0;
 }
 
 cesium-compass .compass {
     width: 80px;
     height: 80px;
 }
+

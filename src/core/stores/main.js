@@ -31,6 +31,10 @@ export const main = {
             altitude: 0,
 
         },
+        profile: {
+            visible: false,
+            show: true,
+        },
 
     },
     modals: {
