@@ -1,29 +1,28 @@
 export class CSSUtils {
 
+
     /**
-     * Get value of a CSSUtils variable
+     * Get the value of the CSS Variable
      *
-     * @param variable (with or without --)
+     * @param variable {string}   can start with -- or not
+     *
+     * @return {string}
      */
     static getCSSVariable = (variable) => {
-        if (!variable.startsWith('--')) {
-            variable = `--${variable}`
-        }
-        return getComputedStyle(document.documentElement)
-            .getPropertyValue(variable)
+        variable = (variable.startsWith('--') ? variable : '--' + variable)
+        return window.getComputedStyle(document.documentElement).getPropertyValue(variable).trim()
     }
 
     /**
-     * Set a CSSUtils variable
+     * set a CSS Variable
      *
-     * @param variable   (with or without --)
-     * @param value
+     * @param variable {string}     can start with -- or not
+     * @param value {any}           the value to assign
+     *
+     * @return {string}
      */
     static setCSSVariable = (variable, value) => {
-        if (!variable.startsWith('--')) {
-            variable = `--${variable}`
-        }
-        gdocument.documentElement.style
-            .setProperty(variable, value)
+        variable = (variable.startsWith('--') ? variable : '--' + variable)
+        document.documentElement.style.setProperty(variable, value)
     }
 }
