@@ -22,8 +22,8 @@ import { FA2SL }           from '@Utils/FA2SL'
 import { UIToast }         from '@Utils/UIToast'
 import { sprintf }         from 'sprintf-js'
 import { useSnapshot }     from 'valtio'
-import { JourneyPOIs }     from './JourneyPOIs'
 import { JourneyData }     from './JourneyData'
+import { JourneyPOIs }     from './JourneyPOIs'
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2
@@ -169,15 +169,15 @@ export const JourneySettings = function JourneySettings() {
                 // New current is the first.
                 vt3d.theJourney = vt3d.getJourneyBySlug(mainStore.list[0])
                 vt3d.theJourney.focus()
+                vt3d.theTrack = vt3d.theJourney.tracks.values().next().value
+                vt3d.theTrack.addToEditor()
                 Utils.renderJourneysList()
-                Utils.renderJourneySettings()
             } else {
                 vt3d.theJourney = null
                 vt3d.cleanEditor()
                 text = 'There are no others available.'
                 mainStore.usable = false
                 mainStore.show = false
-
             }
 
             // Let's inform the user
