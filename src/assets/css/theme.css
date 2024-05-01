@@ -102,9 +102,12 @@ sl-button.square-icon::part(label) {
 /*******************************************************************************
  * Drawers
  */
+:root {
+    --vt3d-drawer-size: 28rem
+}
 
 sl-drawer {
-    /*--size: TODO define a default size if needed */
+    --size: var(--vt3d-drawer-size);
     --header-spacing: var(--vt3d-gutter-s) var(--vt3d-gutter);
     --body-spacing: var(--vt3d-gutter);
     --footer-spacing: var(--vt3d-gutter-s) var(--vt3d-gutter);
