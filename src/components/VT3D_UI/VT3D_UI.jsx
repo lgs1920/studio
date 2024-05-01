@@ -11,6 +11,7 @@ import { forwardRef, useEffect } from 'react'
 import { useCesium }             from 'resium'
 
 import './style.css'
+import { ProfileButton }         from '../Profile/ProfileButton'
 
 export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
 
@@ -32,6 +33,7 @@ export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
                     <CameraPositionUI ref={ref}/>
                     <TrackFileLoaderUI ref={ref}/>
                     <TracksEditor ref={ref}/>
+                    <ProfileButton/>
                 </div>
 
                 <div id={'bottom-ui'}>
