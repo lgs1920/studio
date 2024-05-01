@@ -24,6 +24,8 @@
 }
 
 #top-left-ui {
+    display: flex;
+    flex-direction: column;
     position: absolute;
     top: var(--top);
     left: var(--left);
