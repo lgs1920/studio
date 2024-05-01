@@ -33,7 +33,7 @@ export const main = {
         },
         profile: {
             visible: false,
-            show: true,
+            show: false,
         },
 
     },
@@ -45,4 +45,5 @@ export const main = {
     },
     theJourney: null,
     fullSize: false,
+    canViewJourneyData: false,
 }

@@ -1,19 +1,14 @@
-import { faPencil }                      from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlDrawer, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { SlDrawer }    from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { forwardRef }                    from 'react'
-import { useSnapshot }                   from 'valtio'
-
+import { forwardRef }  from 'react'
+import { useSnapshot } from 'valtio'
 //read version
 
 
 export const Profile = forwardRef(function Profile(props, ref) {
 
-    const mainStore = vt3d.mainProxy.components.profile
+    const mainStore = vt3d.mainProxy
     const mainSnap = useSnapshot(mainStore)
-
-    const editorStore = vt3d.theJourneyEditorProxy
-    const editorSnapshot = useSnapshot(editorStore)
 
     /**
      * Avoid click outside drawer
@@ -30,22 +25,13 @@ export const Profile = forwardRef(function Profile(props, ref) {
      */
     const closeProfile = (event) => {
         if (isOK(event)) {
-            mainStore.show = false
+            mainStore.components.profile.show = false
         }
     }
 
-    /**
-     * Open tracks editor pane
-     *
-     * @param event
-     */
-    const toggleProfile = (event) => {
-        mainStore.show = !mainStore.show
-    }
-
     return (<>
-        <div id="profile-container" key={mainSnap.key}>
-            {<SlDrawer id="profile-pane" open={true /*mainSnap.show*/}
+        <div id="profile-container" key={mainSnap.components.profile.key}>
+            {<SlDrawer id="profile-pane" open={mainSnap.components.profile.show}
                        onSlRequestClose={handleRequestClose}
                        contained
                        onSlHide={closeProfile}
@@ -53,12 +39,5 @@ export const Profile = forwardRef(function Profile(props, ref) {
             >
             </SlDrawer>}
         </div>
-
-        <SlTooltip placement={'right'} content="Open Profile">
-            {mainSnap.usable && <SlButton size={'small'} className={'square-icon'} id={'open-theJourney-editor'}
-                                          onClick={toggleProfile}>
-                <SlIcon library="fa" name={FA2SL.set(faPencil)}></SlIcon>
-            </SlButton>}
-        </SlTooltip>
     </>)
 })
