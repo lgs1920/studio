@@ -135,6 +135,20 @@ export class Utils {
         return journey
     }
 
+    /**
+     * Adapt the profile with to the state of the editor pane
+     */
+    static changeProfileWidth = () => {
+        let width = '100%'
+        if (vt3d.mainProxy.components.journeyEditor.show) {
+            const editor = __.ui.css.getCSSVariable('--vt3d-drawer-size')
+            const compassUI = __.ui.css.getCSSVariable('--vt3d-compass-size')
+            const padding = __.ui.css.getCSSVariable('--vt3d-gutter-s')
+            width = `calc( 100% - ${editor} + ${compassUI} - ${padding}`
+        }
+        __.ui.css.setCSSVariable('--vt3d-profile-pane-width', width)
+    }
+
     settings = () => {
         vt3d.mainProxy.components.journeyEditor.keys.journey.settings++
     }

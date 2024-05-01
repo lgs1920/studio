@@ -1,10 +1,17 @@
+:root {
+    --vt3d-profile-pane-width: 100%
+}
+
 #profile-container {
     position: relative;
-    width: 100%;
+    width: var(--vt3d-profile-pane-width);
     height: 100%;
 }
 
 #profile-pane {
     --size: 200px;
+}
+
+#profile-pane::part(panel) {
     border-radius: var(--sl-border-radius-medium)
 }
