@@ -176,8 +176,8 @@ export const JourneySettings = function JourneySettings() {
                 vt3d.theJourney = null
                 vt3d.cleanEditor()
                 text = 'There are no others available.'
-                mainStore.usable = false
-                mainStore.show = false
+                mainStore.canViewJourneyData = false
+                mainStore.components.journeyEditor.show = false
             }
 
             // Let's inform the user
