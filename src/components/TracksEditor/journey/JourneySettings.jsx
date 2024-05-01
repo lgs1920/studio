@@ -136,18 +136,18 @@ export const JourneySettings = function JourneySettings() {
         const confirmation = await confirmRemoveJourney()
 
         if (confirmation) {
-            const mainStore = vt3d.mainProxy.components.journeyEditor
+            const mainStore = vt3d.mainProxy
             const journey = editorStore.journey.slug
             const removed = vt3d.getJourneyBySlug(journey)
             // get Journey index
-            const index = mainStore.list.findIndex((list) => list === journey)
+            const index = mainStore.components.journeyEditor.list.findIndex((list) => list === journey)
 
             /**
              * Do some cleaning
              */
             if (index >= 0) {
                 // In store
-                mainStore.list.splice(index, 1)
+                mainStore.components.journeyEditor.list.splice(index, 1)
                 // In context
                 vt3d.journeys.delete(editorStore.journey.slug)
 
@@ -165,9 +165,9 @@ export const JourneySettings = function JourneySettings() {
              * Otherwise we close the editing.
              */
             let text = ''
-            if (mainStore.list.length >= 1) {
+            if (mainStore.components.journeyEditor.list.length >= 1) {
                 // New current is the first.
-                vt3d.theJourney = vt3d.getJourneyBySlug(mainStore.list[0])
+                vt3d.theJourney = vt3d.getJourneyBySlug(mainStore.components.journeyEditor.list[0])
                 vt3d.theJourney.focus()
                 vt3d.theTrack = vt3d.theJourney.tracks.values().next().value
                 vt3d.theTrack.addToEditor()
