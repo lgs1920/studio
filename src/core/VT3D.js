@@ -185,7 +185,7 @@ export class VT3D {
                 this.journeys.set(journey.slug, journey)
                 this.mainProxy.components.journeyEditor.list.push(journey.slug)
             }
-            this.mainProxy.components.journeyEditor.usable = true
+            this.mainProxy.components.journeyEditor.canViewJourneyData = true
         }
     }
 
