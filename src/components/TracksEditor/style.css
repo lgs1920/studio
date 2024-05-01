@@ -159,3 +159,8 @@ sl-tab-panel sl-icon::part(svg) {
 .track-points, .journey-POIs {
     margin-top: var(--vt3d-gutter-s);
 }
+
+.track-date {
+    display: flex;
+    gap: var(--vt3d-gutter);
+}

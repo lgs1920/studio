@@ -17,6 +17,7 @@ import {
 
 import { useSnapshot }                                  from 'valtio'
 import { foot, km, kmh, meter, mile, mkm, mph, mpmile } from '../../../Utils/UnitUtils'
+import { DateInfo }                                     from '../DateInfo'
 
 export const TrackData = function TrackData() {
     const editorStore = vt3d.theJourneyEditorProxy
@@ -33,8 +34,19 @@ export const TrackData = function TrackData() {
 
     const metrics = editorStore.track.metrics.global
 
+    const trackDate = (!isNaN(metrics?.duration)) ? {
+        start: editorStore.track.metrics.points[0].time,
+        stop: editorStore.track.metrics.points[editorStore.track.metrics.points.length - 1].time,
+    } : {}
+
+
     return (<>
         {metrics && <SlCard className={'element-data'}>
+
+            {(!isNaN(metrics?.duration)) &&
+                <DateInfo date={trackDate}/>
+            }
+
             <div className={'element-row'}>
 
                 <div className={'element-item title'}>Distance</div>
@@ -177,6 +189,8 @@ export const TrackData = function TrackData() {
 
             {!isNaN(metrics?.duration) &&
                 <>
+                    <SlDivider style={{'--width': '1px'}}/>
+
                     <div className={'element-row'}>
                         <div className={'element-item title'}>Pace</div>
 
