@@ -41,7 +41,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                 await theJourney.saveOriginDataToDB()
 
                 // Force editor to close but remains usable
-                mainStore.components.journeyEditor.usable = true
+                mainStore.canViewJourneyData = true
                 await theJourney.draw({})
 
             } else {
