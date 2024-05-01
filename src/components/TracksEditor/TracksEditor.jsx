@@ -15,7 +15,7 @@ import { Utils }                                 from './Utils'
 
 export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
 
-    const mainStore = vt3d.mainProxy.components.journeyEditor
+    const mainStore = vt3d.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
     const editorStore = vt3d.theJourneyEditorProxy
@@ -36,7 +36,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
      */
     const closeTracksEditor = (event) => {
         if (isOK(event)) {
-            mainStore.show = false
+            mainStore.components.journeyEditor.show = false
         }
     }
 
@@ -46,36 +46,38 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
      * @param event
      */
     const toggleTracksEditor = (event) => {
-        mainStore.show = !mainStore.show
+        mainStore.components.journeyEditor.show = !mainStore.components.journeyEditor.show
     }
 
     return (<>
-        <div id="journeys-editor-container" key={mainSnap.key}>
-            {mainSnap.usable && <SlDrawer id="journeys-editor-pane" open={mainSnap.show}
-                                          onSlRequestClose={handleRequestClose}
-                                          contained
-                                          onSlHide={closeTracksEditor}
-            >
-                {vt3d.journeys.size > 0 && <div id={'track-settings-container'}>
-                    <JourneySelector onChange={Utils.initJourneyEdition}
-                                     label={'Select a Journey:'}/>
-                    <JourneySettings/>
+        <div id="journeys-editor-container" key={mainSnap.components.journeyEditor.key}>
+            {mainSnap.canViewJourneyData &&
+                <SlDrawer id="journeys-editor-pane" open={mainSnap.components.journeyEditor.show}
+                          onSlRequestClose={handleRequestClose}
+                          contained
+                          onSlHide={closeTracksEditor}
+                >
+                    {vt3d.journeys.size > 0 && <div id={'track-settings-container'}>
+                        <JourneySelector onChange={Utils.initJourneyEdition}
+                                         label={'Select a Journey:'}/>
+                        <JourneySettings/>
 
-                    {editorSnapshot.journey.visible && <>
-                        <TrackSelector onChange={Utils.initTrackEdition}
-                                       label={'Select one of the tracks:'}/>
-                        <TrackSettings/>
-                    </>}
-                </div>}
-                <div id="journeys-editor-footer" slot={'footer'}></div>
-            </SlDrawer>}
+                        {editorSnapshot.journey.visible && <>
+                            <TrackSelector onChange={Utils.initTrackEdition}
+                                           label={'Select one of the tracks:'}/>
+                            <TrackSettings/>
+                        </>}
+                    </div>}
+                    <div id="journeys-editor-footer" slot={'footer'}></div>
+                </SlDrawer>}
         </div>
 
         <SlTooltip placement={'right'} content="Edit Tracks">
-            {mainSnap.usable && <SlButton size={'small'} className={'square-icon'} id={'open-theJourney-editor'}
-                                          onClick={toggleTracksEditor}>
-                <SlIcon library="fa" name={FA2SL.set(faPencil)}></SlIcon>
-            </SlButton>}
+            {mainSnap.canViewJourneyData &&
+                <SlButton size={'small'} className={'square-icon'} id={'open-theJourney-editor'}
+                          onClick={toggleTracksEditor}>
+                    <SlIcon library="fa" name={FA2SL.set(faPencil)}></SlIcon>
+                </SlButton>}
         </SlTooltip>
     </>)
 })
