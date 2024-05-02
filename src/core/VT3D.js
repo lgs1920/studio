@@ -48,9 +48,7 @@ export class VT3D {
             },
             convert: UnitUtils.convert,
         }
-
-        __.convert(100).to('kmh')
-
+        
         //Init DBs
         this.db = {
             journeys: new LocalDB({
