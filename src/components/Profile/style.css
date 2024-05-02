@@ -1,5 +1,6 @@
 :root {
-    --vt3d-profile-pane-width: 100%
+    --vt3d-profile-pane-width: 100%;
+    --vt3d-profile-pane-height: 300px;
 }
 
 #profile-container {
@@ -9,7 +10,10 @@
 }
 
 #profile-pane {
-    --size: 200px;
+    --header-spacing: 0;
+    --footer-spacing: 0;
+    --body-spacing: 0;
+    --size: var(--vt3d-profile-pane-height);
 }
 
 #profile-pane::part(panel) {

@@ -1,7 +1,8 @@
-import { SlDrawer }    from '@shoelace-style/shoelace/dist/react'
+import { SlDrawer }     from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { forwardRef }  from 'react'
-import { useSnapshot } from 'valtio'
+import { forwardRef }   from 'react'
+import { useSnapshot }  from 'valtio'
+import { ProfileChart } from './ProfileChart'
 //read version
 
 
@@ -29,6 +30,7 @@ export const Profile = forwardRef(function Profile(props, ref) {
         }
     }
 
+
     return (<>
         <div id="profile-container" key={mainSnap.components.profile.key}>
             {<SlDrawer id="profile-pane" open={mainSnap.components.profile.show}
@@ -37,6 +39,7 @@ export const Profile = forwardRef(function Profile(props, ref) {
                        onSlHide={closeProfile}
                        placement="bottom"
             >
+                {<ProfileChart/>}
             </SlDrawer>}
         </div>
     </>)
