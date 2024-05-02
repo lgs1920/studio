@@ -39,6 +39,7 @@
     "luxon": "^3.4.4",
     "path": "^0.12.7",
     "react": "^18.2.0",
+    "react-apexcharts": "^1.4.1",
     "react-dom": "^18.2.0",
     "resium": "^1.17.2",
     "sprintf-js": "^1.1.3",
