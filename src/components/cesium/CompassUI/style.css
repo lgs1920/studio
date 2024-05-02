@@ -3,8 +3,6 @@ cesium-compass {
     height: var(--vt3d-compass-size);
     width: var(--vt3d-compass-size);
     position: fixed;
-    right: 0;
-    bottom: 0;
 }
 
 cesium-compass .compass {

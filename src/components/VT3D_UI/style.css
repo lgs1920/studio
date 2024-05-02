@@ -35,6 +35,8 @@
     position: absolute;
     top: var(--top);
     right: var(--right);
+    height: var(--vt3d-compass-size);
+    width: var(--vt3d-compass-size);
 }
 
 #bottom-ui {
@@ -49,8 +51,8 @@
 }
 
 #bottom-right-ui {
-    height: var(--vt3d-compass-size);
-    width: var(--vt3d-compass-size);
+    height: var(--vt3d-gutter-s);
+    width: var(--vt3d-gutter-s);
     align-self: flex-end;
 }
 

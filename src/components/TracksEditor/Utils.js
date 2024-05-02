@@ -50,16 +50,14 @@ export class Utils {
 
 
             // Save information
-            TrackUtils.saveCurrentJourneyToDB(event.target.value).then(
-                async () => {
-                    if (editorStore.journey.visible) {
-                        vt3d.theJourney.focus()
-                    }
+            TrackUtils.saveCurrentJourneyToDB(event.target.value).then(async () => {
+                if (editorStore.journey.visible) {
+                    vt3d.theJourney.focus()
+                }
 
-                    await TrackUtils.saveCurrentTrackToDB(null)
-                    await TrackUtils.saveCurrentPOIToDB(null)
-                },
-            )
+                await TrackUtils.saveCurrentTrackToDB(null)
+                await TrackUtils.saveCurrentPOIToDB(null)
+            })
 
         }
     }
@@ -78,14 +76,12 @@ export class Utils {
             Utils.renderTracksList()
             Utils.renderTrackSettings()
             // Save information
-            TrackUtils.saveCurrentTrackToDB(event.target.value).then(
-                async () => {
-                    if (editorStore.journey.visible) {
-                        editorStore.journey.focus()
-                    }
-                    await TrackUtils.saveCurrentPOIToDB(null)
-                },
-            )
+            TrackUtils.saveCurrentTrackToDB(event.target.value).then(async () => {
+                if (editorStore.journey.visible) {
+                    editorStore.journey.focus()
+                }
+                await TrackUtils.saveCurrentPOIToDB(null)
+            })
 
         }
     }
@@ -139,13 +135,7 @@ export class Utils {
      * Adapt the profile with to the state of the editor pane
      */
     static changeProfileWidth = () => {
-        let width = '100%'
-        if (vt3d.mainProxy.components.journeyEditor.show) {
-            const editor = __.ui.css.getCSSVariable('--vt3d-drawer-size')
-            const compassUI = __.ui.css.getCSSVariable('--vt3d-compass-size')
-            const padding = __.ui.css.getCSSVariable('--vt3d-gutter-s')
-            width = `calc( 100% - ${editor} + ${compassUI} - ${padding}`
-        }
+        const width = (vt3d.mainProxy.components.journeyEditor.show) ? `calc( 100% - ${__.ui.css.getCSSVariable('--vt3d-drawer-size')}` : '100%'
         __.ui.css.setCSSVariable('--vt3d-profile-pane-width', width)
     }
 

@@ -45,10 +45,11 @@ export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
                         <Profile ref={ref}/>
                     </div>
                     <div id={'bottom-right-ui'}>
-                        <CompassUI ref={ref}/>
+
                     </div>
                 </div>
                 <div id={'top-right-ui'}>
+                    <CompassUI ref={ref}/>
                 </div>
 
                 <FloatingMenu/>
