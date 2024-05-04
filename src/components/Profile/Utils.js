@@ -1,5 +1,9 @@
-import { km, mile }    from '@Utils/UnitUtils'
-import { foot, meter } from '../../Utils/UnitUtils'
+import {
+    faArrowDownToLine, faArrowLeftToLine, faArrowRightToLine, faCircleDot,
+}                                from '@fortawesome/pro-regular-svg-icons'
+import { foot, km, meter, mile } from '@Utils/UnitUtils'
+import { sprintf }               from 'sprintf-js'
+import { FA2SL }                 from '../../Utils/FA2SL'
 
 export class Utils {
 
@@ -7,44 +11,91 @@ export class Utils {
      *
      * @param type {number} Plot type
      */
-    static prepareData = (type = HEIGHT_DISTANCE) => {
+    static prepareData = (type = ELEVATION_VS_DISTANCE) => {
         if (vt3d.theJourney === null) {
             return
         }
 
-        let data = []
+        // For each typeof chart and according to units System, we set the units to each axis
+        let units, titles
+        switch (type) {
+            case ELEVATION_VS_DISTANCE :
+                units = {x: [km, mile], y: [meter, foot]}
+                titles = {x: 'Distance', y: 'Elevation'}
+        }
+
+        const options = {
+            xaxis: {
+                title: {
+                    text: `${titles.x} - ${units.x[vt3d.configuration.unitsSystem]}`,
+                },
+            },
+            yaxis: {
+                title: {
+                    text: `${titles.y} - ${units.y[vt3d.configuration.unitsSystem]}`,
+                },
+                decimalsInFloat: 1,
+                tickAmount: 4,
+            },
+            tooltip: {
+                custom: Utils.tooltipElevationVsDistance,
+            },
+        }
+
+        const data = {
+            series: [], options: options,
+        }
+
         vt3d.theJourney.tracks.forEach((track, slug) => {
             let distance = 0
-            const line = {data: []}
-            let units = []
-
-            // For each typeof chart and according to units System, se set the units to each axis
-            switch (type) {
-                case HEIGHT_DISTANCE :
-                    units = {
-                        x: [km, mile],
-                        y: [meter, foot],
-                    }
-                    break
+            const dataSet = {
+                data: [],
+                color: track.color,
+                name: track.title,
             }
-
             track.metrics.points.forEach(point => {
                 distance += point.distance
-                let graph = {}
+                let coords = {}
                 switch (type) {
-                    case HEIGHT_DISTANCE : {
-                        graph.x = __.convert(distance).to(units.x[vt3d.configuration.unitsSystem])
-                        graph.y = __.convert(point.altitude).to(units.y[vt3d.configuration.unitsSystem])
+                    case ELEVATION_VS_DISTANCE : {
+                        coords.x = __.convert(distance).to(units.x[vt3d.configuration.unitsSystem])
+                        coords.y = __.convert(point.altitude).to(units.y[vt3d.configuration.unitsSystem])
+                        coords.point = point
                     }
                 }
-                line.data.push(graph)
-
+                dataSet.data.push(coords)
             })
-            data.push(line)
+            data.series.push(dataSet)
         })
 
         return data
     }
+
+    static tooltipElevationVsDistance = (options) => {
+        const data = options.w.config.series[options.seriesIndex].data
+
+        const coords = data[options.dataPointIndex]
+        const length = data[data.length - 1].x
+
+        const yUnits = [meter, foot]
+        const xUnits = [km, mile]
+        return `
+<div id="elevation-distance-tooltip">
+         <span>[ ${coords.point.latitude} , ${coords.point.longitude} ]</span>
+         <span class="point-distance">
+           <sl-icon library="fa" name="${FA2SL.set(faArrowLeftToLine)}"></sl-icon>
+            ${sprintf('%\' .1f', coords.x)}  ${xUnits[vt3d.configuration.unitsSystem]}
+            <sl-icon library="fa" name="${FA2SL.set(faCircleDot)}"></sl-icon>
+            ${sprintf('%\' .1f', length - coords.x)}  ${xUnits[vt3d.configuration.unitsSystem]}
+            <sl-icon library="fa" name="${FA2SL.set(faArrowRightToLine)}"></sl-icon>
+        </span>                       
+        <span>${sprintf('%\' .1f', coords.y)} ${yUnits[vt3d.configuration.unitsSystem]}</span>
+        <sl-icon library="fa" name="${FA2SL.set(faArrowDownToLine)}"></sl-icon>
+
+
+    </div>
+    `
+    }
 }
 
-export const HEIGHT_DISTANCE = 0
+export const ELEVATION_VS_DISTANCE = 0

@@ -3,7 +3,7 @@ import './style.css'
 import { forwardRef }   from 'react'
 import { useSnapshot }  from 'valtio'
 import { ProfileChart } from './ProfileChart'
-//read version
+import { Utils }        from './Utils'
 
 
 export const Profile = forwardRef(function Profile(props, ref) {
@@ -30,17 +30,22 @@ export const Profile = forwardRef(function Profile(props, ref) {
         }
     }
 
+    const data = Utils.prepareData()
 
     return (<>
         <div id="profile-container" key={mainSnap.components.profile.key}>
-            {<SlDrawer id="profile-pane" open={mainSnap.components.profile.show}
-                       onSlRequestClose={handleRequestClose}
-                       contained
-                       onSlHide={closeProfile}
-                       placement="bottom"
+            <SlDrawer id="profile-pane" open={mainSnap.components.profile.show}
+                      onSlRequestClose={handleRequestClose}
+                      contained
+                      onSlHide={closeProfile}
+                      placement="bottom"
             >
-                {<ProfileChart/>}
-            </SlDrawer>}
+                {data && <ProfileChart series={data.series}
+                                       options={data.options}
+                                       height={__.ui.css.getCSSVariable('--vt3d-profile-chart-height')}
+                />}
+            </SlDrawer>
         </div>
+
     </>)
 })
