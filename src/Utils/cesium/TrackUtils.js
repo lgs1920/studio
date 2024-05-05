@@ -567,6 +567,9 @@ export class TrackUtils {
         } else if (!vt3d.mainProxy.canViewJourneyData) {
             // False we can not view data
             vt3d.mainProxy.canViewProfile = false
+        } else if (!journey.visible) {
+            // False if journey is not visible
+            vt3d.mainProxy.canViewProfile = false
         } else {
             const test = Array.from(journey.tracks.values()).filter(track => !track.hasAltitude)
             console.log(test.length)
