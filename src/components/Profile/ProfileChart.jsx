@@ -38,7 +38,8 @@ export const ProfileChart = function ProfileChart(props) {
         }, dataLabels: {
             enabled: false,
         }, tooltip: {
-            custom: props.options.tooltip.custom, followCursor: true,
+            custom: props.options.tooltip.custom,
+            followCursor: true,
         }, grid: {
             show: true, xaxis: {
                 lines: {
