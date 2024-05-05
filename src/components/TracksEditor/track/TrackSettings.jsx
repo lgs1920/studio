@@ -72,6 +72,8 @@ export const TrackSettings = function TrackSettings() {
         editorStore.track.visible = visibility
         TrackUtils.updateTrackVisibility(editorStore.journey, editorStore.track, visibility)
         await Utils.updateTrack(JUST_SAVE)
+
+        ProfileUtils.updateTrackVisibility()
     }
 
     const textVisibilityTrack = sprintf('%s Track', editorSnapshot.track.visible ? 'Hide' : 'Show')

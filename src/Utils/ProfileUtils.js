@@ -46,26 +46,28 @@ export class ProfileUtils {
             series: [], options: options,
         }
 
+        let distance = 0
         vt3d.theJourney.tracks.forEach((track, slug) => {
-            let distance = 0
-            const dataSet = {
-                data: [],
-                color: track.color,
-                name: track.title,
-            }
-            track.metrics.points.forEach(point => {
-                distance += point.distance
-                let coords = {}
-                switch (type) {
-                    case ELEVATION_VS_DISTANCE : {
-                        coords.x = __.convert(distance).to(units.x[vt3d.configuration.unitsSystem])
-                        coords.y = __.convert(point.altitude).to(units.y[vt3d.configuration.unitsSystem])
-                        coords.point = point
-                    }
+            if (track.visible) {
+                const dataSet = {
+                    data: [],
+                    color: track.color,
+                    name: track.title,
                 }
-                dataSet.data.push(coords)
-            })
-            data.series.push(dataSet)
+                track.metrics.points.forEach(point => {
+                    distance += point.distance
+                    let coords = {}
+                    switch (type) {
+                        case ELEVATION_VS_DISTANCE : {
+                            coords.x = __.convert(distance).to(units.x[vt3d.configuration.unitsSystem])
+                            coords.y = __.convert(point.altitude).to(units.y[vt3d.configuration.unitsSystem])
+                            coords.point = point
+                        }
+                    }
+                    dataSet.data.push(coords)
+                })
+                data.series.push(dataSet)
+            }
         })
 
         return data
@@ -137,7 +139,17 @@ export class ProfileUtils {
     }
 
     /**
-     * Force Profile to be redrawn c
+     * Update track visibility
+     *
+     * We draw all
+     */
+    static updateTrackVisibility = () => {
+        ProfileUtils.prepareData()
+        ProfileUtils.draw()
+    }
+
+    /**
+     * Force Profile to be redrawn
      */
     static draw = () => {
         vt3d.mainProxy.components.profile.key++
