@@ -572,7 +572,6 @@ export class TrackUtils {
             vt3d.mainProxy.canViewProfile = false
         } else {
             const test = Array.from(journey.tracks.values()).filter(track => !track.hasAltitude)
-            console.log(test.length)
             vt3d.mainProxy.canViewProfile = test.length === 0
         }
     }
