@@ -51,9 +51,17 @@ export const ProfileChart = function ProfileChart(props) {
                 },
             },
         }, legend: {
-            markers: {radius: 3}, itemMargin: {
+            markers: {
+                radius: 3,
+                //onClick: ProfileUtils.updateTrackVisibility,
+            },
+            itemMargin: {
                 horizontal: 5, vertical: 0,
             },
+            onItemClick: {
+                toggleDataSeries: false,
+            },
+
         }, title: {
             text: vt3d?.theJourney?.title ?? '',
             align: 'left',
