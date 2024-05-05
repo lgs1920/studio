@@ -352,6 +352,9 @@ export class TrackUtils {
         vt3d.theTrack.addToContext()
         vt3d.theTrack.addToEditor()
 
+        TrackUtils.setProfileVisibility(vt3d.theJourney)
+
+
         // One step further, let's prepare the drawings
         for (const journey of journeys) {
             await journey.prepareDrawing()
@@ -547,5 +550,29 @@ export class TrackUtils {
         TrackUtils.updateFlagsVisibility(journey, track, 'stop', visibility)
 
     }
+
+    /**
+     * If one of the tracks has no altitude, neither does the journey.
+     *
+     * Other neftive ca are:
+     *  - can not view
+     *  - journey undefined (should not but occurs at app init)
+     *
+     * @return {boolean}
+     */
+    static setProfileVisibility(journey) {
+        if (journey === undefined || journey === null) {
+            // False if there is no journy
+            vt3d.mainProxy.canViewProfile = false
+        } else if (!vt3d.mainProxy.canViewJourneyData) {
+            // False we can not view data
+            vt3d.mainProxy.canViewProfile = false
+        } else {
+            const test = Array.from(journey.tracks.values()).filter(track => !track.hasAltitude)
+            console.log(test.length)
+            vt3d.mainProxy.canViewProfile = test.length === 0
+        }
+    }
+
 
 }

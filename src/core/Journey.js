@@ -561,7 +561,6 @@ export class Journey extends MapElement {
         }, 0)
 
         this.metrics = global
-
     }
 
     /**

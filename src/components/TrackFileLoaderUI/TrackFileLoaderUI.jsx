@@ -7,6 +7,7 @@ import { FA2SL }                       from '@Utils/FA2SL'
 import { UIToast }                     from '@Utils/UIToast'
 import { forwardRef }                  from 'react'
 import { useSnapshot }                 from 'valtio'
+import { ProfileUtils }                from '../../Utils/ProfileUtils'
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
 
@@ -37,10 +38,13 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                 const theTrack = vt3d.theJourney.tracks.entries().next().value[1]
                 theTrack.addToEditor()
 
+                TrackUtils.setProfileVisibility(vt3d.theJourney)
+                ProfileUtils.draw()
+
                 await theJourney.saveToDB()
                 await theJourney.saveOriginDataToDB()
 
-                // Force editor to close but remains usable
+
                 mainStore.canViewJourneyData = true
                 await theJourney.draw({})
 

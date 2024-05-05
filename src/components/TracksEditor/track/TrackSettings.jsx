@@ -13,6 +13,7 @@ import {
 import { TrackUtils }         from '@Utils/cesium/TrackUtils'
 import { FA2SL }              from '@Utils/FA2SL'
 import { useSnapshot }        from 'valtio'
+import { ProfileUtils }       from '../../../Utils/ProfileUtils'
 import { Utils }              from '../Utils'
 import { TrackData }          from './TrackData'
 import { TrackFlagsSettings } from './TrackFlagsSettings'
@@ -56,7 +57,9 @@ export const TrackSettings = function TrackSettings() {
         editorStore.track.title = __.app.singleTitle(title, titles)
 
         await Utils.updateTrack(JUST_SAVE)
-        Utils.renderTracksList()
+
+        ProfileUtils.updateTitle()
+
     })
 
     /**

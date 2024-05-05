@@ -3,9 +3,9 @@ import {
 }                                from '@fortawesome/pro-regular-svg-icons'
 import { foot, km, meter, mile } from '@Utils/UnitUtils'
 import { sprintf }               from 'sprintf-js'
-import { FA2SL }                 from '../../Utils/FA2SL'
+import { FA2SL }                 from './FA2SL'
 
-export class Utils {
+export class ProfileUtils {
 
     /**
      *
@@ -38,7 +38,7 @@ export class Utils {
                 tickAmount: 4,
             },
             tooltip: {
-                custom: Utils.tooltipElevationVsDistance,
+                custom: ProfileUtils.tooltipElevationVsDistance,
             },
         }
 
@@ -71,7 +71,18 @@ export class Utils {
         return data
     }
 
+    /**
+     * This overloads the default tooltip for the chart Elevation vs Distance
+     * THis is a function defined for ApexChart.
+     * See https://apexcharts.com/docs/options/tooltip/# (custom option)
+     *
+     * @param options
+     * @return {string}  HTML
+     */
     static tooltipElevationVsDistance = (options) => {
+
+        //TODO Use renderToString from react: touse  ???
+        //TODO here : https://react.dev/reference/react-dom/server/renderToString
         const data = options.w.config.series[options.seriesIndex].data
 
         const coords = data[options.dataPointIndex]
@@ -91,11 +102,48 @@ export class Utils {
         </span>                       
         <span>${sprintf('%\' .1f', coords.y)} ${yUnits[vt3d.configuration.unitsSystem]}</span>
         <sl-icon library="fa" name="${FA2SL.set(faArrowDownToLine)}"></sl-icon>
-
-
     </div>
     `
+    }
+
+    /**
+     * Update Color of tracks
+     */
+    static updateColor = () => {
+        const series = []
+        vt3d.theJourney.tracks.forEach((track, slug) => {
+            series.push({color: track.color})
+        })
+        PROFILE_CHARTS.forEach(id => {
+            const chart = ApexCharts.getChartByID(id)
+            chart.updateSeries(series)
+        })
+
+    }
+
+    /**
+     * Update Titles of Profile
+     */
+    static updateTitle = () => {
+        const series = []
+        vt3d.theJourney.tracks.forEach((track, slug) => {
+            series.push({name: track.title})
+        })
+        PROFILE_CHARTS.forEach(id => {
+            const chart = ApexCharts.getChartByID(id)
+            chart.updateSeries(series)
+        })
+
+    }
+
+    /**
+     * Force Profile to be redrawn c
+     */
+    static draw = () => {
+        vt3d.mainProxy.components.profile.key++
     }
 }
 
 export const ELEVATION_VS_DISTANCE = 0
+export const CHART_ELEVATION_VS_DISTANCE = 'elevation-distance'
+export const PROFILE_CHARTS = [CHART_ELEVATION_VS_DISTANCE]

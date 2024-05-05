@@ -2,6 +2,7 @@ import { Journey, NO_FOCUS, RE_LOADING }                from '@Core/Journey'
 import { Track }                                        from '@Core/Track'
 import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE } from '@Core/VT3D'
 import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
+import { ProfileUtils }                                 from '../../Utils/ProfileUtils'
 import { UPDATE_JOURNEY_SILENTLY }                      from './journey/JourneySettings'
 
 export class Utils {
@@ -48,6 +49,10 @@ export class Utils {
             Utils.renderTracksList()
             Utils.renderTrackSettings()
 
+            // Profile management
+            TrackUtils.setProfileVisibility(editorStore.journey)
+            // Update Profile to show the correct Journey
+            ProfileUtils.draw()
 
             // Save information
             TrackUtils.saveCurrentJourneyToDB(event.target.value).then(async () => {
@@ -75,12 +80,14 @@ export class Utils {
             // Force rerender
             Utils.renderTracksList()
             Utils.renderTrackSettings()
+
             // Save information
             TrackUtils.saveCurrentTrackToDB(event.target.value).then(async () => {
                 if (editorStore.journey.visible) {
                     editorStore.journey.focus()
                 }
                 await TrackUtils.saveCurrentPOIToDB(null)
+
             })
 
         }
@@ -122,6 +129,8 @@ export class Utils {
         vt3d.saveJourney(journey)
         // saveToDB toDB
         await journey.saveToDB()
+
+        TrackUtils.setProfileVisibility(journey)
 
         if (action !== UPDATE_JOURNEY_SILENTLY) {
             await journey.draw({action: action})
