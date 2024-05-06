@@ -5,6 +5,7 @@ import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 import { Canvg }                          from 'canvg'
 import * as Cesium                        from 'cesium'
 import { FLAG_START, FLAG_STOP, POI_STD } from '../../core/Journey'
+import { APP_KEY }                        from '../../core/VT3D'
 
 // Pin Marker Type
 export const PIN_ICON = 1
@@ -63,9 +64,8 @@ export class POIUtils {
         const backgroundColor = Cesium.Color.fromCssColorString(poi.backgroundColor)
         const foregroundColor = poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : undefined
 
-
         // Check data source
-        let dataSource = vt3d.viewer.dataSources.getByName(poi.journey, true)[0]
+        let dataSource = vt3d.viewer.dataSources.getByName(poi.journey ?? APP_KEY, true)[0]
         switch (poi.type) {
             case PIN_CIRCLE:
                 // TODO manque des options id, name ....

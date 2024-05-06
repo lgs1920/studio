@@ -1,9 +1,10 @@
+import { ProfileMapMarker }                from '@Components/Profile/ProfileMapMarker'
 import {
     faArrowDownToLine, faArrowLeftToLine, faArrowRightToLine, faCircleDot,
-}                                from '@fortawesome/pro-regular-svg-icons'
-import { foot, km, meter, mile } from '@Utils/UnitUtils'
-import { sprintf }               from 'sprintf-js'
-import { FA2SL }                 from './FA2SL'
+}                                          from '@fortawesome/pro-regular-svg-icons'
+import { sprintf }                         from 'sprintf-js'
+import { FA2SL }                           from './FA2SL'
+import { DISTANCE_UNITS, ELEVATION_UNITS } from './UnitUtils'
 
 export class ProfileUtils {
 
@@ -20,7 +21,7 @@ export class ProfileUtils {
         let units, titles
         switch (type) {
             case ELEVATION_VS_DISTANCE :
-                units = {x: [km, mile], y: [meter, foot]}
+                units = {x: DISTANCE_UNITS, y: ELEVATION_UNITS}
                 titles = {x: 'Distance', y: 'Elevation'}
         }
 
@@ -83,29 +84,37 @@ export class ProfileUtils {
      */
     static tooltipElevationVsDistance = (options) => {
 
+        // Display in
         //TODO Use renderToString from react: touse  ???
         //TODO here : https://react.dev/reference/react-dom/server/renderToString
         const data = options.w.config.series[options.seriesIndex].data
-
         const coords = data[options.dataPointIndex]
         const length = data[data.length - 1].x
 
-        const yUnits = [meter, foot]
-        const xUnits = [km, mile]
+        // Show on map
+        ProfileUtils.showOnMap(options)
+
+        // Show on Profile
         return `
 <div id="elevation-distance-tooltip">
          <span>[ ${coords.point.latitude} , ${coords.point.longitude} ]</span>
          <span class="point-distance">
            <sl-icon library="fa" name="${FA2SL.set(faArrowLeftToLine)}"></sl-icon>
-            ${sprintf('%\' .1f', coords.x)}  ${xUnits[vt3d.configuration.unitsSystem]}
+            ${sprintf('%\' .1f', coords.x)}  ${DISTANCE_UNITS[vt3d.configuration.unitsSystem]}
             <sl-icon library="fa" name="${FA2SL.set(faCircleDot)}"></sl-icon>
-            ${sprintf('%\' .1f', length - coords.x)}  ${xUnits[vt3d.configuration.unitsSystem]}
+            ${sprintf('%\' .1f', length - coords.x)}  ${DISTANCE_UNITS[vt3d.configuration.unitsSystem]}
             <sl-icon library="fa" name="${FA2SL.set(faArrowRightToLine)}"></sl-icon>
         </span>                       
-        <span>${sprintf('%\' .1f', coords.y)} ${yUnits[vt3d.configuration.unitsSystem]}</span>
+        <span>${sprintf('%\' .1f', coords.y)} ${ELEVATION_UNITS[vt3d.configuration.unitsSystem]}</span>
         <sl-icon library="fa" name="${FA2SL.set(faArrowDownToLine)}"></sl-icon>
     </div>
     `
+    }
+
+    static showOnMap = (options) => {
+        const data = options.w.config.series[options.seriesIndex].data
+        const coords = data[options.dataPointIndex]
+        const length = data[data.length - 1].x
     }
 
     /**
@@ -153,6 +162,17 @@ export class ProfileUtils {
      */
     static draw = () => {
         vt3d.mainProxy.components.profile.key++
+        ProfileUtils.drawMarker()
+    }
+
+    static drawMarker = () => {
+
+        if (vt3d.profileMapMarker === undefined) {
+            vt3d.profileMapMarker = new ProfileMapMarker({},
+            )
+        }
+
+        vt3d.profileMapMarker.draw()
     }
 }
 

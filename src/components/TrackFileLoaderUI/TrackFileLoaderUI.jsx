@@ -39,7 +39,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                 theTrack.addToEditor()
 
                 TrackUtils.setProfileVisibility(vt3d.theJourney)
-                ProfileUtils.draw()
+
 
                 await theJourney.saveToDB()
                 await theJourney.saveOriginDataToDB()
@@ -47,6 +47,8 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
 
                 mainStore.canViewJourneyData = true
                 await theJourney.draw({})
+                await TrackUtils.createCommonMapObjectsStore()
+                ProfileUtils.draw()
 
             } else {
                 // It exists, we notify it

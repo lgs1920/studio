@@ -20,6 +20,8 @@ export class VT3D {
     floatingMenu = {}
     journeys = new Map()
 
+    profileMapMarker = undefined
+
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
         // Track Editor store is used to manage the settings of the theJourney in edit
@@ -48,7 +50,7 @@ export class VT3D {
             },
             convert: UnitUtils.convert,
         }
-        
+
         //Init DBs
         this.db = {
             journeys: new LocalDB({
