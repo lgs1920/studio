@@ -71,3 +71,8 @@
 .vt3d-ui-toolbar.vertical {
     flex-direction: column;
 }
+
+#profile-ui {
+    display: flex;
+    flex-grow: 1;
+}

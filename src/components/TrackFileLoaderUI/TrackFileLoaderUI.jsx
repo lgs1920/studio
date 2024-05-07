@@ -62,7 +62,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
 
     return (
         <>
-            <SlTooltip placement={'right'} content="Load a track file">
+            <SlTooltip placement={props.tooltip} content="Load a track file">
                 <SlButton size={'small'} onClick={uploadFile} className={'square-icon'}>
                     <SlIcon library="fa" name={FA2SL.set(faMapLocation)}/>
                 </SlButton>
