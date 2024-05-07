@@ -84,14 +84,15 @@ export const ProfileChart = function ProfileChart(props) {
     })
 
     return (<>
-        {props.series &&
-
-            <Chart options={options}
-                   series={props.series}
-                   height={props.height}
-                   width={'100%'}
-                   type={'area'}
-            />}
-    </>)
+            {props.series &&
+                <Chart options={options}
+                       series={props.series}
+                       height={props.height}
+                       width={'100%'}
+                       type={'area'}
+                />
+            }
+        </>
+    )
 
 }

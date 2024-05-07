@@ -48,6 +48,8 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
                                                    value={editorSnapshot.journey.slug}
                                                    onSlChange={props.onChange}
                                                    key={mainSnapshot.keys.journey.list}
+                                                   size={props.size ?? 'medium'}
+                                                   className="journey-selector"
         >
             <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
@@ -57,7 +59,7 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
                 {journey.title}
             </SlOption>)}
         </SlSelect>}
-        {mainSnapshot.list.length === 1 && <>
+        {mainSnapshot.list.length === 1 && props.single && <>
             <span className={'journey-title'}>
             <SlIcon className={'journey-title-icon'} library="fa" name={FA2SL.set(faRoute)} slot={'expand-icon'}/>
                 {vt3d.theJourney.title}

@@ -32,6 +32,21 @@
     align-content: center;
 }
 
+#profile-pane {
+    --body-spacing: var(--vt3d-gutter-s);
+}
+
+#profile-pane::part(header) {
+    padding-top: var(--vt3d-gutter-s);
+    justify-content: flex-end;
+}
+
+#profile-pane .journey-selector {
+    position: absolute;
+    top: var(--vt3d-gutter-xs);
+    width: 15rem;
+}
+
 #elevation-distance-tooltip {
     font-size: var(--vt3d-font-size-s);
     font-family: var(--vt3d-font-family);
@@ -64,3 +79,4 @@
 #elevation-distance-tooltip .point-distance sl-icon {
     width: 15px;
 }
+

@@ -1,11 +1,13 @@
-import { SlDrawer }     from '@shoelace-style/shoelace/dist/react'
+import { SlDrawer }        from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { ProfileUtils } from '@Utils/ProfileUtils'
-import { forwardRef }   from 'react'
-import { useSnapshot }  from 'valtio'
-import { TrackUtils }   from '../../Utils/cesium/TrackUtils'
-import { Toolbar }      from '../VT3D_UI/Toolbar'
-import { ProfileChart } from './ProfileChart'
+import { ProfileUtils }    from '@Utils/ProfileUtils'
+import { forwardRef }      from 'react'
+import { useSnapshot }     from 'valtio'
+import { TrackUtils }      from '../../Utils/cesium/TrackUtils'
+import { JourneySelector } from '../TracksEditor/journey/JourneySelector'
+import { Utils }           from '../TracksEditor/Utils'
+import { Toolbar }         from '../VT3D_UI/Toolbar'
+import { ProfileChart }    from './ProfileChart'
 
 
 export const Profile = forwardRef(function Profile(props, ref) {
@@ -49,6 +51,9 @@ export const Profile = forwardRef(function Profile(props, ref) {
                               onSlHide={closeProfile}
                               placement="bottom"
                     >
+                        <JourneySelector size={'small'}
+                                         onChange={Utils.initJourneyEdition}/>
+
                         <div slot="header-actions">
                             <Toolbar editor={true}
                                      profile={false}

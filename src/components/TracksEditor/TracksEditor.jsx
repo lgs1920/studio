@@ -69,7 +69,8 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                     </div>
                     {vt3d.journeys.size > 0 && <div id={'track-settings-container'}>
                         <JourneySelector onChange={Utils.initJourneyEdition}
-                                         label={'Select a Journey:'}/>
+                                         label={'Select a Journey:'}
+                                         single={true}/>
                         <JourneySettings/>
 
                         {editorSnapshot.journey.visible && <>
