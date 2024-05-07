@@ -168,8 +168,7 @@ export class ProfileUtils {
      */
     static draw = () => {
         vt3d.mainProxy.components.profile.key++
-        ProfileUtils.draw()
-
+        vt3d.profileMapMarker.draw()
     }
 
     static initMarker = () => {
