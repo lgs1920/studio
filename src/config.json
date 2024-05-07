@@ -16,6 +16,7 @@
   "profile": {
     "show": true,
     "marker": {
+      "show": true,
       "size": 16,
       "color": "#f2c55c"
     }

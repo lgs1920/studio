@@ -543,27 +543,20 @@ export class TrackUtils {
     }
 
     /**
-     * If one of the tracks has no altitude, neither does the journey.
-     *
-     * Other neftive ca are:
-     *  - can not view
-     *  - journey undefined (should not but occurs at app init)
+     * Set the profil visibility, according to some criterias
      *
      * @return {boolean}
      */
     static setProfileVisibility(journey) {
-        if (journey === undefined || journey === null) {
-            // False if there is no journy
-            vt3d.mainProxy.canViewProfile = false
-        } else if (!vt3d.mainProxy.canViewJourneyData) {
-            // False we can not view data
-            vt3d.mainProxy.canViewProfile = false
-        } else if (!journey.visible) {
-            // False if journey is not visible
-            vt3d.mainProxy.canViewProfile = false
-        } else {
-            const test = Array.from(journey.tracks.values()).filter(track => !track.hasAltitude)
-            vt3d.mainProxy.canViewProfile = test.length === 0
-        }
+        vt3d.mainProxy.canViewProfile =
+            vt3d.configuration.profile.show &&       // By configuration
+            vt3d.configuration.profile.marker.show &&       // By configuration
+            journey !== undefined &&                        // During init
+            journey !== null &&                             // same
+            journey.visible &&                              // Journey visible
+            vt3d.mainProxy.canViewJourneyData &&            // can view data
+            Array.from(journey.tracks.values())             // Has Altitude for each track
+                .every(track => track.hasAltitude)
+
     }
 }
