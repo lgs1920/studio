@@ -44,6 +44,7 @@ export class POI {
         this.vertical = options.vertical ?? POI_VERTICAL_ALIGN_CENTER
         this.track = options.track ?? undefined
         this.journey = options.journey ?? undefined
+        this.drawn = false
     }
 
     static clone = (source, exceptions = {}) => {
@@ -73,9 +74,14 @@ export class POI {
 
     draw = async (parentVisibility = true) => {
         await POIUtils.draw(this, parentVisibility)
+        this.drawn = true
     }
     remove = async () => {
         await POIUtils.remove(this)
+    }
+
+    moveTo = async (coordinates) => {
+        await POIUtils.update(this, {coordinates: coordinates, visibility: true})
     }
 
 }

@@ -34,6 +34,8 @@ export const Profile = forwardRef(function Profile(props, ref) {
     const data = ProfileUtils.prepareData()
     TrackUtils.setProfileVisibility(vt3d.theJourney)
 
+    ProfileUtils.initMarker()
+    
     return (
         <>
             {mainSnap.canViewProfile &&

@@ -7,7 +7,6 @@ import {
 import { Track }                                                               from '../../core/Track'
 import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/VT3D'
 import { FileUtils }                                                           from '../FileUtils.js'
-import { EntitiesUtils }                                                       from './EntitiesUtils'
 import { POIUtils }                                                            from './POIUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
@@ -253,22 +252,6 @@ export class TrackUtils {
     }
 
     /**
-     * Retrieve the entities
-     *
-     * @param name  {string|null}   name of the datasource
-     */
-    static getEntitiesByDataSourceName = (name) => {
-        // if we do not have datasource name, we'll find in all datasource
-        let dataSource
-        for (let i = 0; i < vt3d.viewer.dataSources.length; i++) {
-            const item = vt3d.viewer.dataSources.get(i)
-            if (item.name === name) {
-                return item.entities
-            }
-        }
-    }
-
-    /**
      * Search the datasource that contains an entity with a specific id.
      *
      * @param entityId the id of the required entities.
@@ -302,9 +285,6 @@ export class TrackUtils {
         // })
     }
 
-    static getTrackChildById = (track, id) => {
-        return EntitiesUtils.getEntityById(`${track.slug}#${id}`)
-    }
 
     static getDescription(feature) {
         return feature?.properties?.desc ?? undefined

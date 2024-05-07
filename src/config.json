@@ -38,6 +38,7 @@
     "thickness": 2,
     "pois": {
       "color": "#f2c55c",
+      "border": "#ffffff99",
       "size": 16,
       "wanderer": {
         "color": "#1689CCff",

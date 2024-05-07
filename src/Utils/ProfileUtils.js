@@ -115,6 +115,13 @@ export class ProfileUtils {
         const data = options.w.config.series[options.seriesIndex].data
         const coords = data[options.dataPointIndex]
         const length = data[data.length - 1].x
+
+        if (!vt3d.profileMapMarker.drawn) {
+            vt3d.profileMapMarker.draw()
+        } else {
+            vt3d.profileMapMarker.moveTo([coords.point.longitude, coords.point.latitude])
+        }
+
     }
 
     /**
@@ -154,7 +161,6 @@ export class ProfileUtils {
      */
     static updateTrackVisibility = () => {
         ProfileUtils.prepareData()
-        ProfileUtils.draw()
     }
 
     /**
@@ -162,16 +168,18 @@ export class ProfileUtils {
      */
     static draw = () => {
         vt3d.mainProxy.components.profile.key++
-        ProfileUtils.drawMarker()
+        ProfileUtils.draw()
+
+    }
+
+    static initMarker = () => {
+        if (vt3d.profileMapMarker === undefined) {
+            vt3d.profileMapMarker = new ProfileMapMarker()
+        }
     }
 
     static drawMarker = () => {
-
-        if (vt3d.profileMapMarker === undefined) {
-            vt3d.profileMapMarker = new ProfileMapMarker({},
-            )
-        }
-
+        ProfileUtils.initMarker()
         vt3d.profileMapMarker.draw()
     }
 }
