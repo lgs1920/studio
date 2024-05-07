@@ -1,14 +1,12 @@
-import { faPencil }                              from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlDrawer, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                 from '@Utils/FA2SL'
+import { SlDrawer }        from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { forwardRef }                            from 'react'
-import { useSnapshot }                           from 'valtio'
-import { JourneySelector }                       from './journey/JourneySelector'
-import { JourneySettings }                       from './journey/JourneySettings'
-import { TrackSelector }                         from './track/TrackSelector'
-import { TrackSettings }                         from './track/TrackSettings'
-import { Utils }                                 from './Utils'
+import { forwardRef }      from 'react'
+import { useSnapshot }     from 'valtio'
+import { JourneySelector } from './journey/JourneySelector'
+import { JourneySettings } from './journey/JourneySettings'
+import { TrackSelector }   from './track/TrackSelector'
+import { TrackSettings }   from './track/TrackSettings'
+import { Utils }           from './Utils'
 
 //read version
 
@@ -73,13 +71,5 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                     <div id="journeys-editor-footer" slot={'footer'}></div>
                 </SlDrawer>}
         </div>
-
-        <SlTooltip placement={'right'} content="Edit Tracks">
-            {mainSnap.canViewJourneyData &&
-                <SlButton size={'small'} className={'square-icon'} id={'open-theJourney-editor'}
-                          onClick={toggleTracksEditor}>
-                    <SlIcon library="fa" name={FA2SL.set(faPencil)}></SlIcon>
-                </SlButton>}
-        </SlTooltip>
     </>)
 })

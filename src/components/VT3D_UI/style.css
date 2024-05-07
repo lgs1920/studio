@@ -63,7 +63,11 @@
     align-self: flex-end;
 }
 
-#profile-ui {
+.vt3d-ui-toolbar {
     display: flex;
-    flex-grow: 1;
+    gap: var(--vt3d-gutter-s);
+}
+
+.vt3d-ui-toolbar.vertical {
+    flex-direction: column;
 }
