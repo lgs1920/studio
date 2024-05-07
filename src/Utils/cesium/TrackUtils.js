@@ -549,8 +549,7 @@ export class TrackUtils {
      */
     static setProfileVisibility(journey) {
         vt3d.mainProxy.canViewProfile =
-            vt3d.configuration.profile.show &&       // By configuration
-            vt3d.configuration.profile.marker.show &&       // By configuration
+            vt3d.configuration.profile.show &&              // By configuration
             journey !== undefined &&                        // During init
             journey !== null &&                             // same
             journey.visible &&                              // Journey visible

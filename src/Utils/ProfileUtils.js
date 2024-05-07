@@ -92,7 +92,9 @@ export class ProfileUtils {
         const length = data[data.length - 1].x
 
         // Show on map
-        ProfileUtils.showOnMap(options)
+        if (vt3d.configuration.profile.marker.show) {
+            ProfileUtils.showOnMap(options)
+        }
 
         // Show on Profile
         return `
@@ -168,7 +170,9 @@ export class ProfileUtils {
      */
     static draw = () => {
         vt3d.mainProxy.components.profile.key++
-        vt3d.profileMapMarker.draw()
+        if (vt3d.configuration.profile.marker.show) {
+            vt3d.profileMapMarker.draw()
+        }
     }
 
     static initMarker = () => {
@@ -179,7 +183,9 @@ export class ProfileUtils {
 
     static drawMarker = () => {
         ProfileUtils.initMarker()
-        vt3d.profileMapMarker.draw()
+        if (vt3d.configuration.profile.marker.show) {
+            vt3d.profileMapMarker.draw()
+        }
     }
 }
 
