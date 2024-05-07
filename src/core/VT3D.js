@@ -20,7 +20,7 @@ export class VT3D {
     floatingMenu = {}
     journeys = new Map()
 
-    profileMapMarker = undefined
+    profileTrackMarker = undefined
 
     constructor() {
         // Declare Stores and snapshots for states management by @valtio

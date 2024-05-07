@@ -28,6 +28,8 @@ export const Profile = forwardRef(function Profile(props, ref) {
     const closeProfile = (event) => {
         if (isOK(event)) {
             mainStore.components.profile.show = false
+            //TODO manage 'profile/close' event and externalise
+            vt3d.profileTrackMarker.toggleVisibility()
         }
     }
 
@@ -35,7 +37,7 @@ export const Profile = forwardRef(function Profile(props, ref) {
     TrackUtils.setProfileVisibility(vt3d.theJourney)
 
     ProfileUtils.initMarker()
-    
+
     return (
         <>
             {mainSnap.canViewProfile &&

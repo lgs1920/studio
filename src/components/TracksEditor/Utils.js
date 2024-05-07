@@ -49,8 +49,12 @@ export class Utils {
             Utils.renderTracksList()
             Utils.renderTrackSettings()
 
+            //TODO manage 'journey/change' event and externalise profile management
+
             // Profile management
             TrackUtils.setProfileVisibility(editorStore.journey)
+            vt3d.profileTrackMarker.toggleVisibility()
+
             // Update Profile to show the correct Journey
             ProfileUtils.draw()
 

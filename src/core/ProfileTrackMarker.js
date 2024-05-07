@@ -1,11 +1,11 @@
 import { POI } from '@Core/POI'
 
 import { faCircleDot }               from '@fortawesome/pro-regular-svg-icons'
-import { POI_VERTICAL_ALIGN_CENTER } from '../../core/POI'
-import { APP_KEY }                   from '../../core/VT3D'
-import { JUST_ICON }                 from '../../Utils/cesium/POIUtils'
+import { JUST_ICON }                 from '../Utils/cesium/POIUtils'
+import { POI_VERTICAL_ALIGN_CENTER } from './POI'
+import { APP_KEY }                   from './VT3D'
 
-export class ProfileMapMarker extends POI {
+export class ProfileTrackMarker extends POI {
     prof
 
     constructor(options) {
@@ -14,7 +14,7 @@ export class ProfileMapMarker extends POI {
             type: JUST_ICON,
             icon: faCircleDot,
             size: vt3d.configuration.profile.marker.size,
-            name: 'profileMapMarker',
+            name: 'profileTrackMarker',
             slug: 'profile-map-marker',
             journey: APP_KEY,
             coordinates: [vt3d.configuration.center.longitude, vt3d.configuration.center.latitude],

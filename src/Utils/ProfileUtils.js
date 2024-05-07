@@ -1,8 +1,8 @@
-import { ProfileMapMarker }                from '@Components/Profile/ProfileMapMarker'
 import {
     faArrowDownToLine, faArrowLeftToLine, faArrowRightToLine, faCircleDot,
 }                                          from '@fortawesome/pro-regular-svg-icons'
 import { sprintf }                         from 'sprintf-js'
+import { ProfileTrackMarker }              from '../core/ProfileTrackMarker'
 import { FA2SL }                           from './FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS } from './UnitUtils'
 
@@ -118,10 +118,10 @@ export class ProfileUtils {
         const coords = data[options.dataPointIndex]
         const length = data[data.length - 1].x
 
-        if (!vt3d.profileMapMarker.drawn) {
-            vt3d.profileMapMarker.draw()
+        if (!vt3d.profileTrackMarker.drawn) {
+            vt3d.profileTrackMarker.draw()
         } else {
-            vt3d.profileMapMarker.moveTo([coords.point.longitude, coords.point.latitude])
+            vt3d.profileTrackMarker.moveTo([coords.point.longitude, coords.point.latitude])
         }
 
     }
@@ -171,20 +171,20 @@ export class ProfileUtils {
     static draw = () => {
         vt3d.mainProxy.components.profile.key++
         if (vt3d.configuration.profile.marker.show) {
-            vt3d.profileMapMarker.draw()
+            vt3d.profileTrackMarker.draw()
         }
     }
 
     static initMarker = () => {
-        if (vt3d.profileMapMarker === undefined) {
-            vt3d.profileMapMarker = new ProfileMapMarker()
+        if (vt3d.profileTrackMarker === undefined) {
+            vt3d.profileTrackMarker = new ProfileTrackMarker()
         }
     }
 
     static drawMarker = () => {
         if (vt3d.configuration.profile.marker.show) {
             ProfileUtils.initMarker()
-            vt3d.profileMapMarker.draw()
+            vt3d.profileTrackMarker.draw()
         }
     }
 }

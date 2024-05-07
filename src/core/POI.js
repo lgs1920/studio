@@ -84,6 +84,10 @@ export class POI {
         await POIUtils.update(this, {coordinates: coordinates, visibility: true})
     }
 
+    toggleVisibility = async () => {
+        await POIUtils.update(this, {visibility: !this.visible})
+    }
+
 }
 
 export const POI_VERTICAL_ALIGN_TOP = 'top'
