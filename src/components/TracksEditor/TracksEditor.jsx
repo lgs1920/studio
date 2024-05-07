@@ -2,6 +2,7 @@ import { SlDrawer }        from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { forwardRef }      from 'react'
 import { useSnapshot }     from 'valtio'
+import { Toolbar }         from '../VT3D_UI/Toolbar'
 import { JourneySelector } from './journey/JourneySelector'
 import { JourneySettings } from './journey/JourneySettings'
 import { TrackSelector }   from './track/TrackSelector'
@@ -57,6 +58,15 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                           contained
                           onSlHide={closeTracksEditor}
                 >
+                    <div slot="header-actions">
+                        <Toolbar editor={false}
+                                 profile={true}
+                                 fileLoader={true}
+                                 position={'horizontal'}
+                                 tooltip={'top'}
+                                 mode={'embed'}
+                        />
+                    </div>
                     {vt3d.journeys.size > 0 && <div id={'track-settings-container'}>
                         <JourneySelector onChange={Utils.initJourneyEdition}
                                          label={'Select a Journey:'}/>

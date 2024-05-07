@@ -4,6 +4,7 @@ import { ProfileUtils } from '@Utils/ProfileUtils'
 import { forwardRef }   from 'react'
 import { useSnapshot }  from 'valtio'
 import { TrackUtils }   from '../../Utils/cesium/TrackUtils'
+import { Toolbar }      from '../VT3D_UI/Toolbar'
 import { ProfileChart } from './ProfileChart'
 
 
@@ -48,6 +49,15 @@ export const Profile = forwardRef(function Profile(props, ref) {
                               onSlHide={closeProfile}
                               placement="bottom"
                     >
+                        <div slot="header-actions">
+                            <Toolbar editor={true}
+                                     profile={false}
+                                     fileLoader={true}
+                                     position={'horizontal'}
+                                     tooltip={'top'}
+                                     mode={'embed'}
+                            />
+                        </div>
                         {data && <ProfileChart series={data.series}
                                                options={data.options}
                                                height={__.ui.css.getCSSVariable('--vt3d-profile-chart-height')}

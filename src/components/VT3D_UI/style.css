@@ -72,6 +72,10 @@
     flex-direction: column;
 }
 
+.vt3d-ui-toolbar.embed sl-button {
+    --sl-input-border-width: 0
+}
+
 #profile-ui {
     display: flex;
     flex-grow: 1;
