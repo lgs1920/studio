@@ -1,0 +1,66 @@
+:root {
+    --vt3d-profile-pane-width: 100%;
+    --vt3d-profile-pane-height: 250px;
+    --vt3d-profile-chart-height: 200px;
+}
+
+#profile-pane {
+    --header-spacing: 0;
+    --footer-spacing: 0;
+    --body-spacing: 0;
+    --size: var(--vt3d-profile-pane-height);
+}
+
+#profile-pane::part(panel) {
+    border-radius: var(--sl-border-radius-medium)
+}
+
+#profile-container {
+    position: relative;
+    width: var(--vt3d-profile-pane-width);
+    height: 100%;
+}
+
+#profile-container .apexcharts-canvas {
+    overflow: hidden;
+}
+
+.profile-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-content: center;
+}
+
+#elevation-distance-tooltip {
+    font-size: var(--vt3d-font-size-s);
+    font-family: var(--vt3d-font-family);
+    line-height: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--vt3d-gutter-xs);
+    gap: var(--vt3d-gutter-xs);
+
+    min-width: 100px;
+}
+
+#elevation-distance-tooltip > span:first-child {
+    display: inline-flex;
+    text-align: center;
+}
+
+#elevation-distance-tooltip > span {
+    display: flex;
+    justify-content: space-between;
+    padding: 0;
+    align-items: center;
+}
+
+#elevation-distance-tooltip .point-distance {
+    gap: var(--vt3d-gutter-s);
+}
+
+#elevation-distance-tooltip .point-distance sl-icon {
+    width: 15px;
+}

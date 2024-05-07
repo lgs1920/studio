@@ -31,6 +31,11 @@ export const main = {
             altitude: 0,
 
         },
+        profile: {
+            visible: false,
+            show: false,
+            key: 0,
+        },
 
     },
     modals: {
@@ -41,4 +46,6 @@ export const main = {
     },
     theJourney: null,
     fullSize: false,
+    canViewJourneyData: false,
+    canViewProfile: false,
 }

@@ -5,6 +5,7 @@ import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 import { Canvg }                          from 'canvg'
 import * as Cesium                        from 'cesium'
 import { FLAG_START, FLAG_STOP, POI_STD } from '../../core/Journey'
+import { APP_KEY }                        from '../../core/VT3D'
 
 // Pin Marker Type
 export const PIN_ICON = 1
@@ -17,9 +18,7 @@ export const JUST_ICON = 5
 export class POIUtils {
     static verticalOrigin = (origin => {
         const location = {
-            top: Cesium.VerticalOrigin.TOP,
-            bottom: Cesium.VerticalOrigin.BOTTOM,
-            center: Cesium.VerticalOrigin.CENTER,
+            top: Cesium.VerticalOrigin.TOP, bottom: Cesium.VerticalOrigin.BOTTOM, center: Cesium.VerticalOrigin.CENTER,
         }
         return location[origin]
     })
@@ -43,6 +42,13 @@ export class POIUtils {
      */
     static draw = async (poi, parentVisibility = true) => {
 
+        // Bail early if POI already exists
+        if (poi.drawn) {
+            return
+        }
+
+        poi.drawn = true
+
         let poiOptions = {
             name: poi.name,
             parent: poi.parent,
@@ -50,7 +56,9 @@ export class POIUtils {
             description: poi.description,
             position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1], poi.coordinates[2]),
             show: POIUtils.setPOIVisibility(poi, parentVisibility),
-            disableDepthTestDistance: new Cesium.ConstantProperty(0),
+            //disableDepthTestDistance: new Cesium.ConstantProperty(0),
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+
         }
         const pinBuilder = new Cesium.PinBuilder()
 
@@ -63,22 +71,17 @@ export class POIUtils {
         const backgroundColor = Cesium.Color.fromCssColorString(poi.backgroundColor)
         const foregroundColor = poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : undefined
 
-
         // Check data source
-        let dataSource = vt3d.viewer.dataSources.getByName(poi.journey, true)[0]
+        const dataSource = vt3d.viewer.dataSources.getByName(poi.journey ?? APP_KEY, true)[0]
         switch (poi.type) {
             case PIN_CIRCLE:
-                // TODO manque des options id, name ....
                 return await dataSource.entities.add({
-                    point: {
-                        position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1]),
-                        //backgroundPadding: Cesium.Cartesian2(8, 4),
-                        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                        color: poi.backgroundColor,
+                    ...poiOptions, point: {
                         pixelSize: poi.size,
-                        outlineColor: poi.foregroundColor,
-                        outlineWidth: poi.border,
+                        color: foregroundColor,
+                        outlineColor: backgroundColor,
+                        outlineWidth: 3,
+                        disableDepthTestDistance: new Cesium.ConstantProperty(0),
                     },
                 })
             case PIN_COLOR:
@@ -97,6 +100,18 @@ export class POIUtils {
                     poiOptions.billboard.image = canvas
                     return await dataSource.entities.add(poiOptions)
                 })
+        }
+
+    }
+
+    static update = (poi, options) => {
+        const dataSource = vt3d.viewer.dataSources.getByName(poi.journey ?? APP_KEY, true)[0]
+        const entity = dataSource.entities.getById(poi.slug)
+        // Update positions
+        entity.position = options.coordinates ? Cesium.Cartesian3.fromDegrees(options.coordinates[0], options.coordinates[1], options.coordinates[2]) : entity.position
+        // Update visibility
+        if (options.visibility !== undefined) {
+            entity.show = options.visibility
         }
 
     }

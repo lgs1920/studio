@@ -102,9 +102,12 @@ sl-button.square-icon::part(label) {
 /*******************************************************************************
  * Drawers
  */
+:root {
+    --vt3d-drawer-size: 28rem
+}
 
 sl-drawer {
-    /*--size: TODO define a default size if needed */
+    --size: var(--vt3d-drawer-size);
     --header-spacing: var(--vt3d-gutter-s) var(--vt3d-gutter);
     --body-spacing: var(--vt3d-gutter);
     --footer-spacing: var(--vt3d-gutter-s) var(--vt3d-gutter);
@@ -142,4 +145,16 @@ sl-card[variant="primary"]::part(base) {
     display: flex;
     flex-direction: column;
     gap: var(--vt3d-gutter-s);
+}
+
+/*******************************************************************************
+ * Compass
+ */
+:root {
+    --vt3d-compass-size: 95px;
+}
+
+cesium-compass {
+    --cesium-compass-fill-color: var(--vt3d-dark-ui-bg-color);
+    --cesium-compass-stroke-color: var(--vt3d-dark-ui-fg-color);
 }

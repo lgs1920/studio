@@ -15,9 +15,9 @@ import {
     FA2SL,
 }                      from '@Utils/FA2SL'
 
-import { useSnapshot }                                  from 'valtio'
-import { foot, km, kmh, meter, mile, mkm, mph, mpmile } from '../../../Utils/UnitUtils'
-import { DateInfo }                                     from '../DateInfo'
+import { useSnapshot }                                              from 'valtio'
+import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS } from '../../../Utils/UnitUtils'
+import { DateInfo }                                                 from '../DateInfo'
 
 export const TrackData = function TrackData() {
     const editorStore = vt3d.theJourneyEditorProxy
@@ -53,7 +53,7 @@ export const TrackData = function TrackData() {
                 <div className={'element-item'}>
                     <sl-icon variant="primary" library="fa"
                              name={FA2SL.set(faRoute)}></sl-icon>
-                    <TextValueUI value={metrics.distance} units={[km, mile]}/>
+                    <TextValueUI value={metrics.distance} units={DISTANCE_UNITS}/>
                 </div>
             </div>
             <div className={'element-row'}>
@@ -62,12 +62,12 @@ export const TrackData = function TrackData() {
                         <div className={'element-item indented'}>
                             <sl-icon variant="primary" library="fa" name={FA2SL.set(faArrowUpRight)}></sl-icon>
                             <TextValueUI value={metrics.positive.distance}
-                                         units={[km, mile]}/>
+                                         units={DISTANCE_UNITS}/>
                         </div>
                         <div className={'element-item'}>
                             <sl-icon variant="primary" library="fa" name={FA2SL.set(faArrowDownRight)}></sl-icon>
                             <TextValueUI value={metrics.negative.distance}
-                                         units={[km, mile]}/>
+                                         units={DISTANCE_UNITS}/>
                         </div>
                     </>
                 }
@@ -105,7 +105,7 @@ export const TrackData = function TrackData() {
                         {metrics.positive.elevation > 0 &&
                             <div className={'element-item'}>
                                 <sl-icon variant="primary" library="fa" name={FA2SL.set(faArrowUpRight)}></sl-icon>
-                                <TextValueUI value={metrics.positive.elevation} units={[meter, foot]}
+                                <TextValueUI value={metrics.positive.elevation} units={ELEVATION_UNITS}
                                              format={'%\' .1f'}/>
                             </div>
                         }
@@ -113,7 +113,7 @@ export const TrackData = function TrackData() {
                             <div className={'element-item'}>
                                 <sl-icon variant="primary" library="fa"
                                          name={FA2SL.set(faArrowDownRight)}></sl-icon>
-                                <TextValueUI value={metrics.negative.elevation} units={[meter, foot]}
+                                <TextValueUI value={metrics.negative.elevation} units={ELEVATION_UNITS}
                                              format={'%\' .1f'}/>
                             </div>
                         }
@@ -129,11 +129,11 @@ export const TrackData = function TrackData() {
 
                         {!isNaN(metrics.minHeight) && <div className={'element-item'}>
                             <sl-icon variant="primary" library="fa" name={FA2SL.set(faDownToLine)}></sl-icon>
-                            <TextValueUI value={metrics.minHeight} units={[meter, foot]} format={'%\' .1f'}/>
+                            <TextValueUI value={metrics.minHeight} units={ELEVATION_UNITS} format={'%\' .1f'}/>
                         </div>}
                         {!isNaN(metrics.maxHeight) && <div className={'element-item'}>
                             <sl-icon variant="primary" library="fa" name={FA2SL.set(faUpToLine)}></sl-icon>
-                            <TextValueUI value={metrics.maxHeight} units={[meter, foot]} format={'%\' .1f'}/>
+                            <TextValueUI value={metrics.maxHeight} units={ELEVATION_UNITS} format={'%\' .1f'}/>
                         </div>}
 
                     </div>
@@ -149,21 +149,21 @@ export const TrackData = function TrackData() {
 
                         <div className={'element-item'}>
                             <sl-icon variant="primary" library="fa" name={FA2SL.set(faGaugeSimpleHigh)}></sl-icon>
-                            <TextValueUI value={metrics.averageSpeed} units={[kmh, mph]}/>
+                            <TextValueUI value={metrics.averageSpeed} units={SPEED_UNITS}/>
                         </div>
                         <div className={'element-item'}>
                             <sl-icon variant="primary" library="fa" name={FA2SL.set(faPersonHiking)}></sl-icon>
-                            <TextValueUI value={metrics.averageSpeedMoving} units={[kmh, mph]}/>
+                            <TextValueUI value={metrics.averageSpeedMoving} units={SPEED_UNITS}/>
                         </div>
                     </div>
                     <div className={'element-row'}>
                         <div className={'element-item indented'}>
                             <sl-icon variant="primary" library="fa" name={FA2SL.set(faDownToLine)}></sl-icon>
-                            <TextValueUI value={metrics.minSpeed} units={[kmh, mph]}/>
+                            <TextValueUI value={metrics.minSpeed} units={SPEED_UNITS}/>
                         </div>
                         <div className={'element-item'}>
                             <sl-icon variant="primary" library="fa" name={FA2SL.set(faUpToLine)}></sl-icon>
-                            <TextValueUI value={metrics.maxSpeed} units={[kmh, mph]}/>
+                            <TextValueUI value={metrics.maxSpeed} units={SPEED_UNITS}/>
                         </div>
                     </div>
                     {!isNaN(metrics?.minHeight) &&
@@ -171,14 +171,14 @@ export const TrackData = function TrackData() {
                             {metrics.positive.elevation > 0 &&
                                 <div className={'element-item indented'}>
                                     <sl-icon variant="primary" library="fa" name={FA2SL.set(faArrowUpRight)}></sl-icon>
-                                    <TextValueUI value={metrics.positive.speed} units={[kmh, mph]}/>
+                                    <TextValueUI value={metrics.positive.speed} units={SPEED_UNITS}/>
                                 </div>
                             }
                             {metrics.negative.elevation < 0 &&
                                 <div className={'element-item'}>
                                     <sl-icon variant="primary" library="fa"
                                              name={FA2SL.set(faArrowDownRight)}></sl-icon>
-                                    <TextValueUI value={metrics.negative.speed} units={[kmh, mph]}/>
+                                    <TextValueUI value={metrics.negative.speed} units={SPEED_UNITS}/>
                                 </div>
                             }
                         </div>
@@ -196,21 +196,21 @@ export const TrackData = function TrackData() {
 
                         <div className={'element-item'}>
                             <sl-icon variant="primary" library="fa" name={FA2SL.set(faGaugeSimpleHigh)}></sl-icon>
-                            <TextValueUI value={metrics.averagePace} units={[mkm, mpmile]}/>
+                            <TextValueUI value={metrics.averagePace} units={PACE_UNITS}/>
                         </div>
                         <div className={'element-item'}>
                             <sl-icon variant="primary" library="fa" name={FA2SL.set(faPersonHiking)}></sl-icon>
-                            <TextValueUI value={metrics.averageSpeedMoving} units={[mkm, mpmile]}/>
+                            <TextValueUI value={metrics.averageSpeedMoving} units={PACE_UNITS}/>
                         </div>
                     </div>
                     <div className={'element-row'}>
                         <div className={'element-item indented'}>
                             <sl-icon variant="primary" library="fa" name={FA2SL.set(faDownToLine)}></sl-icon>
-                            <TextValueUI value={metrics.minPace} units={[mkm, mpmile]}/>
+                            <TextValueUI value={metrics.minPace} units={PACE_UNITS}/>
                         </div>
                         <div className={'element-item'}>
                             <sl-icon variant="primary" library="fa" name={FA2SL.set(faUpToLine)}></sl-icon>
-                            <TextValueUI value={metrics.maxPace} units={[mkm, mpmile]}/>
+                            <TextValueUI value={metrics.maxPace} units={PACE_UNITS}/>
                         </div>
                     </div>
                     {!isNaN(metrics?.minHeight) &&
@@ -218,14 +218,14 @@ export const TrackData = function TrackData() {
                             {metrics.positive.elevation > 0 &&
                                 <div className={'element-item indented'}>
                                     <sl-icon variant="primary" library="fa" name={FA2SL.set(faArrowUpRight)}></sl-icon>
-                                    <TextValueUI value={metrics.positive.pace} units={[mkm, mpmile]}/>
+                                    <TextValueUI value={metrics.positive.pace} units={PACE_UNITS}/>
                                 </div>
                             }
                             {metrics.negative.elevation < 0 &&
                                 <div className={'element-item'}>
                                     <sl-icon variant="primary" library="fa"
                                              name={FA2SL.set(faArrowDownRight)}></sl-icon>
-                                    <TextValueUI value={metrics.negative.pace} units={[mkm, mpmile]}
+                                    <TextValueUI value={metrics.negative.pace} units={PACE_UNITS}
                                                  format={'%\' .1f'}/>
                                 </div>
                             }

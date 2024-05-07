@@ -1,14 +1,13 @@
-import { default as extent }                                          from '@mapbox/geojson-extent'
-import * as Cesium                                                    from 'cesium'
-import { Color, CustomDataSource, GeoJsonDataSource }                 from 'cesium'
+import { default as extent }                                                   from '@mapbox/geojson-extent'
+import * as Cesium                                                             from 'cesium'
+import { Color, CustomDataSource, GeoJsonDataSource }                          from 'cesium'
 import {
     FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
-}                                                                     from '../../core/Journey'
-import { Track }                                                      from '../../core/Track'
-import { CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/VT3D'
-import { FileUtils }                                                  from '../FileUtils.js'
-import { EntitiesUtils }                                              from './EntitiesUtils'
-import { POIUtils }                                                   from './POIUtils'
+}                                                                              from '../../core/Journey'
+import { Track }                                                               from '../../core/Track'
+import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/VT3D'
+import { FileUtils }                                                           from '../FileUtils.js'
+import { POIUtils }                                                            from './POIUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -43,6 +42,15 @@ export class TrackUtils {
             hasAltitude: hasAltitude, hasTime: feature.properties?.coordinateProperties?.times !== undefined,
         }
     })
+
+    /**
+     * We need to create a common data source for some elements that are note related to tracks nor journeys
+     */
+    static createCommonMapObjectsStore = async () => {
+        if (vt3d.viewer.dataSources.getByName(APP_KEY, true).length === 0) {
+            await vt3d.viewer.dataSources.add(new CustomDataSource(APP_KEY))
+        }
+    }
 
     /**
      * Prepare all the Datasources for the tacks and POIs drawings for aJourney
@@ -109,7 +117,6 @@ export class TrackUtils {
         })
     }
 
-
     /**
      * Focus on a geometry
      *
@@ -161,7 +168,6 @@ export class TrackUtils {
 
         return [bbox[0] - x * w, bbox[1] - y * h, bbox[2] + x * w, bbox[3] + y * h]
     }
-
 
     /**
      * Filters an array of objects using custom predicates.
@@ -246,22 +252,6 @@ export class TrackUtils {
     }
 
     /**
-     * Retrieve the entities
-     *
-     * @param name  {string|null}   name of the datasource
-     */
-    static getEntitiesByDataSourceName = (name) => {
-        // if we do not have datasource name, we'll find in all datasource
-        let dataSource
-        for (let i = 0; i < vt3d.viewer.dataSources.length; i++) {
-            const item = vt3d.viewer.dataSources.get(i)
-            if (item.name === name) {
-                return item.entities
-            }
-        }
-    }
-
-    /**
      * Search the datasource that contains an entity with a specific id.
      *
      * @param entityId the id of the required entities.
@@ -295,9 +285,6 @@ export class TrackUtils {
         // })
     }
 
-    static getTrackChildById = (track, id) => {
-        return EntitiesUtils.getEntityById(`${track.slug}#${id}`)
-    }
 
     static getDescription(feature) {
         return feature?.properties?.desc ?? undefined
@@ -352,6 +339,9 @@ export class TrackUtils {
         vt3d.theTrack.addToContext()
         vt3d.theTrack.addToEditor()
 
+        TrackUtils.setProfileVisibility(vt3d.theJourney)
+
+
         // One step further, let's prepare the drawings
         for (const journey of journeys) {
             await journey.prepareDrawing()
@@ -364,6 +354,9 @@ export class TrackUtils {
             items.push(journey.draw({mode: journey.slug === currentJourney.slug ? FOCUS_ON_FEATURE : NO_FOCUS}))
         })
         await Promise.all(items)
+
+        await TrackUtils.createCommonMapObjectsStore()
+
     }
 
     static setTheTrack = async (fromDB = true) => {
@@ -435,6 +428,7 @@ export class TrackUtils {
     static saveCurrentPOIToDB = async (current) => {
         await vt3d.db.journeys.put(CURRENT_POI, current, CURRENT_STORE)
     }
+
     /**
      * Update POIs visibility
      *
@@ -452,6 +446,7 @@ export class TrackUtils {
         })
 
     }
+
     /**
      * Update Flags visibility
      *
@@ -525,7 +520,6 @@ export class TrackUtils {
         }
     }
 
-
     /**
      * Update Track visibility
      *
@@ -548,4 +542,20 @@ export class TrackUtils {
 
     }
 
+    /**
+     * Set the profil visibility, according to some criterias
+     *
+     * @return {boolean}
+     */
+    static setProfileVisibility(journey) {
+        vt3d.mainProxy.canViewProfile =
+            vt3d.configuration.profile.show &&              // By configuration
+            journey !== undefined &&                        // During init
+            journey !== null &&                             // same
+            journey.visible &&                              // Journey visible
+            vt3d.mainProxy.canViewJourneyData &&            // can view data
+            Array.from(journey.tracks.values())             // Has Altitude for each track
+                .every(track => track.hasAltitude)
+
+    }
 }

@@ -15,11 +15,8 @@
 
 #vt3d-main-ui > div {
     display: flex;
-    flex-direction: column;
     gap: var(--vt3d-gutter-s);
     pointer-events: auto;
-
-
     --top: var(--vt3d-gutter-s);
     --left: var(--vt3d-gutter-s);
     --bottom: var(--vt3d-gutter-s);
@@ -27,6 +24,8 @@
 }
 
 #top-left-ui {
+    display: flex;
+    flex-direction: column;
     position: absolute;
     top: var(--top);
     left: var(--left);
@@ -36,18 +35,35 @@
     position: absolute;
     top: var(--top);
     right: var(--right);
+    height: var(--vt3d-compass-size);
+    width: var(--vt3d-compass-size);
+}
+
+#bottom-ui {
+    display: flex;
+    height: 50vh;
+    width: 100%;
+    flex-direction: row;
+    padding: var(--vt3d-gutter-s);
+    position: absolute;
+    bottom: 0;
+    left: 0;
 }
 
 #bottom-right-ui {
-    position: absolute;
-    bottom: var(--bottom);
-    right: var(--right);
+    height: var(--vt3d-gutter-s);
+    width: var(--vt3d-gutter-s);
+    align-self: flex-end;
 }
 
 #bottom-left-ui {
-    position: absolute;
-    bottom: var(--bottom);
-    left: var(--left);
+    display: flex;
+    flex-direction: column;
+    gap: var(--vt3d-gutter-s);
+    align-self: flex-end;
 }
 
-
+#profile-ui {
+    display: flex;
+    flex-grow: 1;
+}

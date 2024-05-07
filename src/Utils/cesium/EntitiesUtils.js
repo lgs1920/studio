@@ -22,4 +22,20 @@ export class EntitiesUtils {
     static getEntityById = (id) => {
         return vt3d.viewer.entities.getById(id)
     }
+
+    /**
+     * Retrieve the entities
+     *
+     * @param name  {string|null}   name of the datasource
+     */
+    static getEntitiesByDataSourceName = (name) => {
+        // if we do not have datasource name, we'll find in all datasource
+        let dataSource
+        for (let i = 0; i < vt3d.viewer.dataSources.length; i++) {
+            const item = vt3d.viewer.dataSources.get(i)
+            if (item.name === name) {
+                return item.entities
+            }
+        }
+    }
 }

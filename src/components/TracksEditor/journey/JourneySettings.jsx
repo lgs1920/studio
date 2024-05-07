@@ -22,6 +22,7 @@ import { FA2SL }           from '@Utils/FA2SL'
 import { UIToast }         from '@Utils/UIToast'
 import { sprintf }         from 'sprintf-js'
 import { useSnapshot }     from 'valtio'
+import { ProfileUtils }    from '../../../Utils/ProfileUtils'
 import { JourneyData }     from './JourneyData'
 import { JourneyPOIs }     from './JourneyPOIs'
 
@@ -48,7 +49,7 @@ export const JourneySettings = function JourneySettings() {
             return
         }
         editorStore.journey.description = description
-        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
+        await Utils.Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
     })
 
     /**
@@ -69,7 +70,7 @@ export const JourneySettings = function JourneySettings() {
         // title should not been already used for another journey.
         editorStore.journey.title = editorStore.journey.singleTitle(title)
         // Then use it
-        await updateJourney(UPDATE_JOURNEY_SILENTLY)
+        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneysList()
     })
 
@@ -80,7 +81,7 @@ export const JourneySettings = function JourneySettings() {
     const setJourneyVisibility = (async visibility => {
         editorStore.journey.visible = visibility
         vt3d.theJourney.updateVisibility(visibility)
-        await updateJourney(UPDATE_JOURNEY_SILENTLY)
+        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneySettings()
     })
     /**
@@ -90,7 +91,7 @@ export const JourneySettings = function JourneySettings() {
     const setAllPOIsVisibility = (async visibility => {
         editorStore.journey.POIsVisible = visibility
         TrackUtils.updatePOIsVisibility(vt3d.theJourney, visibility)
-        await updateJourney(UPDATE_JOURNEY_SILENTLY)
+        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneySettings()
     })
 
@@ -107,7 +108,7 @@ export const JourneySettings = function JourneySettings() {
         // // Then we redraw the theJourney
         // await vt3d.theJourney.showAfterHeightSimulation()
 
-        await updateJourney(UPDATE_JOURNEY_THEN_DRAW)
+        await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
     })
     /**
      * Export journey confirmation
@@ -136,18 +137,18 @@ export const JourneySettings = function JourneySettings() {
         const confirmation = await confirmRemoveJourney()
 
         if (confirmation) {
-            const mainStore = vt3d.mainProxy.components.journeyEditor
+            const mainStore = vt3d.mainProxy
             const journey = editorStore.journey.slug
             const removed = vt3d.getJourneyBySlug(journey)
             // get Journey index
-            const index = mainStore.list.findIndex((list) => list === journey)
+            const index = mainStore.components.journeyEditor.list.findIndex((list) => list === journey)
 
             /**
              * Do some cleaning
              */
             if (index >= 0) {
                 // In store
-                mainStore.list.splice(index, 1)
+                mainStore.components.journeyEditor.list.splice(index, 1)
                 // In context
                 vt3d.journeys.delete(editorStore.journey.slug)
 
@@ -165,19 +166,22 @@ export const JourneySettings = function JourneySettings() {
              * Otherwise we close the editing.
              */
             let text = ''
-            if (mainStore.list.length >= 1) {
+            if (mainStore.components.journeyEditor.list.length >= 1) {
                 // New current is the first.
-                vt3d.theJourney = vt3d.getJourneyBySlug(mainStore.list[0])
+                vt3d.theJourney = vt3d.getJourneyBySlug(mainStore.components.journeyEditor.list[0])
                 vt3d.theJourney.focus()
                 vt3d.theTrack = vt3d.theJourney.tracks.values().next().value
                 vt3d.theTrack.addToEditor()
                 Utils.renderJourneysList()
+                // Sync Profile
+                ProfileUtils.draw()
             } else {
                 vt3d.theJourney = null
                 vt3d.cleanEditor()
                 text = 'There are no others available.'
-                mainStore.usable = false
-                mainStore.show = false
+                mainStore.canViewJourneyData = false
+                mainStore.components.journeyEditor.show = false
+                mainStore.components.profile.show = false
             }
 
             // Let's inform the user
