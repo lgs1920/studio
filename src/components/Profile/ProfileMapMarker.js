@@ -13,6 +13,7 @@ export class ProfileMapMarker extends POI {
         const POIOptions = {
             type: JUST_ICON,
             icon: faCircleDot,
+            size: vt3d.configuration.profile.marker.size,
             name: 'profileMapMarker',
             slug: 'profile-map-marker',
             journey: APP_KEY,
@@ -21,9 +22,8 @@ export class ProfileMapMarker extends POI {
             time: false,
             visible: true,
             vertical: POI_VERTICAL_ALIGN_CENTER,
-            border: 3,
-            backgroundColor: 'transparent',//vt3d.configuration.journey.pois.border,
-            foregroundColor: vt3d.theTrack?.color ?? vt3d.configuration.journey.pois.color,
+            backgroundColor: 'transparent',
+            foregroundColor: vt3d.configuration.profile.marker.color,
         }
 
         super(POIOptions)

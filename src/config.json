@@ -13,7 +13,13 @@
       "range": 2000
     }
   },
-  "showProfile": true,
+  "profile": {
+    "show": true,
+    "marker": {
+      "size": 16,
+      "color": "#f2c55c"
+    }
+  },
   "DEMServers": [
     {
       "name": "No Altitude",
