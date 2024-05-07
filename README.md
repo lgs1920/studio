@@ -16,7 +16,7 @@ but I think of something like that:
 
 ### MVP : first
 
-* A mockup that will be able to load theJourney file and display it
+* ~~A mockup that will be able to load theJourney file and display it~~
 * A dedicated site (ie public build)
 
 ### Beta : adding some animation on tracks
@@ -26,9 +26,9 @@ but I think of something like that:
 
 ### Beta : Add theJourney data and profile
 
-* compute elevation +,-, speed,
-  hourly (km/h) and kilometer (time/km) averages and all similar and useful data.
-* Add a profile synchronised with theJourney animation
+* ~~compute elevation +,-, speed,
+  hourly (km/h) and kilometer (time/km) averages and all similar and useful data.~~
+* ~~Add a profile synchronised with theJourney animation~~
 
 ### 1.0 : Video export
 
@@ -58,4 +58,6 @@ The app is based on :
 * Valtio - https://valtio.pmnd.rs - state management
 * Shoelace - https://shoelace.style/ - The web components used for UI
 * fontawesome - https://fontawesome.com/ - The icons library
+* ApexCharts - https://apexcharts.com/ - Chart library
+* Bun - https://bun.sh/ - javascript runtime
 
