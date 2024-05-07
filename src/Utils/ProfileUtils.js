@@ -182,8 +182,8 @@ export class ProfileUtils {
     }
 
     static drawMarker = () => {
-        ProfileUtils.initMarker()
         if (vt3d.configuration.profile.marker.show) {
+            ProfileUtils.initMarker()
             vt3d.profileMapMarker.draw()
         }
     }
