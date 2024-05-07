@@ -72,6 +72,11 @@ export const ProfileChart = function ProfileChart(props) {
                 fontFamily: __.ui.css.getCSSVariable('--vt3d-font-family'),
             },
         },
+        plotOptions: {
+            area: {
+                fillTo: 'origin',
+            },
+        },
 
     }
 
