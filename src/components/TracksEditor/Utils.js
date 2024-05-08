@@ -2,7 +2,6 @@ import { Journey, NO_FOCUS, RE_LOADING }                from '@Core/Journey'
 import { Track }                                        from '@Core/Track'
 import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE } from '@Core/VT3D'
 import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
-import { ProfileUtils }                                 from '../../Utils/ProfileUtils'
 import { UPDATE_JOURNEY_SILENTLY }                      from './journey/JourneySettings'
 
 export class Utils {
@@ -56,7 +55,7 @@ export class Utils {
             vt3d.profileTrackMarker.toggleVisibility()
 
             // Update Profile to show the correct Journey
-            ProfileUtils.draw()
+            __.ui.profilerdraw()
 
             // Save information
             TrackUtils.saveCurrentJourneyToDB(event.target.value).then(async () => {

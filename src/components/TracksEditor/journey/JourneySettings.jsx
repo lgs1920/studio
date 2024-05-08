@@ -22,7 +22,6 @@ import { FA2SL }           from '@Utils/FA2SL'
 import { UIToast }         from '@Utils/UIToast'
 import { sprintf }         from 'sprintf-js'
 import { useSnapshot }     from 'valtio'
-import { ProfileUtils }    from '../../../Utils/ProfileUtils'
 import { JourneyData }     from './JourneyData'
 import { JourneyPOIs }     from './JourneyPOIs'
 
@@ -174,7 +173,7 @@ export const JourneySettings = function JourneySettings() {
                 vt3d.theTrack.addToEditor()
                 Utils.renderJourneysList()
                 // Sync Profile
-                ProfileUtils.draw()
+                __.ui.profilerdraw()
             } else {
                 vt3d.theJourney = null
                 vt3d.cleanEditor()

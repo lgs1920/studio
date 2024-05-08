@@ -7,7 +7,6 @@ import { FA2SL }                       from '@Utils/FA2SL'
 import { UIToast }                     from '@Utils/UIToast'
 import { forwardRef }                  from 'react'
 import { useSnapshot }                 from 'valtio'
-import { ProfileUtils }                from '../../Utils/ProfileUtils'
 
 export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, ref) {
 
@@ -48,7 +47,7 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
                 mainStore.canViewJourneyData = true
                 await theJourney.draw({})
                 await TrackUtils.createCommonMapObjectsStore()
-                ProfileUtils.draw()
+                __.ui.profilerdraw()
 
             } else {
                 // It exists, we notify it
@@ -62,13 +61,11 @@ export const TrackFileLoaderUI = forwardRef(function TrackFileLoaderUI(props, re
 
     return (
         <>
-            <div id="file-loader" className={'ui-element- transparent'} ref={ref}>
-                <SlTooltip placement={'right'} content="Load a track file">
-                    <SlButton size={'small'} onClick={uploadFile} className={'square-icon'}>
-                        <SlIcon library="fa" name={FA2SL.set(faMapLocation)}/>
-                    </SlButton>
-                </SlTooltip>
-            </div>
+            <SlTooltip placement={props.tooltip} content="Load a track file">
+                <SlButton size={'small'} onClick={uploadFile} className={'square-icon'}>
+                    <SlIcon library="fa" name={FA2SL.set(faMapLocation)}/>
+                </SlButton>
+            </SlTooltip>
         </>
     )
 

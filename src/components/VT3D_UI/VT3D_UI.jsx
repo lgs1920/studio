@@ -4,14 +4,13 @@ import { CreditsUI }             from '@Components/CreditsUI/CreditsUI'
 import { FloatingMenu }          from '@Components/FloatingMenu/FloatingMenu'
 import { FullScreenUI }          from '@Components/FullScreenUI/FullScreenUI'
 import { Profile }               from '@Components/Profile/Profile'
-import { TrackFileLoaderUI }     from '@Components/TrackFileLoaderUI/TrackFileLoaderUI'
 import { TracksEditor }          from '@Components/TracksEditor/TracksEditor'
+import { Toolbar }               from '@Components/VT3D_UI/Toolbar'
 import { CanvasEvents }          from '@Core/events/CanvasEvents'
 import { forwardRef, useEffect } from 'react'
 import { useCesium }             from 'resium'
 
 import './style.css'
-import { ProfileButton }         from '../Profile/ProfileButton'
 
 export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
 
@@ -31,9 +30,12 @@ export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
             <div id="vt3d-main-ui" ref={ref}>
                 <div id={'top-left-ui'}>
                     <CameraPositionUI ref={ref}/>
-                    <TrackFileLoaderUI ref={ref}/>
-                    <TracksEditor ref={ref}/>
-                    <ProfileButton/>
+                    <Toolbar editor={true}
+                             profile={true}
+                             fileLoader={true}
+                             position={'vertical'}
+                             tooltip={'right'}/>
+                    <TracksEditor/>
                 </div>
 
                 <div id={'bottom-ui'}>

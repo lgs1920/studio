@@ -63,6 +63,28 @@
     align-self: flex-end;
 }
 
+.vt3d-ui-toolbar {
+    display: flex;
+    gap: var(--vt3d-gutter-s);
+    justify-items: normal;
+    align-items: center;
+}
+
+.vt3d-ui-toolbar.vertical {
+    flex-direction: column;
+    justify-items: center;
+    align-items: normal;
+}
+
+.vt3d-ui-toolbar sl-divider {
+    height: 1rem;
+    --spacing: 0
+}
+
+.vt3d-ui-toolbar.embed sl-button {
+    --sl-input-border-width: 0
+}
+
 #profile-ui {
     display: flex;
     flex-grow: 1;

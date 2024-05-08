@@ -1,7 +1,6 @@
 import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE }            from '@Core/VT3D'
 import { SlColorPicker, SlDivider, SlRange, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
-import { ProfileUtils }                                 from '@Utils/ProfileUtils'
 import { useSnapshot }                                  from 'valtio'
 import { Utils }                                        from '../Utils'
 
@@ -25,7 +24,7 @@ export const TrackStyleSettings = function TrackSettings() {
     const setColor = (async event => {
         editorStore.track.color = event.target.value
         await Utils.updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
-        ProfileUtils.updateColor()
+        __.ui.profiler.updateColor()
     })
 
 

@@ -2,17 +2,26 @@ import {
     faArrowDownToLine, faArrowLeftToLine, faArrowRightToLine, faCircleDot,
 }                                          from '@fortawesome/pro-regular-svg-icons'
 import { sprintf }                         from 'sprintf-js'
-import { ProfileTrackMarker }              from '../core/ProfileTrackMarker'
-import { FA2SL }                           from './FA2SL'
-import { DISTANCE_UNITS, ELEVATION_UNITS } from './UnitUtils'
+import { FA2SL }                           from '../../Utils/FA2SL'
+import { DISTANCE_UNITS, ELEVATION_UNITS } from '../../Utils/UnitUtils'
+import { ProfileTrackMarker }              from '../ProfileTrackMarker'
+import { Singleton }                       from '../Singleton'
 
-export class ProfileUtils {
+export class Profiler extends Singleton {
+
+    charts = null
+
+    constructor() {
+        super()
+        this.charts = new Map()
+
+    }
 
     /**
      *
      * @param type {number} Plot type
      */
-    static prepareData = (type = ELEVATION_VS_DISTANCE) => {
+    prepareData = (type = ELEVATION_VS_DISTANCE) => {
         if (vt3d.theJourney === null) {
             return
         }
@@ -39,7 +48,7 @@ export class ProfileUtils {
                 tickAmount: 4,
             },
             tooltip: {
-                custom: ProfileUtils.tooltipElevationVsDistance,
+                custom: this.tooltipElevationVsDistance,
             },
         }
 
@@ -82,7 +91,7 @@ export class ProfileUtils {
      * @param options
      * @return {string}  HTML
      */
-    static tooltipElevationVsDistance = (options) => {
+    tooltipElevationVsDistance = (options) => {
 
         // Display in
         //TODO Use renderToString from react: touse  ???
@@ -93,7 +102,7 @@ export class ProfileUtils {
 
         // Show on map
         if (vt3d.configuration.profile.marker.show) {
-            ProfileUtils.showOnMap(options)
+            this.showOnMap(options)
         }
 
         // Show on Profile
@@ -113,7 +122,7 @@ export class ProfileUtils {
     `
     }
 
-    static showOnMap = (options) => {
+    showOnMap = (options) => {
         const data = options.w.config.series[options.seriesIndex].data
         const coords = data[options.dataPointIndex]
         const length = data[data.length - 1].x
@@ -129,14 +138,13 @@ export class ProfileUtils {
     /**
      * Update Color of tracks
      */
-    static updateColor = () => {
+    updateColor = () => {
         const series = []
         vt3d.theJourney.tracks.forEach((track, slug) => {
             series.push({color: track.color})
         })
         PROFILE_CHARTS.forEach(id => {
-            const chart = ApexCharts.getChartByID(id)
-            chart.updateSeries(series)
+            this.charts.get(id).updateSeries(series)
         })
 
     }
@@ -144,14 +152,14 @@ export class ProfileUtils {
     /**
      * Update Titles of Profile
      */
-    static updateTitle = () => {
+    updateTitle = () => {
         const series = []
         vt3d.theJourney.tracks.forEach((track, slug) => {
             series.push({name: track.title})
         })
         PROFILE_CHARTS.forEach(id => {
             const chart = ApexCharts.getChartByID(id)
-            chart.updateSeries(series)
+            this.charts.get(id).updateSeries(series)
         })
 
     }
@@ -161,31 +169,53 @@ export class ProfileUtils {
      *
      * We draw all
      */
-    static updateTrackVisibility = () => {
-        ProfileUtils.prepareData()
+    updateTrackVisibility = () => {
+        this.prepareData()
     }
 
     /**
      * Force Profile to be redrawn
      */
-    static draw = () => {
+    draw = () => {
         vt3d.mainProxy.components.profile.key++
         if (vt3d.configuration.profile.marker.show) {
             vt3d.profileTrackMarker.draw()
         }
     }
 
-    static initMarker = () => {
+    initMarker = () => {
         if (vt3d.profileTrackMarker === undefined) {
             vt3d.profileTrackMarker = new ProfileTrackMarker()
         }
     }
 
-    static drawMarker = () => {
+    drawMarker = () => {
         if (vt3d.configuration.profile.marker.show) {
-            ProfileUtils.initMarker()
+            this.initMarker()
             vt3d.profileTrackMarker.draw()
         }
+    }
+    resetChart = () => {
+        PROFILE_CHARTS.forEach(id => {
+            ApexCharts.exec(id, 'resetSeries', true, true)
+        })
+    }
+
+    /**
+     * Set the profil visibility, according to some criterias
+     *
+     * @return {boolean}
+     */
+    setVisibility = (journey = vt3d.theJourney) => {
+        vt3d.mainProxy.canViewProfile =
+            vt3d.configuration.profile.show &&              // By configuration
+            journey !== undefined &&                        // During init
+            journey !== null &&                             // same
+            journey.visible &&                              // Journey visible
+            vt3d.mainProxy.canViewJourneyData &&            // can view data
+            Array.from(journey.tracks.values())             // Has Altitude for each track
+                .every(track => track.hasAltitude)
+
     }
 }
 

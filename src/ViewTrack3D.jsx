@@ -14,6 +14,7 @@ import { Camera, CameraFlyTo, Entity, Globe, Scene, Viewer } from 'resium'
  * We are using shoelace Web components
  */
 import '@shoelace-style/shoelace/dist/themes/light.css'
+import { Profiler }                                          from './core/ui/Profiler'
 import { UIToast }                                           from './Utils/UIToast'
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
@@ -59,6 +60,10 @@ export function ViewTrack3D() {
 
         // Read DB
         readAllFromDB()
+
+        // Init Managers
+        __.ui.profiler = new Profiler()
+
 
         //Ready
         UIToast.success({
