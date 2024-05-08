@@ -2,19 +2,23 @@ import './style.css'
 import { useEffect }                   from 'react'
 import { default as Chart }            from 'react-apexcharts'
 import { useSnapshot }                 from 'valtio'
-import { CHART_ELEVATION_VS_DISTANCE } from '../../Utils/ProfileUtils'
+import { CHART_ELEVATION_VS_DISTANCE } from '../../core/ui/Profiler'
 
 
 export const ProfileChart = function ProfileChart(props) {
 
-    //read version
     const options = {
         chart: {
-            id: CHART_ELEVATION_VS_DISTANCE, toolbar: {
+            id: CHART_ELEVATION_VS_DISTANCE,
+            toolbar: {
                 show: false,
             }, offsetX: 0, offsetY: 0, parentHeightOffset: 0, zoom: {
                 type: 'x', enabled: true, autoScaleYaxis: true,
-            }, //events: {},
+            }, events: {
+                beforeMount: function (chartContext, config) {
+                    __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, ApexCharts.getChartByID(CHART_ELEVATION_VS_DISTANCE))
+                },
+            },
 
         }, fill: {
             type: 'gradient', gradient: {
@@ -53,7 +57,7 @@ export const ProfileChart = function ProfileChart(props) {
         }, legend: {
             markers: {
                 radius: 3,
-                //onClick: ProfileUtils.updateTrackVisibility,
+                //onClick: __.ui.profilerupdateTrackVisibility,
             },
             itemMargin: {
                 horizontal: 5, vertical: 0,

@@ -1,6 +1,6 @@
-import { html2canvas } from 'html2canvas'
-import { jsPDF }       from 'jspdf'
-import { DateTime }    from 'luxon'
+import { default as html2canvas } from 'html2canvas'
+import { jsPDF }                  from 'jspdf'
+import { DateTime }               from 'luxon'
 // dummy...
 let dummy = jsPDF
 dummy = html2canvas
@@ -63,7 +63,7 @@ export class Export {
         }).then((canvas) => {
             element.classList.toggle('snapshot-in-progress')
             const orientation = canvas.width >= canvas.height ? 'l' : 'p'
-            canvas.toBlob((blob) => DashboardExportUtils.exportToFile(blob, `${file}.png`))
+            canvas.toBlob((blob) => Export.toFile(blob, `${file}.png`))
         })
     }
     /**

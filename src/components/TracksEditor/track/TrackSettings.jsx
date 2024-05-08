@@ -13,7 +13,6 @@ import {
 import { TrackUtils }         from '@Utils/cesium/TrackUtils'
 import { FA2SL }              from '@Utils/FA2SL'
 import { useSnapshot }        from 'valtio'
-import { ProfileUtils }       from '../../../Utils/ProfileUtils'
 import { Utils }              from '../Utils'
 import { TrackData }          from './TrackData'
 import { TrackFlagsSettings } from './TrackFlagsSettings'
@@ -58,7 +57,7 @@ export const TrackSettings = function TrackSettings() {
 
         await Utils.updateTrack(JUST_SAVE)
 
-        ProfileUtils.updateTitle()
+        __.ui.profilerupdateTitle()
 
     })
 
@@ -73,7 +72,7 @@ export const TrackSettings = function TrackSettings() {
         TrackUtils.updateTrackVisibility(editorStore.journey, editorStore.track, visibility)
         await Utils.updateTrack(JUST_SAVE)
 
-        ProfileUtils.updateTrackVisibility()
+        __.ui.profilerupdateTrackVisibility()
     }
 
     const textVisibilityTrack = sprintf('%s Track', editorSnapshot.track.visible ? 'Hide' : 'Show')
