@@ -8,7 +8,7 @@ import { UIToast }                     from '@Utils/UIToast'
 import { forwardRef }                  from 'react'
 import { useSnapshot }                 from 'valtio'
 
-export const JourneyLoader = forwardRef(function TrackFileLoaderUI(props, ref) {
+export const JourneyLoader = JourneyLoader(props) {
 
     const mainStore = vt3d.mainProxy
     const mainSnap = useSnapshot(mainStore)
@@ -69,5 +69,5 @@ export const JourneyLoader = forwardRef(function TrackFileLoaderUI(props, ref) {
         </>
     )
 
-})
+}
 

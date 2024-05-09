@@ -1,4 +1,4 @@
-import { TrackFileLoaderUI }  from '@Components/FileLoader/FileLoader'
+import { JourneyLoader }      from '@Components/FileLoader/JourneyLoader'
 import { ProfileButton }      from '@Components/Profile/ProfileButton'
 import { TracksEditorButton } from '@Components/TracksEditor/TracksEditorButton'
 import { SlDivider }          from '@shoelace-style/shoelace/dist/react'
@@ -25,7 +25,7 @@ export const Toolbar = (props) => {
                     {props.center}<SlDivider vertical/>
                 </>
             }
-            {props.fileLoader && <TrackFileLoaderUI tooltip={props.tooltip}/>}
+            {props.fileLoader && <JourneyLoader tooltip={props.tooltip}/>}
             {props.editor && <TracksEditorButton tooltip={props.tooltip}/>}
             {props.profile && <ProfileButton tooltip={props.tooltip}/>}
 
