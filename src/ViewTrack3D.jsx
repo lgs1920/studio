@@ -85,22 +85,11 @@ export function ViewTrack3D() {
                 navigationHelpButton={false}
                 fullscreenButton={false}
                 baseLayerPicker={false}
-                sceneModePicker={false}
+                sceneModePicker={true}
                 terrain={Cesium.Terrain.fromWorldTerrain({
                     requestVertexNormals: false,
                 })}
                 id="viewTrack3DViewer"
-            //   imageryProvider={true}
-            // baseLayer={Cesium.ImageryLayer.fromWorldImagery({
-            //     style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS,
-            // })}
-            //     imageryProvider={new Cesium.WebMapTileServiceImageryProvider({
-            //         url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
-            //         layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
-            //         style: 'normal',
-            //         format: 'image/png',
-            //         tileMatrixSetID: 'PM',
-            //     })}
                 ref={viewerRef}
         >
             {/* <ImageryLayer imageryProvider={new Cesium.OpenStreetMapImageryProvider({ */}
@@ -108,10 +97,11 @@ export function ViewTrack3D() {
             {/* })}/> */}
             <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({
                 url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
-                layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
+                layer: 'GEOGRAPHICALGRIDSYSTEMS.MAPS.OVERVIEW',
                 style: 'normal',
                 format: 'image/png',
                 tileMatrixSetID: 'PM',
+                credit: new Cesium.Credit('IGN'),
             })}
             />
             <Scene></Scene>
