@@ -85,25 +85,55 @@ export function ViewTrack3D() {
                 navigationHelpButton={false}
                 fullscreenButton={false}
                 baseLayerPicker={false}
-                sceneModePicker={true}
+                sceneModePicker={false}
                 terrain={Cesium.Terrain.fromWorldTerrain({
                     requestVertexNormals: false,
                 })}
                 id="viewTrack3DViewer"
+            //   imageryProvider={true}
+            // baseLayer={Cesium.ImageryLayer.fromWorldImagery({
+            //     style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS,
+            // })}
+            //     imageryProvider={new Cesium.WebMapTileServiceImageryProvider({
+            //         url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
+            //         layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
+            //         style: 'normal',
+            //         format: 'image/png',
+            //         tileMatrixSetID: 'PM',
+            //     })}
                 ref={viewerRef}
         >
             {/* <ImageryLayer imageryProvider={new Cesium.OpenStreetMapImageryProvider({ */}
             {/*     url: 'https://a.tile.openstreetmap.org/', */}
             {/* })}/> */}
+
+
+            {/* <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({ */}
+            {/*     url: 'https://wxs.ign.fr/cartes/geoportail/wmts', */}
+            {/*     layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', */}
+            {/*     style: 'normal', */}
+            {/*     format: 'image/png', */}
+            {/*     tileMatrixSetID: 'PM', */}
+            {/* })} */}
+
+
             <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({
                 url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
-                layer: 'GEOGRAPHICALGRIDSYSTEMS.MAPS.OVERVIEW',
+                layer: 'ORTHOIMAGERY.ORTHOPHOTOS2',
                 style: 'normal',
                 format: 'image/png',
                 tileMatrixSetID: 'PM',
-                credit: new Cesium.Credit('IGN'),
-            })}
-            />
+            })}/>
+
+
+            {/* <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({ */}
+            {/*     url: 'https://wxs.ign.fr/cartes/geoportail/wmts', */}
+            {/*     layer: 'CADASTRALPARCELS.PARCELLAIRE_EXPRESS', */}
+            {/*     style: 'normal', */}
+            {/*     format: 'image/png', */}
+            {/*     tileMatrixSetID: 'PM', */}
+            {/* })}/> */}
+
             <Scene></Scene>
             <Globe enableLighting={false}></Globe>
             <Camera onMoveStart={updateCameraPosition} onMoveEnd={updateCameraPosition} ref={viewerRef}>
