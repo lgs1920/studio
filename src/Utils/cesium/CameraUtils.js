@@ -90,27 +90,29 @@ export class CameraUtils {
      *
      */
     static turnAroundCameraTarget = () => {
-        return
-        /**
-         * Only if target has been defined
-         */
-        if (vt3d.configuration.center.target) {
-            const cameraOffset = new HeadingPitchRange(
-                Math.toRadians(vt3d.configuration.center.camera.heading),
-                Math.toRadians(vt3d.configuration.center.camera.pitch),
-                vt3d.configuration.center.camera.range,
-            )
-            CameraUtils.lookAt(vt3d.camera, vt3d.windowCenter, cameraOffset)
 
+        if (vt3d.journeys.size === 0) {
             /**
-             * Let's rotate on left for PI/1000 angle
+             * Only if target has been defined
              */
-            const step = Math.PI / 1000
-            vt3d.viewer.clock.onTick.addEventListener(async () => {
-                vt3d.camera.rotateLeft(step)
-                // No event on rotate, so we force update position
-                await CameraUtils.updatePosition()
-            })
+            if (vt3d.configuration.center.target) {
+                const cameraOffset = new HeadingPitchRange(
+                    Math.toRadians(vt3d.configuration.center.camera.heading),
+                    Math.toRadians(vt3d.configuration.center.camera.pitch),
+                    vt3d.configuration.center.camera.range,
+                )
+                CameraUtils.lookAt(vt3d.camera, vt3d.windowCenter, cameraOffset)
+
+                /**
+                 * Let's rotate on left for PI/1000 angle
+                 */
+                const step = Math.PI / 1000
+                vt3d.stopTurnAround = vt3d.viewer.clock.onTick.addEventListener(async () => {
+                    vt3d.camera.rotateLeft(step)
+                    // No event on rotate, so we force update position
+                    await CameraUtils.updatePosition()
+                })
+            }
         }
     }
 

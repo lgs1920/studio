@@ -48,6 +48,8 @@ export const JourneyLoader = (props) => {
                 await TrackUtils.createCommonMapObjectsStore()
                 __.ui.profiler.draw()
 
+                vt3d.stopTurnAround()
+
             } else {
                 // It exists, we notify it
                 UIToast.warning({
