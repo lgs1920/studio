@@ -15,6 +15,7 @@ import { Camera, CameraFlyTo, Entity, Globe, ImageryLayer, Scene, Viewer } from 
  */
 import '@shoelace-style/shoelace/dist/themes/light.css'
 import { Profiler }                                                        from './core/ui/Profiler'
+import { Wanderer }                                                        from './core/ui/Wanderer'
 import { UIToast }                                                         from './Utils/UIToast'
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
@@ -63,8 +64,7 @@ export function ViewTrack3D() {
 
         // Init Managers
         __.ui.profiler = new Profiler()
-
-
+        __.ui.wanderer = new Wanderer()
         //Ready
         UIToast.success({
             caption: `Welcome on ${vt3d.configuration.applicationName}!`,
@@ -103,9 +103,9 @@ export function ViewTrack3D() {
             //     })}
                 ref={viewerRef}
         >
-            {/* <ImageryLayer imageryProvider={new Cesium.OpenStreetMapImageryProvider({ */}
-            {/*     url: 'https://a.tile.openstreetmap.org/', */}
-            {/* })}/> */}
+            <ImageryLayer imageryProvider={new Cesium.OpenStreetMapImageryProvider({
+                url: 'https://a.tile.openstreetmap.org/',
+            })}/>
 
 
             {/* <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({ */}
@@ -117,13 +117,13 @@ export function ViewTrack3D() {
             {/* })} */}
 
 
-            <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({
-                url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
-                layer: 'ORTHOIMAGERY.ORTHOPHOTOS2',
-                style: 'normal',
-                format: 'image/png',
-                tileMatrixSetID: 'PM',
-            })}/>
+            {/* <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({ */}
+            {/*     url: 'https://wxs.ign.fr/cartes/geoportail/wmts', */}
+            {/*     layer: 'ORTHOIMAGERY.ORTHOPHOTOS2', */}
+            {/*     style: 'normal', */}
+            {/*     format: 'image/png', */}
+            {/*     tileMatrixSetID: 'PM', */}
+            {/* })}/> */}
 
 
             {/* <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({ */}

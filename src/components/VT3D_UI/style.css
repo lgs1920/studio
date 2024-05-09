@@ -91,3 +91,10 @@
     flex-grow: 1;
     pointer-events: none;
 }
+
+/***************************************
+ * Wander Controls
+ */
+.wanderDuration {
+    width: 5rem;
+}
