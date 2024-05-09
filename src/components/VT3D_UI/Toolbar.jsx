@@ -1,5 +1,5 @@
+import { TrackFileLoaderUI }  from '@Components/FileLoader/FileLoader'
 import { ProfileButton }      from '@Components/Profile/ProfileButton'
-import { TrackFileLoaderUI }  from '@Components/TrackFileLoaderUI/TrackFileLoaderUI'
 import { TracksEditorButton } from '@Components/TracksEditor/TracksEditorButton'
 import { SlDivider }          from '@shoelace-style/shoelace/dist/react'
 import { SnapshotButton }     from './Snapshot'
