@@ -5,10 +5,9 @@ import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react
 import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
 import { FA2SL }                       from '@Utils/FA2SL'
 import { UIToast }                     from '@Utils/UIToast'
-import { forwardRef }                  from 'react'
 import { useSnapshot }                 from 'valtio'
 
-export const JourneyLoader = JourneyLoader(props) {
+export const JourneyLoader = (props) => {
 
     const mainStore = vt3d.mainProxy
     const mainSnap = useSnapshot(mainStore)
