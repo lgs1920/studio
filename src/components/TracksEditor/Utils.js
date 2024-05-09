@@ -55,7 +55,7 @@ export class Utils {
             vt3d.profileTrackMarker.toggleVisibility()
 
             // Update Profile to show the correct Journey
-            __.ui.profilerdraw()
+            __.ui.profiler.draw()
 
             // Save information
             TrackUtils.saveCurrentJourneyToDB(event.target.value).then(async () => {

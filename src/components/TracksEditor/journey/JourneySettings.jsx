@@ -173,7 +173,7 @@ export const JourneySettings = function JourneySettings() {
                 vt3d.theTrack.addToEditor()
                 Utils.renderJourneysList()
                 // Sync Profile
-                __.ui.profilerdraw()
+                __.ui.profiler.draw()
             } else {
                 vt3d.theJourney = null
                 vt3d.cleanEditor()

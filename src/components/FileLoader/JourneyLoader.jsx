@@ -46,7 +46,7 @@ export const JourneyLoader = (props) => {
                 mainStore.canViewJourneyData = true
                 await theJourney.draw({})
                 await TrackUtils.createCommonMapObjectsStore()
-                __.ui.profilerdraw()
+                __.ui.profiler.draw()
 
             } else {
                 // It exists, we notify it
