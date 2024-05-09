@@ -107,11 +107,13 @@ export class POIUtils {
     static update = (poi, options) => {
         const dataSource = vt3d.viewer.dataSources.getByName(poi.journey ?? APP_KEY, true)[0]
         const entity = dataSource.entities.getById(poi.slug)
-        // Update positions
-        entity.position = options.coordinates ? Cesium.Cartesian3.fromDegrees(options.coordinates[0], options.coordinates[1], options.coordinates[2]) : entity.position
-        // Update visibility
-        if (options.visibility !== undefined) {
-            entity.show = options.visibility
+        if (entity) {
+            // Update positions
+            entity.position = options.coordinates ? Cesium.Cartesian3.fromDegrees(options.coordinates[0], options.coordinates[1], options.coordinates[2]) : entity.position
+            // Update visibility
+            if (options.visibility !== undefined) {
+                entity.show = options.visibility
+            }
         }
 
     }
