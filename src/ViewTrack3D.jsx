@@ -6,16 +6,16 @@ import { VT3D }        from '@Core/VT3D'
 import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
 import { TrackUtils }  from '@Utils/cesium/TrackUtils'
 
-import * as Cesium                                           from 'cesium'
-import { useEffect, useRef }                                 from 'react'
-import { Camera, CameraFlyTo, Entity, Globe, Scene, Viewer } from 'resium'
+import * as Cesium                                                         from 'cesium'
+import { useEffect, useRef }                                               from 'react'
+import { Camera, CameraFlyTo, Entity, Globe, ImageryLayer, Scene, Viewer } from 'resium'
 
 /**
  * We are using shoelace Web components
  */
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { Profiler }                                          from './core/ui/Profiler'
-import { UIToast }                                           from './Utils/UIToast'
+import { Profiler }                                                        from './core/ui/Profiler'
+import { UIToast }                                                         from './Utils/UIToast'
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 window.vt3d = new VT3D()
@@ -90,13 +90,31 @@ export function ViewTrack3D() {
                     requestVertexNormals: false,
                 })}
                 id="viewTrack3DViewer"
-                imageryProvider={false}
+            //   imageryProvider={true}
             // baseLayer={Cesium.ImageryLayer.fromWorldImagery({
             //     style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS,
             // })}
+            //     imageryProvider={new Cesium.WebMapTileServiceImageryProvider({
+            //         url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
+            //         layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
+            //         style: 'normal',
+            //         format: 'image/png',
+            //         tileMatrixSetID: 'PM',
+            //     })}
                 ref={viewerRef}
         >
-            <Scene pickTranslucentDepth={true} useDepthPicking={true}></Scene>
+            {/* <ImageryLayer imageryProvider={new Cesium.OpenStreetMapImageryProvider({ */}
+            {/*     url: 'https://a.tile.openstreetmap.org/', */}
+            {/* })}/> */}
+            <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({
+                url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
+                layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
+                style: 'normal',
+                format: 'image/png',
+                tileMatrixSetID: 'PM',
+            })}
+            />
+            <Scene></Scene>
             <Globe enableLighting={false}></Globe>
             <Camera onMoveStart={updateCameraPosition} onMoveEnd={updateCameraPosition} ref={viewerRef}>
                 <CameraFlyTo
