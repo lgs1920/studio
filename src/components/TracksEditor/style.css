@@ -15,6 +15,7 @@
     left: var(--vt3d-gutter);
     top: auto;
     right: auto;
+    pointer-events: none;
 }
 
 sl-tab sl-icon {

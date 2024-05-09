@@ -19,6 +19,7 @@
     position: relative;
     width: var(--vt3d-profile-pane-width);
     height: 100%;
+    pointer-events: none;
 }
 
 #profile-container .apexcharts-canvas {
