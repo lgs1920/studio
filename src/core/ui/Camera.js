@@ -17,9 +17,14 @@ export class Camera {
             return Camera.instance
         }
 
-        this.longitude = settings?.longitude ?? vt3d.configuration.starter.longitude
-        this.latitude = settings?.latitude ?? vt3d.configuration.starter.latitude
-        this.height = settings?.height ?? vt3d.configuration.starter.height
+        this.target.longitude = settings?.target.longitude ?? vt3d.configuration.starter.longitude
+        this.target.latitude = settings?.target.latitude ?? vt3d.configuration.starter.latitude
+        this.target.height = settings?.target.height ?? vt3d.configuration.starter.height
+
+        this.longitude = 0
+        this.latitude = 0
+        this.height = 0
+
         this.heading = settings?.heading ?? vt3d.configuration.starter.camera.heading
         this.pitch = settings?.pitch ?? vt3d.configuration.starter.camera.pitch
         this.roll = settings?.roll ?? vt3d.configuration.starter.camera.roll
@@ -43,6 +48,11 @@ export class Camera {
         if (data === null) {
             data = await CameraUtils.updateCamera()
         }
+        this.target = {
+            longitude: data.target.longitude,
+            latitude: data.target.latitude,
+            height: data.target.height,
+        }
 
         this.longitude = data.longitude
         this.latitude = data.latitude
@@ -53,9 +63,14 @@ export class Camera {
     }
 
     reset = () => {
-        this.longitude = vt3d.configuration.starter.longitude
-        this.latitude = vt3d.configuration.starter.latitude
-        this.height = vt3d.configuration.starter.height
+        this.target = {
+            longitude: vt3d.configuration.starter.longitude,
+            latitude: vt3d.configuration.starter.latitude,
+            height: vt3d.configuration.starter.height,
+        }
+        this.longitude = 0
+        this.latitude = 0
+        this.height = 0
         this.heading = vt3d.configuration.starter.camera.heading
         this.pitch = vt3d.configuration.starter.camera.pitch
         this.roll = vt3d.configuration.starter.camera.roll
