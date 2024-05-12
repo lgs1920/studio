@@ -14,8 +14,6 @@ import { Camera, CameraFlyTo, Entity, Globe, ImageryLayer, Scene, Viewer } from 
  * We are using shoelace Web components
  */
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { Profiler }                                                        from './core/ui/Profiler'
-import { Wanderer }                                                        from './core/ui/Wanderer'
 import { UIToast }                                                         from './Utils/UIToast'
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
@@ -35,9 +33,14 @@ export function ViewTrack3D() {
         roll: Cesium.Math.toRadians(center.camera.roll),
     }
 
+    const cameraStore = vt3d.mainProxy.components.camera
+
+    const run360 = () => {
+        CameraUtils.run360()
+    }
+
     const updateCameraPosition = () => {
-        const cameraStore = vt3d.mainProxy.components.camera
-        CameraUtils.updatePosition().then(data => {
+        CameraUtils.updateCamera().then(data => {
             if (data !== undefined) {
                 cameraStore.position = data
             }
@@ -56,15 +59,15 @@ export function ViewTrack3D() {
         __.app.setTheme()
 
         // Update camera info
-        CameraUtils.updatePosition(vt3d?.camera).then(async r => {
+        CameraUtils.updateCamera(vt3d?.camera).then(async r => {
         })
 
         // Read DB
         readAllFromDB()
 
-        // Init Managers
-        __.ui.profiler = new Profiler()
-        __.ui.wanderer = new Wanderer()
+        vt3d.initManagers()
+
+
         //Ready
         UIToast.success({
             caption: `Welcome on ${vt3d.configuration.applicationName}!`,
@@ -136,13 +139,13 @@ export function ViewTrack3D() {
 
             <Scene></Scene>
             <Globe enableLighting={false}></Globe>
-            <Camera onMoveStart={updateCameraPosition} onMoveEnd={updateCameraPosition} ref={viewerRef}>
+            <Camera onMoveEnd={updateCameraPosition} ref={viewerRef}>
                 <CameraFlyTo
                     orientation={vt3d.cameraOrientation}
                     duration={3}
                     destination={vt3d.windowCenter}
                     once={true}
-                    onComplete={CameraUtils.turnAroundCameraTarget}
+                    onComplete={run360}
                 />
             </Camera>
             <Entity id={'markers-group'}/>

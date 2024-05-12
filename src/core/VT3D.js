@@ -1,12 +1,15 @@
-import { AppUtils }          from '@Utils/AppUtils'
-import { MouseUtils }        from '@Utils/cesium/MouseUtils'
-import { CSSUtils }          from '@Utils/CSSUtils'
-import { proxy }             from 'valtio'
-import { UnitUtils }         from '../Utils/UnitUtils'
-import { LocalDB }           from './db/LocalDB'
-import { MouseEventHandler } from './MouseEventHandler'
-import { main }              from './stores/main'
-import { theJourneyEditor }  from './stores/theJourneyEditor'
+import { AppUtils }                from '@Utils/AppUtils'
+import { MouseUtils }              from '@Utils/cesium/MouseUtils'
+import { CSSUtils }                from '@Utils/CSSUtils'
+import { proxy }                   from 'valtio'
+import { UnitUtils }               from '../Utils/UnitUtils'
+import { LocalDB }                 from './db/LocalDB'
+import { MouseEventHandler }       from './MouseEventHandler'
+import { main }                    from './stores/main'
+import { theJourneyEditor }        from './stores/theJourneyEditor'
+import { Camera as CameraManager } from './ui/Camera.js'
+import { Profiler }                from './ui/Profiler.js'
+import { Wanderer }                from './ui/Wanderer.js'
 
 export class VT3D {
     /** @type {Proxy} */
@@ -63,18 +66,22 @@ export class VT3D {
 
     }
 
+    /** @return {Viewer} */
     get viewer() {
         return this.#viewer
     }
+
 
     set viewer(viewer) {
         this.#viewer = viewer
     }
 
+    /** @return {Scene} */
     get scene() {
         return this.#viewer?.scene
     }
 
+    /** @return {Camera} */
     get camera() {
         return this?.scene?.camera
     }
@@ -203,6 +210,12 @@ export class VT3D {
 
     cleanEditor = () => {
         this.theJourneyEditorProxy = proxy(theJourneyEditor)
+    }
+
+    initManagers = () => {
+        __.ui.profiler = new Profiler()
+        __.ui.wanderer = new Wanderer()
+        __.ui.camera = new CameraManager()
     }
 }
 
