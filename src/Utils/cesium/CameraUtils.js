@@ -95,11 +95,12 @@ export class CameraUtils {
      *
      */
     static run360 = (camera = __.ui.camera && new Camera()) => {
+        console.log(camera)
         CameraUtils.lookAt(vt3d.camera,
             Cartesian3.fromDegrees(
-                camera.longitude,
-                camera.latitude,
-                camera.height,
+                camera.longitude ?? camera.target.longitude,
+                camera.latitude ?? camera.target.latitude,
+                camera.height ?? camera.target.height,
             ),
             new HeadingPitchRange(
                 M.toRadians(camera.heading),

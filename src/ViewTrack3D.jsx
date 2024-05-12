@@ -11,10 +11,10 @@ import { VT3D }                    from '@Core/VT3D'
 import { CameraUtils }             from '@Utils/cesium/CameraUtils.js'
 import { TrackUtils }              from '@Utils/cesium/TrackUtils'
 
-import * as Cesium                                                 from 'cesium'
-import { useEffect, useRef }                                       from 'react'
-import { Camera, CameraFlyTo, Globe, ImageryLayer, Scene, Viewer } from 'resium'
-import { UIToast }                                                 from './Utils/UIToast'
+import * as Cesium                                                         from 'cesium'
+import { useEffect, useRef }                                               from 'react'
+import { Camera, CameraFlyTo, Entity, Globe, ImageryLayer, Scene, Viewer } from 'resium'
+import { UIToast }                                                         from './Utils/UIToast'
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 window.vt3d = new VT3D()
@@ -24,13 +24,13 @@ export function ViewTrack3D() {
 
     const viewerRef = useRef(null)
 
-    const center = vt3d.configuration.starter
-    vt3d.windowCenter = Cesium.Cartesian3.fromDegrees(center.longitude, center.latitude, center.height)
+    const starter = vt3d.configuration.starter
+    vt3d.windowCenter = Cesium.Cartesian3.fromDegrees(starter.longitude, starter.latitude, starter.height)
 
     vt3d.cameraOrientation = {
-        heading: Cesium.Math.toRadians(center.camera.heading),
-        pitch: Cesium.Math.toRadians(center.camera.pitch),
-        roll: Cesium.Math.toRadians(center.camera.roll),
+        heading: Cesium.Math.toRadians(starter.camera.heading),
+        pitch: Cesium.Math.toRadians(starter.camera.pitch),
+        roll: Cesium.Math.toRadians(starter.camera.roll),
     }
 
     const cameraStore = vt3d.mainProxy.components.camera
