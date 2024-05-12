@@ -126,7 +126,7 @@ export class TrackUtils {
      *                              - slug : the slug of the element
      */
     static focus = (track, showBbox = false) => {
-        const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading), Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
+        const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.starter.camera.heading), Cesium.Math.toRadians(vt3d.configuration.starter.camera.pitch), vt3d.configuration.starter.camera.range)
 
         // Let's focus on one of the right datasource
         const dataSource = TrackUtils.getDataSourcesByName(track.parent)[0]

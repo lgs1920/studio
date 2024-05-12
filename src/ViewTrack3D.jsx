@@ -26,7 +26,7 @@ export function ViewTrack3D() {
 
     const viewerRef = useRef(null)
 
-    const center = vt3d.configuration.center
+    const center = vt3d.configuration.starter
     vt3d.windowCenter = Cesium.Cartesian3.fromDegrees(center.longitude, center.latitude, center.height)
 
     vt3d.cameraOrientation = {

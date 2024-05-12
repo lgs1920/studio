@@ -95,11 +95,11 @@ export class CameraUtils {
             /**
              * Only if target has been defined
              */
-            if (vt3d.configuration.center.target) {
+            if (vt3d.configuration.starter.target) {
                 const cameraOffset = new HeadingPitchRange(
-                    Math.toRadians(vt3d.configuration.center.camera.heading),
-                    Math.toRadians(vt3d.configuration.center.camera.pitch),
-                    vt3d.configuration.center.camera.range,
+                    Math.toRadians(vt3d.configuration.starter.camera.heading),
+                    Math.toRadians(vt3d.configuration.starter.camera.pitch),
+                    vt3d.configuration.starter.camera.range,
                 )
                 CameraUtils.lookAt(vt3d.camera, vt3d.windowCenter, cameraOffset)
 
