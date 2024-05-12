@@ -418,10 +418,7 @@ export class Journey extends MapElement {
      * @return {Promise<void>}
      */
     removeFromDB = async () => {
-        if (this.origin === undefined) {
-            await vt3d.db.journeys.delete(this.slug, ORIGIN_STORE)
-        }
-
+        await vt3d.db.journeys.delete(this.slug, ORIGIN_STORE)
         await vt3d.db.journeys.delete(this.slug, JOURNEYS_STORE)
     }
 
