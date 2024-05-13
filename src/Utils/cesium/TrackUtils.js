@@ -128,21 +128,21 @@ export class TrackUtils {
     static focus = (track, showBbox = false) => {
         const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.starter.camera.heading), Cesium.Math.toRadians(vt3d.configuration.starter.camera.pitch), vt3d.configuration.starter.camera.range)
 
-        // Let's focus on one of the right datasource
-        const dataSource = TrackUtils.getDataSourcesByName(track.parent)[0]
-
         // We calculate the Bounding Box and enlarge it by 30%
         const bbox = TrackUtils.extendBbox(extent(track.content), 30)
         // Then we map it to the camera view
         let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
         const rectCarto = Cesium.Cartographic.fromCartesian(vt3d.camera.getRectangleCameraCoordinates(rectangle))
         const destination = Cesium.Cartographic.toCartesian(rectCarto)
-
+        //vt3d.camera.constrainedAxis = undefined
+        vt3d.camera.lookAtTransform(Cesium.Matrix4.IDENTITY)
         vt3d.camera.flyTo({
-            destination: destination, duration: 1, orientation: {
+            destination: destination, duration: 1,
+            orientation: {
                 heading: 0.0, pitch: -Cesium.Math.PI_OVER_TWO,
             },
         })
+        //  vt3d.viewer.scene.screenSpaceCameraController.enableTilt = false
 
         //Show BBox if requested
         if (showBbox) {
