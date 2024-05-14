@@ -60,13 +60,10 @@ export function ViewTrack3D() {
         // Set DefaultTheme
         __.app.setTheme()
 
-        // Update camera info
-        CameraUtils.updateCamera(vt3d?.camera).then(async r => {
-        })
-
         // Read DB
         readAllFromDB()
 
+        // Let's instantiate some elements Managers
         vt3d.initManagers()
 
         //Ready
@@ -140,7 +137,7 @@ export function ViewTrack3D() {
 
             <Scene></Scene>
             <Globe enableLighting={false}></Globe>
-            <Camera onMoveEnd={updateCameraPosition} ref={viewerRef}>
+            <Camera onChange={updateCameraPosition} ref={viewerRef}>
                 <CameraFlyTo
                     orientation={vt3d.cameraOrientation}
                     duration={3}

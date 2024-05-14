@@ -5,13 +5,18 @@
     "longitude": 5.70291,
     "latitude": 45.33524,
     "height": 1920,
-    "target": true,
     "camera": {
       "heading": 360,
       "pitch": -30,
       "roll": 0,
       "range": 2000
     }
+  },
+  "camera": {
+    "heading": 360,
+    "pitch": -30,
+    "roll": 0,
+    "range": 2000
   },
   "profile": {
     "show": true,

@@ -3,6 +3,7 @@ import { CameraUtils } from '../../Utils/cesium/CameraUtils.js'
 export class Camera {
     static CLOCKWISE = true
     static MOVE_EVENT = 'camera/move'
+    static UPDATE_EVENT = 'camera/update'
 
     starter = {}
     heading
@@ -26,19 +27,21 @@ export class Camera {
         this.latitude = undefined
         this.height = undefined
 
-        this.heading = settings?.heading ?? vt3d.configuration.starter.camera.heading
-        this.pitch = settings?.pitch ?? vt3d.configuration.starter.camera.pitch
-        this.roll = settings?.roll ?? vt3d.configuration.starter.camera.roll
-        this.range = settings?.range ?? vt3d.configuration.starter.camera.range
+        this.heading = settings?.heading ?? vt3d.configuration.camera.heading
+        this.pitch = settings?.pitch ?? vt3d.configuration.camera.pitch
+        this.roll = settings?.roll ?? vt3d.configuration.camera.roll
+        this.range = settings?.range ?? vt3d.configuration.camera.range
         this.clockwise = Camera.CLOCKWISE
 
         Camera.instance = this
+
+        vt3d.events.on(Camera.MOVE_EVENT, this.update)
 
     }
 
     run360 = () => {
         CameraUtils.run360(this)
-        this.update()
+        return this.update()
     }
 
     stop360 = () => {
@@ -46,21 +49,47 @@ export class Camera {
     }
 
     update = async (data = null) => {
-        if (data === null) {
-            data = await CameraUtils.updateCamera()
-        }
-        this.target = {
-            longitude: data.target.longitude,
-            latitude: data.target.latitude,
-            height: data.target.height,
+        data = (data === null) ? await CameraUtils.updateCamera() : data[0]
+        if (data) {
+            this.target = {
+                longitude: data.target.longitude,
+                latitude: data.target.latitude,
+                height: data.target.height,
+            }
+            this.longitude = data.longitude
+            this.latitude = data.latitude
+            this.height = data.height
+            this.heading = data.heading
+            this.pitch = data.pitch
+            this.roll = data.roll
+            this.range = data.range
+        } else {
+            this.reset()
         }
 
-        this.longitude = data.longitude
-        this.latitude = data.latitude
-        this.height = data.height
-        this.heading = data.heading
-        this.pitch = data.pitch
-        this.roll = data.roll
+        vt3d.events.emit(Camera.UPDATE_EVENT)
+        return this
+
+    }
+
+    /**
+     * Get the data of the camera instance
+     */
+    get = () => {
+        return {
+            target: {
+                longitude: this.target.longitude,
+                latitude: this.target.latitude,
+                height: this.target.height,
+            },
+            longitude: this.longitude,
+            latitude: this.latitude,
+            height: this.height,
+            heading: this.heading,
+            pitch: this.pitch,
+            roll: this.roll,
+            range: this.range,
+        }
     }
 
     reset = () => {
@@ -72,10 +101,12 @@ export class Camera {
         this.longitude = undefined
         this.latitude = undefined
         this.height = undefined
-        this.heading = vt3d.configuration.starter.camera.heading
-        this.pitch = vt3d.configuration.starter.camera.pitch
-        this.roll = vt3d.configuration.starter.camera.roll
-        this.range = vt3d.configuration.starter.camera.range
+        this.heading = vt3d.configuration.camera.heading
+        this.pitch = vt3d.configuration.camera.pitch
+        this.roll = vt3d.configuration.camera.roll
+        this.range = vt3d.configuration.camera.range
+
+        return this
     }
 
 }
