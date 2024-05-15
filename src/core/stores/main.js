@@ -2,6 +2,7 @@ export const main = {
     components: {
         camera: {
             show: false,
+            showTarget: false,
             position: {},
             event: false,
         },
