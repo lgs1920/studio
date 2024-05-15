@@ -30,7 +30,7 @@ export const CameraTargetPositionUI = (props) => {
 
     }
     return (
-        <div id="camera-position">
+        <div className="camera-position">
             <SlTooltip placement={'right'} content="Target information">
                 <SlButton size={'small'} className={'square-icon'} onClick={toggle}>
                     <SlIcon library="fa" name={FA2SL.set(faCrosshairsSimple)}></SlIcon>
@@ -41,17 +41,17 @@ export const CameraTargetPositionUI = (props) => {
                 <SlAnimation size="small" easing="bounceInLeft" duration={1000} iterations={1}
                              play={cameraSnap.showTarget}
                              onSlFinish={() => toggle()}>
-                    <SlCard id="camera-data-panel" open={cameraSnap.showTarget}>
+                    <SlCard className="camera-data-panel" open={cameraSnap.showTarget}>
                         <sl-icon library="fa" name={FA2SL.set(faCompass)}></sl-icon>
                         <TextValueUI value={cameraSnap.position.target.longitude.toFixed(5)}
-                                     id={'camera-longitude'}
+                                     className={'camera-longitude'}
                                      text={'Lon:'}/>
                         <TextValueUI value={cameraSnap.position.target.latitude.toFixed(5)}
-                                     id={'camera-latitude'}
+                                     className={'camera-latitude'}
                                      text={'Lat:'}/>
                         <sl-icon library="fa" name={FA2SL.set(faMountains)}></sl-icon>
                         <TextValueUI value={cameraSnap.position.target.height.toFixed()}
-                                     id={'camera-altitude'}
+                                     className={'camera-altitude'}
                                      units={[meter, mile]}/>
                     </SlCard>
                 </SlAnimation>

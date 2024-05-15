@@ -32,7 +32,7 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
 
     }
     return (
-        <div id="camera-position" ref={ref}>
+        <div className="camera-position" ref={ref}>
             <SlTooltip placement={'right'} content="Camera information">
                 <SlButton size={'small'} className={'square-icon'} onClick={toggle}>
                     <SlIcon library="fa" name={FA2SL.set(faVideo)}></SlIcon>
@@ -43,22 +43,22 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
                 <SlAnimation size="small" easing="bounceInLeft" duration={1000} iterations={1}
                              play={cameraSnap.show}
                              onSlFinish={() => toggle()}>
-                    <SlCard id="camera-data-panel" ref={ref} open={cameraSnap.show}>
+                    <SlCard className="camera-data-panel" ref={ref} open={cameraSnap.show}>
                         <sl-icon library="fa" name={FA2SL.set(faCompass)}></sl-icon>
                         <TextValueUI value={cameraSnap.position.longitude.toFixed(5)}
-                                     id={'camera-longitude'}
+                                     className={'camera-longitude'}
                                      text={'Lon:'}/>
                         <TextValueUI value={cameraSnap.position.latitude.toFixed(5)}
-                                     id={'camera-latitude'}
+                                     className={'camera-latitude'}
                                      text={'Lat:'}/>
                         <sl-icon library="fa" name={FA2SL.set(faAngle)}></sl-icon>
                         <TextValueUI value={cameraSnap.position.heading.toFixed()}
-                                     id={'camera-heading'} text={'Heading:'} units={'°'}/>
+                                     className={'camera-heading'} text={'Heading:'} units={'°'}/>
                         <TextValueUI value={(cameraSnap.position.pitch).toFixed()}
-                                     id={'camera-pitch'} text={'Pitch:'} units={'°'}/>
+                                     className={'camera-pitch'} text={'Pitch:'} units={'°'}/>
                         <sl-icon library="fa" name={FA2SL.set(faMountains)}></sl-icon>
                         <TextValueUI value={cameraSnap.position.height.toFixed()}
-                                     id={'camera-altitude'}
+                                     className={'camera-altitude'}
                                      units={[meter, mile]}/>
                     </SlCard>
                 </SlAnimation>
