@@ -73,7 +73,7 @@ export class Journey extends MapElement {
             this.getPOIsFromGeoJson()
 
             // Finally saveToDB
-            save()
+            save().then()
 
 
             const prepare = async () => {
@@ -90,6 +90,9 @@ export class Journey extends MapElement {
         vt3d.events.on(Camera.UPDATE_EVENT, () => {
             if (this.isCurrent()) {
                 this.camera = __.ui.camera.get()
+                vt3d.saveJourney(this)
+                this.addToContext()
+                vt3d.theJourney.camera = this.camera
                 save()
             }
         })

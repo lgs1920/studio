@@ -137,7 +137,7 @@ export function ViewTrack3D() {
 
             <Scene></Scene>
             <Globe enableLighting={false}></Globe>
-            <Camera onChange={updateCameraPosition} ref={viewerRef}>
+            <Camera onChange={updateCameraPosition} percentageChanged={0.1} ref={viewerRef}>
                 <CameraFlyTo
                     orientation={vt3d.cameraOrientation}
                     duration={3}

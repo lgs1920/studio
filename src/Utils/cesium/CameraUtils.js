@@ -40,9 +40,12 @@ export class CameraUtils {
                         latitude: 0,
                         height: 0,
                     },
-                    longitude: 0,
-                    latitude: 0,
-                    height: 0,
+                    position: {
+                        longitude: 0,
+                        latitude: 0,
+                        height: 0,
+                        range: 0,
+                    },
                 }
             }
         }

@@ -154,17 +154,6 @@ export class TrackUtils {
             initCamera = true
         }
 
-        //Express in radians for the following
-        const heading = Math.toRadians(camera.heading)
-        const pitch = Math.toRadians(camera.pitch)
-        const range = camera.range
-
-        const offset = new Cesium.HeadingPitchRange(
-            heading,
-            pitch,
-            range,
-        )
-
         // We calculate the Bounding Box and enlarge it by 30%
         const bbox = TrackUtils.extendBbox(extent(track.content), 30)
         let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
@@ -177,24 +166,30 @@ export class TrackUtils {
         } else {
             // we get destination point from saved coordinates
             destination = Cesium.Cartesian3.fromDegrees(
-                camera.target.longitude, camera.target.latitude, camera.target.height,
+                camera.longitude, camera.latitude, camera.height,
             )
         }
 
-        vt3d.viewer.flyTo(datasource, {orientation: offset, maximumHeight: camera.target.height + 5000}).then(() => {
+        vt3d.viewer.flyTo(datasource, {
+            offset: {
+                heading: Math.toRadians(camera.heading),
+                pitch: Math.toRadians(camera.pitch),
+                range: camera.range,
+            },
+        }).then(() => {
             vt3d.events.emit(Camera.UPDATE_EVENT)
         })
 
-        //Show BBox if requested
-        if (showBbox) {
-            vt3d.viewer.entities.add({
-                name: `BBox#${track.slug}`,
-                rectangle: {
-                    coordinates: rectangle,
-                    material: Cesium.Color.WHITE.withAlpha(0.05),
-                },
-            })
-        }
+        // //Show BBox if requested
+        // if (showBbox) {
+        //     vt3d.viewer.entities.add({
+        //         name: `BBox#${track.slug}`,
+        //         rectangle: {
+        //             coordinates: rectangle,
+        //             material: Cesium.Color.WHITE.withAlpha(0.05),
+        //         },
+        //     })
+        // }
     }
 
     static extendBbox = (bbox, x, y = undefined) => {
