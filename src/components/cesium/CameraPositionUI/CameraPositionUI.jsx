@@ -33,13 +33,13 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
     }
     return (
         <div id="camera-position" ref={ref}>
-            <SlTooltip placement={'right'} content="Show real time camera information">
+            <SlTooltip placement={'right'} content="Camera information">
                 <SlButton size={'small'} className={'square-icon'} onClick={toggle}>
                     <SlIcon library="fa" name={FA2SL.set(faVideo)}></SlIcon>
                 </SlButton>
             </SlTooltip>
 
-            {cameraSnap.show &&
+            {cameraSnap.show && cameraSnap.position.target !== undefined &&
                 <SlAnimation size="small" easing="bounceInLeft" duration={1000} iterations={1}
                              play={cameraSnap.show}
                              onSlFinish={() => toggle()}>
