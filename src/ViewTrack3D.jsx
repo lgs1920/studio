@@ -32,7 +32,6 @@ export function ViewTrack3D() {
         pitch: Cesium.Math.toRadians(starter.camera.pitch),
         roll: Cesium.Math.toRadians(starter.camera.roll),
     }
-
     const cameraStore = vt3d.mainProxy.components.camera
 
     const run360 = () => {
@@ -76,7 +75,7 @@ export function ViewTrack3D() {
 
         console.log('ViewTrack3D has been loaded and is ready !')
     })
-    
+
     return (<>
         <Viewer full
                 timeline={false}
@@ -104,7 +103,7 @@ export function ViewTrack3D() {
                 ref={viewerRef}
         >
             <ImageryLayer imageryProvider={new Cesium.OpenStreetMapImageryProvider({
-                url: 'https://a.tile.openstreetmap.org/',
+                url: 'https://tile.openstreetmap.org/',
             })}/>
 
 
@@ -136,7 +135,7 @@ export function ViewTrack3D() {
 
             <Scene></Scene>
             <Globe enableLighting={false}></Globe>
-            <Camera onChange={updateCameraPosition} /* percentageChanged={0.1}*/ ref={viewerRef}>
+            <Camera onChange={updateCameraPosition} percentageChanged={0.1} ref={viewerRef}>
                 <CameraFlyTo
                     orientation={vt3d.cameraOrientation}
                     duration={3}
