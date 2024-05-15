@@ -3,6 +3,7 @@ export const main = {
         camera: {
             show: false,
             position: {},
+            event: false,
         },
         credits: {show: false},
         journeyEditor: {
