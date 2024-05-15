@@ -1,6 +1,6 @@
 import { POI } from '@Core/POI'
 
-import { faCircleDot }               from '@fortawesome/pro-regular-svg-icons'
+import { faCircle }                  from '@fortawesome/pro-solid-svg-icons'
 import { JUST_ICON }                 from '../Utils/cesium/POIUtils'
 import { POI_VERTICAL_ALIGN_CENTER } from './POI'
 import { APP_KEY }                   from './VT3D'
@@ -12,7 +12,7 @@ export class ProfileTrackMarker extends POI {
 
         const POIOptions = {
             type: JUST_ICON,
-            icon: faCircleDot,
+            icon: faCircle,
             size: vt3d.configuration.profile.marker.size,
             name: 'profileTrackMarker',
             slug: 'profile-map-marker',
@@ -23,10 +23,11 @@ export class ProfileTrackMarker extends POI {
             visible: true,
             vertical: POI_VERTICAL_ALIGN_CENTER,
             backgroundColor: 'transparent',
-            foregroundColor: vt3d.configuration.profile.marker.color,
+            foregroundColor: options?.foregroundColor ?? vt3d.configuration.profile.marker.color,
         }
 
         super(POIOptions)
     }
+
 
 }

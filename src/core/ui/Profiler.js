@@ -1,11 +1,9 @@
-import {
-    faArrowDownToLine, faArrowLeftToLine, faArrowRightToLine, faCircleDot,
-}                                          from '@fortawesome/pro-regular-svg-icons'
-import { sprintf }                         from 'sprintf-js'
-import { FA2SL }                           from '../../Utils/FA2SL'
-import { DISTANCE_UNITS, ELEVATION_UNITS } from '../../Utils/UnitUtils'
-import { ProfileTrackMarker }              from '../ProfileTrackMarker'
-import { Singleton }                       from '../Singleton'
+import { faArrowDownToLine, faArrowLeftToLine, faArrowRightToLine, faCircle } from '@fortawesome/pro-regular-svg-icons'
+import { sprintf }                                                            from 'sprintf-js'
+import { FA2SL }                                                              from '../../Utils/FA2SL'
+import { DISTANCE_UNITS, ELEVATION_UNITS }                                    from '../../Utils/UnitUtils'
+import { ProfileTrackMarker }                                                 from '../ProfileTrackMarker'
+import { Singleton }                                                          from '../Singleton'
 
 export class Profiler extends Singleton {
 
@@ -112,7 +110,7 @@ export class Profiler extends Singleton {
          <span class="point-distance">
            <sl-icon library="fa" name="${FA2SL.set(faArrowLeftToLine)}"></sl-icon>
             ${sprintf('%\' .1f', coords.x)}  ${DISTANCE_UNITS[vt3d.configuration.unitsSystem]}
-            <sl-icon library="fa" name="${FA2SL.set(faCircleDot)}"></sl-icon>
+            <sl-icon library="fa" name="${FA2SL.set(faCircle)}"></sl-icon>
             ${sprintf('%\' .1f', length - coords.x)}  ${DISTANCE_UNITS[vt3d.configuration.unitsSystem]}
             <sl-icon library="fa" name="${FA2SL.set(faArrowRightToLine)}"></sl-icon>
         </span>                       
@@ -146,7 +144,7 @@ export class Profiler extends Singleton {
         PROFILE_CHARTS.forEach(id => {
             this.charts.get(id).updateSeries(series)
         })
-
+        vt3d.profileTrackMarker.update()
     }
 
     /**

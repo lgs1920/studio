@@ -114,6 +114,11 @@ export class POIUtils {
             if (options.visibility !== undefined) {
                 entity.show = options.visibility
             }
+            if (options.foregroundColor !== undefined) {
+                entity.color = Cesium.Color.fromCssColorString(options.foregroundColor)
+            } else {
+                entity.color = Cesium.Color.fromCssColorString(vt3d.theTrack.color)
+            }
         }
 
     }
