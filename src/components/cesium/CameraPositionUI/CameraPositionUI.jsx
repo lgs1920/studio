@@ -21,7 +21,7 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
         // Update camera info
         if (!cameraStore.show) {
             cameraStore.show = !cameraStore.show
-            CameraUtils.updatePosition(vt3d?.camera).then(data => {
+            CameraUtils.updateCamera(vt3d?.camera).then(data => {
                 if (data !== undefined) {
                     cameraStore.position = data
                 }

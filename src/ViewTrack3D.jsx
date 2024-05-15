@@ -2,6 +2,10 @@
  * React
  */
 import { VT3D_UI }     from '@Components/VT3D_UI/VT3D_UI.jsx'
+/**
+ * We are using shoelace Web components
+ */
+import '@shoelace-style/shoelace/dist/themes/light.css'
 import { VT3D }        from '@Core/VT3D'
 import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
 import { TrackUtils }  from '@Utils/cesium/TrackUtils'
@@ -9,12 +13,7 @@ import { TrackUtils }  from '@Utils/cesium/TrackUtils'
 import * as Cesium                                                         from 'cesium'
 import { useEffect, useRef }                                               from 'react'
 import { Camera, CameraFlyTo, Entity, Globe, ImageryLayer, Scene, Viewer } from 'resium'
-
-/**
- * We are using shoelace Web components
- */
-import '@shoelace-style/shoelace/dist/themes/light.css'
-import { Profiler }                                                        from './core/ui/Profiler'
+import { Camera as CameraManager }                                         from './core/ui/Camera.js'
 import { UIToast }                                                         from './Utils/UIToast'
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
@@ -25,22 +24,29 @@ export function ViewTrack3D() {
 
     const viewerRef = useRef(null)
 
-    const center = vt3d.configuration.center
-    vt3d.windowCenter = Cesium.Cartesian3.fromDegrees(center.longitude, center.latitude, center.height)
+    const starter = vt3d.configuration.starter
+    vt3d.windowCenter = Cesium.Cartesian3.fromDegrees(starter.longitude, starter.latitude, starter.height)
 
     vt3d.cameraOrientation = {
-        heading: Cesium.Math.toRadians(center.camera.heading),
-        pitch: Cesium.Math.toRadians(center.camera.pitch),
-        roll: Cesium.Math.toRadians(center.camera.roll),
+        heading: Cesium.Math.toRadians(starter.camera.heading),
+        pitch: Cesium.Math.toRadians(starter.camera.pitch),
+        roll: Cesium.Math.toRadians(starter.camera.roll),
+    }
+
+    const cameraStore = vt3d.mainProxy.components.camera
+
+    const run360 = () => {
+        CameraUtils.run360()
     }
 
     const updateCameraPosition = () => {
-        const cameraStore = vt3d.mainProxy.components.camera
-        CameraUtils.updatePosition().then(data => {
+        CameraUtils.updateCamera().then(data => {
             if (data !== undefined) {
                 cameraStore.position = data
             }
+            vt3d.events.emit(CameraManager.MOVE_EVENT, [data])
         })
+
     }
 
 
@@ -54,16 +60,11 @@ export function ViewTrack3D() {
         // Set DefaultTheme
         __.app.setTheme()
 
-        // Update camera info
-        CameraUtils.updatePosition(vt3d?.camera).then(async r => {
-        })
-
         // Read DB
         readAllFromDB()
 
-        // Init Managers
-        __.ui.profiler = new Profiler()
-
+        // Let's instantiate some elements Managers
+        vt3d.initManagers()
 
         //Ready
         UIToast.success({
@@ -103,9 +104,9 @@ export function ViewTrack3D() {
             //     })}
                 ref={viewerRef}
         >
-            {/* <ImageryLayer imageryProvider={new Cesium.OpenStreetMapImageryProvider({ */}
-            {/*     url: 'https://a.tile.openstreetmap.org/', */}
-            {/* })}/> */}
+            <ImageryLayer imageryProvider={new Cesium.OpenStreetMapImageryProvider({
+                url: 'https://a.tile.openstreetmap.org/',
+            })}/>
 
 
             {/* <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({ */}
@@ -117,13 +118,13 @@ export function ViewTrack3D() {
             {/* })} */}
 
 
-            <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({
-                url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
-                layer: 'ORTHOIMAGERY.ORTHOPHOTOS2',
-                style: 'normal',
-                format: 'image/png',
-                tileMatrixSetID: 'PM',
-            })}/>
+            {/* <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({ */}
+            {/*     url: 'https://wxs.ign.fr/cartes/geoportail/wmts', */}
+            {/*     layer: 'ORTHOIMAGERY.ORTHOPHOTOS2', */}
+            {/*     style: 'normal', */}
+            {/*     format: 'image/png', */}
+            {/*     tileMatrixSetID: 'PM', */}
+            {/* })}/> */}
 
 
             {/* <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({ */}
@@ -136,13 +137,13 @@ export function ViewTrack3D() {
 
             <Scene></Scene>
             <Globe enableLighting={false}></Globe>
-            <Camera onMoveStart={updateCameraPosition} onMoveEnd={updateCameraPosition} ref={viewerRef}>
+            <Camera onChange={updateCameraPosition} ref={viewerRef}>
                 <CameraFlyTo
                     orientation={vt3d.cameraOrientation}
                     duration={3}
                     destination={vt3d.windowCenter}
                     once={true}
-                    onComplete={CameraUtils.turnAroundCameraTarget}
+                    onComplete={run360}
                 />
             </Camera>
             <Entity id={'markers-group'}/>

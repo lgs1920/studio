@@ -48,7 +48,7 @@ export const JourneyLoader = (props) => {
                 await TrackUtils.createCommonMapObjectsStore()
                 __.ui.profiler.draw()
 
-                vt3d.stopTurnAround()
+                vt3d.stop360()
 
             } else {
                 // It exists, we notify it

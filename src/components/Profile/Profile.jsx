@@ -11,6 +11,7 @@ import { UIToast }                               from '../../Utils/UIToast'
 import { JourneySelector }                       from '../TracksEditor/journey/JourneySelector'
 import { Utils }                                 from '../TracksEditor/Utils'
 import { Toolbar }                               from '../VT3D_UI/Toolbar'
+import { Wander }                                from '../Wander/Wander'
 import { ProfileChart }                          from './ProfileChart'
 
 export const Profile = function Profile(props, ref) {
@@ -100,6 +101,7 @@ export const Profile = function Profile(props, ref) {
                              tooltip={'top'}
                              mode={'embed'}
                              center={<ProfileToolbar/>}
+                             left={<Wander/>}
                     />
                 </div>
                 {data && <ProfileChart series={data.series}

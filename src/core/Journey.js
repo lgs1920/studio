@@ -1,8 +1,5 @@
 import { gpx, kml }                     from '@tmcw/togeojson'
 import {
-    default as flatten,
-}                                       from '@turf/flatten'
-import {
     getGeom,
 }                                       from '@turf/invariant'
 import {
@@ -19,6 +16,9 @@ import {
 }                                       from './MapElement'
 import { POI, POI_VERTICAL_ALIGN_TOP }  from './POI'
 import { Track }                        from './Track'
+import {
+    Camera,
+}                                       from './ui/Camera.js'
 import { JOURNEYS_STORE, ORIGIN_STORE } from './VT3D'
 
 export class Journey extends MapElement {
@@ -34,9 +34,15 @@ export class Journey extends MapElement {
     POIsVisible = true
 
     metrics = {}
+    camera = {}
 
     constructor(title, type, options) {
         super()
+
+        const save = async () => {
+            await this.saveToDB()
+        }
+
         if (title) {
             this.title = this.singleTitle(title)
             this.type = type
@@ -51,6 +57,9 @@ export class Journey extends MapElement {
 
             this.DEMServer = options.DEMServer ?? NO_DEM_SERVER
 
+            this.camera = options.camera ?? null
+
+
             // Transform content to GeoJson
             this.getGeoJson(options.content ?? '')
 
@@ -64,17 +73,26 @@ export class Journey extends MapElement {
             this.getPOIsFromGeoJson()
 
             // Finally saveToDB
-            const save = async () => {
-                await this.saveToDB()
-            }
-
             save()
+
+
             const prepare = async () => {
                 await this.prepareDrawing()
             }
             prepare()
 
         }
+
+        /**
+         * If we're on the current journey, we register to the camera updates events
+         * in order to save camera information
+         */
+        vt3d.events.on(Camera.UPDATE_EVENT, () => {
+            if (this.isCurrent()) {
+                this.camera = __.ui.camera.get()
+                save()
+            }
+        })
     }
 
     /**
@@ -125,6 +143,15 @@ export class Journey extends MapElement {
 
     static unproxify = (object) => {
         return super.serialize({...object, ...{__class: Journey}})
+    }
+
+    /**
+     * Check if it is the current Journey
+     *
+     * @return {boolean}
+     */
+    isCurrent = () => {
+        return vt3d.theJourney && vt3d.theJourney.slug === this.slug
     }
 
     prepareDrawing = async () => {
@@ -418,10 +445,7 @@ export class Journey extends MapElement {
      * @return {Promise<void>}
      */
     removeFromDB = async () => {
-        if (this.origin === undefined) {
-            await vt3d.db.journeys.delete(this.slug, ORIGIN_STORE)
-        }
-
+        await vt3d.db.journeys.delete(this.slug, ORIGIN_STORE)
         await vt3d.db.journeys.delete(this.slug, JOURNEYS_STORE)
     }
 
@@ -480,7 +504,7 @@ export class Journey extends MapElement {
     }
 
     focus = () => {
-        TrackUtils.focus({content: flatten(this.geoJson), slug: this.slug})
+        TrackUtils.focus(this)
     }
 
     showAfterHeightSimulation = async () => {

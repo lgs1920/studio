@@ -1,5 +1,5 @@
 import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-icons'
-import { faRoute }                          from '@fortawesome/pro-solid-svg-icons'
+import { faCircle, faRoute }                from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlOption, SlSelect }       from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                            from '@Utils/FA2SL'
 import { forwardRef }                       from 'react'
@@ -40,8 +40,16 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
             return 0
         })
     }
+
     // set Default
     mainStore.theJourney = vt3d.theJourney?.slug
+
+    // Look for colo to add in prefix
+    const prefixColor = (journey) => {
+        const color = (journey.tracks.size === 1) ? journey.tracks.values().next().value.color : 'black'
+        return {color: color, fontSize: '0.9em'}
+
+    }
 
     return (<>
         {mainSnapshot.list.length > 1 && <SlSelect hoist label={props.label}
@@ -54,6 +62,13 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
             <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
             {journeys.map(journey => <SlOption key={journey.title} value={journey.slug}>
+                <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
+                <SlIcon library="fa"
+                        name={FA2SL.set(faCircle)}
+                        slot={'prefix'}
+                        style={prefixColor(journey)}
+                />
+
                 {journey.visible ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/> : <SlIcon
                     slot="suffix" library="fa" name={FA2SL.set(faEyeSlash)}/>}
                 {journey.title}

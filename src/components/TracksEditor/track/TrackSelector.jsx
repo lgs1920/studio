@@ -1,8 +1,10 @@
 import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon, SlOption, SlSelect }       from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                            from '@Utils/FA2SL'
-import { forwardRef }                       from 'react'
-import { useSnapshot }                      from 'valtio'
+import { faCircle }                         from '@fortawesome/pro-solid-svg-icons'
+
+import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                      from '@Utils/FA2SL'
+import { forwardRef }                 from 'react'
+import { useSnapshot }                from 'valtio'
 
 export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
 
@@ -23,6 +25,12 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     // TODO : Check if it right to take tracks in the order in which they were created.
     // }
 
+    // Look for color to add in prefix
+    const prefixColor = (track) => {
+        return {color: track.color, fontSize: '0.9em'}
+    }
+
+
     return (<>
             { // Several tracks : we add a selection widget
                 tracks.size > 1 && <SlSelect hoist label={props.label}
@@ -33,6 +41,11 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
                     <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
                     {Array.from(editorSnapshot.journey.tracks.values()).map(track =>
                         <SlOption key={track.title} value={track.slug}>
+                            <SlIcon library="fa"
+                                    name={FA2SL.set(faCircle)}
+                                    slot={'prefix'}
+                                    style={prefixColor(track)}
+                            />
                             {track.visible ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/> : <SlIcon
                                 slot="suffix" library="fa" name={FA2SL.set(faEyeSlash)}/>}
                             {track.title}

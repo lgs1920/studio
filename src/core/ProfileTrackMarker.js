@@ -17,7 +17,7 @@ export class ProfileTrackMarker extends POI {
             name: 'profileTrackMarker',
             slug: 'profile-map-marker',
             journey: APP_KEY,
-            coordinates: [vt3d.configuration.center.longitude, vt3d.configuration.center.latitude],
+            coordinates: [vt3d.configuration.starter.longitude, vt3d.configuration.starter.latitude],
             altitude: false,
             time: false,
             visible: true,

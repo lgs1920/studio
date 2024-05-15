@@ -1,10 +1,13 @@
 import { default as extent }                                                   from '@mapbox/geojson-extent'
 import * as Cesium                                                             from 'cesium'
-import { Color, CustomDataSource, GeoJsonDataSource }                          from 'cesium'
+import { Color, CustomDataSource, GeoJsonDataSource, Math }                    from 'cesium'
 import {
     FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
 }                                                                              from '../../core/Journey'
 import { Track }                                                               from '../../core/Track'
+import {
+    Camera,
+}                                                                              from '../../core/ui/Camera.js'
 import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/VT3D'
 import { FileUtils }                                                           from '../FileUtils.js'
 import { POIUtils }                                                            from './POIUtils'
@@ -118,30 +121,68 @@ export class TrackUtils {
     }
 
     /**
-     * Focus on a geometry
+     * Focus on a journey
      *
-     * @param {Object } track Feature or Feature collection to focus on.
-     *                        Should contains at least 2 properties :
-     *                              - content : the geo json
-     *                              - slug : the slug of the element
+     * We need, at least, one journey or one track, but not both
+     *
+     * @param {Journey } journey
+     * @param {Track} track
+     * @param {boolean} showBbox
      */
-    static focus = (track, showBbox = false) => {
-        const cameraOffset = new Cesium.HeadingPitchRange(Cesium.Math.toRadians(vt3d.configuration.center.camera.heading), Cesium.Math.toRadians(vt3d.configuration.center.camera.pitch), vt3d.configuration.center.camera.range)
+    static focus = async ({journey = null, track = null, showBbox = false}) => {
 
-        // Let's focus on one of the right datasource
-        const dataSource = TrackUtils.getDataSourcesByName(track.parent)[0]
+        // If track not provided, we'll get the first one of the journey
+        let datasource
+        if (track === null) {
+            // But we need to set the journey to the current one if there is no information
+            if (journey === null) {
+                journey = vt3d.theJourney
+            }
+            track = journey.tracks.values().next().value
+            datasource = vt3d.viewer.dataSources.getByName(track.slug, true)[0]
+        } else {
+            // We have a track, let's force the journey (even if there is one provided)
+            journey = vt3d.journeys.get(track.parent)
+            datasource = vt3d.viewer.dataSources.getByName(track.slug, true)[0]
+        }
+
+        // Do we have camera information ? Get it if not
+        let camera = journey.camera
+        let initCamera = false
+        if (camera === null) {
+            camera = __.ui.camera.reset().get()
+            initCamera = true
+        }
+
+        //Express in radians for the following
+        const heading = Math.toRadians(camera.heading)
+        const pitch = Math.toRadians(camera.pitch)
+        const range = camera.range
+
+        const offset = new Cesium.HeadingPitchRange(
+            heading,
+            pitch,
+            range,
+        )
 
         // We calculate the Bounding Box and enlarge it by 30%
         const bbox = TrackUtils.extendBbox(extent(track.content), 30)
-        // Then we map it to the camera view
         let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
-        const rectCarto = Cesium.Cartographic.fromCartesian(vt3d.camera.getRectangleCameraCoordinates(rectangle))
-        const destination = Cesium.Cartographic.toCartesian(rectCarto)
 
-        vt3d.camera.flyTo({
-            destination: destination, duration: 1, orientation: {
-                heading: 0.0, pitch: -Cesium.Math.PI_OVER_TWO,
-            },
+        let destination
+        if (initCamera) {
+            // We map th BBox to the camera view and get destination point
+            destination = vt3d.camera.getRectangleCameraCoordinates(rectangle)
+
+        } else {
+            // we get destination point from saved coordinates
+            destination = Cesium.Cartesian3.fromDegrees(
+                camera.target.longitude, camera.target.latitude, camera.target.height,
+            )
+        }
+
+        vt3d.viewer.flyTo(datasource, {orientation: offset, maximumHeight: camera.target.height + 5000}).then(() => {
+            vt3d.events.emit(Camera.UPDATE_EVENT)
         })
 
         //Show BBox if requested

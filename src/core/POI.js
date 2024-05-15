@@ -88,6 +88,13 @@ export class POI {
         await POIUtils.update(this, {visibility: !this.visible})
     }
 
+    hide = async () => {
+        await POIUtils.update(this, {visibility: false})
+    }
+    show = async () => {
+        await POIUtils.update(this, {visibility: true})
+    }
+
 }
 
 export const POI_VERTICAL_ALIGN_TOP = 'top'

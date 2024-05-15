@@ -181,6 +181,7 @@ export const JourneySettings = function JourneySettings() {
                 mainStore.canViewJourneyData = false
                 mainStore.components.journeyEditor.show = false
                 mainStore.components.profile.show = false
+                mainStore.canViewProfile = false
             }
 
             // Let's inform the user

@@ -29,12 +29,17 @@ export const main = {
             latitude: 0,
             longitude: 0,
             altitude: 0,
-
         },
         profile: {
             visible: false,
             show: false,
             key: 0,
+        },
+        wanderer: {
+            run: false,
+            rightWay: true,
+            duration: undefined,
+            forcedToStart: true, // false= force To Stop
         },
 
     },
