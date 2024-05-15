@@ -15,12 +15,12 @@ export class CameraUtils {
     static getHeadingPitchRoll = (camera) => {
         if (camera) {
             return {
-                heading: M.toDegrees(camera.heading),
+                heading: Math.max(0, Math.min(M.toDegrees(Math.round(camera.heading)), 360)),
                 pitch: M.toDegrees(camera.pitch),
                 roll: M.toDegrees(camera.roll),
             }
         } else {
-            return {heading: 0, pitch: 0, roll: 0}
+            return {heading: 360, pitch: -90, roll: 360}
         }
 
     }
@@ -85,16 +85,12 @@ export class CameraUtils {
         try {
             const cameraPositions = await CameraUtils.getPositions(camera)
             const hpr = await CameraUtils.getHeadingPitchRoll(camera)
-            let heading = hpr.heading
-            if (heading === 360) {
-                heading = 0
-            }
             return {
                 target: cameraPositions.target,
                 longitude: cameraPositions.position.longitude,
                 latitude: cameraPositions.position.latitude,
                 height: cameraPositions.position.height,
-                heading: heading,
+                heading: hpr.heading,
                 pitch: hpr.pitch,
                 roll: hpr.roll,
                 range: cameraPositions.position.range,

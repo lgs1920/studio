@@ -66,6 +66,8 @@ export function ViewTrack3D() {
         // Let's instantiate some elements Managers
         vt3d.initManagers()
 
+        updateCameraPosition()
+
         //Ready
         UIToast.success({
             caption: `Welcome on ${vt3d.configuration.applicationName}!`,
@@ -73,11 +75,8 @@ export function ViewTrack3D() {
         })
 
         console.log('ViewTrack3D has been loaded and is ready !')
-
-
     })
-
-
+    
     return (<>
         <Viewer full
                 timeline={false}
@@ -91,7 +90,7 @@ export function ViewTrack3D() {
                     requestVertexNormals: false,
                 })}
                 id="viewTrack3DViewer"
-            //   imageryProvider={true}
+            //imageryProvider={true}
             // baseLayer={Cesium.ImageryLayer.fromWorldImagery({
             //     style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS,
             // })}
@@ -115,7 +114,7 @@ export function ViewTrack3D() {
             {/*     style: 'normal', */}
             {/*     format: 'image/png', */}
             {/*     tileMatrixSetID: 'PM', */}
-            {/* })} */}
+            {/* })}/> */}
 
 
             {/* <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({ */}
@@ -137,7 +136,7 @@ export function ViewTrack3D() {
 
             <Scene></Scene>
             <Globe enableLighting={false}></Globe>
-            <Camera onChange={updateCameraPosition} percentageChanged={0.1} ref={viewerRef}>
+            <Camera onChange={updateCameraPosition} /* percentageChanged={0.1}*/ ref={viewerRef}>
                 <CameraFlyTo
                     orientation={vt3d.cameraOrientation}
                     duration={3}

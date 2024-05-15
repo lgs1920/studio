@@ -21,7 +21,7 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
         // Update camera info
         if (!cameraStore.show) {
             cameraStore.show = !cameraStore.show
-            CameraUtils.updateCamera(vt3d?.camera).then(data => {
+            CameraUtils.updateCamera().then(data => {
                 if (data !== undefined) {
                     cameraStore.position = data
                 }
@@ -31,14 +31,12 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
         cameraStore.show = false
 
     }
-
-
     return (
         <div id="camera-position" ref={ref}>
             <SlTooltip placement={'right'} content="Show real time camera information">
-
-                <SlButton size={'small'} className={'square-icon'} onClick={toggle}><SlIcon library="fa"
-                                                                                            name={FA2SL.set(faVideo)}></SlIcon></SlButton>
+                <SlButton size={'small'} className={'square-icon'} onClick={toggle}>
+                    <SlIcon library="fa" name={FA2SL.set(faVideo)}></SlIcon>
+                </SlButton>
             </SlTooltip>
 
             {cameraSnap.show &&
@@ -59,7 +57,7 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
                         <TextValueUI value={(cameraSnap.position.pitch).toFixed()}
                                      id={'camera-pitch'} text={'Pitch:'} units={'°'}/>
                         <sl-icon library="fa" name={FA2SL.set(faMountains)}></sl-icon>
-                        <TextValueUI value={cameraSnap.position.altitude.toFixed()}
+                        <TextValueUI value={cameraSnap.position.height.toFixed()}
                                      id={'camera-altitude'}
                                      units={[meter, mile]}/>
                     </SlCard>
