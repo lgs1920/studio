@@ -58,7 +58,7 @@ export class Profiler extends Singleton {
 
         let distance = 0
         vt3d.theJourney.tracks.forEach((track, slug) => {
-            if (track.visible) {
+            if (track.visible && track.metrics.points !== undefined) {
                 const dataSet = {
                     data: [],
                     color: track.color,
