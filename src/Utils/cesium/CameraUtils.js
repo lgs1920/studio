@@ -1,12 +1,11 @@
-import { Cartesian2, Cartesian3, Ellipsoid, HeadingPitchRange, Math as M, Transforms } from 'cesium'
-import { Camera }                                                                      from '../../core/ui/Camera.js'
+import { Cartesian2, Cartesian3, Ellipsoid, HeadingPitchRange, Math as M } from 'cesium'
 
 export class CameraUtils {
 
     static lookAt = (camera, center, hpr) => {
         // Lock camera to a point
         const point = new Cartesian3(center.x, center.y, center.z)
-        camera.lookAtTransform(Transforms.eastNorthUpToFixedFrame(point), hpr)
+        camera.lookAt(point, hpr)
     }
 
     /**
@@ -110,12 +109,14 @@ export class CameraUtils {
      *
      *
      */
-    static run360 = (camera = __.ui.camera && new Camera()) => {
+    static run360 = () => {
+        const camera = __.ui.camera.get()
+        console.log(camera)
         CameraUtils.lookAt(vt3d.camera,
             Cartesian3.fromDegrees(
-                camera.longitude ?? camera.target.longitude,
-                camera.latitude ?? camera.target.latitude,
-                camera.height ?? camera.target.height,
+                camera.target.longitude,
+                camera.target.latitude,
+                camera.target.height,
             ),
             new HeadingPitchRange(
                 M.toRadians(camera.heading),
@@ -126,7 +127,6 @@ export class CameraUtils {
         const step = (camera.clockwise) ? M.PI / 1000 : -M.PI / 1000
         vt3d.stop360 = vt3d.viewer.clock.onTick.addEventListener(async () => {
             vt3d.camera.rotateLeft(step)
-            __.ui.camera.update()
         })
     }
 

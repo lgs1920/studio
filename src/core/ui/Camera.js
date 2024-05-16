@@ -35,8 +35,6 @@ export class Camera {
 
         Camera.instance = this
 
-        vt3d.events.on(Camera.MOVE_EVENT, this.update)
-
     }
 
     run360 = () => {
