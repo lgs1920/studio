@@ -82,8 +82,12 @@
     --spacing: 0
 }
 
+.vt3d-ui-toolbar sl-button {
+    max-width: max-content;
+}
+
 .vt3d-ui-toolbar.embed sl-button {
-    --sl-input-border-width: 0
+    --sl-input-border-width: 0;
 }
 
 #profile-ui {
