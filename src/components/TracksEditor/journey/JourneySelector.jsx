@@ -39,16 +39,17 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
             }
             return 0
         })
+
     }
 
     // set Default
     mainStore.theJourney = vt3d.theJourney?.slug
+    const theJourney = vt3d.theJourney
 
     // Look for colo to add in prefix
     const prefixColor = (journey) => {
         const color = (journey.tracks.size === 1) ? journey.tracks.values().next().value.color : 'black'
         return {color: color, fontSize: '0.9em'}
-
     }
 
     return (<>
@@ -59,6 +60,14 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
                                                    size={props.size ?? 'medium'}
                                                    className="journey-selector"
         >
+            <SlIcon library="fa"
+                    name={FA2SL.set(faCircle)}
+                    slot={'prefix'}
+                    style={{
+                        color: (theJourney.tracks.size === 1) ? editorSnapshot.track.color : 'black',
+                        fontSize: '0.9em',
+                    }}
+            />
             <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
             {journeys.map(journey => <SlOption key={journey.title} value={journey.slug}>
