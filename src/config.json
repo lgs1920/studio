@@ -7,14 +7,14 @@
     "height": 1920,
     "camera": {
       "heading": 360,
-      "pitch": -45,
+      "pitch": -30,
       "roll": 0,
-      "range": 3000
+      "range": 2000
     }
   },
   "camera": {
     "heading": 360,
-    "pitch": -0,
+    "pitch": -45,
     "roll": 0,
     "range": 2000
   },

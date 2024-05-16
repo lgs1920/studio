@@ -26,7 +26,7 @@ export function ViewTrack3D() {
 
     const viewerRef = useRef(null)
     const mainStore = vt3d.mainProxy
-    mainStore.layer = Layer.IGN_PLAN
+    mainStore.layer = Layer.IGN_AERIAL
 
 
     const starter = vt3d.configuration.starter
@@ -40,7 +40,7 @@ export function ViewTrack3D() {
     const cameraStore = vt3d.mainProxy.components.camera
 
     const run360 = () => {
-        //  CameraUtils.run360()
+        CameraUtils.run360()
     }
 
     const updateCameraPosition = () => {
@@ -102,7 +102,9 @@ export function ViewTrack3D() {
         >
             <MapLayer/>
 
-            <Scene></Scene>
+            <Scene verticalExaggeration={1.15}
+                   verticalExaggerationRelativeHeight={2400.0}>
+            </Scene>
             <Globe enableLighting={false}></Globe>
             <Camera onChange={updateCameraPosition} percentageChanged={0.1} ref={viewerRef}>
                 <CameraFlyTo

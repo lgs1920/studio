@@ -17,38 +17,49 @@ export const MapLayer = (layer) => {
                 })}/>
             }
 
-                {
-                    mainSnap.layer === Layer.IGN_PLAN &&
-                    <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                        url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
-                        layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
-                        style: 'normal',
-                        format: 'image/png',
-                        tileMatrixSetID: 'PM',
-                    })}/>
-                }
+            {
+                mainSnap.layer === Layer.IGN_PLAN &&
+                <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
+                    url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
+                    layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
+                    style: 'normal',
+                    format: 'image/png',
+                    tileMatrixSetID: 'PM',
+                })}/>
+            }
 
-                {
-                    mainSnap.layer === Layer.IGN_AERIAL &&
-                    <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                        url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
-                        layer: 'ORTHOIMAGERY.ORTHOPHOTOS2',
-                        style: 'normal',
-                        format: 'image/png',
-                        tileMatrixSetID: 'PM',
-                    })}/>
-                }
+            {
+                mainSnap.layer === Layer.IGN_AERIAL &&
+                <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
+                    url: 'https://wmts.geopf.fr/wmts',
+                    layer: 'ORTHOIMAGERY.ORTHOPHOTOS',
+                    style: 'normal',
+                    format: 'image/jpeg',
+                    tileMatrixSetID: 'PM',
+                    service: 'WMTS',
+                })}/>
+            }
+            https://wmts.geopf.fr/wmts?
+            layer=ORTHOIMAGERY.ORTHOPHOTOS&
+            style=normal&
+            tilematrixset=PM&
+            Service=WMTS&
+            Request=GetTile&
+            Version=1.0.0&
+            Format=image%2Fjpeg&
+            TileMatrix=11
+            &TileCol=1060&TileRow=732
 
-                {
-                    mainSnap.layer === Layer.IGN_CADASTRAL &&
-                    <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                        url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
-                        layer: 'CADASTRALPARCELS.PARCELLAIRE_EXPRESS',
-                        style: 'normal',
-                        format: 'image/png',
-                        tileMatrixSetID: 'PM',
-                    })}/>
-                }
+            {
+                mainSnap.layer === Layer.IGN_CADASTRAL &&
+                <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
+                    url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
+                    layer: 'CADASTRALPARCELS.PARCELLAIRE_EXPRESS',
+                    style: 'normal',
+                    format: 'image/png',
+                    tileMatrixSetID: 'PM',
+                })}/>
+            }
 
         </>
     )
