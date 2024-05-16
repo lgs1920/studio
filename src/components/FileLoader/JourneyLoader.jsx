@@ -1,6 +1,6 @@
 import './style.css'
 import { Journey }                     from '@Core/Journey'
-import { faMapLocation }               from '@fortawesome/pro-regular-svg-icons'
+import { faCirclePlus }                from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
 import { FA2SL }                       from '@Utils/FA2SL'
@@ -66,7 +66,7 @@ export const JourneyLoader = (props) => {
         <>
             <SlTooltip placement={props.tooltip} content="Load a track file">
                 <SlButton size={'small'} onClick={uploadFile} className={'square-icon'}>
-                    <SlIcon library="fa" name={FA2SL.set(faMapLocation)}/>
+                    <SlIcon library="fa" name={FA2SL.set(faCirclePlus)}/>
                 </SlButton>
             </SlTooltip>
         </>

@@ -1,6 +1,6 @@
 import {
-    faRegularArrowsRotateReverseMagnifyingGlass, faRegularCircleDotSlash,
-}                                                from '@awesome.me/kit-938bf84c0d/icons/kit/custom'
+    faRegularArrowsRotateReverseMagnifyingGlass, faSolidCircleSlash,
+}                                                from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { SlButton, SlDrawer, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { useSnapshot }                           from 'valtio'
@@ -61,14 +61,14 @@ export const Profile = function Profile(props, ref) {
     const ProfileToolbar = (props) => {
         return (<>
             <SlTooltip placement={'top'} content="Toggle Marker Visibility">
-                {<SlButton size={'small'} id={'toggle-marker-visibility'} className={'square-icon'}>
+                {<SlButton id={'toggle-marker-visibility'} className={'square-icon'}>
                     <SlIcon library="fa"
-                            onClick={toggleMarker} name={FA2SL.set(faRegularCircleDotSlash)}></SlIcon>
+                            onClick={toggleMarker} name={FA2SL.set(faSolidCircleSlash)}></SlIcon>
                 </SlButton>}
             </SlTooltip>
 
             <SlTooltip placement={'top'} content="Reset Chart">
-                {<SlButton size={'small'} id={'open-the-profile-panel'} className={'square-icon'}>
+                {<SlButton id={'open-the-profile-panel'} className={'square-icon'}>
                     <SlIcon library="fa"
                             onClick={resetChart}
                             name={FA2SL.set(faRegularArrowsRotateReverseMagnifyingGlass)}></SlIcon>
