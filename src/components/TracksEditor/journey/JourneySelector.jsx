@@ -49,7 +49,7 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
     // Look for colo to add in prefix
     const prefixColor = (journey) => {
         const color = (journey.tracks.size === 1) ? journey.tracks.values().next().value.color : 'black'
-        return {color: color, fontSize: '0.9em'}
+        return {color: color}
     }
 
     return (<>

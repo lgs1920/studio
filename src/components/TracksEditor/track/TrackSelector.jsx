@@ -1,5 +1,5 @@
 import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-icons'
-import { faCircle }                         from '@fortawesome/pro-solid-svg-icons'
+import { faCircle, faRoute }                from '@fortawesome/pro-solid-svg-icons'
 
 import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                      from '@Utils/FA2SL'
@@ -28,7 +28,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     // Look for color to add in prefix
     const prefixColor = (track) => {
         // mainStore.keys.track.list
-        return {color: editorSnapshot.color, fontSize: '0.9em'}
+        return {color: editorSnapshot.track.color}
     }
 
 
@@ -40,9 +40,9 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
                                              key={mainSnapshot.keys.track.list}
                 >
                     <SlIcon library="fa"
-                            name={FA2SL.set(faCircle)}
+                            name={FA2SL.set(faRoute)}
                             slot={'prefix'}
-                            style={{color: editorSnapshot.track.color, fontSize: '0.9em'}}
+                            style={{color: editorSnapshot.track.color}}
                     />
 
                     <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
