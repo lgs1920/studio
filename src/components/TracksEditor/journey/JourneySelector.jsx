@@ -61,11 +61,10 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
                                                    className="journey-selector"
         >
             <SlIcon library="fa"
-                    name={FA2SL.set(faCircle)}
+                    name={FA2SL.set(faRoute)}
                     slot={'prefix'}
                     style={{
                         color: (theJourney.tracks.size === 1) ? editorSnapshot.track.color : 'black',
-                        fontSize: '0.9em',
                     }}
             />
             <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
@@ -85,7 +84,13 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
         </SlSelect>}
         {mainSnapshot.list.length === 1 && props.single && <>
             <span className={'journey-title'}>
-            <SlIcon className={'journey-title-icon'} library="fa" name={FA2SL.set(faRoute)} slot={'expand-icon'}/>
+            <SlIcon className={'journey-title-icon'}
+                    library="fa" name={FA2SL.set(faRoute)}
+                    slot={'expand-icon'}
+                    style={{
+                        color: (theJourney.tracks.size === 1) ? editorSnapshot?.track?.color : 'black',
+                    }}
+            />
                 {vt3d.theJourney.title}
                 </span>
         </>}
