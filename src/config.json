@@ -7,9 +7,9 @@
     "height": 1920,
     "camera": {
       "heading": 360,
-      "pitch": -30,
+      "pitch": -45,
       "roll": 0,
-      "range": 2000
+      "range": 3000
     }
   },
   "camera": {
@@ -85,5 +85,31 @@
     "minSlope": 2,
     "stopDuration": 60,
     "stopSpeedLimit": 0.2
+  },
+  "layers": {
+    "IGN": {
+      "CADASTRAL": {
+        "name": "IGN Cadastral",
+        "id": "ign-cadastral",
+        "image": ""
+      },
+      "PLAN": {
+        "name": "IGN Plan",
+        "id": "ign-plan",
+        "image": ""
+      },
+      "PHOTO": {
+        "name": "IGN Aerial",
+        "id": "ign-photo",
+        "image": ""
+      }
+    },
+    "OSM": {
+      "PLAN": {
+        "name": "OSM Plan",
+        "id": "osm-plan",
+        "image": ""
+      }
+    }
   }
 }

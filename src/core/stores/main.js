@@ -55,4 +55,5 @@ export const main = {
     fullSize: false,
     canViewJourneyData: false,
     canViewProfile: false,
+    layer: false,
 }
