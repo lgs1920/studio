@@ -1,12 +1,10 @@
 import { CameraPositionUI }       from '@Components/cesium/CameraPositionUI/CameraPositionUI'
 import { CompassUI }              from '@Components/cesium/CompassUI/CompassUI'
 import { CreditsUI }              from '@Components/CreditsUI/CreditsUI'
-import { FloatingMenu }           from '@Components/FloatingMenu/FloatingMenu'
 import { FullScreenUI }           from '@Components/FullScreenUI/FullScreenUI'
 import { Profile }                from '@Components/Profile/Profile'
 import { TracksEditor }           from '@Components/TracksEditor/TracksEditor'
 import { Toolbar }                from '@Components/VT3D_UI/Toolbar'
-import { CanvasEvents }           from '@Core/events/CanvasEvents'
 import { forwardRef, useEffect }  from 'react'
 import { useCesium }              from 'resium'
 
@@ -20,8 +18,8 @@ export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
     useEffect(() => {
 
         // Manage canvas related events
-        CanvasEvents.attach()
-        CanvasEvents.addListeners()
+        // CanvasEvents.attach()
+        // CanvasEvents.addListeners()
 
     }, [])
 
@@ -57,7 +55,7 @@ export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
                     <CompassUI ref={ref} scene={vt3d.scene}/>
                 </div>
 
-                <FloatingMenu/>
+                {/* <FloatingMenu/> */}
 
             </div>
         </>

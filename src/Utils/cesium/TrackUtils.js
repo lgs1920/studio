@@ -5,9 +5,6 @@ import {
     FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
 }                                                                              from '../../core/Journey'
 import { Track }                                                               from '../../core/Track'
-import {
-    Camera,
-}                                                                              from '../../core/ui/Camera.js'
 import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/VT3D'
 import { FileUtils }                                                           from '../FileUtils.js'
 import { POIUtils }                                                            from './POIUtils'
@@ -158,17 +155,17 @@ export class TrackUtils {
         const bbox = TrackUtils.extendBbox(extent(track.content), 30)
         let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
 
-        let destination
-        if (initCamera) {
-            // We map th BBox to the camera view and get destination point
-            destination = vt3d.camera.getRectangleCameraCoordinates(rectangle)
-
-        } else {
-            // we get destination point from saved coordinates
-            destination = Cesium.Cartesian3.fromDegrees(
-                camera.longitude, camera.latitude, camera.height,
-            )
-        }
+        // let destination
+        // if (initCamera) {
+        //     // We map th BBox to the camera view and get destination point
+        //     destination = vt3d.camera.getRectangleCameraCoordinates(rectangle)
+        //
+        // } else {
+        //     // we get destination point from saved coordinates
+        //     destination = Cesium.Cartesian3.fromDegrees(
+        //         camera.longitude, camera.latitude, camera.height,
+        //     )
+        // }
 
         vt3d.viewer.flyTo(datasource, {
             offset: {
@@ -177,7 +174,7 @@ export class TrackUtils {
                 range: camera.range,
             },
         }).then(() => {
-            vt3d.events.emit(Camera.UPDATE_EVENT)
+            __.ui.camera.update()
         })
 
         // //Show BBox if requested

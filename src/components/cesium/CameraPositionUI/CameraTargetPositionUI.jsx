@@ -19,15 +19,11 @@ export const CameraTargetPositionUI = (props) => {
         // Update camera info
         if (!cameraStore.showTarget) {
             cameraStore.showTarget = !cameraStore.showTarget
-            // CameraUtils.updateCamera().then(data => {
-            //     if (data !== undefined) {
-            //         cameraStore.position = data
-            //     }
-            // })
+            cameraStore.show = !cameraStore.show
+            cameraStore.position = __.ui.camera.get()
             return
         }
         cameraStore.showTarget = false
-
     }
     return (
         <div className="camera-position">
@@ -40,7 +36,7 @@ export const CameraTargetPositionUI = (props) => {
             {cameraSnap.showTarget && cameraSnap.position.target !== undefined &&
                 <SlAnimation size="small" easing="bounceInLeft" duration={1000} iterations={1}
                              play={cameraSnap.showTarget}
-                             onSlFinish={() => toggle()}>
+                             onSlFinish={toggle}>
                     <SlCard className="camera-data-panel" open={cameraSnap.showTarget}>
                         <sl-icon library="fa" name={FA2SL.set(faCompass)}></sl-icon>
                         <TextValueUI value={cameraSnap.position.target.longitude.toFixed(5)}

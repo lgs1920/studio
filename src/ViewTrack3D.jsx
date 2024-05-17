@@ -15,7 +15,6 @@ import { useEffect, useRef }                         from 'react'
 import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
 import { MapLayer }                                  from './components/cesium/MapLayer.jsx'
 import { Layer }                                     from './core/Layer.js'
-import { Camera as CameraManager }                   from './core/ui/Camera.js'
 import { UIToast }                                   from './Utils/UIToast'
 
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
@@ -44,13 +43,20 @@ export function ViewTrack3D() {
     }
 
     const updateCameraPosition = () => {
-        CameraUtils.updateCamera().then(data => {
-            if (data !== undefined) {
+        if (__?.ui?.camera) {
+            __.ui.camera.update().then(data => {
+                return
                 cameraStore.position = data
-            }
-            vt3d.events.emit(CameraManager.MOVE_EVENT, [data])
-        })
-
+                vt3d.events.emit(CameraManager.UPDATE_EVENT, [data])
+            })
+        } else {
+            CameraUtils.updateCamera().then(data => {
+                if (data !== undefined) {
+                    cameraStore.position = data
+                }
+                vt3d.events.emit(CameraManager.UPDATE_EVENT, [data])
+            })
+        }
     }
 
 

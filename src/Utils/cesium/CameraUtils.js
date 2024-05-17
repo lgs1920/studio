@@ -84,7 +84,7 @@ export class CameraUtils {
         try {
             const cameraPositions = await CameraUtils.getPositions(camera)
             const hpr = await CameraUtils.getHeadingPitchRoll(camera)
-            return {
+            vt3d.mainProxy.components.camera.position = {
                 target: cameraPositions.target,
                 longitude: cameraPositions.position.longitude,
                 latitude: cameraPositions.position.latitude,
@@ -94,6 +94,7 @@ export class CameraUtils {
                 roll: hpr.roll,
                 range: cameraPositions.position.range,
             }
+            return vt3d.mainProxy.components.camera.position
         } catch (e) {
             console.error(e)
             return undefined
@@ -111,23 +112,25 @@ export class CameraUtils {
      */
     static run360 = () => {
         const camera = __.ui.camera.get()
-        console.log(camera)
-        CameraUtils.lookAt(vt3d.camera,
-            Cartesian3.fromDegrees(
-                camera.target.longitude,
-                camera.target.latitude,
-                camera.target.height,
-            ),
-            new HeadingPitchRange(
-                M.toRadians(camera.heading),
-                M.toRadians(camera.pitch),
-                camera.range,
-            ))
+        if (camera.target) {
+            CameraUtils.lookAt(vt3d.camera,
+                Cartesian3.fromDegrees(
+                    camera.target.longitude,
+                    camera.target.latitude,
+                    camera.target.height,
+                ),
+                new HeadingPitchRange(
+                    M.toRadians(camera.heading),
+                    M.toRadians(camera.pitch),
+                    camera.range,
+                ))
 
-        const step = (camera.clockwise) ? M.PI / 1000 : -M.PI / 1000
-        vt3d.stop360 = vt3d.viewer.clock.onTick.addEventListener(async () => {
-            vt3d.camera.rotateLeft(step)
-        })
+            const step = (camera.clockwise) ? M.PI / 1000 : -M.PI / 1000
+            vt3d.stop360 = vt3d.viewer.clock.onTick.addEventListener(async () => {
+                vt3d.camera.rotateLeft(step)
+            })
+        }
+
     }
 
     //https://groups.google.com/g/cesium-dev/c/QSFf3RxNRfE
