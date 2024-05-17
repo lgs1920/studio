@@ -19,7 +19,6 @@ export const CameraTargetPositionUI = (props) => {
         // Update camera info
         if (!cameraStore.showTarget) {
             cameraStore.showTarget = !cameraStore.showTarget
-            cameraStore.show = !cameraStore.show
             cameraStore.position = __.ui.camera.get()
             return
         }
