@@ -35,6 +35,7 @@ export class Journey extends MapElement {
 
     metrics = {}
     camera = {}
+    cameraOrigin = {}
 
     constructor(title, type, options) {
         super()
@@ -504,7 +505,7 @@ export class Journey extends MapElement {
         })
 
         if (mode === FOCUS_ON_FEATURE) {
-            this.focus()
+            this.focus({action: action})
         }
 
 

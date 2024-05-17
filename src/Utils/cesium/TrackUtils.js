@@ -1,4 +1,5 @@
 import { default as extent }                                                   from '@mapbox/geojson-extent'
+import { point }                                                               from '@turf/helpers'
 import * as Cesium                                                             from 'cesium'
 import { Color, CustomDataSource, GeoJsonDataSource, Math }                    from 'cesium'
 import {
@@ -126,7 +127,7 @@ export class TrackUtils {
      * @param {Track} track
      * @param {boolean} showBbox
      */
-    static focus = async ({journey = null, track = null, showBbox = false}) => {
+    static focus = async ({action = 0, journey = null, track = null, showBbox = false}) => {
 
         // If track not provided, we'll get the first one of the journey
         let datasource
@@ -144,38 +145,53 @@ export class TrackUtils {
         }
 
         // Do we have camera information ? Get it if not
-        let camera = journey.camera
         let initCamera = false
-        if (camera === null) {
-            camera = __.ui.camera.reset().get()
+        if (journey.camera === null) {
+            const camera = __.ui.camera.reset().get()
             initCamera = true
+        } else {
+            // If it is initial Loading, we  target on saved coordiatessswhen we read in DB
+            const camera = (action === INITIAL_LOADING) ? journey.cameraOrigin : journey.camera
         }
 
         // We calculate the Bounding Box and enlarge it by 30%
-        const bbox = TrackUtils.extendBbox(extent(track.content), 30)
-        let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
+        const square = TrackUtils.extendBbox(extent(track.content), 30)
+        let rectangle = Cesium.Rectangle.fromDegrees(square.bbox[0], square.bbox[1], square.bbox[2], square.bbox[3])
 
-        // let destination
-        // if (initCamera) {
-        //     // We map th BBox to the camera view and get destination point
-        //     destination = vt3d.camera.getRectangleCameraCoordinates(rectangle)
-        //
-        // } else {
-        //     // we get destination point from saved coordinates
-        //     destination = Cesium.Cartesian3.fromDegrees(
-        //         camera.longitude, camera.latitude, camera.height,
-        //     )
-        // }
+        let destination
+        if (initCamera) {
+            // We map th BBox to the camera view and get destination point
+            destination = vt3d.camera.getRectangleCameraCoordinates(rectangle)
 
-        vt3d.viewer.flyTo(datasource, {
-            offset: {
+        } else {
+            // we get destination point from saved coordinates
+            destination = Cesium.Cartesian3.fromDegrees(
+                camera.longitude, camera.latitude, camera.height,
+            )
+        }
+
+        vt3d.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(
+                camera.longitude, camera.latitude, camera.height,
+            ),
+            orientation: {
                 heading: Math.toRadians(camera.heading),
                 pitch: Math.toRadians(camera.pitch),
-                range: camera.range,
+                roll: camera.roll,
             },
-        }).then(() => {
-            __.ui.camera.update()
         })
+        __.ui.camera.update()
+
+
+        // vt3d.viewer.flyTo(datasource, {
+        //     offset: {
+        //         heading: Math.toRadians(camera.heading),
+        //         pitch: Math.toRadians(camera.pitch),
+        //         range: camera.range,
+        //     },
+        // }).then(() => {
+        //     __.ui.camera.update()
+        // })
 
         // //Show BBox if requested
         // if (showBbox) {
@@ -199,7 +215,10 @@ export class TrackUtils {
         const w = bbox[2] - bbox[0]
         const h = bbox[3] - bbox[1]
 
-        return [bbox[0] - x * w, bbox[1] - y * h, bbox[2] + x * w, bbox[3] + y * h]
+        return {
+            bbox: [bbox[0] - x * w, bbox[1] - y * h, bbox[2] + x * w, bbox[3] + y * h],
+            center: point([(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2]),
+        }
     }
 
     /**
@@ -345,6 +364,11 @@ export class TrackUtils {
             return
         }
 
+        // We're ready for rendering so let's ave journeys
+        journeys.forEach(journey => {
+            journey.cameraOrigin = journey.camera
+            vt3d.saveJourney(journey)
+        })
 
         // Get the Current Journey. Then we Set current if it exists in journeys.
         // If not, let's use the first track or null.
@@ -355,16 +379,10 @@ export class TrackUtils {
         if (currentJourney) {
             vt3d.theJourney = currentJourney
             await TrackUtils.setTheTrack()
-
         } else {
             // Something's wrong. exit
             return
         }
-
-        // We're ready for rendering so let's ave joueneys
-        journeys.forEach(journey => {
-            vt3d.saveJourney(journey)
-        })
 
         // Now instantiate some contexts
         vt3d.theJourney.addToContext()
@@ -384,7 +402,10 @@ export class TrackUtils {
         // Now it's time for the show. Draw all journeys but focus on the current one
         const items = []
         vt3d.journeys.forEach(journey => {
-            items.push(journey.draw({mode: journey.slug === currentJourney.slug ? FOCUS_ON_FEATURE : NO_FOCUS}))
+            items.push(journey.draw({
+                action: INITIAL_LOADING,
+                mode: journey.slug === currentJourney.slug ? FOCUS_ON_FEATURE : NO_FOCUS,
+            }))
         })
         await Promise.all(items)
 
