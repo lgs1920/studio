@@ -5,12 +5,10 @@ import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react
 import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
 import { FA2SL }                       from '@Utils/FA2SL'
 import { UIToast }                     from '@Utils/UIToast'
-import { useSnapshot }                 from 'valtio'
 
 export const JourneyLoader = (props) => {
 
     const mainStore = vt3d.mainProxy
-    const mainSnap = useSnapshot(mainStore)
 
     const uploadFile = async () => {
 
@@ -38,13 +36,12 @@ export const JourneyLoader = (props) => {
 
                 TrackUtils.setProfileVisibility(vt3d.theJourney)
 
-
                 await theJourney.saveToDB()
                 await theJourney.saveOriginDataToDB()
 
-
                 mainStore.canViewJourneyData = true
                 await theJourney.draw({})
+
                 await TrackUtils.createCommonMapObjectsStore()
                 __.ui.profiler.draw()
 
