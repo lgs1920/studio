@@ -15,4 +15,8 @@ module.exports = {
       { allowConstantExport: true },
     ],
   },
+    "globals": {
+      "vt3d": false,
+      "__":false
+    }
 }
