@@ -39,6 +39,8 @@ export function ViewTrack3D() {
     const cameraStore = vt3d.mainProxy.components.camera
 
     const run360 = () => {
+        vt3d.camera.changed.addEventListener(updateCameraPosition)
+        vt3d.camera.percentageChanged=0.2
         CameraUtils.run360()
     }
 
@@ -112,7 +114,7 @@ export function ViewTrack3D() {
                    verticalExaggerationRelativeHeight={2400.0}>
             </Scene>
             <Globe enableLighting={false}></Globe>
-            <Camera onChange={updateCameraPosition} percentageChanged={0.1} ref={viewerRef}>
+            <Camera>
                 <CameraFlyTo
                     orientation={vt3d.cameraOrientation}
                     duration={3}
