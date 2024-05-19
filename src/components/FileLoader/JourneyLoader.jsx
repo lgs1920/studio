@@ -5,6 +5,7 @@ import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react
 import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
 import { FA2SL }                       from '@Utils/FA2SL'
 import { UIToast }                     from '@Utils/UIToast'
+import { CameraUtils }                 from '../../Utils/cesium/CameraUtils.js'
 
 export const JourneyLoader = (props) => {
 
@@ -45,9 +46,8 @@ export const JourneyLoader = (props) => {
                 await TrackUtils.createCommonMapObjectsStore()
                 __.ui.profiler.draw()
 
-                if (vt3d.stop360) {
-                    vt3d.stop360()
-                }
+                __.ui.camera.stop360()
+                __.ui.camera.addUpdateEvent()
 
             } else {
                 // It exists, we notify it

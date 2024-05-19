@@ -14,9 +14,10 @@
   },
   "camera": {
     "heading": 360,
-    "pitch": -45,
+    "pitch": -30,
     "roll": 0,
-    "range": 2000
+    "range": 2000,
+    "percentageChanged": 0.2
   },
   "profile": {
     "show": true,

@@ -135,6 +135,13 @@ export class CameraUtils {
 
     }
 
+    static stop360 =() => {
+        if (vt3d.stop360) {
+            vt3d.stop360()
+            vt3d.stop360=undefined
+        }
+    }
+
     //https://groups.google.com/g/cesium-dev/c/QSFf3RxNRfE
     static lookAtPoint = () => {
         var ray = vt3d.camera.getPickRay(new Cartesian2(

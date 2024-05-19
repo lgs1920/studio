@@ -89,10 +89,6 @@ export class Journey extends MapElement {
          * in order to save camera information
          */
         vt3d.events.on(Camera.UPDATE_EVENT, (data) => {
-            if (data) {
-                console.log(data,
-                )
-            }
             if (this.isCurrent()) {
                 this.camera = __.ui.camera.get()
                 vt3d.saveJourney(this)

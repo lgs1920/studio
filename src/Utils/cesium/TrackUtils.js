@@ -335,6 +335,9 @@ export class TrackUtils {
         // Let's read tracks in DB
         const journeys = await Journey.readAllFromDB()
 
+        // The add event for the camera
+        __.ui.camera.addUpdateEvent()
+
         // Bail early if there's nothing to read
         if (journeys.length === 0) {
             vt3d.theJourney = null

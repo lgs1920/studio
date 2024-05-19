@@ -40,7 +40,8 @@ export function ViewTrack3D() {
 
     const run360 = () => {
         vt3d.camera.changed.addEventListener(updateCameraPosition)
-        vt3d.camera.percentageChanged=0.2
+        vt3d.camera.percentageChanged=vt3d.configuration.camera.percentageChanged
+        __.ui.camera.event = true
         CameraUtils.run360()
     }
 
@@ -77,7 +78,6 @@ export function ViewTrack3D() {
         // Let's instantiate some elements Managers
         vt3d.initManagers()
 
-        updateCameraPosition()
 
         //Ready
         UIToast.success({

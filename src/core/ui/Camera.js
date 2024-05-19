@@ -42,8 +42,22 @@ export class Camera {
         await this.update()
     }
 
-    stop360 = () => {
-        vt3d.stop360()
+    stop360 = async () => {
+        CameraUtils.stop360()
+        await this.update()
+    }
+
+    addUpdateEvent = () => {
+        if (!__.ui.camera.event) {
+            vt3d.camera.percentageChanged = vt3d.configuration.camera.percentageChanged
+            vt3d.camera.changed.addEventListener(() => {
+                __.ui.camera.update().then(data => {
+                    vt3d.mainProxy.components.camera.position = data
+                    vt3d.events.emit(this.UPDATE_EVENT, [data])
+                })
+            })
+        }
+        __.ui.camera.event = true
     }
 
     update = async (data = null) => {
