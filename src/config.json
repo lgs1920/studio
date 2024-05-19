@@ -1,6 +1,6 @@
 {
   "ionToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4ZmZkZjZkYS1iODgwLTQzYzUtOTM5ZS1iYTc2Nzk0OTM1ZjQiLCJpZCI6MTkwODA4LCJpYXQiOjE3MDU2ODQ3OTZ9.BV6yuYzhp8A_cgEs5MbqZWZaCtyOW-08aSORPflJ3dw",
-  "applicationName": "ViewTrack3D",
+  "applicationName": "LGS1920",
   "starter": {
     "longitude": 5.70291,
     "latitude": 45.33524,
@@ -16,13 +16,14 @@
     "heading": 360,
     "pitch": -30,
     "roll": 0,
-    "range": 2000
+    "range": 2000,
+    "percentageChanged": 0.2
   },
   "profile": {
     "show": true,
     "marker": {
       "show": true,
-      "size": 16,
+      "size": 13,
       "color": "#f2c55c"
     }
   },
@@ -85,5 +86,31 @@
     "minSlope": 2,
     "stopDuration": 60,
     "stopSpeedLimit": 0.2
+  },
+  "layers": {
+    "IGN": {
+      "CADASTRAL": {
+        "name": "IGN Cadastral",
+        "id": "ign-cadastral",
+        "image": ""
+      },
+      "PLAN": {
+        "name": "IGN Plan",
+        "id": "ign-plan",
+        "image": ""
+      },
+      "PHOTO": {
+        "name": "IGN Aerial",
+        "id": "ign-photo",
+        "image": ""
+      }
+    },
+    "OSM": {
+      "PLAN": {
+        "name": "OSM Plan",
+        "id": "osm-plan",
+        "image": ""
+      }
+    }
   }
 }

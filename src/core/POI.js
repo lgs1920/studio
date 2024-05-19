@@ -72,6 +72,10 @@ export class POI {
         return icon
     }
 
+    update = async (options) => {
+        await POIUtils.update(this, options)
+    }
+
     draw = async (parentVisibility = true) => {
         await POIUtils.draw(this, parentVisibility)
         this.drawn = true
@@ -81,18 +85,18 @@ export class POI {
     }
 
     moveTo = async (coordinates) => {
-        await POIUtils.update(this, {coordinates: coordinates, visibility: true})
+        await this.update({coordinates: coordinates, visibility: true})
     }
 
     toggleVisibility = async () => {
-        await POIUtils.update(this, {visibility: !this.visible})
+        await this.update({visibility: !this.visible})
     }
 
     hide = async () => {
-        await POIUtils.update(this, {visibility: false})
+        await this.update({visibility: false})
     }
     show = async () => {
-        await POIUtils.update(this, {visibility: true})
+        await this.update({visibility: true})
     }
 
 }

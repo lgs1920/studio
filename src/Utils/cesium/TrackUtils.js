@@ -1,13 +1,13 @@
 import { default as extent }                                                   from '@mapbox/geojson-extent'
-import * as Cesium                                                             from 'cesium'
-import { Color, CustomDataSource, GeoJsonDataSource, Math }                    from 'cesium'
+import { default as centroid }                                       from '@turf/centroid'
+import * as Cesium                                                   from 'cesium'
+import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 } from 'cesium'
 import {
     FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
-}                                                                              from '../../core/Journey'
-import { Track }                                                               from '../../core/Track'
+}                                                                    from '../../core/Journey'
 import {
-    Camera,
-}                                                                              from '../../core/ui/Camera.js'
+    Camera as CameraManager,
+}                                                                    from '../../core/ui/Camera.js'
 import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/VT3D'
 import { FileUtils }                                                           from '../FileUtils.js'
 import { POIUtils }                                                            from './POIUtils'
@@ -40,7 +40,6 @@ export class TrackUtils {
                 break
             }
         }
-        const test = feature.properties?.coordinateProperties?.times
         return {
             hasAltitude: hasAltitude, hasTime: feature.properties?.coordinateProperties?.times !== undefined,
         }
@@ -61,7 +60,7 @@ export class TrackUtils {
      * For Each Track we create a GeoJson Data source, named with the track slug
      * For all the POIs, flags included, we create a Custom Data Source named with journey slug.
      *
-     * @param journey
+     * @param {Journey} journey
      * @return {Promise<void>}
      */
     static prepareDrawing = async journey => {
@@ -125,65 +124,66 @@ export class TrackUtils {
      *
      * We need, at least, one journey or one track, but not both
      *
+     * @param {number} action
      * @param {Journey } journey
      * @param {Track} track
      * @param {boolean} showBbox
      */
-    static focus = async ({journey = null, track = null, showBbox = false}) => {
+    static focus = async ({action = 0, journey = null, track = null, showBbox = false}) => {
 
         // If track not provided, we'll get the first one of the journey
-        let datasource
         if (track === null) {
             // But we need to set the journey to the current one if there is no information
             if (journey === null) {
                 journey = vt3d.theJourney
             }
             track = journey.tracks.values().next().value
-            datasource = vt3d.viewer.dataSources.getByName(track.slug, true)[0]
         } else {
             // We have a track, let's force the journey (even if there is one provided)
             journey = vt3d.journeys.get(track.parent)
-            datasource = vt3d.viewer.dataSources.getByName(track.slug, true)[0]
         }
 
-        // Do we have camera information ? Get it if not
-        let camera = journey.camera
-        let initCamera = false
-        if (camera === null) {
-            camera = __.ui.camera.reset().get()
-            initCamera = true
-        }
-
-        //Express in radians for the following
-        const heading = Math.toRadians(camera.heading)
-        const pitch = Math.toRadians(camera.pitch)
-        const range = camera.range
-
-        const offset = new Cesium.HeadingPitchRange(
-            heading,
-            pitch,
-            range,
-        )
-
-        // We calculate the Bounding Box and enlarge it by 30%
-        const bbox = TrackUtils.extendBbox(extent(track.content), 30)
+        // We calculate the Bounding Box and enlarge it by 10%
+        // in order to be sure to have the full track inside the window
+        const bbox = TrackUtils.extendBbox(extent(track.content), 10)
         let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
 
-        let destination
-        if (initCamera) {
-            // We map th BBox to the camera view and get destination point
+        // Get the right camera information
+        let camera,destination
+        if (journey.camera === null) {
+            // Let's center to the rectangle
             destination = vt3d.camera.getRectangleCameraCoordinates(rectangle)
 
+            // Get the camera target that we defined to the centroid of the track
+            const target = centroid(track.content)
+            camera = new CameraManager({
+                longitude:Cesium.Math.toDegrees(destination.x),
+                latitude:Cesium.Math.toDegrees(destination.y),
+                height:Cesium.Math.toDegrees(destination.z),
+                target:{
+                    longitude:target.geometry.coordinates[1],
+                    latitude:target.geometry.coordinates[0],
+                    height:Cesium.Math.toDegrees(destination.z), // We take the same
+                }
+            })
+
         } else {
-            // we get destination point from saved coordinates
-            destination = Cesium.Cartesian3.fromDegrees(
-                camera.target.longitude, camera.target.latitude, camera.target.height,
-            )
+            camera = (action === INITIAL_LOADING) ? journey.cameraOrigin : journey.camera
+            destination =Cesium.Cartesian3.fromDegrees(camera.longitude, camera.latitude, camera.height)
         }
 
-        vt3d.viewer.flyTo(datasource, {orientation: offset, maximumHeight: camera.target.height + 5000}).then(() => {
-            vt3d.events.emit(Camera.UPDATE_EVENT)
+        vt3d.camera.flyTo({
+            destination: destination,                               // Camera
+             orientation: {                                         // Offset and Orientation
+                heading: Math.toRadians(camera.heading),
+                 pitch: Math.toRadians(camera.pitch),
+                roll: 0//Math.toRadians(camera.roll)
+             },
+            maximumHeight: camera.target.height + 2000,
+            pitchAdjustHeight: 200,
+            endTransform:Matrix4.IDENTITY
         })
+       await __.ui.camera.update()
 
         //Show BBox if requested
         if (showBbox) {
@@ -191,7 +191,7 @@ export class TrackUtils {
                 name: `BBox#${track.slug}`,
                 rectangle: {
                     coordinates: rectangle,
-                    material: Cesium.Color.WHITE.withAlpha(0.05),
+                    material: Cesium.Color.WHITE.withAlpha(0.1),
                 },
             })
         }
@@ -317,16 +317,6 @@ export class TrackUtils {
         return undefined
     }
 
-    static cleanTrack = (track) => {
-        // Search  data source associated tothe track
-        // const dataSource = vt3d.viewer.dataSources.getByName(track.slug)[0]
-        // // Now get the entities
-        // dataSource.entities.values.forEach(entity => {
-        //     entity.show = track.visible
-        // })
-    }
-
-
     static getDescription(feature) {
         return feature?.properties?.desc ?? undefined
     }
@@ -345,6 +335,9 @@ export class TrackUtils {
         // Let's read tracks in DB
         const journeys = await Journey.readAllFromDB()
 
+        // The add event for the camera
+        __.ui.camera.addUpdateEvent()
+
         // Bail early if there's nothing to read
         if (journeys.length === 0) {
             vt3d.theJourney = null
@@ -353,6 +346,10 @@ export class TrackUtils {
             return
         }
 
+        // We're ready for rendering so let's ave journeys
+        journeys.forEach(journey => {
+            journey.cameraOrigin = journey.camera
+        })
 
         // Get the Current Journey. Then we Set current if it exists in journeys.
         // If not, let's use the first track or null.
@@ -363,13 +360,12 @@ export class TrackUtils {
         if (currentJourney) {
             vt3d.theJourney = currentJourney
             await TrackUtils.setTheTrack()
-
         } else {
             // Something's wrong. exit
             return
         }
 
-        // We're ready for rendering so let's ave joueneys
+        // We're ready for rendering so let's save journeys
         journeys.forEach(journey => {
             vt3d.saveJourney(journey)
         })
@@ -392,7 +388,10 @@ export class TrackUtils {
         // Now it's time for the show. Draw all journeys but focus on the current one
         const items = []
         vt3d.journeys.forEach(journey => {
-            items.push(journey.draw({mode: journey.slug === currentJourney.slug ? FOCUS_ON_FEATURE : NO_FOCUS}))
+            items.push(journey.draw({
+                action: INITIAL_LOADING,
+                mode: journey.slug === currentJourney.slug ? FOCUS_ON_FEATURE : NO_FOCUS,
+            }))
         })
         await Promise.all(items)
 

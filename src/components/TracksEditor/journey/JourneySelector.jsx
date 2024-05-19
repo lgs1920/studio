@@ -1,5 +1,5 @@
 import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-icons'
-import { faCircle, faRoute }                from '@fortawesome/pro-solid-svg-icons'
+import { faRoute, faSquare }                from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlOption, SlSelect }       from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                            from '@Utils/FA2SL'
 import { forwardRef }                       from 'react'
@@ -39,16 +39,17 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
             }
             return 0
         })
+
     }
 
     // set Default
     mainStore.theJourney = vt3d.theJourney?.slug
+    const theJourney = vt3d.theJourney
 
     // Look for colo to add in prefix
     const prefixColor = (journey) => {
         const color = (journey.tracks.size === 1) ? journey.tracks.values().next().value.color : 'black'
-        return {color: color, fontSize: '0.9em'}
-
+        return {color: color}
     }
 
     return (<>
@@ -59,12 +60,19 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
                                                    size={props.size ?? 'medium'}
                                                    className="journey-selector"
         >
+            <SlIcon library="fa"
+                    name={FA2SL.set(faRoute)}
+                    slot={'prefix'}
+                    style={{
+                        color: (theJourney.tracks.size === 1) ? editorSnapshot.track.color : 'black',
+                    }}
+            />
             <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
             {journeys.map(journey => <SlOption key={journey.title} value={journey.slug}>
                 <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
                 <SlIcon library="fa"
-                        name={FA2SL.set(faCircle)}
+                        name={FA2SL.set(faSquare)}
                         slot={'prefix'}
                         style={prefixColor(journey)}
                 />
@@ -76,7 +84,13 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
         </SlSelect>}
         {mainSnapshot.list.length === 1 && props.single && <>
             <span className={'journey-title'}>
-            <SlIcon className={'journey-title-icon'} library="fa" name={FA2SL.set(faRoute)} slot={'expand-icon'}/>
+            <SlIcon className={'journey-title-icon'}
+                    library="fa" name={FA2SL.set(faRoute)}
+                    slot={'expand-icon'}
+                    style={{
+                        color: (theJourney.tracks.size === 1) ? editorSnapshot?.track?.color : 'black',
+                    }}
+            />
                 {vt3d.theJourney.title}
                 </span>
         </>}

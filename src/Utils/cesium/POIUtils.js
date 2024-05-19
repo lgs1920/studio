@@ -109,10 +109,15 @@ export class POIUtils {
         const entity = dataSource.entities.getById(poi.slug)
         if (entity) {
             // Update positions
-            entity.position = options.coordinates ? Cesium.Cartesian3.fromDegrees(options.coordinates[0], options.coordinates[1], options.coordinates[2]) : entity.position
+            entity.position = options?.coordinates ? Cesium.Cartesian3.fromDegrees(options.coordinates[0], options.coordinates[1], options.coordinates[2]) : entity.position
             // Update visibility
             if (options.visibility !== undefined) {
                 entity.show = options.visibility
+            }
+            if (options.foregroundColor !== undefined) {
+                entity.color = Cesium.Color.fromCssColorString(options.foregroundColor)
+            } else {
+                entity.color = Cesium.Color.fromCssColorString(vt3d.theTrack.color)
             }
         }
 

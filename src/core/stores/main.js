@@ -2,7 +2,9 @@ export const main = {
     components: {
         camera: {
             show: false,
+            showTarget: false,
             position: {},
+            event: false,
         },
         credits: {show: false},
         journeyEditor: {
@@ -53,4 +55,5 @@ export const main = {
     fullSize: false,
     canViewJourneyData: false,
     canViewProfile: false,
+    layer: false,
 }

@@ -1,5 +1,4 @@
-import { Cartesian2, Cartesian3, Ellipsoid, HeadingPitchRange, Math as M, Transforms } from 'cesium'
-import { Camera }                                                                      from '../../core/ui/Camera.js'
+import { Cartesian2, Cartesian3, Ellipsoid, HeadingPitchRange, Math as M,Transforms,Matrix4 } from 'cesium'
 
 export class CameraUtils {
 
@@ -9,27 +8,29 @@ export class CameraUtils {
         camera.lookAtTransform(Transforms.eastNorthUpToFixedFrame(point), hpr)
     }
 
+    static unlock = (camera) => {
+        camera.lookAtTransform(Matrix4.IDENTITY);
+    }
+
     /**
      * get Camera Heading and Pitch
      */
     static getHeadingPitchRoll = (camera) => {
         if (camera) {
             return {
-                heading: M.toDegrees(camera.heading),
+                heading: Math.max(0, Math.min(M.toDegrees(Math.round(camera.heading)), 360)),
                 pitch: M.toDegrees(camera.pitch),
                 roll: M.toDegrees(camera.roll),
             }
         } else {
-            return {heading: 0, pitch: 0, roll: 0}
+            return {heading: 360, pitch: -90, roll: 360}
         }
-
     }
 
     /**
      * get Camera target and position in degrees
      */
     static getPositions = async (camera) => {
-
         // If we do not have camera, we try to set one or return zeros
         if (!camera) {
             camera = vt3d.camera
@@ -40,9 +41,12 @@ export class CameraUtils {
                         latitude: 0,
                         height: 0,
                     },
-                    longitude: 0,
-                    latitude: 0,
-                    height: 0,
+                    position: {
+                        longitude: 0,
+                        latitude: 0,
+                        height: 0,
+                        range: 0,
+                    },
                 }
             }
         }
@@ -82,20 +86,17 @@ export class CameraUtils {
         try {
             const cameraPositions = await CameraUtils.getPositions(camera)
             const hpr = await CameraUtils.getHeadingPitchRoll(camera)
-            let heading = hpr.heading
-            if (heading === 360) {
-                heading = 0
-            }
-            return {
+            vt3d.mainProxy.components.camera.position = {
                 target: cameraPositions.target,
                 longitude: cameraPositions.position.longitude,
                 latitude: cameraPositions.position.latitude,
                 height: cameraPositions.position.height,
-                heading: heading,
+                heading: hpr.heading,
                 pitch: hpr.pitch,
                 roll: hpr.roll,
                 range: cameraPositions.position.range,
             }
+            return vt3d.mainProxy.components.camera.position
         } catch (e) {
             console.error(e)
             return undefined
@@ -111,24 +112,34 @@ export class CameraUtils {
      *
      *
      */
-    static run360 = (camera = __.ui.camera && new Camera()) => {
-        CameraUtils.lookAt(vt3d.camera,
-            Cartesian3.fromDegrees(
-                camera.longitude ?? camera.target.longitude,
-                camera.latitude ?? camera.target.latitude,
-                camera.height ?? camera.target.height,
-            ),
-            new HeadingPitchRange(
-                M.toRadians(camera.heading),
-                M.toRadians(camera.pitch),
-                camera.range,
-            ))
+    static run360 = () => {
+        const camera = __.ui.camera.get()
+        if (camera.target) {
+            CameraUtils.lookAt(vt3d.camera,
+                Cartesian3.fromDegrees(
+                    camera.target.longitude,
+                    camera.target.latitude,
+                    camera.target.height,
+                ),
+                new HeadingPitchRange(
+                    M.toRadians(camera.heading),
+                    M.toRadians(camera.pitch),
+                    camera.range,
+                ))
 
-        const step = (camera.clockwise) ? M.PI / 1000 : -M.PI / 1000
-        vt3d.stop360 = vt3d.viewer.clock.onTick.addEventListener(async () => {
-            vt3d.camera.rotateLeft(step)
-            __.ui.camera.update()
-        })
+            const step = (camera.clockwise) ? M.PI / 1000 : -M.PI / 1000
+            vt3d.stop360 = vt3d.viewer.clock.onTick.addEventListener(async () => {
+                vt3d.camera.rotateLeft(step)
+            })
+        }
+
+    }
+
+    static stop360 =() => {
+        if (vt3d.stop360) {
+            vt3d.stop360()
+            vt3d.stop360=undefined
+        }
     }
 
     //https://groups.google.com/g/cesium-dev/c/QSFf3RxNRfE

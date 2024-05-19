@@ -35,6 +35,7 @@ export class Journey extends MapElement {
 
     metrics = {}
     camera = {}
+    cameraOrigin = {}
 
     constructor(title, type, options) {
         super()
@@ -73,7 +74,7 @@ export class Journey extends MapElement {
             this.getPOIsFromGeoJson()
 
             // Finally saveToDB
-            save()
+            save().then()
 
 
             const prepare = async () => {
@@ -87,9 +88,12 @@ export class Journey extends MapElement {
          * If we're on the current journey, we register to the camera updates events
          * in order to save camera information
          */
-        vt3d.events.on(Camera.UPDATE_EVENT, () => {
+        vt3d.events.on(Camera.UPDATE_EVENT, (data) => {
             if (this.isCurrent()) {
                 this.camera = __.ui.camera.get()
+                vt3d.saveJourney(this)
+                this.addToContext()
+                vt3d.theJourney.camera = this.camera
                 save()
             }
         })
@@ -200,7 +204,7 @@ export class Journey extends MapElement {
             console.error(error)
             // Error => we notify
             UIToast.error({
-                caption: `An error occurs during loading <strong>${trackFile.title}<strong>!`, text: error,
+                caption: `An error occurs during loading <strong>${this.title}<strong>!`, text: error,
             })
             this.geoJson = undefined
         }
@@ -214,7 +218,7 @@ export class Journey extends MapElement {
      */
     getTracksFromGeoJson = () => {
         if (this.geoJson.type === FEATURE_COLLECTION) {
-            this.geoJson.features.forEach((feature, index) => {
+            this.geoJson.features.forEach((feature) => {
                 const geometry = getGeom(feature)
                 const title = feature.properties.name
                 if ([FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING].includes(geometry.type)) {
@@ -315,7 +319,7 @@ export class Journey extends MapElement {
                         break
                     }
                     case FEATURE_LINE_STRING :
-                    case FEATURE_MULTILINE_STRING:
+                    case FEATURE_MULTILINE_STRING: {
                         const parentSlug = this.#setTrackSlug(feature.properties.name)
                         // Create Track Start Flag
                         const start = coordinates[0][0]
@@ -359,7 +363,7 @@ export class Journey extends MapElement {
                         const stopFlag = new POI({...common, ...stopParameters})
                         this.tracks.get(parentSlug).flags.stop = stopFlag
                         flags.push(stopFlag)
-
+                    }
                         break
                 }
 
@@ -409,16 +413,6 @@ export class Journey extends MapElement {
      */
     #setSlug = (suffix, prefix = '') => {
         return `${__.app.slugify(prefix)}#${this.slug}#${__.app.slugify(suffix)}`
-    }
-
-    /**
-     * Read a journey
-     *
-     * @param store
-     * @return {Promise<void>}
-     */
-    readFromDB = async (store = '') => {
-        // TODO read data and add origine
     }
 
     /**
@@ -497,14 +491,15 @@ export class Journey extends MapElement {
         })
 
         if (mode === FOCUS_ON_FEATURE) {
-            this.focus()
+            this.focus({action: action})
         }
 
 
     }
 
-    focus = () => {
-        TrackUtils.focus(this)
+    focus = (props={}) => {
+        props.journey=this
+        TrackUtils.focus(props)
     }
 
     showAfterHeightSimulation = async () => {
@@ -567,7 +562,7 @@ export class Journey extends MapElement {
             // Negative elevation
             global.negativeElevation = 0
             global.negativeDistance = 0
-            allMetrics.forEach((point, index) => {
+            allMetrics.forEach((point) => {
                 if (point.elevation < 0) {
                     global.negativeElevation += point.elevation
                     global.negativeDistance += point.distance

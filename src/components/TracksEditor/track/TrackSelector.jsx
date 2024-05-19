@@ -1,5 +1,5 @@
 import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-icons'
-import { faCircle }                         from '@fortawesome/pro-solid-svg-icons'
+import { faRoute, faSquare }                from '@fortawesome/pro-solid-svg-icons'
 
 import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                      from '@Utils/FA2SL'
@@ -27,7 +27,8 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
 
     // Look for color to add in prefix
     const prefixColor = (track) => {
-        return {color: track.color, fontSize: '0.9em'}
+        // mainStore.keys.track.list
+        return {color: editorSnapshot.track.color}
     }
 
 
@@ -38,16 +39,22 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
                                              onSlChange={props.onChange}
                                              key={mainSnapshot.keys.track.list}
                 >
+                    <SlIcon library="fa"
+                            name={FA2SL.set(faRoute)}
+                            slot={'prefix'}
+                            style={{color: editorSnapshot.track.color}}
+                    />
                     <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
                     {Array.from(editorSnapshot.journey.tracks.values()).map(track =>
                         <SlOption key={track.title} value={track.slug}>
                             <SlIcon library="fa"
-                                    name={FA2SL.set(faCircle)}
+                                    name={FA2SL.set(faSquare)}
                                     slot={'prefix'}
-                                    style={prefixColor(track)}
+                                    style={prefixColor()}
                             />
-                            {track.visible ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/> : <SlIcon
-                                slot="suffix" library="fa" name={FA2SL.set(faEyeSlash)}/>}
+                            {track.visible
+                             ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/>
+                             : <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEyeSlash)}/>}
                             {track.title}
                         </SlOption>)}
                 </SlSelect>}

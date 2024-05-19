@@ -1,16 +1,15 @@
 import './style.css'
 import { Journey }                     from '@Core/Journey'
-import { faMapLocation }               from '@fortawesome/pro-regular-svg-icons'
+import { faCirclePlus }                from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
 import { FA2SL }                       from '@Utils/FA2SL'
 import { UIToast }                     from '@Utils/UIToast'
-import { useSnapshot }                 from 'valtio'
+import { CameraUtils }                 from '../../Utils/cesium/CameraUtils.js'
 
 export const JourneyLoader = (props) => {
 
     const mainStore = vt3d.mainProxy
-    const mainSnap = useSnapshot(mainStore)
 
     const uploadFile = async () => {
 
@@ -38,17 +37,17 @@ export const JourneyLoader = (props) => {
 
                 TrackUtils.setProfileVisibility(vt3d.theJourney)
 
-
                 await theJourney.saveToDB()
                 await theJourney.saveOriginDataToDB()
 
-
                 mainStore.canViewJourneyData = true
                 await theJourney.draw({})
+
                 await TrackUtils.createCommonMapObjectsStore()
                 __.ui.profiler.draw()
 
-                vt3d.stop360()
+                __.ui.camera.stop360()
+                __.ui.camera.addUpdateEvent()
 
             } else {
                 // It exists, we notify it
@@ -64,7 +63,7 @@ export const JourneyLoader = (props) => {
         <>
             <SlTooltip placement={props.tooltip} content="Load a track file">
                 <SlButton size={'small'} onClick={uploadFile} className={'square-icon'}>
-                    <SlIcon library="fa" name={FA2SL.set(faMapLocation)}/>
+                    <SlIcon library="fa" name={FA2SL.set(faCirclePlus)}/>
                 </SlButton>
             </SlTooltip>
         </>

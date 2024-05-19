@@ -10,12 +10,13 @@ import { VT3D }        from '@Core/VT3D'
 import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
 import { TrackUtils }  from '@Utils/cesium/TrackUtils'
 
-import * as Cesium                                                         from 'cesium'
-import { useEffect, useRef }                                               from 'react'
-import { Camera, CameraFlyTo, Entity, Globe, ImageryLayer, Scene, Viewer } from 'resium'
-import { Camera as CameraManager }                                         from './core/ui/Camera.js'
-import { UIToast }                                                         from './Utils/UIToast'
-
+import * as Cesium                                   from 'cesium'
+import { useEffect, useRef }                         from 'react'
+import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
+import { MapLayer }                                  from './components/cesium/MapLayer.jsx'
+import { Layer }                                     from './core/Layer.js'
+import { UIToast }                                   from './Utils/UIToast'
+import {Camera as CameraManager} from './core/ui/Camera'
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 window.vt3d = new VT3D()
 await __.app.init()
@@ -23,6 +24,9 @@ await __.app.init()
 export function ViewTrack3D() {
 
     const viewerRef = useRef(null)
+    const mainStore = vt3d.mainProxy
+    mainStore.layer = Layer.IGN_AERIAL
+
 
     const starter = vt3d.configuration.starter
     vt3d.windowCenter = Cesium.Cartesian3.fromDegrees(starter.longitude, starter.latitude, starter.height)
@@ -32,21 +36,29 @@ export function ViewTrack3D() {
         pitch: Cesium.Math.toRadians(starter.camera.pitch),
         roll: Cesium.Math.toRadians(starter.camera.roll),
     }
-
     const cameraStore = vt3d.mainProxy.components.camera
 
     const run360 = () => {
+        vt3d.camera.changed.addEventListener(updateCameraPosition)
+        vt3d.camera.percentageChanged=vt3d.configuration.camera.percentageChanged
+        __.ui.camera.event = true
         CameraUtils.run360()
     }
 
     const updateCameraPosition = () => {
-        CameraUtils.updateCamera().then(data => {
-            if (data !== undefined) {
+        if (__?.ui?.camera) {
+            __.ui.camera.update().then(data => {
                 cameraStore.position = data
-            }
-            vt3d.events.emit(CameraManager.MOVE_EVENT, [data])
-        })
-
+                vt3d.events.emit(CameraManager.UPDATE_EVENT, [data])
+            })
+        } else {
+            CameraUtils.updateCamera().then(data => {
+                if (data !== undefined) {
+                    cameraStore.position = data
+                }
+                vt3d.events.emit(CameraManager.UPDATE_EVENT, [data])
+            })
+        }
     }
 
 
@@ -66,6 +78,7 @@ export function ViewTrack3D() {
         // Let's instantiate some elements Managers
         vt3d.initManagers()
 
+
         //Ready
         UIToast.success({
             caption: `Welcome on ${vt3d.configuration.applicationName}!`,
@@ -73,10 +86,7 @@ export function ViewTrack3D() {
         })
 
         console.log('ViewTrack3D has been loaded and is ready !')
-
-
     })
-
 
     return (<>
         <Viewer full
@@ -85,59 +95,25 @@ export function ViewTrack3D() {
                 homeButton={false}
                 navigationHelpButton={false}
                 fullscreenButton={false}
-                baseLayerPicker={false}
+
                 sceneModePicker={false}
                 terrain={Cesium.Terrain.fromWorldTerrain({
                     requestVertexNormals: false,
                 })}
                 id="viewTrack3DViewer"
-            //   imageryProvider={true}
-            // baseLayer={Cesium.ImageryLayer.fromWorldImagery({
-            //     style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS,
-            // })}
-            //     imageryProvider={new Cesium.WebMapTileServiceImageryProvider({
-            //         url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
-            //         layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
-            //         style: 'normal',
-            //         format: 'image/png',
-            //         tileMatrixSetID: 'PM',
-            //     })}
+            // Avoid consuming Cesium Ion Sessions
+            // DONOT CHANGE
+                imageryProvider={false}
+                baseLayerPicker={false}
                 ref={viewerRef}
         >
-            <ImageryLayer imageryProvider={new Cesium.OpenStreetMapImageryProvider({
-                url: 'https://a.tile.openstreetmap.org/',
-            })}/>
+            <MapLayer/>
 
-
-            {/* <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({ */}
-            {/*     url: 'https://wxs.ign.fr/cartes/geoportail/wmts', */}
-            {/*     layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', */}
-            {/*     style: 'normal', */}
-            {/*     format: 'image/png', */}
-            {/*     tileMatrixSetID: 'PM', */}
-            {/* })} */}
-
-
-            {/* <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({ */}
-            {/*     url: 'https://wxs.ign.fr/cartes/geoportail/wmts', */}
-            {/*     layer: 'ORTHOIMAGERY.ORTHOPHOTOS2', */}
-            {/*     style: 'normal', */}
-            {/*     format: 'image/png', */}
-            {/*     tileMatrixSetID: 'PM', */}
-            {/* })}/> */}
-
-
-            {/* <ImageryLayer imageryProvider={new Cesium.WebMapTileServiceImageryProvider({ */}
-            {/*     url: 'https://wxs.ign.fr/cartes/geoportail/wmts', */}
-            {/*     layer: 'CADASTRALPARCELS.PARCELLAIRE_EXPRESS', */}
-            {/*     style: 'normal', */}
-            {/*     format: 'image/png', */}
-            {/*     tileMatrixSetID: 'PM', */}
-            {/* })}/> */}
-
-            <Scene></Scene>
+            <Scene verticalExaggeration={1.15}
+                   verticalExaggerationRelativeHeight={2400.0}>
+            </Scene>
             <Globe enableLighting={false}></Globe>
-            <Camera onChange={updateCameraPosition} ref={viewerRef}>
+            <Camera>
                 <CameraFlyTo
                     orientation={vt3d.cameraOrientation}
                     duration={3}
@@ -146,7 +122,6 @@ export function ViewTrack3D() {
                     onComplete={run360}
                 />
             </Camera>
-            <Entity id={'markers-group'}/>
             <VT3D_UI/>
         </Viewer>
     </>)
