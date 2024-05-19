@@ -24,6 +24,13 @@ export const CameraTargetPositionUI = (props) => {
         }
         cameraStore.showTarget = false
     }
+
+    const hasTarget = ()=> {
+        return cameraSnap.position.target
+            && cameraSnap.position.target.longitude
+            && cameraSnap.position.target.latitude
+            && cameraSnap.position.target.height
+    }
     return (
         <div className="camera-position">
             <SlTooltip placement={'right'} content="Target information">
@@ -32,7 +39,7 @@ export const CameraTargetPositionUI = (props) => {
                 </SlButton>
             </SlTooltip>
 
-            {cameraSnap.showTarget && cameraSnap.position.target !== undefined &&
+            {cameraSnap.showTarget && hasTarget() &&
                 <SlAnimation size="small" easing="bounceInLeft" duration={1000} iterations={1}
                              play={cameraSnap.showTarget}
                              onSlFinish={toggle}>
