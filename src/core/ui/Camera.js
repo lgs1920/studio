@@ -37,9 +37,9 @@ export class Camera {
 
     }
 
-    run360 = () => {
+    run360 = async () => {
         CameraUtils.run360(this)
-        return this.update()
+        await this.update()
     }
 
     stop360 = () => {

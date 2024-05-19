@@ -24,6 +24,7 @@
     "@mapbox/togeojson": "^0.16.2",
     "@shoelace-style/shoelace": "^2.13.1",
     "@tmcw/togeojson": "^5.8.1",
+    "@turf/centroid": "^6.5.0",
     "@turf/distance": "^6.5.0",
     "@turf/flatten": "^6.5.0",
     "@turf/helpers": "^6.5.0",

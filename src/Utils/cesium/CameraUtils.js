@@ -126,9 +126,9 @@ export class CameraUtils {
                 ))
 
             const step = (camera.clockwise) ? M.PI / 1000 : -M.PI / 1000
-            vt3d.stop360 = vt3d.viewer.clock.onTick.addEventListener(async () => {
-                vt3d.camera.rotateLeft(step)
-            })
+            // vt3d.stop360 = vt3d.viewer.clock.onTick.addEventListener(async () => {
+            //     vt3d.camera.rotateLeft(step)
+            // })
         }
 
     }
