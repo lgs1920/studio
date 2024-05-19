@@ -16,7 +16,7 @@ import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
 import { MapLayer }                                  from './components/cesium/MapLayer.jsx'
 import { Layer }                                     from './core/Layer.js'
 import { UIToast }                                   from './Utils/UIToast'
-
+import {Camera as CameraManager} from './core/ui/Camera'
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 window.vt3d = new VT3D()
 await __.app.init()
@@ -47,7 +47,6 @@ export function ViewTrack3D() {
     const updateCameraPosition = () => {
         if (__?.ui?.camera) {
             __.ui.camera.update().then(data => {
-                return
                 cameraStore.position = data
                 vt3d.events.emit(CameraManager.UPDATE_EVENT, [data])
             })
