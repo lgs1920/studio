@@ -170,7 +170,7 @@ export class TrackUtils {
             camera = (action === INITIAL_LOADING) ? journey.cameraOrigin : journey.camera
             destination =Cesium.Cartesian3.fromDegrees(camera.longitude, camera.latitude, camera.height)
         }
-
+        CameraUtils.unlock(vt3d.camera)
         vt3d.camera.flyTo({
             destination: destination,                               // Camera
              orientation: {                                         // Offset and Orientation
@@ -178,9 +178,7 @@ export class TrackUtils {
                  pitch: Math.toRadians(camera.pitch),
                 roll: 0//Math.toRadians(camera.roll)
              },
-            complete:()=> {
-                CameraUtils.run360()
-            }
+          //  maximumHeight:camera.target.height + 2000
         })
        //await __.ui.camera.update()
 

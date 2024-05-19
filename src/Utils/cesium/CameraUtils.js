@@ -1,11 +1,15 @@
-import { Cartesian2, Cartesian3, Ellipsoid, HeadingPitchRange, Math as M } from 'cesium'
+import { Cartesian2, Cartesian3, Ellipsoid, HeadingPitchRange, Math as M,Transforms,Matrix4 } from 'cesium'
 
 export class CameraUtils {
 
     static lookAt = (camera, center, hpr) => {
         // Lock camera to a point
         const point = new Cartesian3(center.x, center.y, center.z)
-        camera.lookAt(point, hpr)
+        camera.lookAtTransform(Transforms.eastNorthUpToFixedFrame(point), hpr)
+    }
+
+    static unlock = (camera) => {
+        camera.lookAtTransform(Matrix4.IDENTITY);
     }
 
     /**
@@ -21,14 +25,12 @@ export class CameraUtils {
         } else {
             return {heading: 360, pitch: -90, roll: 360}
         }
-
     }
 
     /**
      * get Camera target and position in degrees
      */
     static getPositions = async (camera) => {
-
         // If we do not have camera, we try to set one or return zeros
         if (!camera) {
             camera = vt3d.camera
@@ -126,9 +128,9 @@ export class CameraUtils {
                 ))
 
             const step = (camera.clockwise) ? M.PI / 1000 : -M.PI / 1000
-            // vt3d.stop360 = vt3d.viewer.clock.onTick.addEventListener(async () => {
-            //     vt3d.camera.rotateLeft(step)
-            // })
+            vt3d.stop360 = vt3d.viewer.clock.onTick.addEventListener(async () => {
+                vt3d.camera.rotateLeft(step)
+            })
         }
 
     }
