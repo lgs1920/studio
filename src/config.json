@@ -6,23 +6,24 @@
     "latitude": 45.33524,
     "height": 1920,
     "camera": {
-      "heading": 360,
+      "heading": 0,
       "pitch": -30,
       "roll": 0,
       "range": 2000
     }
   },
   "camera": {
-    "heading": 360,
-    "pitch": -30,
+    "heading":0,
+    "pitch": -45,
     "roll": 0,
-    "range": 2000,
+    "range": 4000,
     "percentageChanged": 0.2
   },
   "profile": {
     "show": true,
     "marker": {
       "show": true,
+
       "size": 13,
       "color": "#f2c55c"
     }

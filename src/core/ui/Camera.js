@@ -64,17 +64,17 @@ export class Camera {
         data = (data === null) ? await CameraUtils.updateCamera() : data[0]
         if (data) {
             this.target = {
-                longitude: data.target.longitude,
-                latitude: data.target.latitude,
-                height: data.target.height,
+                longitude: data.target.longitude??this.target.longitude,
+                latitude: data.target.latitude??this.target.latitude,
+                height: data.target.height??this.target.height,
             }
-            this.longitude = data.longitude
-            this.latitude = data.latitude
-            this.height = data.height
-            this.heading = data.heading
-            this.pitch = data.pitch
-            this.roll = data.roll
-            this.range = data.range
+            this.longitude = data.longitude??this.longitude
+            this.latitude = data.latitude??this.latitude
+            this.height = data.height??this.height
+            this.heading = data.heading??this.heading
+            this.pitch = data.pitch??this.pitch
+            this.roll = data.roll??this.roll
+            this.range = data.range?? this.range
         } else {
             this.reset()
         }
