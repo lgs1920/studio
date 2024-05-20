@@ -1,15 +1,18 @@
 import { default as extent }                                                   from '@mapbox/geojson-extent'
 import { default as centroid }                                       from '@turf/centroid'
-import * as Cesium                                                   from 'cesium'
-import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 } from 'cesium'
+import * as Cesium                                                                                  from 'cesium'
+import {
+    Cartesian3, Color, CustomDataSource, GeoJsonDataSource, HeadingPitchRange, Math as M, Math, Matrix4,
+} from 'cesium'
 import {
     FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
-}                                                                    from '../../core/Journey'
+}                                                                                                   from '../../core/Journey'
 import {
     Camera as CameraManager,
 }                                                                    from '../../core/ui/Camera.js'
 import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/VT3D'
 import { FileUtils }                                                           from '../FileUtils.js'
+import { CameraUtils } from './CameraUtils.js'
 import { POIUtils }                                                            from './POIUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
@@ -143,9 +146,9 @@ export class TrackUtils {
             journey = vt3d.journeys.get(track.parent)
         }
 
-        // We calculate the Bounding Box and enlarge it by 10%
+        // We calculate the Bounding Box and enlarge it by 20%
         // in order to be sure to have the full track inside the window
-        const bbox = TrackUtils.extendBbox(extent(track.content), 10)
+        const bbox = TrackUtils.extendBbox(extent(track.content), 20)
         let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
 
         // Get the right camera information
@@ -155,36 +158,40 @@ export class TrackUtils {
             destination = vt3d.camera.getRectangleCameraCoordinates(rectangle)
 
             // Get the camera target that we defined to the centroid of the track
-            const target = centroid(track.content)
+            const centroiid = centroid(track.content)
+            const target = {
+                longitude:centroiid.geometry.coordinates[1],
+                latitude:centroiid.geometry.coordinates[0],
+                height:Cesium.Math.toDegrees(destination.z), // We take the same
+            }
             camera = new CameraManager({
                 longitude:Cesium.Math.toDegrees(destination.x),
                 latitude:Cesium.Math.toDegrees(destination.y),
                 height:Cesium.Math.toDegrees(destination.z),
-                target:{
-                    longitude:target.geometry.coordinates[1],
-                    latitude:target.geometry.coordinates[0],
-                    height:Cesium.Math.toDegrees(destination.z), // We take the same
-                }
+                target:target,
             })
+            camera.pitch = -90
+
+
 
         } else {
             camera = (action === INITIAL_LOADING) ? journey.cameraOrigin : journey.camera
             destination =Cesium.Cartesian3.fromDegrees(camera.longitude, camera.latitude, camera.height)
         }
+//      destination =Cesium.Cartesian3.fromDegrees(camera.longitude, camera.latitude, camera.height)
+
 
         vt3d.camera.flyTo({
             destination: destination,                               // Camera
              orientation: {                                         // Offset and Orientation
                 heading: Math.toRadians(camera.heading),
                  pitch: Math.toRadians(camera.pitch),
-                roll: 0//Math.toRadians(camera.roll)
+                 roll: Math.toRadians(camera.roll),
              },
             maximumHeight: camera.target.height + 2000,
             pitchAdjustHeight: 200,
-            endTransform:Matrix4.IDENTITY
+            endTransform:Matrix4.IDENTITY,
         })
-       await __.ui.camera.update()
-
         //Show BBox if requested
         if (showBbox) {
             vt3d.viewer.entities.add({

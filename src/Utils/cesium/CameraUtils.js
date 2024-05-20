@@ -1,4 +1,7 @@
-import { Cartesian2, Cartesian3, Ellipsoid, HeadingPitchRange, Math as M,Transforms,Matrix4 } from 'cesium'
+
+import {
+    Cartesian2, Cartesian3, Cartographic, Ellipsoid, HeadingPitchRange, Math as M, Matrix4, Transforms,
+} from 'cesium'
 
 export class CameraUtils {
 
@@ -144,20 +147,41 @@ export class CameraUtils {
 
     //https://groups.google.com/g/cesium-dev/c/QSFf3RxNRfE
     static lookAtPoint = () => {
-        var ray = vt3d.camera.getPickRay(new Cartesian2(
+        const ray = vt3d.camera.getPickRay(new Cartesian2(
             Math.round(vt3d.canvas.clientWidth / 2),
             Math.round(vt3d.canvas.clientHeight / 2),
         ))
 
-        var position = vt3d.scene.globe.pick(ray, vt3d.scene)
+        const position = vt3d.scene.globe.pick(ray, vt3d.scene)
         if (position) {
-            var cartographic = Ellipsoid.WGS84.cartesianToCartographic(position)
+            const cartographic = Ellipsoid.WGS84.cartesianToCartographic(position)
             return {
                 latitude: M.toDegrees(cartographic.latitude),
                 longitude: M.toDegrees(cartographic.longitude),
                 height: cartographic.height,
                 range: Cartesian3.distance(position, vt3d.camera.position),
             }
+        }
+    }
+
+    static cameraPositionFromTarget=(target,hpr) =>{
+
+        const transform = Transforms.eastNorthUpToFixedFrame(
+            Cartesian3.fromDegrees(target.longitude, target.latitude, target.height)
+        );
+
+        const heading = M.toRadians(hpr.heading);
+        const pitch = M.toRadians(hpr.pitch);
+        const range = hpr.range;
+        const cameraPosition = new Cartesian3();
+        Matrix4.multiplyByPoint(transform, new Cartesian3(Math.cos(heading) * range, Math.sin(heading) * range, pitch), cameraPosition);
+
+        const cartographicPosition = Cartographic.fromCartesian(cameraPosition);
+
+        return {
+            longitude :M.toDegrees(cartographicPosition.longitude),
+            latitude : M.toDegrees(cartographicPosition.latitude),
+            height : cartographicPosition.height
         }
     }
 
