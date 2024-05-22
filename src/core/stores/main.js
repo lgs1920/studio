@@ -39,9 +39,10 @@ export const main = {
         },
         wanderer: {
             run: false,
-            rightWay: true,
+            pause:false,
+            forward: true,
             duration: undefined,
-            forcedToStart: true, // false= force To Stop
+            loop:false
         },
 
     },

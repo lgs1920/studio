@@ -43,8 +43,6 @@ export class CanvasEvents {
 
         vt3d.events.on('canvas/rightClick', AnyOtherMouseCoordinates.show)
         vt3d.events.on('canvas/ctrlClick', AnyOtherMouseCoordinates.show)
-
-        vt3d.events.on('wander/drawPoint', Wander.drawPoint)
     }
 
     /**
