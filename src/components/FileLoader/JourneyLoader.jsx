@@ -1,11 +1,11 @@
 import './style.css'
-import { Journey }                     from '@Core/Journey'
-import { faCirclePlus }                from '@fortawesome/pro-regular-svg-icons'
+import { faRegularRouteCirclePlus } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import { Journey }                  from '@Core/Journey'
+
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
 import { FA2SL }                       from '@Utils/FA2SL'
 import { UIToast }                     from '@Utils/UIToast'
-import { CameraUtils }                 from '../../Utils/cesium/CameraUtils.js'
 
 export const JourneyLoader = (props) => {
 
@@ -61,9 +61,9 @@ export const JourneyLoader = (props) => {
 
     return (
         <>
-            <SlTooltip placement={props.tooltip} content="Load a track file">
+            <SlTooltip placement={props.tooltip} content="Add a new Journey">
                 <SlButton size={'small'} onClick={uploadFile} className={'square-icon'}>
-                    <SlIcon library="fa" name={FA2SL.set(faCirclePlus)}/>
+                    <SlIcon library="fa" name={FA2SL.set(faRegularRouteCirclePlus)}/>
                 </SlButton>
             </SlTooltip>
         </>
