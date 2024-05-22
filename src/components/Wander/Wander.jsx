@@ -1,5 +1,6 @@
-import { faPause, faPlay, faRotateLeft, faRotateRight }    from '@fortawesome/pro-regular-svg-icons'
-import { faStop }                                          from '@fortawesome/pro-solid-svg-icons'
+import { faArrowRightLongToLine,faPause, faPlay,faArrowRotateLeft, faArrowRotateRight,faArrowsRepeat } from '@fortawesome/pro-regular-svg-icons'
+import {  faStop }                                            from '@fortawesome/pro-solid-svg-icons'
+//import {faRegularArrowsRepeatSlash}                                             from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { SlButton, SlIcon, SlOption, SlSelect, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                           from '@Utils/FA2SL'
 import { useSnapshot }                                     from 'valtio'
@@ -38,6 +39,7 @@ export const Wander = (props) => {
             __.ui.wanderer.stop()
         }
     }
+
     const pauseWander = () => {
         wanderStore.run = !wanderStore.run
         wanderStore.pause = true
@@ -51,6 +53,10 @@ export const Wander = (props) => {
         if (wanderStore.duration) {
             __.ui.wanderer.resume()
         }
+    }
+    const toggleLoop = () => {
+        wanderStore.loop = !wanderStore.loop
+        __.ui.wanderer.update({loop: wanderStore.loop})
     }
 
     // Default tooltip placement
@@ -85,7 +91,7 @@ export const Wander = (props) => {
     <SlTooltip hoist placement={tooltip} content="Reverse direction">
             <SlButton size={'small'} className={'square-icon'} onClick={toggleDirection}>
                 <SlIcon library="fa" name={FA2SL.set(
-                    wanderSnapshot.forward ? faRotateRight : faRotateLeft,
+                    wanderSnapshot.forward ? faArrowRotateRight : faArrowRotateLeft,
                 )}
                         className={`${wanderSnapshot.run ? 'fa-spin' : ''} ${!wanderSnapshot.forward ? 'fa-spin-reverse' : ''}`}
                 />
@@ -101,6 +107,15 @@ export const Wander = (props) => {
                 <SlOption key={duration.text} value={duration.time}>{duration.text}</SlOption>,
             )}
         </SlSelect>
+
+        <SlTooltip hoist placement={tooltip} content={wanderSnapshot.loop?'Single tour':'Loop'}>
+            <SlButton size={'small'} className={'square-icon'} onClick={toggleLoop}>
+                <SlIcon library="fa" name={FA2SL.set(
+                    wanderSnapshot.loop?faArrowRightLongToLine:faArrowsRepeat
+                )}
+                />
+            </SlButton>
+        </SlTooltip>
     </>)
 
 }
