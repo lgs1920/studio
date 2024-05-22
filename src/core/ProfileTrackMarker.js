@@ -29,5 +29,13 @@ export class ProfileTrackMarker extends POI {
         super(POIOptions)
     }
 
+    showOnTrack = async (coordinates) => {
+        if (!this.drawn) {
+            this.coordinates = coordinates
+            await this.draw()
+        } else {
+            await this.moveTo(coordinates)
+        }
+    }
 
 }

@@ -1,12 +1,10 @@
-import { WANDER_DURATION } from '@Core/ui/Wanderer'
-import {
-    faArrowsRotateReverse, faBackwardStep, faForwardStep, faPause, faPlay,
-}                          from '@fortawesome/pro-regular-svg-icons'
-import {
-    SlButton, SlIcon, SlOption, SlSelect, SlTooltip,
-}                          from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }           from '@Utils/FA2SL'
-import { useSnapshot }     from 'valtio'
+import { faPause, faPlay, faRotateLeft, faRotateRight }    from '@fortawesome/pro-regular-svg-icons'
+import { faStop }                                          from '@fortawesome/pro-solid-svg-icons'
+import { SlButton, SlIcon, SlOption, SlSelect, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                           from '@Utils/FA2SL'
+import { useSnapshot }                                     from 'valtio'
+import { Wanderer }                                        from '../../core/ui/Wanderer.js'
+import { WanderUtils }                                     from '../../Utils/cesium/WanderUtils.js'
 
 export const Wander = (props) => {
 
@@ -16,33 +14,51 @@ export const Wander = (props) => {
 
     // Use the first as default if needed
     if (wanderSnapshot.duration === undefined) {
-        wanderStore.duration = WANDER_DURATION.values().next().value.time.toString()
+        wanderStore.duration = Wanderer.DURATIONS.values().next().value.time.toString()
     }
 
     const changeDuration = (event) => {
         wanderStore.duration = event.target.value
+        __.ui.wanderer.update({duration: parseInt(wanderStore.duration)})
+        if (wanderStore.duration) {
+            __.ui.wanderer.resume()
+        }
     }
 
     const toggleWander = () => {
         wanderStore.run = !wanderStore.run
-        wanderStore.placement = undefined
+        if (wanderStore.run) {
+            if (wanderStore.pause) {
+                __.ui.wanderer.play()
+                wanderStore.pause = false
+            } else {
+                __.ui.wanderer.start()
+            }
+        } else {
+            __.ui.wanderer.stop()
+        }
+    }
+    const pauseWander = () => {
+        wanderStore.run = !wanderStore.run
+        wanderStore.pause = true
+        __.ui.wanderer.pause()
     }
 
-    const togglePlacement = (event) => {
-        wanderStore.forcedToStart = event.currentTarget.id.includes('start')
+    const toggleDirection = () => {
+        wanderStore.forward = !wanderStore.forward
+        wanderStore.run = true
+        __.ui.wanderer.update({forward: wanderStore.forward})
+        if (wanderStore.duration) {
+            __.ui.wanderer.resume()
+        }
     }
-    const toggleDirection = (event) => {
-        wanderStore.rightWay = !wanderStore.rightWay
-    }
+
     // Default tooltip placement
     const tooltip = (props.tooltip) ?? 'top'
 
+    WanderUtils.initWanderMode()
+
     return (<>
-        <SlTooltip hoist placement={tooltip} content="Go to Start">
-            <SlButton size={'small'} className={'square-icon'} onClick={togglePlacement} id={'force-start'}>
-                <SlIcon library="fa" name={FA2SL.set(faBackwardStep)}/>
-            </SlButton>
-        </SlTooltip>
         {!wanderSnapshot.run &&
             <SlTooltip hoist placement={tooltip} content="Play">
                 <SlButton key={wanderSnapshot.run} size={'small'} className={'square-icon'} onClick={toggleWander}>
@@ -50,29 +66,38 @@ export const Wander = (props) => {
                 </SlButton>
             </SlTooltip>
         }
+
         {wanderSnapshot.run &&
-            <SlTooltip hoist placement={tooltip} content="Pause">
+            <>
+            <SlTooltip hoist placement={tooltip} content="Stop">
                 <SlButton key={wanderSnapshot.run} size={'small'} className={'square-icon'} onClick={toggleWander}>
+                    <SlIcon library="fa" name={FA2SL.set(faStop)}/>
+                </SlButton>
+            </SlTooltip>
+            <SlTooltip hoist placement={tooltip} content="Pause">
+                    <SlButton key={wanderSnapshot.run} size={'small'} className={'square-icon'} onClick={pauseWander}>
                     <SlIcon library="fa" name={FA2SL.set(faPause)}/>
                 </SlButton>
             </SlTooltip>
-        }
-        <SlTooltip hoist placement={tooltip} content="Go to End">
-            <SlButton size={'small'} className={'square-icon'} onClick={togglePlacement} id={'force-end'}>
-                <SlIcon library="fa" name={FA2SL.set(faForwardStep)}/>
-            </SlButton>
-        </SlTooltip>
-        <SlTooltip hoist placement={tooltip} content="Reverse direction">
+            </>
+}
+
+    <SlTooltip hoist placement={tooltip} content="Reverse direction">
             <SlButton size={'small'} className={'square-icon'} onClick={toggleDirection}>
-                <SlIcon library="fa" name={FA2SL.set(faArrowsRotateReverse)}/>
+                <SlIcon library="fa" name={FA2SL.set(
+                    wanderSnapshot.forward ? faRotateRight : faRotateLeft,
+                )}
+                        className={`${wanderSnapshot.run ? 'fa-spin' : ''} ${!wanderSnapshot.forward ? 'fa-spin-reverse' : ''}`}
+                />
             </SlButton>
         </SlTooltip>
-        <SlSelect hoist
+
+    <SlSelect hoist
                   onSlChange={changeDuration}
                   value={wanderSnapshot.duration}
                   size={'small'}
                   className={'wanderDuration'}>
-            {WANDER_DURATION.map(duration =>
+        {Wanderer.DURATIONS.map(duration =>
                 <SlOption key={duration.text} value={duration.time}>{duration.text}</SlOption>,
             )}
         </SlSelect>
