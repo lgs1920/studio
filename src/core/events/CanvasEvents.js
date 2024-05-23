@@ -34,7 +34,6 @@ export class CanvasEvents {
      *
      */
     static addListeners = () => {
-
         // Add events
         lgs.events.on('canvas/click', AnyOtherMouseCoordinates.show)
         lgs.events.on('canvas/click', MarkerMenu.show)
