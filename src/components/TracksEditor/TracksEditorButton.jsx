@@ -4,7 +4,7 @@ import { FA2SL }                       from '@Utils/FA2SL'
 import './style.css'
 import { useSnapshot }                 from 'valtio'
 
-export const TracksEditorButton = function TracksEditorButton(props, ref) {
+export const TracksEditorButton =  (props) => {
 
     const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
