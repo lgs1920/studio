@@ -1,7 +1,7 @@
 
-#vt3d-main-ui {
+#lgs-main-ui {
     display: flex;
-    gap: var(--vt3d-gutter-s);
+    gap: var(--lgs-gutter-s);
     position: fixed;
     top: 0;
     height: 100vh;
@@ -9,18 +9,18 @@
     width: 100vw;
     pointer-events: none;
 
-    z-index: var(--vt3d-ui-layer-zindex);
+    z-index: var(--lgs-ui-layer-zindex);
 
 }
 
-#vt3d-main-ui > div {
+#lgs-main-ui > div {
     display: flex;
-    gap: var(--vt3d-gutter-s);
+    gap: var(--lgs-gutter-s);
     pointer-events: auto;
-    --top: var(--vt3d-gutter-s);
-    --left: var(--vt3d-gutter-s);
-    --bottom: var(--vt3d-gutter-s);
-    --right: var(--vt3d-gutter-s);
+    --top: var(--lgs-gutter-s);
+    --left: var(--lgs-gutter-s);
+    --bottom: var(--lgs-gutter-s);
+    --right: var(--lgs-gutter-s);
 }
 
 #top-left-ui {
@@ -35,8 +35,8 @@
     position: absolute;
     top: var(--top);
     right: var(--right);
-    height: var(--vt3d-compass-size);
-    width: var(--vt3d-compass-size);
+    height: var(--lgs-compass-size);
+    width: var(--lgs-compass-size);
 }
 
 #bottom-ui {
@@ -44,7 +44,7 @@
     height: 50vh;
     width: 100%;
     flex-direction: row;
-    padding: var(--vt3d-gutter-s);
+    padding: var(--lgs-gutter-s);
     position: absolute;
     bottom: 0;
     left: 0;
@@ -52,41 +52,41 @@
 }
 
 #bottom-right-ui {
-    height: var(--vt3d-gutter-s);
-    width: var(--vt3d-gutter-s);
+    height: var(--lgs-gutter-s);
+    width: var(--lgs-gutter-s);
     align-self: flex-end;
 }
 
 #bottom-left-ui {
     display: flex;
     flex-direction: column;
-    gap: var(--vt3d-gutter-s);
+    gap: var(--lgs-gutter-s);
     align-self: flex-end;
 }
 
-.vt3d-ui-toolbar {
+.lgs-ui-toolbar {
     display: flex;
-    gap: var(--vt3d-gutter-s);
+    gap: var(--lgs-gutter-s);
     justify-items: normal;
     align-items: center;
 }
 
-.vt3d-ui-toolbar.vertical {
+.lgs-ui-toolbar.vertical {
     flex-direction: column;
     justify-items: center;
     align-items: normal;
 }
 
-.vt3d-ui-toolbar sl-divider {
+.lgs-ui-toolbar sl-divider {
     height: 1rem;
     --spacing: 0
 }
 
-.vt3d-ui-toolbar sl-button {
+.lgs-ui-toolbar sl-button {
     max-width: max-content;
 }
 
-.vt3d-ui-toolbar.embed sl-button {
+.lgs-ui-toolbar.embed sl-button {
     --sl-input-border-width: 0;
 }
 

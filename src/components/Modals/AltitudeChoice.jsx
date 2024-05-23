@@ -4,18 +4,18 @@ import { forwardRef, useState } from 'react'
 import { useSnapshot }          from 'valtio'
 
 import '../../../assets/css/modals.css'
-import { DEMServerSelection }   from '../VT3D_UI/DEMServerSelection'
+import { DEMServerSelection } from '../MainUI/DEMServerSelection'
 
 
 export const AltitudeChoice = forwardRef(function AltitudeChoice() {
 
-    const mainStore = vt3d.mainProxy
+    const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
-    const storeEditor = vt3d.theJourneyEditorProxy
+    const storeEditor = lgs.theJourneyEditorProxy
     const snapEditor = useSnapshot(storeEditor)
 
-    const [server, setServer] = useState(vt3d?.mainProxy.theJourney?.DEMServer ?? NO_DEM_SERVER)
+    const [server, setServer] = useState(lgs?.mainProxy.theJourney?.DEMServer ?? NO_DEM_SERVER)
 
     const setOpen = (open) => {
         mainStore.modals.altitudeChoice.show = open
@@ -46,13 +46,13 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
     const closeDialog = async (event) => {
         if (isOK(event)) {
             event.preventDefault()
-            vt3d.theJourney.DEMServer = server
+            lgs.theJourney.DEMServer = server
             if (server !== NO_DEM_SERVER) {
-                await vt3d.theJourney.extractMetrics()
-                vt3d.saveJourney()
-                vt3d.theJourney.addToContext()
+                await lgs.theJourney.extractMetrics()
+                lgs.saveJourney()
+                lgs.theJourney.addToContext()
                 // Then we redraw the theJourney
-                await vt3d.theJourney.showAfterHeightSimulation()
+                await lgs.theJourney.showAfterHeightSimulation()
             }
         }
     }

@@ -10,10 +10,10 @@ import { Utils }                       from './Utils'
 
 export const TracksEditorButton = function TracksEditorButton(props, ref) {
 
-    const mainStore = vt3d.mainProxy
+    const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
-    const editorStore = vt3d.theJourneyEditorProxy
+    const editorStore = lgs.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
     /**

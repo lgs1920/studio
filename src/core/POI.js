@@ -9,7 +9,7 @@ export class POI {
      * @type {function(*): *}
      */
     static getMarkerById = (id => {
-        return vt3d.markers.filter(marker => marker.id === id)[0]
+        return lgs.markers.filter(marker => marker.id === id)[0]
     })
     type
     coordinates
@@ -32,8 +32,8 @@ export class POI {
         this.coordinates = options.coordinates || {}
         this.altitude = options.altitude || false
         this.time = options.time || false
-        this.backgroundColor = options.backgroundColor ?? vt3d.POI_TRANSPARENT_COLOR
-        this.foregroundColor = options.foregroundColor ?? vt3d.POI_DEFAULT_COLOR
+        this.backgroundColor = options.backgroundColor ?? lgs.POI_TRANSPARENT_COLOR
+        this.foregroundColor = options.foregroundColor ?? lgs.POI_DEFAULT_COLOR
         this.border = options.border ?? 0
         this.text = options.text ?? undefined
         this.icon = this.defineIcon(options.icon ?? undefined)

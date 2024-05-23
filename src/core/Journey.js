@@ -19,7 +19,7 @@ import { Track }                        from './Track'
 import {
     Camera,
 }                                       from './ui/Camera.js'
-import { JOURNEYS_STORE, ORIGIN_STORE } from './VT3D'
+import { JOURNEYS_STORE, ORIGIN_STORE } from './LGS1920Context.js'
 
 export class Journey extends MapElement {
 
@@ -88,12 +88,12 @@ export class Journey extends MapElement {
          * If we're on the current journey, we register to the camera updates events
          * in order to save camera information
          */
-        vt3d.events.on(Camera.UPDATE_EVENT, (data) => {
+        lgs.events.on(Camera.UPDATE_EVENT, (data) => {
             if (this.isCurrent()) {
                 this.camera = __.ui.camera.get()
-                vt3d.saveJourney(this)
+                lgs.saveJourney(this)
                 this.addToContext()
-                vt3d.theJourney.camera = this.camera
+                lgs.theJourney.camera = this.camera
                 save()
             }
         })
@@ -109,10 +109,10 @@ export class Journey extends MapElement {
     static readAllFromDB = async () => {
         try {
             // get all slugs
-            const slugs = await vt3d.db.journeys.keys(JOURNEYS_STORE)
+            const slugs = await lgs.db.journeys.keys(JOURNEYS_STORE)
             // Get each journey content
             const journeyPromises = slugs.map(async (slug) => {
-                const object = await vt3d.db.journeys.get(slug, JOURNEYS_STORE)
+                const object = await lgs.db.journeys.get(slug, JOURNEYS_STORE)
                 const journey = Journey.deserialize({object: object})
                 return journey
             })
@@ -155,7 +155,7 @@ export class Journey extends MapElement {
      * @return {boolean}
      */
     isCurrent = () => {
-        return vt3d.theJourney && vt3d.theJourney.slug === this.slug
+        return lgs.theJourney && lgs.theJourney.slug === this.slug
     }
 
     prepareDrawing = async () => {
@@ -170,7 +170,7 @@ export class Journey extends MapElement {
      *
      */
     singleTitle = title => {
-        return __.app.singleTitle(title, vt3d.journeys)
+        return __.app.singleTitle(title, lgs.journeys)
     }
 
     /**
@@ -282,7 +282,7 @@ export class Journey extends MapElement {
             this.geoJson.features.forEach((feature, index) => {
                 const geometry = getGeom(feature)
                 const common = {
-                    description: feature.properties.desc, size: vt3d.POI_DEFAULT_SIZE, visible: true,
+                    description: feature.properties.desc, size: lgs.POI_DEFAULT_SIZE, visible: true,
                 }
 
                 // We need to change coordinates array if it is a line string
@@ -313,7 +313,7 @@ export class Journey extends MapElement {
                             time: feature.properties?.time ?? undefined,
                             type: JUST_ICON,
                             icon: feature.properties?.sym ?? feature.properties?.type,
-                            foregroundColor: vt3d.configuration.journey.pois.color,
+                            foregroundColor: lgs.configuration.journey.pois.color,
                         }
                         this.pois.set(parameters.slug, new POI({...common, ...parameters}))
                         break
@@ -335,7 +335,7 @@ export class Journey extends MapElement {
                             type: JUST_ICON,
                             icon: FLAG_START,
                             verticalOrigin: POI_VERTICAL_ALIGN_TOP,
-                            foregroundColor: vt3d.configuration.journey.pois.start.color,
+                            foregroundColor: lgs.configuration.journey.pois.start.color,
                         }
                         const startFlag = new POI({...common, ...startParameters})
                         this.tracks.get(parentSlug).flags.start = startFlag
@@ -358,7 +358,7 @@ export class Journey extends MapElement {
                             type: JUST_ICON,
                             icon: FLAG_STOP,
                             verticalOrigin: POI_VERTICAL_ALIGN_TOP,
-                            foregroundColor: vt3d.configuration.journey.pois.stop.color,
+                            foregroundColor: lgs.configuration.journey.pois.stop.color,
                         }
                         const stopFlag = new POI({...common, ...stopParameters})
                         this.tracks.get(parentSlug).flags.stop = stopFlag
@@ -421,7 +421,7 @@ export class Journey extends MapElement {
      * @return {Promise<void>}
      */
     saveToDB = async () => {
-        await vt3d.db.journeys.put(this.slug, Journey.unproxify(this), JOURNEYS_STORE)
+        await lgs.db.journeys.put(this.slug, Journey.unproxify(this), JOURNEYS_STORE)
     }
 
     /**
@@ -430,7 +430,7 @@ export class Journey extends MapElement {
      * @type {boolean}
      */
     saveOriginDataToDB = async () => {
-        await vt3d.db.journeys.put(this.slug, this.geoJson, ORIGIN_STORE)
+        await lgs.db.journeys.put(this.slug, this.geoJson, ORIGIN_STORE)
     }
 
     /**
@@ -439,8 +439,8 @@ export class Journey extends MapElement {
      * @return {Promise<void>}
      */
     removeFromDB = async () => {
-        await vt3d.db.journeys.delete(this.slug, ORIGIN_STORE)
-        await vt3d.db.journeys.delete(this.slug, JOURNEYS_STORE)
+        await lgs.db.journeys.delete(this.slug, ORIGIN_STORE)
+        await lgs.db.journeys.delete(this.slug, JOURNEYS_STORE)
     }
 
     /**
@@ -448,14 +448,14 @@ export class Journey extends MapElement {
      *
      */
     addToContext = (setToCurrent = true) => {
-        vt3d.saveJourney(this)
+        lgs.saveJourney(this)
         if (setToCurrent) {
-            vt3d.theJourney = this
+            lgs.theJourney = this
         }
     }
 
     addToEditor = () => {
-        vt3d.theJourneyEditorProxy.journey = this
+        lgs.theJourneyEditorProxy.journey = this
     }
 
     /**

@@ -31,7 +31,7 @@ export const REMOVE_JOURNEY = 3
 
 export const JourneySettings = function JourneySettings() {
 
-    const editorStore = vt3d.theJourneyEditorProxy
+    const editorStore = lgs.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
     /**
@@ -79,7 +79,7 @@ export const JourneySettings = function JourneySettings() {
      */
     const setJourneyVisibility = (async visibility => {
         editorStore.journey.visible = visibility
-        vt3d.theJourney.updateVisibility(visibility)
+        lgs.theJourney.updateVisibility(visibility)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneySettings()
     })
@@ -89,7 +89,7 @@ export const JourneySettings = function JourneySettings() {
      */
     const setAllPOIsVisibility = (async visibility => {
         editorStore.journey.POIsVisible = visibility
-        TrackUtils.updatePOIsVisibility(vt3d.theJourney, visibility)
+        TrackUtils.updatePOIsVisibility(lgs.theJourney, visibility)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneySettings()
     })
@@ -103,9 +103,9 @@ export const JourneySettings = function JourneySettings() {
         editorStore.journey.DEMServer = event.target.value
         editorStore.longTask = editorStore.journey.DEMServer !== NO_DEM_SERVER
         Utils.renderJourneySettings()
-        // await vt3d.theJourney.computeAll()
+        // await lgs.theJourney.computeAll()
         // // Then we redraw the theJourney
-        // await vt3d.theJourney.showAfterHeightSimulation()
+        // await lgs.theJourney.showAfterHeightSimulation()
 
         await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
     })
@@ -136,9 +136,9 @@ export const JourneySettings = function JourneySettings() {
         const confirmation = await confirmRemoveJourney()
 
         if (confirmation) {
-            const mainStore = vt3d.mainProxy
+            const mainStore = lgs.mainProxy
             const journey = editorStore.journey.slug
-            const removed = vt3d.getJourneyBySlug(journey)
+            const removed = lgs.getJourneyBySlug(journey)
             // get Journey index
             const index = mainStore.components.journeyEditor.list.findIndex((list) => list === journey)
 
@@ -149,11 +149,11 @@ export const JourneySettings = function JourneySettings() {
                 // In store
                 mainStore.components.journeyEditor.list.splice(index, 1)
                 // In context
-                vt3d.journeys.delete(editorStore.journey.slug)
+                lgs.journeys.delete(editorStore.journey.slug)
 
                 const dataSources = TrackUtils.getDataSourcesByName(editorStore.journey.slug)
                 dataSources.forEach(dataSource => {
-                    vt3d.viewer.dataSources.remove(dataSource)
+                    lgs.viewer.dataSources.remove(dataSource)
                 })
             }
 
@@ -167,16 +167,16 @@ export const JourneySettings = function JourneySettings() {
             let text = ''
             if (mainStore.components.journeyEditor.list.length >= 1) {
                 // New current is the first.
-                vt3d.theJourney = vt3d.getJourneyBySlug(mainStore.components.journeyEditor.list[0])
-                vt3d.theJourney.focus()
-                vt3d.theTrack = vt3d.theJourney.tracks.values().next().value
-                vt3d.theTrack.addToEditor()
+                lgs.theJourney = lgs.getJourneyBySlug(mainStore.components.journeyEditor.list[0])
+                lgs.theJourney.focus()
+                lgs.theTrack = lgs.theJourney.tracks.values().next().value
+                lgs.theTrack.addToEditor()
                 Utils.renderJourneysList()
                 // Sync Profile
                 __.ui.profiler.draw()
             } else {
-                vt3d.theJourney = null
-                vt3d.cleanEditor()
+                lgs.theJourney = null
+                lgs.cleanEditor()
                 text = 'There are no others available.'
                 mainStore.canViewJourneyData = false
                 mainStore.components.journeyEditor.show = false
@@ -199,7 +199,7 @@ export const JourneySettings = function JourneySettings() {
 
     return (<>
         {editorSnapshot.journey &&
-            <div id="journey-settings" key={vt3d.mainProxy.components.journeyEditor.keys.journey.journey}>
+            <div id="journey-settings" key={lgs.mainProxy.components.journeyEditor.keys.journey.journey}>
                 <div className={'settings-panel'} id={'editor-journey-settings-panel'}>
                     <SlTabGroup className={'menu-panel'}>
                         <SlTab slot="nav" panel="data" id="tab-journey-data" active={editorSnapshot.tabs.journey.data}>

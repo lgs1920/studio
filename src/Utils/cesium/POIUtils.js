@@ -5,7 +5,7 @@ import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 import { Canvg }                          from 'canvg'
 import * as Cesium                        from 'cesium'
 import { FLAG_START, FLAG_STOP, POI_STD } from '../../core/Journey'
-import { APP_KEY }                        from '../../core/VT3D'
+import { APP_KEY }                        from '../../core/LGS1920Context.js'
 
 // Pin Marker Type
 export const PIN_ICON = 1
@@ -72,7 +72,7 @@ export class POIUtils {
         const foregroundColor = poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : undefined
 
         // Check data source
-        const dataSource = vt3d.viewer.dataSources.getByName(poi.journey ?? APP_KEY, true)[0]
+        const dataSource = lgs.viewer.dataSources.getByName(poi.journey ?? APP_KEY, true)[0]
         switch (poi.type) {
             case PIN_CIRCLE:
                 return await dataSource.entities.add({
@@ -105,7 +105,7 @@ export class POIUtils {
     }
 
     static update = (poi, options) => {
-        const dataSource = vt3d.viewer.dataSources.getByName(poi.journey ?? APP_KEY, true)[0]
+        const dataSource = lgs.viewer.dataSources.getByName(poi.journey ?? APP_KEY, true)[0]
         const entity = dataSource.entities.getById(poi.slug)
         if (entity) {
             // Update positions
@@ -117,7 +117,7 @@ export class POIUtils {
             if (options.foregroundColor !== undefined) {
                 entity.color = Cesium.Color.fromCssColorString(options.foregroundColor)
             } else {
-                entity.color = Cesium.Color.fromCssColorString(vt3d.theTrack.color)
+                entity.color = Cesium.Color.fromCssColorString(lgs.theTrack.color)
             }
         }
 
@@ -132,7 +132,7 @@ export class POIUtils {
         const svg = (new DOMParser()).parseFromString(html, 'image/svg+xml').querySelector('svg')
         // add foreground
         svg.querySelector('path').setAttribute('fill', marker.foregroundColor)
-        if (marker.backgroundColor !== vt3d.POI_TRANSPARENT_COLOR) {
+        if (marker.backgroundColor !== lgs.POI_TRANSPARENT_COLOR) {
             // add background
             const rectangle = document.createElement('rect')
             rectangle.setAttribute('rx', 10)
@@ -166,7 +166,7 @@ export class POIUtils {
     }
 
     static remove = async (poi) => {
-        const dataSource = vt3d.viewer.dataSources.getByName(poi.slug.startsWith(POI_STD) ? poi.journey : poi.track)[0]
+        const dataSource = lgs.viewer.dataSources.getByName(poi.slug.startsWith(POI_STD) ? poi.journey : poi.track)[0]
         dataSource.entities.values.forEach(entity => {
             if (entity.id === poi.id) {
                 dataSource.entities.remove(entity)

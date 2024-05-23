@@ -6,10 +6,10 @@ import { useSnapshot }                    from 'valtio'
 
 export const SnapshotButton = (props, ref) => {
 
-    const mainStore = vt3d.mainProxy
+    const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
-    const editorStore = vt3d.theJourneyEditorProxy
+    const editorStore = lgs.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
     /**

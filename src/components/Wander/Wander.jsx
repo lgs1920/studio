@@ -10,7 +10,7 @@ import { WanderUtils }                                     from '../../Utils/ces
 export const Wander = (props) => {
 
 
-    const wanderStore = vt3d.mainProxy.components.wanderer
+    const wanderStore = lgs.mainProxy.components.wanderer
     const wanderSnapshot = useSnapshot(wanderStore)
 
     // Use the first as default if needed

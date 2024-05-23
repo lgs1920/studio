@@ -13,9 +13,9 @@ export class AnyOtherMouseCoordinates {
             return
         }
 
-        const menuStore = vt3d.mainProxy.components.floatingMenu
+        const menuStore = lgs.mainProxy.components.floatingMenu
         const position = data.positions.position ?? data.positions.position.endPosition
-        const cartesian = vt3d.viewer.camera.pickEllipsoid(position, vt3d.viewer.scene.globe.ellipsoid)
+        const cartesian = lgs.viewer.camera.pickEllipsoid(position, lgs.viewer.scene.globe.ellipsoid)
 
         if (cartesian) {
             // Get Latitude and longitude and save them
@@ -24,7 +24,7 @@ export class AnyOtherMouseCoordinates {
             menuStore.latitude = Cesium.Math.toDegrees(cartographic.latitude)
 
             // Then transform them to screen coordinate in order to show the menu
-            let {x, y} = Cesium.SceneTransforms.wgs84ToWindowCoordinates(vt3d.viewer.scene, cartesian)
+            let {x, y} = Cesium.SceneTransforms.wgs84ToWindowCoordinates(lgs.viewer.scene, cartesian)
             menuStore.coordinates.x = x
             menuStore.coordinates.y = y
 

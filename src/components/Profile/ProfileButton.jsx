@@ -10,14 +10,14 @@ import { TrackUtils }                  from '../../Utils/cesium/TrackUtils'
 
 export const ProfileButton = forwardRef(function ProfileButton(props, ref) {
 
-    const mainStore = vt3d.mainProxy
+    const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
     const toggleProfileButton = (event) => {
         mainStore.components.profile.show = !mainStore.components.profile.show
     }
 
-    TrackUtils.setProfileVisibility(vt3d.theJourney)
+    TrackUtils.setProfileVisibility(lgs.theJourney)
 
     return (<>
         {mainSnap.canViewProfile &&

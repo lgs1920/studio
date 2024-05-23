@@ -1,8 +1,8 @@
 import './assets/css/theme.css'
 import './assets/css/light.css'
 //import { StrictMode }  from 'react'
-import { createRoot }  from 'react-dom/client'
-import { ViewTrack3D } from './ViewTrack3D.jsx'
+import { createRoot } from 'react-dom/client'
+import { LGS1920 }    from './LGS1920.jsx'
 import './assets/css/app.css'
 
 /**
@@ -11,6 +11,6 @@ import './assets/css/app.css'
 
 createRoot(document.getElementById('root')).render(
     // <StrictMode>
-    <ViewTrack3D/>,
+    <LGS1920/>,
     // </StrictMode>,
 )

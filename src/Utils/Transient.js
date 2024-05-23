@@ -8,7 +8,7 @@ class Transient {
     return
     #content
 
-    constructor(transientName, dataBase = vt3d.db.tracks) {
+    constructor(transientName, dataBase = lgs.db.tracks) {
         this.#key = transientName
         this.#dataBase = dataBase
         this.#store = this.#dataBase.transientStore
@@ -26,7 +26,7 @@ class Transient {
      *  Return if transient expired
      */
     get expired() {
-        vt3d.db.get(this.#key, this.#store, true).then(data => {
+        lgs.db.get(this.#key, this.#store, true).then(data => {
             if (data) {
                 return this.#expired(data)
             }
@@ -48,7 +48,7 @@ class Transient {
      */
     create = async (value, duration = 10 * MINUTE) => {
         if (value !== undefined) {
-            await vt3d.db.put(this.#key, value, this.#store, duration)
+            await lgs.db.put(this.#key, value, this.#store, duration)
         }
     }
 
@@ -64,7 +64,7 @@ class Transient {
      */
     read = async (full = false) => {
 
-        let data = await vt3d.db.get(this.#key, this.#store, true)
+        let data = await lgs.db.get(this.#key, this.#store, true)
         if (data) {
             if (this.#expired(data)) {
                 return null
@@ -83,7 +83,7 @@ class Transient {
      */
     update = async (value, duration = 0) => {
         if (value !== undefined) {
-            return await vt3d.db.update(this.#key, value, this.#store, duration)
+            return await lgs.db.update(this.#key, value, this.#store, duration)
         }
     }
 
@@ -91,7 +91,7 @@ class Transient {
      * Delete the transient
      */
     delete = async () => {
-        return await vt3d.db.delete(this.#key, this.#store)
+        return await lgs.db.delete(this.#key, this.#store)
     }
 
 }

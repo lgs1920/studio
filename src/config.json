@@ -6,10 +6,13 @@
     "latitude": 45.33524,
     "height": 1920,
     "camera": {
-      "heading": 0,
-      "pitch": -30,
-      "roll": 0,
-      "range": 2000
+      "heading": 360,
+      "pitch": -45,
+      "roll": 360,
+      "range": 4000,
+      "longitude": 5.66934,
+      "latitude": 45.3173,
+      "height": 3621
     }
   },
   "camera": {

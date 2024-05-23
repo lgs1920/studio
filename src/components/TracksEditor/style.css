@@ -1,7 +1,7 @@
 
 #journeys-editor-container {
     position: absolute;
-    z-index: var(--vt3d-ui-layer-zindex);
+    z-index: var(--lgs-ui-layer-zindex);
     top: calc(var(--top) * -1);
     left: 0;
     width: calc(100vw - var(--right));
@@ -11,15 +11,15 @@
 
 #journeys-editor-pane {
     position: fixed;
-    bottom: var(--vt3d-gutter);
-    left: var(--vt3d-gutter);
+    bottom: var(--lgs-gutter);
+    left: var(--lgs-gutter);
     top: auto;
     right: auto;
     pointer-events: none;
 }
 
 sl-tab sl-icon {
-    margin-right: var(--vt3d-gutter-xs);
+    margin-right: var(--lgs-gutter-xs);
 }
 
 #journeys-editor-footer {
@@ -39,14 +39,14 @@ sl-tab sl-icon {
 
 #editor-journey-settings-panel {
     display: flex;
-    gap: var(--vt3d-gutter-s);
+    gap: var(--lgs-gutter-s);
 }
 
 #journey-text-description {
     display: flex;
     flex-direction: column;
     gap: 0;
-    margin-bottom: var(--vt3d-gutter-xs);
+    margin-bottom: var(--lgs-gutter-xs);
     width: 1.1rem;
 }
 
@@ -54,7 +54,7 @@ sl-tab sl-icon {
     display: flex;
     flex-direction: column;
     gap: 0;
-    margin-bottom: var(--vt3d-gutter-xs);
+    margin-bottom: var(--lgs-gutter-xs);
     width: 1.5rem;
     align-items: center;
     margin-left: auto
@@ -66,7 +66,7 @@ sl-tab sl-icon {
 
 
 #journey-text-description {
-    gap: var(--vt3d-gutter-xs);
+    gap: var(--lgs-gutter-xs);
     width: 100%;
 }
 
@@ -75,7 +75,7 @@ sl-tab sl-icon {
     width: 100%;
     font-weight: 700;
     align-items: center;
-    margin-right: var(--vt3d-gutter-s);
+    margin-right: var(--lgs-gutter-s);
 }
 
 .journey-title-icon {
@@ -85,21 +85,21 @@ sl-tab sl-icon {
 .settings-panel {
     display: flex;
     width: 100%;
-    gap: var(--vt3d-gutter-s);
+    gap: var(--lgs-gutter-s);
     justify-content: space-between;
 }
 
 #track-text-description {
     display: flex;
     flex-direction: column;
-    gap: var(--vt3d-gutter-xs);
+    gap: var(--lgs-gutter-xs);
     width: 100%;
-    margin-bottom: var(--vt3d-gutter-xs);
+    margin-bottom: var(--lgs-gutter-xs);
 }
 
 #track-line-settings, #track-line-settings > div {
     display: flex;
-    gap: var(--vt3d-gutter-s);
+    gap: var(--lgs-gutter-s);
     width: 100%;
     align-items: center;
     justify-content: space-between;
@@ -112,7 +112,7 @@ sl-tab sl-icon {
 }
 
 sl-tab::part(base) {
-    padding: var(--vt3d-gutter-s);
+    padding: var(--lgs-gutter-s);
 }
 
 sl-tab-panel {
@@ -120,7 +120,7 @@ sl-tab-panel {
 }
 
 sl-tab-panel sl-icon {
-    margin-right: var(--vt3d-gutter-xs);
+    margin-right: var(--lgs-gutter-xs);
     width: 1rem;
 }
 
@@ -131,7 +131,7 @@ sl-tab-panel sl-icon::part(svg) {
 
 .element-data {
     width: 100%;
-    --padding: var(--vt3d-gutter-s);
+    --padding: var(--lgs-gutter-s);
 }
 
 .element-row {
@@ -158,10 +158,10 @@ sl-tab-panel sl-icon::part(svg) {
 }
 
 .track-points, .journey-POIs {
-    margin-top: var(--vt3d-gutter-s);
+    margin-top: var(--lgs-gutter-s);
 }
 
 .track-date {
     display: flex;
-    gap: var(--vt3d-gutter);
+    gap: var(--lgs-gutter);
 }

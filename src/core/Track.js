@@ -32,8 +32,8 @@ export class Track extends MapElement {
         this.parent = options.parent
         this.slug = options.slug
 
-        this.color = options.color ?? vt3d.configuration.journey.color
-        this.thickness = options.thickness ?? vt3d.configuration.journey.thickness
+        this.color = options.color ?? lgs.configuration.journey.color
+        this.thickness = options.thickness ?? lgs.configuration.journey.thickness
         this.visible = options.visible ?? true
         this.description = options.description ?? undefined
 
@@ -156,8 +156,8 @@ export class Track extends MapElement {
                         pointData.speed = Mobility.speed(pointData.distance, pointData.duration)
                         pointData.pace = Mobility.pace(pointData.distance, pointData.duration)
                         pointData.activity =
-                            pointData.speed > vt3d.configuration.metrics.stopSpeedLimit ||
-                            pointData.duration > vt3d.configuration.metrics.stopDuration
+                            pointData.speed > lgs.configuration.metrics.stopSpeedLimit ||
+                            pointData.duration > lgs.configuration.metrics.stopDuration
                     }
                     if (this.hasAltitude) {
                         pointData.elevation = Mobility.elevation(prev, current)
@@ -247,7 +247,7 @@ export class Track extends MapElement {
             global.flat = {elevation: 0, distance: 0, duration: 0, pace: 0, speed: 0, points: 0}
 
             featureMetrics.forEach((point) => {
-                if (point.slope > vt3d.configuration.metrics.minSlope) {
+                if (point.slope > lgs.configuration.metrics.minSlope) {
                     // We sum all data when we get a positive slope
                     global.positive.elevation += point.elevation
                     global.positive.distance += point.distance
@@ -255,7 +255,7 @@ export class Track extends MapElement {
                     global.positive.speed += point.speed
                     global.positive.pace += point.pace
                     global.positive.points++
-                } else if (point.slope < -vt3d.configuration.metrics.minSlope) {
+                } else if (point.slope < -lgs.configuration.metrics.minSlope) {
                     // We sum all data when we get a negative slope
                     global.negative.elevation += point.elevation
                     global.negative.distance += point.distance
@@ -367,7 +367,7 @@ export class Track extends MapElement {
                     //         segment.geometry.coordinates[j].push(altitudes[j])
                     //     }
                     //     // Hide progress bar
-                    //     vt3d.theJourneyEditorProxy.longTask = false
+                    //     lgs.theJourneyEditorProxy.longTask = false
                     // }
                 }
                 // Use title as feature name
@@ -417,13 +417,13 @@ export class Track extends MapElement {
     }
 
     addToEditor = () => {
-        vt3d.theJourneyEditorProxy.track = this
+        lgs.theJourneyEditorProxy.track = this
     }
 
     addToContext = (setToCurrent = true) => {
-        vt3d.saveJourney(vt3d.getJourneyBySlug(this.parent))
+        lgs.saveJourney(lgs.getJourneyBySlug(this.parent))
         if (setToCurrent) {
-            vt3d.theTrack = this
+            lgs.theTrack = this
         }
     }
 

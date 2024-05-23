@@ -13,14 +13,14 @@ export class TrackMenu {
         }
 
 
-        const menuStore = vt3d.mainProxy.components.floatingMenu
+        const menuStore = lgs.mainProxy.components.floatingMenu
 
         // Save track in store
         menuStore.target = data.picked
 
         // Get coordinates of clicked point
         const position = data.positions.position ?? data.positions.position.endPosition
-        const cartesian = vt3d.viewer.camera.pickEllipsoid(position, vt3d.viewer.scene.globe.ellipsoid)
+        const cartesian = lgs.viewer.camera.pickEllipsoid(position, lgs.viewer.scene.globe.ellipsoid)
 
         if (cartesian) {
             // Find the nearest point on the track
@@ -36,7 +36,7 @@ export class TrackMenu {
             const {
                       x,
                       y,
-                  } = Cesium.SceneTransforms.wgs84ToWindowCoordinates(vt3d.viewer.scene, Cesium.Cartesian3.fromDegrees(menuStore.longitude, menuStore.latitude))
+                  } = Cesium.SceneTransforms.wgs84ToWindowCoordinates(lgs.viewer.scene, Cesium.Cartesian3.fromDegrees(menuStore.longitude, menuStore.latitude))
 
             menuStore.coordinates.x = x
             menuStore.coordinates.y = y
@@ -49,7 +49,7 @@ export class TrackMenu {
             data.picked.longitude = menuStore.longitude
             data.picked.latitude = menuStore.latitude
             data.picked.index = nearest.properties.index
-            vt3d.events.emit('wander/drawPoint', data)
+            lgs.events.emit('wander/drawPoint', data)
 
         }
     }

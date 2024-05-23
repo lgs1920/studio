@@ -12,7 +12,7 @@ import './style.css'
 
 export const CreditsUI = forwardRef(function CreditsUI() {
 
-    const mainStore = vt3d.mainProxy.components
+    const mainStore = lgs.mainProxy.components
     const mainSnap = useSnapshot(mainStore)
 
     const setOpen = (open) => {
@@ -26,12 +26,12 @@ export const CreditsUI = forwardRef(function CreditsUI() {
 
             <div id="credits-pane-footer" slot={'footer'}>
                 <div>
-                    <strong>{vt3d.configuration.applicationName}</strong><span>{info.version}</span>
+                    <strong>{lgs.configuration.applicationName}</strong><span>{info.version}</span>
                 </div>
                 <SlTooltip content="Our GitHub repo">
                     <SlIconButton library="fa" name={FA2SL.set(faGithub)}
                                   target={'_blank'}
-                                  href={'https://github.com/ViewTrack3D/vt3d'}
+                                  href={'https://github.com/ViewTrack3D/lgs'}
                     />
                 </SlTooltip>
             </div>

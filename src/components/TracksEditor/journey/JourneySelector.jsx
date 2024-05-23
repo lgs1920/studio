@@ -10,9 +10,9 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
     const handleRequestClose = event => {
         event.preventDefault()
     }
-    const mainStore = vt3d.mainProxy.components.journeyEditor
+    const mainStore = lgs.mainProxy.components.journeyEditor
     const mainSnapshot = useSnapshot(mainStore)
-    const editorStore = vt3d.theJourneyEditorProxy
+    const editorStore = lgs.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
     /**
@@ -20,7 +20,7 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
      */
     let journeys = []
     mainSnapshot.list.forEach(slug => {
-        journeys.push(vt3d.getJourneyBySlug(slug))
+        journeys.push(lgs.getJourneyBySlug(slug))
     })
 
     /**
@@ -43,8 +43,8 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
     }
 
     // set Default
-    mainStore.theJourney = vt3d.theJourney?.slug
-    const theJourney = vt3d.theJourney
+    mainStore.theJourney = lgs.theJourney?.slug
+    const theJourney = lgs.theJourney
 
     // Look for colo to add in prefix
     const prefixColor = (journey) => {
@@ -91,7 +91,7 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
                         color: (theJourney.tracks.size === 1) ? editorSnapshot?.track?.color : 'black',
                     }}
             />
-                {vt3d.theJourney.title}
+                {lgs.theJourney.title}
                 </span>
         </>}
 

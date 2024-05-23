@@ -2,7 +2,7 @@ import { SlDrawer }        from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { forwardRef }      from 'react'
 import { useSnapshot }     from 'valtio'
-import { Toolbar }         from '../VT3D_UI/Toolbar'
+import { Toolbar }         from '../MainUI/Toolbar'
 import { JourneySelector } from './journey/JourneySelector'
 import { JourneySettings } from './journey/JourneySettings'
 import { TrackSelector }   from './track/TrackSelector'
@@ -14,10 +14,10 @@ import { Utils }           from './Utils'
 
 export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
 
-    const mainStore = vt3d.mainProxy
+    const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
-    const editorStore = vt3d.theJourneyEditorProxy
+    const editorStore = lgs.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
     /**
@@ -67,7 +67,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                                  mode={'embed'}
                         />
                     </div>
-                    {vt3d.journeys.size > 0 && <div id={'track-settings-container'}>
+                    {lgs.journeys.size > 0 && <div id={'track-settings-container'}>
                         <JourneySelector onChange={Utils.initJourneyEdition}
                                          label={'Select a Journey:'}
                                          single={true}/>

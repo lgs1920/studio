@@ -19,18 +19,18 @@ export class Camera {
             return Camera.instance
         }
 
-        this.target.longitude = settings?.target?.longitude ?? vt3d.configuration.starter.longitude
-        this.target.latitude = settings?.target?.latitude ?? vt3d.configuration.starter.latitude
-        this.target.height = settings?.target?.height ?? vt3d.configuration.starter.height
+        this.target.longitude = settings?.target?.longitude ?? lgs.configuration.starter.longitude
+        this.target.latitude = settings?.target?.latitude ?? lgs.configuration.starter.latitude
+        this.target.height = settings?.target?.height ?? lgs.configuration.starter.height
 
         this.longitude = undefined
         this.latitude = undefined
         this.height = undefined
 
-        this.heading = settings?.heading ?? vt3d.configuration.camera.heading
-        this.pitch = settings?.pitch ?? vt3d.configuration.camera.pitch
-        this.roll = settings?.roll ?? vt3d.configuration.camera.roll
-        this.range = settings?.range ?? vt3d.configuration.camera.range
+        this.heading = settings?.heading ?? lgs.configuration.camera.heading
+        this.pitch = settings?.pitch ?? lgs.configuration.camera.pitch
+        this.roll = settings?.roll ?? lgs.configuration.camera.roll
+        this.range = settings?.range ?? lgs.configuration.camera.range
         this.clockwise = Camera.CLOCKWISE
 
         Camera.instance = this
@@ -49,11 +49,11 @@ export class Camera {
 
     addUpdateEvent = () => {
         if (!__.ui.camera.event) {
-            vt3d.camera.percentageChanged = vt3d.configuration.camera.percentageChanged
-            vt3d.camera.changed.addEventListener(() => {
+            lgs.camera.percentageChanged = lgs.configuration.camera.percentageChanged
+            lgs.camera.changed.addEventListener(() => {
                 __.ui.camera.update().then(data => {
-                    vt3d.mainProxy.components.camera.position = data
-                    vt3d.events.emit(this.UPDATE_EVENT, [data])
+                    lgs.mainProxy.components.camera.position = data
+                    lgs.events.emit(this.UPDATE_EVENT, [data])
                 })
             })
         }
@@ -79,7 +79,7 @@ export class Camera {
             this.reset()
         }
 
-        vt3d.events.emit(Camera.UPDATE_EVENT)
+        lgs.events.emit(Camera.UPDATE_EVENT)
         return this
 
     }
@@ -106,17 +106,17 @@ export class Camera {
 
     reset = () => {
         this.target = {
-            longitude: vt3d.configuration.starter.longitude,
-            latitude: vt3d.configuration.starter.latitude,
-            height: vt3d.configuration.starter.height,
+            longitude: lgs.configuration.starter.longitude,
+            latitude: lgs.configuration.starter.latitude,
+            height: lgs.configuration.starter.height,
         }
         this.longitude = undefined
         this.latitude = undefined
         this.height = undefined
-        this.heading = vt3d.configuration.camera.heading
-        this.pitch = vt3d.configuration.camera.pitch
-        this.roll = vt3d.configuration.camera.roll
-        this.range = vt3d.configuration.camera.range
+        this.heading = lgs.configuration.camera.heading
+        this.pitch = lgs.configuration.camera.pitch
+        this.roll = lgs.configuration.camera.roll
+        this.range = lgs.configuration.camera.range
 
         return this
     }

@@ -20,7 +20,7 @@ export class Profiler extends Singleton {
      * @param type {number} Plot type
      */
     prepareData = (type = ELEVATION_VS_DISTANCE) => {
-        if (vt3d.theJourney === null) {
+        if (lgs.theJourney === null) {
             return
         }
 
@@ -35,12 +35,12 @@ export class Profiler extends Singleton {
         const options = {
             xaxis: {
                 title: {
-                    text: `${titles.x} - ${units.x[vt3d.configuration.unitsSystem]}`,
+                    text: `${titles.x} - ${units.x[lgs.configuration.unitsSystem]}`,
                 },
             },
             yaxis: {
                 title: {
-                    text: `${titles.y} - ${units.y[vt3d.configuration.unitsSystem]}`,
+                    text: `${titles.y} - ${units.y[lgs.configuration.unitsSystem]}`,
                 },
                 decimalsInFloat: 1,
                 tickAmount: 4,
@@ -55,7 +55,7 @@ export class Profiler extends Singleton {
         }
 
         let distance = 0
-        vt3d.theJourney.tracks.forEach((track, slug) => {
+        lgs.theJourney.tracks.forEach((track, slug) => {
             if (track.visible && track.metrics.points !== undefined) {
                 const dataSet = {
                     data: [],
@@ -67,8 +67,8 @@ export class Profiler extends Singleton {
                     let coords = {}
                     switch (type) {
                         case ELEVATION_VS_DISTANCE : {
-                            coords.x = __.convert(distance).to(units.x[vt3d.configuration.unitsSystem])
-                            coords.y = __.convert(point.altitude).to(units.y[vt3d.configuration.unitsSystem])
+                            coords.x = __.convert(distance).to(units.x[lgs.configuration.unitsSystem])
+                            coords.y = __.convert(point.altitude).to(units.y[lgs.configuration.unitsSystem])
                             coords.point = point
                         }
                     }
@@ -99,7 +99,7 @@ export class Profiler extends Singleton {
         const length = data[data.length - 1].x
 
         // Show on map
-        if (vt3d.configuration.profile.marker.show) {
+        if (lgs.configuration.profile.marker.show) {
             this.showOnMap(options)
         }
 
@@ -109,12 +109,12 @@ export class Profiler extends Singleton {
          <span>[ ${coords.point.latitude} , ${coords.point.longitude} ]</span>
          <span class="point-distance">
            <sl-icon library="fa" name="${FA2SL.set(faArrowLeftToLine)}"></sl-icon>
-            ${sprintf('%\' .1f', coords.x)}  ${DISTANCE_UNITS[vt3d.configuration.unitsSystem]}
+            ${sprintf('%\' .1f', coords.x)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
             <sl-icon library="fa" name="${FA2SL.set(faCircle)}"></sl-icon>
-            ${sprintf('%\' .1f', length - coords.x)}  ${DISTANCE_UNITS[vt3d.configuration.unitsSystem]}
+            ${sprintf('%\' .1f', length - coords.x)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
             <sl-icon library="fa" name="${FA2SL.set(faArrowRightToLine)}"></sl-icon>
         </span>                       
-        <span>${sprintf('%\' .1f', coords.y)} ${ELEVATION_UNITS[vt3d.configuration.unitsSystem]}</span>
+        <span>${sprintf('%\' .1f', coords.y)} ${ELEVATION_UNITS[lgs.configuration.unitsSystem]}</span>
         <sl-icon library="fa" name="${FA2SL.set(faArrowDownToLine)}"></sl-icon>
     </div>
     `
@@ -125,10 +125,10 @@ export class Profiler extends Singleton {
         const coords = data[options.dataPointIndex]
         const length = data[data.length - 1].x
 
-        if (!vt3d.profileTrackMarker.drawn) {
-            vt3d.profileTrackMarker.draw()
+        if (!lgs.profileTrackMarker.drawn) {
+            lgs.profileTrackMarker.draw()
         } else {
-            vt3d.profileTrackMarker.moveTo([coords.point.longitude, coords.point.latitude])
+            lgs.profileTrackMarker.moveTo([coords.point.longitude, coords.point.latitude])
         }
 
     }
@@ -138,13 +138,13 @@ export class Profiler extends Singleton {
      */
     updateColor = () => {
         const series = []
-        vt3d.theJourney.tracks.forEach((track, slug) => {
+        lgs.theJourney.tracks.forEach((track, slug) => {
             series.push({color: track.color})
         })
         PROFILE_CHARTS.forEach(id => {
             this.charts.get(id).updateSeries(series)
         })
-        vt3d.profileTrackMarker.update()
+        lgs.profileTrackMarker.update()
     }
 
     /**
@@ -152,7 +152,7 @@ export class Profiler extends Singleton {
      */
     updateTitle = () => {
         const series = []
-        vt3d.theJourney.tracks.forEach((track, slug) => {
+        lgs.theJourney.tracks.forEach((track, slug) => {
             series.push({name: track.title})
         })
         PROFILE_CHARTS.forEach(id => {
@@ -175,22 +175,22 @@ export class Profiler extends Singleton {
      * Force Profile to be redrawn
      */
     draw = () => {
-        vt3d.mainProxy.components.profile.key++
-        if (vt3d.configuration.profile.marker.show) {
-            vt3d.profileTrackMarker.draw()
+        lgs.mainProxy.components.profile.key++
+        if (lgs.configuration.profile.marker.show) {
+            lgs.profileTrackMarker.draw()
         }
     }
 
     initMarker = () => {
-        if (vt3d.profileTrackMarker === undefined) {
-            vt3d.profileTrackMarker = new ProfileTrackMarker()
+        if (lgs.profileTrackMarker === undefined) {
+            lgs.profileTrackMarker = new ProfileTrackMarker()
         }
     }
 
     drawMarker = () => {
-        if (vt3d.configuration.profile.marker.show) {
+        if (lgs.configuration.profile.marker.show) {
             this.initMarker()
-            vt3d.profileTrackMarker.draw()
+            lgs.profileTrackMarker.draw()
         }
     }
     resetChart = () => {
@@ -204,13 +204,13 @@ export class Profiler extends Singleton {
      *
      * @return {boolean}
      */
-    setVisibility = (journey = vt3d.theJourney) => {
-        vt3d.mainProxy.canViewProfile =
-            vt3d.configuration.profile.show &&              // By configuration
+    setVisibility = (journey = lgs.theJourney) => {
+        lgs.mainProxy.canViewProfile =
+            lgs.configuration.profile.show &&              // By configuration
             journey !== undefined &&                        // During init
             journey !== null &&                             // same
             journey.visible &&                              // Journey visible
-            vt3d.mainProxy.canViewJourneyData &&            // can view data
+            lgs.mainProxy.canViewJourneyData &&            // can view data
             Array.from(journey.tracks.values())             // Has Altitude for each track
                 .every(track => track.hasAltitude)
 

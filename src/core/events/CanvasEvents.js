@@ -25,7 +25,7 @@ export class CanvasEvents {
         /**
          * Emit all subscribed events
          */
-        vt3d.eventHandler.getSubscriptionsTo('canvas').map(event => vt3d.events.emit(event, data))
+        lgs.eventHandler.getSubscriptionsTo('canvas').map(event => lgs.events.emit(event, data))
 
     }
 
@@ -37,12 +37,12 @@ export class CanvasEvents {
     static addListeners = () => {
 
         // Add events
-        vt3d.events.on('canvas/click', AnyOtherMouseCoordinates.show)
-        vt3d.events.on('canvas/click', MarkerMenu.show)
-        vt3d.events.on('canvas/click', TrackMenu.show)
+        lgs.events.on('canvas/click', AnyOtherMouseCoordinates.show)
+        lgs.events.on('canvas/click', MarkerMenu.show)
+        lgs.events.on('canvas/click', TrackMenu.show)
 
-        vt3d.events.on('canvas/rightClick', AnyOtherMouseCoordinates.show)
-        vt3d.events.on('canvas/ctrlClick', AnyOtherMouseCoordinates.show)
+        lgs.events.on('canvas/rightClick', AnyOtherMouseCoordinates.show)
+        lgs.events.on('canvas/ctrlClick', AnyOtherMouseCoordinates.show)
     }
 
     /**
@@ -55,11 +55,11 @@ export class CanvasEvents {
         /**
          * We need to trap some events on canvas
          */
-        const handlerOnCanvas = new Cesium.ScreenSpaceEventHandler(vt3d.canvas)
+        const handlerOnCanvas = new Cesium.ScreenSpaceEventHandler(lgs.canvas)
         const canvasEventsManager = CanvasEvents.manager
 
         // Click
-        vt3d.eventHandler.subscribeEventManager({
+        lgs.eventHandler.subscribeEventManager({
             target: 'canvas',
             name: 'canvas/click',
             event: Cesium.ScreenSpaceEventType.LEFT_CLICK,
@@ -68,7 +68,7 @@ export class CanvasEvents {
         })
 
         // Right Click
-        vt3d.eventHandler.subscribeEventManager({
+        lgs.eventHandler.subscribeEventManager({
             target: 'canvas',
             name: 'canvas/rightClick',
             event: Cesium.ScreenSpaceEventType.RIGHT_CLICK,
@@ -77,13 +77,13 @@ export class CanvasEvents {
         })
 
         // Ctrl+Click
-        vt3d.eventHandler.subscribeEventManager({
+        lgs.eventHandler.subscribeEventManager({
             target: 'canvas',
             name: 'canvas/ctrlClick',
             event: Cesium.ScreenSpaceEventType.LEFT_CLICK,
             manager: canvasEventsManager,
             handler: handlerOnCanvas,
-            keyboard: vt3d.eventHandler.keyboard.CTRL,
+            keyboard: lgs.eventHandler.keyboard.CTRL,
         })
     }
 }

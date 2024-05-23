@@ -10,9 +10,9 @@ import { meter, mile }                                      from '../../../Utils
 
 
 export const CameraTargetPositionUI = (props) => {
-    vt3d.viewer = useCesium().viewer
+    lgs.viewer = useCesium().viewer
 
-    const cameraStore = vt3d.mainProxy.components.camera
+    const cameraStore = lgs.mainProxy.components.camera
     const cameraSnap = useSnapshot(cameraStore)
 
     const toggle = () => {

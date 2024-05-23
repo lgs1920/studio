@@ -36,7 +36,7 @@ import {
 
 export const FloatingMenu = function FloatingMenu() {
 
-    const menuStore = vt3d.mainProxy.components.floatingMenu
+    const menuStore = lgs.mainProxy.components.floatingMenu
     const menuSnap = useSnapshot(menuStore)
     const element = useRef(null)
 
@@ -51,8 +51,8 @@ export const FloatingMenu = function FloatingMenu() {
         if (slug instanceof Track) {
             slug = menuSnap.target.track.slug
         }
-        track = vt3d.getJourneyBySlug(slug)
-        vt3d.theJourney = track
+        track = lgs.getJourneyBySlug(slug)
+        lgs.theJourney = track
         if (menuSnap.type === POI_TYPE) {
             marker = track.markers.get(menuSnap.target.marker)
         }
@@ -123,7 +123,7 @@ export const FloatingMenu = function FloatingMenu() {
      * @return {JSX.Element}
      */
     const Coordinates = () => {
-        return (<div className={'vt3d-card'}>
+        return (<div className={'lgs-card'}>
             <div id={'floating-menu-coordinates'} className={'floating-menu-data'}>
                 <div className={'floating-menu-title'}>
                     <sl-icon variant="primary" library="fa" name={FA2SL.set(faLocationDot)}></sl-icon>
@@ -178,7 +178,7 @@ export const FloatingMenu = function FloatingMenu() {
         }
         return (<>
             {(menuSnap.type === POI_TYPE || menuSnap.type === TRACK_TYPE) && <>
-                <div id="floating-menu-marker-header" className={'vt3d-card'}>
+                <div id="floating-menu-marker-header" className={'lgs-card'}>
                     <span className={'entity-title'}>{name}</span>
                     <div className={'entity-description'}>{description}</div>
                 </div>
@@ -324,7 +324,7 @@ export const FloatingMenu = function FloatingMenu() {
 
             {menuSnap.show &&
                 <SlCard variant={'primary'}>
-                    <div className={'vt3d-card-wrapper'}>
+                    <div className={'lgs-card-wrapper'}>
                         <Header/>
                         <Coordinates/>
                     </div>

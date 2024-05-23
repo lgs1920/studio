@@ -1,5 +1,5 @@
 import { ToggleStateIcon } from '@Components/ToggleStateIcon'
-import { JUST_SAVE }       from '@Core/VT3D'
+import { JUST_SAVE }       from '@Core/LGS1920Context'
 import {
     faRectangleList,
 }                          from '@fortawesome/pro-regular-svg-icons'
@@ -21,7 +21,7 @@ import { TrackStyleSettings } from './TrackStyleSettings'
 
 export const TrackSettings = function TrackSettings() {
 
-    const editorStore = vt3d.theJourneyEditorProxy
+    const editorStore = lgs.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
 
     /**
@@ -80,7 +80,7 @@ export const TrackSettings = function TrackSettings() {
     return (<>
             {editorSnapshot.track && editorSnapshot.journey.tracks.size > 1 && <>
                 <div className={'settings-panel'} id={'editor-track-settings-panel'}
-                     key={vt3d.mainProxy.components.journeyEditor.keys.journey.track}>
+                     key={lgs.mainProxy.components.journeyEditor.keys.journey.track}>
                     {editorSnapshot.track.visible && <SlTabGroup id={'track-menu-panel'} className={'menu-panel'}>
                         <SlTab slot="nav"
                                panel="data" id="tab-tracks-data"

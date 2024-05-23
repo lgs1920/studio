@@ -4,16 +4,16 @@ import { CreditsUI }              from '@Components/CreditsUI/CreditsUI'
 import { FullScreenUI }           from '@Components/FullScreenUI/FullScreenUI'
 import { Profile }                from '@Components/Profile/Profile'
 import { TracksEditor }           from '@Components/TracksEditor/TracksEditor'
-import { Toolbar }                from '@Components/VT3D_UI/Toolbar'
+import { Toolbar }                from '@Components/MainUI/Toolbar'
 import { forwardRef, useEffect }  from 'react'
 import { useCesium }              from 'resium'
 
 import './style.css'
 import { CameraTargetPositionUI } from '../cesium/CameraPositionUI/CameraTargetPositionUI.jsx'
 
-export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
+export const MainUI = forwardRef(function VT3D_UI(props, ref) {
 
-    vt3d.viewer = useCesium().viewer
+    lgs.viewer = useCesium().viewer
 
     useEffect(() => {
 
@@ -26,7 +26,7 @@ export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
 
     return (
         <>
-            <div id="vt3d-main-ui" ref={ref}>
+            <div id="lgs-main-ui" ref={ref}>
                 <div id={'top-left-ui'}>
                     <CameraPositionUI ref={ref}/>
                     <CameraTargetPositionUI ref={ref}/>
@@ -52,7 +52,7 @@ export const VT3D_UI = forwardRef(function VT3D_UI(props, ref) {
                     </div>
                 </div>
                 <div id={'top-right-ui'}>
-                    <CompassUI ref={ref} scene={vt3d.scene}/>
+                    <CompassUI ref={ref} scene={lgs.scene}/>
                 </div>
 
                 {/* <FloatingMenu/> */}

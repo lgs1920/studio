@@ -50,7 +50,7 @@ export class AppUtils {
 
     static setTheme = (theme = null) => {
         if (!theme) {
-            theme = vt3d.configuration.theme
+            theme = lgs.configuration.theme
         }
         document.documentElement.classList.add(`sl-theme-${theme}`)
     }
@@ -81,18 +81,18 @@ export class AppUtils {
     }
 
     /**
-     * Application initialisation
+     * LGS1920Context initialisation
      *
      * @return {Promise<void>}
      */
     static init = async () => {
         // Set Context
-        vt3d.configuration = await import(/* @vite-ignore */ CONFIGURATION)
-        vt3d.setDefaultConfiguration()
-        vt3d.events = new EventEmitter()
+        lgs.configuration = await import(/* @vite-ignore */ CONFIGURATION)
+        lgs.setDefaultConfiguration()
+        lgs.events = new EventEmitter()
 
         // Cesium ION auth
-        Cesium.Ion.defaultAccessToken = vt3d.configuration.ionToken
+        Cesium.Ion.defaultAccessToken = lgs.configuration.ionToken
 
         // Register Font Awesome icons in ShoeLace
         FA2SL.useFontAwesomeInShoelace('fa')

@@ -1,15 +1,15 @@
 import './style.css'
-import { Journey }                     from '@Core/Journey'
-import { faCirclePlus }                from '@fortawesome/pro-regular-svg-icons'
+import { faRegularRouteCirclePlus } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import { Journey }                  from '@Core/Journey'
+
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
 import { FA2SL }                       from '@Utils/FA2SL'
 import { UIToast }                     from '@Utils/UIToast'
-import { CameraUtils }                 from '../../Utils/cesium/CameraUtils.js'
 
 export const JourneyLoader = (props) => {
 
-    const mainStore = vt3d.mainProxy
+    const mainStore = lgs.mainProxy
 
     const uploadFile = async () => {
 
@@ -22,7 +22,7 @@ export const JourneyLoader = (props) => {
             let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
             // Check if the track already exists in context
             // If not we manage and show it.
-            if (vt3d.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
+            if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
                 if (!theJourney.hasAltitude) {
                     mainStore.modals.altitudeChoice.show = true
                 }
@@ -32,10 +32,10 @@ export const JourneyLoader = (props) => {
                 theJourney.addToContext()
                 theJourney.addToEditor()
 
-                const theTrack = vt3d.theJourney.tracks.entries().next().value[1]
+                const theTrack = lgs.theJourney.tracks.entries().next().value[1]
                 theTrack.addToEditor()
 
-                TrackUtils.setProfileVisibility(vt3d.theJourney)
+                TrackUtils.setProfileVisibility(lgs.theJourney)
 
                 await theJourney.saveToDB()
                 await theJourney.saveOriginDataToDB()
@@ -61,9 +61,9 @@ export const JourneyLoader = (props) => {
 
     return (
         <>
-            <SlTooltip placement={props.tooltip} content="Load a track file">
+            <SlTooltip placement={props.tooltip} content="Add a new Journey">
                 <SlButton size={'small'} onClick={uploadFile} className={'square-icon'}>
-                    <SlIcon library="fa" name={FA2SL.set(faCirclePlus)}/>
+                    <SlIcon library="fa" name={FA2SL.set(faRegularRouteCirclePlus)}/>
                 </SlButton>
             </SlTooltip>
         </>

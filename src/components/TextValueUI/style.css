@@ -1,8 +1,8 @@
-.vt3d-text-value {
+.lgs-text-value {
     display: flex;
-    gap: var(--vt3d-gutter-s);
+    gap: var(--lgs-gutter-s);
 }
 
-.vt3d-tv-unit {
+.lgs-tv-unit {
     margin-left: 3px;
 }

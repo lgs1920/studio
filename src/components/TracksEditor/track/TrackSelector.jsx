@@ -11,9 +11,9 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     const handleRequestClose = event => {
         event.preventDefault()
     }
-    const mainStore = vt3d.mainProxy.components.journeyEditor
+    const mainStore = lgs.mainProxy.components.journeyEditor
     const mainSnapshot = useSnapshot(mainStore)
-    const editorStore = vt3d.theJourneyEditorProxy
+    const editorStore = lgs.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
     const tracks = editorStore.journey.tracks
 

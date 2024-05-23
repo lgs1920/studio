@@ -5,9 +5,9 @@ html {
 }
 
 body {
-    font-size: var(--vt3d-font-size);
-    font-family: var(--vt3d-font-family);
-    color: var(--vt3d-dark-ui-fg-color);
+    font-size: var(--lgs-font-size);
+    font-family: var(--lgs-font-family);
+    color: var(--lgs-dark-ui-fg-color);
 }
 
 /** Hide the main toolbar */
@@ -40,7 +40,7 @@ body {
  * Progress Bars
  */
 sl-progress-bar {
-    --height: var(--vt3d-gutter-xs)
+    --height: var(--lgs-gutter-xs)
 }
 
 /**
