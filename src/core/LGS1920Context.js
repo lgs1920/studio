@@ -219,7 +219,7 @@ export class LGS1920Context {
     }
 }
 
-export const APP_KEY = 'LGS1920Context'
+export const APP_KEY = 'LGS1920'
 export const SETTINGS_STORE = 'settings'
 export const CURRENT_STORE = 'current'
 export const JOURNEYS_STORE = 'journeys'
