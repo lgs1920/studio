@@ -147,7 +147,9 @@ export class Utils {
      * Adapt the profile with to the state of the editor pane
      */
     static changeProfileWidth = () => {
-        const width = (lgs.mainProxy.components.journeyEditor.show) ? `calc( 100% - ${__.ui.css.getCSSVariable('--lgs-drawer-size')}` : '100%'
+        const width = (lgs.mainProxy.components.journeyEditor.show)
+                      ? `calc( 100% - ${__.ui.css.getCSSVariable('--lgs-drawer-size')} - ${__.ui.css.getCSSVariable('--lgs-gutter-s')})`
+                      : '100%'
         __.ui.css.setCSSVariable('--lgs-profile-pane-width', width)
     }
 

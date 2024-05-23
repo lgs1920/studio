@@ -2,10 +2,10 @@
 #journeys-editor-container {
     position: absolute;
     z-index: var(--lgs-ui-layer-zindex);
-    top: calc(var(--top) * -1);
     left: 0;
-    width: calc(100vw - var(--right));
-    height: 100vh;
+    right: var(--right);
+    width: calc(100vw - var(--right) - var(--left));
+    height: calc(100vh - var(--top) - var(--bottom));
     pointer-events: none;
 }
 
@@ -16,6 +16,10 @@
     top: auto;
     right: auto;
     pointer-events: none;
+}
+
+#journeys-editor-pane::part(panel) {
+    border-radius: var(--sl-border-radius-medium);
 }
 
 sl-tab sl-icon {
