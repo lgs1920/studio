@@ -23,12 +23,12 @@ export const DateInfo = function DateInfo(props) {
                 <span>{date.start.date}</span>
                 <span>
                     <SlIcon library="fa" name={FA2SL.set(faLocationPin)}
-                            style={{color: vt3d.configuration.journey.pois.start.color}}/>
+                            style={{color: lgs.configuration.journey.pois.start.color}}/>
                     {date.start.time}
                 </span>
                 <span>
                     <SlIcon library="fa" name={FA2SL.set(faLocationPin)}
-                            style={{color: vt3d.configuration.journey.pois.stop.color}}/>
+                            style={{color: lgs.configuration.journey.pois.stop.color}}/>
                     {date.stop.time}
                 </span>
             </div>
@@ -39,12 +39,12 @@ export const DateInfo = function DateInfo(props) {
             <div className={'track-date'}>
                 <span>
                 <SlIcon library="fa" name={FA2SL.set(faLocationPin)}
-                        style={{color: vt3d.configuration.journey.pois.start.color}}/>
+                        style={{color: lgs.configuration.journey.pois.start.color}}/>
                     {date.start.date} {date.start.time}
                 </span>
                 <span>
                 <SlIcon library="fa" name={FA2SL.set(faLocationPin)}
-                        style={{color: vt3d.configuration.journey.pois.stop.color}}/>
+                        style={{color: lgs.configuration.journey.pois.stop.color}}/>
                     {date.stop.date} {date.stop.time}
                 </span>
             </div>

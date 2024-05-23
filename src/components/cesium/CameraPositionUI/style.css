@@ -1,16 +1,16 @@
 .camera-position {
     display: flex;
-    gap: var(--vt3d-gutter-s);
+    gap: var(--lgs-gutter-s);
 }
 
 .camera-data-panel::part(base) {
-    --padding: 0 var(--vt3d-gutter-s);
-    min-height: var(--vt3d-dimension);
+    --padding: 0 var(--lgs-gutter-s);
+    min-height: var(--lgs-dimension);
 }
 
 .camera-data-panel::part(body) {
     display: flex;
-    gap: var(--vt3d-gutter-s);
+    gap: var(--lgs-gutter-s);
     align-items: center;
 }
 

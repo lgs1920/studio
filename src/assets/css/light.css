@@ -425,7 +425,7 @@
 
     --sl-overlay-background-color: hsl(0 0% 0% / 43%);
 
-    --sl-panel-background-color: var(--vt3d-dark-ui-bg-color);
+    --sl-panel-background-color: var(--lgs-dark-ui-bg-color);
     --sl-panel-border-color: var(--sl-color-neutral-200);
     --sl-panel-border-width: 1px;
 

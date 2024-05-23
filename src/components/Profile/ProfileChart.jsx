@@ -67,13 +67,13 @@ export const ProfileChart = function ProfileChart(props) {
             },
 
         }, title: {
-            text: vt3d?.theJourney?.title ?? '',
+            text: lgs?.theJourney?.title ?? '',
             align: 'left',
             margin: 0,
             style: {
-                fontSize: '14px', //__.ui.css.getCSSVariable('--vt3d-font-size'),
+                fontSize: '14px', //__.ui.css.getCSSVariable('--lgs-font-size'),
                 fontWeight: 700,
-                fontFamily: __.ui.css.getCSSVariable('--vt3d-font-family'),
+                fontFamily: __.ui.css.getCSSVariable('--lgs-font-family'),
             },
         },
         plotOptions: {
@@ -84,7 +84,7 @@ export const ProfileChart = function ProfileChart(props) {
 
     }
 
-    const mainStore = vt3d.mainProxy
+    const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
     useEffect(() => {

@@ -9,7 +9,7 @@ import { UIToast }                     from '@Utils/UIToast'
 
 export const JourneyLoader = (props) => {
 
-    const mainStore = vt3d.mainProxy
+    const mainStore = lgs.mainProxy
 
     const uploadFile = async () => {
 
@@ -22,7 +22,7 @@ export const JourneyLoader = (props) => {
             let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
             // Check if the track already exists in context
             // If not we manage and show it.
-            if (vt3d.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
+            if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
                 if (!theJourney.hasAltitude) {
                     mainStore.modals.altitudeChoice.show = true
                 }
@@ -32,10 +32,10 @@ export const JourneyLoader = (props) => {
                 theJourney.addToContext()
                 theJourney.addToEditor()
 
-                const theTrack = vt3d.theJourney.tracks.entries().next().value[1]
+                const theTrack = lgs.theJourney.tracks.entries().next().value[1]
                 theTrack.addToEditor()
 
-                TrackUtils.setProfileVisibility(vt3d.theJourney)
+                TrackUtils.setProfileVisibility(lgs.theJourney)
 
                 await theJourney.saveToDB()
                 await theJourney.saveOriginDataToDB()

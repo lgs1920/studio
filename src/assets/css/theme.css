@@ -1,65 +1,65 @@
 :root {
-    --vt3d-gutter: 0.8rem;
-    --vt3d-gutter-s: 0.5rem;
-    --vt3d-gutter-xs: 0.3rem;
+    --lgs-gutter: 0.8rem;
+    --lgs-gutter-s: 0.5rem;
+    --lgs-gutter-xs: 0.3rem;
 
-    --vt3d-border-radius: 0.5rem;
-    --vt3d-border-radius-s: 0.25rem;
-    --vt3d-border-radius-xs: 0.15rem;
+    --lgs-border-radius: 0.5rem;
+    --lgs-border-radius-s: 0.25rem;
+    --lgs-border-radius-xs: 0.15rem;
 
-    --vt3d-font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-    --vt3d-font-line-height: 1.2;
-    --vt3d-font-weight: 400;
+    --lgs-font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    --lgs-font-line-height: 1.2;
+    --lgs-font-weight: 400;
 
-    --vt3d-dimension: calc(2 * var(--vt3d-gutter));
-    --vt3d-dimension-s: calc(var(--vt3d-dimension) * 0.625);
+    --lgs-dimension: calc(2 * var(--lgs-gutter));
+    --lgs-dimension-s: calc(var(--lgs-dimension) * 0.625);
 
     color-scheme: light dark;
-    --vt3d-dark-ui-primary-color: var(--sl-color-sky-800);
-    --vt3d-dark-ui-secondary-color: var(--sl-color-sky-600);
-    --vt3d-dark-ui-3rd-color: var(--sl-color-sky-400);
-    --vt3d-dark-ui-4th-color: var(--sl-color-sky-300);
-    --vt3d-dark-ui-5th-color: var(--sl-color-sky-200);
+    --lgs-dark-ui-primary-color: var(--sl-color-sky-800);
+    --lgs-dark-ui-secondary-color: var(--sl-color-sky-600);
+    --lgs-dark-ui-3rd-color: var(--sl-color-sky-400);
+    --lgs-dark-ui-4th-color: var(--sl-color-sky-300);
+    --lgs-dark-ui-5th-color: var(--sl-color-sky-200);
 
-    --vt3d-dark-ui-bg-color: var(--vt3d-dark-ui-5th-color);
-    --vt3d-dark-ui-fg-color: var(--vt3d-dark-ui-primary-color);
+    --lgs-dark-ui-bg-color: var(--lgs-dark-ui-5th-color);
+    --lgs-dark-ui-fg-color: var(--lgs-dark-ui-primary-color);
 
-    --vt3d-font-size: 0.9rem;
-    --vt3d-font-size-s: 0.75rem;
+    --lgs-font-size: 0.9rem;
+    --lgs-font-size-s: 0.75rem;
 
-    --vt3d-ui-layer-zindex: 200;
-    --vt3d-drop-zone-zindex: 10;
+    --lgs-ui-layer-zindex: 200;
+    --lgs-drop-zone-zindex: 10;
 
-    --vt3d-button-border-color: var(--vt3d-dark-ui-secondary-color);
-    --vt3d-button-color: var(--vt3d-dark-ui-primary-color);
-    --vt3d-button-bg-color: var(--vt3d-dark-ui-secondary-color);
+    --lgs-button-border-color: var(--lgs-dark-ui-secondary-color);
+    --lgs-button-color: var(--lgs-dark-ui-primary-color);
+    --lgs-button-bg-color: var(--lgs-dark-ui-secondary-color);
 
-    --vt3d-button-border-hover-color: var(--vt3d-dark-ui-primary-color);
-    --vt3d-button-hover-color: var(--vt3d-dark-ui-secondary-color);
-    --vt3d-button-bg-hover-color: var(--vt3d-dark-ui-primary-color);
+    --lgs-button-border-hover-color: var(--lgs-dark-ui-primary-color);
+    --lgs-button-hover-color: var(--lgs-dark-ui-secondary-color);
+    --lgs-button-bg-hover-color: var(--lgs-dark-ui-primary-color);
 
-    --vt3d-button-height: 2.5rem;
+    --lgs-button-height: 2.5rem;
 
-    --vt3d-input-height-s: 1.5rem;
-    --vt3d-border-width-s: 1px;
+    --lgs-input-height-s: 1.5rem;
+    --lgs-border-width-s: 1px;
 
-    --vt3d-compass-stroke-color: var(--vt3d-dark-ui-secondary-color);
-    --vt3d-compass-fill-color: var(--vt3d-dark-ui-secondary-color);
+    --lgs-compass-stroke-color: var(--lgs-dark-ui-secondary-color);
+    --lgs-compass-fill-color: var(--lgs-dark-ui-secondary-color);
 
-    --vt3d-card-ui-bg-color: var(--vt3d-dark-ui-secondary-color);
-    --vt3d-card-ui-color: var(--vt3d-dark-ui-5th-color);
-    --vt3d-card-ui-opacity: 0.8;
-    --vt3d-card-ui-border-color: var(--vt3d-dark-ui-primary-color);
+    --lgs-card-ui-bg-color: var(--lgs-dark-ui-secondary-color);
+    --lgs-card-ui-color: var(--lgs-dark-ui-5th-color);
+    --lgs-card-ui-opacity: 0.8;
+    --lgs-card-ui-border-color: var(--lgs-dark-ui-primary-color);
 
 
 }
 
 .sl-theme-light {
     --sl-input-border-width-small: 4px;
-    --test: var(--vt3d-border-radius-s);
-    font-size: var(--vt3d-font-size);
-    --sl-input-border-width: var(--vt3d-border-width-s);
-    --sl-input-height-small: var(--vt3d-input-height-s);
+    --test: var(--lgs-border-radius-s);
+    font-size: var(--lgs-font-size);
+    --sl-input-border-width: var(--lgs-border-width-s);
+    --sl-input-height-small: var(--lgs-input-height-s);
     line-height: calc(var(--sl-input-height-small) - var(--sl-input-border-width) * 2);
     border-radius: var(--sl-input-border-radius-small);
 }
@@ -70,47 +70,47 @@
  */
 
 .sl-button::part(base) {
-    background-color: var(--vt3d-button-bg-color) !important;
-    border-color: var(--vt3d-button-border-color);
-    color: var(--vt3d-button-color);
+    background-color: var(--lgs-button-bg-color) !important;
+    border-color: var(--lgs-button-border-color);
+    color: var(--lgs-button-color);
 }
 
 .sl-button::part(base):hover:not(.button--disabled) {
-    background-color: var(--vt3d-button-bg-hover-color);
-    border-color: var(--vt3d-button-border-hover-color);
-    color: var(--vt3d-button-hover-color);
+    background-color: var(--lgs-button-bg-hover-color);
+    border-color: var(--lgs-button-border-hover-color);
+    color: var(--lgs-button-hover-color);
 }
 
 .buttons-bar {
     display: flex;
     justify-content: flex-end;
-    gap: var(--vt3d-gutter-s);
+    gap: var(--lgs-gutter-s);
 }
 
 sl-button.square-icon::part(base) {
-    height: var(--vt3d-dimension);
-    width: var(--vt3d-dimension);
+    height: var(--lgs-dimension);
+    width: var(--lgs-dimension);
 }
 
 sl-button.square-icon::part(label) {
     display: flex;
     align-items: center;
     line-height: 1;
-    font-size: var(--vt3d-dimension-s);
+    font-size: var(--lgs-dimension-s);
 }
 
 /*******************************************************************************
  * Drawers
  */
 :root {
-    --vt3d-drawer-size: 28rem
+    --lgs-drawer-size: 28rem
 }
 
 sl-drawer {
-    --size: var(--vt3d-drawer-size);
-    --header-spacing: var(--vt3d-gutter-s) var(--vt3d-gutter);
-    --body-spacing: var(--vt3d-gutter);
-    --footer-spacing: var(--vt3d-gutter-s) var(--vt3d-gutter);
+    --size: var(--lgs-drawer-size);
+    --header-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
+    --body-spacing: var(--lgs-gutter);
+    --footer-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
 
 
 }
@@ -122,39 +122,39 @@ sl-drawer {
 
 sl-card[variant="primary"]::part(base) {
     /*--size: TODO define a default size if needed */
-    --padding: var(--vt3d-gutter-s);
+    --padding: var(--lgs-gutter-s);
     margin: 0;
-    background-color: var(--vt3d-card-ui-bg-color);
-    color: var(--vt3d-card-ui-color);
-    opacity: var(--vt3d-card-ui-opacity);
-    --border-color: var(--vt3d-card-ui-border-color);
+    background-color: var(--lgs-card-ui-bg-color);
+    color: var(--lgs-card-ui-color);
+    opacity: var(--lgs-card-ui-opacity);
+    --border-color: var(--lgs-card-ui-border-color);
 }
 
-.vt3d-card {
+.lgs-card {
     background-color: rgba(255, 255, 255, 0.15);
     border: 1px solid transparent;
-    padding: var(--vt3d-gutter-s);
-    border-radius: var(--vt3d-border-radius-s);
+    padding: var(--lgs-gutter-s);
+    border-radius: var(--lgs-border-radius-s);
 }
 
-.vt3d-card:hover {
+.lgs-card:hover {
     background-color: rgba(255, 255, 255, 0.25);
 }
 
-.vt3d-card-wrapper {
+.lgs-card-wrapper {
     display: flex;
     flex-direction: column;
-    gap: var(--vt3d-gutter-s);
+    gap: var(--lgs-gutter-s);
 }
 
 /*******************************************************************************
  * Compass
  */
 :root {
-    --vt3d-compass-size: 95px;
+    --lgs-compass-size: 95px;
 }
 
 cesium-compass {
-    --cesium-compass-fill-color: var(--vt3d-dark-ui-bg-color);
-    --cesium-compass-stroke-color: var(--vt3d-dark-ui-fg-color);
+    --cesium-compass-fill-color: var(--lgs-dark-ui-bg-color);
+    --cesium-compass-stroke-color: var(--lgs-dark-ui-fg-color);
 }

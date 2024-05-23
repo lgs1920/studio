@@ -1,12 +1,12 @@
 /**
  * React
  */
-import { VT3D_UI }     from '@Components/VT3D_UI/VT3D_UI.jsx'
+import { MainUI }     from '@Components/MainUI/MainUI.jsx'
 /**
  * We are using shoelace Web components
  */
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { VT3D }        from '@Core/VT3D'
+import { LGS1920Context }        from '@Core/LGS1920Context'
 import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
 import { TrackUtils }  from '@Utils/cesium/TrackUtils'
 
@@ -18,29 +18,29 @@ import { Layer }                                     from './core/Layer.js'
 import { UIToast }                                   from './Utils/UIToast'
 import {Camera as CameraManager} from './core/ui/Camera'
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
-window.vt3d = new VT3D()
+window.lgs = new LGS1920Context()
 await __.app.init()
 
-export function ViewTrack3D() {
+export function LGS1920() {
 
     const viewerRef = useRef(null)
-    const mainStore = vt3d.mainProxy
+    const mainStore = lgs.mainProxy
     mainStore.layer = Layer.IGN_AERIAL
 
 
-    const starter = vt3d.configuration.starter
-    vt3d.windowCenter = Cesium.Cartesian3.fromDegrees(starter.longitude, starter.latitude, starter.height)
+    const starter = lgs.configuration.starter
+    lgs.windowCenter = Cesium.Cartesian3.fromDegrees(starter.longitude, starter.latitude, starter.height)
 
-    vt3d.cameraOrientation = {
+    lgs.cameraOrientation = {
         heading: Cesium.Math.toRadians(starter.camera.heading),
         pitch: Cesium.Math.toRadians(starter.camera.pitch),
         roll: Cesium.Math.toRadians(starter.camera.roll),
     }
-    const cameraStore = vt3d.mainProxy.components.camera
+    const cameraStore = lgs.mainProxy.components.camera
 
     const run360 = () => {
-        vt3d.camera.changed.addEventListener(updateCameraPosition)
-        vt3d.camera.percentageChanged=vt3d.configuration.camera.percentageChanged
+        lgs.camera.changed.addEventListener(updateCameraPosition)
+        lgs.camera.percentageChanged=lgs.configuration.camera.percentageChanged
         __.ui.camera.event = true
         CameraUtils.run360()
     }
@@ -49,14 +49,14 @@ export function ViewTrack3D() {
         if (__?.ui?.camera) {
             __.ui.camera.update().then(data => {
                 cameraStore.position = data
-                vt3d.events.emit(CameraManager.UPDATE_EVENT, [data])
+                lgs.events.emit(CameraManager.UPDATE_EVENT, [data])
             })
         } else {
             CameraUtils.updateCamera().then(data => {
                 if (data !== undefined) {
                     cameraStore.position = data
                 }
-                vt3d.events.emit(CameraManager.UPDATE_EVENT, [data])
+                lgs.events.emit(CameraManager.UPDATE_EVENT, [data])
             })
         }
     }
@@ -76,16 +76,16 @@ export function ViewTrack3D() {
         readAllFromDB()
 
         // Let's instantiate some elements Managers
-        vt3d.initManagers()
+        lgs.initManagers()
 
 
         //Ready
         UIToast.success({
-            caption: `Welcome on ${vt3d.configuration.applicationName}!`,
+            caption: `Welcome on ${lgs.configuration.applicationName}!`,
             text: 'We\'re ready to assist you !',
         })
 
-        console.log('ViewTrack3D has been loaded and is ready !')
+        console.log('LGS1920 has been loaded and is ready !')
     })
 
     return (<>
@@ -115,14 +115,14 @@ export function ViewTrack3D() {
             <Globe enableLighting={false}></Globe>
             <Camera>
                 <CameraFlyTo
-                    orientation={vt3d.cameraOrientation}
+                    orientation={lgs.cameraOrientation}
                     duration={3}
-                    destination={vt3d.windowCenter}
+                    destination={lgs.windowCenter}
                     once={true}
                     onComplete={run360}
                 />
             </Camera>
-            <VT3D_UI/>
+            <MainUI/>
         </Viewer>
     </>)
 }

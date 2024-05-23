@@ -11,7 +11,7 @@ import { Camera as CameraManager } from './ui/Camera.js'
 import { Profiler }                from './ui/Profiler.js'
 import { Wanderer }                from './ui/Wanderer.js'
 
-export class VT3D {
+export class LGS1920Context {
     /** @type {Proxy} */
     #mainProxy
     /** @type {Proxy} */
@@ -141,7 +141,7 @@ export class VT3D {
     }
 
     get units() {
-        return vt3d.configuration.units
+        return lgs.configuration.units
     }
 
     setDefaultConfiguration = () => {
@@ -198,9 +198,9 @@ export class VT3D {
      *
      */
     addToContext = (setToCurrent = true) => {
-        vt3d.saveJourney(this)
+        lgs.saveJourney(this)
         if (setToCurrent) {
-            vt3d.theJourney = this
+            lgs.theJourney = this
         }
     }
 
@@ -219,7 +219,7 @@ export class VT3D {
     }
 }
 
-export const APP_KEY = 'VT3D'
+export const APP_KEY = 'LGS1920Context'
 export const SETTINGS_STORE = 'settings'
 export const CURRENT_STORE = 'current'
 export const JOURNEYS_STORE = 'journeys'

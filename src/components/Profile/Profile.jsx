@@ -9,14 +9,14 @@ import { CHART_ELEVATION_VS_DISTANCE }           from '../../core/ui/Profiler'
 import { FA2SL }                                 from '../../Utils/FA2SL'
 import { UIToast }                               from '../../Utils/UIToast'
 import { JourneySelector }                       from '../TracksEditor/journey/JourneySelector'
-import { Utils }                                 from '../TracksEditor/Utils'
-import { Toolbar }                               from '../VT3D_UI/Toolbar'
-import { Wander }                                from '../Wander/Wander'
+import { Utils }   from '../TracksEditor/Utils'
+import { Toolbar } from '../MainUI/Toolbar'
+import { Wander }  from '../Wander/Wander'
 import { ProfileChart }                          from './ProfileChart'
 
 export const Profile = function Profile(props, ref) {
 
-    const mainStore = vt3d.mainProxy
+    const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
 
@@ -37,7 +37,7 @@ export const Profile = function Profile(props, ref) {
         if (isOK(event)) {
             mainStore.components.profile.show = false
             //TODO manage 'profile/close' event and externalise
-            vt3d.profileTrackMarker.toggleVisibility()
+            lgs.profileTrackMarker.toggleVisibility()
         }
     }
 
@@ -45,11 +45,11 @@ export const Profile = function Profile(props, ref) {
         __.ui.profiler.resetChart()
     }
     const toggleMarker = () => {
-        vt3d.profileTrackMarker.toggleVisibility()
+        lgs.profileTrackMarker.toggleVisibility()
     }
 
     const snapshot = () => {
-        const file = `${CHART_ELEVATION_VS_DISTANCE}-${__.app.slugify(vt3d.theJourney.title)}`
+        const file = `${CHART_ELEVATION_VS_DISTANCE}-${__.app.slugify(lgs.theJourney.title)}`
         Export.toPNG(`#apexcharts${CHART_ELEVATION_VS_DISTANCE}`, file).then(() => {
             UIToast.success({
                 caption: `Your chart has been exported successfully !`,
@@ -106,7 +106,7 @@ export const Profile = function Profile(props, ref) {
                 </div>
                 {data && <ProfileChart series={data.series}
                                        options={data.options}
-                                       height={__.ui.css.getCSSVariable('--vt3d-profile-chart-height')}
+                                       height={__.ui.css.getCSSVariable('--lgs-profile-chart-height')}
                 />}
             </SlDrawer>
         </div>}

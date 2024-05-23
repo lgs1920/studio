@@ -5,7 +5,7 @@ import * as Cesium    from 'cesium'
 export class MarkerMenu {
     static show = (data) => {
 
-        const menuStore = vt3d.mainProxy.components.floatingMenu
+        const menuStore = lgs.mainProxy.components.floatingMenu
 
         if (data.picked.type !== POI_TYPE) {
             return
@@ -15,7 +15,7 @@ export class MarkerMenu {
         menuStore.target = data.picked
 
         const position = data.positions.position ?? data.positions.position.endPosition
-        const cartesian = vt3d.viewer.camera.pickEllipsoid(position, vt3d.viewer.scene.globe.ellipsoid)
+        const cartesian = lgs.viewer.camera.pickEllipsoid(position, lgs.viewer.scene.globe.ellipsoid)
 
 
         if (cartesian) {
@@ -23,7 +23,7 @@ export class MarkerMenu {
             menuStore.longitude = Cesium.Math.toDegrees(cartographic.longitude)
             menuStore.latitude = Cesium.Math.toDegrees(cartographic.latitude)
 
-            let {x, y} = Cesium.SceneTransforms.wgs84ToWindowCoordinates(vt3d.viewer.scene, cartesian)
+            let {x, y} = Cesium.SceneTransforms.wgs84ToWindowCoordinates(lgs.viewer.scene, cartesian)
             menuStore.coordinates.x = x
             menuStore.coordinates.y = y
 

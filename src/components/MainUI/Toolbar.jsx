@@ -6,7 +6,7 @@ import { SnapshotButton }     from './Snapshot'
 
 export const Toolbar = (props) => {
     return (
-        <div className={['vt3d-ui-toolbar', props.position, props.mode].join(' ')}>
+        <div className={['lgs-ui-toolbar', props.position, props.mode].join(' ')}>
             {props.left &&
                 <>
                     {props.left}<SlDivider vertical/>

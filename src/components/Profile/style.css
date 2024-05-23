@@ -1,14 +1,14 @@
 :root {
-    --vt3d-profile-pane-width: 100%;
-    --vt3d-profile-pane-height: 260px;
-    --vt3d-profile-chart-height: 200px;
+    --lgs-profile-pane-width: 100%;
+    --lgs-profile-pane-height: 260px;
+    --lgs-profile-chart-height: 200px;
 }
 
 #profile-pane {
     --header-spacing: 0;
     --footer-spacing: 0;
     --body-spacing: 0;
-    --size: var(--vt3d-profile-pane-height);
+    --size: var(--lgs-profile-pane-height);
 }
 
 #profile-pane::part(panel) {
@@ -17,7 +17,7 @@
 
 #profile-container {
     position: relative;
-    width: var(--vt3d-profile-pane-width);
+    width: var(--lgs-profile-pane-width);
     height: 100%;
     pointer-events: none;
 }
@@ -34,29 +34,29 @@
 }
 
 #profile-pane {
-    --body-spacing: var(--vt3d-gutter-s);
+    --body-spacing: var(--lgs-gutter-s);
 }
 
 #profile-pane::part(header) {
-    padding-top: var(--vt3d-gutter-s);
+    padding-top: var(--lgs-gutter-s);
     justify-content: flex-end;
 }
 
 #profile-pane .journey-selector {
     position: absolute;
-    top: var(--vt3d-gutter-xs);
+    top: var(--lgs-gutter-xs);
     width: 15rem;
 }
 
 #elevation-distance-tooltip {
-    font-size: var(--vt3d-font-size-s);
-    font-family: var(--vt3d-font-family);
+    font-size: var(--lgs-font-size-s);
+    font-family: var(--lgs-font-family);
     line-height: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: var(--vt3d-gutter-xs);
-    gap: var(--vt3d-gutter-xs);
+    padding: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
 
     min-width: 100px;
 }
@@ -74,7 +74,7 @@
 }
 
 #elevation-distance-tooltip .point-distance {
-    gap: var(--vt3d-gutter-s);
+    gap: var(--lgs-gutter-s);
 }
 
 #elevation-distance-tooltip .point-distance sl-icon {

@@ -1,6 +1,6 @@
 .dialog-columns {
     display: flex;
-    gap: var(--vt3d-gutter);
+    gap: var(--lgs-gutter);
 }
 
 .dialog-columns > div {

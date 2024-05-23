@@ -1,4 +1,4 @@
-import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE }            from '@Core/VT3D'
+import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE }            from '@Core/LGS1920Context'
 import { SlColorPicker, SlDivider, SlRange, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
 import { useSnapshot }                                  from 'valtio'
@@ -6,7 +6,7 @@ import { Utils }                                        from '../Utils'
 
 export const TrackStyleSettings = function TrackSettings() {
 
-    const editorStore = vt3d.theJourneyEditorProxy
+    const editorStore = lgs.theJourneyEditorProxy
 
     // If we're editing a single track journey, we need
     // to know the track
@@ -45,7 +45,7 @@ export const TrackStyleSettings = function TrackSettings() {
                                size={'small'}
                                label={'Color'}
                                value={editorSnapshot.track.color}
-                               swatches={vt3d.configuration.defaultTrackColors.join(';')}
+                               swatches={lgs.configuration.defaultTrackColors.join(';')}
                                onSlChange={setColor}
                                onSlInput={setColor}
                                disabled={!editorSnapshot.track.visible}

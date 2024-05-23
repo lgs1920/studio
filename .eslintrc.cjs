@@ -16,7 +16,7 @@ module.exports = {
     ],
   },
     "globals": {
-      "vt3d": false,
+      "lgs": false,
       "__":false
     }
 }

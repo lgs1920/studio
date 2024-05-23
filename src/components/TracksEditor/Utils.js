@@ -1,6 +1,6 @@
 import { Journey, NO_FOCUS, RE_LOADING }                from '@Core/Journey'
 import { Track }                                        from '@Core/Track'
-import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE } from '@Core/VT3D'
+import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE } from '@Core/LGS1920Context'
 import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
 import { UPDATE_JOURNEY_SILENTLY }                      from './journey/JourneySettings'
 
@@ -10,25 +10,25 @@ export class Utils {
      * We change its key to rerender the list component
      */
     static renderJourneysList = () => {
-        vt3d.mainProxy.components.journeyEditor.keys.journey.list++
+        lgs.mainProxy.components.journeyEditor.keys.journey.list++
     }
 
     static renderTracksList = () => {
-        vt3d.mainProxy.components.journeyEditor.keys.track.list++
+        lgs.mainProxy.components.journeyEditor.keys.track.list++
     }
     static renderJourneySettings = () => {
-        vt3d.mainProxy.components.journeyEditor.keys.journey.settings++
+        lgs.mainProxy.components.journeyEditor.keys.journey.settings++
     }
 
     static renderTrackSettings = () => {
-        vt3d.mainProxy.components.journeyEditor.keys.track.settings++
+        lgs.mainProxy.components.journeyEditor.keys.track.settings++
     }
 
     static initJourneyEdition = (event = undefined) => {
         if (isOK(event)) {
-            const editorStore = vt3d.theJourneyEditorProxy
-            editorStore.journey = vt3d.getJourneyBySlug(event.target.value)
-            vt3d.saveJourney(editorStore.journey)
+            const editorStore = lgs.theJourneyEditorProxy
+            editorStore.journey = lgs.getJourneyBySlug(event.target.value)
+            lgs.saveJourney(editorStore.journey)
 
             editorStore.journey.addToContext()
             // Force Tab to Data
@@ -52,7 +52,7 @@ export class Utils {
 
             // Profile management
             TrackUtils.setProfileVisibility(editorStore.journey)
-            vt3d.profileTrackMarker.toggleVisibility()
+            lgs.profileTrackMarker.toggleVisibility()
 
             // Update Profile to show the correct Journey
             __.ui.profiler.draw()
@@ -60,7 +60,7 @@ export class Utils {
             // Save information
             TrackUtils.saveCurrentJourneyToDB(event.target.value).then(async () => {
                 if (editorStore.journey.visible) {
-                    vt3d.theJourney.focus()
+                    lgs.theJourney.focus()
                 }
 
                 await TrackUtils.saveCurrentTrackToDB(null)
@@ -71,8 +71,8 @@ export class Utils {
     }
     static initTrackEdition = (event) => {
         if (isOK(event)) {
-            const editorStore = vt3d.theJourneyEditorProxy
-            editorStore.track = vt3d.getTrackBySlug(event.target.value)
+            const editorStore = lgs.theJourneyEditorProxy
+            editorStore.track = lgs.getTrackBySlug(event.target.value)
             editorStore.track.addToContext()
             // Force tab to data
             editorStore.tabs.track.data = true
@@ -99,15 +99,15 @@ export class Utils {
     static updateTrack = async (action) => {
 
         // Update the track
-        vt3d.theJourneyEditorProxy.journey.tracks.set(vt3d.theJourneyEditorProxy.track.slug, vt3d.theJourneyEditorProxy.track)
-        const journey = Journey.deserialize({object: Journey.unproxify(vt3d.theJourneyEditorProxy.journey)})
-        const track = Track.deserialize({object: Track.unproxify(vt3d.theJourneyEditorProxy.track)})
+        lgs.theJourneyEditorProxy.journey.tracks.set(lgs.theJourneyEditorProxy.track.slug, lgs.theJourneyEditorProxy.track)
+        const journey = Journey.deserialize({object: Journey.unproxify(lgs.theJourneyEditorProxy.journey)})
+        const track = Track.deserialize({object: Track.unproxify(lgs.theJourneyEditorProxy.track)})
         //TODO compute only if it is necessary
         await track.extractMetrics()
 
 
         if (action === DRAW_THEN_SAVE || action === JUST_SAVE) {
-            vt3d.saveJourney(journey)
+            lgs.saveJourney(journey)
             // saveToDB toDB
             await journey.saveToDB()
         }
@@ -127,9 +127,9 @@ export class Utils {
      */
     static updateJourney = async action => {
 
-        const journey = Journey.deserialize({object: Journey.unproxify(vt3d.theJourneyEditorProxy.journey)})
+        const journey = Journey.deserialize({object: Journey.unproxify(lgs.theJourneyEditorProxy.journey)})
         await journey.extractMetrics()
-        vt3d.saveJourney(journey)
+        lgs.saveJourney(journey)
         // saveToDB toDB
         await journey.saveToDB()
 
@@ -147,12 +147,12 @@ export class Utils {
      * Adapt the profile with to the state of the editor pane
      */
     static changeProfileWidth = () => {
-        const width = (vt3d.mainProxy.components.journeyEditor.show) ? `calc( 100% - ${__.ui.css.getCSSVariable('--vt3d-drawer-size')}` : '100%'
-        __.ui.css.setCSSVariable('--vt3d-profile-pane-width', width)
+        const width = (lgs.mainProxy.components.journeyEditor.show) ? `calc( 100% - ${__.ui.css.getCSSVariable('--lgs-drawer-size')}` : '100%'
+        __.ui.css.setCSSVariable('--lgs-profile-pane-width', width)
     }
 
     settings = () => {
-        vt3d.mainProxy.components.journeyEditor.keys.journey.settings++
+        lgs.mainProxy.components.journeyEditor.keys.journey.settings++
     }
 
 

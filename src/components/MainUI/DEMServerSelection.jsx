@@ -16,7 +16,7 @@ export const DEMServerSelection = forwardRef(function DEMServerSelection(props, 
                 <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
                 { // Loop on all servers
-                    vt3d.configuration.DEMServers.map(server => (
+                    lgs.configuration.DEMServers.map(server => (
                         <SlOption key={server.value} value={server.value}>{server.name}</SlOption>))
                 }
             </SlSelect>

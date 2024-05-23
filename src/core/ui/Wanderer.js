@@ -138,8 +138,8 @@ export class Wanderer {
             this.#events = options.events ?? this.#events
 
             this.#events.forEach((callback, event) => {
-                vt3d.events.off(event)
-                vt3d.events.on(event, callback)
+                lgs.events.off(event)
+                lgs.events.on(event, callback)
             })
         }
 
@@ -226,7 +226,7 @@ export class Wanderer {
      */
     pause = () => {
         this.running = false
-        vt3d.events.emit(Wanderer.PAUSE_TICK_EVENT, this.current, this.#pathway[this.#current]??null)
+        lgs.events.emit(Wanderer.PAUSE_TICK_EVENT, this.current, this.#pathway[this.#current]??null)
     }
 
     /**
@@ -235,7 +235,7 @@ export class Wanderer {
     start = () => {
         this.#clearTimer()
         this.#current = this.#start
-        vt3d.events.emit(Wanderer.START_TICK_EVENT, this.current, this.#pathway[this.#current]??null)
+        lgs.events.emit(Wanderer.START_TICK_EVENT, this.current, this.#pathway[this.#current]??null)
         this.play()
         this.tick()
     }
@@ -257,9 +257,9 @@ export class Wanderer {
     stop = () => {
         this.running = undefined
         clearInterval(this.#timer)
-        vt3d.events.emit(Wanderer.STOP_TICK_EVENT, this.current, this.#pathway[this.#current]??null)
+        lgs.events.emit(Wanderer.STOP_TICK_EVENT, this.current, this.#pathway[this.#current]??null)
         this.#events.forEach((callback,event) => {
-            vt3d.events.off(event)
+            lgs.events.off(event)
         })
     }
 
@@ -309,17 +309,17 @@ export class Wanderer {
             }
 
             // New tick, we dispatch a new event
-            vt3d.events.emit(Wanderer.UPDATE_TICK_EVENT, [this.#current, this.#pathway[this.#current]??null])
+            lgs.events.emit(Wanderer.UPDATE_TICK_EVENT, [this.#current, this.#pathway[this.#current]??null])
 
         }
     }
 
     prepareData = () => {
-        if (vt3d.theJourney === null) {
+        if (lgs.theJourney === null) {
             return
         }
         const data=[]
-        vt3d.theJourney.tracks.forEach((track, slug) => {
+        lgs.theJourney.tracks.forEach((track, slug) => {
             if (track.visible && track.metrics.points !== undefined) {
                 track.metrics.points.forEach(point => {
                     data.push({

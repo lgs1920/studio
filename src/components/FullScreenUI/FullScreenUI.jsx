@@ -9,7 +9,7 @@ import { useSnapshot }                        from 'valtio'
 
 export const FullScreenUI = forwardRef(function FullScreenUI() {
 
-    const mainStore = vt3d.mainProxy
+    const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
     const toggleFullSize = () => {

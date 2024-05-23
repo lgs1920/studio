@@ -20,7 +20,7 @@ import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS } from '../../
 import { DateInfo }                                                 from '../DateInfo'
 
 export const TrackData = function TrackData() {
-    const editorStore = vt3d.theJourneyEditorProxy
+    const editorStore = lgs.theJourneyEditorProxy
 
     // If we're editing a single track journey, we need
     // to know the track

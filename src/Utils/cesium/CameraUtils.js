@@ -36,7 +36,7 @@ export class CameraUtils {
     static getPositions = async (camera) => {
         // If we do not have camera, we try to set one or return zeros
         if (!camera) {
-            camera = vt3d.camera
+            camera = lgs.camera
             if (camera === undefined) {
                 return {
                     target: {
@@ -67,7 +67,7 @@ export class CameraUtils {
                 longitude: M.toDegrees(longitude),
                 latitude: M.toDegrees(latitude),
                 height: height,
-                range: target?.range ?? vt3d.configuration.camera.range,
+                range: target?.range ?? lgs.configuration.camera.range,
             },
         }
     }
@@ -80,7 +80,7 @@ export class CameraUtils {
 
         // If we do not have camera, we try to set one or return
         if (!camera) {
-            camera = vt3d.camera
+            camera = lgs.camera
             if (camera === undefined) {
                 return
             }
@@ -89,7 +89,7 @@ export class CameraUtils {
         try {
             const cameraPositions = await CameraUtils.getPositions(camera)
             const hpr = await CameraUtils.getHeadingPitchRoll(camera)
-            vt3d.mainProxy.components.camera.position = {
+            lgs.mainProxy.components.camera.position = {
                 target: cameraPositions.target,
                 longitude: cameraPositions.position.longitude,
                 latitude: cameraPositions.position.latitude,
@@ -99,7 +99,7 @@ export class CameraUtils {
                 roll: hpr.roll,
                 range: cameraPositions.position.range,
             }
-            return vt3d.mainProxy.components.camera.position
+            return lgs.mainProxy.components.camera.position
         } catch (e) {
             console.error(e)
             return undefined
@@ -118,7 +118,7 @@ export class CameraUtils {
     static run360 = () => {
         const camera = __.ui.camera.get()
         if (camera.target) {
-            CameraUtils.lookAt(vt3d.camera,
+            CameraUtils.lookAt(lgs.camera,
                 Cartesian3.fromDegrees(
                     camera.target.longitude,
                     camera.target.latitude,
@@ -131,35 +131,35 @@ export class CameraUtils {
                 ))
 
             const step = (camera.clockwise) ? M.PI / 1000 : -M.PI / 1000
-            vt3d.stop360 = vt3d.viewer.clock.onTick.addEventListener(async () => {
-                vt3d.camera.rotateLeft(step)
+            lgs.stop360 = lgs.viewer.clock.onTick.addEventListener(async () => {
+                lgs.camera.rotateLeft(step)
             })
         }
 
     }
 
     static stop360 =() => {
-        if (vt3d.stop360) {
-            vt3d.stop360()
-            vt3d.stop360=undefined
+        if (lgs.stop360) {
+            lgs.stop360()
+            lgs.stop360=undefined
         }
     }
 
     //https://groups.google.com/g/cesium-dev/c/QSFf3RxNRfE
     static lookAtPoint = () => {
-        const ray = vt3d.camera.getPickRay(new Cartesian2(
-            Math.round(vt3d.canvas.clientWidth / 2),
-            Math.round(vt3d.canvas.clientHeight / 2),
+        const ray = lgs.camera.getPickRay(new Cartesian2(
+            Math.round(lgs.canvas.clientWidth / 2),
+            Math.round(lgs.canvas.clientHeight / 2),
         ))
 
-        const position = vt3d.scene.globe.pick(ray, vt3d.scene)
+        const position = lgs.scene.globe.pick(ray, lgs.scene)
         if (position) {
             const cartographic = Ellipsoid.WGS84.cartesianToCartographic(position)
             return {
                 latitude: M.toDegrees(cartographic.latitude),
                 longitude: M.toDegrees(cartographic.longitude),
                 height: cartographic.height,
-                range: Cartesian3.distance(position, vt3d.camera.position),
+                range: Cartesian3.distance(position, lgs.camera.position),
             }
         }
     }

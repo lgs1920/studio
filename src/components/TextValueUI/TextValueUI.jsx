@@ -33,7 +33,7 @@ export const TextValueUI = forwardRef(function TextValueUI(props, ref) {
     }
 
     if (unitsList.includes(units[0])) {
-        toShow = __.convert(toShow).to(units[vt3d.configuration.unitsSystem])
+        toShow = __.convert(toShow).to(units[lgs.configuration.unitsSystem])
     }
 
     if (toShow && props.callback) {
@@ -42,15 +42,15 @@ export const TextValueUI = forwardRef(function TextValueUI(props, ref) {
         toShow = (typeof toShow === 'number') ? sprintf(props.format ?? '%\' .2f', toShow) : toShow
     }
 
-    const classes = (props.class) ? props.class + ' ' : '' + 'vt3d-text-value'
+    const classes = (props.class) ? props.class + ' ' : '' + 'lgs-text-value'
 
     return (
         <div id={props.id} className={classes}>
-            {props.text && <span className="vt3d-tv-text">{props.text}</span>}
+            {props.text && <span className="lgs-tv-text">{props.text}</span>}
             <span>
-            {toShow && <span className="vt3d-tv-value">{toShow}</span>}
-                {units[vt3d.configuration.unitsSystem !== INTERNATIONAL] !== '' &&
-                    <span className="vt3d-tv-unit">{units[vt3d.configuration.unitsSystem]}</span>}
+            {toShow && <span className="lgs-tv-value">{toShow}</span>}
+                {units[lgs.configuration.unitsSystem !== INTERNATIONAL] !== '' &&
+                    <span className="lgs-tv-unit">{units[lgs.configuration.unitsSystem]}</span>}
         </span>
         </div>
     )

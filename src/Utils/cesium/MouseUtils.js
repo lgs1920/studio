@@ -22,7 +22,7 @@ export class MouseUtils {
 
         const position = movement.position ?? movement.endPosition
 
-        const pickedObject = vt3d.viewer.scene.pick(position)
+        const pickedObject = lgs.viewer.scene.pick(position)
         const entity = (pickedObject?.primitive) ? pickedObject.id : undefined
 
 
@@ -30,7 +30,7 @@ export class MouseUtils {
 
             // If it is an entity, we stop event propagation to cesium.
             // From now, we'll manage events on our side
-            vt3d.viewer.selectedEntity = undefined
+            lgs.viewer.selectedEntity = undefined
 
             // Check if it is marker
             const info = Track.getMarkerInformation(entity.id)
@@ -44,7 +44,7 @@ export class MouseUtils {
                 // Is it a track ? Let's search the parent DataSource then the entity slug
                 const datasource = TrackUtils.getDataSourceNameByEntityId(entity.id)
                 if (datasource) {
-                    const track = vt3d.getJourneyBySlug(datasource.name)
+                    const track = lgs.getJourneyBySlug(datasource.name)
                     if (track) {
                         return {
                             track: track,
@@ -74,7 +74,7 @@ export class MouseUtils {
      */
     static showMenu = (type) => {
 
-        const menuStore = vt3d.mainProxy.components.floatingMenu
+        const menuStore = lgs.mainProxy.components.floatingMenu
         menuStore.type = type
         menuStore.show = true
     }

@@ -16,11 +16,11 @@ export class EntitiesUtils {
      * @return {*}
      */
     static getGroupById = (prefix) => {
-        return vt3d.viewer.entities.getById(`${prefix}-group`)
+        return lgs.viewer.entities.getById(`${prefix}-group`)
     }
 
     static getEntityById = (id) => {
-        return vt3d.viewer.entities.getById(id)
+        return lgs.viewer.entities.getById(id)
     }
 
     /**
@@ -31,8 +31,8 @@ export class EntitiesUtils {
     static getEntitiesByDataSourceName = (name) => {
         // if we do not have datasource name, we'll find in all datasource
         let dataSource
-        for (let i = 0; i < vt3d.viewer.dataSources.length; i++) {
-            const item = vt3d.viewer.dataSources.get(i)
+        for (let i = 0; i < lgs.viewer.dataSources.length; i++) {
+            const item = lgs.viewer.dataSources.get(i)
             if (item.name === name) {
                 return item.entities
             }

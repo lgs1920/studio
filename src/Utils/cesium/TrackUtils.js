@@ -9,8 +9,8 @@ import {
 }                                                                                                   from '../../core/Journey'
 import {
     Camera as CameraManager,
-}                                                                    from '../../core/ui/Camera.js'
-import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/VT3D'
+}                                                                              from '../../core/ui/Camera.js'
+import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/LGS1920Context.js'
 import { FileUtils }                                                           from '../FileUtils.js'
 import { CameraUtils } from './CameraUtils.js'
 import { POIUtils }                                                            from './POIUtils'
@@ -52,8 +52,8 @@ export class TrackUtils {
      * We need to create a common data source for some elements that are note related to tracks nor journeys
      */
     static createCommonMapObjectsStore = async () => {
-        if (vt3d.viewer.dataSources.getByName(APP_KEY, true).length === 0) {
-            await vt3d.viewer.dataSources.add(new CustomDataSource(APP_KEY))
+        if (lgs.viewer.dataSources.getByName(APP_KEY, true).length === 0) {
+            await lgs.viewer.dataSources.add(new CustomDataSource(APP_KEY))
         }
     }
 
@@ -73,12 +73,12 @@ export class TrackUtils {
         // Manage Tracks
         journey.tracks.forEach(track => {
             dataSources.push(
-                vt3d.viewer.dataSources.add(new GeoJsonDataSource(track.slug)))
+                lgs.viewer.dataSources.add(new GeoJsonDataSource(track.slug)))
         })
 
         // Manage POIs
         dataSources.push(
-            vt3d.viewer.dataSources.add(new CustomDataSource(journey.slug)))
+            lgs.viewer.dataSources.add(new CustomDataSource(journey.slug)))
 
         await Promise.all(dataSources)
 
@@ -108,7 +108,7 @@ export class TrackUtils {
      */
     static draw = async (track, {action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
         // Load Geo Json for track then set visibility
-        const source = vt3d.viewer.dataSources.getByName(track.slug)[0]
+        const source = lgs.viewer.dataSources.getByName(track.slug)[0]
         return source.load(track.content,
             {
                 stroke: Color.fromCssColorString(track.color),
@@ -138,12 +138,12 @@ export class TrackUtils {
         if (track === null) {
             // But we need to set the journey to the current one if there is no information
             if (journey === null) {
-                journey = vt3d.theJourney
+                journey = lgs.theJourney
             }
             track = journey.tracks.values().next().value
         } else {
             // We have a track, let's force the journey (even if there is one provided)
-            journey = vt3d.journeys.get(track.parent)
+            journey = lgs.journeys.get(track.parent)
         }
 
         // We calculate the Bounding Box and enlarge it by 20%
@@ -155,7 +155,7 @@ export class TrackUtils {
         let camera,destination
         if (journey.camera === null) {
             // Let's center to the rectangle
-            destination = vt3d.camera.getRectangleCameraCoordinates(rectangle)
+            destination = lgs.camera.getRectangleCameraCoordinates(rectangle)
 
             // Get the camera target that we defined to the centroid of the track
             const centroiid = centroid(track.content)
@@ -181,7 +181,7 @@ export class TrackUtils {
 //      destination =Cesium.Cartesian3.fromDegrees(camera.longitude, camera.latitude, camera.height)
 
 
-        vt3d.camera.flyTo({
+        lgs.camera.flyTo({
             destination: destination,                               // Camera
              orientation: {                                         // Offset and Orientation
                 heading: Math.toRadians(camera.heading),
@@ -194,7 +194,7 @@ export class TrackUtils {
         })
         //Show BBox if requested
         if (showBbox) {
-            vt3d.viewer.entities.add({
+            lgs.viewer.entities.add({
                 name: `BBox#${track.slug}`,
                 rectangle: {
                     coordinates: rectangle,
@@ -290,7 +290,7 @@ export class TrackUtils {
 
         //TODO apply only if altitude is missing for some coordinates
         const altitude = []
-        const temp = await Cesium.sampleTerrainMostDetailed(vt3d.viewer.terrainProvider, positions)
+        const temp = await Cesium.sampleTerrainMostDetailed(lgs.viewer.terrainProvider, positions)
         temp.forEach(coordinate => {
             altitude.push(coordinate.altitude)
         })
@@ -309,8 +309,8 @@ export class TrackUtils {
     static getDataSourceNameByEntityId = (entityId) => {
 
         // loop all data sources
-        for (let i = 0; i < vt3d.viewer.dataSources.length; i++) {
-            const item = vt3d.viewer.dataSources.get(i)
+        for (let i = 0; i < lgs.viewer.dataSources.length; i++) {
+            const item = lgs.viewer.dataSources.get(i)
             // loop all entities inside a data source
             for (let j = 0; j < item.entities.values.length; j++) {
                 const child = item.entities.values[j]
@@ -332,8 +332,8 @@ export class TrackUtils {
      * Read tracks from DB and draw them.
      *
      * Set
-     * - vt3d.theJourney
-     * - vt3d.theTrack
+     * - lgs.theJourney
+     * - lgs.theTrack
      *
      * Add information to the editor.
      *
@@ -347,9 +347,9 @@ export class TrackUtils {
 
         // Bail early if there's nothing to read
         if (journeys.length === 0) {
-            vt3d.theJourney = null
-            vt3d.theTrack = null
-            vt3d.thePOI = null
+            lgs.theJourney = null
+            lgs.theTrack = null
+            lgs.thePOI = null
             return
         }
 
@@ -360,12 +360,12 @@ export class TrackUtils {
 
         // Get the Current Journey. Then we Set current if it exists in journeys.
         // If not, let's use the first track or null.
-        let currentJourney = await vt3d.db.journeys.get(CURRENT_JOURNEY, CURRENT_STORE)
+        let currentJourney = await lgs.db.journeys.get(CURRENT_JOURNEY, CURRENT_STORE)
         const tmp = journeys.filter(value => value.slug === currentJourney)
         currentJourney = (tmp.length > 0) ? tmp[0] : journeys[0]
 
         if (currentJourney) {
-            vt3d.theJourney = currentJourney
+            lgs.theJourney = currentJourney
             await TrackUtils.setTheTrack()
         } else {
             // Something's wrong. exit
@@ -374,16 +374,16 @@ export class TrackUtils {
 
         // We're ready for rendering so let's save journeys
         journeys.forEach(journey => {
-            vt3d.saveJourney(journey)
+            lgs.saveJourney(journey)
         })
 
         // Now instantiate some contexts
-        vt3d.theJourney.addToContext()
-        vt3d.theJourney.addToEditor()
-        vt3d.theTrack.addToContext()
-        vt3d.theTrack.addToEditor()
+        lgs.theJourney.addToContext()
+        lgs.theJourney.addToEditor()
+        lgs.theTrack.addToContext()
+        lgs.theTrack.addToEditor()
 
-        TrackUtils.setProfileVisibility(vt3d.theJourney)
+        TrackUtils.setProfileVisibility(lgs.theJourney)
 
 
         // One step further, let's prepare the drawings
@@ -394,7 +394,7 @@ export class TrackUtils {
 
         // Now it's time for the show. Draw all journeys but focus on the current one
         const items = []
-        vt3d.journeys.forEach(journey => {
+        lgs.journeys.forEach(journey => {
             items.push(journey.draw({
                 action: INITIAL_LOADING,
                 mode: journey.slug === currentJourney.slug ? FOCUS_ON_FEATURE : NO_FOCUS,
@@ -413,15 +413,15 @@ export class TrackUtils {
         // to the app context.
         let currentTrack = 'nothing'
         if (fromDB) {
-            currentTrack = await vt3d.db.journeys.get(CURRENT_TRACK, CURRENT_STORE)
+            currentTrack = await lgs.db.journeys.get(CURRENT_TRACK, CURRENT_STORE)
         }
-        if (vt3d.theJourney.tracks.has(currentTrack)) {
-            vt3d.theTrack = vt3d.theJourney.tracks.get(currentTrack)
+        if (lgs.theJourney.tracks.has(currentTrack)) {
+            lgs.theTrack = lgs.theJourney.tracks.get(currentTrack)
         } else {
-            vt3d.theTrack = vt3d.theJourney.tracks.entries().next().value[1]
+            lgs.theTrack = lgs.theJourney.tracks.entries().next().value[1]
         }
         // Add it to editor context
-        vt3d.theTrack.addToEditor()
+        lgs.theTrack.addToEditor()
     }
 
     /**
@@ -434,11 +434,11 @@ export class TrackUtils {
      */
     static getDataSourcesByName(name, strict = false) {
         if (strict) {
-            return vt3d.viewer.dataSources.getByName(name)
+            return lgs.viewer.dataSources.getByName(name)
         }
         const dataSources = []
-        for (let i = 0; i < vt3d.viewer.dataSources.length; i++) {
-            const item = vt3d.viewer.dataSources.get(i)
+        for (let i = 0; i < lgs.viewer.dataSources.length; i++) {
+            const item = lgs.viewer.dataSources.get(i)
             if (item.name.includes(name)) {
                 dataSources.push(item)
             }
@@ -453,7 +453,7 @@ export class TrackUtils {
      * @return {Promise<void>}
      */
     static saveCurrentJourneyToDB = async (current) => {
-        await vt3d.db.journeys.put(CURRENT_JOURNEY, current, CURRENT_STORE)
+        await lgs.db.journeys.put(CURRENT_JOURNEY, current, CURRENT_STORE)
     }
 
     /**
@@ -463,7 +463,7 @@ export class TrackUtils {
      * @return {Promise<void>}
      */
     static saveCurrentTrackToDB = async (current) => {
-        await vt3d.db.journeys.put(CURRENT_TRACK, current, CURRENT_STORE)
+        await lgs.db.journeys.put(CURRENT_TRACK, current, CURRENT_STORE)
     }
 
     /**
@@ -473,7 +473,7 @@ export class TrackUtils {
      * @return {Promise<void>}
      */
     static saveCurrentPOIToDB = async (current) => {
-        await vt3d.db.journeys.put(CURRENT_POI, current, CURRENT_STORE)
+        await lgs.db.journeys.put(CURRENT_POI, current, CURRENT_STORE)
     }
 
     /**
@@ -595,12 +595,12 @@ export class TrackUtils {
      * @return {boolean}
      */
     static setProfileVisibility(journey) {
-        vt3d.mainProxy.canViewProfile =
-            vt3d.configuration.profile.show &&              // By configuration
+        lgs.mainProxy.canViewProfile =
+            lgs.configuration.profile.show &&              // By configuration
             journey !== undefined &&                        // During init
             journey !== null &&                             // same
             journey.visible &&                              // Journey visible
-            vt3d.mainProxy.canViewJourneyData &&            // can view data
+            lgs.mainProxy.canViewJourneyData &&            // can view data
             Array.from(journey.tracks.values())             // Has Altitude for each track
                 .every(track => track.hasAltitude)
 

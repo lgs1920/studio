@@ -5,7 +5,7 @@ import { Layer }                                                          from '
 
 export const MapLayer = (layer) => {
 
-    const mainStore = vt3d.mainProxy
+    const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
     return (<>
