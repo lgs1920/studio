@@ -1,18 +1,39 @@
 import { faArrowDownToLine, faArrowLeftToLine, faArrowRightToLine, faCircle } from '@fortawesome/pro-regular-svg-icons'
 import { sprintf }                                                            from 'sprintf-js'
+import { subscribe } from 'valtio'
+import {
+    Utils,
+}                    from '../../components/TracksEditor/Utils.js'
 import { FA2SL }                                                              from '../../Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS }                                    from '../../Utils/UnitUtils'
 import { ProfileTrackMarker }                                                 from '../ProfileTrackMarker'
-import { Singleton }                                                          from '../Singleton'
 
-export class Profiler extends Singleton {
+export class Profiler {
 
     charts = null
 
     constructor() {
-        super()
+        // Singleton
+        if (Profiler.instance) {
+            return Profiler.instance
+        }
         this.charts = new Map()
 
+        // We need to interact with  Editor
+        subscribe(lgs.journeyEditorStore, this.adaptWidth)
+
+
+        Profiler.instance = this
+
+    }
+
+    /**
+     * Adapt the profiler width, according to editor pane usage
+     *
+     */
+    adaptWidth = () => {
+        const offset = lgs.journeyEditorStore.show ? Utils.panelOffset() : 0
+        __.ui.css.setCSSVariable('--lgs-profile-pane-width', `calc( 100% - ${offset})`)
     }
 
     /**

@@ -27,6 +27,7 @@ export function LGS1920() {
     const mainStore = lgs.mainProxy
     mainStore.layer = Layer.IGN_AERIAL
 
+    lgs.journeyEditorStore = mainStore.components.journeyEditor
 
     const starter = lgs.configuration.starter
     lgs.windowCenter = Cesium.Cartesian3.fromDegrees(starter.longitude, starter.latitude, starter.height)

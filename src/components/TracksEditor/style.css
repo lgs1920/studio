@@ -1,4 +1,7 @@
-
+:root {
+    --lgs-journey-editor-width: 28rem;
+    --lgs-journey-editor-offset: calc( var(--lgs-journey-editor-width) + var(--lgs-gutter-s));
+}
 #journeys-editor-container {
     position: absolute;
     z-index: var(--lgs-ui-layer-zindex);

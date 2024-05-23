@@ -25,6 +25,7 @@ export class LGS1920Context {
 
     profileTrackMarker = undefined
 
+
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
         // Track Editor store is used to manage the settings of the theJourney in edit
@@ -217,6 +218,8 @@ export class LGS1920Context {
         __.ui.wanderer = new Wanderer()
         __.ui.camera = new CameraManager()
     }
+
+
 }
 
 export const APP_KEY = 'LGS1920'

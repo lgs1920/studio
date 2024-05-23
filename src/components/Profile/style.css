@@ -1,9 +1,16 @@
 :root {
-    --lgs-profile-pane-width: 100%;
     --lgs-profile-pane-height: 260px;
     --lgs-profile-chart-height: 200px;
+    --lgs-journey-editor-open-offset:0;
+    --lgs-profile-pane-width:100%;
 }
-
+#profile-container {
+    position: relative;
+    max-width:var(--lgs-profile-pane-width);
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
 #profile-pane {
     --header-spacing: 0;
     --footer-spacing: 0;
@@ -15,12 +22,7 @@
     border-radius: var(--sl-border-radius-medium)
 }
 
-#profile-container {
-    position: relative;
-    width: var(--lgs-profile-pane-width);
-    height: 100%;
-    pointer-events: none;
-}
+
 
 #profile-container .apexcharts-canvas {
     overflow: hidden;

@@ -17,25 +17,12 @@ export const TracksEditorButton = function TracksEditorButton(props, ref) {
     const editorSnapshot = useSnapshot(editorStore)
 
     /**
-     * Close tracks editor pane
-     *
-     * @param event
-     */
-    const closeTracksEditor = (event) => {
-        if (isOK(event)) {
-            mainStore.components.journeyEditor.show = false
-            Utils.changeProfileWidth()
-        }
-    }
-
-    /**
      * Open tracks editor pane
      *
      * @param event
      */
     const toggleTracksEditor = (event) => {
         mainStore.components.journeyEditor.show = !mainStore.components.journeyEditor.show
-        Utils.changeProfileWidth()
     }
 
     return (<>
