@@ -8,13 +8,7 @@ export const TracksEditorButton =  (props) => {
 
     const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
-
-
-    /**
-     * Open tracks editor pane
-     *
-     * @param event
-     */
+    
     const toggleTracksEditor = () => {
         lgs.journeyEditorStore.show = !lgs.journeyEditorStore.show
     }
