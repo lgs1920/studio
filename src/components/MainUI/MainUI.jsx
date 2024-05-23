@@ -5,31 +5,39 @@ import { FullScreenUI }           from '@Components/FullScreenUI/FullScreenUI'
 import { Profile }                from '@Components/Profile/Profile'
 import { TracksEditor }           from '@Components/TracksEditor/TracksEditor'
 import { Toolbar }                from '@Components/MainUI/Toolbar'
-import { forwardRef, useEffect }  from 'react'
+import { useEffect }  from 'react'
 import { useCesium }              from 'resium'
 
 import './style.css'
+import { subscribe }              from 'valtio'
+import { CanvasEvents }           from '../../core/events/CanvasEvents.js'
 import { CameraTargetPositionUI } from '../cesium/CameraPositionUI/CameraTargetPositionUI.jsx'
+import { Utils }                  from '../TracksEditor/Utils.js'
 
-export const MainUI = forwardRef(function VT3D_UI(props, ref) {
+export const MainUI = function VT3D_UI() {
 
     lgs.viewer = useCesium().viewer
 
     useEffect(() => {
 
         // Manage canvas related events
-        // CanvasEvents.attach()
+         CanvasEvents.attach()
         // CanvasEvents.addListeners()
 
     }, [])
 
+    // We need to interact with  Editor
+    subscribe(lgs.journeyEditorStore,() => {
+        const offset = lgs.journeyEditorStore.show ? Utils.panelOffset() : 0
+        __.ui.css.setCSSVariable('--top-right-ui-right-margin', offset)
+    })
 
     return (
         <>
-            <div id="lgs-main-ui" ref={ref}>
+            <div id="lgs-main-ui">
                 <div id={'top-left-ui'}>
-                    <CameraPositionUI ref={ref}/>
-                    <CameraTargetPositionUI ref={ref}/>
+                    <CameraPositionUI/>
+                    <CameraTargetPositionUI/>
 
                     <Toolbar editor={true}
                              profile={true}
@@ -41,18 +49,18 @@ export const MainUI = forwardRef(function VT3D_UI(props, ref) {
 
                 <div id={'bottom-ui'}>
                     <div id={'bottom-left-ui'}>
-                        <FullScreenUI ref={ref}/>
-                        <CreditsUI ref={ref}/>
+                        <FullScreenUI/>
+                        <CreditsUI/>
                     </div>
                     <div id={'profile-ui'}>
-                        <Profile ref={ref}/>
+                        <Profile/>
                     </div>
                     <div id={'bottom-right-ui'}>
 
                     </div>
                 </div>
                 <div id={'top-right-ui'}>
-                    <CompassUI ref={ref} scene={lgs.scene}/>
+                    <CompassUI scene={lgs.scene}/>
                 </div>
 
                 {/* <FloatingMenu/> */}
@@ -60,6 +68,5 @@ export const MainUI = forwardRef(function VT3D_UI(props, ref) {
             </div>
         </>
     )
-
-})
+}
 
