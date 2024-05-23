@@ -35,7 +35,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
      */
     const closeTracksEditor = (event) => {
         if (isOK(event)) {
-            mainStore.components.journeyEditor.show = false
+            lgs.journeyEditorStore.show = false
         }
     }
 
