@@ -12,11 +12,10 @@ import './style.css'
 
 export const CreditsUI = forwardRef(function CreditsUI() {
 
-    const mainStore = lgs.mainProxy.components
-    const mainSnap = useSnapshot(mainStore)
+    const mainSnap = useSnapshot(lgs.mainUIStore)
 
     const setOpen = (open) => {
-        mainStore.credits.show = open
+        lgs.mainUIStore.credits.show = open
     }
 
     return (<>

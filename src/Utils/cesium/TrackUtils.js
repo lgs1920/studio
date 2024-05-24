@@ -12,6 +12,7 @@ import {
 }                                                                              from '../../core/ui/Camera.js'
 import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/LGS1920Context.js'
 import { FileUtils }                                                           from '../FileUtils.js'
+import { UIToast } from '../UIToast.js'
 import { CameraUtils } from './CameraUtils.js'
 import { POIUtils }                                                            from './POIUtils'
 
@@ -84,19 +85,6 @@ export class TrackUtils {
 
     }
 
-    /**
-     * Load a Journey file
-     *
-     * return
-     *
-     * @return {Promise}
-     *
-     */
-    static async loadJourneyFromFile() {
-        return FileUtils.uploadFileFromFrontEnd({
-            accepted: ACCEPTED_TRACK_FILES, mimes: TrackUtils.MIMES,
-        })
-    }
 
     /**
      * Show the TRack on the map
@@ -604,5 +592,57 @@ export class TrackUtils {
             Array.from(journey.tracks.values())             // Has Altitude for each track
                 .every(track => track.hasAltitude)
 
+    }
+
+    static uploadJourneyFile = async () => {
+
+        // uploading a file exits full screen mode, so we force the state
+        const mainStore = lgs.mainProxy
+        mainStore.fullSize = false
+
+        const journey = await  FileUtils.uploadFileFromFrontEnd({
+                accepted: ACCEPTED_TRACK_FILES, mimes: TrackUtils.MIMES,
+            })
+
+        // File is correct let's work with
+        if (journey !== undefined) {
+            let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
+            // Check if the track already exists in context
+            // If not we manage and show it.
+            if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
+                if (!theJourney.hasAltitude) {
+                    mainStore.modals.altitudeChoice.show = true
+                }
+                // Need stats
+                theJourney.extractMetrics()
+                // Prepare the contexts and current values
+                theJourney.addToContext()
+                theJourney.addToEditor()
+
+                const theTrack = lgs.theJourney.tracks.entries().next().value[1]
+                theTrack.addToEditor()
+
+                TrackUtils.setProfileVisibility(lgs.theJourney)
+
+                await theJourney.saveToDB()
+                await theJourney.saveOriginDataToDB()
+
+                mainStore.canViewJourneyData = true
+                await theJourney.draw({})
+
+                await TrackUtils.createCommonMapObjectsStore()
+                __.ui.profiler.draw()
+
+                __.ui.camera.stop360()
+                __.ui.camera.addUpdateEvent()
+
+            } else {
+                // It exists, we notify it
+                UIToast.warning({
+                    caption: `This journey has already been loaded!`,
+                    text: 'Please select another one !',
+                })
+            }
+        }
     }
 }

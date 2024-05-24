@@ -1,22 +1,25 @@
 /**
  * React
  */
-import { MainUI }     from '@Components/MainUI/MainUI.jsx'
+import { MainUI }                  from '@Components/MainUI/MainUI.jsx'
 /**
  * We are using shoelace Web components
  */
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { LGS1920Context }        from '@Core/LGS1920Context'
-import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
-import { TrackUtils }  from '@Utils/cesium/TrackUtils'
+import { LGS1920Context }          from '@Core/LGS1920Context'
+import { CameraUtils }             from '@Utils/cesium/CameraUtils.js'
+import { TrackUtils }              from '@Utils/cesium/TrackUtils'
 
 import * as Cesium                                   from 'cesium'
 import { useEffect, useRef }                         from 'react'
 import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
+import {  useSnapshot }                    from 'valtio'
+import { subscribeKey }                              from 'valtio/utils'
 import { MapLayer }                                  from './components/cesium/MapLayer.jsx'
+import { WelcomeModal }            from './components/MainUI/WelcomeModal.jsx'
 import { Layer }                                     from './core/Layer.js'
-import { UIToast }                                   from './Utils/UIToast'
-import {Camera as CameraManager} from './core/ui/Camera'
+import { Camera as CameraManager } from './core/ui/Camera'
+import { UIToast }                 from './Utils/UIToast'
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 window.lgs = new LGS1920Context()
 await __.app.init()
@@ -28,6 +31,8 @@ export function LGS1920() {
     mainStore.layer = Layer.IGN_AERIAL
 
     lgs.journeyEditorStore = mainStore.components.journeyEditor
+    lgs.mainUIStore = mainStore.components.mainUI
+   // const mainUISnapshot = useSnapshot(lgs.mainUIStore)
 
     const starter = lgs.configuration.starter
     lgs.windowCenter = Cesium.Cartesian3.fromDegrees(starter.longitude, starter.latitude, starter.height)
@@ -64,11 +69,9 @@ export function LGS1920() {
 
 
     useEffect(() => {
-
         const readAllFromDB = async () => {
             await TrackUtils.readAllFromDB()
         }
-
 
         // Set DefaultTheme
         __.app.setTheme()
@@ -78,8 +81,6 @@ export function LGS1920() {
 
         // Let's instantiate some elements Managers
         lgs.initManagers()
-
-
         //Ready
         UIToast.success({
             caption: `Welcome on ${lgs.configuration.applicationName}!`,
@@ -123,7 +124,11 @@ export function LGS1920() {
                     onComplete={run360}
                 />
             </Camera>
+
+
             <MainUI/>
+            <WelcomeModal/>
+
         </Viewer>
     </>)
 }

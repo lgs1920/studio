@@ -2,14 +2,14 @@ import { CameraPositionUI }       from '@Components/cesium/CameraPositionUI/Came
 import { CompassUI }              from '@Components/cesium/CompassUI/CompassUI'
 import { CreditsUI }              from '@Components/CreditsUI/CreditsUI'
 import { FullScreenUI }           from '@Components/FullScreenUI/FullScreenUI'
+import { Toolbar }                from '@Components/MainUI/Toolbar'
 import { Profile }                from '@Components/Profile/Profile'
 import { TracksEditor }           from '@Components/TracksEditor/TracksEditor'
-import { Toolbar }                from '@Components/MainUI/Toolbar'
-import { useEffect }  from 'react'
+import { useEffect }              from 'react'
 import { useCesium }              from 'resium'
 
 import './style.css'
-import { subscribe }              from 'valtio'
+import { subscribe, useSnapshot } from 'valtio'
 import { CanvasEvents }           from '../../core/events/CanvasEvents.js'
 import { CameraTargetPositionUI } from '../cesium/CameraPositionUI/CameraTargetPositionUI.jsx'
 import { Utils }                  from '../TracksEditor/Utils.js'
@@ -35,6 +35,7 @@ export const MainUI = function VT3D_UI() {
     return (
         <>
             <div id="lgs-main-ui">
+                    <>
                 <div id={'top-left-ui'}>
                     <CameraPositionUI/>
                     <CameraTargetPositionUI/>
@@ -45,6 +46,7 @@ export const MainUI = function VT3D_UI() {
                              position={'vertical'}
                              tooltip={'right'}/>
                     <TracksEditor/>
+
                 </div>
 
                 <div id={'bottom-ui'}>
@@ -64,8 +66,11 @@ export const MainUI = function VT3D_UI() {
                 </div>
 
                 {/* <FloatingMenu/> */}
+                    </>
 
             </div>
+
+
         </>
     )
 }

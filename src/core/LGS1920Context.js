@@ -24,7 +24,7 @@ export class LGS1920Context {
     journeys = new Map()
 
     profileTrackMarker = undefined
-
+    initialized=false
 
     constructor() {
         // Declare Stores and snapshots for states management by @valtio

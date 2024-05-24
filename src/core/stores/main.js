@@ -1,12 +1,18 @@
 export const main = {
     components: {
+
+        mainUI:{
+            show:false,
+            credits: {show: false},
+        },
+
         camera: {
             show: false,
             showTarget: false,
             position: {},
             event: false,
         },
-        credits: {show: false},
+
         journeyEditor: {
             visible: false,
             show: false,
