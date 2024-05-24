@@ -1,7 +1,7 @@
 import { proxy }          from 'valtio'
 import { SETTINGS_STORE } from '../../LGS1920Context.js'
 
-export class Store {
+export class SettingsStore {
     constructor(key,store) {
         this.key = key
         this.store = proxy(store)

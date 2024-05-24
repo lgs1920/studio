@@ -1,4 +1,4 @@
-import { Store } from './Store.js'
+import { SettingsStore } from './SettingsStore.js'
 
 export class Settings {
 
@@ -8,7 +8,7 @@ export class Settings {
     }
 
         // App store
-        this.app =  new Store('app',{
+        this.app =  new SettingsStore('app',{
             firstVisit:false,
             lastVisit:null
         })
