@@ -57,7 +57,7 @@ export class LGS1920Context {
 
         //Init DBs
         this.db = {
-            journeys: new LocalDB({
+            lgs1920: new LocalDB({
                 name: `${APP_KEY}`,
                 store: [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, SETTINGS_STORE],
                 manageTransients: true,
@@ -106,10 +106,10 @@ export class LGS1920Context {
     set theJourney(journey) {
         this.#mainProxy.theJourney = journey
         if (journey === null) {
-            this.db.journeys.delete(CURRENT_JOURNEY, CURRENT_STORE).then()
+            this.db.lgs1920.delete(CURRENT_JOURNEY, CURRENT_STORE).then()
             return
         }
-        this.db.journeys.put(CURRENT_JOURNEY, journey.slug, CURRENT_STORE).then(journey.addToEditor())
+        this.db.lgs1920.put(CURRENT_JOURNEY, journey.slug, CURRENT_STORE).then(journey.addToEditor())
     }
 
     /**
@@ -123,10 +123,10 @@ export class LGS1920Context {
     set theTrack(track) {
         this.#mainProxy.theTrack = track
         if (track === null) {
-            this.db.journeys.delete(CURRENT_TRACK, CURRENT_STORE).then()
+            this.db.lgs1920.delete(CURRENT_TRACK, CURRENT_STORE).then()
             return
         }
-        this.db.journeys.put(CURRENT_TRACK, track.slug, CURRENT_STORE)
+        this.db.lgs1920.put(CURRENT_TRACK, track.slug, CURRENT_STORE)
     }
 
     get mainProxy() {

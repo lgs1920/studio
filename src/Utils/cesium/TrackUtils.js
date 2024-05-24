@@ -348,7 +348,7 @@ export class TrackUtils {
 
         // Get the Current Journey. Then we Set current if it exists in journeys.
         // If not, let's use the first track or null.
-        let currentJourney = await lgs.db.journeys.get(CURRENT_JOURNEY, CURRENT_STORE)
+        let currentJourney = await lgs.db.lgs1920.get(CURRENT_JOURNEY, CURRENT_STORE)
         const tmp = journeys.filter(value => value.slug === currentJourney)
         currentJourney = (tmp.length > 0) ? tmp[0] : journeys[0]
 
@@ -401,7 +401,7 @@ export class TrackUtils {
         // to the app context.
         let currentTrack = 'nothing'
         if (fromDB) {
-            currentTrack = await lgs.db.journeys.get(CURRENT_TRACK, CURRENT_STORE)
+            currentTrack = await lgs.db.lgs1920.get(CURRENT_TRACK, CURRENT_STORE)
         }
         if (lgs.theJourney.tracks.has(currentTrack)) {
             lgs.theTrack = lgs.theJourney.tracks.get(currentTrack)
@@ -441,7 +441,7 @@ export class TrackUtils {
      * @return {Promise<void>}
      */
     static saveCurrentJourneyToDB = async (current) => {
-        await lgs.db.journeys.put(CURRENT_JOURNEY, current, CURRENT_STORE)
+        await lgs.db.lgs1920.put(CURRENT_JOURNEY, current, CURRENT_STORE)
     }
 
     /**
@@ -451,7 +451,7 @@ export class TrackUtils {
      * @return {Promise<void>}
      */
     static saveCurrentTrackToDB = async (current) => {
-        await lgs.db.journeys.put(CURRENT_TRACK, current, CURRENT_STORE)
+        await lgs.db.lgs1920.put(CURRENT_TRACK, current, CURRENT_STORE)
     }
 
     /**
@@ -461,7 +461,7 @@ export class TrackUtils {
      * @return {Promise<void>}
      */
     static saveCurrentPOIToDB = async (current) => {
-        await lgs.db.journeys.put(CURRENT_POI, current, CURRENT_STORE)
+        await lgs.db.lgs1920.put(CURRENT_POI, current, CURRENT_STORE)
     }
 
     /**
