@@ -13,12 +13,11 @@ import { TrackUtils }              from '@Utils/cesium/TrackUtils'
 import * as Cesium                                   from 'cesium'
 import { useEffect, useRef }                         from 'react'
 import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
-import {  useSnapshot }                    from 'valtio'
-import { subscribeKey }                              from 'valtio/utils'
 import { MapLayer }                                  from './components/cesium/MapLayer.jsx'
 import { WelcomeModal }            from './components/MainUI/WelcomeModal.jsx'
 import { Layer }                                     from './core/Layer.js'
 import { Camera as CameraManager } from './core/ui/Camera'
+import { SettingsSection }         from './core/ui/settings/SettingsSection.js'
 import { UIToast }                 from './Utils/UIToast'
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 window.lgs = new LGS1920Context()
@@ -81,6 +80,16 @@ export function LGS1920() {
 
         // Let's instantiate some elements Managers
         lgs.initManagers()
+
+        // Add settings sections
+        lgs.settings.add('app', new SettingsSection('app',
+            {
+                lastVisit: null,
+                showIntro:true
+            },
+        ))
+        lgs.settings.app.lastVisit = Date.now()
+
         //Ready
         UIToast.success({
             caption: `Welcome on ${lgs.configuration.applicationName}!`,

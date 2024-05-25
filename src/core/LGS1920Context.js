@@ -7,9 +7,10 @@ import { LocalDB }                 from './db/LocalDB'
 import { MouseEventHandler }       from './MouseEventHandler'
 import { main }                    from './stores/main'
 import { theJourneyEditor }        from './stores/theJourneyEditor'
-import { Camera as CameraManager } from './ui/Camera.js'
-import { Profiler }                from './ui/Profiler.js'
-import { Wanderer }                from './ui/Wanderer.js'
+import { Camera as CameraManager } from './ui/Camera'
+import { Profiler }                from './ui/Profiler'
+import { Wanderer }                from './ui/Wanderer'
+import {Settings}                  from './ui/settings/Settings'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -44,6 +45,7 @@ export class LGS1920Context {
             element: undefined,
             menu: undefined,
         }
+
 
         // Utils are attached to window
         window.__ = {
@@ -217,6 +219,7 @@ export class LGS1920Context {
         __.ui.profiler = new Profiler()
         __.ui.wanderer = new Wanderer()
         __.ui.camera = new CameraManager()
+        lgs.settings = new Settings()
     }
 
 
