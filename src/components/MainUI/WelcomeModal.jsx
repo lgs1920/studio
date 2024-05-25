@@ -4,8 +4,8 @@ import { useState }                               from 'react'
 import { default as ReactMarkdown }               from 'react-markdown'
 import { useSnapshot }                            from 'valtio'
 import { TrackUtils }                             from '../../Utils/cesium/TrackUtils.js'
-import { FA2SL }                                  from '../../Utils/FA2SL.js'
-import text                                       from '../pages/welcome.md'
+import { FA2SL } from '../../Utils/FA2SL.js'
+import text      from '../../assets/pages/welcome.md'
 
 export const WelcomeModal = () => {
     const [open, setOpen] = useState(true)
@@ -25,9 +25,14 @@ export const WelcomeModal = () => {
         hide()
     }
 
+    const setShowModal=()=> {
+        lgs.settings.app.showIntro= !lgs.settings.app.showIntro
+    }
+
     const snapshot = useSnapshot(lgs.journeyEditorStore)
     return (
         <>
+            {lgs.settings.app.showIntro &&
             <SlDialog open={open}
                       modal
                       no-header
@@ -37,7 +42,9 @@ export const WelcomeModal = () => {
                 <ReactMarkdown children={text}/>
                 <div slot="footer">
                     <div id={'footer'}>
-                        <SlCheckbox size={'small'}>Don't show this intro anymore</SlCheckbox>
+
+                        <SlCheckbox size={'small'} onClick={setShowModal}>Don't show this intro anymore</SlCheckbox>
+
                         {snapshot.list !== undefined &&
                         <div className="buttons-bar">
 
@@ -57,6 +64,7 @@ export const WelcomeModal = () => {
                     </div>
                 </div>
             </SlDialog>
+            }
         </>
     )
 }
