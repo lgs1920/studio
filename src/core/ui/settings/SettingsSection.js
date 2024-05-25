@@ -32,7 +32,6 @@ export class SettingsSection {
 
         // Each time we update a parameter in this store, we save it
         subscribe(this.#content, () => {
-            console.log('subscribe')
             this.save()
         })
 
@@ -54,7 +53,6 @@ export class SettingsSection {
      * @return {Promise<void>}
      */
     save = async () => {
-        console.log('save')
         await lgs.db.lgs1920.put(this.key, JSON.parse(JSON.stringify(this.#content)), SETTINGS_STORE)
     }
 
