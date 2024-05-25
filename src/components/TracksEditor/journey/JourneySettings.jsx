@@ -157,6 +157,9 @@ export const JourneySettings = function JourneySettings() {
                 })
             }
 
+            // Stop wanderer
+            __.ui.wanderer.stop()
+
             // Remove journey in DB
             await editorStore.journey.removeFromDB()
 
