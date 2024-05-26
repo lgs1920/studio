@@ -1,36 +1,39 @@
-/**
- * React
- */
+
 import { MainUI }                  from '@Components/MainUI/MainUI.jsx'
-/**
- * We are using shoelace Web components
- */
 import '@shoelace-style/shoelace/dist/themes/light.css'
 import { LGS1920Context }          from '@Core/LGS1920Context'
-import { CameraUtils }             from '@Utils/cesium/CameraUtils.js'
+import { CameraUtils }             from '@Utils/cesium/CameraUtils'
 import { TrackUtils }              from '@Utils/cesium/TrackUtils'
-
 import * as Cesium                                   from 'cesium'
 import { useEffect, useRef }                         from 'react'
 import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
-import { MapLayer }                                  from './components/cesium/MapLayer.jsx'
-import { WelcomeModal }            from './components/MainUI/WelcomeModal.jsx'
-import { Layer }                                     from './core/Layer.js'
+import { MapLayer }                                  from './components/cesium/MapLayer'
+import { WelcomeModal }            from './components/MainUI/WelcomeModal'
+import { Settings }                from './core/settings/Settings'
+import { SettingsSection }         from './core/settings/SettingsSection'
+import { APP_SETTINGS_SECTION }    from './core/stores/settings/app'
 import { Camera as CameraManager } from './core/ui/Camera'
-import { SettingsSection }         from './core/settings/SettingsSection.js'
 import { UIToast }                 from './Utils/UIToast'
-//setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
+
+
 window.lgs = new LGS1920Context()
+
+/***************************************
+ * Application settings
+ */
+lgs.settings = new Settings()
+
+// Add settings sections
+lgs.settings.add(new SettingsSection(APP_SETTINGS_SECTION))
+
+/***************************************/
+
 await __.app.init()
 
 export function LGS1920() {
 
     const viewerRef = useRef(null)
-    const mainStore = lgs.mainProxy
-    mainStore.layer = Layer.IGN_AERIAL
 
-    lgs.journeyEditorStore = mainStore.components.journeyEditor
-    lgs.mainUIStore = mainStore.components.mainUI
    // const mainUISnapshot = useSnapshot(lgs.mainUIStore)
 
     const starter = lgs.configuration.starter
@@ -80,16 +83,6 @@ export function LGS1920() {
 
         // Let's instantiate some elements Managers
         lgs.initManagers()
-
-        // Add settings sections
-        lgs.settings.add('app', new SettingsSection('app',
-            {
-                lastVisit: null,
-                firstVisit:true,
-                showIntro:true
-            },
-        ))
-        lgs.settings.app.lastVisit = Date.now()
 
         //Ready
         UIToast.success({

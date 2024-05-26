@@ -102,6 +102,9 @@ export class AppUtils {
             return event.eventPhase === Event.AT_TARGET
         }
 
+        // Update last visit
+        lgs.settings.app.lastVisit = Date.now()
+
     }
 
     /**

@@ -12,7 +12,7 @@ export class Profiler {
 
     charts = null
 
-    constructor() {
+    constructor(lgs) {
         // Singleton
         if (Profiler.instance) {
             return Profiler.instance

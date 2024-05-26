@@ -4,13 +4,14 @@ import { CSSUtils }                from '@Utils/CSSUtils'
 import { proxy }                   from 'valtio'
 import { UnitUtils }               from '../Utils/UnitUtils'
 import { LocalDB }                 from './db/LocalDB'
+import { Layer }                   from './Layer.js'
 import { MouseEventHandler }       from './MouseEventHandler'
+import { SettingsSection }         from './settings/SettingsSection.js'
 import { main }                    from './stores/main'
 import { theJourneyEditor }        from './stores/theJourneyEditor'
 import { Camera as CameraManager } from './ui/Camera'
 import { Profiler }                from './ui/Profiler'
 import { Wanderer } from './ui/Wanderer'
-import {Settings}   from './settings/Settings'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -31,8 +32,13 @@ export class LGS1920Context {
         // Declare Stores and snapshots for states management by @valtio
         // Track Editor store is used to manage the settings of the theJourney in edit
         this.#theJourneyEditorProxy = proxy(theJourneyEditor)
+
         // Main is global to the app
         this.#mainProxy = proxy(main)
+        this.journeyEditorStore = this.#mainProxy.components.journeyEditor
+        this.mainUIStore = this.#mainProxy.components.mainUI
+
+        this.#mainProxy.layer = Layer.IGN_AERIAL
 
         // Get the first as current theJourney
         if (this.journeys.size) {
@@ -57,6 +63,7 @@ export class LGS1920Context {
             convert: UnitUtils.convert,
         }
 
+
         //Init DBs
         this.db = {
             lgs1920: new LocalDB({
@@ -66,6 +73,7 @@ export class LGS1920Context {
                 version: '0.1',
             }),
         }
+
 
     }
 
@@ -216,14 +224,14 @@ export class LGS1920Context {
     }
 
     initManagers = () => {
-        __.ui.profiler = new Profiler()
+        __.ui.profiler = new Profiler(this)
         __.ui.wanderer = new Wanderer()
         __.ui.camera = new CameraManager()
-        lgs.settings = new Settings()
     }
 
 
 }
+
 
 export const APP_KEY = 'LGS1920'
 export const SETTINGS_STORE = 'settings'
