@@ -1,3 +1,6 @@
+import { snapshot } from 'valtio'
+import { AppUtils } from '../../Utils/AppUtils.js'
+
 export class Settings {
 
     /** @type {Map} */
@@ -19,14 +22,20 @@ export class Settings {
      * @param {string} key
      * @param {object} section
      */
-    add = (key, section) => {
-        this.#sections.set(key, section)
-        Object.defineProperty(this, key, {
+    add = ( section) => {
+        this.#sections.set(section.key, section)
+        // key
+        Object.defineProperty(this, section.key, {
                 get: function () {
-                    return this.#sections.get(key).content
-                },
+                    return this.#sections.get(section.key).content
+                }
             })
 
-
+        // snapKey
+        Object.defineProperty(this, AppUtils.camelCase(`snap-${section.key}`), {
+            get: function () {
+                return snapshot(this.#sections.get(section.key).content)
+            }
+        })
     }
 }

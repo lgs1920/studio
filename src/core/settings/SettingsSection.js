@@ -10,12 +10,11 @@ export class SettingsSection {
 
     /**
      *
-     * @param {string} key
-     * @param {object} section
+     * @param {object} section {key,content}
      */
-    constructor(key, section) {
-        this.key = key
-        this.#content = proxy(section)
+    constructor(section) {
+        this.key = section.key
+        this.#content = proxy(section.content)
         let data = {};
 
         (async () => {
@@ -23,19 +22,25 @@ export class SettingsSection {
             if (data === null) {
                 (async () => {
                     await this.save()
+
                 })()
             } else {
                 this.#content = proxy(data)
             }
+
+            // Each time we update a parameter in this store, we save it
+            this.subscribeToChange()
         })()
 
 
-        // Each time we update a parameter in this store, we save it
-        subscribe(this.#content, () => {
-            this.save()
+
+
+    }
+    subscribeToChange=()=> {
+        return subscribe(this.#content, async () => {
+            //console.log('subscribe =>', this.#content)
+            await this.save()
         })
-
-
     }
 
     /**
