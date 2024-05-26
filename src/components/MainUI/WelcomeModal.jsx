@@ -3,10 +3,13 @@ import { SlButton, SlCheckbox, SlDialog, SlIcon } from '@shoelace-style/shoelace
 import { useEffect, useState }                    from 'react'
 import { default as ReactMarkdown }               from 'react-markdown'
 import { useSnapshot }                            from 'valtio'
+import { ChangelogManager }                       from '../../core/ui/ChangelogManager'
 import { TrackUtils }                             from '../../Utils/cesium/TrackUtils.js'
 import { FA2SL } from '../../Utils/FA2SL.js'
 import welcome      from '../../assets/pages/welcome.md'
 import welcomeBack      from '../../assets/pages/welcome-back.md'
+
+const changeLog = new ChangelogManager()
 
 export const WelcomeModal = () => {
     const [open, setOpen] = useState(true)
@@ -29,8 +32,12 @@ export const WelcomeModal = () => {
         hide()
     }
 
+    const loadJourney = () => {
+        enter()
+        TrackUtils.uploadJourneyFile()
+    }
+
     const setShowModal=(event)=> {
-        console.log(event)
         lgs.settings.app.showIntro= !lgs.settings.app.showIntro
     }
 
@@ -77,7 +84,7 @@ export const WelcomeModal = () => {
                                 </SlButton>
                             }
                             {snapshot.list.length === 0 &&
-                                <SlButton autofocus variant="primary" onClick={TrackUtils.uploadJourneyFile}>
+                                <SlButton autofocus variant="primary" onClick={loadJourney}>
                                     <SlIcon library="fa" name={FA2SL.set(faRoute)}></SlIcon>{'Load your first Journey'}
                                 </SlButton>
                             }
