@@ -1,11 +1,12 @@
 import { faMountains, faRoute }                   from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlCheckbox, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
-import { useState }                               from 'react'
+import { useEffect, useState }                    from 'react'
 import { default as ReactMarkdown }               from 'react-markdown'
 import { useSnapshot }                            from 'valtio'
 import { TrackUtils }                             from '../../Utils/cesium/TrackUtils.js'
 import { FA2SL } from '../../Utils/FA2SL.js'
-import text      from '../../assets/pages/welcome.md'
+import welcome      from '../../assets/pages/welcome.md'
+import welcomeBack      from '../../assets/pages/welcome-back.md'
 
 export const WelcomeModal = () => {
     const [open, setOpen] = useState(true)
@@ -14,6 +15,9 @@ export const WelcomeModal = () => {
         if (event.detail.source === 'overlay') {
             lgs.mainUIStore.show = true
         }
+        console.log('hide')
+        lgs.settings.app.firstVisit= false
+
     }
 
     const hide = () => {
@@ -25,25 +29,43 @@ export const WelcomeModal = () => {
         hide()
     }
 
-    const setShowModal=()=> {
+    const setShowModal=(event)=> {
+        console.log(event)
         lgs.settings.app.showIntro= !lgs.settings.app.showIntro
     }
 
-    const snapshot = useSnapshot(lgs.journeyEditorStore)
+    const TheText = ()=> {
+        if (lgs.settings.app.firstVisit) {
+            lgs.settings.app.firstVisit=false
+            return (<ReactMarkdown children={welcome}/>)
+        }
+        return (<ReactMarkdown children={welcomeBack}/>)
+    }
+
+    useEffect(() => {
+        const checkbox = document.getElementById('do-not-show');
+        if (checkbox) {
+            checkbox.addEventListener('sl-change', setShowModal);
+        }
+    }, [])
+
+        const snapshot = useSnapshot(lgs.journeyEditorStore)
     return (
         <>
-            {lgs.settings.app.showIntro &&
+            {lgs.settings.snapApp.showIntro &&
             <SlDialog open={open}
                       modal
                       no-header
                       id={'welcome-modal'}
                       onSlRequestClose={close}
                       onSlAfterHide={hide}>
-                <ReactMarkdown children={text}/>
+
+                <TheText/>
+
                 <div slot="footer">
                     <div id={'footer'}>
 
-                        <SlCheckbox size={'small'} onClick={setShowModal}>Don't show this intro anymore</SlCheckbox>
+                        <SlCheckbox id={'do-not-show'} size={'small'} >Don't show this intro anymore</SlCheckbox>
 
                         {snapshot.list !== undefined &&
                         <div className="buttons-bar">
