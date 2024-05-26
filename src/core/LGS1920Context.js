@@ -9,8 +9,8 @@ import { main }                    from './stores/main'
 import { theJourneyEditor }        from './stores/theJourneyEditor'
 import { Camera as CameraManager } from './ui/Camera'
 import { Profiler }                from './ui/Profiler'
-import { Wanderer }                from './ui/Wanderer'
-import {Settings}                  from './ui/settings/Settings'
+import { Wanderer } from './ui/Wanderer'
+import {Settings}   from './settings/Settings'
 
 export class LGS1920Context {
     /** @type {Proxy} */

@@ -17,7 +17,7 @@ import { MapLayer }                                  from './components/cesium/M
 import { WelcomeModal }            from './components/MainUI/WelcomeModal.jsx'
 import { Layer }                                     from './core/Layer.js'
 import { Camera as CameraManager } from './core/ui/Camera'
-import { SettingsSection }         from './core/ui/settings/SettingsSection.js'
+import { SettingsSection }         from './core/settings/SettingsSection.js'
 import { UIToast }                 from './Utils/UIToast'
 //setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
 window.lgs = new LGS1920Context()
@@ -85,6 +85,7 @@ export function LGS1920() {
         lgs.settings.add('app', new SettingsSection('app',
             {
                 lastVisit: null,
+                firstVisit:true,
                 showIntro:true
             },
         ))
