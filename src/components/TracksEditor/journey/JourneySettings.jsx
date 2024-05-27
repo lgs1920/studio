@@ -21,9 +21,9 @@ import { TrackUtils }      from '@Utils/cesium/TrackUtils'
 import { FA2SL }           from '@Utils/FA2SL'
 import { UIToast }         from '@Utils/UIToast'
 import { sprintf }         from 'sprintf-js'
-import { useSnapshot }     from 'valtio'
-import { JourneyData }     from './JourneyData'
-import { JourneyPOIs }     from './JourneyPOIs'
+import { useSnapshot } from 'valtio'
+import { JourneyData } from './JourneyData'
+import { JourneyPOIs } from './JourneyPOIs'
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2

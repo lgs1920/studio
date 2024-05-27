@@ -6,8 +6,8 @@ import { SlAnimation, SlButton, SlCard, SlIcon, SlTooltip } from '@shoelace-styl
 import { FA2SL }                                            from '@Utils/FA2SL'
 import { forwardRef }                                       from 'react'
 import { useCesium }                                        from 'resium'
-import { useSnapshot }                                      from 'valtio'
-import { meter, mile }                                      from '../../../Utils/UnitUtils'
+import { useSnapshot } from 'valtio'
+import { meter, mile } from '../../../Utils/UnitUtils'
 
 
 export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref) {
