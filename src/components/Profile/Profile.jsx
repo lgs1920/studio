@@ -9,9 +9,9 @@ import { CHART_ELEVATION_VS_DISTANCE }           from '../../core/ui/Profiler'
 import { FA2SL }                                 from '../../Utils/FA2SL'
 import { UIToast }                               from '../../Utils/UIToast'
 import { JourneySelector }                       from '../TracksEditor/journey/JourneySelector'
-import { Utils }   from '../TracksEditor/Utils'
-import { Toolbar } from '../MainUI/Toolbar'
-import { Wander }  from '../Wander/Wander'
+import { Utils }                                 from '../TracksEditor/Utils'
+import { Toolbar }                               from '../MainUI/Toolbar'
+import { Wander }                                from '../Wander/Wander'
 import { ProfileChart }                          from './ProfileChart'
 
 export const Profile = function Profile(props, ref) {

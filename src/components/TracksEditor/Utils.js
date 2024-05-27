@@ -1,8 +1,8 @@
 import { Journey, NO_FOCUS, RE_LOADING }                from '@Core/Journey'
 import { Track }                                        from '@Core/Track'
 import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE } from '@Core/LGS1920Context'
-import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
-import { UPDATE_JOURNEY_SILENTLY }                      from './journey/JourneySettings'
+import { TrackUtils }              from '@Utils/cesium/TrackUtils'
+import { UPDATE_JOURNEY_SILENTLY } from './journey/JourneySettings'
 
 export class Utils {
 

@@ -3,8 +3,8 @@ import { JUST_SAVE }                         from '@Core/LGS1920Context'
 import { faLocationPin, faLocationPinSlash } from '@fortawesome/pro-solid-svg-icons'
 import { SlTooltip }                         from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                        from '@Utils/cesium/TrackUtils'
-import { useSnapshot }                       from 'valtio'
-import { Utils }                             from '../Utils'
+import { useSnapshot } from 'valtio'
+import { Utils }       from '../Utils'
 
 export const TrackFlagsSettings = function TrackSettings() {
 

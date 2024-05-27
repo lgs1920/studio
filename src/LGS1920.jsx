@@ -8,12 +8,12 @@ import * as Cesium                                   from 'cesium'
 import { useEffect, useRef }                         from 'react'
 import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
 import { MapLayer }                                  from './components/cesium/MapLayer'
-import { WelcomeModal }            from './components/MainUI/WelcomeModal'
-import { Settings }                from './core/settings/Settings'
-import { SettingsSection }         from './core/settings/SettingsSection'
-import { APP_SETTINGS_SECTION }    from './core/stores/settings/app'
-import { Camera as CameraManager } from './core/ui/Camera'
-import { UIToast }                 from './Utils/UIToast'
+import { WelcomeModal }                              from './components/MainUI/WelcomeModal'
+import { Settings }                                  from './core/settings/Settings'
+import { SettingsSection }                           from './core/settings/SettingsSection'
+import { APP_SETTINGS_SECTION }                      from './core/stores/settings/app'
+import { Camera as CameraManager }                   from './core/ui/Camera'
+import { UIToast }                                   from './Utils/UIToast'
 
 
 window.lgs = new LGS1920Context()

@@ -3,9 +3,9 @@ import {  faStop }                                            from '@fortawesome
 //import {faRegularArrowsRepeatSlash}                                             from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { SlButton, SlIcon, SlOption, SlSelect, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                           from '@Utils/FA2SL'
-import { useSnapshot }                                     from 'valtio'
-import { Wanderer }                                        from '../../core/ui/Wanderer.js'
-import { WanderUtils }                                     from '../../Utils/cesium/WanderUtils.js'
+import { useSnapshot } from 'valtio'
+import { Wanderer }    from '../../core/ui/Wanderer.js'
+import { WanderUtils } from '../../Utils/cesium/WanderUtils.js'
 
 export const Wander = (props) => {
 

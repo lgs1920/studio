@@ -2,12 +2,12 @@ import { faMountains, faRoute }                   from '@fortawesome/pro-regular
 import { SlButton, SlCheckbox, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { useEffect, useState }                    from 'react'
 import { default as ReactMarkdown }               from 'react-markdown'
-import { useSnapshot }                            from 'valtio'
-import { ChangelogManager }                       from '../../core/ui/ChangelogManager'
-import { TrackUtils }                             from '../../Utils/cesium/TrackUtils.js'
-import { FA2SL } from '../../Utils/FA2SL.js'
-import welcome      from '../../assets/pages/welcome.md'
-import welcomeBack      from '../../assets/pages/welcome-back.md'
+import { useSnapshot }      from 'valtio'
+import { ChangelogManager } from '../../core/ui/ChangelogManager'
+import { TrackUtils }       from '../../Utils/cesium/TrackUtils.js'
+import { FA2SL }            from '../../Utils/FA2SL.js'
+import welcome              from '../../assets/pages/welcome.md'
+import welcomeBack          from '../../assets/pages/welcome-back.md'
 
 const changeLog = new ChangelogManager()
 

@@ -1,12 +1,12 @@
 import { faArrowDownToLine, faArrowLeftToLine, faArrowRightToLine, faCircle } from '@fortawesome/pro-regular-svg-icons'
 import { sprintf }                                                            from 'sprintf-js'
-import { subscribe } from 'valtio'
+import { subscribe }                       from 'valtio'
 import {
     Utils,
-}                    from '../../components/TracksEditor/Utils.js'
-import { FA2SL }                                                              from '../../Utils/FA2SL'
-import { DISTANCE_UNITS, ELEVATION_UNITS }                                    from '../../Utils/UnitUtils'
-import { ProfileTrackMarker }                                                 from '../ProfileTrackMarker'
+}                                          from '../../components/TracksEditor/Utils.js'
+import { FA2SL }                           from '../../Utils/FA2SL'
+import { DISTANCE_UNITS, ELEVATION_UNITS } from '../../Utils/UnitUtils'
+import { ProfileTrackMarker }              from '../ProfileTrackMarker'
 
 export class Profiler {
 

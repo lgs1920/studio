@@ -1,8 +1,8 @@
 import { JourneyLoader }      from '@Components/FileLoader/JourneyLoader'
 import { ProfileButton }      from '@Components/Profile/ProfileButton'
 import { TracksEditorButton } from '@Components/TracksEditor/TracksEditorButton'
-import { SlDivider }          from '@shoelace-style/shoelace/dist/react'
-import { SnapshotButton }     from './Snapshot'
+import { SlDivider }      from '@shoelace-style/shoelace/dist/react'
+import { SnapshotButton } from './Snapshot'
 
 export const Toolbar = (props) => {
     return (
