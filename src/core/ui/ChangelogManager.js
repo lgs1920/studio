@@ -3,7 +3,7 @@ import axios from 'axios'
 export class ChangelogManager {
 
 
-    CHANGELOG_DIR = '/src/assets/pages/changelog'
+    CHANGELOG_DIR = '/src/assets/public/changelog'
 
     constructor() {
         // Singleton

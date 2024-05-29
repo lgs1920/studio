@@ -5,9 +5,9 @@ import { default as ReactMarkdown }               from 'react-markdown'
 import { useSnapshot }      from 'valtio'
 import { ChangelogManager } from '../../core/ui/ChangelogManager'
 import { TrackUtils }       from '../../Utils/cesium/TrackUtils.js'
-import { FA2SL }            from '../../Utils/FA2SL.js'
-import welcome              from '../../assets/pages/welcome.md'
-import welcomeBack          from '../../assets/pages/welcome-back.md'
+import { FA2SL }   from '../../Utils/FA2SL.js'
+import welcome     from '../../../public/welcome.md'
+import welcomeBack from '../../../public/welcome-back.md'
 
 const changeLog = new ChangelogManager()
 
