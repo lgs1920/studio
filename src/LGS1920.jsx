@@ -15,7 +15,9 @@ import { APP_SETTINGS_SECTION }                      from './core/stores/setting
 import { Camera as CameraManager }                   from './core/ui/Camera'
 import { UIToast }                                   from './Utils/UIToast'
 
-
+/***************************************
+ * Init Application context
+ */
 window.lgs = new LGS1920Context()
 
 /***************************************
@@ -26,8 +28,7 @@ lgs.settings = new Settings()
 // Add settings sections
 lgs.settings.add(new SettingsSection(APP_SETTINGS_SECTION))
 
-/***************************************/
-
+// Applicationiitialisation
 await __.app.init()
 
 export function LGS1920() {
