@@ -2,39 +2,37 @@ import axios from 'axios'
 
 export class ChangelogManager {
 
-
-    CHANGELOG_DIR = '/src/assets/public/changelog'
-
     constructor() {
         // Singleton
         if (ChangelogManager.instance) {
             return ChangelogManager.instance
         }
-        this.list = this.ls()
-
-        console.log(this.list)
         ChangelogManager.instance = this
-
     }
 
-    ls = async () => {
-        await axios.get('/src/core/ajax/test.js', {
-            params: {
-                ID: 12345
-            }
-        })
+    /**
+     * List the change log directory and get all markdown files.
+     * @return {{files:[],last:{}}}
+     */
+    list = async () => {
+      return axios.get(`${lgs.BACKEND_API}changelog/list?extension=md`)
             .then(function (response) {
-                console.log(response);
+                return response.data
             })
-            .catch(function (error) {
-                console.log(error);
+            .catch(function () {
+                return {list: [], last: undefined}
             })
-            .finally(function () {
-                // dans tous les cas
-            });
-        //return getAllFilesSync(this.CHANGELOG_DIR).toArray()
     }
 
-    whatsNew = () => {
+    /**
+     * Get all th files that were created after the last visit
+     *
+     * @param {[{name,time}]} files
+     * @param {timestamp} lastVisit  the last visit date
+     *
+     * @return {[{name,time}]}
+     */
+    whatsNew = (files,lastVisit) => {
+        return files.filter(file=> file.time > lastVisit)
     }
 }

@@ -12,6 +12,7 @@ import { theJourneyEditor }        from './stores/theJourneyEditor'
 import { Camera as CameraManager } from './ui/Camera'
 import { Profiler }                from './ui/Profiler'
 import { Wanderer }                from './ui/Wanderer'
+//import config from 'dotenv'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -27,6 +28,8 @@ export class LGS1920Context {
 
     profileTrackMarker = undefined
     initialized=false
+
+    BACKEND_API
 
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
@@ -74,6 +77,8 @@ export class LGS1920Context {
             }),
         }
 
+        // Backend  @vite
+        this.BACKEND_API=`${import.meta.env.VITE_BACKEND_API}/`
 
     }
 

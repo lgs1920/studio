@@ -1,5 +1,6 @@
 import * as Cesium      from 'cesium'
 import { EventEmitter } from '../assets/libs/EventEmitter/EventEmitter'
+import { ChangelogManager } from '../core/ui/ChangelogManager'
 import { FA2SL }        from './FA2SL'
 
 export const CONFIGURATION = '../config.json'
@@ -104,6 +105,15 @@ export class AppUtils {
 
         // Update last visit
         lgs.settings.app.lastVisit = Date.now()
+
+        // Read changelog
+        const changeLog = new ChangelogManager()
+        changeLog.list().then(files => {
+            lgs.changelog={
+                files:files,
+                toRead:changeLog.whatsNew(files.list,lgs.settings.app.lastVisit)
+            }
+        })
 
     }
 
