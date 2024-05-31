@@ -6,7 +6,7 @@ import { FA2SL }                                                          from '
 import { forwardRef }                                                     from 'react'
 import { useSnapshot }                                                    from 'valtio'
 
-import info from '../../version.json'
+import info from '../../../public/version.json'
 import './style.css'
 
 

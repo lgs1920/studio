@@ -4,5 +4,6 @@ export const APP_SETTINGS_SECTION = {
         lastVisit: null,
         firstVisit: true,
         showIntro: true,
+        changelogToRead:true
     },
 }
