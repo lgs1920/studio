@@ -6,9 +6,8 @@ import { FA2SL }                                                          from '
 import { forwardRef }                                                     from 'react'
 import { useSnapshot }                                                    from 'valtio'
 
-import info from '../../../public/version.json'
-import './style.css'
 
+import './style.css'
 
 export const CreditsUI = forwardRef(function CreditsUI() {
 
@@ -18,6 +17,12 @@ export const CreditsUI = forwardRef(function CreditsUI() {
         lgs.mainUIStore.credits.show = open
     }
 
+    const version = async()=> {
+        return  await fetch('/version.json').then(
+            res => res.json()
+        )
+    }
+
     return (<>
         <SlDrawer className="ui-element- transparent" id="credits-pane" open={mainSnap.credits.show}
                   onSlAfterHide={() => setOpen(false)}>
@@ -25,7 +30,7 @@ export const CreditsUI = forwardRef(function CreditsUI() {
 
             <div id="credits-pane-footer" slot={'footer'}>
                 <div>
-                    <strong>{lgs.configuration.applicationName}</strong><span>{info.version}</span>
+                    <strong>{lgs.configuration.applicationName}</strong><span>{version().studio}</span>
                 </div>
                 <SlTooltip content="Our GitHub repo">
                     <SlIconButton library="fa" name={FA2SL.set(faGithub)}

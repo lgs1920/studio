@@ -3,7 +3,7 @@ import { EventEmitter } from '../assets/libs/EventEmitter/EventEmitter'
 import { ChangelogManager } from '../core/ui/ChangelogManager'
 import { FA2SL }        from './FA2SL'
 
-export const CONFIGURATION = '../config.json'
+export const CONFIGURATION ='/config.json'
 
 export class AppUtils {
     /**
@@ -88,7 +88,10 @@ export class AppUtils {
      */
     static init = async () => {
         // Set Context
-        lgs.configuration = await import(/* @vite-ignore */ CONFIGURATION)
+        lgs.configuration =  await fetch(CONFIGURATION).then(
+            res => res.json()
+        )
+
         lgs.setDefaultConfiguration()
         lgs.events = new EventEmitter()
 
