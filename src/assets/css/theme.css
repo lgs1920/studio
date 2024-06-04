@@ -113,8 +113,27 @@ sl-drawer {
     --footer-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
 }
 
-sl-drawer .drawer-pane-footer {
+.drawer-pane-footer {
     font-size: var(--sl-font-size-small);
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter);
+    width: 100%;
+}
+
+.drawer-pane-footer strong {
+    font-weight: 600;
+}
+
+.drawer-pane-footer strong:after {
+    content: ': ';
+    font-weight: normal;
+}
+
+.drawer-pane-footer .drawer-footer-url {
+    margin-left: auto;
+    display: flex;
+    gap: var(--lgs-gutter-s);
 }
 
 /*******************************************************************************
