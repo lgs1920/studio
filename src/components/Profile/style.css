@@ -22,8 +22,6 @@
     border-radius: var(--sl-border-radius-medium)
 }
 
-
-
 #profile-container .apexcharts-canvas {
     overflow: hidden;
 }
