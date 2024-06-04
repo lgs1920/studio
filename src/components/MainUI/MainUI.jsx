@@ -9,10 +9,11 @@ import { useEffect }              from 'react'
 import { useCesium }              from 'resium'
 
 import './style.css'
-import { subscribe, useSnapshot } from 'valtio'
+import { subscribe } from 'valtio'
 import { CanvasEvents }           from '../../core/events/CanvasEvents.js'
 import { CameraTargetPositionUI } from '../cesium/CameraPositionUI/CameraTargetPositionUI.jsx'
-import { Utils }                  from '../TracksEditor/Utils.js'
+import { Utils }     from '../TracksEditor/Utils.js'
+import { SupportUI } from './SupportUI'
 
 export const MainUI = function VT3D_UI() {
 
@@ -45,9 +46,10 @@ export const MainUI = function VT3D_UI() {
                              fileLoader={true}
                              position={'vertical'}
                              tooltip={'right'}/>
-                    <TracksEditor/>
                     <CreditsUI/>
-                    <FullScreenUI/>
+                    <SupportUI/>
+                    <FullScreenUI/>                        
+                    <TracksEditor/>
                 </div>
 
                 <div id={'bottom-ui'}>
