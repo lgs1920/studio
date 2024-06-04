@@ -16,7 +16,6 @@
 #lgs-main-ui > div {
     display: flex;
     gap: var(--lgs-gutter-s);
-    pointer-events: auto;
     --top: var(--lgs-gutter-s);
     --left: var(--lgs-gutter-s);
     --bottom: var(--lgs-gutter-s);
@@ -24,6 +23,7 @@
 }
 
 #top-left-ui {
+    pointer-events: auto;
     display: flex;
     flex-direction: column;
     position: absolute;
@@ -35,6 +35,7 @@
 }
 
 #top-right-ui {
+    pointer-events: auto;
     position: absolute;
     top: var(--top);
     right: var(--right);
