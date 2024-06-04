@@ -111,8 +111,10 @@ sl-drawer {
     --header-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
     --body-spacing: var(--lgs-gutter);
     --footer-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
+}
 
-
+sl-drawer .drawer-pane-footer {
+    font-size: var(--sl-font-size-small);
 }
 
 /*******************************************************************************
