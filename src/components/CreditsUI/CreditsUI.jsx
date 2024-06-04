@@ -37,8 +37,8 @@ export const CreditsUI = function CreditsUI() {
                   onSlAfterHide={() => setOpen(false)}
                   ref={drawerRef}
                   >
-
             <Scrollbars>
+                <h1>{'Credits'}</h1>
                 <ReactMarkdown children={engine}/>
                 <ReactMarkdown children={providers}/>
                 <ReactMarkdown children={code}/>
