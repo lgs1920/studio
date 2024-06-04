@@ -46,20 +46,16 @@ export const MainUI = function VT3D_UI() {
                              position={'vertical'}
                              tooltip={'right'}/>
                     <TracksEditor/>
-
+                    <CreditsUI/>
+                    <FullScreenUI/>
                 </div>
 
                 <div id={'bottom-ui'}>
-                    <div id={'bottom-left-ui'}>
-                        <FullScreenUI/>
-                        <CreditsUI/>
-                    </div>
+                    {/* <div id={'bottom-left-ui'}></div> */}
                     <div id={'profile-ui'}>
                         <Profile/>
                     </div>
-                    <div id={'bottom-right-ui'}>
-
-                    </div>
+                    {/* <div id={'bottom-right-ui'}></div> */}
                 </div>
                 <div id={'top-right-ui'}>
                     <CompassUI scene={lgs.scene}/>

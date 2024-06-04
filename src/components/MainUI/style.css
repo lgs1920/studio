@@ -46,7 +46,7 @@
 #bottom-ui {
     display: flex;
     height: 50vh;
-    width: 100%;
+    width: calc(100vw - 2 * var(--lgs-gutter-s));
     flex-direction: row;
     padding: var(--lgs-gutter-s);
     position: absolute;
