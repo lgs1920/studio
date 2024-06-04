@@ -28,7 +28,7 @@ lgs.settings = new Settings()
 // Add settings sections
 lgs.settings.add(new SettingsSection(APP_SETTINGS_SECTION))
 
-// Applicationiitialisation
+// Application initialisation
 await __.app.init()
 
 export function LGS1920() {
