@@ -77,8 +77,6 @@ export class LGS1920Context {
             }),
         }
 
-        // Backend  @vite
-        this.BACKEND_API=`${import.meta.env.VITE_BACKEND_API}/`
 
     }
 
