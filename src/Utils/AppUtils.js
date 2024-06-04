@@ -91,8 +91,16 @@ export class AppUtils {
         lgs.configuration =  await fetch(CONFIGURATION).then(
             res => res.json()
         )
-
         lgs.setDefaultConfiguration()
+
+        // Backend  @vite
+        this.BACKEND_API = `${import.meta.env.VITE_BACKEND_API}/`
+
+         // Versions
+         lgs.versions = await fetch(`${this.BACKEND_API}versions`).then(
+            res => res.json(),
+        )
+
         lgs.events = new EventEmitter()
 
         // Cesium ION auth
