@@ -11,6 +11,7 @@
     height: 100%;
     pointer-events: none;
 }
+
 #profile-pane {
     --header-spacing: 0;
     --footer-spacing: 0;
@@ -20,6 +21,10 @@
 
 #profile-pane::part(panel) {
     border-radius: var(--sl-border-radius-medium)
+}
+
+#profile-pane::part(title) {
+    display: none;
 }
 
 #profile-container .apexcharts-canvas {
@@ -37,15 +42,22 @@
     --body-spacing: var(--lgs-gutter-s);
 }
 
-#profile-pane::part(header) {
-    padding-top: var(--lgs-gutter-s);
-    justify-content: flex-end;
+#profile-pane::part(header-actions) {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    flex-shrink: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: end;
+    gap: var(--sl-spacing-2x-small);
+    padding: 0 var(--header-spacing);
+    width: 100%;
+    flex: 1 1;
 }
 
-#profile-pane .journey-selector {
-    position: absolute;
-    top: var(--lgs-gutter-xs);
-    width: 15rem;
+#profile-pane header::part(title) {
+    display: none;
 }
 
 #elevation-distance-tooltip {
@@ -57,8 +69,6 @@
     align-items: center;
     padding: var(--lgs-gutter-xs);
     gap: var(--lgs-gutter-xs);
-
-    min-width: 100px;
 }
 
 #elevation-distance-tooltip > span:first-child {
@@ -79,5 +89,44 @@
 
 #elevation-distance-tooltip .point-distance sl-icon {
     width: 15px;
+}
+
+.profile-toolbar {
+    padding-top: var(--lgs-gutter-s);
+    display: flex;
+    gap: var(--lgs-gutter-s);
+    justify-content: space-between;
+    flex: 1 ;
+
+    container-type:size;
+    container-name: profile-toolbar;
+    align-items: center;
+
+}
+
+.profile-toolbar .journey-selector {
+    flex-basis: 50%;
+}
+.profile-toolbar .profile-tools-part {
+    flex-basis: 40%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+.profile-toolbar .lgs-ui-toolbar {
+    justify-self: flex-end;
+}
+
+.profile-toolbar .wander-menu {
+    display: flex;
+    gap: var(--lgs-gutter-xs);
+}
+
+@container profile-toolbar ( width <= 800px) {
+    .profile-toolbar .journey-selector {
+        flex-grow: 1;
+        flex-basis: 90%;
+    }
 }
 

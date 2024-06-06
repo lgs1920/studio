@@ -64,7 +64,7 @@ export const Wander = (props) => {
 
     WanderUtils.initWanderMode()
 
-    return (<>
+    return (<div className={"wander-menu"} id={props.id}>
         {!wanderSnapshot.run &&
             <SlTooltip hoist placement={tooltip} content="Play">
                 <SlButton key={wanderSnapshot.run} size={'small'} className={'square-icon'} onClick={toggleWander}>
@@ -116,7 +116,7 @@ export const Wander = (props) => {
                 />
             </SlButton>
         </SlTooltip>
-    </>)
+    </div>)
 
 }
 

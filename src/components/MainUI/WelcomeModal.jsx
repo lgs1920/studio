@@ -3,13 +3,11 @@ import { SlButton, SlCheckbox, SlDialog, SlIcon } from '@shoelace-style/shoelace
 import { useEffect, useState }                    from 'react'
 import { default as ReactMarkdown }               from 'react-markdown'
 import { useSnapshot }      from 'valtio'
-import { ChangelogManager } from '../../core/ui/ChangelogManager'
 import { TrackUtils }       from '../../Utils/cesium/TrackUtils.js'
 import { FA2SL }   from '../../Utils/FA2SL.js'
-import welcome     from '../../../public/welcome.md'
-import welcomeBack from '../../../public/welcome-back.md'
+import welcome     from '../../../public/assets/modals/welcome.md'
+import welcomeBack from '../../../public/assets/modals/welcome-back.md'
 
-const changeLog = new ChangelogManager()
 
 export const WelcomeModal = () => {
     const [open, setOpen] = useState(true)
@@ -18,9 +16,7 @@ export const WelcomeModal = () => {
         if (event.detail.source === 'overlay') {
             lgs.mainUIStore.show = true
         }
-        console.log('hide')
         lgs.settings.app.firstVisit= false
-
     }
 
     const hide = () => {
@@ -47,6 +43,10 @@ export const WelcomeModal = () => {
             return (<ReactMarkdown children={welcome}/>)
         }
         return (<ReactMarkdown children={welcomeBack}/>)
+    }
+
+    const readChangeLog = ()=> {
+
     }
 
     useEffect(() => {
@@ -76,8 +76,9 @@ export const WelcomeModal = () => {
 
                         {snapshot.list !== undefined &&
                         <div className="buttons-bar">
-
-                            <SlButton /*onClick={handleConfirm}*/ >{'What\'s new ?'}</SlButton>
+                            {lgs.settings.snapApp.changelogToRead &&
+                            <SlButton onClick={readChangeLog} >{'What\'s new ?'}</SlButton>
+                            }
                             {snapshot.list.length > 0 &&
                                 <SlButton autofocus variant="primary" onClick={enter} >
                                     <SlIcon library="fa" name={FA2SL.set(faMountains)}></SlIcon>{'Enter'}

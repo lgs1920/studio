@@ -144,7 +144,6 @@ export class Profiler {
     showOnMap = (options) => {
         const data = options.w.config.series[options.seriesIndex].data
         const coords = data[options.dataPointIndex]
-        const length = data[data.length - 1].x
 
         if (!lgs.profileTrackMarker.drawn) {
             lgs.profileTrackMarker.draw()
@@ -159,7 +158,7 @@ export class Profiler {
      */
     updateColor = () => {
         const series = []
-        lgs.theJourney.tracks.forEach((track, slug) => {
+        lgs.theJourney.tracks.forEach((track) => {
             series.push({color: track.color})
         })
         PROFILE_CHARTS.forEach(id => {
@@ -177,7 +176,6 @@ export class Profiler {
             series.push({name: track.title})
         })
         PROFILE_CHARTS.forEach(id => {
-            const chart = ApexCharts.getChartByID(id)
             this.charts.get(id).updateSeries(series)
         })
 

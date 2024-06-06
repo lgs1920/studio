@@ -8,9 +8,9 @@ import { Export }                                from '../../core/ui/Export'
 import { CHART_ELEVATION_VS_DISTANCE }           from '../../core/ui/Profiler'
 import { FA2SL }                                 from '../../Utils/FA2SL'
 import { UIToast }                               from '../../Utils/UIToast'
+import { Toolbar } from '../MainUI/Toolbar'
 import { JourneySelector }                       from '../TracksEditor/journey/JourneySelector'
 import { Utils }                                 from '../TracksEditor/Utils'
-import { Toolbar }                               from '../MainUI/Toolbar'
 import { Wander }                                from '../Wander/Wander'
 import { ProfileChart }                          from './ProfileChart'
 
@@ -89,25 +89,30 @@ export const Profile = function Profile(props, ref) {
                       onSlHide={closeProfile}
                       placement="bottom"
             >
-                <JourneySelector size={'small'}
-                                 onChange={Utils.initJourneyEdition}/>
 
-                <div slot="header-actions">
-                    <Toolbar editor={true}
-                             profile={false}
-                             fileLoader={true}
-                             snapshot={snapshot}
-                             position={'horizontal'}
-                             tooltip={'top'}
-                             mode={'embed'}
-                             center={<ProfileToolbar/>}
-                             left={<Wander/>}
-                    />
+
+                <div className="profile-toolbar" slot={'header-actions'}>
+                    <JourneySelector size={'small'} onChange={Utils.initJourneyEdition}/>
+
+                    <div className={'profile-tools-part'}>
+                        <Wander id={'profile-wander'}/>
+                        <Toolbar editor={true}
+                                 profile={false}
+                                 fileLoader={true}
+                                 snapshot={snapshot}
+                                 position={'horizontal'}
+                                 tooltip={'top'}
+                                 mode={'embed'}
+                                 center={<ProfileToolbar/>}
+                        />
+                    </div>
                 </div>
-                {data && <ProfileChart series={data.series}
-                                       options={data.options}
-                                       height={__.ui.css.getCSSVariable('--lgs-profile-chart-height')}
-                />}
+                {data &&
+                    <ProfileChart series={data.series}
+                                  options={data.options}
+                                  height={__.ui.css.getCSSVariable('--lgs-profile-chart-height')}
+                    />
+                }
             </SlDrawer>
         </div>}
     </>)

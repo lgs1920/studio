@@ -66,16 +66,17 @@ export const ProfileChart = function ProfileChart(props) {
                 toggleDataSeries: false,
             },
 
-        }, title: {
-            text: lgs?.theJourney?.title ?? '',
-            align: 'left',
-            margin: 0,
-            style: {
-                fontSize: '14px', //__.ui.css.getCSSVariable('--lgs-font-size'),
-                fontWeight: 700,
-                fontFamily: __.ui.css.getCSSVariable('--lgs-font-family'),
-            },
         },
+        // title: {
+        //     text: lgs?.theJourney?.title ?? '',
+        //     align: 'left',
+        //     margin: 0,
+        //     style: {
+        //         fontSize: '14px', //__.ui.css.getCSSVariable('--lgs-font-size'),
+        //         fontWeight: 700,
+        //         fontFamily: __.ui.css.getCSSVariable('--lgs-font-family'),
+        //     },
+        // },
         plotOptions: {
             area: {
                 fillTo: 'origin',
