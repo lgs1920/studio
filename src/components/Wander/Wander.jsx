@@ -1,6 +1,6 @@
-import { faArrowRightLongToLine,faPause, faPlay,faArrowRotateLeft, faArrowRotateRight,faArrowsRepeat } from '@fortawesome/pro-regular-svg-icons'
+import { faPause, faPlay,faArrowRotateLeft, faArrowRotateRight,faArrowsRepeat } from '@fortawesome/pro-regular-svg-icons'
 import {  faStop }                                            from '@fortawesome/pro-solid-svg-icons'
-//import {faRegularArrowsRepeatSlash}                                             from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import {faRegularArrowsRepeatSlash}              from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { SlButton, SlIcon, SlOption, SlSelect, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                           from '@Utils/FA2SL'
 import { useSnapshot } from 'valtio'
@@ -108,10 +108,10 @@ export const Wander = (props) => {
             )}
         </SlSelect>
 
-        <SlTooltip hoist placement={tooltip} content={wanderSnapshot.loop?'Single tour':'Loop'}>
+        <SlTooltip hoist placement={tooltip} content={wanderSnapshot.loop?'Stop Loop':'Loop'}>
             <SlButton size={'small'} className={'square-icon'} onClick={toggleLoop}>
                 <SlIcon library="fa" name={FA2SL.set(
-                    wanderSnapshot.loop?faArrowRightLongToLine:faArrowsRepeat
+                    wanderSnapshot.loop?faRegularArrowsRepeatSlash:faArrowsRepeat
                 )}
                 />
             </SlButton>
