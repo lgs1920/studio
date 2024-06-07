@@ -115,6 +115,9 @@
 .profile-toolbar .journey-selector {
     flex-basis: 50%;
 }
+.profile-toolbar .journey-selector::part(combobox) {
+    max-width: 30rem;
+}
 
 .profile-toolbar .profile-tools-part {
     flex-basis: 40%;
