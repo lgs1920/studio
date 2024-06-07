@@ -68,6 +68,9 @@
     align-self: flex-end;
 }
 
+/***************************************
+ * Toolbar
+ */
 .lgs-ui-toolbar {
     display: flex;
     gap: var(--lgs-gutter-s);
@@ -93,7 +96,25 @@
 .lgs-ui-toolbar.embed sl-button {
     --sl-input-border-width: 0;
 }
-
+/***************************************
+ * Dropdown Toolbar
+ */
+.lgs-ui-dropdown-toolbar.just-icons sl-menu {
+    align-items: center;
+    padding: 0;
+    --lgs-dimension: 1.4rem;
+    overflow-x: hidden;
+}
+.lgs-ui-dropdown-toolbar.just-icons ::part(submenu-icon),
+.lgs-ui-dropdown-toolbar.just-icons ::part(checked-icon) {
+    display: none;
+}
+.lgs-ui-dropdown-toolbar.just-icons sl-menu-item::part(base) {
+    padding: 0 var(--sl-spacing-2x-small);
+}
+/***************************************
+ * Profile
+ */
 #profile-ui {
     display: flex;
     flex-grow: 1;
@@ -114,6 +135,7 @@
  */
 #welcome-modal::part(panel) {
     background: rgba( 255, 255, 255, 0.15 );
+    background-image: linear-gradient(to right, rgba(255,188,0,0.30), rgba(255,114,15,0.30));
     box-shadow: var(--sl-shadow-x-large);
     backdrop-filter: blur( 4px );
     -webkit-backdrop-filter: blur( 4px );
