@@ -40,7 +40,7 @@ export const TrackStyleSettings = function TrackSettings() {
 
     return (
         <div id="track-line-settings">
-            <SlTooltip content="Color">
+            <SlTooltip hoist content="Color">
                 <SlColorPicker opacity
                                size={'small'}
                                label={'Color'}
@@ -52,7 +52,7 @@ export const TrackStyleSettings = function TrackSettings() {
                                noFormatToggle
                 />
             </SlTooltip>
-            <SlTooltip content="Thickness">
+            <SlTooltip hoist content="Thickness">
                 <SlRange min={1} max={10} step={1}
                          value={editorSnapshot.track.thickness}
                          style={{'--thumb-size': '1rem'}}

@@ -30,7 +30,7 @@ export const SupportUI = () => {
 
             </SlDialog>
 
-            <SlTooltip content="Open Help">
+            <SlTooltip hoist content="Open Help">
                 <SlButton size={'small'} className={'square-icon'} id={'launch-the-support'} onClick={() => setOpen(true)}>
                     <SlIcon library="fa" name={FA2SL.set(faMessageQuestion)}></SlIcon>
                 </SlButton>

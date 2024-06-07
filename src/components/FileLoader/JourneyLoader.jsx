@@ -9,7 +9,7 @@ export const JourneyLoader = (props) => {
 
     return (
         <>
-            <SlTooltip placement={props.tooltip} content="Add a new Journey">
+            <SlTooltip hoist placement={props.tooltip} content="Add a new Journey">
                 <SlButton size={'small'} onClick={TrackUtils.uploadJourneyFile} className={'square-icon'}>
                     <SlIcon library="fa" name={FA2SL.set(faRegularRouteCirclePlus)}/>
                 </SlButton>

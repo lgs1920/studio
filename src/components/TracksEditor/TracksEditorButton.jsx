@@ -14,7 +14,7 @@ export const TracksEditorButton =  (props) => {
     }
 
     return (<>
-        <SlTooltip placement={props.tooltip} content="Edit Tracks">
+        <SlTooltip hoist placement={props.tooltip} content="Edit Tracks">
             {mainSnap.canViewJourneyData &&
                 <SlButton size={'small'} className={'square-icon'} id={'open-theJourney-editor'}
                           onClick={toggleTracksEditor}>

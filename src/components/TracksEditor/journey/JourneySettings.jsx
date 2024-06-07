@@ -242,7 +242,7 @@ export const JourneySettings = function JourneySettings() {
                                 </SlTooltip>
 
                                 {/* Change description */}
-                                <SlTooltip content={'Description'}>
+                                <SlTooltip hoist content={'Description'}>
                                     <SlTextarea row={2}
                                                 size={'small'}
                                                 id={'journey-description'}
@@ -278,12 +278,12 @@ export const JourneySettings = function JourneySettings() {
 
                     <div id="journey-visibility" className={'editor-vertical-menu'}>
                         <span>
-                        <SlTooltip content={textVisibilityJourney}>
+                        <SlTooltip hoist content={textVisibilityJourney}>
                             <ToggleStateIcon change={setJourneyVisibility}
                                              initial={editorSnapshot.journey.visible}/>
                         </SlTooltip>
                             {editorSnapshot.journey.pois.size > 1 &&
-                                <SlTooltip content={textVisibilityPOIs}>
+                                <SlTooltip hoist content={textVisibilityPOIs}>
                                     <ToggleStateIcon
                                         change={setAllPOIsVisibility}
                                         initial={editorSnapshot.journey.POIsVisible}
@@ -297,12 +297,12 @@ export const JourneySettings = function JourneySettings() {
                         </span>
 
                         <span>
-                        <SlTooltip content={'Export'}>
+                        <SlTooltip hoist content={'Export'}>
                             <a onClick={exportJourney}>
                                 <SlIcon library="fa" name={FA2SL.set(faDownload)}/>
                             </a>
                         </SlTooltip>
-                        <SlTooltip content={'Remove'}>
+                        <SlTooltip hoist content={'Remove'}>
                             <a onClick={removeJourney}>
                                 <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
                             </a>

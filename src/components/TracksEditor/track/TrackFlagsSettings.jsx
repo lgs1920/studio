@@ -47,7 +47,7 @@ export const TrackFlagsSettings = function TrackSettings() {
 
     return (
         <>
-            <SlTooltip content={textVisibilityStartFlag}>
+            <SlTooltip hoist content={textVisibilityStartFlag}>
                 <ToggleStateIcon change={setStartFlagVisibility}
                                  id={'start-visibility'}
                                  icons={{
@@ -56,7 +56,7 @@ export const TrackFlagsSettings = function TrackSettings() {
                                  style={{color: lgs.configuration.journey.pois.start.color}}
                                  initial={editorSnapshot?.track.flags.start.visible}/>
             </SlTooltip>
-            <SlTooltip content={textVisibilityStopFlag}>
+            <SlTooltip hoist content={textVisibilityStopFlag}>
                 <ToggleStateIcon change={setStopFlagVisibility}
                                  id={'stop-visibility'}
                                  icons={{

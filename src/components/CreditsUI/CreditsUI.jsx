@@ -47,7 +47,7 @@ export const CreditsUI = function CreditsUI() {
             <DrawerFooter/>
 
         </SlDrawer>
-        <SlTooltip placement={'right'} content="Show Credits">
+        <SlTooltip hoist placement={'right'} content="Show Credits">
             <SlButton className={'square-icon'} size="small" id={'open-credits-pane'} onClick={() => setOpen(true)}>
                 <SlIcon library="fa" name={FA2SL.set(faCircleInfo)}></SlIcon>
             </SlButton>
