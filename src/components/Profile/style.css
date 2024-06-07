@@ -20,7 +20,8 @@
 }
 
 #profile-pane::part(panel) {
-    border-radius: var(--sl-border-radius-medium)
+    border-radius: var(--sl-border-radius-medium);
+    padding: var(--body-spacing);
 }
 
 #profile-pane::part(title) {
@@ -43,6 +44,10 @@
 }
 
 #profile-pane::part(header-actions) {
+    z-index: 1;
+}
+
+#profile-pane::part(header-actions) {
     display: flex;
     width: 100%;
     justify-content: space-between;
@@ -51,13 +56,17 @@
     flex-wrap: wrap;
     justify-content: end;
     gap: var(--sl-spacing-2x-small);
-    padding: 0 var(--header-spacing);
+    margin: var(--header-spacing);
     width: 100%;
     flex: 1 1;
 }
 
 #profile-pane header::part(title) {
     display: none;
+}
+
+.lgs-ui-toolbar.lgs-ui-dropdown-toolbar {
+    display: none
 }
 
 #elevation-distance-tooltip {
@@ -92,7 +101,6 @@
 }
 
 .profile-toolbar {
-    padding-top: var(--lgs-gutter-s);
     display: flex;
     gap: var(--lgs-gutter-s);
     justify-content: space-between;
@@ -107,6 +115,7 @@
 .profile-toolbar .journey-selector {
     flex-basis: 50%;
 }
+
 .profile-toolbar .profile-tools-part {
     flex-basis: 40%;
     display: flex;
@@ -123,10 +132,27 @@
     gap: var(--lgs-gutter-xs);
 }
 
+.profile-additional {
+    display: flex;
+    padding: 0 var(--sl-spacing-2x-small);
+}
+
+.lgs-ui-dropdown-toolbar .profile-additional {
+    flex-direction: column;
+}
+
 @container profile-toolbar ( width <= 800px) {
     .profile-toolbar .journey-selector {
         flex-grow: 1;
-        flex-basis: 90%;
+        flex-basis: 50%;
+    }
+
+    .lgs-ui-toolbar.lgs-ui-dropdown-toolbar {
+        display: flex
+    }
+
+    .lgs-ui-toolbar:not(.lgs-ui-dropdown-toolbar) {
+        display: none
     }
 }
 
