@@ -94,11 +94,12 @@ export class AppUtils {
         lgs.setDefaultConfiguration()
 
         // Backend  @vite
-        this.BACKEND_API = `${import.meta.env.VITE_BACKEND_API}/`
+        lgs.BACKEND_API = `${import.meta.env.VITE_BACKEND_API}/`
 
          // Versions
-         lgs.versions = await fetch(`${this.BACKEND_API}versions`).then(
-            res => res.json(),
+         lgs.versions = await fetch(`${lgs.BACKEND_API}versions`)
+             .then(res => res.json())
+             .catch(error => console.error(error)
         )
 
         lgs.events = new EventEmitter()
