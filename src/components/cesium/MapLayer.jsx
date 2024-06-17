@@ -1,7 +1,7 @@
 import { OpenStreetMapImageryProvider, WebMapTileServiceImageryProvider } from 'cesium'
 import { ImageryLayer }                                                   from 'resium'
-import { useSnapshot }                                                    from 'valtio'
-import { Layer }                                                          from '../../core/Layer.js'
+import { useSnapshot } from 'valtio'
+import { Layer }       from '../../core/Layer.js'
 
 export const MapLayer = (layer) => {
 

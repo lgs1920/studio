@@ -1,11 +1,11 @@
-import { faArrowRightLongToLine,faPause, faPlay,faArrowRotateLeft, faArrowRotateRight,faArrowsRepeat } from '@fortawesome/pro-regular-svg-icons'
+import { faPause, faPlay,faArrowRotateLeft, faArrowRotateRight,faArrowsRepeat } from '@fortawesome/pro-regular-svg-icons'
 import {  faStop }                                            from '@fortawesome/pro-solid-svg-icons'
-//import {faRegularArrowsRepeatSlash}                                             from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import {faRegularArrowsRepeatSlash}              from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { SlButton, SlIcon, SlOption, SlSelect, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                           from '@Utils/FA2SL'
-import { useSnapshot }                                     from 'valtio'
-import { Wanderer }                                        from '../../core/ui/Wanderer.js'
-import { WanderUtils }                                     from '../../Utils/cesium/WanderUtils.js'
+import { useSnapshot } from 'valtio'
+import { Wanderer }    from '../../core/ui/Wanderer.js'
+import { WanderUtils } from '../../Utils/cesium/WanderUtils.js'
 
 export const Wander = (props) => {
 
@@ -64,7 +64,7 @@ export const Wander = (props) => {
 
     WanderUtils.initWanderMode()
 
-    return (<>
+    return (<div className={"wander-menu"} id={props.id}>
         {!wanderSnapshot.run &&
             <SlTooltip hoist placement={tooltip} content="Play">
                 <SlButton key={wanderSnapshot.run} size={'small'} className={'square-icon'} onClick={toggleWander}>
@@ -108,15 +108,15 @@ export const Wander = (props) => {
             )}
         </SlSelect>
 
-        <SlTooltip hoist placement={tooltip} content={wanderSnapshot.loop?'Single tour':'Loop'}>
+        <SlTooltip hoist placement={tooltip} content={wanderSnapshot.loop?'Stop Loop':'Loop'}>
             <SlButton size={'small'} className={'square-icon'} onClick={toggleLoop}>
                 <SlIcon library="fa" name={FA2SL.set(
-                    wanderSnapshot.loop?faArrowRightLongToLine:faArrowsRepeat
+                    wanderSnapshot.loop?faRegularArrowsRepeatSlash:faArrowsRepeat
                 )}
                 />
             </SlButton>
         </SlTooltip>
-    </>)
+    </div>)
 
 }
 

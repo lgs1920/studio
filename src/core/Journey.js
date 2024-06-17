@@ -109,10 +109,10 @@ export class Journey extends MapElement {
     static readAllFromDB = async () => {
         try {
             // get all slugs
-            const slugs = await lgs.db.journeys.keys(JOURNEYS_STORE)
+            const slugs = await lgs.db.lgs1920.keys(JOURNEYS_STORE)
             // Get each journey content
             const journeyPromises = slugs.map(async (slug) => {
-                const object = await lgs.db.journeys.get(slug, JOURNEYS_STORE)
+                const object = await lgs.db.lgs1920.get(slug, JOURNEYS_STORE)
                 const journey = Journey.deserialize({object: object})
                 return journey
             })
@@ -421,7 +421,7 @@ export class Journey extends MapElement {
      * @return {Promise<void>}
      */
     saveToDB = async () => {
-        await lgs.db.journeys.put(this.slug, Journey.unproxify(this), JOURNEYS_STORE)
+        await lgs.db.lgs1920.put(this.slug, Journey.unproxify(this), JOURNEYS_STORE)
     }
 
     /**
@@ -430,7 +430,7 @@ export class Journey extends MapElement {
      * @type {boolean}
      */
     saveOriginDataToDB = async () => {
-        await lgs.db.journeys.put(this.slug, this.geoJson, ORIGIN_STORE)
+        await lgs.db.lgs1920.put(this.slug, this.geoJson, ORIGIN_STORE)
     }
 
     /**
@@ -439,8 +439,8 @@ export class Journey extends MapElement {
      * @return {Promise<void>}
      */
     removeFromDB = async () => {
-        await lgs.db.journeys.delete(this.slug, ORIGIN_STORE)
-        await lgs.db.journeys.delete(this.slug, JOURNEYS_STORE)
+        await lgs.db.lgs1920.delete(this.slug, ORIGIN_STORE)
+        await lgs.db.lgs1920.delete(this.slug, JOURNEYS_STORE)
     }
 
     /**

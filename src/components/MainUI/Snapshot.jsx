@@ -33,7 +33,7 @@ export const SnapshotButton = (props, ref) => {
     }
 
     return (<>
-        <SlTooltip placement={props.tooltip} content="Snapshot">
+        <SlTooltip hoist placement={props.tooltip} content="Snapshot">
             <SlButton size={'small'} className={'square-icon snapshot'}
                       onClick={props.snapshot}>
                 <SlIcon library="fa" name={FA2SL.set(faRegularCameraCircleArrowDown)}></SlIcon>

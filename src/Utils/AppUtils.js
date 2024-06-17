@@ -1,8 +1,9 @@
 import * as Cesium      from 'cesium'
 import { EventEmitter } from '../assets/libs/EventEmitter/EventEmitter'
+import { ChangelogManager } from '../core/ui/ChangelogManager'
 import { FA2SL }        from './FA2SL'
 
-export const CONFIGURATION = '../config.json'
+export const CONFIGURATION ='/config.json'
 
 export class AppUtils {
     /**
@@ -87,8 +88,20 @@ export class AppUtils {
      */
     static init = async () => {
         // Set Context
-        lgs.configuration = await import(/* @vite-ignore */ CONFIGURATION)
+        lgs.configuration =  await fetch(CONFIGURATION).then(
+            res => res.json()
+        )
         lgs.setDefaultConfiguration()
+
+        // Backend  @vite
+        lgs.BACKEND_API = `${import.meta.env.VITE_BACKEND_API}/`
+
+         // Versions
+         lgs.versions = await fetch(`${lgs.BACKEND_API}versions`)
+             .then(res => res.json())
+             .catch(error => console.error(error)
+        )
+
         lgs.events = new EventEmitter()
 
         // Cesium ION auth
@@ -101,6 +114,18 @@ export class AppUtils {
         window.isOK = (event) => {
             return event.eventPhase === Event.AT_TARGET
         }
+
+        // Update last visit
+        lgs.settings.app.lastVisit = Date.now()
+
+        // Read changelog
+        const changeLog = new ChangelogManager()
+        changeLog.list().then(files => {
+            lgs.changelog={
+                files:files,
+                toRead:changeLog.whatsNew(files.list,lgs.settings.app.lastVisit)
+            }
+        })
 
     }
 

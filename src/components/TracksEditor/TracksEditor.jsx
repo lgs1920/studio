@@ -35,19 +35,8 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
      */
     const closeTracksEditor = (event) => {
         if (isOK(event)) {
-            mainStore.components.journeyEditor.show = false
-            Utils.changeProfileWidth()
+            lgs.journeyEditorStore.show = false
         }
-    }
-
-    /**
-     * Open tracks editor pane
-     *
-     * @param event
-     */
-    const toggleTracksEditor = (event) => {
-        mainStore.components.journeyEditor.show = !mainStore.components.journeyEditor.show
-        Utils.changeProfileWidth()
     }
 
     return (<>

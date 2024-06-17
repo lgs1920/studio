@@ -8,10 +8,11 @@ import { Export }                                from '../../core/ui/Export'
 import { CHART_ELEVATION_VS_DISTANCE }           from '../../core/ui/Profiler'
 import { FA2SL }                                 from '../../Utils/FA2SL'
 import { UIToast }                               from '../../Utils/UIToast'
+import { DropdownToolbar } from '../MainUI/DropdownToolbar'
+import { Toolbar }         from '../MainUI/Toolbar'
 import { JourneySelector }                       from '../TracksEditor/journey/JourneySelector'
-import { Utils }   from '../TracksEditor/Utils'
-import { Toolbar } from '../MainUI/Toolbar'
-import { Wander }  from '../Wander/Wander'
+import { Utils }                                 from '../TracksEditor/Utils'
+import { Wander }                                from '../Wander/Wander'
 import { ProfileChart }                          from './ProfileChart'
 
 export const Profile = function Profile(props, ref) {
@@ -59,22 +60,22 @@ export const Profile = function Profile(props, ref) {
     }
 
     const ProfileToolbar = (props) => {
-        return (<>
-            <SlTooltip placement={'top'} content="Toggle Marker Visibility">
+        return (<div className={'profile-additional'}>
+            <SlTooltip hoist placement={props.placement} content="Toggle Marker Visibility">
                 {<SlButton id={'toggle-marker-visibility'} className={'square-icon'}>
                     <SlIcon library="fa"
                             onClick={toggleMarker} name={FA2SL.set(faSolidCircleSlash)}></SlIcon>
                 </SlButton>}
             </SlTooltip>
 
-            <SlTooltip placement={'top'} content="Reset Chart">
+            <SlTooltip hoist placement={props.placement} content="Reset Chart">
                 {<SlButton id={'open-the-profile-panel'} className={'square-icon'}>
                     <SlIcon library="fa"
                             onClick={resetChart}
                             name={FA2SL.set(faRegularArrowsRotateReverseMagnifyingGlass)}></SlIcon>
                 </SlButton>}
             </SlTooltip>
-        </>)
+        </div>)
     }
 
     const data = __.ui.profiler.prepareData()
@@ -89,25 +90,40 @@ export const Profile = function Profile(props, ref) {
                       onSlHide={closeProfile}
                       placement="bottom"
             >
-                <JourneySelector size={'small'}
-                                 onChange={Utils.initJourneyEdition}/>
 
-                <div slot="header-actions">
-                    <Toolbar editor={true}
-                             profile={false}
-                             fileLoader={true}
-                             snapshot={snapshot}
-                             position={'horizontal'}
-                             tooltip={'top'}
-                             mode={'embed'}
-                             center={<ProfileToolbar/>}
-                             left={<Wander/>}
-                    />
+
+                <div className="profile-toolbar" slot={'header-actions'}>
+                    <JourneySelector size={'small'} onChange={Utils.initJourneyEdition}/>
+
+                    <div className={'profile-tools-part'}>
+                        <Wander id={'profile-wander'}/>
+                        <Toolbar editor={true}
+                                 profile={false}
+                                 fileLoader={true}
+                                 snapshot={snapshot}
+                                 position={'horizontal'}
+                                 tooltip={'top'}
+                                 mode={'embed'}
+                                 center={<ProfileToolbar placement={'top'}/>}
+                        />
+                        <DropdownToolbar editor={true}
+                                         profile={false}
+                                         fileLoader={true}
+                                         snapshot={snapshot}
+                                         tooltip={'left'}
+                                         center={<ProfileToolbar placement={'left'}/>}
+                                         mode={'embed'}
+                                         icons={true}
+                                         placement={'left'}
+                        />
+                    </div>
                 </div>
-                {data && <ProfileChart series={data.series}
-                                       options={data.options}
-                                       height={__.ui.css.getCSSVariable('--lgs-profile-chart-height')}
-                />}
+                {data &&
+                    <ProfileChart series={data.series}
+                                  options={data.options}
+                                  height={__.ui.css.getCSSVariable('--lgs-profile-chart-height')}
+                    />
+                }
             </SlDrawer>
         </div>}
     </>)

@@ -36,6 +36,12 @@ body {
 
 }
 
+/***************************************
+ * Icons and buttons
+ */
+sl-button:not(.square-icon) sl-icon:first-child {
+    margin-right: var(--lgs-gutter-s);
+}
 /**
  * Progress Bars
  */

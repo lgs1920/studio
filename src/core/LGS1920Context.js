@@ -4,12 +4,15 @@ import { CSSUtils }                from '@Utils/CSSUtils'
 import { proxy }                   from 'valtio'
 import { UnitUtils }               from '../Utils/UnitUtils'
 import { LocalDB }                 from './db/LocalDB'
+import { Layer }                   from './Layer.js'
 import { MouseEventHandler }       from './MouseEventHandler'
+import { SettingsSection }         from './settings/SettingsSection.js'
 import { main }                    from './stores/main'
 import { theJourneyEditor }        from './stores/theJourneyEditor'
-import { Camera as CameraManager } from './ui/Camera.js'
-import { Profiler }                from './ui/Profiler.js'
-import { Wanderer }                from './ui/Wanderer.js'
+import { Camera as CameraManager } from './ui/Camera'
+import { Profiler }                from './ui/Profiler'
+import { Wanderer }                from './ui/Wanderer'
+//import config from 'dotenv'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -24,13 +27,21 @@ export class LGS1920Context {
     journeys = new Map()
 
     profileTrackMarker = undefined
+    initialized=false
+
+    BACKEND_API
 
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
         // Track Editor store is used to manage the settings of the theJourney in edit
         this.#theJourneyEditorProxy = proxy(theJourneyEditor)
+
         // Main is global to the app
         this.#mainProxy = proxy(main)
+        this.journeyEditorStore = this.#mainProxy.components.journeyEditor
+        this.mainUIStore = this.#mainProxy.components.mainUI
+
+        this.#mainProxy.layer = Layer.IGN_AERIAL
 
         // Get the first as current theJourney
         if (this.journeys.size) {
@@ -44,6 +55,7 @@ export class LGS1920Context {
             menu: undefined,
         }
 
+
         // Utils are attached to window
         window.__ = {
             app: AppUtils,
@@ -54,15 +66,17 @@ export class LGS1920Context {
             convert: UnitUtils.convert,
         }
 
+
         //Init DBs
         this.db = {
-            journeys: new LocalDB({
+            lgs1920: new LocalDB({
                 name: `${APP_KEY}`,
                 store: [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, SETTINGS_STORE],
                 manageTransients: true,
                 version: '0.1',
             }),
         }
+
 
     }
 
@@ -105,10 +119,10 @@ export class LGS1920Context {
     set theJourney(journey) {
         this.#mainProxy.theJourney = journey
         if (journey === null) {
-            this.db.journeys.delete(CURRENT_JOURNEY, CURRENT_STORE).then()
+            this.db.lgs1920.delete(CURRENT_JOURNEY, CURRENT_STORE).then()
             return
         }
-        this.db.journeys.put(CURRENT_JOURNEY, journey.slug, CURRENT_STORE).then(journey.addToEditor())
+        this.db.lgs1920.put(CURRENT_JOURNEY, journey.slug, CURRENT_STORE).then(journey.addToEditor())
     }
 
     /**
@@ -122,10 +136,10 @@ export class LGS1920Context {
     set theTrack(track) {
         this.#mainProxy.theTrack = track
         if (track === null) {
-            this.db.journeys.delete(CURRENT_TRACK, CURRENT_STORE).then()
+            this.db.lgs1920.delete(CURRENT_TRACK, CURRENT_STORE).then()
             return
         }
-        this.db.journeys.put(CURRENT_TRACK, track.slug, CURRENT_STORE)
+        this.db.lgs1920.put(CURRENT_TRACK, track.slug, CURRENT_STORE)
     }
 
     get mainProxy() {
@@ -213,13 +227,16 @@ export class LGS1920Context {
     }
 
     initManagers = () => {
-        __.ui.profiler = new Profiler()
+        __.ui.profiler = new Profiler(this)
         __.ui.wanderer = new Wanderer()
         __.ui.camera = new CameraManager()
     }
+
+
 }
 
-export const APP_KEY = 'LGS1920Context'
+
+export const APP_KEY = 'LGS1920'
 export const SETTINGS_STORE = 'settings'
 export const CURRENT_STORE = 'current'
 export const JOURNEYS_STORE = 'journeys'

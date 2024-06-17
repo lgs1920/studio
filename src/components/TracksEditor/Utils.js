@@ -1,8 +1,8 @@
 import { Journey, NO_FOCUS, RE_LOADING }                from '@Core/Journey'
 import { Track }                                        from '@Core/Track'
 import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE } from '@Core/LGS1920Context'
-import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
-import { UPDATE_JOURNEY_SILENTLY }                      from './journey/JourneySettings'
+import { TrackUtils }              from '@Utils/cesium/TrackUtils'
+import { UPDATE_JOURNEY_SILENTLY } from './journey/JourneySettings'
 
 export class Utils {
 
@@ -22,6 +22,10 @@ export class Utils {
 
     static renderTrackSettings = () => {
         lgs.mainProxy.components.journeyEditor.keys.track.settings++
+    }
+
+    static panelOffset = () => {
+        return __.ui.css.getCSSVariable('--lgs-journey-editor-offset')
     }
 
     static initJourneyEdition = (event = undefined) => {
@@ -141,14 +145,6 @@ export class Utils {
             journey.focus()
         }
         return journey
-    }
-
-    /**
-     * Adapt the profile with to the state of the editor pane
-     */
-    static changeProfileWidth = () => {
-        const width = (lgs.mainProxy.components.journeyEditor.show) ? `calc( 100% - ${__.ui.css.getCSSVariable('--lgs-drawer-size')}` : '100%'
-        __.ui.css.setCSSVariable('--lgs-profile-pane-width', width)
     }
 
     settings = () => {

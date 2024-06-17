@@ -3,16 +3,17 @@ import { default as centroid }                                       from '@turf
 import * as Cesium                                                                                  from 'cesium'
 import {
     Cartesian3, Color, CustomDataSource, GeoJsonDataSource, HeadingPitchRange, Math as M, Math, Matrix4,
-} from 'cesium'
+}                                                                              from 'cesium'
 import {
     FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
-}                                                                                                   from '../../core/Journey'
+}                                                                              from '../../core/Journey'
 import {
     Camera as CameraManager,
 }                                                                              from '../../core/ui/Camera.js'
 import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/LGS1920Context.js'
 import { FileUtils }                                                           from '../FileUtils.js'
-import { CameraUtils } from './CameraUtils.js'
+import { UIToast }                                                             from '../UIToast.js'
+import { CameraUtils }                                                         from './CameraUtils.js'
 import { POIUtils }                                                            from './POIUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
@@ -84,19 +85,6 @@ export class TrackUtils {
 
     }
 
-    /**
-     * Load a Journey file
-     *
-     * return
-     *
-     * @return {Promise}
-     *
-     */
-    static async loadJourneyFromFile() {
-        return FileUtils.uploadFileFromFrontEnd({
-            accepted: ACCEPTED_TRACK_FILES, mimes: TrackUtils.MIMES,
-        })
-    }
 
     /**
      * Show the TRack on the map
@@ -360,7 +348,7 @@ export class TrackUtils {
 
         // Get the Current Journey. Then we Set current if it exists in journeys.
         // If not, let's use the first track or null.
-        let currentJourney = await lgs.db.journeys.get(CURRENT_JOURNEY, CURRENT_STORE)
+        let currentJourney = await lgs.db.lgs1920.get(CURRENT_JOURNEY, CURRENT_STORE)
         const tmp = journeys.filter(value => value.slug === currentJourney)
         currentJourney = (tmp.length > 0) ? tmp[0] : journeys[0]
 
@@ -413,7 +401,7 @@ export class TrackUtils {
         // to the app context.
         let currentTrack = 'nothing'
         if (fromDB) {
-            currentTrack = await lgs.db.journeys.get(CURRENT_TRACK, CURRENT_STORE)
+            currentTrack = await lgs.db.lgs1920.get(CURRENT_TRACK, CURRENT_STORE)
         }
         if (lgs.theJourney.tracks.has(currentTrack)) {
             lgs.theTrack = lgs.theJourney.tracks.get(currentTrack)
@@ -453,7 +441,7 @@ export class TrackUtils {
      * @return {Promise<void>}
      */
     static saveCurrentJourneyToDB = async (current) => {
-        await lgs.db.journeys.put(CURRENT_JOURNEY, current, CURRENT_STORE)
+        await lgs.db.lgs1920.put(CURRENT_JOURNEY, current, CURRENT_STORE)
     }
 
     /**
@@ -463,7 +451,7 @@ export class TrackUtils {
      * @return {Promise<void>}
      */
     static saveCurrentTrackToDB = async (current) => {
-        await lgs.db.journeys.put(CURRENT_TRACK, current, CURRENT_STORE)
+        await lgs.db.lgs1920.put(CURRENT_TRACK, current, CURRENT_STORE)
     }
 
     /**
@@ -473,7 +461,7 @@ export class TrackUtils {
      * @return {Promise<void>}
      */
     static saveCurrentPOIToDB = async (current) => {
-        await lgs.db.journeys.put(CURRENT_POI, current, CURRENT_STORE)
+        await lgs.db.lgs1920.put(CURRENT_POI, current, CURRENT_STORE)
     }
 
     /**
@@ -604,5 +592,57 @@ export class TrackUtils {
             Array.from(journey.tracks.values())             // Has Altitude for each track
                 .every(track => track.hasAltitude)
 
+    }
+
+    static uploadJourneyFile = async () => {
+
+        // uploading a file exits full screen mode, so we force the state
+        const mainStore = lgs.mainProxy
+        mainStore.fullSize = false
+
+        const journey = await  FileUtils.uploadFileFromFrontEnd({
+                accepted: ACCEPTED_TRACK_FILES, mimes: TrackUtils.MIMES,
+            })
+
+        // File is correct let's work with
+        if (journey !== undefined) {
+            let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
+            // Check if the track already exists in context
+            // If not we manage and show it.
+            if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
+                if (!theJourney.hasAltitude) {
+                    mainStore.modals.altitudeChoice.show = true
+                }
+                // Need stats
+                theJourney.extractMetrics()
+                // Prepare the contexts and current values
+                theJourney.addToContext()
+                theJourney.addToEditor()
+
+                const theTrack = lgs.theJourney.tracks.entries().next().value[1]
+                theTrack.addToEditor()
+
+                TrackUtils.setProfileVisibility(lgs.theJourney)
+
+                await theJourney.saveToDB()
+                await theJourney.saveOriginDataToDB()
+
+                mainStore.canViewJourneyData = true
+                await theJourney.draw({})
+
+                await TrackUtils.createCommonMapObjectsStore()
+                __.ui.profiler.draw()
+
+                __.ui.camera.stop360()
+                __.ui.camera.addUpdateEvent()
+
+            } else {
+                // It exists, we notify it
+                UIToast.warning({
+                    caption: `This journey has already been loaded!`,
+                    text: 'Please select another one !',
+                })
+            }
+        }
     }
 }

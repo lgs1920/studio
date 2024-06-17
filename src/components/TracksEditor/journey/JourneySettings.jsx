@@ -21,9 +21,9 @@ import { TrackUtils }      from '@Utils/cesium/TrackUtils'
 import { FA2SL }           from '@Utils/FA2SL'
 import { UIToast }         from '@Utils/UIToast'
 import { sprintf }         from 'sprintf-js'
-import { useSnapshot }     from 'valtio'
-import { JourneyData }     from './JourneyData'
-import { JourneyPOIs }     from './JourneyPOIs'
+import { useSnapshot } from 'valtio'
+import { JourneyData } from './JourneyData'
+import { JourneyPOIs } from './JourneyPOIs'
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2
@@ -157,6 +157,9 @@ export const JourneySettings = function JourneySettings() {
                 })
             }
 
+            // Stop wanderer
+            __.ui.wanderer.stop()
+
             // Remove journey in DB
             await editorStore.journey.removeFromDB()
 
@@ -239,7 +242,7 @@ export const JourneySettings = function JourneySettings() {
                                 </SlTooltip>
 
                                 {/* Change description */}
-                                <SlTooltip content={'Description'}>
+                                <SlTooltip hoist content={'Description'}>
                                     <SlTextarea row={2}
                                                 size={'small'}
                                                 id={'journey-description'}
@@ -275,12 +278,12 @@ export const JourneySettings = function JourneySettings() {
 
                     <div id="journey-visibility" className={'editor-vertical-menu'}>
                         <span>
-                        <SlTooltip content={textVisibilityJourney}>
+                        <SlTooltip hoist content={textVisibilityJourney}>
                             <ToggleStateIcon change={setJourneyVisibility}
                                              initial={editorSnapshot.journey.visible}/>
                         </SlTooltip>
                             {editorSnapshot.journey.pois.size > 1 &&
-                                <SlTooltip content={textVisibilityPOIs}>
+                                <SlTooltip hoist content={textVisibilityPOIs}>
                                     <ToggleStateIcon
                                         change={setAllPOIsVisibility}
                                         initial={editorSnapshot.journey.POIsVisible}
@@ -294,12 +297,12 @@ export const JourneySettings = function JourneySettings() {
                         </span>
 
                         <span>
-                        <SlTooltip content={'Export'}>
+                        <SlTooltip hoist content={'Export'}>
                             <a onClick={exportJourney}>
                                 <SlIcon library="fa" name={FA2SL.set(faDownload)}/>
                             </a>
                         </SlTooltip>
-                        <SlTooltip content={'Remove'}>
+                        <SlTooltip hoist content={'Remove'}>
                             <a onClick={removeJourney}>
                                 <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
                             </a>

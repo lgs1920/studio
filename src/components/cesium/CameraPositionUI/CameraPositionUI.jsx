@@ -6,8 +6,8 @@ import { SlAnimation, SlButton, SlCard, SlIcon, SlTooltip } from '@shoelace-styl
 import { FA2SL }                                            from '@Utils/FA2SL'
 import { forwardRef }                                       from 'react'
 import { useCesium }                                        from 'resium'
-import { useSnapshot }                                      from 'valtio'
-import { meter, mile }                                      from '../../../Utils/UnitUtils'
+import { useSnapshot } from 'valtio'
+import { meter, mile } from '../../../Utils/UnitUtils'
 
 
 export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref) {
@@ -29,7 +29,7 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
 
     return (
         <div className="camera-position" ref={ref}>
-            <SlTooltip placement={'right'} content="Camera information">
+            <SlTooltip hoist placement={'right'} content="Camera information">
                 <SlButton size={'small'} className={'square-icon'} onClick={toggle}>
                     <SlIcon library="fa" name={FA2SL.set(faVideo)}></SlIcon>
                 </SlButton>

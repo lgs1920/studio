@@ -1,18 +1,39 @@
 import { faArrowDownToLine, faArrowLeftToLine, faArrowRightToLine, faCircle } from '@fortawesome/pro-regular-svg-icons'
 import { sprintf }                                                            from 'sprintf-js'
-import { FA2SL }                                                              from '../../Utils/FA2SL'
-import { DISTANCE_UNITS, ELEVATION_UNITS }                                    from '../../Utils/UnitUtils'
-import { ProfileTrackMarker }                                                 from '../ProfileTrackMarker'
-import { Singleton }                                                          from '../Singleton'
+import { subscribe }                       from 'valtio'
+import {
+    Utils,
+}                                          from '../../components/TracksEditor/Utils.js'
+import { FA2SL }                           from '../../Utils/FA2SL'
+import { DISTANCE_UNITS, ELEVATION_UNITS } from '../../Utils/UnitUtils'
+import { ProfileTrackMarker }              from '../ProfileTrackMarker'
 
-export class Profiler extends Singleton {
+export class Profiler {
 
     charts = null
 
-    constructor() {
-        super()
+    constructor(lgs) {
+        // Singleton
+        if (Profiler.instance) {
+            return Profiler.instance
+        }
         this.charts = new Map()
 
+        // We need to interact with  Editor
+        subscribe(lgs.journeyEditorStore, this.adaptWidth)
+
+
+        Profiler.instance = this
+
+    }
+
+    /**
+     * Adapt the profiler width, according to editor pane usage
+     *
+     */
+    adaptWidth = () => {
+        const offset = lgs.journeyEditorStore.show ? Utils.panelOffset() : 0
+        __.ui.css.setCSSVariable('--lgs-profile-pane-width', `calc( 100% - ${offset})`)
     }
 
     /**
@@ -123,7 +144,6 @@ export class Profiler extends Singleton {
     showOnMap = (options) => {
         const data = options.w.config.series[options.seriesIndex].data
         const coords = data[options.dataPointIndex]
-        const length = data[data.length - 1].x
 
         if (!lgs.profileTrackMarker.drawn) {
             lgs.profileTrackMarker.draw()
@@ -138,7 +158,7 @@ export class Profiler extends Singleton {
      */
     updateColor = () => {
         const series = []
-        lgs.theJourney.tracks.forEach((track, slug) => {
+        lgs.theJourney.tracks.forEach((track) => {
             series.push({color: track.color})
         })
         PROFILE_CHARTS.forEach(id => {
@@ -156,7 +176,6 @@ export class Profiler extends Singleton {
             series.push({name: track.title})
         })
         PROFILE_CHARTS.forEach(id => {
-            const chart = ApexCharts.getChartByID(id)
             this.charts.get(id).updateSeries(series)
         })
 

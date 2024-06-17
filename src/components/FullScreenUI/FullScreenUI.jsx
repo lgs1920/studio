@@ -24,7 +24,7 @@ export const FullScreenUI = forwardRef(function FullScreenUI() {
     }
 
     return (<>
-        <SlTooltip placement={'right'} content={mainSnap.fullSize ? 'Exit Full screen' : 'Full Screen'}>
+        <SlTooltip hoist placement={'right'} content={mainSnap.fullSize ? 'Exit Full screen' : 'Full Screen'}>
             <SlButton size="small" onClick={toggleFullSize} className={'square-icon'}>
                 {!mainSnap.fullSize && <SlIcon library="fa" name={FA2SL.set(faArrowsMaximize)}></SlIcon>}
                 {mainSnap.fullSize && <SlIcon library="fa" name={FA2SL.set(faArrowsMinimize)}></SlIcon>}

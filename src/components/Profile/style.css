@@ -1,7 +1,15 @@
 :root {
-    --lgs-profile-pane-width: 100%;
     --lgs-profile-pane-height: 260px;
     --lgs-profile-chart-height: 200px;
+    --lgs-journey-editor-open-offset:0;
+    --lgs-profile-pane-width:100%;
+}
+#profile-container {
+    position: relative;
+    max-width:var(--lgs-profile-pane-width);
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
 }
 
 #profile-pane {
@@ -12,14 +20,12 @@
 }
 
 #profile-pane::part(panel) {
-    border-radius: var(--sl-border-radius-medium)
+    border-radius: var(--sl-border-radius-medium);
+    padding: var(--body-spacing);
 }
 
-#profile-container {
-    position: relative;
-    width: var(--lgs-profile-pane-width);
-    height: 100%;
-    pointer-events: none;
+#profile-pane::part(title) {
+    display: none;
 }
 
 #profile-container .apexcharts-canvas {
@@ -37,15 +43,30 @@
     --body-spacing: var(--lgs-gutter-s);
 }
 
-#profile-pane::part(header) {
-    padding-top: var(--lgs-gutter-s);
-    justify-content: flex-end;
+#profile-pane::part(header-actions) {
+    z-index: 1;
 }
 
-#profile-pane .journey-selector {
-    position: absolute;
-    top: var(--lgs-gutter-xs);
-    width: 15rem;
+#profile-pane::part(header-actions) {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    flex-shrink: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: end;
+    gap: var(--sl-spacing-2x-small);
+    margin: var(--header-spacing);
+    width: 100%;
+    flex: 1 1;
+}
+
+#profile-pane header::part(title) {
+    display: none;
+}
+
+.lgs-ui-toolbar.lgs-ui-dropdown-toolbar {
+    display: none
 }
 
 #elevation-distance-tooltip {
@@ -57,8 +78,6 @@
     align-items: center;
     padding: var(--lgs-gutter-xs);
     gap: var(--lgs-gutter-xs);
-
-    min-width: 100px;
 }
 
 #elevation-distance-tooltip > span:first-child {
@@ -79,5 +98,64 @@
 
 #elevation-distance-tooltip .point-distance sl-icon {
     width: 15px;
+}
+
+.profile-toolbar {
+    display: flex;
+    gap: var(--lgs-gutter-s);
+    justify-content: space-between;
+    flex: 1 ;
+
+    container-type:size;
+    container-name: profile-toolbar;
+    align-items: center;
+
+}
+
+.profile-toolbar .journey-selector {
+    flex-basis: 50%;
+}
+.profile-toolbar .journey-selector::part(combobox) {
+    max-width: 30rem;
+}
+
+.profile-toolbar .profile-tools-part {
+    flex-basis: 40%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+.profile-toolbar .lgs-ui-toolbar {
+    justify-self: flex-end;
+}
+
+.profile-toolbar .wander-menu {
+    display: flex;
+    gap: var(--lgs-gutter-xs);
+}
+
+.profile-additional {
+    display: flex;
+    padding: 0 var(--sl-spacing-2x-small);
+}
+
+.lgs-ui-dropdown-toolbar .profile-additional {
+    flex-direction: column;
+}
+
+@container profile-toolbar ( width <= 800px) {
+    .profile-toolbar .journey-selector {
+        flex-grow: 1;
+        flex-basis: 50%;
+    }
+
+    .lgs-ui-toolbar.lgs-ui-dropdown-toolbar {
+        display: flex
+    }
+
+    .lgs-ui-toolbar:not(.lgs-ui-dropdown-toolbar) {
+        display: none
+    }
 }
 

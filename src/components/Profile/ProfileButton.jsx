@@ -21,7 +21,7 @@ export const ProfileButton = forwardRef(function ProfileButton(props, ref) {
 
     return (<>
         {mainSnap.canViewProfile &&
-            <SlTooltip placement={props.tooltip} content="Open Profile">
+            <SlTooltip hoist placement={props.tooltip} content="Open Profile">
                 {<SlButton size={'small'} className={'square-icon'} id={'open-the-profile-panel'}
                            onClick={toggleProfileButton}
                            key={mainSnap.components.profile.key}>

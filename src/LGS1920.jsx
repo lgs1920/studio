@@ -1,32 +1,41 @@
-/**
- * React
- */
-import { MainUI }     from '@Components/MainUI/MainUI.jsx'
-/**
- * We are using shoelace Web components
- */
-import '@shoelace-style/shoelace/dist/themes/light.css'
-import { LGS1920Context }        from '@Core/LGS1920Context'
-import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
-import { TrackUtils }  from '@Utils/cesium/TrackUtils'
 
+import { MainUI }                  from '@Components/MainUI/MainUI.jsx'
+import '@shoelace-style/shoelace/dist/themes/light.css'
+import { LGS1920Context }          from '@Core/LGS1920Context'
+import { CameraUtils }             from '@Utils/cesium/CameraUtils'
+import { TrackUtils }              from '@Utils/cesium/TrackUtils'
 import * as Cesium                                   from 'cesium'
 import { useEffect, useRef }                         from 'react'
 import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
-import { MapLayer }                                  from './components/cesium/MapLayer.jsx'
-import { Layer }                                     from './core/Layer.js'
+import { MapLayer }                                  from './components/cesium/MapLayer'
+import { WelcomeModal }                              from './components/MainUI/WelcomeModal'
+import { Settings }                                  from './core/settings/Settings'
+import { SettingsSection }                           from './core/settings/SettingsSection'
+import { APP_SETTINGS_SECTION }                      from './core/stores/settings/app'
+import { Camera as CameraManager }                   from './core/ui/Camera'
 import { UIToast }                                   from './Utils/UIToast'
-import {Camera as CameraManager} from './core/ui/Camera'
-//setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.13.1/cdn/')
+
+/***************************************
+ * Init Application context
+ */
 window.lgs = new LGS1920Context()
+
+/***************************************
+ * Application settings
+ */
+lgs.settings = new Settings()
+
+// Add settings sections
+lgs.settings.add(new SettingsSection(APP_SETTINGS_SECTION))
+
+// Application initialisation
 await __.app.init()
 
 export function LGS1920() {
 
     const viewerRef = useRef(null)
-    const mainStore = lgs.mainProxy
-    mainStore.layer = Layer.IGN_AERIAL
 
+   // const mainUISnapshot = useSnapshot(lgs.mainUIStore)
 
     const starter = lgs.configuration.starter
     lgs.windowCenter = Cesium.Cartesian3.fromDegrees(starter.longitude, starter.latitude, starter.height)
@@ -63,11 +72,9 @@ export function LGS1920() {
 
 
     useEffect(() => {
-
         const readAllFromDB = async () => {
             await TrackUtils.readAllFromDB()
         }
-
 
         // Set DefaultTheme
         __.app.setTheme()
@@ -77,7 +84,6 @@ export function LGS1920() {
 
         // Let's instantiate some elements Managers
         lgs.initManagers()
-
 
         //Ready
         UIToast.success({
@@ -122,7 +128,11 @@ export function LGS1920() {
                     onComplete={run360}
                 />
             </Camera>
+
+
             <MainUI/>
+            <WelcomeModal/>
+
         </Viewer>
     </>)
 }

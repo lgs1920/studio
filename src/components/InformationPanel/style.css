@@ -1,0 +1,15 @@
+#info-pane::part(body) {
+    overflow: hidden;
+}
+
+
+.whats-new-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+    --sl-spacing-medium: var(--lgs-gutter-xs);
+}
+
+.whats-new-list summary {
+margin: 0 !important
+}

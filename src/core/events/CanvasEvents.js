@@ -2,7 +2,6 @@ import { AnyOtherMouseCoordinates } from '@Components/FloatingMenu/AnyOtherMouse
 import { MarkerMenu }               from '@Components/FloatingMenu/MarkerMenu'
 import { TrackMenu }                from '@Components/FloatingMenu/TrackMenu'
 import { MouseUtils }               from '@Utils/cesium/MouseUtils'
-import { Wander }                   from '@Utils/cesium/Wander'
 import * as Cesium                  from 'cesium'
 
 export class CanvasEvents {
@@ -35,7 +34,6 @@ export class CanvasEvents {
      *
      */
     static addListeners = () => {
-
         // Add events
         lgs.events.on('canvas/click', AnyOtherMouseCoordinates.show)
         lgs.events.on('canvas/click', MarkerMenu.show)

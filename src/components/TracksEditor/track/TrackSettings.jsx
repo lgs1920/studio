@@ -111,14 +111,14 @@ export const TrackSettings = function TrackSettings() {
                             <div id={'track-text-description'}>
                                 {editorSnapshot.journey.tracks.size > 1 && <>
                                     {/* Change visible name (title) */}
-                                    <SlTooltip content={'Title'}>
+                                    <SlTooltip hoist content={'Title'}>
                                         <SlInput id="track-title"
                                                  value={editorSnapshot.track.title}
                                                  onSlChange={setTitle}
                                         />
                                     </SlTooltip>
                                     {/* Change description */}
-                                    <SlTooltip content={'Description'}>
+                                    <SlTooltip hoist content={'Description'}>
                                         <SlTextarea row={2}
                                                     size={'small'}
                                                     id="track-description"
@@ -144,7 +144,8 @@ export const TrackSettings = function TrackSettings() {
                     </SlTabGroup>}
 
                     <div id="track-visibility" className={'editor-vertical-menu'}>
-                        {editorStore.journey.tracks.size > 1 && <SlTooltip content={textVisibilityTrack}>
+                        {editorStore.journey.tracks.size > 1 &&
+                            <SlTooltip hoist content={textVisibilityTrack}>
                             <ToggleStateIcon change={setTrackVisibility} initial={editorSnapshot.track.visible}/>
                         </SlTooltip>}
                         <TrackFlagsSettings/>

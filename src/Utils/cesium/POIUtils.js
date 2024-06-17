@@ -111,10 +111,10 @@ export class POIUtils {
             // Update positions
             entity.position = options?.coordinates ? Cesium.Cartesian3.fromDegrees(options.coordinates[0], options.coordinates[1], options.coordinates[2]) : entity.position
             // Update visibility
-            if (options.visibility !== undefined) {
+            if (options?.visibility !== undefined) {
                 entity.show = options.visibility
             }
-            if (options.foregroundColor !== undefined) {
+            if (options?.foregroundColor !== undefined) {
                 entity.color = Cesium.Color.fromCssColorString(options.foregroundColor)
             } else {
                 entity.color = Cesium.Color.fromCssColorString(lgs.theTrack.color)

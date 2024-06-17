@@ -1,8 +1,8 @@
 import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE }            from '@Core/LGS1920Context'
 import { SlColorPicker, SlDivider, SlRange, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
-import { useSnapshot }                                  from 'valtio'
-import { Utils }                                        from '../Utils'
+import { useSnapshot } from 'valtio'
+import { Utils }       from '../Utils'
 
 export const TrackStyleSettings = function TrackSettings() {
 
@@ -40,7 +40,7 @@ export const TrackStyleSettings = function TrackSettings() {
 
     return (
         <div id="track-line-settings">
-            <SlTooltip content="Color">
+            <SlTooltip hoist content="Color">
                 <SlColorPicker opacity
                                size={'small'}
                                label={'Color'}
@@ -52,7 +52,7 @@ export const TrackStyleSettings = function TrackSettings() {
                                noFormatToggle
                 />
             </SlTooltip>
-            <SlTooltip content="Thickness">
+            <SlTooltip hoist content="Thickness">
                 <SlRange min={1} max={10} step={1}
                          value={editorSnapshot.track.thickness}
                          style={{'--thumb-size': '1rem'}}
