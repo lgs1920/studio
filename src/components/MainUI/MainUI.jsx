@@ -1,6 +1,5 @@
 import { CameraPositionUI }       from '@Components/cesium/CameraPositionUI/CameraPositionUI'
 import { CompassUI }              from '@Components/cesium/CompassUI/CompassUI'
-import { CreditsUI }              from '@Components/CreditsUI/CreditsUI'
 import { FullScreenUI }           from '@Components/FullScreenUI/FullScreenUI'
 import { Toolbar }                from '@Components/MainUI/Toolbar'
 import { Profile }                from '@Components/Profile/Profile'
@@ -12,7 +11,8 @@ import './style.css'
 import { subscribe } from 'valtio'
 import { CanvasEvents }           from '../../core/events/CanvasEvents.js'
 import { CameraTargetPositionUI } from '../cesium/CameraPositionUI/CameraTargetPositionUI.jsx'
-import { Utils }     from '../TracksEditor/Utils.js'
+import { Panel }                  from '../InformationPanel/Panel'
+import { Utils }                  from '../TracksEditor/Utils.js'
 import { SupportUI } from './SupportUI'
 
 export const MainUI = function VT3D_UI() {
@@ -46,7 +46,7 @@ export const MainUI = function VT3D_UI() {
                              fileLoader={true}
                              position={'vertical'}
                              tooltip={'right'}/>
-                    <CreditsUI/>
+                    <Panel/>
                     <SupportUI/>
                     <FullScreenUI/>                        
                     <TracksEditor/>

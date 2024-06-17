@@ -35,4 +35,17 @@ export class ChangelogManager {
     whatsNew = (files,lastVisit) => {
         return files.filter(file=> file.time > lastVisit)
     }
+
+    /**
+     * Read  changelog file
+     */
+    read =async(file)=> {
+        return axios.get(`${lgs.BACKEND_API}changelog/read/${file}`)
+            .then(function (response) {
+                return response.data.content
+            })
+            .catch(function () {
+                return ''
+            })
+    }
 }
