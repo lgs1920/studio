@@ -40,7 +40,7 @@
     "cesium": "^1.118.2",
     "dotenv": "^16.4.5",
     "easy-file-picker": "^1.1.0",
-    "elysia": "^1.0.22",
+    "elysia": "^1.0.23",
     "fs": "^0.0.1-security",
     "fs.promises": "^0.1.2",
     "geojson-extent": "^0.3.2",
@@ -66,11 +66,11 @@
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
-    "@vitejs/plugin-react": "^4.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.7",
     "typescript": "^5.4.5",
-    "vite": "^5.2.12"
+    "vite": "^5.3.1"
   }
 }
