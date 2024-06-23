@@ -68,7 +68,7 @@ export const Wander = (props) => {
         {!wanderSnapshot.run &&
             <SlTooltip hoist placement={tooltip} content="Play">
                 <SlButton key={wanderSnapshot.run} size={'small'} className={'square-icon'} onClick={toggleWander}>
-                    <SlIcon library="fa" name={FA2SL.set(faPlay)}/>
+                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPlay)}/>
                 </SlButton>
             </SlTooltip>
         }
@@ -77,12 +77,12 @@ export const Wander = (props) => {
             <>
             <SlTooltip hoist placement={tooltip} content="Stop">
                 <SlButton key={wanderSnapshot.run} size={'small'} className={'square-icon'} onClick={toggleWander}>
-                    <SlIcon library="fa" name={FA2SL.set(faStop)}/>
+                    <SlIcon slot="prefix" slot="prefix" library="fa" name={FA2SL.set(faStop)}/>
                 </SlButton>
             </SlTooltip>
             <SlTooltip hoist placement={tooltip} content="Pause">
                     <SlButton key={wanderSnapshot.run} size={'small'} className={'square-icon'} onClick={pauseWander}>
-                    <SlIcon library="fa" name={FA2SL.set(faPause)}/>
+                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPause)}/>
                 </SlButton>
             </SlTooltip>
             </>
@@ -90,7 +90,7 @@ export const Wander = (props) => {
 
     <SlTooltip hoist placement={tooltip} content="Reverse direction">
             <SlButton size={'small'} className={'square-icon'} onClick={toggleDirection}>
-                <SlIcon library="fa" name={FA2SL.set(
+                <SlIcon slot="prefix" library="fa" name={FA2SL.set(
                     wanderSnapshot.forward ? faArrowRotateRight : faArrowRotateLeft,
                 )}
                         className={`${wanderSnapshot.run ? 'fa-spin' : ''} ${!wanderSnapshot.forward ? 'fa-spin-reverse' : ''}`}
@@ -110,7 +110,7 @@ export const Wander = (props) => {
 
         <SlTooltip hoist placement={tooltip} content={wanderSnapshot.loop?'Stop Loop':'Loop'}>
             <SlButton size={'small'} className={'square-icon'} onClick={toggleLoop}>
-                <SlIcon library="fa" name={FA2SL.set(
+                <SlIcon slot="prefix" library="fa" name={FA2SL.set(
                     wanderSnapshot.loop?faRegularArrowsRepeatSlash:faArrowsRepeat
                 )}
                 />

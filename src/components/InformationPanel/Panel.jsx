@@ -59,9 +59,9 @@ export const Panel = () => {
             <DrawerFooter/>
 
         </SlDrawer>
-        <SlTooltip hoist placement={'right'} content="Show Information">
+        <SlTooltip hoist placement="right" content="Show Information">
             <SlButton className={'square-icon'} size="small" id={'open-info-pane'} onClick={() => setOpen(true)}>
-                <SlIcon library="fa" name={FA2SL.set(faCircleInfo)}></SlIcon>
+                <SlIcon slot="prefix" slot="prefix" library="fa" name={FA2SL.set(faCircleInfo)}></SlIcon>
             </SlButton>
         </SlTooltip>
 

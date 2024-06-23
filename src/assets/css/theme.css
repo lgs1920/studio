@@ -11,7 +11,7 @@
     --lgs-font-line-height: 1.2;
     --lgs-font-weight: 400;
 
-    --lgs-dimension: calc(2 * var(--lgs-gutter));
+    --lgs-dimension: calc(3 * var(--lgs-gutter));
     --lgs-dimension-s: calc(var(--lgs-dimension) * 0.625);
 
     color-scheme: light dark;
@@ -32,7 +32,7 @@
 
     --lgs-button-border-color: var(--lgs-dark-ui-secondary-color);
     --lgs-button-color: var(--lgs-dark-ui-primary-color);
-    --lgs-button-bg-color: var(--lgs-dark-ui-secondary-color);
+    --lgs-button-bg-color:  var(--lgs-dark-ui-secondary-color);
 
     --lgs-button-border-hover-color: var(--lgs-dark-ui-primary-color);
     --lgs-button-hover-color: var(--lgs-dark-ui-secondary-color);
@@ -50,6 +50,15 @@
     --lgs-card-ui-color: var(--lgs-dark-ui-5th-color);
     --lgs-card-ui-opacity: 0.8;
     --lgs-card-ui-border-color: var(--lgs-dark-ui-primary-color);
+
+    --lgs-error-color:var(--sl-color-red-500);
+    --lgs-error-bg-color:var(--sl-color-red-50);
+
+    --lgs-success-color:var(--sl-color-green-500);
+    --lgs-success-bg-color:var(--sl-color-green-50);
+
+    --lgs-hover-color:var(--sl-color-primary-500);
+    --lgs-hover-bg-color:var(--sl-color-primary-50);
 
 
 }
@@ -73,6 +82,9 @@
     background-color: var(--lgs-button-bg-color) !important;
     border-color: var(--lgs-button-border-color);
     color: var(--lgs-button-color);
+    display: flex;
+    gap:var(--lgs-gutter-s);
+    align-items:center;
 }
 
 .sl-button::part(base):hover:not(.button--disabled) {
@@ -81,22 +93,35 @@
     color: var(--lgs-button-hover-color);
 }
 
+sl-button::part(label) {
+    display: flex;
+    gap:var(--lgs-gutter-s);
+    align-items:center;
+    padding-left: 0;
+}
+
 .buttons-bar {
     display: flex;
     justify-content: flex-end;
     gap: var(--lgs-gutter-s);
 }
 
-sl-button.square-icon::part(base) {
+.square-icon::part(base) {
     height: var(--lgs-dimension);
     width: var(--lgs-dimension);
+    padding: 0;
 }
 
-sl-button.square-icon::part(label) {
+.square-icon::part(label) {
     display: flex;
     align-items: center;
+    justify-content: center;
     line-height: 1;
-    font-size: var(--lgs-dimension-s);
+    font-size: var(--lgs-dimension);
+}
+
+sl-button sl-icon, sl-icon-button  {
+    font-size: var(--sl-font-size-large);
 }
 
 /*******************************************************************************
@@ -153,7 +178,7 @@ sl-card[variant="primary"]::part(base) {
 
 .lgs-card {
     background-color: rgba(255, 255, 255, 0.15);
-    border: 1px solid transparent;
+    border: 1px solid  var(--sl-color-gray-300);
     padding: var(--lgs-gutter-s);
     border-radius: var(--lgs-border-radius-s);
 }
@@ -178,4 +203,12 @@ sl-card[variant="primary"]::part(base) {
 cesium-compass {
     --cesium-compass-fill-color: var(--lgs-dark-ui-bg-color);
     --cesium-compass-stroke-color: var(--lgs-dark-ui-fg-color);
+}
+
+/*******************************************************************************
+ * Dialogs / Modals
+ */
+
+sl-dialog {
+    --header-spacing:var(--body-spacing) var(--body-spacing) 0 var(--body-spacing)
 }

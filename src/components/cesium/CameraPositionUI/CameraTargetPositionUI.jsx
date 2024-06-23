@@ -33,9 +33,9 @@ export const CameraTargetPositionUI = (props) => {
     }
     return (
         <div className="camera-position">
-            <SlTooltip hoist placement={'right'} content="Target information">
+            <SlTooltip hoist placement="right" content="Target information">
                 <SlButton size={'small'} className={'square-icon'} onClick={toggle}>
-                    <SlIcon library="fa" name={FA2SL.set(faCrosshairsSimple)}></SlIcon>
+                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}></SlIcon>
                 </SlButton>
             </SlTooltip>
 

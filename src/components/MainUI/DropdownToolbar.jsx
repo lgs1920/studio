@@ -15,11 +15,8 @@ export const DropdownToolbar = (props) => {
             <SlDropdown>
                 <div slot="trigger">
                     <SlTooltip hoist placement={props.tooltip} content="Edit Tracks">
-                        <SlButton size={'small'}
-                                  className={'square-icon'}
-
-                        >
-                            <SlIcon library="fa" name={FA2SL.set(faEllipsisVertical)}></SlIcon>
+                        <SlButton size={'small'} className={'square-icon'}>
+                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faEllipsisVertical)}></SlIcon>
                         </SlButton>
                     </SlTooltip>
                 </div>

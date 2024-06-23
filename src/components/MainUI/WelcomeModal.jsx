@@ -81,12 +81,12 @@ export const WelcomeModal = () => {
                             }
                             {snapshot.list.length > 0 &&
                                 <SlButton autofocus variant="primary" onClick={enter} >
-                                    <SlIcon library="fa" name={FA2SL.set(faMountains)}></SlIcon>{'Enter'}
+                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMountains)}></SlIcon>{'Enter'}
                                 </SlButton>
                             }
                             {snapshot.list.length === 0 &&
                                 <SlButton autofocus variant="primary" onClick={loadJourney}>
-                                    <SlIcon library="fa" name={FA2SL.set(faRoute)}></SlIcon>{'Load your first Journey'}
+                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRoute)}></SlIcon>{'Load your first Journey'}
                                 </SlButton>
                             }
                         </div>
