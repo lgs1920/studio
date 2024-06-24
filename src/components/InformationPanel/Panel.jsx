@@ -5,22 +5,18 @@ import {
 import {
     SlButton, SlDrawer, SlIcon, SlTab, SlTabGroup, SlTabPanel, SlTooltip,
 }                                   from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                    from '@Utils/FA2SL'
-import React, { useEffect, useRef } from 'react'
-import { useSnapshot }              from 'valtio'
+import { FA2SL }                              from '@Utils/FA2SL'
+import React, { useEffect, useRef, useState } from 'react'
+import { useSnapshot }                        from 'valtio'
 import './style.css'
 
 import { CreditsPanel } from './CreditsPanel'
 import { WhatsNew }     from './WhatsNew'
 
 export const Panel = () => {
-
-    const mainSnap = useSnapshot(lgs.mainUIStore)
+    const infoPanelStore= lgs.mainProxy.components.informationPanel
+    const infoPanel = useSnapshot(infoPanelStore)
     const drawerRef = useRef(null)
-
-    const setOpen = (open) => {
-        lgs.mainUIStore.credits.show = open
-    }
 
     useEffect(() => {
         //search the link and add external target (as it is not possible in markdown)
@@ -34,10 +30,12 @@ export const Panel = () => {
 
     }, [])
 
+    const togglePanelVisibility= () =>infoPanelStore.visible = !infoPanelStore.visible
+
     return (<>
         <SlDrawer id="info-pane"
-                  open={mainSnap.credits.show}
-                  onSlAfterHide={() => setOpen(false)}
+                  open={infoPanel.visible}
+                  onSlAfterHide={togglePanelVisibility}
                   ref={drawerRef}
         >
 
@@ -60,7 +58,7 @@ export const Panel = () => {
 
         </SlDrawer>
         <SlTooltip hoist placement="right" content="Show Information">
-            <SlButton className={'square-icon'} size="small" id={'open-info-pane'} onClick={() => setOpen(true)}>
+            <SlButton className={'square-icon'} size="small" id={'open-info-pane'} onClick={togglePanelVisibility}>
                 <SlIcon slot="prefix" slot="prefix" library="fa" name={FA2SL.set(faCircleInfo)}></SlIcon>
             </SlButton>
         </SlTooltip>

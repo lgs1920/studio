@@ -51,6 +51,12 @@ export const main = {
             loop:false
         },
 
+        informationPanel:{
+            visible:false,
+            tab:null
+        }
+
+
     },
     modals: {
         altitudeChoice: {

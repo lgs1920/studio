@@ -9,8 +9,13 @@ import welcome     from '../../../public/assets/modals/welcome.md'
 import welcomeBack from '../../../public/assets/modals/welcome-back.md'
 
 
+
+
 export const WelcomeModal = () => {
     const [open, setOpen] = useState(true)
+
+    const infoPanel=lgs.mainProxy.components.informationPanel
+    const editorPanel = useSnapshot(lgs.journeyEditorStore)
 
     const close = (event) => {
         if (event.detail.source === 'overlay') {
@@ -22,6 +27,12 @@ export const WelcomeModal = () => {
     const hide = () => {
         setOpen(false)
         lgs.mainUIStore.show = true
+    }
+
+    function showNews() {
+        hide()
+        infoPanel.visible = true
+
     }
 
     const enter = () => {
@@ -45,10 +56,6 @@ export const WelcomeModal = () => {
         return (<ReactMarkdown children={welcomeBack}/>)
     }
 
-    const readChangeLog = ()=> {
-
-    }
-
     useEffect(() => {
         const checkbox = document.getElementById('do-not-show');
         if (checkbox) {
@@ -56,7 +63,6 @@ export const WelcomeModal = () => {
         }
     }, [])
 
-        const snapshot = useSnapshot(lgs.journeyEditorStore)
     return (
         <>
             {lgs.settings.snapApp.showIntro &&
@@ -74,17 +80,17 @@ export const WelcomeModal = () => {
 
                         <SlCheckbox id={'do-not-show'} size={'small'} >Don't show this intro anymore</SlCheckbox>
 
-                        {snapshot.list !== undefined &&
+                        {editorPanel.list !== undefined &&
                         <div className="buttons-bar">
                             {lgs.settings.snapApp.changelogToRead &&
-                            <SlButton onClick={readChangeLog} >{'What\'s new ?'}</SlButton>
+                            <SlButton  onClick={showNews} variant="text">{'What\'s new ?'}</SlButton>
                             }
-                            {snapshot.list.length > 0 &&
+                            {editorPanel.list.length > 0 &&
                                 <SlButton autofocus variant="primary" onClick={enter} >
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMountains)}></SlIcon>{'Enter'}
                                 </SlButton>
                             }
-                            {snapshot.list.length === 0 &&
+                            {editorPanel.list.length === 0 &&
                                 <SlButton autofocus variant="primary" onClick={loadJourney}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRoute)}></SlIcon>{'Load your first Journey'}
                                 </SlButton>
