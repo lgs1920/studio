@@ -3,7 +3,7 @@ export const main = {
 
         mainUI:{
             show:false,
-            credits: {show: false},
+            journeyLoader: {visible: false},
         },
 
         camera: {

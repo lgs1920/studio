@@ -1,15 +1,16 @@
 import './style.css'
-import { faFileCirclePlus, faLocationPlus, faXmark }                 from '@fortawesome/pro-regular-svg-icons'
+import { faFileCirclePlus, faLocationPlus, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import {
     faBan, faChevronRight, faFileCircleCheck, faFileCircleExclamation, faLocationSmile,
-} from '@fortawesome/pro-solid-svg-icons'
+}                                                    from '@fortawesome/pro-solid-svg-icons'
 
-import { SlButton, SlDialog, SlDivider, SlIcon, SlInput, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                     from '@Utils/FA2SL'
-import { useState }                                                  from 'react'
-import { Scrollbars }                                                from 'react-custom-scrollbars'
-import { useDropzone }                                               from 'react-dropzone'
-import { ACCEPTED_TRACK_FILES }                                      from '../../Utils/cesium/TrackUtils'
+import { SlButton, SlDialog, SlIcon, SlInput, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                          from '@Utils/FA2SL'
+import { useState }                                       from 'react'
+import { Scrollbars }                                     from 'react-custom-scrollbars'
+import { useDropzone }                                    from 'react-dropzone'
+import { useSnapshot }                                    from 'valtio'
+import { ACCEPTED_TRACK_FILES }                           from '../../Utils/cesium/TrackUtils'
 
 
 const allJourneyFiles = []
@@ -18,7 +19,6 @@ const allJourneyFiles = []
  * https://react-dropzone.js.org/
  */
 export const JourneyLoader = (props) => {
-    const [open, setOpen] = useState(false)
 
     // const onDrop = useCallback((acceptedFiles) => {
     //     acceptedFiles.forEach((file) => {
@@ -35,6 +35,11 @@ export const JourneyLoader = (props) => {
     //
     // }, [])
 
+    const journeyLoaderStore=lgs.mainProxy.components.mainUI.journeyLoader
+    const journeyLoaderSnap= useSnapshot(journeyLoaderStore)
+
+    const notYetUrl = true
+
     const addFileToList = (eventOrUrl => {
         console.log(eventOrUrl)
     })
@@ -46,17 +51,53 @@ export const JourneyLoader = (props) => {
               isDragAccept,
               isDragReject,
           } = useDropzone({
-                              accept:         {'image/*': []},
-                              onDragAccepted: addFileToList(),
+                                        accept: {
+                                            // 'application/gpx+xml':      ['.gpx'],
+                                            // 'vnd.gpxsee.map+xml':       ['.gpx'],
+                                            // 'application/octet-stream': ['.gpx'],
+                                            // 'application/fgeo+json':    ['.json', '.geojson'],
+                                            // 'application/json':         ['.json', '.geojson'],
+                                            // 'vnd.google-earth.kml+xml': ['.kml'],
+                                            // // kmz: ['vnd.google-earth.kmz'], //TODO KMZ files
+
+                                            // 'application/gpx+xml':      ['.gpx'],
+                                            // 'application/gpx':          ['.gpx'],
+                                            // 'text/xml':                 ['.gpx'],
+                                            // 'vnd.gpxsee.map+xml':       ['.gpx'],
+                                            // 'application/octet-stream': ['.gpx'],
+                                            // 'application/geo+json':     ['.json', '.geojson'],
+                                            // 'application/vnd.geo+json': ['.json', '.geojson'],
+                                            // 'application/json':         ['.json', '.geojson'],
+                                            // 'vnd.google-earth.kml+xml': ['.kml'],
+                                            // // kmz: ['vnd.google-earth.kmz'], //TODO KMZ files
+                                            //
+                                            // 'text/plain': ['.gpx', 'json', '.kml', '.geojson'],
+                                            '*': ['.gpx', 'json', '.kml', '.geojson'],
+
+                                        },
+
+                                        onDragAccepted: addFileToList(),
+                                        onDragRejected: addFileToList(),
                               multiple:       true,
                           })
 
-    const fileItem = (file) => {
+    const fileItem = (props) => {
+        console.log(props.file)
         return (
-            <li key={file.path}>
+            <li key={props.file.path}>
+                {props.success &&
                 <SlIcon className={'read-journey-success'} library="fa" name={FA2SL.set(faFileCircleCheck)}></SlIcon>
-                <SlIcon className={'read-journey-failure'} library="fa" name={FA2SL.set(faFileCircleExclamation)}></SlIcon>
-                {file.name}
+                }
+                {!props.success &&
+                    <SlIcon className={'read-journey-failure'} library="fa"
+                            name={FA2SL.set(faFileCircleExclamation)}></SlIcon>
+                }
+                {props.file.name}
+                {!props.success &&
+                    <div class={'error-message'}>
+                        ceci est un message d'erreur
+                    </div>
+                }
             </li>
         )
     }
@@ -65,7 +106,7 @@ export const JourneyLoader = (props) => {
         allJourneyFiles.push(file)
         return (
             <>
-                {allJourneyFiles.map(file => fileItem(file))}
+                {allJourneyFiles.map(file => fileItem({file: file, success: false}))}
             </>
         )
 
@@ -96,18 +137,27 @@ export const JourneyLoader = (props) => {
         )
     }
 
+    const close = (event) => {
+        if (event.detail.source === 'overlay') {
+                event.preventDefault();
+                return
+        }
+        journeyLoaderStore.visible = false
+    }
+
     return (
         <>
             <SlTooltip hoist placement={props.tooltip} content="Add a new Journey">
                 {/* <SlButton size={'small'} onClick={setOpen(true);TrackUtils.uploadJourneyFile} className={'square-icon'}> */}
-                <SlButton size={'small'} className={'square-icon'}>
+                <SlButton size={'small'} className={'square-icon'} onClick={()=>journeyLoaderStore.visible =!journeyLoaderStore.visible}>
                     <SlIcon  slot="prefix" library="fa" name={FA2SL.set(faLocationPlus)}/>
                 </SlButton>
             </SlTooltip>
 
-            <SlDialog open={true}
+            <SlDialog open={journeyLoaderSnap.visible}
                       id={'file-loader-modal'}
                       label={'Add Journeys'}
+                      onSlRequestClose={close}
             >
                 <div className="download-columns">
                     <div slot="header-actions"></div>
@@ -151,6 +201,7 @@ export const JourneyLoader = (props) => {
 
                     </div>
 
+                    {!notYetUrl &&
                     <div className={'add-url'}>
                         <SlInput type={'url'} placeholder={'Or enter/paste a file URL here:'}></SlInput>
 
@@ -158,6 +209,7 @@ export const JourneyLoader = (props) => {
                             <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFileCirclePlus)}/>{'Add'}
                         </SlButton>
                     </div>
+                    }
 
                     <div className={'drag-and-drop-list lgs-card'}>
                         <Scrollbars>
@@ -166,7 +218,7 @@ export const JourneyLoader = (props) => {
                     </div>
 
                     <div className="buttons-bar">
-                        <SlButton variant="primary"><ButtonLabel/></SlButton>
+                        <SlButton variant="primary" onClick={close}><ButtonLabel/></SlButton>
                     </div>
                 </div>
             </SlDialog>
