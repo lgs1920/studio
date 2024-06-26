@@ -22,7 +22,7 @@ export const SupportUI = () => {
                     <div id={'footer'}>
                         <div className="buttons-bar">
                             <SlButton autofocus variant="primary"  onClick={() => setOpen(false)}>
-                                <SlIcon slot="prefix" slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>{'Close'}
+                                <SlIcon slot="prefix"library="fa" name={FA2SL.set(faXmark)}></SlIcon>{'Close'}
                             </SlButton>
                         </div>
                     </div>

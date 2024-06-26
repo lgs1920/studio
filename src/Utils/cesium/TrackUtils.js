@@ -1,20 +1,19 @@
-import { default as extent }                                                   from '@mapbox/geojson-extent'
+import { default as extent }                                         from '@mapbox/geojson-extent'
 import { default as centroid }                                       from '@turf/centroid'
-import * as Cesium                                                                                  from 'cesium'
-import {
-    Cartesian3, Color, CustomDataSource, GeoJsonDataSource, HeadingPitchRange, Math as M, Math, Matrix4,
-}                                                                              from 'cesium'
+import * as Cesium                                                   from 'cesium'
+import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 } from 'cesium'
 import {
     FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
-}                                                                              from '../../core/Journey'
+}                                                                    from '../../core/Journey'
+import {
+    APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK,
+}                                                                    from '../../core/LGS1920Context.js'
 import {
     Camera as CameraManager,
-}                                                                              from '../../core/ui/Camera.js'
-import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/LGS1920Context.js'
-import { FileUtils }                                                           from '../FileUtils.js'
-import { UIToast }                                                             from '../UIToast.js'
-import { CameraUtils }                                                         from './CameraUtils.js'
-import { POIUtils }                                                            from './POIUtils'
+}                                                                    from '../../core/ui/Camera.js'
+import { FileUtils }                                                 from '../FileUtils.js'
+import { UIToast }                                                   from '../UIToast.js'
+import { POIUtils }                                                  from './POIUtils'
 
 export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
 export const FEATURE                  = 'Feature',

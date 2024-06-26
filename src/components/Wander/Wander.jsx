@@ -77,7 +77,7 @@ export const Wander = (props) => {
             <>
             <SlTooltip hoist placement={tooltip} content="Stop">
                 <SlButton key={wanderSnapshot.run} size={'small'} className={'square-icon'} onClick={toggleWander}>
-                    <SlIcon slot="prefix" slot="prefix" library="fa" name={FA2SL.set(faStop)}/>
+                    <SlIcon slot="prefix"library="fa" name={FA2SL.set(faStop)}/>
                 </SlButton>
             </SlTooltip>
             <SlTooltip hoist placement={tooltip} content="Pause">

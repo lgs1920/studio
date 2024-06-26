@@ -70,7 +70,7 @@ export const Profile = function Profile(props, ref) {
 
             <SlTooltip hoist placement={props.placement} content="Reset Chart">
                 {<SlButton id={'open-the-profile-panel'} className={'square-icon'}>
-                    <SlIcon  slot="prefix" slot="prefix" library="fa"
+                    <SlIcon  slot="prefix"library="fa"
                             onClick={resetChart}
                             name={FA2SL.set(faRegularArrowsRotateReverseMagnifyingGlass)}></SlIcon>
                 </SlButton>}
