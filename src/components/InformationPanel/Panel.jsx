@@ -1,13 +1,7 @@
-import { DrawerFooter }             from '@Components/DrawerFooter'
-import {
-    faCircleInfo,
-}                                   from '@fortawesome/pro-regular-svg-icons'
-import {
-    SlButton, SlDrawer, SlIcon, SlTab, SlTabGroup, SlTabPanel, SlTooltip,
-}                                   from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                              from '@Utils/FA2SL'
-import React, { useEffect, useRef, useState } from 'react'
-import { useSnapshot }                        from 'valtio'
+import { DrawerFooter }                            from '@Components/DrawerFooter'
+import { SlDrawer, SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react'
+import React, { useEffect, useRef }                from 'react'
+import { useSnapshot }                             from 'valtio'
 import './style.css'
 
 import { CreditsPanel } from './CreditsPanel'
@@ -53,15 +47,9 @@ export const Panel = () => {
                 <SlTabPanel name="tab-whats-new"><WhatsNew/></SlTabPanel>
             </SlTabGroup>
 
-
             <DrawerFooter/>
 
         </SlDrawer>
-        <SlTooltip hoist placement="right" content="Show Information">
-            <SlButton className={'square-icon'} size="small" id={'open-info-pane'} onClick={togglePanelVisibility}>
-                <SlIcon slot="prefix"library="fa" name={FA2SL.set(faCircleInfo)}></SlIcon>
-            </SlButton>
-        </SlTooltip>
 
     </>)
 }
