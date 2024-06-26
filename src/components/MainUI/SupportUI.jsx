@@ -1,27 +1,28 @@
-import { faLocationPlus, faMessageQuestion, faXmark } from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlDialog, SlIcon, SlTooltip }      from '@shoelace-style/shoelace/dist/react'
-import { useState }                              from 'react'
-import { default as ReactMarkdown }              from 'react-markdown'
-import support                                   from '../../../public/assets/modals/support.md'
-import { FA2SL }                                 from '../../Utils/FA2SL.js'
+import { faXmark }                    from '@fortawesome/pro-regular-svg-icons'
+import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
+import { default as ReactMarkdown }   from 'react-markdown'
+import { useSnapshot }                from 'valtio'
+import support                        from '../../../public/assets/modals/support.md'
+import { FA2SL }                      from '../../Utils/FA2SL'
 
 
 export const SupportUI = () => {
-    const [open, setOpen] = useState(false)
+    const setSupport = lgs.mainProxy.components.mainUI.support
+    const getSupport = useSnapshot(setSupport)
     return (
         <>
-            <SlDialog open={open}
+            <SlDialog open={getSupport.visible}
                       modal
                       no-header
                       id={'support-modal'}
-                      onSlAfterHide={() => setOpen(false)}>
-
+                      onSlAfterHide={() => setSupport.visible = false}
+            >
                 <ReactMarkdown children={support}/>
 
                 <div slot="footer">
                     <div id={'footer'}>
                         <div className="buttons-bar">
-                            <SlButton autofocus variant="primary"  onClick={() => setOpen(false)}>
+                            <SlButton autofocus variant="primary" onClick={() => setSupport.visible = false}>
                                 <SlIcon slot="prefix"library="fa" name={FA2SL.set(faXmark)}></SlIcon>{'Close'}
                             </SlButton>
                         </div>
@@ -29,12 +30,6 @@ export const SupportUI = () => {
                 </div>
 
             </SlDialog>
-
-            <SlTooltip hoist placement="right" content="Open Help">
-                <SlButton size={'small'} className={'square-icon'} id={'launch-the-support'} onClick={() => setOpen(true)}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMessageQuestion)}/>
-                </SlButton>
-            </SlTooltip>
         </>
     )
 }

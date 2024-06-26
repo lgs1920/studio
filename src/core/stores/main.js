@@ -4,6 +4,7 @@ export const main = {
         mainUI:{
             show:false,
             journeyLoader: {visible: false},
+            support: {visible:false}
         },
 
         camera: {
