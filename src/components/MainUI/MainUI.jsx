@@ -12,8 +12,10 @@ import { subscribe } from 'valtio'
 import { CanvasEvents }           from '../../core/events/CanvasEvents.js'
 import { CameraTargetPositionUI } from '../cesium/CameraPositionUI/CameraTargetPositionUI.jsx'
 import { Panel }                  from '../InformationPanel/Panel'
+import { PanelButton }            from '../InformationPanel/PanelButton'
 import { Utils }                  from '../TracksEditor/Utils.js'
 import { SupportUI } from './SupportUI'
+import { SupportUIButton }        from './SupportUIButton'
 
 export const MainUI = function VT3D_UI() {
 
@@ -46,10 +48,9 @@ export const MainUI = function VT3D_UI() {
                              fileLoader={true}
                              position={'vertical'}
                              tooltip={'right'}/>
-                    <Panel/>
-                    <SupportUI/>
-                    <FullScreenUI/>                        
-                    <TracksEditor/>
+                    <PanelButton/>
+                    <SupportUIButton/>
+
                 </div>
 
                 <div id={'bottom-ui'}>
@@ -68,7 +69,10 @@ export const MainUI = function VT3D_UI() {
 
             </div>
 
-
+            <Panel/>
+            <SupportUI/>
+            <FullScreenUI/>
+            <TracksEditor/>
         </>
     )
 }
