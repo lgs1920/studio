@@ -32,7 +32,6 @@ export const WelcomeModal = () => {
     function showNews() {
         hide()
         infoPanel.visible = true
-
     }
 
     const enter = () => {
@@ -41,7 +40,7 @@ export const WelcomeModal = () => {
 
     const loadJourney = () => {
         enter()
-        TrackUtils.uploadJourneyFile()
+        lgs.mainUIStore.journeyLoader.visible = true
     }
 
     const setShowModal=(event)=> {
