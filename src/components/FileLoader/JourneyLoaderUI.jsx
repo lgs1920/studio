@@ -18,7 +18,7 @@ const allJourneyFiles = []
 /**
  * https://react-dropzone.js.org/
  */
-export const JourneyLoader = (props) => {
+export const JourneyLoaderUI = (props) => {
 
     // const onDrop = useCallback((acceptedFiles) => {
     //     acceptedFiles.forEach((file) => {
@@ -82,7 +82,6 @@ export const JourneyLoader = (props) => {
                           })
 
     const fileItem = (props) => {
-        console.log(props.file)
         return (
             <li key={props.file.path}>
                 {props.success &&
@@ -146,13 +145,6 @@ export const JourneyLoader = (props) => {
     }
 
     return (
-        <>
-            <SlTooltip hoist placement={props.tooltip} content="Add a new Journey">
-                {/* <SlButton size={'small'} onClick={setOpen(true);TrackUtils.uploadJourneyFile} className={'square-icon'}> */}
-                <SlButton size={'small'} className={'square-icon'} onClick={()=>journeyLoaderStore.visible =!journeyLoaderStore.visible}>
-                    <SlIcon  slot="prefix" library="fa" name={FA2SL.set(faLocationPlus)}/>
-                </SlButton>
-            </SlTooltip>
 
             <SlDialog open={journeyLoaderSnap.visible}
                       id={'file-loader-modal'}
@@ -222,7 +214,7 @@ export const JourneyLoader = (props) => {
                     </div>
                 </div>
             </SlDialog>
-        </>
+
     )
 
 }

@@ -1,4 +1,4 @@
-import { JourneyLoader }                                               from '@Components/FileLoader/JourneyLoader'
+import { JourneyLoaderUI }                                               from '@Components/FileLoader/JourneyLoaderUI'
 import { ProfileButton }                                               from '@Components/Profile/ProfileButton'
 import {
     TracksEditorButton,
