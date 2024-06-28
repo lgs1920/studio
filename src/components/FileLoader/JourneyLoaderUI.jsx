@@ -137,10 +137,10 @@ export const JourneyLoaderUI = (props) => {
     }
 
     const close = (event) => {
-        if (event.detail.source === 'overlay') {
-                event.preventDefault();
-                return
-        }
+        // if (event.detail.source === 'overlay') {
+        //         event.preventDefault();
+        //         return
+        // }
         journeyLoaderStore.visible = false
     }
 
