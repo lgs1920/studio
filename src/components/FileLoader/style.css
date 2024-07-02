@@ -36,25 +36,43 @@
     color:var(--dropzone-text-color);
     transition: border .24s ease-in-out;
     background-color: var(--dropzone-bg-color);
-);
 
 }
-.drag-and-drop:hover {
+
+@keyframes changeBackground {
+    0%   {background-color: transparent; opacity: 0;}
+    25%  {background-color: var(--dropzone-bg-color); opacity: 1;}
+    75%  {background-color: var(--dropzone-bg-color); opacity: 1;}
+    100% {background-color: transparent; opacity: 0;}
+}
+
+.drag-and-drop.waiting-drop{
     --dropzone-border-color:var(--lgs-hover-color);
     --dropzone-text-color: var(--lgs-hover-color);
     --dropzone-bg-color:var(--lgs-hover-bg-color);
 }
 
 .drag-and-drop.drag-accept {
+    animation: changeBackground 3s;
     --dropzone-border-color:var(--lgs-success-color);
     --dropzone-text-color: var(--lgs-success-color);
     --dropzone-bg-color:var(--lgs-success-bg-color);
 }
 
 .drag-and-drop.drag-reject {
+    animation: changeBackground 3s;
     --dropzone-border-color:var(--lgs-error-color);
     --dropzone-text-color: var(--lgs-error-color);
     --dropzone-bg-color:var(--lgs-error-bg-color);
+    z-index: 2;
+}
+
+.drag-and-drop.drag-some-reject {
+    animation: changeBackground 3s;
+    --dropzone-border-color:var(--lgs-warning-color);
+    --dropzone-text-color: var(--lgs-warning-color);
+    --dropzone-bg-color:var(--lgs-warning-bg-color);
+    z-index: 3
 }
 
 .drag-and-drop span {

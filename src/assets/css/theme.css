@@ -57,6 +57,9 @@
     --lgs-success-color:var(--sl-color-green-500);
     --lgs-success-bg-color:var(--sl-color-green-50);
 
+    --lgs-warning-color:var(--sl-color-orange-500);
+    --lgs-warning-bg-color:var(--sl-color-orange-50);
+
     --lgs-hover-color:var(--sl-color-primary-500);
     --lgs-hover-bg-color:var(--sl-color-primary-50);
 

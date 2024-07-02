@@ -1,20 +1,7 @@
 import './style.css'
-import { faFileCirclePlus, faLocationPlus, faXmark } from '@fortawesome/pro-regular-svg-icons'
-import {
-    faBan, faChevronRight, faFileCircleCheck, faFileCircleExclamation, faLocationSmile,
-}                                                    from '@fortawesome/pro-solid-svg-icons'
-
-import { SlButton, SlDialog, SlIcon, SlInput, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { faLocationPlus}  from '@fortawesome/pro-regular-svg-icons'
+import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                          from '@Utils/FA2SL'
-import { useState }                                       from 'react'
-import { Scrollbars }                                     from 'react-custom-scrollbars'
-import { useDropzone }                                    from 'react-dropzone'
-import { useSnapshot }                                    from 'valtio'
-import { ACCEPTED_TRACK_FILES }                           from '../../Utils/cesium/TrackUtils'
-
-
-const allJourneyFiles = []
-
 
 export const JourneyLoaderButton = (props) => {
 

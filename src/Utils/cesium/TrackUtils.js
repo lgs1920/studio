@@ -15,7 +15,7 @@ import { FileUtils }                                                 from '../Fi
 import { UIToast }                                                   from '../UIToast.js'
 import { POIUtils }                                                  from './POIUtils'
 
-export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
+export const SUPPORTED_EXTENSIONS = ['geojson', 'json','kml', 'gpx' /* TODO 'kmz'*/]
 export const FEATURE                  = 'Feature',
              FEATURE_COLLECTION       = 'FeatureCollection',
              FEATURE_LINE_STRING      = 'LineString',
@@ -600,7 +600,7 @@ export class TrackUtils {
         mainStore.fullSize = false
 
         const journey = await  FileUtils.uploadFileFromFrontEnd({
-                accepted: ACCEPTED_TRACK_FILES, mimes: TrackUtils.MIMES,
+                accepted: SUPPORTED_EXTENSIONS, mimes: TrackUtils.MIMES,
             })
 
         // File is correct let's work with

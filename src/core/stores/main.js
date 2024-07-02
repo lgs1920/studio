@@ -3,8 +3,22 @@ export const main = {
 
         mainUI:{
             show:false,
-            journeyLoader: {visible: false},
+            journeyLoader: {visible:  false},
+
+
+
             support: {visible:false}
+        },
+
+        fileLoader:{
+            accepted: 0,
+            error:'',
+            dragging:     {
+                active: null,
+                files:  [],
+            },
+            fileList:[],
+            empty:true,
         },
 
         camera: {

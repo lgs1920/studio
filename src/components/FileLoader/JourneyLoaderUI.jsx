@@ -1,17 +1,20 @@
 import './style.css'
-import { faFileCirclePlus, faLocationPlus, faXmark } from '@fortawesome/pro-regular-svg-icons'
+import { faFileCirclePlus, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import {
-    faBan, faChevronRight, faFileCircleCheck, faFileCircleExclamation, faLocationSmile,
-}                                                    from '@fortawesome/pro-solid-svg-icons'
+    faBan, faChevronRight, faFileCircleCheck, faFileCircleExclamation, faLocationSmile, faWarning,
+}                                    from '@fortawesome/pro-solid-svg-icons'
 
-import { SlButton, SlDialog, SlIcon, SlInput, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                          from '@Utils/FA2SL'
-import { useState }                                       from 'react'
-import { Scrollbars }                                     from 'react-custom-scrollbars'
-import { useDropzone }                                    from 'react-dropzone'
-import { useSnapshot }                                    from 'valtio'
-import { ACCEPTED_TRACK_FILES }                           from '../../Utils/cesium/TrackUtils'
-
+import { SlButton, SlDialog, SlIcon, SlInput } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                               from '@Utils/FA2SL'
+import { useCallback }                         from 'react'
+import { Scrollbars }                          from 'react-custom-scrollbars'
+import { sprintf }                             from 'sprintf-js'
+import { useSnapshot }                         from 'valtio'
+import { SUPPORTED_EXTENSIONS }                from '../../Utils/cesium/TrackUtils'
+import {
+    DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
+}                                              from '../../Utils/FileUtils'
+import { DragNDropFile }                       from '../DragNDropFile/DragNDropFile'
 
 const allJourneyFiles = []
 
@@ -20,7 +23,9 @@ const allJourneyFiles = []
  */
 export const JourneyLoaderUI = (props) => {
 
-    // const onDrop = useCallback((acceptedFiles) => {
+    const onDrop = useCallback((acceptedFiles) => {
+        console.log(acceptedFiles)
+    })
     //     acceptedFiles.forEach((file) => {
     //         const reader = new FileReader()
     //
@@ -38,48 +43,14 @@ export const JourneyLoaderUI = (props) => {
     const journeyLoaderStore=lgs.mainProxy.components.mainUI.journeyLoader
     const journeyLoaderSnap= useSnapshot(journeyLoaderStore)
 
+    const setState = lgs.mainProxy.components.fileLoader
+    const getState = useSnapshot(setState)
+
     const notYetUrl = true
 
     const addFileToList = (eventOrUrl => {
         console.log(eventOrUrl)
     })
-
-    const {
-              acceptedFiles,
-              getRootProps, getInputProps,
-              isFocused,
-              isDragAccept,
-              isDragReject,
-          } = useDropzone({
-                                        accept: {
-                                            // 'application/gpx+xml':      ['.gpx'],
-                                            // 'vnd.gpxsee.map+xml':       ['.gpx'],
-                                            // 'application/octet-stream': ['.gpx'],
-                                            // 'application/fgeo+json':    ['.json', '.geojson'],
-                                            // 'application/json':         ['.json', '.geojson'],
-                                            // 'vnd.google-earth.kml+xml': ['.kml'],
-                                            // // kmz: ['vnd.google-earth.kmz'], //TODO KMZ files
-
-                                            // 'application/gpx+xml':      ['.gpx'],
-                                            // 'application/gpx':          ['.gpx'],
-                                            // 'text/xml':                 ['.gpx'],
-                                            // 'vnd.gpxsee.map+xml':       ['.gpx'],
-                                            // 'application/octet-stream': ['.gpx'],
-                                            // 'application/geo+json':     ['.json', '.geojson'],
-                                            // 'application/vnd.geo+json': ['.json', '.geojson'],
-                                            // 'application/json':         ['.json', '.geojson'],
-                                            // 'vnd.google-earth.kml+xml': ['.kml'],
-                                            // // kmz: ['vnd.google-earth.kmz'], //TODO KMZ files
-                                            //
-                                            // 'text/plain': ['.gpx', 'json', '.kml', '.geojson'],
-                                            '*': ['.gpx', 'json', '.kml', '.geojson'],
-
-                                        },
-
-                                        onDragAccepted: addFileToList(),
-                                        onDragRejected: addFileToList(),
-                              multiple:       true,
-                          })
 
     const fileItem = (props) => {
         return (
@@ -100,19 +71,21 @@ export const JourneyLoaderUI = (props) => {
             </li>
         )
     }
-
-    const fileList = acceptedFiles.map(file => {
-        allJourneyFiles.push(file)
-        return (
-            <>
-                {allJourneyFiles.map(file => fileItem({file: file, success: false}))}
-            </>
-        )
-
-    })
+    //
+    // const fileList = acceptedFiles.map(file => {
+    //     allJourneyFiles.push(file)
+    //     return (
+    //         <>
+    //             {allJourneyFiles.map(file => fileItem({file: file, success: false}))}
+    //         </>
+    //     )
+    //
+    // })
 
     const ButtonLabel = () => {
-        if (allJourneyFiles.length ===0) {
+
+        // TODO que les fichiers OK
+        if (getState.fileList.length === 0) {
             return (
                 <>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}/>
@@ -128,70 +101,93 @@ export const JourneyLoaderUI = (props) => {
         )
     }
 
-    const AllowedFormat = ()=> {
+    const Message = () => {
+        return (
+            <section className={sprintf('drag-and-drop%s', getState.dragging.active ? ' waiting-drop' : '')}>
+                                    <span>
+                                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFileCirclePlus)}></SlIcon>
+                                        {'Drop your files here !'}
+                                    </span>
+                <span>
+                                        {'Or click to browse and select files on your device!'}
+                                    </span>
+
+                <AllowedFormat/>
+            </section>
+        )
+    }
+
+    const Rejected = () => {
+        return (
+            <section className={'drag-and-drop drag-reject'}>
+                                    <span>
+                                         <SlIcon library="fa" name={FA2SL.set(faBan)}></SlIcon>
+                                        {getState.error}
+                                    </span>
+
+                {/* eslint-disable-next-line no-undef */}
+                <AllowedFormat/>
+            </section>
+        )
+    }
+
+    const SomeRejected = () => {
+        return (
+            <section className={'drag-and-drop drag-some-reject'}>
+                                    <span>
+                                         <SlIcon library="fa" name={FA2SL.set(faWarning)}></SlIcon>
+                                        {getState.error}
+                                    </span>
+
+                {/* eslint-disable-next-line no-undef */}
+                <AllowedFormat/>
+            </section>
+        )
+    }
+    const Accepted = () => {
+        return (
+            <section className={'drag-and-drop drag-accept'}>
+                                    <span>
+                                         <SlIcon library="fa" name={FA2SL.set(faLocationSmile)}></SlIcon>
+                                        {'Enjoy !'}
+                                    </span>
+            </section>
+        )
+    }
+
+
+    const AllowedFormat = () => {
         return (
             <span className={'comment'}>
-                {sprintf('Accepted formats: %s', ACCEPTED_TRACK_FILES.join(', '))}
+                {sprintf('Accepted formats: %s', SUPPORTED_EXTENSIONS.join(', '))}
             </span>
         )
     }
 
     const close = (event) => {
-        // if (event.detail.source === 'overlay') {
-        //         event.preventDefault();
-        //         return
-        // }
         journeyLoaderStore.visible = false
     }
 
+
     return (
 
-            <SlDialog open={journeyLoaderSnap.visible}
-                      id={'file-loader-modal'}
-                      label={'Add Journeys'}
-                      onSlRequestClose={close}
-            >
-                <div className="download-columns">
-                    <div slot="header-actions"></div>
-                    <div className={'drag-and-drop-container'} {...getRootProps()}>
-                        <input {...getInputProps()} />
+        <SlDialog open={journeyLoaderSnap.visible}
+                  id={'file-loader-modal'}
+                  label={'Add Journeys'}
+                  onSlRequestClose={close}
+        >
+            <div className="download-columns">
+                <div slot="header-actions"></div>
+                <DragNDropFile
+                    className={'drag-and-drop-container'}
+                    types={SUPPORTED_EXTENSIONS}
+                >
+                    {getState.accepted === DRAG_AND_DROP_FILE_WAITING && <Message/>}
+                    {getState.accepted === DRAG_AND_DROP_FILE_ACCEPTED && <Accepted/>}
+                    {getState.accepted === DRAG_AND_DROP_FILE_REJECTED && <Rejected/>}
+                    {getState.accepted === DRAG_AND_DROP_FILE_PARTIALLY && <SomeRejected/>}
 
-                        {!isDragAccept && !isDragReject &&
-                            <section className={'drag-and-drop waiting-drop'}>
-                                    <span>
-                                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFileCirclePlus)}></SlIcon>
-                                        {'Drop your files here !'}
-                                    </span>
-                                <span>
-                                        {'Or click to browse and select files on your device!'}
-                                    </span>
-
-                                <AllowedFormat/>
-                            </section>
-                        }
-
-                        {isDragReject &&
-                            <section className={'drag-and-drop drag-reject'}>
-                                    <span>
-                                         <SlIcon library="fa" name={FA2SL.set(faBan)}></SlIcon>
-                                        {'Format not supported !'}
-                                    </span>
-
-                                {/* eslint-disable-next-line no-undef */}
-                                <AllowedFormat/>
-                            </section>
-                        }
-
-                        {isDragAccept &&
-                            <section className={'drag-and-drop drag-accept'}>
-                                    <span>
-                                         <SlIcon library="fa" name={FA2SL.set(faLocationSmile)}></SlIcon>
-                                        {'Enjoy !'}
-                                    </span>
-                            </section>
-                        }
-
-                    </div>
+                </DragNDropFile>
 
                     {!notYetUrl &&
                     <div className={'add-url'}>
@@ -202,13 +198,12 @@ export const JourneyLoaderUI = (props) => {
                         </SlButton>
                     </div>
                     }
-
+                {!getState.empty &&
                     <div className={'drag-and-drop-list lgs-card'}>
                         <Scrollbars>
-                            <ul>{fileList}</ul>
                         </Scrollbars>
                     </div>
-
+                }
                     <div className="buttons-bar">
                         <SlButton variant="primary" onClick={close}><ButtonLabel/></SlButton>
                     </div>
