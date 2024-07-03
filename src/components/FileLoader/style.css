@@ -37,6 +37,8 @@
     transition: border .24s ease-in-out;
     background-color: var(--dropzone-bg-color);
 
+    cursor: pointer;
+
 }
 
 @keyframes changeBackground {
@@ -46,7 +48,7 @@
     100% {background-color: transparent; opacity: 0;}
 }
 
-.drag-and-drop.waiting-drop{
+.drag-and-drop.waiting-drop,.drag-and-drop:hover{
     --dropzone-border-color:var(--lgs-hover-color);
     --dropzone-text-color: var(--lgs-hover-color);
     --dropzone-bg-color:var(--lgs-hover-bg-color);
@@ -64,7 +66,6 @@
     --dropzone-border-color:var(--lgs-error-color);
     --dropzone-text-color: var(--lgs-error-color);
     --dropzone-bg-color:var(--lgs-error-bg-color);
-    z-index: 2;
 }
 
 .drag-and-drop.drag-some-reject {
@@ -72,7 +73,6 @@
     --dropzone-border-color:var(--lgs-warning-color);
     --dropzone-text-color: var(--lgs-warning-color);
     --dropzone-bg-color:var(--lgs-warning-bg-color);
-    z-index: 3
 }
 
 .drag-and-drop span {
@@ -111,6 +111,14 @@
 
 .read-journey-failure {
     color:var(--lgs-error-color)
+}
+
+.read-journey-error-message {
+    font-size: var(--lgs-font-size-s);
+    border-color: var(--lgs-error-color);
+    color: var(--lgs-error-color);
+    background-color:var(--lgs-error-bg-color);
+    padding: var(--lgs-gutter-xs);
 }
 
 .add-url sl-input {

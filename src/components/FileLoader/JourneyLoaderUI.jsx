@@ -1,8 +1,8 @@
 import './style.css'
 import { faFileCirclePlus, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import {
-    faBan, faChevronRight, faFileCircleCheck, faFileCircleExclamation, faLocationSmile, faWarning,
-}                                    from '@fortawesome/pro-solid-svg-icons'
+    faBan, faCaretRight, faChevronRight, faFileCircleCheck, faFileCircleExclamation, faLocationSmile, faWarning,
+} from '@fortawesome/pro-solid-svg-icons'
 
 import { SlButton, SlDialog, SlIcon, SlInput } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                               from '@Utils/FA2SL'
@@ -23,23 +23,6 @@ const allJourneyFiles = []
  */
 export const JourneyLoaderUI = (props) => {
 
-    const onDrop = useCallback((acceptedFiles) => {
-        console.log(acceptedFiles)
-    })
-    //     acceptedFiles.forEach((file) => {
-    //         const reader = new FileReader()
-    //
-    //         reader.onabort = () => console.log('file reading was aborted')
-    //         reader.onerror = () => console.log('file reading has failed')
-    //         reader.onload = () => {
-    //             // Do whatever you want with the file contents
-    //             const binaryStr = reader.result
-    //         }
-    //         reader.readAsArrayBuffer(file)
-    //     })
-    //
-    // }, [])
-
     const journeyLoaderStore=lgs.mainProxy.components.mainUI.journeyLoader
     const journeyLoaderSnap= useSnapshot(journeyLoaderStore)
 
@@ -48,40 +31,34 @@ export const JourneyLoaderUI = (props) => {
 
     const notYetUrl = true
 
-    const addFileToList = (eventOrUrl => {
-        console.log(eventOrUrl)
-    })
-
-    const fileItem = (props) => {
+    const FileItem = ({item}) => {
         return (
-            <li key={props.file.path}>
-                {props.success &&
+            <li key={item.file.path}>
+                {item.status &&
                 <SlIcon className={'read-journey-success'} library="fa" name={FA2SL.set(faFileCircleCheck)}></SlIcon>
                 }
-                {!props.success &&
+                {!item.status &&
                     <SlIcon className={'read-journey-failure'} library="fa"
                             name={FA2SL.set(faFileCircleExclamation)}></SlIcon>
                 }
-                {props.file.name}
-                {!props.success &&
-                    <div class={'error-message'}>
-                        ceci est un message d'erreur
-                    </div>
-                }
+                {item.file.name}
             </li>
         )
     }
-    //
-    // const fileList = acceptedFiles.map(file => {
-    //     allJourneyFiles.push(file)
-    //     return (
-    //         <>
-    //             {allJourneyFiles.map(file => fileItem({file: file, success: false}))}
-    //         </>
-    //     )
-    //
-    // })
 
+    const FileList = () => {
+        return (
+            <ul>
+                {getState.fileList.map((item, index) => <FileItem key={index} item={item}/>)}
+            </ul>
+        )
+    }
+
+    /**
+     * If no files are elected, the label is "Close" else "Continue"
+     * @return {JSX.Element}
+     * @constructor
+     */
     const ButtonLabel = () => {
 
         // TODO que les fichiers OK
@@ -95,68 +72,99 @@ export const JourneyLoaderUI = (props) => {
         }
         return (
             <>
-                <SlIcon slot="prefix"  library="fa" name={FA2SL.set(faChevronRight)}/>
+                <SlIcon slot="prefix"  library="fa" name={FA2SL.set(faCaretRight)}/>
                 {'Continue'}
             </>
         )
     }
 
+    /**
+     * This is the standard message
+     *
+     * @return {JSX.Element}
+     * @constructor
+     */
     const Message = () => {
         return (
             <section className={sprintf('drag-and-drop%s', getState.dragging.active ? ' waiting-drop' : '')}>
-                                    <span>
-                                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFileCirclePlus)}></SlIcon>
-                                        {'Drop your files here !'}
-                                    </span>
                 <span>
-                                        {'Or click to browse and select files on your device!'}
-                                    </span>
+                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFileCirclePlus)}></SlIcon>
+                    {'Drop your files here !'}
+                </span>
+                <span>
+                    {'Or click to browse and select files on your device!'}
+                </span>
 
-                <AllowedFormat/>
+                <AllowedFormatsMessage/>
             </section>
         )
     }
 
+    /**
+     * This will be displayed when all files are rejected
+     *
+     * @return {JSX.Element}
+     * @constructor
+     */
     const Rejected = () => {
         return (
             <section className={'drag-and-drop drag-reject'}>
-                                    <span>
-                                         <SlIcon library="fa" name={FA2SL.set(faBan)}></SlIcon>
-                                        {getState.error}
-                                    </span>
+                <span>
+                     <SlIcon library="fa" name={FA2SL.set(faBan)}></SlIcon>
+                    {getState.error}
+                </span>
 
                 {/* eslint-disable-next-line no-undef */}
-                <AllowedFormat/>
+                <AllowedFormatsMessage/>
             </section>
         )
     }
 
+    /**
+     * This will be displayed when some files, not all, are rejected
+     *
+     * @return {JSX.Element}
+     * @constructor
+     */
     const SomeRejected = () => {
         return (
             <section className={'drag-and-drop drag-some-reject'}>
-                                    <span>
-                                         <SlIcon library="fa" name={FA2SL.set(faWarning)}></SlIcon>
-                                        {getState.error}
-                                    </span>
+                <span>
+                     <SlIcon library="fa" name={FA2SL.set(faWarning)}></SlIcon>
+                    {getState.error}
+                </span>
 
                 {/* eslint-disable-next-line no-undef */}
-                <AllowedFormat/>
+                <AllowedFormatsMessage/>
             </section>
         )
     }
+
+    /**
+     * This will be displayed when all are accepted
+     *
+     * @return {JSX.Element}
+     * @constructor
+     */
     const Accepted = () => {
         return (
             <section className={'drag-and-drop drag-accept'}>
-                                    <span>
-                                         <SlIcon library="fa" name={FA2SL.set(faLocationSmile)}></SlIcon>
-                                        {'Enjoy !'}
-                                    </span>
+                <span>
+                     <SlIcon library="fa" name={FA2SL.set(faLocationSmile)}></SlIcon>
+                    {'Enjoy !'}
+                </span>
             </section>
         )
     }
 
 
-    const AllowedFormat = () => {
+    /**
+     * The allowed format reminder message
+     *
+     * @return {JSX.Element}
+     * @constructor
+     */
+    const AllowedFormatsMessage = () => {
         return (
             <span className={'comment'}>
                 {sprintf('Accepted formats: %s', SUPPORTED_EXTENSIONS.join(', '))}
@@ -164,7 +172,12 @@ export const JourneyLoaderUI = (props) => {
         )
     }
 
-    const close = (event) => {
+    /**
+     * Close the modal
+     *
+     */
+    const close = () => {
+        setState.fileList=[]
         journeyLoaderStore.visible = false
     }
 
@@ -198,12 +211,14 @@ export const JourneyLoaderUI = (props) => {
                         </SlButton>
                     </div>
                     }
-                {!getState.empty &&
-                    <div className={'drag-and-drop-list lgs-card'}>
-                        <Scrollbars>
-                        </Scrollbars>
-                    </div>
-                }
+                    {getState.fileList.length > 0 &&
+                        <div className={'drag-and-drop-list lgs-card'}>
+                            <Scrollbars>
+                                <FileList/>
+                            </Scrollbars>
+                        </div>
+                    }
+
                     <div className="buttons-bar">
                         <SlButton variant="primary" onClick={close}><ButtonLabel/></SlButton>
                     </div>

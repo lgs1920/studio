@@ -2,8 +2,9 @@ import { useRef }      from 'react'
 import { useSnapshot } from 'valtio'
 import {
     DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
+    DRAG_AND_DROP_STATUS_TIMER,
     FileUtils,
-}                      from '../../Utils/FileUtils'
+} from '../../Utils/FileUtils'
 
 /**
  * From : https://www.codemzy.com/blog/react-drag-drop-file-upload
@@ -130,36 +131,55 @@ export const DragNDropFile = (props) => {
         setState.dragging.active = false
 
         const list = []
+
         for (const file of event.dataTransfer.files) {
-            const tmp = validate(file)
-            list.push({
-                          file:   file,
-                          status: tmp.status,
-                          error:  tmp.error,
-                      })
+            const doublon = getState.fileList.some(item => item.file.name === file.name);
+            if (!doublon ) {
+                const tmp = validate(file)
+                list.push({
+                              file:   {
+                                  date: file.lastModified,
+                                  name: file.name,
+                                  type: file.type,
+                                  size: file.size,
+                              },
+                              status: tmp.status,
+                              error:  tmp.error,
+                          })
+            }
         }
 
-        // Check if  all are ok or wrong or only some of them
-        let allTrue = list.every(item => item.status === true)
-        let allFalse = list.every(item => item.status === false)
+        if (list.length >0) {
+            // Add to existing file list
+            setState.fileList = [...getState.fileList, ...list]
 
-        // The set state and error messages accordingly
-        if (allTrue) {
-            setState.accepted = DRAG_AND_DROP_FILE_ACCEPTED
-        }
-        else if (allFalse) {
-            setState.accepted = DRAG_AND_DROP_FILE_REJECTED
-            setState.error = IMPROPER_FORMAT
-        }
-        else {
-            setState.accepted = DRAG_AND_DROP_FILE_PARTIALLY
-            setState.error = SOME_IMPROPER_FORMAT
-        }
+            // Use callback if defined
+            if (props.onDrop) {
+                props.onDrop(list)
+            }
 
-        setTimeout(() => {
-            console.log('ok')
-            setState.accepted = DRAG_AND_DROP_FILE_WAITING
-        }, 3000)
+            // Check if  all are ok or wrong or only some of them
+            let allTrue = list.every(item => item.status === true)
+            let allFalse = list.every(item => item.status === false)
+
+            // The set state and error messages accordingly
+            if (allTrue) {
+                setState.accepted = DRAG_AND_DROP_FILE_ACCEPTED
+            }
+            else if (allFalse) {
+                setState.accepted = DRAG_AND_DROP_FILE_REJECTED
+                setState.error = IMPROPER_FORMAT
+            }
+            else {
+                setState.accepted = DRAG_AND_DROP_FILE_PARTIALLY
+                setState.error = SOME_IMPROPER_FORMAT
+            }
+
+            // After some seconds, return to normal state
+            setTimeout(() => {
+                setState.accepted = DRAG_AND_DROP_FILE_WAITING
+            }, DRAG_AND_DROP_STATUS_TIMER)
+        }
 
     }
 
@@ -203,7 +223,7 @@ export const DragNDropFile = (props) => {
         return check
     }
 
-    // triggers the input when the button is clicked
+    // triggers the input when the drop zone is clicked
     const launchFilesSelector = (event) => {
         inputRef.current.click()
         cancelEvent(event)
