@@ -83,10 +83,9 @@
 }
 
 .drag-and-drop-list {
-
     display: flex;
     flex-direction: column;
-    height: max(15vh,100px);
+    height: max(10vh,80px);
     gap: var(--lgs-gutter-s);
     padding: 0 0 var(--lgs-gutter-s) var(--lgs-gutter-s);
 }
