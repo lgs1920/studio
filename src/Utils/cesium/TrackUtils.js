@@ -593,15 +593,11 @@ export class TrackUtils {
 
     }
 
-    static uploadJourneyFile = async () => {
+    static uploadJourneyFile = async (journey) => {
 
         // uploading a file exits full screen mode, so we force the state
         const mainStore = lgs.mainProxy
         mainStore.fullSize = false
-
-        const journey = await  FileUtils.uploadFileFromFrontEnd({
-                accepted: SUPPORTED_EXTENSIONS, mimes: TrackUtils.MIMES,
-            })
 
         // File is correct let's work with
         if (journey !== undefined) {
