@@ -1,3 +1,5 @@
+import { proxyMap } from 'valtio/vanilla/utils/proxyMap'
+
 export const main = {
     components: {
 
@@ -17,7 +19,7 @@ export const main = {
                 active: null,
                 files:  [],
             },
-            fileList:[],
+            fileList:new proxyMap(),
             empty:true,
         },
 
