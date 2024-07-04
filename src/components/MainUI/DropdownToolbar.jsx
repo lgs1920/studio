@@ -6,6 +6,7 @@ import {
 import { faEllipsisVertical }                                          from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                       from '../../Utils/FA2SL.js'
+import { JourneyLoaderButton }                                           from '../FileLoader/JourneyLoaderButton'
 import { SnapshotButton }                                              from './Snapshot'
 
 export const DropdownToolbar = (props) => {
@@ -26,7 +27,7 @@ export const DropdownToolbar = (props) => {
                     }
 
                     {props.fileLoader &&
-                        <SlMenuItem><JourneyLoader tooltip={props.tooltip}/></SlMenuItem>
+                        <SlMenuItem><JourneyLoaderButton tooltip={props.tooltip}/></SlMenuItem>
                     }
 
                     {props.profile &&
