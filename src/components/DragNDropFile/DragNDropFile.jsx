@@ -1,9 +1,9 @@
-import { useRef }      from 'react'
-import { useSnapshot } from 'valtio'
+import { useEffect, useRef } from 'react'
+import { useSnapshot }       from 'valtio'
 import {
     DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
     DRAG_AND_DROP_STATUS_TIMER, FileUtils,
-} from '../../Utils/FileUtils'
+}                            from '../../Utils/FileUtils'
 
 /**
  * From : https://www.codemzy.com/blog/react-drag-drop-file-upload
@@ -52,8 +52,21 @@ export const DragNDropFile = (props) => {
      */
     const onDragStart = (event) => {
         cancelEvent(event)
+        setState.dragging.active = true
         if (props.onDragStart) {
             props.onDragStart()
+        }
+    }
+
+    /**
+     * Window Drag Enter event
+     *
+     * @param event
+     */
+    const onWindowDragEnter = (event) => {
+        cancelEvent(event)
+        if (props.detectWindowDrag) {
+            setState.dragging.active = true
         }
     }
 
@@ -66,7 +79,9 @@ export const DragNDropFile = (props) => {
      */
     const onDragEnter = (event) => {
         cancelEvent(event)
-        setState.dragging.active = true
+        if (!props.detectWindowDrag) {
+            setState.dragging.active = true
+        }
         if (props.onDragEnter) {
             props.onDragEnter()
         }
@@ -89,6 +104,19 @@ export const DragNDropFile = (props) => {
 
     }
 
+
+    /**
+     * Window Drag Leave event
+     *
+     * @param event
+     */
+    const onWindowDragLeave = (event) => {
+        cancelEvent(event)
+        if (props.detectWindowDrag) {
+            setState.dragging.active = false
+        }
+    }
+
     /**
      * Drag leave event
      *
@@ -98,7 +126,10 @@ export const DragNDropFile = (props) => {
      */
     const onDragLeave = (event) => {
         cancelEvent(event)
-        setState.dragging.active = false
+        if (!props.detectWindowDrag) {
+            setState.dragging.active = false
+        }
+
         if (props.onDragLeave) {
             props.onDragLeave(event)
         }
@@ -237,6 +268,24 @@ export const DragNDropFile = (props) => {
         inputRef.current.click()
         cancelEvent(event)
     }
+
+    /**
+     *
+     */
+    useEffect(() => {
+        window.addEventListener('dragenter', onWindowDragEnter)
+        window.addEventListener('dragleave', onWindowDragLeave)
+        window.addEventListener('dragend', onWindowDragLeave)
+
+        // //window.addEventListener('dragend', onWindowDragLeave);
+        // return () => {
+        //     window.removeEventListener('dragenter', onWindowDragEnter);
+        //     window.removeEventListener('dragleave', onWindowDragLeave);
+        //     window.removeEventListener('dragend', onWindowDragLeave);
+        //
+        // }
+    }, [])
+
 
     return (
         <>

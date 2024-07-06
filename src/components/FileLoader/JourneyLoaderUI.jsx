@@ -227,6 +227,7 @@ export const JourneyLoaderUI = (props) => {
                     className={'drag-and-drop-container'}
                     types={SUPPORTED_EXTENSIONS}
                     manageContent={loadJourney}
+                    detectWindowDrag={true}
                 >
                     {getState.accepted === DRAG_AND_DROP_FILE_WAITING && <Message/>}
                     {getState.accepted === DRAG_AND_DROP_FILE_ACCEPTED && <Accepted/>}
