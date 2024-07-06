@@ -7,7 +7,7 @@ import { useSnapshot }                        from 'valtio'
 //read version
 
 
-export const FullScreenUI = forwardRef(function FullScreenUI() {
+export const FullScreenButton = forwardRef(function FullScreenUI() {
 
     const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)

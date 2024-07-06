@@ -1,6 +1,6 @@
 import { CameraPositionUI }       from '@Components/cesium/CameraPositionUI/CameraPositionUI'
 import { CompassUI }              from '@Components/cesium/CompassUI/CompassUI'
-import { FullScreenUI }           from '@Components/FullScreenUI/FullScreenUI'
+import { FullScreenButton }           from '@Components/FullScreenButton/FullScreenButton'
 import { Toolbar }                from '@Components/MainUI/Toolbar'
 import { Profile }                from '@Components/Profile/Profile'
 import { TracksEditor }           from '@Components/TracksEditor/TracksEditor'
@@ -12,6 +12,7 @@ import { subscribe } from 'valtio'
 import { CanvasEvents }           from '../../core/events/CanvasEvents.js'
 import { CameraTargetPositionUI } from '../cesium/CameraPositionUI/CameraTargetPositionUI.jsx'
 import { JourneyLoaderUI }        from '../FileLoader/JourneyLoaderUI'
+import { FloatingMenu }           from '../FloatingMenu/FloatingMenu'
 import { Panel }                  from '../InformationPanel/Panel'
 import { PanelButton }            from '../InformationPanel/PanelButton'
 import { Utils }                  from '../TracksEditor/Utils.js'
@@ -51,7 +52,7 @@ export const MainUI = function VT3D_UI() {
                              tooltip={'right'}/>
                     <PanelButton/>
                     <SupportUIButton/>
-
+                    <FullScreenButton/>
                 </div>
 
                 <div id={'bottom-ui'}>
@@ -72,7 +73,6 @@ export const MainUI = function VT3D_UI() {
             <JourneyLoaderUI/>
             <Panel/>
             <SupportUI/>
-            <FullScreenUI/>
             <TracksEditor/>
         </>
     )
