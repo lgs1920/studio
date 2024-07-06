@@ -1,5 +1,3 @@
-import axios from 'axios'
-import { getFileAsString } from 'easy-file-picker'
 import { MILLIS } from './AppUtils'
 
 /* https://github.com/danisss9/easy-file-picker */
@@ -25,6 +23,38 @@ export class FileUtils {
         const extension = FileUtils.getExtension(fileName)
         const re = new RegExp(`.${extension}`, 'g')
         return {name: fileName.replace(re, ''), extension: extension}
+    }
+
+    /**
+     * Read a file as text
+     *
+     * @param {File} file      file to read
+     * @param manageContentCB  Callback used to manage read content.
+     *             - {File} file      : this is tne entry File object
+     *             - {string} content : this is the file content
+     *             - {boolean} status : this is the reading status
+     *
+     */
+    static readFileAsText = (file, manageContentCB = null) => {
+        const reader = new FileReader()
+
+        reader.addEventListener('load', () => {
+                                    if (manageContentCB) {
+                                        manageContentCB(file, reader.result, true)
+                                    }
+                                },
+                                false,
+        )
+        reader.addEventListener('error', () => {
+                                    if (manageContentCB) {
+                                        manageContentCB(file, reader.result, false)
+                                    }
+                                },
+                                false,
+        )
+
+        reader.readAsText(file)
+
     }
 
 }

@@ -1,4 +1,4 @@
-import { proxyMap } from 'valtio/vanilla/utils/proxyMap'
+import { proxyMap } from 'valtio/utils'
 
 export const main = {
     components: {

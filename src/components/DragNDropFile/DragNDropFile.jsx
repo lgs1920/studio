@@ -2,8 +2,7 @@ import { useRef }      from 'react'
 import { useSnapshot } from 'valtio'
 import {
     DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
-    DRAG_AND_DROP_STATUS_TIMER,
-    FileUtils,
+    DRAG_AND_DROP_STATUS_TIMER, FileUtils,
 } from '../../Utils/FileUtils'
 
 /**
@@ -17,6 +16,7 @@ export const DragNDropFile = (props) => {
 
     const setState = lgs.mainProxy.components.fileLoader
     const getState = useSnapshot(setState)
+    var fileList = setState.fileList
 
     const inputRef = useRef(null)
 
@@ -130,28 +130,32 @@ export const DragNDropFile = (props) => {
         cancelEvent(event)
         setState.dragging.active = false
 
-        const list = []
-
-        for (const file of event.dataTransfer.files) {
-            const doublon = getState.fileList.some(item => item.file.name === file.name);
-            if (!doublon ) {
-                const tmp = validate(file)
-                list.push({
+        const list = new Map()
+        const files = event.dataTransfer.files
+        for (const file of files) {
+            const tmp = validate(file)
+            FileUtils.readFileAsText(file, props.manageContent ?? null)
+            list.set(__.app.slugify(`${file.name}`),
+                     {
                               file:   {
                                   date: file.lastModified,
-                                  name: file.name,
+                                  fullName:  file.name,
+                                  name:      tmp.file.name,
+                                  extension: tmp.file.extension,
                                   type: file.type,
                                   size: file.size,
                               },
                               status: tmp.status,
                               error:  tmp.error,
-                          })
-            }
-        }
+                     }
+            )
 
-        if (list.length >0) {
+        }
+        if (list.size >0) {
             // Add to existing file list
-            setState.fileList = [...getState.fileList, ...list]
+            list.forEach((item,key)=>{
+                fileList.set(key,item)
+            })
 
             // Use callback if defined
             if (props.onDrop) {
@@ -159,8 +163,8 @@ export const DragNDropFile = (props) => {
             }
 
             // Check if  all are ok or wrong or only some of them
-            let allTrue = list.every(item => item.status === true)
-            let allFalse = list.every(item => item.status === false)
+            let allTrue = Array.from(list.values()).every(item =>  item.status === true)
+            let allFalse = Array.from(list.values()).every(item => item.status === false)
 
             // The set state and error messages accordingly
             if (allTrue) {
@@ -175,12 +179,14 @@ export const DragNDropFile = (props) => {
                 setState.error = SOME_IMPROPER_FORMAT
             }
 
+
             // After some seconds, return to normal state
             setTimeout(() => {
                 setState.accepted = DRAG_AND_DROP_FILE_WAITING
             }, DRAG_AND_DROP_STATUS_TIMER)
-        }
 
+
+        }
     }
 
     /**
@@ -210,7 +216,9 @@ export const DragNDropFile = (props) => {
      */
     const validate = (file) => {
         let check = {status: true, message: ''}
-        if (props.types.includes(FileUtils.getExtension(file.name))) {
+        const fileInfo = FileUtils.getFileNameAndExtension(file.name)
+
+        if (props.types.includes(fileInfo.extension)) {
             if (props.validate) {
                 check = props.validate(file)
             }
@@ -220,6 +228,7 @@ export const DragNDropFile = (props) => {
             check.error = IMPROPER_FORMAT
         }
 
+        check.file = fileInfo
         return check
     }
 

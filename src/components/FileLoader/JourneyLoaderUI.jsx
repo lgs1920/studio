@@ -6,17 +6,18 @@ import {
 
 import { SlButton, SlDialog, SlIcon, SlInput } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                               from '@Utils/FA2SL'
-import { useCallback }                         from 'react'
 import { Scrollbars }                          from 'react-custom-scrollbars'
 import { sprintf }                             from 'sprintf-js'
-import { useSnapshot }                         from 'valtio'
-import { SUPPORTED_EXTENSIONS }                from '../../Utils/cesium/TrackUtils'
+import { useSnapshot }                      from 'valtio'
+import { proxyMap }                      from 'valtio/utils'
+
+import { SUPPORTED_EXTENSIONS, TrackUtils } from '../../Utils/cesium/TrackUtils'
 import {
     DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
-}                                              from '../../Utils/FileUtils'
+    FileUtils,
+} from '../../Utils/FileUtils'
 import { DragNDropFile }                       from '../DragNDropFile/DragNDropFile'
 
-const allJourneyFiles = []
 
 /**
  * https://react-dropzone.js.org/
@@ -28,12 +29,35 @@ export const JourneyLoaderUI = (props) => {
 
     const setState = lgs.mainProxy.components.fileLoader
     const getState = useSnapshot(setState)
+    var fileList = setState.fileList
 
     const notYetUrl = true
 
+    /**
+     * Callback after loading a file. We load the journey
+     *
+     * @param file
+     * @param content
+     * @param result
+     */
+    const loadJourney=(file,content,result) => {
+        if (result) {
+            const journey = FileUtils.getFileNameAndExtension(file.name)
+            journey.content = content
+            TrackUtils.uploadJourneyFile(journey)
+        }
+    }
+
+    /**
+     * isplay item for File List
+     *
+     * @param item
+     * @return {JSX.Element}
+     * @constructor
+     */
     const FileItem = ({item}) => {
         return (
-            <li key={item.file.path}>
+            <li key={item.file.date}>
                 {item.status &&
                 <SlIcon className={'read-journey-success'} library="fa" name={FA2SL.set(faFileCircleCheck)}></SlIcon>
                 }
@@ -41,28 +65,37 @@ export const JourneyLoaderUI = (props) => {
                     <SlIcon className={'read-journey-failure'} library="fa"
                             name={FA2SL.set(faFileCircleExclamation)}></SlIcon>
                 }
-                {item.file.name}
+                {item.file.fullName}
             </li>
         )
     }
 
+    /**
+     * File list component
+     *
+     * @return {JSX.Element}
+     * @constructor
+     */
     const FileList = () => {
         return (
             <ul>
-                {getState.fileList.map((item, index) => <FileItem key={index} item={item}/>)}
+                {Array.from(fileList.values()).map((item, index) => <FileItem key={index} item={item}/>)}
             </ul>
         )
     }
 
     /**
+     * Button label Component
+     *
      * If no files are elected, the label is "Close" else "Continue"
+     *
      * @return {JSX.Element}
      * @constructor
      */
     const ButtonLabel = () => {
 
         // TODO que les fichiers OK
-        if (getState.fileList.length === 0) {
+        if (fileList.size === 0) {
             return (
                 <>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}/>
@@ -177,10 +210,9 @@ export const JourneyLoaderUI = (props) => {
      *
      */
     const close = () => {
-        setState.fileList=[]
+        fileList.clear()
         journeyLoaderStore.visible = false
     }
-
 
     return (
 
@@ -194,6 +226,7 @@ export const JourneyLoaderUI = (props) => {
                 <DragNDropFile
                     className={'drag-and-drop-container'}
                     types={SUPPORTED_EXTENSIONS}
+                    manageContent={loadJourney}
                 >
                     {getState.accepted === DRAG_AND_DROP_FILE_WAITING && <Message/>}
                     {getState.accepted === DRAG_AND_DROP_FILE_ACCEPTED && <Accepted/>}
@@ -211,7 +244,7 @@ export const JourneyLoaderUI = (props) => {
                         </SlButton>
                     </div>
                     }
-                    {getState.fileList.length > 0 &&
+                    {fileList.size > 0 &&
                         <div className={'drag-and-drop-list lgs-card'}>
                             <Scrollbars>
                                 <FileList/>
