@@ -35,7 +35,7 @@ export const Profile = function Profile(props, ref) {
      * @param event
      */
     const closeProfile = (event) => {
-        if (isOK(event)) {
+        if (window.isOK(event)) {
             mainStore.components.profile.show = false
             //TODO manage 'profile/close' event and externalise
             lgs.profileTrackMarker.toggleVisibility()

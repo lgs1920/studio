@@ -18,7 +18,7 @@ export const SnapshotButton = (props, ref) => {
      * @param event
      */
     const closeTracksEditor = (event) => {
-        if (isOK(event)) {
+        if (window.isOK(event)) {
             mainStore.components.journeyEditor.show = false
         }
     }

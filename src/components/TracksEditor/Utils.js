@@ -29,7 +29,7 @@ export class Utils {
     }
 
     static initJourneyEdition = (event = undefined) => {
-        if (isOK(event)) {
+        if (window.isOK(event)) {
             const editorStore = lgs.theJourneyEditorProxy
             editorStore.journey = lgs.getJourneyBySlug(event.target.value)
             lgs.saveJourney(editorStore.journey)
@@ -74,7 +74,7 @@ export class Utils {
         }
     }
     static initTrackEdition = (event) => {
-        if (isOK(event)) {
+        if (window.isOK(event)) {
             const editorStore = lgs.theJourneyEditorProxy
             editorStore.track = lgs.getTrackBySlug(event.target.value)
             editorStore.track.addToContext()
