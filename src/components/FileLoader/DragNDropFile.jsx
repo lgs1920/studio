@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useSnapshot }       from 'valtio'
 import {
     DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
-    DRAG_AND_DROP_STATUS_TIMER, FileUtils,
+    DRAG_AND_DROP_STATUS_DELAY, FileUtils,
 }                            from '../../Utils/FileUtils'
 
 /**
@@ -165,8 +165,7 @@ export const DragNDropFile = (props) => {
         const files = event.dataTransfer.files
         for (const file of files) {
             const tmp = validate(file)
-            FileUtils.readFileAsText(file, props.manageContent ?? null)
-            list.set(__.app.slugify(`${file.name}`),
+            list.set(__.app.slugify(file.name),
                      {
                               file:   {
                                   date: file.lastModified,
@@ -176,7 +175,7 @@ export const DragNDropFile = (props) => {
                                   type: file.type,
                                   size: file.size,
                               },
-                              status: tmp.status,
+                         validated: tmp.validated,
                               error:  tmp.error,
                      }
             )
@@ -194,8 +193,8 @@ export const DragNDropFile = (props) => {
             }
 
             // Check if  all are ok or wrong or only some of them
-            let allTrue = Array.from(list.values()).every(item =>  item.status === true)
-            let allFalse = Array.from(list.values()).every(item => item.status === false)
+            let allTrue = Array.from(list.values()).every(item => item.validated === true)
+            let allFalse = Array.from(list.values()).every(item => item.validated === false)
 
             // The set state and error messages accordingly
             if (allTrue) {
@@ -210,11 +209,29 @@ export const DragNDropFile = (props) => {
                 setState.error = SOME_IMPROPER_FORMAT
             }
 
+            // Read and manage content
+            for (const file of files) {
+                const item = fileList.get(__.app.slugify(file.name))
+                item.fileReadSuccess = false
 
-            // After some seconds, return to normal state
+                try {
+                    if(item.validated) {
+                        FileUtils.readFileAsText(file, props.manageContent ?? null)
+                        item.fileReadSuccess = true
+                    }
+                }
+                catch {
+                    item.fileReadSuccess = false
+                }
+
+                fileList.set(__.app.slugify(file.name), item)
+            }
+
+
+            // After a delay, return to normal state
             setTimeout(() => {
                 setState.accepted = DRAG_AND_DROP_FILE_WAITING
-            }, DRAG_AND_DROP_STATUS_TIMER)
+            }, DRAG_AND_DROP_STATUS_DELAY)
 
 
         }
@@ -239,23 +256,23 @@ export const DragNDropFile = (props) => {
      * Validate file
      *
      * The only test done here consists of testing the extendion.
-     * Other can be done in  props.validate functopn that returns {status:boolean,error:message}
+     * Other can be done in  props.validateCB function that returns {status:boolean,error:message}
      *
      * @param file
      *
-     * @return {{error: string, status: boolean}}
+     * @return {{error: string, validated: boolean}}
      */
     const validate = (file) => {
-        let check = {status: true, message: ''}
+        let check = {validated: true, message: ''}
         const fileInfo = FileUtils.getFileNameAndExtension(file.name)
 
         if (props.types.includes(fileInfo.extension)) {
-            if (props.validate) {
-                check = props.validate(file)
+            if (props.validateCB) {
+                check = props.validateCB(file)
             }
         }
         else {
-            check.status = false
+            check.validated = false
             check.error = IMPROPER_FORMAT
         }
 
@@ -276,8 +293,6 @@ export const DragNDropFile = (props) => {
         window.addEventListener('dragenter', onWindowDragEnter)
         window.addEventListener('dragleave', onWindowDragLeave)
         window.addEventListener('dragend', onWindowDragLeave)
-
-        // //window.addEventListener('dragend', onWindowDragLeave);
         // return () => {
         //     window.removeEventListener('dragenter', onWindowDragEnter);
         //     window.removeEventListener('dragleave', onWindowDragLeave);

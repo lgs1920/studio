@@ -1,22 +1,25 @@
 import './style.css'
-import { faFileCirclePlus, faXmark } from '@fortawesome/pro-regular-svg-icons'
+import { faArrowRotateRight, faFileCirclePlus, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import {
-    faBan, faCaretRight, faChevronRight, faFileCircleCheck, faFileCircleExclamation, faLocationSmile, faWarning,
+    faBan, faCaretRight, faDoNotEnter, faFileCircleCheck, faFileCircleExclamation, faLocationExclamation,
+    faLocationSmile,
+    faLocationXmark, faWarning,
 } from '@fortawesome/pro-solid-svg-icons'
 
 import { SlButton, SlDialog, SlIcon, SlInput } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                               from '@Utils/FA2SL'
 import { Scrollbars }                          from 'react-custom-scrollbars'
 import { sprintf }                             from 'sprintf-js'
-import { useSnapshot }                      from 'valtio'
-import { proxyMap }                      from 'valtio/utils'
+import { useSnapshot }                                   from 'valtio'
 
-import { SUPPORTED_EXTENSIONS, TrackUtils } from '../../Utils/cesium/TrackUtils'
+import {
+    JOURNEY_DENIED, JOURNEY_KO, JOURNEY_WAITING, SUPPORTED_EXTENSIONS, TrackUtils,
+} from '../../Utils/cesium/TrackUtils'
 import {
     DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
     FileUtils,
-} from '../../Utils/FileUtils'
-import { DragNDropFile }                       from '../DragNDropFile/DragNDropFile'
+}                                                                        from '../../Utils/FileUtils'
+import { DragNDropFile }                                     from './DragNDropFile'
 
 
 /**
@@ -40,32 +43,56 @@ export const JourneyLoaderUI = (props) => {
      * @param content
      * @param result
      */
-    const loadJourney=(file,content,result) => {
+    const loadJourney = async (file, content, result) => {
+        let status = JOURNEY_WAITING
         if (result) {
             const journey = FileUtils.getFileNameAndExtension(file.name)
             journey.content = content
-            TrackUtils.uploadJourneyFile(journey)
+            status = await TrackUtils.uploadJourneyFile(journey)
         }
+        const item = fileList.get(__.app.slugify(file.name))
+        item.journeyStatus = status
+        fileList.set(__.app.slugify(file.name), item)
     }
 
     /**
-     * isplay item for File List
+     * Display item for File List
      *
      * @param item
      * @return {JSX.Element}
      * @constructor
      */
     const FileItem = ({item}) => {
+
+        // JOURNEY_KO      = 0, JOURNEY_OK      = 1, JOURNEY_EXISTS  = 2, JOURNEY_WAITING = 3, JOURNEY_DENIED = 4
+        const classes = ['read-journey-failure', 'read-journey-success', 'read-journey-warning', 'read-journey-waiting fa-spin','read-journey-failure']
+        const icons = [faLocationXmark, faLocationSmile, faLocationExclamation,faArrowRotateRight,faDoNotEnter]
+
+        if(item.validated === false) {
+            item.journeyStatus = JOURNEY_DENIED
+        }
+
+        // We start with waiting
+        if(item.journeyStatus === undefined) {
+            item.journeyStatus = JOURNEY_WAITING
+        }
+
         return (
-            <li key={item.file.date}>
-                {item.status &&
+            <li key={new Date()}>
+                {item.validated &&
                 <SlIcon className={'read-journey-success'} library="fa" name={FA2SL.set(faFileCircleCheck)}></SlIcon>
                 }
-                {!item.status &&
-                    <SlIcon className={'read-journey-failure'} library="fa"
-                            name={FA2SL.set(faFileCircleExclamation)}></SlIcon>
+                {!item.validated &&
+                    <SlIcon className={'read-journey-failure'} library="fa" name={FA2SL.set(faFileCircleExclamation)}></SlIcon>
                 }
                 {item.file.fullName}
+
+                {item.journeyStatus !== undefined &&
+                    <SlIcon className={classes[item.journeyStatus]}
+                            library="fa" name={FA2SL.set(icons[item.journeyStatus])}>
+                    </SlIcon>
+                }
+
             </li>
         )
     }

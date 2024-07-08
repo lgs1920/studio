@@ -98,8 +98,13 @@
     display: flex;
     gap: var(--lgs-gutter-s);
     align-items: center;
-
 }
+
+.drag-and-drop-list li sl-icon:nth-child(2){
+    margin-left: auto;
+    margin-right: var(--lgs-gutter);
+}
+
 .drag-and-drop-list li sl-icon{
     font-size: var(--sl-font-size-large);
 }
@@ -110,6 +115,10 @@
 
 .read-journey-failure {
     color:var(--lgs-error-color)
+}
+
+.read-journey-warning {
+    color:var(--lgs-warning-color)
 }
 
 .read-journey-error-message {

@@ -11,7 +11,6 @@ import {
 import {
     Camera as CameraManager,
 }                                                                    from '../../core/ui/Camera.js'
-import { FileUtils }                                                 from '../FileUtils.js'
 import { UIToast }                                                   from '../UIToast.js'
 import { POIUtils }                                                  from './POIUtils'
 
@@ -21,6 +20,13 @@ export const FEATURE                  = 'Feature',
              FEATURE_LINE_STRING      = 'LineString',
              FEATURE_MULTILINE_STRING = 'MultiLineString',
              FEATURE_POINT            = 'Point'
+
+export const JOURNEY_KO      = 0,
+             JOURNEY_OK      = 1,
+             JOURNEY_EXISTS  = 2,
+             JOURNEY_WAITING = 3,
+            JOURNEY_DENIED = 4
+
 
 export class TrackUtils {
 
@@ -593,51 +599,71 @@ export class TrackUtils {
 
     }
 
+    /**
+     * Read a journey in
+     *
+     *
+     * @param {} journey {
+     *           name:      file name,
+     *           extension: file extension
+     *           content : content
+     * }
+     *
+     * @return {Promise<number>}
+     */
     static uploadJourneyFile = async (journey) => {
 
         // uploading a file exits full screen mode, so we force the state
         const mainStore = lgs.mainProxy
         mainStore.fullSize = false
 
-        // File is correct let's work with
-        if (journey !== undefined) {
-            let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
-            // Check if the track already exists in context
-            // If not we manage and show it.
-            if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
-                if (!theJourney.hasAltitude) {
-                    mainStore.modals.altitudeChoice.show = true
+        try {
+            // File is correct let's work with
+            if (journey !== undefined) {
+                let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
+                // Check if the track already exists in context
+                // If not we manage and show it.
+                if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
+                    if (!theJourney.hasAltitude) {
+                        mainStore.modals.altitudeChoice.show = true
+                    }
+                    // Need stats
+                    theJourney.extractMetrics()
+                    // Prepare the contexts and current values
+                    theJourney.addToContext()
+                    theJourney.addToEditor()
+
+                    const theTrack = lgs.theJourney.tracks.entries().next().value[1]
+                    theTrack.addToEditor()
+
+                    TrackUtils.setProfileVisibility(lgs.theJourney)
+
+                    await theJourney.saveToDB()
+                    await theJourney.saveOriginDataToDB()
+
+                    mainStore.canViewJourneyData = true
+                    await theJourney.draw({})
+
+                    await TrackUtils.createCommonMapObjectsStore()
+                    __.ui.profiler.draw()
+
+                    await __.ui.camera.stop360()
+                    __.ui.camera.addUpdateEvent()
+
+                    return JOURNEY_OK
                 }
-                // Need stats
-                theJourney.extractMetrics()
-                // Prepare the contexts and current values
-                theJourney.addToContext()
-                theJourney.addToEditor()
-
-                const theTrack = lgs.theJourney.tracks.entries().next().value[1]
-                theTrack.addToEditor()
-
-                TrackUtils.setProfileVisibility(lgs.theJourney)
-
-                await theJourney.saveToDB()
-                await theJourney.saveOriginDataToDB()
-
-                mainStore.canViewJourneyData = true
-                await theJourney.draw({})
-
-                await TrackUtils.createCommonMapObjectsStore()
-                __.ui.profiler.draw()
-
-                __.ui.camera.stop360()
-                __.ui.camera.addUpdateEvent()
-
-            } else {
-                // It exists, we notify it
-                UIToast.warning({
-                    caption: `This journey has already been loaded!`,
-                    text: 'Please select another one !',
-                })
+                else {
+                    // It exists, we notify it
+                    UIToast.warning({
+                                        caption: `This journey has already been loaded!`,
+                                        text:    'Please select another one !',
+                                    })
+                    return JOURNEY_EXISTS
+                }
             }
+        }
+        catch (e) {
+            return JOURNEY_KO
         }
     }
 }
