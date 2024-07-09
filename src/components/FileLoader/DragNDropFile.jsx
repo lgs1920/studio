@@ -151,108 +151,6 @@ export const DragNDropFile = (props) => {
     }
 
     /**
-     * Drop event
-     *
-     * @param event
-     *
-     * Calls props.onDrop event
-     */
-    const onDrop = (event) => {
-        cancelEvent(event)
-        setState.dragging.active = false
-
-        const list = new Map()
-        const files = event.dataTransfer.files
-        for (const file of files) {
-            const tmp = validate(file)
-            list.set(__.app.slugify(file.name),
-                     {
-                              file:   {
-                                  date: file.lastModified,
-                                  fullName:  file.name,
-                                  name:      tmp.file.name,
-                                  extension: tmp.file.extension,
-                                  type: file.type,
-                                  size: file.size,
-                              },
-                         validated: tmp.validated,
-                              error:  tmp.error,
-                     }
-            )
-
-        }
-        if (list.size >0) {
-            // Add to existing file list
-            list.forEach((item,key)=>{
-                fileList.set(key,item)
-            })
-
-            // Use callback if defined
-            if (props.onDrop) {
-                props.onDrop(list)
-            }
-
-            // Check if  all are ok or wrong or only some of them
-            let allTrue = Array.from(list.values()).every(item => item.validated === true)
-            let allFalse = Array.from(list.values()).every(item => item.validated === false)
-
-            // The set state and error messages accordingly
-            if (allTrue) {
-                setState.accepted = DRAG_AND_DROP_FILE_ACCEPTED
-            }
-            else if (allFalse) {
-                setState.accepted = DRAG_AND_DROP_FILE_REJECTED
-                setState.error = IMPROPER_FORMAT
-            }
-            else {
-                setState.accepted = DRAG_AND_DROP_FILE_PARTIALLY
-                setState.error = SOME_IMPROPER_FORMAT
-            }
-
-            // Read and manage content
-            for (const file of files) {
-                const item = fileList.get(__.app.slugify(file.name))
-                item.fileReadSuccess = false
-
-                try {
-                    if(item.validated) {
-                        FileUtils.readFileAsText(file, props.manageContent ?? null)
-                        item.fileReadSuccess = true
-                    }
-                }
-                catch {
-                    item.fileReadSuccess = false
-                }
-
-                fileList.set(__.app.slugify(file.name), item)
-            }
-
-
-            // After a delay, return to normal state
-            setTimeout(() => {
-                setState.accepted = DRAG_AND_DROP_FILE_WAITING
-            }, DRAG_AND_DROP_STATUS_DELAY)
-
-
-        }
-    }
-
-    /**
-     * Drag enter event
-     *
-     * @param event
-     *
-     * Calls props.onDragEnter event
-     */
-    const onChange = (event) => {
-        cancelEvent(event)
-        setState.dragging.active = false
-        if (event.target.files && event.target.files[0]) {
-            // handleFiles(event.target.file
-        }
-    }
-
-    /**
      * Validate file
      *
      * The only test done here consists of testing the extendion.
@@ -279,6 +177,121 @@ export const DragNDropFile = (props) => {
         check.file = fileInfo
         return check
     }
+
+    /**
+     * Validate file selection
+     *
+     * @param event  (change or drop)
+     *
+     * Calls props.onDrop or props.onChnge callbacls
+     */
+    const validateSelection = (event) => {
+        cancelEvent(event)
+        setState.dragging.active = false
+
+        const DROP   = 'drop',
+              CHANGE = 'change'
+
+        const list = new Map()
+        // Get file from event
+        const files = event.type === DROP
+                      ? event.dataTransfer.files
+                      : event.target.files
+
+        for (const file of files) {
+            const tmp = validate(file)
+            list.set(__.app.slugify(file.name),
+                     {
+                              file:   {
+                                  date: file.lastModified,
+                                  fullName:  file.name,
+                                  name:      tmp.file.name,
+                                  extension: tmp.file.extension,
+                                  type: file.type,
+                                  size: file.size,
+                              },
+                         validated: tmp.validated,
+                              error:  tmp.error,
+                     }
+            )
+
+        }
+        if (list.size >0) {
+            // Add to existing file list
+            list.forEach((item,key)=>{
+                fileList.set(key,item)
+            })
+
+            // Use callback if defined
+            if (event.type === DROP && props.onDrop) {
+                props.onDrop(list)
+            }
+            if (event.type === CHANGE && props.onChange) {
+                props.onChange(list)
+            }
+
+            // Check if  all are ok or wrong or only some of them
+            let allTrue = Array.from(list.values()).every(item => item.validated === true)
+            let allFalse = Array.from(list.values()).every(item => item.validated === false)
+
+            // The set state and error messages accordingly
+            if (allTrue) {
+                setState.accepted = DRAG_AND_DROP_FILE_ACCEPTED
+            }
+            else if (allFalse) {
+                setState.accepted = DRAG_AND_DROP_FILE_REJECTED
+                setState.error = IMPROPER_FORMAT
+            }
+            else {
+                setState.accepted = DRAG_AND_DROP_FILE_PARTIALLY
+                setState.error = SOME_IMPROPER_FORMAT
+            }
+
+            // After a delay, return to normal state
+            setTimeout(() => {
+                setState.accepted = DRAG_AND_DROP_FILE_WAITING
+            }, DRAG_AND_DROP_STATUS_DELAY)
+
+            // Read and manage content
+            for (const file of files) {
+                const item = fileList.get(__.app.slugify(file.name))
+                item.fileReadSuccess = false
+
+                try {
+                    if(item.validated) {
+                        FileUtils.readFileAsText(file, props.manageContent ?? null)
+                        item.fileReadSuccess = true
+                    }
+                }
+                catch {
+                    item.fileReadSuccess = false
+                }
+
+                fileList.set(__.app.slugify(file.name), item)
+            }
+
+
+
+
+        }
+    }
+
+    /**
+     * Drop event
+     *
+     * @param event
+     *
+     */
+    const onDrop = validateSelection
+
+    /**
+     * Drag enter event
+     *
+     * @param event
+     *
+     */
+    const onChange = validateSelection
+
 
     // triggers the input when the drop zone is clicked
     const launchFilesSelector = (event) => {
