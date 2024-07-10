@@ -1,8 +1,9 @@
 import { faXmark }                    from '@fortawesome/pro-regular-svg-icons'
-import { faCheck, faFileCircleCheck } from '@fortawesome/pro-solid-svg-icons'
+import { faCheck } from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { useState }                   from 'react'
 import { FA2SL }                      from '../../Utils/FA2SL'
+import parse  from 'html-react-parser';
 
 /**
  * Confirm Dialog
@@ -53,19 +54,19 @@ export const useConfirm = (title, message, confirmLabel, cancelLabel) => {
         handleClose();
     }
     const ConfirmationDialog = () => (
-        <SlDialog open={open} label="confirm-dialog" onSlRequestClose={handleRequestClose}
+        <SlDialog open={open} onSlRequestClose={handleRequestClose}
                   onSlAfterHide={() => setOpen(false)}>
-            <div slot="label">{title}</div>
+            <div slot="label">{parse(title)}</div>
             {message}
             <div slot="footer">
                 <div className="buttons-bar">
                     <SlButton onClick={handleCancel}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(cancelIcon)}></SlIcon>
-                        {cancelText}
+                        {parse(cancelText)}
                     </SlButton>
                     <SlButton variant="primary" onClick={handleConfirm}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(confirmIcon)}></SlIcon>
-                        {confirmText}
+                        {parse(confirmText)}
                     </SlButton>
                 </div>
             </div>
