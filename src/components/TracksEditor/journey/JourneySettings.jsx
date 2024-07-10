@@ -117,7 +117,7 @@ export const JourneySettings = function JourneySettings() {
                                                                           //     text:'Export',
                                                                           //     icon:faDownload
                                                                           // }
-    // )
+     )
 
     /**
      * Export Journey
