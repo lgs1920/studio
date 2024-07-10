@@ -17,7 +17,7 @@ import { FA2SL }                      from '../../Utils/FA2SL'
  * @return {[function(): *,function(): Promise<unknown>]}
  */
 export const useConfirm = (title, message, confirmLabel, cancelLabel) => {
-    const [promise, setPromise] = useState(null)
+    const [queue, setQueue] = useState([])
     const [open, setOpen] = useState(false)
 
     const confirmIcon = confirmLabel?.icon??faCheck
@@ -26,7 +26,8 @@ export const useConfirm = (title, message, confirmLabel, cancelLabel) => {
     const cancelText = cancelLabel?.text??'No'
 
     const confirm = () => new Promise((resolve, reject) => {
-        setPromise({resolve})
+        setQueue(prevQueue => [...prevQueue, { resolve }]);
+        if (!open) setOpen(true);
     })
 
     // Prevent the dialog from closing when the user clicks on the overlay
@@ -37,20 +38,22 @@ export const useConfirm = (title, message, confirmLabel, cancelLabel) => {
     }
 
     const handleClose = () => {
-        setPromise(null)
+        setQueue(prevQueue => prevQueue.slice(1));
+        if (queue.length > 1) setOpen(true);
+        else setOpen(false);
     }
 
     const handleConfirm = () => {
-        promise?.resolve(true)
-        handleClose()
+        queue[0]?.resolve(true);
+        handleClose();
     }
 
     const handleCancel = () => {
-        promise?.resolve(false)
-        handleClose()
+        queue[0]?.resolve(false);
+        handleClose();
     }
     const ConfirmationDialog = () => (
-        <SlDialog open={promise !== null} label="confirm-dialog" onSlRequestClose={handleRequestClose}
+        <SlDialog open={open} label="confirm-dialog" onSlRequestClose={handleRequestClose}
                   onSlAfterHide={() => setOpen(false)}>
             <div slot="label">{title}</div>
             {message}
