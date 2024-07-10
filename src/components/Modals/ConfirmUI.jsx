@@ -1,5 +1,8 @@
-import { SlButton, SlDialog } from '@shoelace-style/shoelace/dist/react'
-import { useState }           from 'react'
+import { faXmark }                    from '@fortawesome/pro-regular-svg-icons'
+import { faCheck, faFileCircleCheck } from '@fortawesome/pro-solid-svg-icons'
+import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
+import { useState }                   from 'react'
+import { FA2SL }                      from '../../Utils/FA2SL'
 
 /**
  * Confirm Dialog
@@ -13,9 +16,12 @@ import { useState }           from 'react'
  *
  * @return {[function(): *,function(): Promise<unknown>]}
  */
-export const useConfirm = (title, message, confirmLabel = 'Yes', cancelLabel = 'No') => {
+export const useConfirm = (title, message, confirmLabel = {text:'Yes'}, cancelLabel = {text:'No'}) => {
     const [promise, setPromise] = useState(null)
     const [open, setOpen] = useState(false)
+
+    const confirmIcon = confirmLabel.icon??faCheck
+    const cancelIcon = cancelLabel.icon??faXmark
 
     const confirm = () => new Promise((resolve, reject) => {
         setPromise({resolve})
@@ -48,8 +54,14 @@ export const useConfirm = (title, message, confirmLabel = 'Yes', cancelLabel = '
             {message}
             <div slot="footer">
                 <div className="buttons-bar">
-                    <SlButton onClick={handleCancel}>{cancelLabel}</SlButton>
-                    <SlButton variant="primary" onClick={handleConfirm}>{confirmLabel}</SlButton>
+                    <SlButton onClick={handleCancel}>
+                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(cancelIcon)}></SlIcon>
+                        {cancelLabel.text}
+                    </SlButton>
+                    <SlButton variant="primary" onClick={handleConfirm}>
+                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(confirmIcon)}></SlIcon>
+                        {confirmLabel.text}
+                    </SlButton>
                 </div>
             </div>
         </SlDialog>
