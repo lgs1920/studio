@@ -85,7 +85,7 @@ export const JourneyLoaderUI = (props) => {
                 {!item.validated &&
                     <SlIcon className={'read-journey-failure'} library="fa" name={FA2SL.set(faFileCircleExclamation)}></SlIcon>
                 }
-                {item.file.fullName}
+                <span>{item.file.fullName}</span>
 
                 {item.journeyStatus !== undefined &&
                     <SlIcon className={classes[item.journeyStatus]}
