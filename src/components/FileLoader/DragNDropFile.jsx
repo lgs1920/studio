@@ -23,11 +23,7 @@ export const DragNDropFile = (props) => {
     const classes = props.classes ?? 'drag-and-drop-container'
     const id = props.id ?? 'drag-and-drop-file'
 
-    const acceptedTypes = props.types.map(type => {
-        if (!type.startsWith('.')) {
-            type = '.' + type
-        }
-    })
+    const acceptedTypes = props.types.map(type => (!type.startsWith('.')? '.':'') + type)
 
     const IMPROPER_FORMAT = 'File format not supported!'
     const SOME_IMPROPER_FORMAT = 'Not all files format are supported!'
@@ -306,12 +302,12 @@ export const DragNDropFile = (props) => {
         window.addEventListener('dragenter', onWindowDragEnter)
         window.addEventListener('dragleave', onWindowDragLeave)
         window.addEventListener('dragend', onWindowDragLeave)
-        // return () => {
-        //     window.removeEventListener('dragenter', onWindowDragEnter);
-        //     window.removeEventListener('dragleave', onWindowDragLeave);
-        //     window.removeEventListener('dragend', onWindowDragLeave);
-        //
-        // }
+        return () => {
+            window.removeEventListener('dragenter', onWindowDragEnter);
+            window.removeEventListener('dragleave', onWindowDragLeave);
+            window.removeEventListener('dragend', onWindowDragLeave);
+
+        }
     }, [])
 
 
