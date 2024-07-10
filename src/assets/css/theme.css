@@ -215,3 +215,23 @@ cesium-compass {
 sl-dialog {
     --header-spacing:var(--body-spacing) var(--body-spacing) 0 var(--body-spacing)
 }
+
+sl-dialog [slot="label"] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+sl-dialog::part(title) {
+    /*white-space: nowrap; !* Empêche le texte de passer à la ligne *!*/
+    /*overflow: hidden; !* Cache le contenu qui déborde *!*/
+    /*text-overflow: ellipsis; !* Ajoute des points de suspension lorsque le texte déborde *!*/
+    /*min-width: 0;*/
+    width: 100%;
+}
+
+dialog__header-actions sl-icon-button, .dialog__header-actions ::slotted(sl-icon-button) {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-start;
+}
