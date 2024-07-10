@@ -18,7 +18,7 @@ export const TracksEditorButton =  (props) => {
             {mainSnap.canViewJourneyData &&
                 <SlButton size={'small'} className={'square-icon'} id={'open-theJourney-editor'}
                           onClick={toggleTracksEditor}>
-                    <SlIcon library="fa" name={FA2SL.set(faPencil)}></SlIcon>
+                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPencil)}></SlIcon>
                 </SlButton>}
         </SlTooltip>
     </>)

@@ -7,7 +7,7 @@ import { useSnapshot }                        from 'valtio'
 //read version
 
 
-export const FullScreenUI = forwardRef(function FullScreenUI() {
+export const FullScreenButton = forwardRef(function FullScreenUI() {
 
     const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
@@ -24,10 +24,10 @@ export const FullScreenUI = forwardRef(function FullScreenUI() {
     }
 
     return (<>
-        <SlTooltip hoist placement={'right'} content={mainSnap.fullSize ? 'Exit Full screen' : 'Full Screen'}>
+        <SlTooltip hoist placement="right" content={mainSnap.fullSize ? 'Exit Full screen' : 'Full Screen'}>
             <SlButton size="small" onClick={toggleFullSize} className={'square-icon'}>
-                {!mainSnap.fullSize && <SlIcon library="fa" name={FA2SL.set(faArrowsMaximize)}></SlIcon>}
-                {mainSnap.fullSize && <SlIcon library="fa" name={FA2SL.set(faArrowsMinimize)}></SlIcon>}
+                {!mainSnap.fullSize && <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsMaximize)}></SlIcon>}
+                {mainSnap.fullSize && <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsMinimize)}></SlIcon>}
             </SlButton>
         </SlTooltip>
 

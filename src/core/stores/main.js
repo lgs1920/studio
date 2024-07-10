@@ -1,9 +1,26 @@
+import { proxyMap } from 'valtio/utils'
+
 export const main = {
     components: {
 
         mainUI:{
             show:false,
-            credits: {show: false},
+            journeyLoader: {visible:  false},
+
+
+
+            support: {visible:false}
+        },
+
+        fileLoader:{
+            accepted: 0,
+            error:'',
+            dragging:     {
+                active: null,
+                files:  [],
+            },
+            fileList:new proxyMap(),
+            empty:true,
         },
 
         camera: {
@@ -50,6 +67,12 @@ export const main = {
             duration: undefined,
             loop:false
         },
+
+        informationPanel:{
+            visible:false,
+            tab:null
+        }
+
 
     },
     modals: {

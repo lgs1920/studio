@@ -1,39 +1,7 @@
-import { getFileAsString } from 'easy-file-picker'
+import { MILLIS } from './AppUtils'
 
 /* https://github.com/danisss9/easy-file-picker */
 export class FileUtils {
-
-
-    /**
-     * Upload a file corresponding to the desired types
-     *
-     *
-     * @returns {Promise<FileStringResult|string>}
-     */
-    static async uploadFileFromFrontEnd(props = null) {
-        return await getFileAsString(
-            props.accepted ? {acceptedExtensions: props.accepted} : {},
-        ).then(file => {
-            if (file) {
-                // Let's add extension info to file and change name by removing it
-                const info = FileUtils.getFileNameAndExtension(file.name)
-                file.name = info.name
-                file.extension = info.extension
-
-                // If no types specified, we force one type if mimes are specified
-                // else we use extension as types then we return the file object
-                if (file.type === '' && props.mimes) {
-                    file.type = props.mimes[file.extension][0]
-                    return file
-                }
-                // Else, Let's check for the type found in content to avoid hacking
-                if (file.type === extension || (props.mimes && props.mimes[file.extension].includes(file.type))) {
-                    return file
-                }
-            }
-            return undefined
-        })
-    }
 
     /**
      * Extract file extension (ie after the last dot)
@@ -56,4 +24,43 @@ export class FileUtils {
         const re = new RegExp(`.${extension}`, 'g')
         return {name: fileName.replace(re, ''), extension: extension}
     }
+
+    /**
+     * Read a file as text
+     *
+     * @param {File} file      file to read
+     * @param manageContentCB  Callback used to manage read content.
+     *             - {File} file      : this is tne entry File object
+     *             - {string} content : this is the file content
+     *             - {boolean} status : this is the reading status
+     *
+     */
+    static readFileAsText = (file, manageContentCB = null) => {
+        const reader = new FileReader()
+
+        reader.addEventListener('load', () => {
+                                    if (manageContentCB) {
+                                        manageContentCB(file, reader.result, true)
+                                    }
+                                },
+                                false,
+        )
+        reader.addEventListener('error', () => {
+                                    if (manageContentCB) {
+                                        manageContentCB(file, reader.result, false)
+                                    }
+                                },
+                                false,
+        )
+
+        reader.readAsText(file)
+
+    }
+
 }
+
+export const DRAG_AND_DROP_FILE_WAITING   =0,
+             DRAG_AND_DROP_FILE_ACCEPTED  =1,
+             DRAG_AND_DROP_FILE_REJECTED  =2,
+             DRAG_AND_DROP_FILE_PARTIALLY = 3,
+             DRAG_AND_DROP_STATUS_DELAY = 3*MILLIS

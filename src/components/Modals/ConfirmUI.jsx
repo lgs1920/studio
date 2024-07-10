@@ -1,5 +1,9 @@
-import { SlButton, SlDialog } from '@shoelace-style/shoelace/dist/react'
-import { useState }           from 'react'
+import { faXmark }                    from '@fortawesome/pro-regular-svg-icons'
+import { faCheck } from '@fortawesome/pro-solid-svg-icons'
+import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
+import { useState }                   from 'react'
+import { FA2SL }                      from '../../Utils/FA2SL'
+import parse  from 'html-react-parser';
 
 /**
  * Confirm Dialog
@@ -13,12 +17,18 @@ import { useState }           from 'react'
  *
  * @return {[function(): *,function(): Promise<unknown>]}
  */
-export const useConfirm = (title, message, confirmLabel = 'Yes', cancelLabel = 'No') => {
-    const [promise, setPromise] = useState(null)
+export const useConfirm = (title, message, confirmLabel, cancelLabel) => {
+    const [queue, setQueue] = useState([])
     const [open, setOpen] = useState(false)
 
+    const confirmIcon = confirmLabel?.icon??faCheck
+    const confirmText = confirmLabel?.text??'Yes'
+    const cancelIcon = cancelLabel?.icon??faXmark
+    const cancelText = cancelLabel?.text??'No'
+
     const confirm = () => new Promise((resolve, reject) => {
-        setPromise({resolve})
+        setQueue(prevQueue => [...prevQueue, { resolve }]);
+        if (!open) setOpen(true);
     })
 
     // Prevent the dialog from closing when the user clicks on the overlay
@@ -29,27 +39,35 @@ export const useConfirm = (title, message, confirmLabel = 'Yes', cancelLabel = '
     }
 
     const handleClose = () => {
-        setPromise(null)
+        setQueue(prevQueue => prevQueue.slice(1));
+        if (queue.length > 1) setOpen(true);
+        else setOpen(false);
     }
 
     const handleConfirm = () => {
-        promise?.resolve(true)
-        handleClose()
+        queue[0]?.resolve(true);
+        handleClose();
     }
 
     const handleCancel = () => {
-        promise?.resolve(false)
-        handleClose()
+        queue[0]?.resolve(false);
+        handleClose();
     }
     const ConfirmationDialog = () => (
-        <SlDialog open={promise !== null} label="confirm-dialog" onSlRequestClose={handleRequestClose}
+        <SlDialog open={open} onSlRequestClose={handleRequestClose}
                   onSlAfterHide={() => setOpen(false)}>
-            <div slot="label">{title}</div>
+            <div slot="label">{parse(title)}</div>
             {message}
             <div slot="footer">
                 <div className="buttons-bar">
-                    <SlButton onClick={handleCancel}>{cancelLabel}</SlButton>
-                    <SlButton variant="primary" onClick={handleConfirm}>{confirmLabel}</SlButton>
+                    <SlButton onClick={handleCancel}>
+                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(cancelIcon)}></SlIcon>
+                        {parse(cancelText)}
+                    </SlButton>
+                    <SlButton variant="primary" onClick={handleConfirm}>
+                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(confirmIcon)}></SlIcon>
+                        {parse(confirmText)}
+                    </SlButton>
                 </div>
             </div>
         </SlDialog>

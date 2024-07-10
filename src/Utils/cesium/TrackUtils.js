@@ -1,27 +1,32 @@
-import { default as extent }                                                   from '@mapbox/geojson-extent'
+import { default as extent }                                         from '@mapbox/geojson-extent'
 import { default as centroid }                                       from '@turf/centroid'
-import * as Cesium                                                                                  from 'cesium'
-import {
-    Cartesian3, Color, CustomDataSource, GeoJsonDataSource, HeadingPitchRange, Math as M, Math, Matrix4,
-}                                                                              from 'cesium'
+import * as Cesium                                                   from 'cesium'
+import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 } from 'cesium'
 import {
     FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
-}                                                                              from '../../core/Journey'
+}                                                                    from '../../core/Journey'
+import {
+    APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK,
+}                                                                    from '../../core/LGS1920Context.js'
 import {
     Camera as CameraManager,
-}                                                                              from '../../core/ui/Camera.js'
-import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/LGS1920Context.js'
-import { FileUtils }                                                           from '../FileUtils.js'
-import { UIToast }                                                             from '../UIToast.js'
-import { CameraUtils }                                                         from './CameraUtils.js'
-import { POIUtils }                                                            from './POIUtils'
+}                                                                    from '../../core/ui/Camera.js'
+import { UIToast }                                                   from '../UIToast.js'
+import { POIUtils }                                                  from './POIUtils'
 
-export const ACCEPTED_TRACK_FILES = ['.geojson', '.kml', '.gpx' /* TODO '.kmz'*/]
+export const SUPPORTED_EXTENSIONS = ['geojson', 'json','kml', 'gpx' /* TODO 'kmz'*/]
 export const FEATURE                  = 'Feature',
              FEATURE_COLLECTION       = 'FeatureCollection',
              FEATURE_LINE_STRING      = 'LineString',
              FEATURE_MULTILINE_STRING = 'MultiLineString',
              FEATURE_POINT            = 'Point'
+
+export const JOURNEY_KO      = 0,
+             JOURNEY_OK      = 1,
+             JOURNEY_EXISTS  = 2,
+             JOURNEY_WAITING = 3,
+            JOURNEY_DENIED = 4
+
 
 export class TrackUtils {
 
@@ -594,55 +599,71 @@ export class TrackUtils {
 
     }
 
-    static uploadJourneyFile = async () => {
+    /**
+     * Read a journey in
+     *
+     *
+     * @param {} journey {
+     *           name:      file name,
+     *           extension: file extension
+     *           content : content
+     * }
+     *
+     * @return {Promise<number>}
+     */
+    static uploadJourneyFile = async (journey) => {
 
         // uploading a file exits full screen mode, so we force the state
         const mainStore = lgs.mainProxy
         mainStore.fullSize = false
 
-        const journey = await  FileUtils.uploadFileFromFrontEnd({
-                accepted: ACCEPTED_TRACK_FILES, mimes: TrackUtils.MIMES,
-            })
+        try {
+            // File is correct let's work with
+            if (journey !== undefined) {
+                let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
+                // Check if the track already exists in context
+                // If not we manage and show it.
+                if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
+                    if (!theJourney.hasAltitude) {
+                        mainStore.modals.altitudeChoice.show = true
+                    }
+                    // Need stats
+                    theJourney.extractMetrics()
+                    // Prepare the contexts and current values
+                    theJourney.addToContext()
+                    theJourney.addToEditor()
 
-        // File is correct let's work with
-        if (journey !== undefined) {
-            let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
-            // Check if the track already exists in context
-            // If not we manage and show it.
-            if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
-                if (!theJourney.hasAltitude) {
-                    mainStore.modals.altitudeChoice.show = true
+                    const theTrack = lgs.theJourney.tracks.entries().next().value[1]
+                    theTrack.addToEditor()
+
+                    TrackUtils.setProfileVisibility(lgs.theJourney)
+
+                    await theJourney.saveToDB()
+                    await theJourney.saveOriginDataToDB()
+
+                    mainStore.canViewJourneyData = true
+                    await theJourney.draw({})
+
+                    await TrackUtils.createCommonMapObjectsStore()
+                    __.ui.profiler.draw()
+
+                    await __.ui.camera.stop360()
+                    __.ui.camera.addUpdateEvent()
+
+                    return JOURNEY_OK
                 }
-                // Need stats
-                theJourney.extractMetrics()
-                // Prepare the contexts and current values
-                theJourney.addToContext()
-                theJourney.addToEditor()
-
-                const theTrack = lgs.theJourney.tracks.entries().next().value[1]
-                theTrack.addToEditor()
-
-                TrackUtils.setProfileVisibility(lgs.theJourney)
-
-                await theJourney.saveToDB()
-                await theJourney.saveOriginDataToDB()
-
-                mainStore.canViewJourneyData = true
-                await theJourney.draw({})
-
-                await TrackUtils.createCommonMapObjectsStore()
-                __.ui.profiler.draw()
-
-                __.ui.camera.stop360()
-                __.ui.camera.addUpdateEvent()
-
-            } else {
-                // It exists, we notify it
-                UIToast.warning({
-                    caption: `This journey has already been loaded!`,
-                    text: 'Please select another one !',
-                })
+                else {
+                    // It exists, we notify it
+                    UIToast.warning({
+                                        caption: `This journey has already been loaded!`,
+                                        text:    'Please select another one !',
+                                    })
+                    return JOURNEY_EXISTS
+                }
             }
+        }
+        catch (e) {
+            return JOURNEY_KO
         }
     }
 }

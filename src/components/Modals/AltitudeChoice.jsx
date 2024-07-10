@@ -27,7 +27,7 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
      * @param event
      */
     const allowAltitudeSimulation = async event => {
-        if (isOK(event)) {
+        if (window.isOK(event)) {
             setServer(event.target.value)
             event.preventDefault()
         }
@@ -44,7 +44,7 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
      * @return {Promise<void>}
      */
     const closeDialog = async (event) => {
-        if (isOK(event)) {
+        if (window.isOK(event)) {
             event.preventDefault()
             lgs.theJourney.DEMServer = server
             if (server !== NO_DEM_SERVER) {

@@ -34,7 +34,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
      * @param event
      */
     const closeTracksEditor = (event) => {
-        if (isOK(event)) {
+        if (window.isOK(event)) {
             lgs.journeyEditorStore.show = false
         }
     }
@@ -42,7 +42,8 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
     return (<>
         <div id="journeys-editor-container" key={mainSnap.components.journeyEditor.key}>
             {mainSnap.canViewJourneyData &&
-                <SlDrawer id="journeys-editor-pane" open={mainSnap.components.journeyEditor.show}
+                <SlDrawer id="journeys-editor-pane"
+                          open={mainSnap.components.journeyEditor.show}
                           onSlRequestClose={handleRequestClose}
                           contained
                           onSlHide={closeTracksEditor}

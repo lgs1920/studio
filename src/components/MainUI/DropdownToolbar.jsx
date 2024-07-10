@@ -1,4 +1,4 @@
-import { JourneyLoader }                                               from '@Components/FileLoader/JourneyLoader'
+import { JourneyLoaderUI }                                               from '@Components/FileLoader/JourneyLoaderUI'
 import { ProfileButton }                                               from '@Components/Profile/ProfileButton'
 import {
     TracksEditorButton,
@@ -6,6 +6,7 @@ import {
 import { faEllipsisVertical }                                          from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                       from '../../Utils/FA2SL.js'
+import { JourneyLoaderButton }                                           from '../FileLoader/JourneyLoaderButton'
 import { SnapshotButton }                                              from './Snapshot'
 
 export const DropdownToolbar = (props) => {
@@ -15,11 +16,8 @@ export const DropdownToolbar = (props) => {
             <SlDropdown>
                 <div slot="trigger">
                     <SlTooltip hoist placement={props.tooltip} content="Edit Tracks">
-                        <SlButton size={'small'}
-                                  className={'square-icon'}
-
-                        >
-                            <SlIcon library="fa" name={FA2SL.set(faEllipsisVertical)}></SlIcon>
+                        <SlButton size={'small'} className={'square-icon'}>
+                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faEllipsisVertical)}></SlIcon>
                         </SlButton>
                     </SlTooltip>
                 </div>
@@ -29,7 +27,7 @@ export const DropdownToolbar = (props) => {
                     }
 
                     {props.fileLoader &&
-                        <SlMenuItem><JourneyLoader tooltip={props.tooltip}/></SlMenuItem>
+                        <SlMenuItem><JourneyLoaderButton tooltip={props.tooltip}/></SlMenuItem>
                     }
 
                     {props.profile &&

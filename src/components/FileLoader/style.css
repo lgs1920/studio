@@ -1,0 +1,155 @@
+#file-loader-modal {
+    --width: min(400px,90vw);
+}
+#file-loader-modal::part(close-button) {
+    display: none;
+}
+.download-columns, .download-columns-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter)
+}
+
+.download-columns > div {
+    display: flex;
+    gap: var(--lgs-gutter-s);
+}
+
+.drag-and-drop-container {
+    display: flex;
+    flex-direction: column;
+}
+.drag-and-drop {
+    --dropzone-border-color: var(--sl-input-border-color);
+    --dropzone-text-color:'';
+    --dropzone-bg-color:'';
+
+    display: flex;
+    flex-direction: column;
+    height: max(20vh,150px);
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border: calc(2 * var(--sl-input-border-width)) dashed var(--dropzone-border-color);
+    border-radius: var(--sl-border-radius-medium);
+    font-size: var(--sl-font-size-medium);
+    color:var(--dropzone-text-color);
+    transition: border .24s ease-in-out;
+    background-color: var(--dropzone-bg-color);
+
+    cursor: pointer;
+
+}
+
+@keyframes changeBackground {
+    0%   {background-color: transparent; opacity: 0;}
+    25%  {background-color: var(--dropzone-bg-color); opacity: 1;}
+    75%  {background-color: var(--dropzone-bg-color); opacity: 1;}
+    100% {background-color: transparent; opacity: 0;}
+}
+
+.drag-and-drop.waiting-drop,.drag-and-drop:hover{
+    --dropzone-border-color:var(--lgs-hover-color);
+    --dropzone-text-color: var(--lgs-hover-color);
+    --dropzone-bg-color:var(--lgs-hover-bg-color);
+}
+
+.drag-and-drop.drag-accept {
+    animation: changeBackground 3s;
+    --dropzone-border-color:var(--lgs-success-color);
+    --dropzone-text-color: var(--lgs-success-color);
+    --dropzone-bg-color:var(--lgs-success-bg-color);
+}
+
+.drag-and-drop.drag-reject {
+    animation: changeBackground 3s;
+    --dropzone-border-color:var(--lgs-error-color);
+    --dropzone-text-color: var(--lgs-error-color);
+    --dropzone-bg-color:var(--lgs-error-bg-color);
+}
+
+.drag-and-drop.drag-some-reject {
+    animation: changeBackground 3s;
+    --dropzone-border-color:var(--lgs-warning-color);
+    --dropzone-text-color: var(--lgs-warning-color);
+    --dropzone-bg-color:var(--lgs-warning-bg-color);
+}
+
+.drag-and-drop span {
+    display: flex;
+    gap: var(--lgs-gutter-s);
+    align-items: center;
+    text-align: center;
+}
+
+.drag-and-drop-list {
+    display: flex;
+    flex-direction: column;
+    height: max(10vh,80px);
+    gap: var(--lgs-gutter-s);
+    padding: 0 0 var(--lgs-gutter-s) var(--lgs-gutter-s);
+}
+
+.drag-and-drop-list ul {
+    padding: 0;
+    list-style: none;
+}
+.drag-and-drop-list li {
+    display: flex;
+    gap: var(--lgs-gutter-s);
+    align-items: center;
+    margin-right: var(--lgs-gutter);
+}
+
+.drag-and-drop-list li sl-icon:nth-child(2){
+    margin-left: auto;
+}
+
+.drag-and-drop-list li sl-icon{
+    font-size: var(--sl-font-size-large);
+    flex: 0 0 auto;
+}
+
+.drag-and-drop-list li span {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.read-journey-success {
+    color:var(--lgs-success-color)
+}
+
+.read-journey-failure {
+    color:var(--lgs-error-color)
+}
+
+.read-journey-warning {
+    color:var(--lgs-warning-color)
+}
+
+.read-journey-error-message {
+    font-size: var(--lgs-font-size-s);
+    border-color: var(--lgs-error-color);
+    color: var(--lgs-error-color);
+    background-color:var(--lgs-error-bg-color);
+    padding: var(--lgs-gutter-xs);
+}
+
+.add-url sl-input {
+    flex-grow: 1;
+}
+
+.add-url sl-input {
+    flex-shrink: 0;
+}
+
+.drag-and-drop-container .comment {
+    font-size: var(--lgs-font-size-s);
+    color: var(--sl-color-gray-400)
+}
+
+.drag-and-drop-container sl-icon {
+    font-size: var(--sl-font-size-large);
+}

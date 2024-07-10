@@ -25,7 +25,7 @@ export const ProfileButton = forwardRef(function ProfileButton(props, ref) {
                 {<SlButton size={'small'} className={'square-icon'} id={'open-the-profile-panel'}
                            onClick={toggleProfileButton}
                            key={mainSnap.components.profile.key}>
-                    <SlIcon library="fa" name={FA2SL.set(faChartLine)}></SlIcon>
+                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faChartLine)}></SlIcon>
                 </SlButton>}
             </SlTooltip>
         }

@@ -18,7 +18,7 @@ export const SnapshotButton = (props, ref) => {
      * @param event
      */
     const closeTracksEditor = (event) => {
-        if (isOK(event)) {
+        if (window.isOK(event)) {
             mainStore.components.journeyEditor.show = false
         }
     }
@@ -36,7 +36,7 @@ export const SnapshotButton = (props, ref) => {
         <SlTooltip hoist placement={props.tooltip} content="Snapshot">
             <SlButton size={'small'} className={'square-icon snapshot'}
                       onClick={props.snapshot}>
-                <SlIcon library="fa" name={FA2SL.set(faRegularCameraCircleArrowDown)}></SlIcon>
+                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRegularCameraCircleArrowDown)}></SlIcon>
             </SlButton>
         </SlTooltip>
     </>)

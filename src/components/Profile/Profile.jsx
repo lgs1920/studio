@@ -35,7 +35,7 @@ export const Profile = function Profile(props, ref) {
      * @param event
      */
     const closeProfile = (event) => {
-        if (isOK(event)) {
+        if (window.isOK(event)) {
             mainStore.components.profile.show = false
             //TODO manage 'profile/close' event and externalise
             lgs.profileTrackMarker.toggleVisibility()
@@ -63,14 +63,14 @@ export const Profile = function Profile(props, ref) {
         return (<div className={'profile-additional'}>
             <SlTooltip hoist placement={props.placement} content="Toggle Marker Visibility">
                 {<SlButton id={'toggle-marker-visibility'} className={'square-icon'}>
-                    <SlIcon library="fa"
+                    <SlIcon  slot="prefix" library="fa"
                             onClick={toggleMarker} name={FA2SL.set(faSolidCircleSlash)}></SlIcon>
                 </SlButton>}
             </SlTooltip>
 
             <SlTooltip hoist placement={props.placement} content="Reset Chart">
                 {<SlButton id={'open-the-profile-panel'} className={'square-icon'}>
-                    <SlIcon library="fa"
+                    <SlIcon  slot="prefix"library="fa"
                             onClick={resetChart}
                             name={FA2SL.set(faRegularArrowsRotateReverseMagnifyingGlass)}></SlIcon>
                 </SlButton>}
