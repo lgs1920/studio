@@ -255,6 +255,7 @@ export const JourneyLoaderUI = (props) => {
                     types={SUPPORTED_EXTENSIONS}
                     manageContent={loadJourney}
                     detectWindowDrag={true}
+                    multiple
                 >
                     {getState.accepted === DRAG_AND_DROP_FILE_WAITING && <Message/>}
                     {getState.accepted === DRAG_AND_DROP_FILE_ACCEPTED && <Accepted/>}
