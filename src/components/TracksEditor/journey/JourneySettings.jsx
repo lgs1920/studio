@@ -113,10 +113,11 @@ export const JourneySettings = function JourneySettings() {
      * Export journey confirmation
      */
     const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export "${editorSnapshot.journey.title}" ?`, 'Not Yet. Sorry.',
-                                                                          {
-                                                                              text:'Export',
-                                                                              icon:faDownload
-                                                                          })
+                                                                          // {
+                                                                          //     text:'Export',
+                                                                          //     icon:faDownload
+                                                                          // }
+    // )
 
     /**
      * Export Journey
@@ -130,7 +131,8 @@ export const JourneySettings = function JourneySettings() {
     /**
      * Remove journey confirmation
      */
-    const [ConfirmRemoveJourneyDialog, confirmRemoveJourney] = useConfirm(`Remove "${editorSnapshot.journey.title}" ?`, 'Are you sure you want to remove this journey ?')
+    const [ConfirmRemoveJourneyDialog, confirmRemoveJourney] = useConfirm(`Remove "${editorSnapshot.journey.title}" ?`, 'Are you sure you want to remove this journey ?',
+    {icon:faTrashCan,text:'Remove'})
 
     /**
      * Remove journey
