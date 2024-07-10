@@ -16,12 +16,14 @@ import { FA2SL }                      from '../../Utils/FA2SL'
  *
  * @return {[function(): *,function(): Promise<unknown>]}
  */
-export const useConfirm = (title, message, confirmLabel = {text:'Yes'}, cancelLabel = {text:'No'}) => {
+export const useConfirm = (title, message, confirmLabel, cancelLabel) => {
     const [promise, setPromise] = useState(null)
     const [open, setOpen] = useState(false)
 
-    const confirmIcon = confirmLabel.icon??faCheck
-    const cancelIcon = cancelLabel.icon??faXmark
+    const confirmIcon = confirmLabel?.icon??faCheck
+    const confirmText = confirmLabel?.text??'Yes'
+    const cancelIcon = cancelLabel?.icon??faXmark
+    const cancelText = cancelLabel?.text??'No'
 
     const confirm = () => new Promise((resolve, reject) => {
         setPromise({resolve})
@@ -56,11 +58,11 @@ export const useConfirm = (title, message, confirmLabel = {text:'Yes'}, cancelLa
                 <div className="buttons-bar">
                     <SlButton onClick={handleCancel}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(cancelIcon)}></SlIcon>
-                        {cancelLabel.text}
+                        {cancelText}
                     </SlButton>
                     <SlButton variant="primary" onClick={handleConfirm}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(confirmIcon)}></SlIcon>
-                        {confirmLabel.text}
+                        {confirmText}
                     </SlButton>
                 </div>
             </div>
