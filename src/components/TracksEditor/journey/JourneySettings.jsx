@@ -112,7 +112,11 @@ export const JourneySettings = function JourneySettings() {
     /**
      * Export journey confirmation
      */
-    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export "${editorSnapshot.journey.title}" ?`, 'Not Yet. Sorry.')
+    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export "${editorSnapshot.journey.title}" ?`, 'Not Yet. Sorry.',
+                                                                          {
+                                                                              text:'Export',
+                                                                              icon:faDownload
+                                                                          })
 
     /**
      * Export Journey
