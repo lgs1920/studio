@@ -70,7 +70,7 @@ export const MainUI = function VT3D_UI() {
                     </>
 
             </div>
-            <JourneyLoaderUI/>
+            <JourneyLoaderUI multiple/>
             <Panel/>
             <SupportUI/>
             <TracksEditor/>
