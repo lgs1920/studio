@@ -24,7 +24,13 @@ export const Panel = () => {
 
     }, [])
 
-    const togglePanelVisibility= () =>infoPanelStore.visible = !infoPanelStore.visible
+    const togglePanelVisibility= (event) => {
+        if (event.target !== 'sl-drawer' ) {
+            event.preventDefault()
+            return
+        }
+        infoPanelStore.visible = !infoPanelStore.visible
+    }
 
     return (<>
         <SlDrawer id="info-pane"
@@ -36,7 +42,6 @@ export const Panel = () => {
                 <SlTab slot="nav" panel="tab-whats-new">
                     What's New ?
                 </SlTab>
-
                 <SlTab slot="nav" panel="tab-credits">
                     Credits
                 </SlTab>
