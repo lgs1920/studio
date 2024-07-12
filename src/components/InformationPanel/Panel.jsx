@@ -32,9 +32,7 @@ export const Panel = () => {
                   onSlAfterHide={togglePanelVisibility}
                   ref={drawerRef}
         >
-
-
-            <SlTabGroup style={{display: 'flex', flexDirection: 'column', alignItems: 'stretch'}}>
+            <SlTabGroup>
                 <SlTab slot="nav" panel="tab-whats-new">
                     What's New ?
                 </SlTab>
@@ -42,14 +40,18 @@ export const Panel = () => {
                 <SlTab slot="nav" panel="tab-credits">
                     Credits
                 </SlTab>
-
-                <SlTabPanel name="tab-credits"><CreditsPanel/></SlTabPanel>
-                <SlTabPanel name="tab-whats-new"><WhatsNew/></SlTabPanel>
+                <SlTabPanel  name="tab-credits">
+                    <CreditsPanel/>
+                </SlTabPanel>
+                <SlTabPanel  name="tab-whats-new">
+                    <WhatsNew/>
+                </SlTabPanel>
             </SlTabGroup>
 
             <DrawerFooter/>
 
         </SlDrawer>
 
-    </>)
+        </>
+    )
 }

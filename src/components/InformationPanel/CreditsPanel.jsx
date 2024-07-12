@@ -7,12 +7,13 @@ import code                         from '../../../public/assets/credits/credits
 
 export const CreditsPanel = () => {
 
-    return (<>
-        <Scrollbars style={{height: '100vh'}}>
+    return (
+        <Scrollbars style={{height: '100%'}}>
             <h1>{'Credits'}</h1>
             <ReactMarkdown children={engine}/>
             <ReactMarkdown children={providers}/>
             <ReactMarkdown children={code}/>
         </Scrollbars>
-    </>)
+    )
+
 }

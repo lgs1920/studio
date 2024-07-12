@@ -1,8 +1,8 @@
 import { SlDetails, SlDivider } from '@shoelace-style/shoelace/dist/react'
 import { DateTime }             from 'luxon'
-import React, { useEffect } from 'react'
-import { Scrollbars }       from 'react-custom-scrollbars'
-import Markdown             from 'react-markdown'
+import React, { useEffect }   from 'react'
+import { Scrollbars }         from 'react-custom-scrollbars'
+import Markdown               from 'react-markdown'
 import { proxy, useSnapshot } from 'valtio'
 import { ChangelogManager }   from '../../core/ui/ChangelogManager'
 
@@ -34,8 +34,7 @@ export const WhatsNew = () => {
         state.loading = false
     }, []);
 
-    return (<>
-        <Scrollbars style={{height: '100vh'}}>
+    return (<Scrollbars style={{height: '100%'}}>
             <h1>{'What\'s new?'}</h1>
             <div className={'whats-new-list'}>
                 {snap.data.map(file => (
@@ -50,5 +49,5 @@ export const WhatsNew = () => {
                 ))}
             </div>
         </Scrollbars>
-    </>)
+    )
 }
