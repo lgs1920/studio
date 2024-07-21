@@ -69,6 +69,7 @@ export const WelcomeModal = () => {
                       modal
                       no-header
                       id={'welcome-modal'}
+                      className={'lgs-theme'}
                       onSlRequestClose={close}
                       onSlAfterHide={hide}>
 

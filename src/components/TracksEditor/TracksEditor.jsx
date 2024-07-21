@@ -47,6 +47,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                           onSlRequestClose={handleRequestClose}
                           contained
                           onSlHide={closeTracksEditor}
+                          className={'lgs-theme'}
                 >
                     <div slot="header-actions">
                         <Toolbar editor={false}

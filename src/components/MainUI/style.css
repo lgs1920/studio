@@ -134,14 +134,14 @@
  * https://hype4.academy/tools/glassmorphism-generator
  */
 #welcome-modal::part(panel) {
-    background: rgba( 255, 255, 255, 0.15 );
-    background-image: linear-gradient(to right, rgba(255,188,0,0.30), rgba(255,114,15,0.30));
-    box-shadow: var(--sl-shadow-x-large);
-    backdrop-filter: blur( 4px );
-    -webkit-backdrop-filter: blur( 4px );
-    border-radius: 10px;
-    border: 1px solid rgba( 255, 255, 255, 0.18 );
-    color:#fff
+    /*background: rgba( 255, 255, 255, 0.15 );*/
+    /*background-image: linear-gradient(to right, rgba(255,188,0,0.30), rgba(255,114,15,0.30));*/
+    /*box-shadow: var(--sl-shadow-x-large);*/
+    /*backdrop-filter: blur( 4px );*/
+    /*-webkit-backdrop-filter: blur( 4px );*/
+    /*border-radius: 10px;*/
+    /*border: 1px solid rgba( 255, 255, 255, 0.18 );*/
+   /* color:#fff*/
 }
 
 #welcome-modal #footer{

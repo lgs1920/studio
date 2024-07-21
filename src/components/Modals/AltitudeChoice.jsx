@@ -62,6 +62,7 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
             <SlDialog open={snap.modals.altitudeChoice.show}
                       style={{'--width': '50vw'}}
                       onSlHide={closeDialog}
+                      className={'lgs-theme'}
             >
 
                 <div slot="label">

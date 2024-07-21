@@ -89,6 +89,7 @@ export const Profile = function Profile(props, ref) {
                       contained
                       onSlHide={closeProfile}
                       placement="bottom"
+                      className={'lgs-theme'}
             >
 
 

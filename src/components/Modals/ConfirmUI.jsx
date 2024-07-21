@@ -55,7 +55,9 @@ export const useConfirm = (title, message, confirmLabel, cancelLabel) => {
     }
     const ConfirmationDialog = () => (
         <SlDialog open={open} onSlRequestClose={handleRequestClose}
-                  onSlAfterHide={() => setOpen(false)}>
+                  onSlAfterHide={() => setOpen(false)}
+                  className={'lgs-theme'}
+        >
             <div slot="label">{parse(title)}</div>
             {message}
             <div slot="footer">

@@ -63,8 +63,24 @@
     --lgs-hover-color:var(--sl-color-primary-500);
     --lgs-hover-bg-color:var(--sl-color-primary-50);
 
-
+    --lgs-theme-background:rgba( 255, 255, 255, 0.15 );
+    --lgs-theme-gradient-1: linear-gradient(to right, rgba(192, 134, 24, 0.75), rgba(142, 120, 6, 0.65));
+    --lgs-theme-gradient-1: linear-gradient(61deg, rgba(142, 212, 244, 0.64) 20%, rgba(13, 127, 204, 0.55) 90%);
+    --lgs-theme-background-image: var(--lgs-theme-gradient-1);
 }
+
+.lgs-theme, .lgs-theme::part(panel) {
+        /*background: var(--lgs-theme-background);*/
+        /*background-image: var(--lgs-theme-background-image);*/
+        /*box-shadow: var(--sl-shadow-x-large);*/
+        /*backdrop-filter: blur( 4px );*/
+        /*-webkit-backdrop-filter: blur( 4px );*/
+        /*border-radius: 10px;*/
+        /*border: 1px solid rgba( 255, 255, 255, 0.18 );*/
+        /*color:#fff*/
+}
+
+
 
 .sl-theme-light {
     --sl-input-border-width-small: 4px;

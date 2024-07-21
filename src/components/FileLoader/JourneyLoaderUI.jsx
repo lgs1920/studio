@@ -247,6 +247,8 @@ export const JourneyLoaderUI = (props) => {
                   id={'file-loader-modal'}
                   label={'Add Journeys'}
                   onSlRequestClose={close}
+                  className={'lgs-theme'}
+
         >
             <div className="download-columns">
                 <div slot="header-actions"></div>

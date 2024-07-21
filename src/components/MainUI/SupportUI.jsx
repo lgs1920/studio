@@ -15,6 +15,7 @@ export const SupportUI = () => {
                       modal
                       no-header
                       id={'support-modal'}
+                      className={'lgs-theme'}
                       onSlAfterHide={() => setSupport.visible = false}
             >
                 <ReactMarkdown children={support}/>
