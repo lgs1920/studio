@@ -34,23 +34,23 @@
       "color": "#f2c55c"
     }
   },
-  "DEMServers": [
+  "AvailableElevationServers": [
     {
-      "name": "No Altitude",
-      "value": "none"
+      "name": "Open-Elevation (Worldwide,30m)",
+      "id": "open-elevation",
+      "doc": "https://github.com/Jorl17/open-elevation/blob/master/docs/api.md",
+      "url": "https://api.open-elevation.com/api/v1/",
+      "type": "GET",
+      "maxQuery": 5000
     },
     {
-      "name": "Use Given Data",
-      "value": "from-file"
-    },
-    {
-      "name": "Internal catcher",
-      "value": "internal"
-    },
-    {
-      "name": "Open-Elevation DEM",
-      "value": "open-elevation",
-      "url": "https://github.com/Jorl17/open-elevation/blob/master/docs/api.md"
+      "name": "IGN GeoPortail (France,2m)",
+      "id": "ign-geoportail",
+      "doc": "https://geoservices.ign.fr/documentation/services/services-deprecies/calcul-altimetrique-rest",
+      "url": "https://wxs.ign.fr/calcul/alti/rest/elevation.json?",
+      "type": "GET",
+      "delimiter": "|",
+      "maxQuery": 5000
     }
   ],
   "journey": {

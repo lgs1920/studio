@@ -1,5 +1,6 @@
 import * as Cesium      from 'cesium'
 import { EventEmitter } from '../assets/libs/EventEmitter/EventEmitter'
+import { ElevationServer } from '../core/ElevationServer'
 import { ChangelogManager } from '../core/ui/ChangelogManager'
 import { FA2SL }        from './FA2SL'
 
@@ -91,7 +92,6 @@ export class AppUtils {
         lgs.configuration =  await fetch(CONFIGURATION).then(
             res => res.json()
         )
-        lgs.setDefaultConfiguration()
 
         // Backend  @vite
         lgs.BACKEND_API = `${import.meta.env.VITE_BACKEND_API}/`
@@ -127,6 +127,10 @@ export class AppUtils {
             }
         })
 
+        // Set Elevation servers
+        const tmp = new Map()
+        lgs.configuration.AvailableElevationServers.forEach(server => tmp.set(server.id,server))
+        lgs.elevationServers = new Map([...ElevationServer.FAKE_SERVERS,...tmp])
     }
 
     /**
