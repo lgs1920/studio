@@ -38,7 +38,7 @@ export class ElevationServer {
                                       [
                                           ElevationServer.FILE_CONTENT,
                                           {
-                                              label:  'Reset to File Elevation Data',
+                                              label:  'File Elevation Data',
                                               id:     ElevationServer.FILE_CONTENT,
                                               icon:   faFileWaveform,
                                               origin: true,
