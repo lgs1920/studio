@@ -280,19 +280,19 @@ export const JourneySettings = function JourneySettings() {
                          * Data Tab Panel
                          */}
                         <SlTabPanel name="data">
-                            {editorSnapshot.journey.tracks.size === 1 && <TrackData/>}
-                            {editorSnapshot.journey.tracks.size > 1 && <JourneyData/>}
-
                             {/* Add DEM server selection if we do not have height initially (ie in the journey file) */}
-                            <div>
+                            <div className = {'select-elevation-source'}>
                                 <SelectElevationSource
                                     default={editorSnapshot.journey?.elevationServer ?? ElevationServer.NONE}
-                                    label={'Fix Elevation:'}
+                                    label={'Elevation:'}
                                     onChange={computeElevation}
-
                                 />
+
                                 {editorSnapshot.longTask && <SlProgressBar indeterminate/>}
+
                             </div>
+                            {editorSnapshot.journey.tracks.size === 1 && <TrackData/>}
+                            {editorSnapshot.journey.tracks.size > 1 && <JourneyData/>}
 
                         </SlTabPanel>
                         {/**
