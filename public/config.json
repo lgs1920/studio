@@ -34,25 +34,7 @@
       "color": "#f2c55c"
     }
   },
-  "AvailableElevationServers": [
-    {
-      "name": "Open-Elevation (Worldwide,30m)",
-      "id": "open-elevation",
-      "doc": "https://github.com/Jorl17/open-elevation/blob/master/docs/api.md",
-      "url": "https://api.open-elevation.com/api/v1/",
-      "type": "GET",
-      "maxQuery": 5000
-    },
-    {
-      "name": "IGN GeoPortail (France,2m)",
-      "id": "ign-geoportail",
-      "doc": "https://geoservices.ign.fr/documentation/services/services-deprecies/calcul-altimetrique-rest",
-      "url": "https://wxs.ign.fr/calcul/alti/rest/elevation.json?",
-      "type": "GET",
-      "delimiter": "|",
-      "maxQuery": 5000
-    }
-  ],
+
   "journey": {
     "color": "#B22222ff",
     "thickness": 2,
