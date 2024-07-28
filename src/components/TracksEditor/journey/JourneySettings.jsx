@@ -139,9 +139,15 @@ export const JourneySettings = function JourneySettings() {
                     UIToast.error({
                                       caption: `An error occurred when calculating elevations`, text: 'Changes aborted! Check app error console to see details.',
                                   })
-                    editorStore.journey.elevationServer = former
+                    editorStore.journey.elevationServer = former // Reset choice
                     return
                 }
+
+                // Successfull, let's continue
+                UIToast.success({
+                                    caption: `Elevation data have been modified`,
+                                    text: `Source: ${ElevationServer.SERVERS.get(editorStore.journey.elevationServer).label}`,
+                                })
 
 
                 //TODO manages
@@ -244,7 +250,6 @@ export const JourneySettings = function JourneySettings() {
             }
 
             // Let's inform the user
-
             UIToast.success({
                 caption: `${removed.title}</strong>`,
                 text: `removed successfully!<br>${text}`,
