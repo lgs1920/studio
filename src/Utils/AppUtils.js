@@ -128,9 +128,7 @@ export class AppUtils {
         })
 
         // Set Elevation servers
-        const tmp = new Map()
-        lgs.configuration.AvailableElevationServers.forEach(server => tmp.set(server.id,server))
-        lgs.elevationServers = new Map([...ElevationServer.FAKE_SERVERS,...tmp])
+        lgs.elevationServers = ElevationServer.SERVERS
     }
 
     /**

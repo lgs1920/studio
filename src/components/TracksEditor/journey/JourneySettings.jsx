@@ -1,29 +1,43 @@
-import { useConfirm }      from '@Components/Modals/ConfirmUI'
-import { ToggleStateIcon } from '@Components/ToggleStateIcon'
-import { NO_DEM_SERVER }   from '@Core/Journey'
-import { TrackData }       from '@Editor/track/TrackData'
+import { useConfirm } from '@Components/Modals/ConfirmUI'
+import {
+    ToggleStateIcon,
+}                     from '@Components/ToggleStateIcon'
+import {
+    TrackData,
+}                     from '@Editor/track/TrackData'
 import {
     TrackFlagsSettings,
-}                          from '@Editor/track/TrackFlagsSettings'
-import { TrackPoints }     from '@Editor/track/TrackPoints'
+}                     from '@Editor/track/TrackFlagsSettings'
+import {
+    TrackPoints,
+}                     from '@Editor/track/TrackPoints'
 import {
     TrackStyleSettings,
-}                          from '@Editor/track/TrackStyleSettings'
-import { Utils }           from '@Editor/Utils'
+}                     from '@Editor/track/TrackStyleSettings'
+import { Utils }      from '@Editor/Utils'
 import {
     faCircleDot, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList, faTelescope,
     faTrashCan,
-}                          from '@fortawesome/pro-regular-svg-icons'
+}                     from '@fortawesome/pro-regular-svg-icons'
 import {
-    SlIcon, SlInput, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                          from '@shoelace-style/shoelace/dist/react'
-import { TrackUtils }      from '@Utils/cesium/TrackUtils'
-import { FA2SL }           from '@Utils/FA2SL'
-import { UIToast }         from '@Utils/UIToast'
-import { sprintf }         from 'sprintf-js'
+    SlIcon, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
+}                     from '@shoelace-style/shoelace/dist/react'
+import {
+    TrackUtils,
+}                     from '@Utils/cesium/TrackUtils'
+import { FA2SL }      from '@Utils/FA2SL'
+import { UIToast }    from '@Utils/UIToast'
+import { sprintf }    from 'sprintf-js'
 import { useSnapshot } from 'valtio'
+import {
+    ElevationServer,
+}                     from '../../../core/ElevationServer'
+import {
+    SelectElevationSource,
+}                     from '../../MainUI/SelectElevationSource'
 import { JourneyData } from './JourneyData'
 import { JourneyPOIs } from './JourneyPOIs'
+import {Journey} from '../../../core/Journey'
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2
@@ -33,6 +47,7 @@ export const JourneySettings = function JourneySettings() {
 
     const editorStore = lgs.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
+    const former = editorStore.journey.elevationServer
 
     /**
      * Change journey description
@@ -95,19 +110,54 @@ export const JourneySettings = function JourneySettings() {
     })
 
     /**
-     * Change DEM server
+     * Change Elevation server
      *
-     * @type {setDEMServer}
+     * @type {computeElevation}
      */
-    const setDEMServer = (async event => {
-        editorStore.journey.DEMServer = event.target.value
-        editorStore.longTask = editorStore.journey.DEMServer !== NO_DEM_SERVER
-        Utils.renderJourneySettings()
-        // await lgs.theJourney.computeAll()
-        // // Then we redraw the theJourney
-        // await lgs.theJourney.showAfterHeightSimulation()
+    const computeElevation = (async event => {
+        editorStore.journey.elevationServer = event.target.value
 
-        await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
+        editorStore.longTask = editorStore.journey.elevationServer !== ElevationServer.NONE
+
+        // use a Elevationserver
+        const server = new ElevationServer(editorStore.journey.elevationServer)
+
+        // Extract coordinates
+        const theJourney = Journey.unproxify(lgs.theJourney)
+
+        theJourney.geoJson.features.forEach((feature,index) => {
+            const coordinates  =feature.geometry.coordinates
+            const origin =theJourney.origin.features[index].geometry.coordinates
+            server.getElevation(coordinates,origin).then(data => {
+                editorStore.longTask=false
+
+                // Manage errors (it fails if there is at least one error)
+                if (data.errors) {
+                    data.errors.forEach(error => {
+                        console.error(error)
+                    })
+                    UIToast.error({
+                                      caption: `An error occurred when calculating elevations`, text: 'Changes aborted! Check app error console to see details.',
+                                  })
+                    editorStore.journey.elevationServer = former
+                    return
+                }
+
+
+                //TODO manages
+
+                // Utils.renderJourneySettings()
+                // await lgs.theJourney.computeAll()
+                // // // Then we redraw the theJourney
+                // await lgs.theJourney.showAfterHeightSimulation()
+                //
+                // await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
+            })
+        })
+
+
+
+
     })
     /**
      * Export journey confirmation
@@ -233,6 +283,17 @@ export const JourneySettings = function JourneySettings() {
                             {editorSnapshot.journey.tracks.size === 1 && <TrackData/>}
                             {editorSnapshot.journey.tracks.size > 1 && <JourneyData/>}
 
+                            {/* Add DEM server selection if we do not have height initially (ie in the journey file) */}
+                            <div>
+                                <SelectElevationSource
+                                    default={editorSnapshot.journey?.elevationServer ?? ElevationServer.NONE}
+                                    label={'Fix Elevation:'}
+                                    onChange={computeElevation}
+
+                                />
+                                {editorSnapshot.longTask && <SlProgressBar indeterminate/>}
+                            </div>
+
                         </SlTabPanel>
                         {/**
                          * Edit  Tab Panel
@@ -255,7 +316,6 @@ export const JourneySettings = function JourneySettings() {
                                                 value={editorSnapshot.journey.description}
                                                 onSlChange={setDescription}
                                                 placeholder={'Journey description'}
-
                                     />
                                 </SlTooltip>
 
@@ -316,18 +376,6 @@ export const JourneySettings = function JourneySettings() {
                         </span>
                     </div>
                 </div>
-
-                {/* Add DEM server selection if we do not have height initially (ie in the journey file) */}
-                {/* <div> */}
-                {/*     <DEMServerSelection */}
-                {/*         default={editorSnapshot.journey?.DEMServer ?? NO_DEM_SERVER} */}
-                {/*         label={'Elevation:'} */}
-                {/*         onChange={setDEMServer} */}
-                {/*     /> */}
-                {/*     {editorSnapshot.longTask && <SlProgressBar indeterminate/>} */}
-                {/* </div> */}
-                {/* Journey line settings */}
-
 
                 <ConfirmRemoveJourneyDialog/>
                 <ConfirmExportJourneyDialog/>

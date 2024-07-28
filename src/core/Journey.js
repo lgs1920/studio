@@ -11,6 +11,7 @@ import {
 import {
     UIToast,
 }                                       from '@Utils/UIToast'
+import { ElevationServer }              from './ElevationServer'
 import {
     MapElement,
 }                                       from './MapElement'
@@ -56,7 +57,7 @@ export class Journey extends MapElement {
 
             this.description = options.description ?? ''
 
-            this.DEMServer = options.DEMServer ?? NO_DEM_SERVER
+            this.elevationServer = options.elevationServer ?? ElevationServer.NONE
 
             this.camera = options.camera ?? null
 
@@ -194,6 +195,7 @@ export class Journey extends MapElement {
                 case KML:
                     this.geoJson = kml(new DOMParser().parseFromString(content, 'text/xml'))
                     break
+                case JSON_:
                 case GEOJSON :
                     this.geoJson = JSON.parse(content)
             }
@@ -605,6 +607,7 @@ export const GPX = 'gpx'
 export const KML = 'kml'
 export const KMZ = 'kmz'
 export const GEOJSON = 'geojson'
+export const JSON_='json'
 
 export const FLAG_START = 'start'
 export const FLAG_STOP = 'stop'
@@ -612,7 +615,6 @@ export const POI_FLAG = 'flag'
 export const POI_STD = 'poi'
 export const TRACK_SLUG = 'track'
 
-export const NO_DEM_SERVER = 'none'
 export const SIMULATE_ALTITUDE = 'simulate-altitude'
 export const INITIAL_LOADING = 1
 export const RE_LOADING = 2

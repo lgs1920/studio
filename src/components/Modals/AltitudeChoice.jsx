@@ -1,10 +1,10 @@
-import { NO_DEM_SERVER }        from '@Core/Journey'
+import { ElevationServer.NONE }        from '@Core/Journey'
 import { SlButton, SlDialog }   from '@shoelace-style/shoelace/dist/react'
 import { forwardRef, useState } from 'react'
 import { useSnapshot }          from 'valtio'
 
 import '../../../assets/css/modals.css'
-import { DEMServerSelection } from '../MainUI/DEMServerSelection'
+import { SelectElevationSource } from '../MainUI/SelectElevationSource'
 
 
 export const AltitudeChoice = forwardRef(function AltitudeChoice() {
@@ -15,7 +15,7 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
     const storeEditor = lgs.theJourneyEditorProxy
     const snapEditor = useSnapshot(storeEditor)
 
-    const [server, setServer] = useState(lgs?.mainProxy.theJourney?.DEMServer ?? NO_DEM_SERVER)
+    const [server, setServer] = useState(lgs?.mainProxy.theJourney?.elevationServer ?? ElevationServer.NONE)
 
     const setOpen = (open) => {
         mainStore.modals.altitudeChoice.show = open
@@ -46,8 +46,8 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
     const closeDialog = async (event) => {
         if (window.isOK(event)) {
             event.preventDefault()
-            lgs.theJourney.DEMServer = server
-            if (server !== NO_DEM_SERVER) {
+            lgs.theJourney.elevationServer = server
+            if (server !== ElevationServer.NONE) {
                 await lgs.theJourney.extractMetrics()
                 lgs.saveJourney()
                 lgs.theJourney.addToContext()
@@ -75,8 +75,8 @@ export const AltitudeChoice = forwardRef(function AltitudeChoice() {
                         but you can also simulate them !<br/>
                     </div>
                     <div className="dialog-action">
-                        <DEMServerSelection
-                            default={snapEditor.track.DEMServer ?? NO_DEM_SERVER}
+                        <SelectElevationSource
+                            default={snapEditor.track.elevationServer ?? ElevationServer.NONE}
                             label={'Choose the way you wish to obtain altitude:'}
                             onChange={allowAltitudeSimulation}/>
                     </div>

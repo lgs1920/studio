@@ -620,6 +620,11 @@ export class TrackUtils {
         try {
             // File is correct let's work with
             if (journey !== undefined) {
+
+                // if (journey.extension === 'json' && typeof journey.content === 'string') {
+                //     journey.content = JSON.parse(journey.content)
+                // }
+
                 let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
                 // Check if the track already exists in context
                 // If not we manage and show it.
@@ -656,13 +661,17 @@ export class TrackUtils {
                     // It exists, we notify it
                     UIToast.warning({
                                         caption: `This journey has already been loaded!`,
-                                        text:    'Please select another one !',
+                                        text:    'Please select another one!',
                                     })
                     return JOURNEY_EXISTS
                 }
             }
         }
         catch (e) {
+            UIToast.error({
+                                caption: `We have encountered problems reading this file!`,
+                                text:    'Maybe the format is wrong!',
+                            })
             return JOURNEY_KO
         }
     }

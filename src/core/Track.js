@@ -339,7 +339,7 @@ export class Track extends MapElement {
                     //        https://tessadem.com/elevation-api/  ($)
                     //     or https://github.com/Jorl17/open-elevation/blob/master/docs/api.md
 
-                    // if (this.DEMServer === NO_DEM_SERVER) {
+                    // if (this.elevationServer === ElevationServer.NONE) {
                     //     // May be, some computations have been done before, so we cleaned them
                     //     // use case : any DEM server -> no DEM server
                     //     let j = 0
@@ -352,8 +352,8 @@ export class Track extends MapElement {
                     // } else {
                     //     // We have aDEM Server, so let's compute altitude
                     //     let altitudes = []
-                    //     switch (this.DEMServer) {
-                    //         case NO_DEM_SERVER:
+                    //     switch (this.elevationServer) {
+                    //         case ElevationServer.NONE:
                     //             break
                     //         case 'internal' :
                     //             // altitudes = await
