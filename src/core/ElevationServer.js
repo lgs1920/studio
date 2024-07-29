@@ -125,7 +125,7 @@ export class ElevationServer {
             // then wait they are resolved
             const all = await Promise.all(promises)
             // Now return data with elevations
-            const data= all.map(item => item.data);
+            const data= all.map(item => item.coordinates);
             const errors = all
                 .map(item => item.error ? item.error : null)
                 .filter(error => error !== null);
@@ -134,7 +134,7 @@ export class ElevationServer {
             }
             return {coordinates:[].concat(...data)}
         }
-
+        // Nothing to do, return coordinates without change
         return {coordinates:coordinates}
     }
 
