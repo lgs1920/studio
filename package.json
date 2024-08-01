@@ -22,7 +22,7 @@
     "@mapbox/extent": "^0.4.0",
     "@mapbox/geojson-extent": "^1.0.1",
     "@mapbox/togeojson": "^0.16.2",
-    "@shoelace-style/shoelace": "^2.15.1",
+    "@shoelace-style/shoelace": "^2.16.0",
     "@tmcw/togeojson": "^5.8.1",
     "@turf/boolean-clockwise": "^6.5.0",
     "@turf/centroid": "^6.5.0",
