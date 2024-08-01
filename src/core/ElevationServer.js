@@ -95,7 +95,8 @@ export class ElevationServer {
      *        or
      *        errors:[error]
      */
-    getElevation = async (coordinates, origin = []) => {
+    getElevation = (coordinates, origin = []) => {
+        return new Promise((resolve, reject) => {
         if (this.server.id !== ElevationServer.NONE) {
 
             // According selected option, we set the right mthode to call
@@ -122,20 +123,49 @@ export class ElevationServer {
             }
             // Now let's run queries in parallel
             let promises = chunks[0].map((coordinates, index) => this.fetchElevation(coordinates, chunks[1][index]))
+
             // then wait they are resolved
-            const all = await Promise.all(promises)
-            // Now return data with elevations
-            const data= all.map(item => item.coordinates);
-            const errors = all
-                .map(item => item.error ? item.error : null)
-                .filter(error => error !== null);
-            if (errors.length > 0) {
-                return {errors:errors}
-            }
-            return {coordinates:[].concat(...data)}
+            return Promise.allSettled(promises).then((results) => {
+                                                  const data = {
+                                                      coordinates: [],
+                                                      errors:      [],
+                                                  }
+                                                  results.forEach(result => {
+                                                      if (result.status === 'fulfilled') {
+                                                          if (result.value.coordinates) {
+                                                              data.coordinates.push(...result.value.coordinates)
+                                                          }
+                                                          if (result.value.errors) {
+                                                              data.errors.push(result.value.errors)
+                                                          }
+                                                      }
+                                                      else { // rejected or undefined
+                                                          data.errors = result?.reason?.errors ?? result?.errors
+                                                      }
+                                                  })
+
+                                                  if (data.errors && data.errors.length > 0) {
+                                                      reject({errors: data.errors})
+                                                  }
+                                                  else {
+                                                      resolve({
+                                                                  coordinates: data.coordinates,
+                                                                  errors:      null,
+                                                              })
+                                                  }
+                                              },
+            ).catch((error) => {
+                reject({
+                           errors: error,
+                       })
+            })
         }
         // Nothing to do, return coordinates without change
-        return {coordinates:coordinates}
+            resolve({
+                        coordinates: coordinates,
+                        errors:      null,
+                    })
+        })
     }
 
     /**
@@ -161,17 +191,19 @@ export class ElevationServer {
             resource:'ign_rge_alti_wld'
         }
 
-        return axios.post(ElevationServer.SERVERS.get(ElevationServer.IGN_GEOPORTAIL).url, payload)
-            .then(function (response) {
-                const data=[]
-                response.data.elevations.forEach((point,index) => {
-                     data.push([lon[index],lat[index],point])
-                 })
-                return {coordinates:data}
-            })
-            .catch(error =>{
-                return {errors:[error]}
-            })
+        return new Promise((resolve, reject) => {
+            axios.post(ElevationServer.SERVERS.get(ElevationServer.IGN_GEOPORTAIL).url, payload)
+                .then(function (response) {
+                    const data = []
+                    response.data.elevations.forEach((point, index) => {
+                        data.push([lon[index], lat[index], point])
+                    })
+                    resolve({coordinates: data})
+                })
+                .catch(error => {
+                    reject({errors: [error]})
+                })
+        })
     }
 
     /**
@@ -185,22 +217,23 @@ export class ElevationServer {
         const payload = {locations: []}
         coordinates.forEach(coordinate => {
             payload.locations.push({
-                                       longitude:  coordinate[0],
-                                       latitude: coordinate[1],
+                                       longitude: coordinate[0],
+                                       latitude:  coordinate[1],
                                    })
         })
-
-        return axios.post(ElevationServer.SERVERS.get(ElevationServer.OPEN_ELEVATION).url, payload)
-            .then(function (response) {
-                const data=[]
-                response.data.results.forEach(point => {
-                    data.push([point.longitude,point.latitude,point.elevation])
+        return new Promise((resolve, reject) => {
+            axios.post(ElevationServer.SERVERS.get(ElevationServer.OPEN_ELEVATION).url, payload)
+                .then(function (response) {
+                    const data = []
+                    response.data.results.forEach(point => {
+                        data.push([point.longitude, point.latitude, point.elevation])
+                    })
+                    resolve({coordinates: data})
                 })
-                return {coordinates:data}
-            })
-            .catch(error =>{
-                return {errors:[error]}
-            })
+                .catch(error => {
+                    reject({errors: [error]})
+                })
+        })
     }
     /**
      * Clear elevation data
@@ -216,7 +249,9 @@ export class ElevationServer {
             }
             data.push(coordinate)
         })
-        return {coordinates:data}
+        return new Promise((resolve, reject) => {
+            resolve ({coordinates: data})
+        })
     }
 
     /**
@@ -232,6 +267,8 @@ export class ElevationServer {
             coordinate[2] = origin[index][2]
             data.push(coordinate)
         })
-        return {coordinates: data}
+            return new Promise((resolve) => {
+                resolve({coordinates: data})
+            })
     }
 }

@@ -2,6 +2,7 @@ import { default as extent }                                         from '@mapb
 import { default as centroid }                                       from '@turf/centroid'
 import * as Cesium                                                   from 'cesium'
 import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 } from 'cesium'
+import { ElevationServer }                                           from '../../core/ElevationServer'
 import {
     FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
 }                                                                    from '../../core/Journey'
@@ -600,7 +601,7 @@ export class TrackUtils {
     }
 
     /**
-     * Read a journey in
+     * Read a journey
      *
      *
      * @param {} journey {
@@ -611,7 +612,7 @@ export class TrackUtils {
      *
      * @return {Promise<number>}
      */
-    static uploadJourneyFile = async (journey) => {
+    static loadJourneyFromFile = async (journey) => {
 
         // uploading a file exits full screen mode, so we force the state
         const mainStore = lgs.mainProxy
@@ -629,9 +630,10 @@ export class TrackUtils {
                 // Check if the track already exists in context
                 // If not we manage and show it.
                 if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
-                    if (!theJourney.hasAltitude) {
-                        mainStore.modals.altitudeChoice.show = true
-                    }
+
+
+                   theJourney.globalSettings()
+
                     // Need stats
                     theJourney.extractMetrics()
                     // Prepare the contexts and current values

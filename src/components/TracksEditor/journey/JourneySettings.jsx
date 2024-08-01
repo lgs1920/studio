@@ -33,11 +33,13 @@ import {
     ElevationServer,
 }                     from '../../../core/ElevationServer'
 import {
+    Journey,
+}                     from '../../../core/Journey'
+import {
     SelectElevationSource,
 }                     from '../../MainUI/SelectElevationSource'
 import { JourneyData } from './JourneyData'
 import { JourneyPOIs } from './JourneyPOIs'
-import {Journey} from '../../../core/Journey'
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2
@@ -54,7 +56,7 @@ export const JourneySettings = function JourneySettings() {
      *
      * @type {(function(*): Promise<*>)|*}
      */
-    const setDescription = (async event => {
+    const setDescription = async event => {
         const description = event.target.value
         // Title is empty, we force the former value
         if (description === '') {
@@ -64,7 +66,7 @@ export const JourneySettings = function JourneySettings() {
         }
         editorStore.journey.description = description
         await Utils.Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
-    })
+    }
 
     /**
      * Change Journey Title
@@ -73,7 +75,7 @@ export const JourneySettings = function JourneySettings() {
      *
      * @type {setTitle}
      */
-    const setTitle = (async event => {
+    const setTitle = async event => {
         const title = event.target.value
         // Title is empty, we force the former value
         if (title === '') {
@@ -86,35 +88,35 @@ export const JourneySettings = function JourneySettings() {
         // Then use it
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneysList()
-    })
+    }
 
     /**
      * Change journey visibility
      *
      */
-    const setJourneyVisibility = (async visibility => {
+    const setJourneyVisibility = async visibility => {
         editorStore.journey.visible = visibility
         lgs.theJourney.updateVisibility(visibility)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneySettings()
-    })
+    }
     /**
      * Change POIs visibility
      *
      */
-    const setAllPOIsVisibility = (async visibility => {
+    const setAllPOIsVisibility = async visibility => {
         editorStore.journey.POIsVisible = visibility
         TrackUtils.updatePOIsVisibility(lgs.theJourney, visibility)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneySettings()
-    })
+    }
 
     /**
      * Change Elevation server
      *
      * @type {computeElevation}
      */
-    const computeElevation = (async event => {
+    const computeElevation = async event => {
         editorStore.journey.elevationServer = event.target.value
 
         editorStore.longTask = editorStore.journey.elevationServer !== ElevationServer.NONE
@@ -124,47 +126,92 @@ export const JourneySettings = function JourneySettings() {
 
         // Extract coordinates
         const theJourney = Journey.unproxify(lgs.theJourney)
-
-        theJourney.geoJson.features.forEach((feature,index) => {
-            const coordinates  =feature.geometry.coordinates
-            const origin =theJourney.origin.features[index].geometry.coordinates
-            server.getElevation(coordinates,origin).then(data => {
-                editorStore.longTask=false
-
-                // Manage errors (it fails if there is at least one error)
-                if (data.errors) {
-                    data.errors.forEach(error => {
-                        console.error(error)
-                    })
-                    UIToast.error({
-                                      caption: `An error occurred when calculating elevations`, text: 'Changes aborted! Check app error console to see details.',
-                                  })
-                    editorStore.journey.elevationServer = former // Reset choice
-                    return
-                }
-
-                // Successfull, let's continue
-                UIToast.success({
-                                    caption: `Elevation data have been modified`,
-                                    text: `Source: ${ElevationServer.SERVERS.get(editorStore.journey.elevationServer).label}`,
-                                })
-
-
-                //TODO manages
-
-                // Utils.renderJourneySettings()
-                // await lgs.theJourney.computeAll()
-                // // // Then we redraw the theJourney
-                // await lgs.theJourney.showAfterHeightSimulation()
-                //
-                // await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
-            })
+        const promises = []
+        theJourney.geoJson.features.forEach((feature, index) => {
+            const coordinates = feature.geometry.coordinates
+            const origin = theJourney.origin.features[index].geometry.coordinates
+            promises.push(server.getElevation(coordinates, origin))
         })
 
+        Promise.allSettled(promises)
+            .then(
+                (results) => {
+                    editorStore.longTask = false
+console.log(results)
+                    // Check if we have at least one error
+
+                    const hasError = results.some(result => result.value && result.value.errors !== null || result.status==='rejected');
+                    if (hasError) {
+                                results.forEach(result => {
+                                    const tmp = result.value??result.reason
+                                    if (tmp && tmp.errors)  {
+                                        console.error(tmp.errors)
+                                    }
+                                })
+                                UIToast.error({
+                                                  caption: `An error occurred when calculating elevations`,
+                                                  text:    'Changes aborted! Check logs to see error details.',
+                                              })
+                                editorStore.journey.elevationServer = former // Reset choice
+                                return
+                    } else {
+                        UIToast.success({
+                                                caption: `Elevation data have been modified`,
+                                                text:    `Source:
+                        ${ElevationServer.SERVERS.get(editorStore.journey.elevationServer).label}`
+                            })
+                        // Change the current feature
+                      //  theJourney.geoJson.features[index].geometry.coordinates = data.coordinates
+                    }
+                })
+        // .then(data => {
+        //
+        //
+        //
+        //     // Manage errors (it fails if there is at least one error)
+        //     if (data.errors) {
+        //         data.errors.forEach(error => {
+        //             console.error(error)
+        //         })
+        //         UIToast.error({
+        //                           caption: `An error occurred when calculating elevations`,
+        //                           text:    'Changes aborted! Check app error console to see details.',
+        //                       })
+        //         editorStore.journey.elevationServer = former // Reset choice
+        //         return
+        //     }
+        //
+        //     // Successfull, let's continue
+        //     UIToast.success({
+        //                         caption: `Elevation data have been modified`,
+        //                         text:    `Source:
+        // ${ElevationServer.SERVERS.get(editorStore.journey.elevationServer).label}`, })   // Change the current
+        // feature theJourney.geoJson.features[index].geometry.coordinates = data.coordinates })
 
 
+        // Recopute all journey information
 
-    })
+        // Save them
+
+        // Display them
+
+        // Update profile ?
+
+        // Utils.renderJourneySettings()
+        // await lgs.theJourney.computeAll()
+        // // // Then we redraw the theJourney
+        // await lgs.theJourney.showAfterHeightSimulation()
+        //
+        // await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
+
+        // await theJourney.extractMetrics()
+        // lgs.saveJourney(theJourney)
+        // theJourney.addToContext()
+        // // Then we redraw the theJourney
+        // await lgs.theJourney.showAfterHeightSimulation()
+        //  await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
+    }
+
     /**
      * Export journey confirmation
      */
@@ -288,7 +335,7 @@ export const JourneySettings = function JourneySettings() {
                             {/* Add DEM server selection if we do not have height initially (ie in the journey file) */}
                             <div className = {'select-elevation-source'}>
                                 <SelectElevationSource
-                                    default={editorSnapshot.journey?.elevationServer ?? ElevationServer.NONE}
+                                    default={editorSnapshot.journey?.elevationServer}
                                     label={'Elevation:'}
                                     onChange={computeElevation}
                                 />

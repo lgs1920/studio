@@ -13,7 +13,7 @@ import { sprintf }                             from 'sprintf-js'
 import { useSnapshot }                                   from 'valtio'
 
 import {
-    JOURNEY_DENIED, JOURNEY_KO, JOURNEY_WAITING, SUPPORTED_EXTENSIONS, TrackUtils,
+    JOURNEY_DENIED, JOURNEY_OK, JOURNEY_WAITING, SUPPORTED_EXTENSIONS, TrackUtils,
 } from '../../Utils/cesium/TrackUtils'
 import {
     DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
@@ -48,7 +48,13 @@ export const JourneyLoaderUI = (props) => {
         if (result) {
             const journey = FileUtils.getFileNameAndExtension(file.name)
             journey.content = content
-            status = await TrackUtils.uploadJourneyFile(journey)
+            status = await TrackUtils.loadJourneyFromFile(journey)
+            // Reading is OK, so we set some readonly parameters
+            if (status === JOURNEY_OK) {
+                // Get some initial settings
+                lgs.theJourney.globalSettings()
+                console.log(lgs.theJourney)
+            }
         }
         const item = fileList.get(__.app.slugify(file.name))
         item.journeyStatus = status

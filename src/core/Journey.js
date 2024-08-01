@@ -1,26 +1,30 @@
-import { gpx, kml }                     from '@tmcw/togeojson'
+import { gpx, kml }                    from '@tmcw/togeojson'
 import {
     getGeom,
-}                                       from '@turf/invariant'
+}                                      from '@turf/invariant'
 import {
     JUST_ICON,
-}                                       from '@Utils/cesium/POIUtils'
+}                                      from '@Utils/cesium/POIUtils'
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                                       from '@Utils/cesium/TrackUtils'
+}                                      from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
-}                                       from '@Utils/UIToast'
-import { ElevationServer }              from './ElevationServer'
+}                                      from '@Utils/UIToast'
+import {
+    ElevationServer,
+}                                      from './ElevationServer'
+import {
+    JOURNEYS_STORE, ORIGIN_STORE,
+}                                      from './LGS1920Context.js'
 import {
     MapElement,
-}                                       from './MapElement'
-import { POI, POI_VERTICAL_ALIGN_TOP }  from './POI'
-import { Track }                        from './Track'
+}                                      from './MapElement'
+import { POI, POI_VERTICAL_ALIGN_TOP } from './POI'
+import { Track }                       from './Track'
 import {
     Camera,
-}                                       from './ui/Camera.js'
-import { JOURNEYS_STORE, ORIGIN_STORE } from './LGS1920Context.js'
+}                                      from './ui/Camera.js'
 
 export class Journey extends MapElement {
 
@@ -37,6 +41,9 @@ export class Journey extends MapElement {
     metrics = {}
     camera = {}
     cameraOrigin = {}
+
+    hasElevation = false
+    hasTime = false
 
     constructor(title, type, options) {
         super()
@@ -56,8 +63,6 @@ export class Journey extends MapElement {
             this.POIsVisible = options.POIsVisible ?? true
 
             this.description = options.description ?? ''
-
-            this.elevationServer = options.elevationServer ?? ElevationServer.NONE
 
             this.camera = options.camera ?? null
 
@@ -89,7 +94,7 @@ export class Journey extends MapElement {
          * If we're on the current journey, we register to the camera updates events
          * in order to save camera information
          */
-        lgs.events.on(Camera.UPDATE_EVENT, (data) => {
+        lgs.events.on(Camera.UPDATE_EVENT, () => {
             if (this.isCurrent()) {
                 this.camera = __.ui.camera.get()
                 lgs.saveJourney(this)
@@ -157,6 +162,24 @@ export class Journey extends MapElement {
      */
     isCurrent = () => {
         return lgs.theJourney && lgs.theJourney.slug === this.slug
+    }
+
+    /**
+     * Set some global  parameters
+     *
+     *   hasTime  =>  null, true , false
+     *   hasElevation  =>  null, true , false
+     *
+     */
+    globalSettings = () => {
+        const tracks = Array.from(this.tracks.values())
+        this.hasTime = tracks.every(track => track.hasTime) ? true :
+                       (tracks.some(track => track.hasTime) ? null : false)
+
+        this.hasElevation = tracks.every(track => track.hasAltitude) ? true :
+                            (tracks.some(track => track.hasAltitude) ? null : false)
+
+        this.elevationServer = this.hasElevation ? ElevationServer.FILE_CONTENT : ElevationServer.NONE
     }
 
     prepareDrawing = async () => {
