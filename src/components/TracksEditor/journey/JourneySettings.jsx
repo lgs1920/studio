@@ -125,7 +125,7 @@ export const JourneySettings = function JourneySettings() {
         const server = new ElevationServer(editorStore.journey.elevationServer)
 
         // Extract coordinates
-        const theJourney = Journey.unproxify(lgs.theJourney)
+        const theJourney = lgs.theJourney
         const promises = []
         theJourney.geoJson.features.forEach((feature, index) => {
             const coordinates = feature.geometry.coordinates
@@ -134,82 +134,64 @@ export const JourneySettings = function JourneySettings() {
         })
 
         Promise.allSettled(promises)
-            .then(
-                (results) => {
-                    editorStore.longTask = false
-console.log(results)
-                    // Check if we have at least one error
+            // Notifications
+            .then(results => {
 
+                // Suppress in progress notification
+                    editorStore.longTask = false
+
+                    // Check if we have at least one error
                     const hasError = results.some(result => result.value && result.value.errors !== null || result.status==='rejected');
+
                     if (hasError) {
-                                results.forEach(result => {
-                                    const tmp = result.value??result.reason
-                                    if (tmp && tmp.errors)  {
-                                        console.error(tmp.errors)
-                                    }
-                                })
-                                UIToast.error({
-                                                  caption: `An error occurred when calculating elevations`,
-                                                  text:    'Changes aborted! Check logs to see error details.',
-                                              })
-                                editorStore.journey.elevationServer = former // Reset choice
-                                return
+                        // Failure notification
+                        results.forEach(result => {
+                            const tmp = result.value ?? result.reason
+                            if (tmp && tmp.errors) {
+                                console.error(tmp.errors)
+                            }
+                        })
+
+                        UIToast.error({
+                                          caption: `An error occurred when calculating elevations`,
+                                          text:    'Changes aborted! Check logs to see error details.',
+                                      })
+                        return []
                     } else {
+                        // Success notification
                         UIToast.success({
-                                                caption: `Elevation data have been modified`,
-                                                text:    `Source:
-                        ${ElevationServer.SERVERS.get(editorStore.journey.elevationServer).label}`
-                            })
-                        // Change the current feature
-                      //  theJourney.geoJson.features[index].geometry.coordinates = data.coordinates
+                                            caption: `Elevation data have been modified`,
+                                            text:    `Source:${ElevationServer.SERVERS.get(editorStore.journey.elevationServer).label}`,
+                                        })
+                        const coordinates = []
+                        results.forEach(result => {
+                            coordinates.push(result.value.coordinates)
+                        })
+                        return coordinates
                     }
                 })
-        // .then(data => {
-        //
-        //
-        //
-        //     // Manage errors (it fails if there is at least one error)
-        //     if (data.errors) {
-        //         data.errors.forEach(error => {
-        //             console.error(error)
-        //         })
-        //         UIToast.error({
-        //                           caption: `An error occurred when calculating elevations`,
-        //                           text:    'Changes aborted! Check app error console to see details.',
-        //                       })
-        //         editorStore.journey.elevationServer = former // Reset choice
-        //         return
-        //     }
-        //
-        //     // Successfull, let's continue
-        //     UIToast.success({
-        //                         caption: `Elevation data have been modified`,
-        //                         text:    `Source:
-        // ${ElevationServer.SERVERS.get(editorStore.journey.elevationServer).label}`, })   // Change the current
-        // feature theJourney.geoJson.features[index].geometry.coordinates = data.coordinates })
 
+            // Now manage and save new data
+            .then(async coordinates => {
+                if (coordinates.length > 0) {
+                    // Changes are OK, ave data
+                    theJourney.geoJson.features.forEach((feature, index, features) => {
+                        features[index].geometry.coordinates = coordinates[index]
+                    })
 
-        // Recopute all journey information
+                    await theJourney.extractMetrics()
+                    theJourney.addToContext()
+                    theJourney.saveToDB()
+                    // Then we redraw the theJourney
+                    await lgs.theJourney.showAfterHeightSimulation()
+                    await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
+                }
+                else {
+                    // Changes are in error, we reset selection
+                    editorStore.journey.elevationServer = former
+                }
+            })
 
-        // Save them
-
-        // Display them
-
-        // Update profile ?
-
-        // Utils.renderJourneySettings()
-        // await lgs.theJourney.computeAll()
-        // // // Then we redraw the theJourney
-        // await lgs.theJourney.showAfterHeightSimulation()
-        //
-        // await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
-
-        // await theJourney.extractMetrics()
-        // lgs.saveJourney(theJourney)
-        // theJourney.addToContext()
-        // // Then we redraw the theJourney
-        // await lgs.theJourney.showAfterHeightSimulation()
-        //  await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
     }
 
     /**
