@@ -178,8 +178,6 @@ export const JourneySettings = function JourneySettings() {
                     theJourney.geoJson.features.forEach((feature, index, features) => {
                         features[index].geometry.coordinates = coordinates[index]
                     })
-
-                    // TODO dab=ns getTracks geoJson est différent (lgs.thejourney.geoJSON différent de this.geoJson)
                     theJourney.getTracksFromGeoJson()
                     theJourney.getPOIsFromGeoJson()
                     await theJourney.extractMetrics()
@@ -188,6 +186,11 @@ export const JourneySettings = function JourneySettings() {
                     // Then we redraw the theJourney
                    await theJourney.showAfterHeightSimulation()
                    await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
+
+                    //redraw profiler
+                    __.ui.profiler.draw()
+
+
                 }
                 else {
                     // Changes are in error, we reset selection
