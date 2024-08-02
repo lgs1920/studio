@@ -187,7 +187,9 @@ export const JourneySettings = function JourneySettings() {
                    await theJourney.showAfterHeightSimulation()
                    await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
 
-                    //redraw profiler
+                    Utils.updateJourneyEditor(theJourney.slug)
+
+                    //Sync  profile
                     __.ui.profiler.draw()
 
 
@@ -298,7 +300,7 @@ export const JourneySettings = function JourneySettings() {
 
     return (<>
         {editorSnapshot.journey &&
-            <div id="journey-settings" key={lgs.mainProxy.components.journeyEditor.keys.journey.journey}>
+            <div id="journey-settings" key={lgs.mainProxy.components.journeyEditor.keys.journey.settings}>
                 <div className={'settings-panel'} id={'editor-journey-settings-panel'}>
                     <SlTabGroup className={'menu-panel'}>
                         <SlTab slot="nav" panel="data" id="tab-journey-data" active={editorSnapshot.tabs.journey.data}>
@@ -319,7 +321,7 @@ export const JourneySettings = function JourneySettings() {
                         {/**
                          * Data Tab Panel
                          */}
-                        <SlTabPanel name="data">
+                        <SlTabPanel name="data" key={lgs.mainProxy.components.journeyEditor.keys.journey.settings}>
                             {/* Add DEM server selection if we do not have height initially (ie in the journey file) */}
                             <div className = {'select-elevation-source'}>
                                 <SelectElevationSource
