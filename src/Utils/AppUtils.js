@@ -93,6 +93,8 @@ export class AppUtils {
             res => res.json()
         )
 
+        lgs.setDefaultConfiguration()
+
         // Backend  @vite
         lgs.BACKEND_API = `${import.meta.env.VITE_BACKEND_API}/`
 

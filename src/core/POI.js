@@ -37,7 +37,7 @@ export class POI {
         this.border = options.border ?? 0
         this.text = options.text ?? undefined
         this.icon = this.defineIcon(options.icon ?? undefined)
-        this.size = options.size ?? (this.type === PIN_CIRCLE ? 10 : 32)
+        this.size = options.size ?? (this.type === PIN_CIRCLE ? lgs.POI_PIN_DEFAULT_SIZE : lgs.POI_DEFAULT_SIZE)
         this.description = options.description ?? undefined
         this.image = options.image ?? undefined
         this.visible = options.visible ?? true

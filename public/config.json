@@ -29,7 +29,6 @@
     "show": true,
     "marker": {
       "show": true,
-
       "size": 13,
       "color": "#f2c55c"
     }
@@ -41,7 +40,8 @@
     "pois": {
       "color": "#f2c55c",
       "border": "#ffffff99",
-      "size": 16,
+      "size": 13,
+      "sizePin": 10,
       "wanderer": {
         "color": "#1689CCff",
         "border": "#FFF"

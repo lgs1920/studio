@@ -161,9 +161,9 @@ export class LGS1920Context {
     setDefaultConfiguration = () => {
         // Defaults
         this.POI_DEFAULT_SIZE = this.configuration.journey.pois.size
+        this.POI_PIN_DEFAULT_SIZE = this.configuration.journey.pois.size
         this.POI_DEFAULT_COLOR = this.configuration.journey.pois.color
         this.POI_TRANSPARENT_COLOR = 'transparent'
-
     }
 
     /**
