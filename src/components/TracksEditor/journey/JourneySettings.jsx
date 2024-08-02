@@ -125,11 +125,10 @@ export const JourneySettings = function JourneySettings() {
         const server = new ElevationServer(editorStore.journey.elevationServer)
 
         // Extract coordinates
-        const theJourney = lgs.theJourney
         const promises = []
-        theJourney.geoJson.features.forEach((feature, index) => {
+        lgs.theJourney.geoJson.features.forEach((feature, index) => {
             const coordinates = feature.geometry.coordinates
-            const origin = theJourney.origin.features[index].geometry.coordinates
+            const origin = lgs.theJourney.origin.features[index].geometry.coordinates
             promises.push(server.getElevation(coordinates, origin))
         })
 
@@ -174,17 +173,21 @@ export const JourneySettings = function JourneySettings() {
             // Now manage and save new data
             .then(async coordinates => {
                 if (coordinates.length > 0) {
-                    // Changes are OK, ave data
+                    const theJourney = Journey.deserialize({object: Journey.unproxify(lgs.theJourney)})
+                    // Changes are OK, set data
                     theJourney.geoJson.features.forEach((feature, index, features) => {
                         features[index].geometry.coordinates = coordinates[index]
                     })
 
+                    // TODO dab=ns getTracks geoJson est différent (lgs.thejourney.geoJSON différent de this.geoJson)
+                    theJourney.getTracksFromGeoJson()
+                    theJourney.getPOIsFromGeoJson()
                     await theJourney.extractMetrics()
                     theJourney.addToContext()
                     theJourney.saveToDB()
                     // Then we redraw the theJourney
-                    await lgs.theJourney.showAfterHeightSimulation()
-                    await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
+                   await theJourney.showAfterHeightSimulation()
+                   await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
                 }
                 else {
                     // Changes are in error, we reset selection

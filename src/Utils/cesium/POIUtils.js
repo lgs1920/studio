@@ -73,6 +73,10 @@ export class POIUtils {
 
         // Check data source
         const dataSource = lgs.viewer.dataSources.getByName(poi.journey ?? APP_KEY, true)[0]
+
+        // We remove the existing if it exists
+        dataSource.entities.removeById(poiOptions.id)
+
         switch (poi.type) {
             case PIN_CIRCLE:
                 return await dataSource.entities.add({
@@ -96,6 +100,7 @@ export class POIUtils {
                     return await dataSource.entities.add(poiOptions)
                 })
             case JUST_ICON:
+
                 return POIUtils.useOnlyFontAwesome(poi).then(async canvas => {
                     poiOptions.billboard.image = canvas
                     return await dataSource.entities.add(poiOptions)
