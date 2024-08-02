@@ -10,6 +10,7 @@ import { SettingsSection }         from './settings/SettingsSection.js'
 import { main }                    from './stores/main'
 import { theJourneyEditor }        from './stores/theJourneyEditor'
 import { Camera as CameraManager } from './ui/Camera'
+import { JourneyEditor }           from './ui/JourneyEditor'
 import { Profiler }                from './ui/Profiler'
 import { Wanderer }                from './ui/Wanderer'
 //import config from 'dotenv'
@@ -228,6 +229,7 @@ export class LGS1920Context {
 
     initManagers = () => {
         __.ui.profiler = new Profiler(this)
+        __.ui.journeyEditor = new JourneyEditor()
         __.ui.wanderer = new Wanderer()
         __.ui.camera = new CameraManager()
     }
