@@ -33,6 +33,8 @@ export class ElevationServer {
                                               label: 'Remove Elevation Data',
                                               id:    ElevationServer.CLEAR,
                                               icon:  faTrashCan,
+                                              labelSelection: 'No Elevation Data',
+                                              iconSelection:  faRegularMountainsSlash,
                                           },
                                       ],
 

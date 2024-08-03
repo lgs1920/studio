@@ -28,8 +28,8 @@ export const SelectElevationSource = (props) => {
                 { // Loop on all servers
                     props.servers.map(server => (
                         <SlOption key={server.id} value={server.id}>
-                            <SlIcon library="fa" name={FA2SL.set(server.icon)} slot={'prefix'}/>
-                            {server.label}
+                            <SlIcon library="fa" name={FA2SL.set(props.default === server.id?server.iconSelection??server.icon:server.icon)} slot={'prefix'}/>
+                            {props.default === server.id?server.labelSelection??server.label:server.label}
                         </SlOption>
                     ))
                 }
