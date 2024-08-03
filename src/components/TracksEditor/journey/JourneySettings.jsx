@@ -185,7 +185,6 @@ export const JourneySettings = function JourneySettings() {
                     theJourney.saveToDB()
                     // Then we redraw the theJourney
                    await theJourney.showAfterHeightSimulation()
-                   await Utils.updateJourney(UPDATE_JOURNEY_THEN_DRAW)
 
                     Utils.updateJourneyEditor(theJourney.slug)
 

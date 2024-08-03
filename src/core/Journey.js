@@ -511,8 +511,13 @@ export class Journey extends MapElement {
         await Promise.all(promises)
 
         //Ready
+        const texts = new Map([
+                                  [INITIAL_LOADING, 'loaded succesfully!'],
+                                  [SIMULATE_ALTITUDE, 'redrawn succesfully!'],
+                                  [RE_LOADING, 'redrawn succesfully!'],
+                              ])
         UIToast.success({
-            caption: `${this.title}`, text: 'loaded succesfully!',
+                            caption: `${this.title}`, text: texts.get(action),
         })
 
         if (mode === FOCUS_ON_FEATURE) {
@@ -528,7 +533,7 @@ export class Journey extends MapElement {
     }
 
     showAfterHeightSimulation = async () => {
-        await this.draw(SIMULATE_ALTITUDE)
+        await this.draw({action: SIMULATE_ALTITUDE})
     }
 
     updateVisibility = (visibility) => {
@@ -638,7 +643,7 @@ export const POI_FLAG = 'flag'
 export const POI_STD = 'poi'
 export const TRACK_SLUG = 'track'
 
-export const SIMULATE_ALTITUDE = 'simulate-altitude'
+export const SIMULATE_ALTITUDE = 99
 export const INITIAL_LOADING = 1
 export const RE_LOADING = 2
 export const FOCUS_ON_FEATURE = 1
