@@ -332,44 +332,6 @@ export class Track extends MapElement {
                              : this.content.geometry.coordinates
 
             segments.forEach((segment, index) => {
-                // Some altitudes info are missing. Let's simulate them
-                // TODO do this only for the first time (ie hasAltitude = 0, SIMULATED,CLEANED ...)
-                if (!this.hasAltitude) {
-                    // TODO add different plugins for DEM elevation like:
-                    //        https://tessadem.com/elevation-api/  ($)
-                    //     or https://github.com/Jorl17/open-elevation/blob/master/docs/api.md
-
-                    // if (this.elevationServer === ElevationServer.NONE) {
-                    //     // May be, some computations have been done before, so we cleaned them
-                    //     // use case : any DEM server -> no DEM server
-                    //     let j = 0
-                    //     segment.geometry.coordinates.forEach(coordinate => {
-                    //         if (coordinate.length === 3) {
-                    //             segment.geometry.coordinates[j] = coordinate.splice(2, 1)
-                    //         }
-                    //         j++
-                    //     })
-                    // } else {
-                    //     // We have aDEM Server, so let's compute altitude
-                    //     let altitudes = []
-                    //     switch (this.elevationServer) {
-                    //         case ElevationServer.NONE:
-                    //             break
-                    //         case 'internal' :
-                    //             // altitudes = await
-                    //             // TrackUtils.getElevationFromTerrain(segment.geometry.coordinates)
-                    //             break
-                    //         case 'open-elevation' : {
-                    //         }
-                    //     }
-                    //     // Add them to data
-                    //     for (let j = 0; j < altitudes.length; j++) {
-                    //         segment.geometry.coordinates[j].push(altitudes[j])
-                    //     }
-                    //     // Hide progress bar
-                    //     lgs.theJourneyEditorProxy.longTask = false
-                    // }
-                }
                 // Use title as feature name
                 this.content.properties.name = this.title
 
