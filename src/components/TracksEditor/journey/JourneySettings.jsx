@@ -112,7 +112,7 @@ export const JourneySettings = function JourneySettings() {
     }
 
     /**
-     * Change Elevation server
+     * Change Elevation instance
      *
      * @type {computeElevation}
      */
@@ -160,7 +160,7 @@ export const JourneySettings = function JourneySettings() {
                         // Success notification
                         UIToast.success({
                                             caption: `Elevation data have been modified`,
-                                            text:    `Source:${ElevationServer.SERVERS.get(editorStore.journey.elevationServer).label}`,
+                                            text:    `Source:${ElevationServer.getServer(editorStore.journey.elevationServer).label}`,
                                         })
                         const coordinates = []
                         results.forEach(result => {
@@ -298,6 +298,22 @@ export const JourneySettings = function JourneySettings() {
     const textVisibilityJourney = sprintf('%s Journey', editorSnapshot.journey.visible ? 'Hide' : 'Show')
     const textVisibilityPOIs = sprintf('%s POIs', editorSnapshot.journey.allPOIs ? 'Hide' : 'Show')
 
+    let serverList = []
+
+    if (!editorSnapshot.journey.hasElevation) {
+        if (editorSnapshot.journey?.elevationServer === ElevationServer.NONE) {
+            serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.NONE))
+        }
+        else {
+            serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.CLEAR))
+        }
+    }
+    else {
+        serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.CLEAR))
+        serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.FILE_CONTENT))
+    }
+    serverList  = serverList.concat(Array.from(ElevationServer.SERVERS.values()))
+
     return (<>
         {editorSnapshot.journey &&
             <div id="journey-settings" key={lgs.mainProxy.components.journeyEditor.keys.journey.settings}>
@@ -321,13 +337,14 @@ export const JourneySettings = function JourneySettings() {
                         {/**
                          * Data Tab Panel
                          */}
-                        <SlTabPanel name="data" key={lgs.mainProxy.components.journeyEditor.keys.journey.settings}>
-                            {/* Add DEM server selection if we do not have height initially (ie in the journey file) */}
+                        <SlTabPanel name="data">
+                            {/* Add DEM instance selection if we do not have height initially (ie in the journey file) */}
                             <div className = {'select-elevation-source'}>
                                 <SelectElevationSource
                                     default={editorSnapshot.journey?.elevationServer}
                                     label={'Elevation:'}
                                     onChange={computeElevation}
+                                    servers={serverList}
                                 />
 
                                 {editorSnapshot.longTask && <SlProgressBar indeterminate/>}

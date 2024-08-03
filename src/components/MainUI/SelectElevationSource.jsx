@@ -5,8 +5,8 @@ import { FA2SL }                      from '@Utils/FA2SL'
 /**
  *
  * @prop {string} label : Associated label
- * @prop {array} excluded : wich servers need to be excluded
- * @prop {string} default : which server is selected by default
+ * @prop {array} servers : which servers will be listed
+ * @prop {string} default : which instance is selected by default
  * @prop {function} onChange : On change callback
  *
  * @return {JSX.Element}
@@ -14,19 +14,9 @@ import { FA2SL }                      from '@Utils/FA2SL'
  */
 export const SelectElevationSource = (props) => {
 
-    // Use defied Elevation servers
-    const servers = lgs.elevationServers
-
-    // Exclude some servers
-    for (let server of props.excluded ?? []) {
-        servers.delete(server)
-    }
-
-
     const handleRequestClose = event => {
         event.preventDefault()
     }
-
     return (
         <>
             <SlSelect hoist label={props.label}
@@ -36,7 +26,7 @@ export const SelectElevationSource = (props) => {
                 <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
                 { // Loop on all servers
-                    Array.from(servers.values()).map(server => (
+                    props.servers.map(server => (
                         <SlOption key={server.id} value={server.id}>
                             <SlIcon library="fa" name={FA2SL.set(server.icon)} slot={'prefix'}/>
                             {server.label}

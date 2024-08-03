@@ -14,11 +14,10 @@ export class ElevationServer {
     static IGN_GEOPORTAIL = 'ign-geoportail'
 
     /**
-     * Define some fake elevation servers  for manage some UCs
-     *
-     * @type {Map<null, {name: string, id: null}>}
+     * Define elevation servers
      */
-    static FAKE_SERVERS = new Map([
+    static FAKE_SERVERS = new Map(
+        [
                                       [
                                           ElevationServer.NONE,
                                           {
@@ -27,43 +26,45 @@ export class ElevationServer {
                                               icon:  faRegularMountainsSlash,
                                           },
                                       ],
+
                                       [
                                           ElevationServer.CLEAR,
                                           {
-                                              label: 'Remove Current Elevation Data',
+                                              label: 'Remove Elevation Data',
                                               id:    ElevationServer.CLEAR,
                                               icon:  faTrashCan,
                                           },
                                       ],
+
                                       [
                                           ElevationServer.FILE_CONTENT,
                                           {
-                                              label:  'File Elevation Data',
+                                              label: 'Use File Elevation Data',
                                               id:     ElevationServer.FILE_CONTENT,
                                               icon:   faFileWaveform,
                                               origin: true,
                                           },
                                       ],
+        ]
+    )
 
-
-                                  ])
-
-    static SERVERS = new Map([
-                                 ...ElevationServer.FAKE_SERVERS, ...[
+    static SERVERS = new Map(
+        [
             [
                 ElevationServer.OPEN_ELEVATION,
                 {
-                    label:       'Open-Elevation (Worldwide, 30m)',
-                    id:          ElevationServer.OPEN_ELEVATION,
-                    doc:         'https://github.com/Jorl17/open-elevation/blob/master/docs/api.md',
-                    url:         'https://api.open-elevation.com/api/v1/lookup',
-                    icon:        faMapLocation,
+                    label: 'From Open-Elevation (Worldwide, 30m)',
+                    id:    ElevationServer.OPEN_ELEVATION,
+                    doc:   'https://github.com/Jorl17/open-elevation/blob/master/docs/api.md',
+                    url:   'https://api.open-elevation.com/api/v1/lookup',
+                    icon:  faMapLocation,
                 },
             ],
+
             [
                 ElevationServer.IGN_GEOPORTAIL,
                 {
-                    label:       'IGN GeoPortail (France, 2.5m)',
+                    label:       'From IGN GeoPortail (France, 2.5m)',
                     id:          'ign-geoportail',
                     doc:         'https://geoservices.ign.fr/documentation/services/services-deprecies/calcul-altimetrique-rest',
                     url:         'https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json',
@@ -71,17 +72,20 @@ export class ElevationServer {
                     icon:        faMapLocation,
                 },
             ],
-
         ],
-                             ])
+    )
 
 
     constructor(id) {
         // Get the right info
-        this.server = ElevationServer.SERVERS.get(id)
+        this.instance = ElevationServer.getServer(id)
         // Fix missing attributes
-        this.server.maxPerQuery = this.server.maxPerQuery ?? 10000000
+        this.instance.maxPerQuery = this.instance?.maxPerQuery ?? 10000000
         this.fetchElevation = null
+    }
+
+    static getServer = (id) => {
+        return ElevationServer.SERVERS.get(id) ?? ElevationServer.FAKE_SERVERS.get(id)
     }
 
 
@@ -97,10 +101,10 @@ export class ElevationServer {
      */
     getElevation = (coordinates, origin = []) => {
         return new Promise((resolve, reject) => {
-        if (this.server.id !== ElevationServer.NONE) {
+        if (this.instance.id !== ElevationServer.NONE) {
 
             // According selected option, we set the right mthode to call
-            switch (this.server.id) {
+            switch (this.instance.id) {
                 case ElevationServer.CLEAR:
                     this.fetchElevation = ElevationServer.clearElevation
                     break
@@ -117,9 +121,9 @@ export class ElevationServer {
             let chunks = [[], []]
 
             // We cut the array by slice of maxPerQuery
-            for (let cursor = 0; cursor < coordinates.length; cursor += this.server.maxPerQuery) {
-                chunks[0].push(coordinates.slice(cursor, cursor + this.server.maxPerQuery))
-                chunks[1].push(origin.slice(cursor, cursor + this.server.maxPerQuery))
+            for (let cursor = 0; cursor < coordinates.length; cursor += this.instance.maxPerQuery) {
+                chunks[0].push(coordinates.slice(cursor, cursor + this.instance.maxPerQuery))
+                chunks[1].push(origin.slice(cursor, cursor + this.instance.maxPerQuery))
             }
             // Now let's run queries in parallel
             let promises = chunks[0].map((coordinates, index) => this.fetchElevation(coordinates, chunks[1][index]))
@@ -249,7 +253,7 @@ export class ElevationServer {
             }
             data.push(coordinate)
         })
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             resolve ({coordinates: data})
         })
     }
