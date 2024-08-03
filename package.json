@@ -40,7 +40,7 @@
     "cesium": "^1.120.0",
     "dotenv": "^16.4.5",
     "easy-file-picker": "^1.1.0",
-    "elysia": "^1.1.4",
+    "elysia": "^1.1.5",
     "fs": "^0.0.1-security",
     "fs.promises": "^0.1.2",
     "geojson-extent": "^0.3.2",
