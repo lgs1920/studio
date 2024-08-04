@@ -15,6 +15,7 @@ import {
 import {
     FA2SL,
 }                from '@Utils/FA2SL'
+import parse     from 'html-react-parser'
 import {
     DateTime, Duration,
 }                from 'luxon'
@@ -180,7 +181,7 @@ export const FloatingMenu = function FloatingMenu() {
             {(menuSnap.type === POI_TYPE || menuSnap.type === TRACK_TYPE) && <>
                 <div id="floating-menu-marker-header" className={'lgs-card'}>
                     <span className={'entity-title'}>{name}</span>
-                    <div className={'entity-description'}>{description}</div>
+                    <div className={'entity-description'}>{parse(description)}</div>
                 </div>
             </>}
         </>)

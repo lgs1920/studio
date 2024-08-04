@@ -27,6 +27,7 @@ import {
 }                     from '@Utils/cesium/TrackUtils'
 import { FA2SL }      from '@Utils/FA2SL'
 import { UIToast }    from '@Utils/UIToast'
+import parse          from 'html-react-parser'
 import { sprintf }    from 'sprintf-js'
 import { useSnapshot } from 'valtio'
 import {
@@ -34,12 +35,13 @@ import {
 }                     from '../../../core/ElevationServer'
 import {
     Journey, SIMULATE_ALTITUDE,
-} from '../../../core/Journey'
+}                     from '../../../core/Journey'
 import {
     SelectElevationSource,
 }                     from '../../MainUI/SelectElevationSource'
 import { JourneyData } from './JourneyData'
 import { JourneyPOIs } from './JourneyPOIs'
+
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2
@@ -371,7 +373,7 @@ export const JourneySettings = function JourneySettings() {
                                     <SlTextarea row={2}
                                                 size={'small'}
                                                 id={'journey-description'}
-                                                value={editorSnapshot.journey.description}
+                                                value={parse(editorSnapshot.journey.description)}
                                                 onSlChange={setDescription}
                                                 placeholder={'Journey description'}
                                     />

@@ -18,6 +18,8 @@ import { TrackData }          from './TrackData'
 import { TrackFlagsSettings } from './TrackFlagsSettings'
 import { TrackPoints }        from './TrackPoints'
 import { TrackStyleSettings } from './TrackStyleSettings'
+import parse from 'html-react-parser'
+
 
 export const TrackSettings = function TrackSettings() {
 
@@ -122,7 +124,7 @@ export const TrackSettings = function TrackSettings() {
                                         <SlTextarea row={2}
                                                     size={'small'}
                                                     id="track-description"
-                                                    value={editorSnapshot.track.description}
+                                                    value={parse(editorSnapshot.track.description)}
                                                     onSlChange={setDescription}
                                                     placeholder={'Track description'}
                                         />
