@@ -33,8 +33,8 @@ import {
     ElevationServer,
 }                     from '../../../core/ElevationServer'
 import {
-    Journey,
-}                     from '../../../core/Journey'
+    Journey, SIMULATE_ALTITUDE,
+} from '../../../core/Journey'
 import {
     SelectElevationSource,
 }                     from '../../MainUI/SelectElevationSource'
@@ -184,7 +184,7 @@ export const JourneySettings = function JourneySettings() {
                     theJourney.addToContext()
                     theJourney.saveToDB()
                     // Then we redraw the theJourney
-                   await theJourney.showAfterHeightSimulation()
+                   await Utils.updateJourney(SIMULATE_ALTITUDE)
 
                     Utils.updateJourneyEditor(theJourney.slug)
 
