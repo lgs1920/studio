@@ -91,7 +91,7 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
                         color: (theJourney.tracks.size === 1) ? editorSnapshot?.track?.color : 'black',
                     }}
             />
-                {lgs.theJourney.title}
+                {editorSnapshot.journey.title}
                 </span>
         </>}
 
