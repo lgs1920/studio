@@ -1,4 +1,4 @@
-import { faArrowsMaximize, faArrowsMinimize } from '@fortawesome/pro-regular-svg-icons'
+import { faExpand, faCompress } from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip }        from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                              from '@Utils/FA2SL'
 import { useEffect }                         from 'react'
@@ -43,9 +43,9 @@ export const FullScreenButton = () => {
             <SlTooltip hoist placement="right" content={mainSnap.fullSize ? 'Exit Full screen' : 'Full Screen'}>
                 <SlButton size="small" onClick={toggleFullScreen} className={'square-icon'}>
                     {!mainSnap.fullSize &&
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsMaximize)}></SlIcon>}
+                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faExpand)}></SlIcon>}
                     {mainSnap.fullSize &&
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsMinimize)}></SlIcon>}
+                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCompress)}></SlIcon>}
                 </SlButton>
             </SlTooltip>
 
