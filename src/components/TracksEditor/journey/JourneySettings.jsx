@@ -280,7 +280,7 @@ export const JourneySettings = function JourneySettings() {
             } else {
                 lgs.theJourney = null
                 lgs.cleanEditor()
-                text = 'There are no others available.'
+                text = 'There are no others journeys.'
                 mainStore.canViewJourneyData = false
                 mainStore.components.journeyEditor.show = false
                 mainStore.components.profile.show = false
