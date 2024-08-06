@@ -33,7 +33,7 @@
     "@turf/nearest-point": "^6.5.0",
     "@turf/nearest-point-on-line": "^6.5.0",
     "@turf/point-to-line-distance": "^6.5.0",
-    "apexcharts": "^3.51.0",
+    "apexcharts": "^3.52.0",
     "axios": "^1.7.3",
     "babel-plugin-module-resolver": "^5.0.2",
     "canvg": "^4.0.2",
