@@ -127,6 +127,7 @@ export class ElevationServer {
                 chunks[0].push(coordinates.slice(cursor, cursor + this.instance.maxPerQuery))
                 chunks[1].push(origin.slice(cursor, cursor + this.instance.maxPerQuery))
             }
+
             // Now let's run queries in parallel
             let promises = chunks[0].map((coordinates, index) => this.fetchElevation(coordinates, chunks[1][index]))
 
@@ -227,8 +228,17 @@ export class ElevationServer {
                                        latitude:  coordinate[1],
                                    })
         })
+        await __.app.wait(2000)
         return new Promise((resolve, reject) => {
-            axios.post(ElevationServer.SERVERS.get(ElevationServer.OPEN_ELEVATION).url, payload)
+            axios({
+                      method:  'post',
+                      url:     ElevationServer.SERVERS.get(ElevationServer.OPEN_ELEVATION).url,
+                      data:    payload,
+                      headers: {
+                          'content-type': 'application/json',
+                          'Accept':       'application/json',
+                      },
+                  })
                 .then(function (response) {
                     const data = []
                     response.data.results.forEach(point => {

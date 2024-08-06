@@ -236,11 +236,10 @@ export class TrackUtils {
      * Aggregate Geo Json data in order to have longitude, latitude, altitude,time
      * for each point (altitude and time
      *
-     * @param geoJson
      * @return {[[{longitude, latitude, altitude,time}]]}
      *
      */
-    static prepareDataForMetrics = async geoJson => {
+    static prepareDataForMetrics = async () => {
         const dataExtract = [] = []
         // Only for Feature Collections that are Line or multi line string typ
         const type = this.content.geometry.type
