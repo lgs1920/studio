@@ -77,6 +77,8 @@ export class ElevationServer {
         ],
     )
 
+    static ERROR_DATA = -99999.0
+    static WRONG_DATA_ERROR = new Error('The data is inconsistent. <br/>Elevation Server data probably not available for this part of the globe!')
 
     constructor(id) {
         // Get the right info
@@ -203,6 +205,9 @@ export class ElevationServer {
                 .then(function (response) {
                     const data = []
                     response.data.elevations.forEach((point, index) => {
+                        if (point === ElevationServer.ERROR_DATA) {
+                            throw ElevationServer.WRONG_DATA_ERROR
+                        }
                         data.push([lon[index], lat[index], point])
                     })
                     resolve({coordinates: data})
@@ -228,7 +233,7 @@ export class ElevationServer {
                                        latitude:  coordinate[1],
                                    })
         })
-        await __.app.wait(2000)
+
         return new Promise((resolve, reject) => {
             axios({
                       method:  'post',
