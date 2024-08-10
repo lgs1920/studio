@@ -59,7 +59,7 @@ export const TrackSettings = function TrackSettings() {
 
         await Utils.updateTrack(JUST_SAVE)
 
-        __.ui.profilerupdateTitle()
+        __.ui.profiler.updateTitle()
 
     })
 
@@ -74,7 +74,8 @@ export const TrackSettings = function TrackSettings() {
         TrackUtils.updateTrackVisibility(editorStore.journey, editorStore.track, visibility)
         await Utils.updateTrack(JUST_SAVE)
 
-        __.ui.profilerupdateTrackVisibility()
+        Utils.renderTracksList()
+        __.ui.profiler.updateTrackVisibility()
     }
 
     const textVisibilityTrack = sprintf('%s Track', editorSnapshot.track.visible ? 'Hide' : 'Show')
