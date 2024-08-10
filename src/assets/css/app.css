@@ -36,6 +36,15 @@ body {
 
 }
 
+.toast-error {
+        font-size: var(--lgs-font-size-small);
+        background-color: var(--lgs-error-bg-color);
+        color: var(--lgs-error-color);
+       border: 1px solid var(--lgs-error-color);
+    padding:var(--lgs-gutter-s);
+    border-radius: var(--lgs-border-radius-s);
+}
+
 /***************************************
  * Icons and buttons
  */
