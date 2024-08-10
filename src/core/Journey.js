@@ -241,26 +241,32 @@ export class Journey extends MapElement {
      * Populate this.tracks
      *
      */
-    getTracksFromGeoJson = () => {
+    getTracksFromGeoJson = (keepContext = false) => {
         if (this.geoJson.type === FEATURE_COLLECTION) {
             this.geoJson.features.forEach((feature) => {
                 const geometry = getGeom(feature)
                 const title = feature.properties.name
+                const slug = this.#setTrackSlug(feature.properties.name)
+                const track = keepContext?this.tracks.get(slug):null
                 if ([FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING].includes(geometry.type)) {
                     // Let's define some tracks parameters
                     const parameters = {
                         parent: this.slug,
-                        name: feature.properties.name,
+                        name: keepContext?track.name:feature.properties.name,
                         slug: this.#setTrackSlug(feature.properties.name),
-                        hasTime: this.#hasTime(feature.properties),
-                        hasAltitude: this.#hasAltitude(geometry),
-                        description: feature.properties.desc ?? '',
+                        hasTime: keepContext?track.hasTime:this.#hasTime(feature.properties),
+                        hasAltitude: keepContext?track.hasAltitude:this.#hasAltitude(geometry),
+                        description: keepContext?track.description:feature.properties.desc ?? '',
                         segments: geometry.coordinates.length,
+
+                        visible: keepContext?track.visible:true,
+                        color :  keepContext?track.color: lgs.configuration.journey.color,
+                        thickness :  keepContext?track.thickness: lgs.configuration.journey.thickness,
+                        flags: keepContext?track.flags: {start: undefined, stop: undefined},
                         content: feature,
-                        visible: true,
                         geoJson: feature,
                     }
-                    this.tracks.set(parameters.slug, new Track(title, parameters))
+                    this.tracks.set(slug, new Track(title, parameters))
                 }
             })
         }

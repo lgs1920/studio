@@ -66,7 +66,7 @@ export const JourneySettings = function JourneySettings() {
             return
         }
         editorStore.journey.description = description
-        await Utils.Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
+        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
     }
 
     /**
@@ -232,7 +232,7 @@ export const JourneySettings = function JourneySettings() {
                     })
 
                     // Now we need to rebuild the data
-                    theJourney.getTracksFromGeoJson()
+                    theJourney.getTracksFromGeoJson(true)
                     theJourney.getPOIsFromGeoJson()
                     await theJourney.extractMetrics()
                     theJourney.addToContext()
