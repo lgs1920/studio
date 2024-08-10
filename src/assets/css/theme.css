@@ -208,6 +208,7 @@ sl-card[variant="primary"]::part(base) {
     --border-color: var(--lgs-card-ui-border-color);
 }
 
+
 .lgs-card {
     background-color: rgba(255, 255, 255, 0.15);
     border: 1px solid  var(--sl-color-gray-300);
