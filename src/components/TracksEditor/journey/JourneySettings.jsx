@@ -23,7 +23,7 @@ import {
     SlIcon, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
 }                     from '@shoelace-style/shoelace/dist/react'
 import {
-    TrackUtils,
+    FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
 }                     from '@Utils/cesium/TrackUtils'
 import { FA2SL }      from '@Utils/FA2SL'
 import { UIToast }    from '@Utils/UIToast'
@@ -41,7 +41,6 @@ import {
 }                     from '../../MainUI/SelectElevationSource'
 import { JourneyData } from './JourneyData'
 import { JourneyPOIs } from './JourneyPOIs'
-
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2
@@ -127,36 +126,48 @@ export const JourneySettings = function JourneySettings() {
         const server = new ElevationServer(editorStore.journey.elevationServer)
 
         // Extract coordinates
-        const promises = []
+
+        let allCoordinates = []
+        let allOrigin = []
+
         lgs.theJourney.geoJson.features.forEach((feature, index) => {
-            const coordinates = feature.geometry.coordinates
-            const origin = lgs.theJourney.origin.features[index].geometry.coordinates
-            promises.push(server.getElevation(coordinates, origin))
+            let coordinates = feature.geometry.coordinates
+            let origin = lgs.theJourney.origin.features[index].geometry.coordinates
+
+            switch (feature.geometry.type) {
+                case FEATURE_POINT:
+                    // we do not have an array of array
+                    coordinates = [coordinates]
+                    break
+                case FEATURE_MULTILINE_STRING:
+                    // Easier to work with flatten array
+                    coordinates = coordinates.flat()
+                    break
+            }
+
+            coordinates.forEach((coordinate, index) => {
+                allCoordinates.push([coordinate[0], coordinate[1]])
+                allOrigin.push(origin[index])
+            })
         })
 
-        Promise.allSettled(promises)
-            // Notifications
+        // Time to fetch
+        server.getElevation(allCoordinates, allOrigin)
             .then(results => {
 
                 // Suppress in progress notification
                     editorStore.longTask = false
 
-                    // Check if we have at least one error
-                    const hasError = results.some(result => result.value && result.value.errors !== null || result.status==='rejected');
-
-                    if (hasError) {
+                if (results.errors) {
                         // Failure notification
-                        results.forEach(result => {
-                            const tmp = result.value ?? result.reason
-                            if (tmp && tmp.errors) {
-                                console.error(tmp.errors)
-                            }
-                        })
+                    results.errors.forEach(error => console.error(error))
 
                         UIToast.error({
                                           caption: `An error occurred when calculating elevations`,
                                           text:    'Changes aborted! Check logs to see error details.',
                                       })
+                    editorStore.journey.elevationServer = former
+
                         return []
                     } else {
                         // Success notification
@@ -165,8 +176,8 @@ export const JourneySettings = function JourneySettings() {
                                             text:    `Source:${ElevationServer.getServer(editorStore.journey.elevationServer).label}`,
                                         })
                         const coordinates = []
-                        results.forEach(result => {
-                            coordinates.push(result.value.coordinates)
+                    results.coordinates.forEach(coordinate => {
+                        coordinates.push(coordinate)
                         })
                         return coordinates
                     }
@@ -177,20 +188,63 @@ export const JourneySettings = function JourneySettings() {
                 if (coordinates.length > 0) {
                     const theJourney = Journey.deserialize({object: Journey.unproxify(lgs.theJourney)})
                     // Changes are OK, set data
+                    let counter = 0
+
+                    // coordinates is flat array, we need to slice it into chunks
+                    // in order to realign data
+
                     theJourney.geoJson.features.forEach((feature, index, features) => {
-                        features[index].geometry.coordinates = coordinates[index]
+                        let length = feature.geometry.coordinates.length
+                        // We need to realign some types
+                        switch (feature.geometry.type) {
+                            case FEATURE_POINT:
+                                // Need an array
+                                feature.geometry.coordinates = [feature.geometry.coordinates[0]]
+                                length = 1
+                                break
+                            case FEATURE_MULTILINE_STRING:
+                                // Length is elements number, sub arrays included
+                                length = feature.geometry.coordinates.flat().length
+                                break
+                        }
+
+                        // Get the right part of coordinates
+                        const chunk = coordinates.slice(counter, counter + length)
+                        counter+=length
+
+                        switch (feature.geometry.type) {
+                            case FEATURE_POINT:
+                                // Realign data for Point: only an object
+                                features[index].geometry.coordinates = chunk[0]
+                                break
+                            case FEATURE_MULTILINE_STRING: {
+                                // Realign data for multi strings: slice it into segments
+                                const tmp = features[index].geometry.coordinates
+                                let subCounter = 0
+                                tmp.forEach((segment, subIndex) => {
+                                    features[index].geometry.coordinates[subIndex]=chunk.slice(subCounter,subCounter+tmp[subIndex].length)
+                                    subCounter+=tmp[subIndex].length
+                                })
+                                break
+                            }
+                            default: features[index].geometry.coordinates=chunk
+                        }
                     })
+
+                    // Now we need to rebuild the data
                     theJourney.getTracksFromGeoJson()
                     theJourney.getPOIsFromGeoJson()
                     await theJourney.extractMetrics()
                     theJourney.addToContext()
                     theJourney.saveToDB()
-                    // Then we redraw the theJourney
+
+                    // Then we redraw the journey
                    await Utils.updateJourney(SIMULATE_ALTITUDE)
 
+                    // And update editor
                     Utils.updateJourneyEditor(theJourney.slug)
 
-                    //Sync  profile
+                    // If the Profile UI is open, we re-sync it
                     __.ui.profiler.draw()
 
 
@@ -200,6 +254,19 @@ export const JourneySettings = function JourneySettings() {
                     editorStore.journey.elevationServer = former
                 }
             })
+
+            .catch(error => {
+                editorStore.longTask = false
+                editorStore.journey.elevationServer = former
+                // Failure notification
+                console.error(error)
+                UIToast.error({
+                                  caption: `An error occurred when calculating elevations`,
+                                  text:    'Changes aborted! Check logs to see error details.',
+                              })
+            })
+
+
 
     }
 
