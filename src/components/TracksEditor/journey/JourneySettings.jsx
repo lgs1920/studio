@@ -142,6 +142,7 @@ export const JourneySettings = function JourneySettings() {
                 case FEATURE_MULTILINE_STRING:
                     // Easier to work with flatten array
                     coordinates = coordinates.flat()
+                    origin = origin.flat()
                     break
             }
 
@@ -165,6 +166,7 @@ export const JourneySettings = function JourneySettings() {
                         UIToast.error({
                                           caption: `An error occurred when calculating elevations`,
                                           text:    'Changes aborted! Check logs to see error details.',
+                                          error: results.errors,
                                       })
                     editorStore.journey.elevationServer = former
 
@@ -259,10 +261,11 @@ export const JourneySettings = function JourneySettings() {
                 editorStore.longTask = false
                 editorStore.journey.elevationServer = former
                 // Failure notification
-                console.error(error)
+                console.error(error.errors??error)
                 UIToast.error({
                                   caption: `An error occurred when calculating elevations`,
                                   text:    'Changes aborted! Check logs to see error details.',
+                    errors:error.errors??error
                               })
             })
 

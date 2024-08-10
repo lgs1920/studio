@@ -254,17 +254,15 @@ export class Journey extends MapElement {
                         parent: this.slug,
                         name: keepContext?track.name:feature.properties.name,
                         slug: this.#setTrackSlug(feature.properties.name),
-                        hasTime: keepContext?track.hasTime:this.#hasTime(feature.properties),
-                        hasAltitude: keepContext?track.hasAltitude:this.#hasAltitude(geometry),
+                        hasTime: this.#hasTime(feature.properties),
+                        hasAltitude: this.#hasAltitude(geometry),
                         description: keepContext?track.description:feature.properties.desc ?? '',
                         segments: geometry.coordinates.length,
-
                         visible: keepContext?track.visible:true,
                         color :  keepContext?track.color: lgs.configuration.journey.color,
                         thickness :  keepContext?track.thickness: lgs.configuration.journey.thickness,
                         flags: keepContext?track.flags: {start: undefined, stop: undefined},
                         content: feature,
-                        geoJson: feature,
                     }
                     this.tracks.set(slug, new Track(title, parameters))
                 }
