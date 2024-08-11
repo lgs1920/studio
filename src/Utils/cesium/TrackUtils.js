@@ -2,7 +2,7 @@ import { default as extent }                                         from '@mapb
 import { default as centroid }                                       from '@turf/centroid'
 import * as Cesium                                                   from 'cesium'
 import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 } from 'cesium'
-import { ElevationServer }                                           from '../../core/ElevationServer'
+import { ElevationServer }                                           from '../../core/Elevation/ElevationServer'
 import {
     FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
 }                                                                    from '../../core/Journey'

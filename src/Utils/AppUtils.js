@@ -1,6 +1,6 @@
 import * as Cesium      from 'cesium'
-import { EventEmitter } from '../assets/libs/EventEmitter/EventEmitter'
-import { ElevationServer } from '../core/ElevationServer'
+import { EventEmitter }     from '../assets/libs/EventEmitter/EventEmitter'
+import { ElevationServer }  from '../core/Elevation/ElevationServer'
 import { ChangelogManager } from '../core/ui/ChangelogManager'
 import { FA2SL }        from './FA2SL'
 

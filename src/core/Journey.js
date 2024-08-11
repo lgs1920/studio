@@ -10,13 +10,13 @@ import {
 }                                      from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
-}                                      from '@Utils/UIToast'
+} from '@Utils/UIToast'
 import {
     ElevationServer,
-}                                      from './ElevationServer'
+} from './Elevation/ElevationServer'
 import {
     JOURNEYS_STORE, ORIGIN_STORE,
-}                                      from './LGS1920Context.js'
+} from './LGS1920Context.js'
 import {
     MapElement,
 }                                      from './MapElement'

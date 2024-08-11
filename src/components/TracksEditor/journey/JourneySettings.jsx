@@ -32,10 +32,10 @@ import { sprintf }    from 'sprintf-js'
 import { useSnapshot } from 'valtio'
 import {
     ElevationServer,
-}                     from '../../../core/ElevationServer'
+}                      from '../../../core/Elevation/ElevationServer'
 import {
     Journey, SIMULATE_ALTITUDE,
-}                     from '../../../core/Journey'
+}                      from '../../../core/Journey'
 import {
     SelectElevationSource,
 }                     from '../../MainUI/SelectElevationSource'
