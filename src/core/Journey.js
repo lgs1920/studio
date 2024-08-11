@@ -240,6 +240,9 @@ export class Journey extends MapElement {
      *
      * Populate this.tracks
      *
+     * @param keepContext {boolean} when true, we update only some data related to position
+     *                              and elevation.
+     *
      */
     getTracksFromGeoJson = (keepContext = false) => {
         if (this.geoJson.type === FEATURE_COLLECTION) {
