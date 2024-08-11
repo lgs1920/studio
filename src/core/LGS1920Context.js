@@ -29,9 +29,6 @@ export class LGS1920Context {
 
     profileTrackMarker = undefined
     initialized=false
-
-    BACKEND_API
-
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
         // Track Editor store is used to manage the settings of the theJourney in edit
