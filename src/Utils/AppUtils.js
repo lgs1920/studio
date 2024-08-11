@@ -1,8 +1,9 @@
-import * as Cesium      from 'cesium'
+import axios       from 'axios'
+import * as Cesium from 'cesium'
 import { EventEmitter }     from '../assets/libs/EventEmitter/EventEmitter'
 import { ElevationServer }  from '../core/Elevation/ElevationServer'
 import { ChangelogManager } from '../core/ui/ChangelogManager'
-import { FA2SL }        from './FA2SL'
+import { FA2SL }   from './FA2SL'
 
 export const CONFIGURATION ='/config.json'
 
@@ -95,42 +96,61 @@ export class AppUtils {
 
         lgs.setDefaultConfiguration()
 
-        // Backend  @vite
-        lgs.BACKEND_API = `${import.meta.env.VITE_BACKEND_API}/`
-
-         // Versions
-         lgs.versions = await fetch(`${lgs.BACKEND_API}versions`)
-             .then(res => res.json())
-             .catch(error => console.error(error)
-        )
-
-        lgs.events = new EventEmitter()
-
-        // Cesium ION auth
-        Cesium.Ion.defaultAccessToken = lgs.configuration.ionToken
-
         // Register Font Awesome icons in ShoeLace
         FA2SL.useFontAwesomeInShoelace('fa')
 
-        // Shoelace needs to avoid bubbling events. Here's an helper
-        window.isOK = (event) => {
-            return event.eventPhase === Event.AT_TARGET
+        // Backend  @vite
+        lgs.BACKEND_API = `${import.meta.env.VITE_BACKEND_API}/`
+
+        // Ping server
+        const server = await __.app.pingBackend()
+
+        if (server.alive) {
+
+            try {
+                // Versions
+                lgs.versions = await fetch(`${lgs.BACKEND_API}versions`)
+                    .then(res => res.json())
+                    .catch(error => console.error(error),
+                    )
+
+                lgs.events = new EventEmitter()
+
+                // Cesium ION auth
+                Cesium.Ion.defaultAccessToken = lgs.configuration.ionToken
+
+
+                // Shoelace needs to avoid bubbling events. Here's an helper
+                window.isOK = (event) => {
+                    return event.eventPhase === Event.AT_TARGET
+                }
+
+                // Update last visit
+                lgs.settings.app.lastVisit = Date.now()
+
+                // Read changelog
+                const changeLog = new ChangelogManager()
+                changeLog.list().then(files => {
+                    lgs.changelog = {
+                        files:  files,
+                        toRead: changeLog.whatsNew(files.list, lgs.settings.app.lastVisit),
+                    }
+                })
+
+                // Set Elevation servers
+                lgs.elevationServers = ElevationServer.SERVERS
+
+                return {status: true}
+            }
+            catch (error) {
+                console.log(error)
+                return {status: false, error: error}
+            }
+        }
+        else {
+            return {status: false, error: new Error(`${lgs.configuration.applicationName} Backend server seems to be unreachable!`)}
         }
 
-        // Update last visit
-        lgs.settings.app.lastVisit = Date.now()
-
-        // Read changelog
-        const changeLog = new ChangelogManager()
-        changeLog.list().then(files => {
-            lgs.changelog={
-                files:files,
-                toRead:changeLog.whatsNew(files.list,lgs.settings.app.lastVisit)
-            }
-        })
-
-        // Set Elevation servers
-        lgs.elevationServers = ElevationServer.SERVERS
     }
 
     /**
@@ -161,6 +181,32 @@ export class AppUtils {
         return single
     }
 
+    /**
+     * Ping Backend server
+     *
+     * Timeouts for connections and response are the same, 2 seconds
+     *
+     *
+     * @return {alive:boolean}
+     */
+    static pingBackend = async () => {
+        return axios({
+                         method:  'get',
+                         url:     `${lgs.BACKEND_API}ping`,
+                         headers: {
+                             'content-type': 'application/json',
+                             'Accept':       'application/json',
+                         },
+                         timeout: 2 * MILLIS,
+                         signal:  AbortSignal.timeout(2 * MILLIS),
+                     })
+            .then(function (response) {
+                return response.data
+            })
+            .catch(function () {
+                return {alive: false}
+            })
+    }
 
 }
 
