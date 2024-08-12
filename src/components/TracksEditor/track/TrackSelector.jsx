@@ -27,7 +27,8 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
 
     return (<>
             { // Several tracks : we add a selection widget
-                tracks.size > 1 && <SlSelect hoist label={props.label}
+                tracks.size > 1 && editorSnapshot.track &&
+                <SlSelect hoist label={props.label}
                                              value={editorSnapshot.track.slug}
                                              onSlChange={props.onChange}
                                              key={mainSnapshot.keys.track.list}
