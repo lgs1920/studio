@@ -25,16 +25,10 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
     // TODO : Check if it right to take tracks in the order in which they were created.
     // }
 
-    // Look for color to add in prefix
-    const prefixColor = (track) => {
-        // mainStore.keys.track.list
-        return {color: editorSnapshot.track.color}
-    }
-
-
     return (<>
             { // Several tracks : we add a selection widget
-                tracks.size > 1 && <SlSelect hoist label={props.label}
+                tracks.size > 1 && editorSnapshot.track &&
+                <SlSelect hoist label={props.label}
                                              value={editorSnapshot.track.slug}
                                              onSlChange={props.onChange}
                                              key={mainSnapshot.keys.track.list}
@@ -50,7 +44,7 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
                             <SlIcon library="fa"
                                     name={FA2SL.set(faSquare)}
                                     slot={'prefix'}
-                                    style={prefixColor()}
+                                    style={{color: track.color}}
                             />
                             {track.visible
                              ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/>

@@ -73,6 +73,13 @@ export class UIToast {
     static #setNotificationContent = (message = {}) => {
         let content = message.caption ? `<div class="toast-caption">${message.caption}</div>` : ''
         content += message.text ? `<div class="toast-text">${message.text}</div>` : ''
+        let errors = message.errors ??[]
+        if (!Array.isArray(errors)) {
+            errors = [errors]
+        }
+       errors.forEach(error => {
+       //    content +=` <div class="toast-error">${error.message}</div>`
+        })
         return content
     }
 }

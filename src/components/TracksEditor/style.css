@@ -171,3 +171,10 @@ sl-tab-panel sl-icon::part(svg) {
     display: flex;
     gap: var(--lgs-gutter);
 }
+
+.select-elevation-source {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+    margin-bottom:var(--lgs-gutter) ;
+}

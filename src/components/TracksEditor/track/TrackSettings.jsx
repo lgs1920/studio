@@ -18,6 +18,8 @@ import { TrackData }          from './TrackData'
 import { TrackFlagsSettings } from './TrackFlagsSettings'
 import { TrackPoints }        from './TrackPoints'
 import { TrackStyleSettings } from './TrackStyleSettings'
+import parse from 'html-react-parser'
+
 
 export const TrackSettings = function TrackSettings() {
 
@@ -57,7 +59,7 @@ export const TrackSettings = function TrackSettings() {
 
         await Utils.updateTrack(JUST_SAVE)
 
-        __.ui.profilerupdateTitle()
+        __.ui.profiler.updateTitle()
 
     })
 
@@ -72,7 +74,8 @@ export const TrackSettings = function TrackSettings() {
         TrackUtils.updateTrackVisibility(editorStore.journey, editorStore.track, visibility)
         await Utils.updateTrack(JUST_SAVE)
 
-        __.ui.profilerupdateTrackVisibility()
+        Utils.renderTracksList()
+        __.ui.profiler.updateTrackVisibility()
     }
 
     const textVisibilityTrack = sprintf('%s Track', editorSnapshot.track.visible ? 'Hide' : 'Show')
@@ -122,7 +125,7 @@ export const TrackSettings = function TrackSettings() {
                                         <SlTextarea row={2}
                                                     size={'small'}
                                                     id="track-description"
-                                                    value={editorSnapshot.track.description}
+                                                    value={parse(editorSnapshot.track.description)}
                                                     onSlChange={setDescription}
                                                     placeholder={'Track description'}
                                         />

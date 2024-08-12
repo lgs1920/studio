@@ -2,6 +2,7 @@ import { default as extent }                                         from '@mapb
 import { default as centroid }                                       from '@turf/centroid'
 import * as Cesium                                                   from 'cesium'
 import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 } from 'cesium'
+import { ElevationServer }                                           from '../../core/Elevation/ElevationServer'
 import {
     FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
 }                                                                    from '../../core/Journey'
@@ -125,7 +126,13 @@ export class TrackUtils {
      * @param {Track} track
      * @param {boolean} showBbox
      */
-    static focus = async ({action = 0, journey = null, track = null, showBbox = false}) => {
+    static focus = async (
+        {action = 0,
+            journey = null,
+            track = null,
+            showBbox = false,
+            resetCamera=false
+        }) => {
 
         // If track not provided, we'll get the first one of the journey
         if (track === null) {
@@ -146,7 +153,7 @@ export class TrackUtils {
 
         // Get the right camera information
         let camera,destination
-        if (journey.camera === null) {
+        if (journey.camera === null || resetCamera) {
             // Let's center to the rectangle
             destination = lgs.camera.getRectangleCameraCoordinates(rectangle)
 
@@ -165,6 +172,7 @@ export class TrackUtils {
             })
             camera.pitch = -90
 
+            journey.camera =camera
 
 
         } else {
@@ -235,11 +243,10 @@ export class TrackUtils {
      * Aggregate Geo Json data in order to have longitude, latitude, altitude,time
      * for each point (altitude and time
      *
-     * @param geoJson
      * @return {[[{longitude, latitude, altitude,time}]]}
      *
      */
-    static prepareDataForMetrics = async geoJson => {
+    static prepareDataForMetrics = async () => {
         const dataExtract = [] = []
         // Only for Feature Collections that are Line or multi line string typ
         const type = this.content.geometry.type
@@ -600,7 +607,7 @@ export class TrackUtils {
     }
 
     /**
-     * Read a journey in
+     * Read a journey
      *
      *
      * @param {} journey {
@@ -611,7 +618,7 @@ export class TrackUtils {
      *
      * @return {Promise<number>}
      */
-    static uploadJourneyFile = async (journey) => {
+    static loadJourneyFromFile = async (journey) => {
 
         // uploading a file exits full screen mode, so we force the state
         const mainStore = lgs.mainProxy
@@ -620,13 +627,19 @@ export class TrackUtils {
         try {
             // File is correct let's work with
             if (journey !== undefined) {
+
+                // if (journey.extension === 'json' && typeof journey.content === 'string') {
+                //     journey.content = JSON.parse(journey.content)
+                // }
+
                 let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
                 // Check if the track already exists in context
                 // If not we manage and show it.
                 if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
-                    if (!theJourney.hasAltitude) {
-                        mainStore.modals.altitudeChoice.show = true
-                    }
+
+
+                   theJourney.globalSettings()
+
                     // Need stats
                     theJourney.extractMetrics()
                     // Prepare the contexts and current values
@@ -656,13 +669,17 @@ export class TrackUtils {
                     // It exists, we notify it
                     UIToast.warning({
                                         caption: `This journey has already been loaded!`,
-                                        text:    'Please select another one !',
+                                        text:    'Please select another one!',
                                     })
                     return JOURNEY_EXISTS
                 }
             }
         }
         catch (e) {
+            UIToast.error({
+                                caption: `We have encountered problems reading this file!`,
+                                text:    'Maybe the format is wrong!',
+                            })
             return JOURNEY_KO
         }
     }

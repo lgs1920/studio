@@ -255,13 +255,15 @@ export class Wanderer {
      * Stop the wanderer
      */
     stop = () => {
-        this.running = undefined
-        lgs.profileTrackMarker.hide()
-        clearInterval(this.#timer)
-        lgs.events.emit(Wanderer.STOP_TICK_EVENT, this.current, this.#pathway[this.#current]??null)
-        this.#events.forEach((callback,event) => {
-            lgs.events.off(event)
-        })
+        if (this.running) {
+            this.running = undefined
+            lgs.profileTrackMarker.hide()
+            clearInterval(this.#timer)
+            lgs.events.emit(Wanderer.STOP_TICK_EVENT, this.current, this.#pathway[this.#current] ?? null)
+            this.#events.forEach((callback, event) => {
+                lgs.events.off(event)
+            })
+        }
     }
 
 

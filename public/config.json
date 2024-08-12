@@ -29,37 +29,19 @@
     "show": true,
     "marker": {
       "show": true,
-
       "size": 13,
       "color": "#f2c55c"
     }
   },
-  "DEMServers": [
-    {
-      "name": "No Altitude",
-      "value": "none"
-    },
-    {
-      "name": "Use Given Data",
-      "value": "from-file"
-    },
-    {
-      "name": "Internal catcher",
-      "value": "internal"
-    },
-    {
-      "name": "Open-Elevation DEM",
-      "value": "open-elevation",
-      "url": "https://github.com/Jorl17/open-elevation/blob/master/docs/api.md"
-    }
-  ],
+
   "journey": {
     "color": "#B22222ff",
     "thickness": 2,
     "pois": {
       "color": "#f2c55c",
       "border": "#ffffff99",
-      "size": 16,
+      "size": 13,
+      "sizePin": 10,
       "wanderer": {
         "color": "#1689CCff",
         "border": "#FFF"

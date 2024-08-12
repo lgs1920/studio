@@ -1,13 +1,13 @@
-
-import { MainUI }                  from '@Components/MainUI/MainUI.jsx'
+import { MainUI }         from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { LGS1920Context }          from '@Core/LGS1920Context'
-import { CameraUtils }             from '@Utils/cesium/CameraUtils'
-import { TrackUtils }              from '@Utils/cesium/TrackUtils'
+import { LGS1920Context } from '@Core/LGS1920Context'
+import { CameraUtils }    from '@Utils/cesium/CameraUtils'
+import { TrackUtils }     from '@Utils/cesium/TrackUtils'
 import * as Cesium                                   from 'cesium'
 import { useEffect, useRef }                         from 'react'
 import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
 import { MapLayer }                                  from './components/cesium/MapLayer'
+import { InitErrorMessage } from './components/InitErrorMessage'
 import { WelcomeModal }                              from './components/MainUI/WelcomeModal'
 import { Settings }                                  from './core/settings/Settings'
 import { SettingsSection }                           from './core/settings/SettingsSection'
@@ -29,7 +29,7 @@ lgs.settings = new Settings()
 lgs.settings.add(new SettingsSection(APP_SETTINGS_SECTION))
 
 // Application initialisation
-await __.app.init()
+const initApp = await __.app.init()
 
 export function LGS1920() {
 
@@ -72,9 +72,14 @@ export function LGS1920() {
 
 
     useEffect(() => {
-        const readAllFromDB = async () => {
-            await TrackUtils.readAllFromDB()
-        }
+
+
+        if (initApp.status) {
+            // Init was OK
+
+            const readAllFromDB = async () => {
+                await TrackUtils.readAllFromDB()
+            }
 
         // Set DefaultTheme
         __.app.setTheme()
@@ -91,10 +96,22 @@ export function LGS1920() {
             text: 'We\'re ready to assist you !',
         })
 
-        console.log('LGS1920 has been loaded and is ready !')
+            console.log('LGS1920 has been loaded and is ready !')
+        }
+        else {
+            // Init was wrong, let'stop here
+            console.log('LGS1920 was stopped due to errors!')
+            console.error(initApp.error)
+        }
     })
 
     return (<>
+
+        {
+            !initApp.status && <InitErrorMessage message={initApp.error.message}/>
+        }
+        {
+            initApp.status &&
         <Viewer full
                 timeline={false}
                 animation={false}
@@ -111,8 +128,7 @@ export function LGS1920() {
             // DONOT CHANGE
                 imageryProvider={false}
                 baseLayerPicker={false}
-                ref={viewerRef}
-        >
+                ref={viewerRef}>
             <MapLayer/>
 
             <Scene verticalExaggeration={1.15}
@@ -134,6 +150,7 @@ export function LGS1920() {
             <WelcomeModal/>
 
         </Viewer>
+        }
     </>)
 }
 

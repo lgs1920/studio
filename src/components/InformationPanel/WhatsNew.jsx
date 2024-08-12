@@ -38,7 +38,10 @@ export const WhatsNew = () => {
             <h1>{'What\'s new?'}</h1>
             <div className={'whats-new-list'}>
                 {snap.data.map(file => (
-                    <SlDetails small open={file.open} key={file.name}>
+                    <SlDetails small open={file.open}
+                               key={file.name}
+                               className={'lgs-theme'}
+                    >
                         <h2 slot="summary">[{file.name}] {file.date}</h2>
                         <SlDivider></SlDivider>
                         <Markdown>

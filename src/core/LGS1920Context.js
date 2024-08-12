@@ -10,6 +10,7 @@ import { SettingsSection }         from './settings/SettingsSection.js'
 import { main }                    from './stores/main'
 import { theJourneyEditor }        from './stores/theJourneyEditor'
 import { Camera as CameraManager } from './ui/Camera'
+import { JourneyEditor }           from './ui/JourneyEditor'
 import { Profiler }                from './ui/Profiler'
 import { Wanderer }                from './ui/Wanderer'
 //import config from 'dotenv'
@@ -28,9 +29,6 @@ export class LGS1920Context {
 
     profileTrackMarker = undefined
     initialized=false
-
-    BACKEND_API
-
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
         // Track Editor store is used to manage the settings of the theJourney in edit
@@ -161,9 +159,9 @@ export class LGS1920Context {
     setDefaultConfiguration = () => {
         // Defaults
         this.POI_DEFAULT_SIZE = this.configuration.journey.pois.size
+        this.POI_PIN_DEFAULT_SIZE = this.configuration.journey.pois.size
         this.POI_DEFAULT_COLOR = this.configuration.journey.pois.color
         this.POI_TRANSPARENT_COLOR = 'transparent'
-
     }
 
     /**
@@ -228,6 +226,7 @@ export class LGS1920Context {
 
     initManagers = () => {
         __.ui.profiler = new Profiler(this)
+        __.ui.journeyEditor = new JourneyEditor()
         __.ui.wanderer = new Wanderer()
         __.ui.camera = new CameraManager()
     }

@@ -30,8 +30,13 @@ export class Utils {
 
     static initJourneyEdition = (event = undefined) => {
         if (window.isOK(event)) {
+            Utils.updateJourneyEditor(event.target.value)
+        }
+    }
+    static updateJourneyEditor = (journeySlug) => {
+        if (window.isOK(event)) {
             const editorStore = lgs.theJourneyEditorProxy
-            editorStore.journey = lgs.getJourneyBySlug(event.target.value)
+            editorStore.journey = lgs.getJourneyBySlug(journeySlug)
             lgs.saveJourney(editorStore.journey)
 
             editorStore.journey.addToContext()
@@ -70,7 +75,6 @@ export class Utils {
                 await TrackUtils.saveCurrentTrackToDB(null)
                 await TrackUtils.saveCurrentPOIToDB(null)
             })
-
         }
     }
     static initTrackEdition = (event) => {

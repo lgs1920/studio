@@ -9,6 +9,7 @@ import welcome     from '../../../public/assets/modals/welcome.md'
 import welcomeBack from '../../../public/assets/modals/welcome-back.md'
 
 
+import {faRegularRouteCirclePlus}              from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 
 
 export const WelcomeModal = () => {
@@ -69,6 +70,7 @@ export const WelcomeModal = () => {
                       modal
                       no-header
                       id={'welcome-modal'}
+                      className={'lgs-theme'}
                       onSlRequestClose={close}
                       onSlAfterHide={hide}>
 
@@ -91,7 +93,7 @@ export const WelcomeModal = () => {
                             }
                             {editorPanel.list.length === 0 &&
                                 <SlButton autofocus variant="primary" onClick={loadJourney}>
-                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRoute)}></SlIcon>{'Load your first Journey'}
+                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRegularRouteCirclePlus)}></SlIcon>{'Load your first Journey'}
                                 </SlButton>
                             }
                         </div>

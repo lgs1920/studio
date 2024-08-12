@@ -1,25 +1,30 @@
-import { gpx, kml }                     from '@tmcw/togeojson'
+import { gpx, kml }                    from '@tmcw/togeojson'
 import {
     getGeom,
-}                                       from '@turf/invariant'
+}                                      from '@turf/invariant'
 import {
     JUST_ICON,
-}                                       from '@Utils/cesium/POIUtils'
+}                                      from '@Utils/cesium/POIUtils'
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                                       from '@Utils/cesium/TrackUtils'
+}                                      from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
-}                                       from '@Utils/UIToast'
+} from '@Utils/UIToast'
+import {
+    ElevationServer,
+} from './Elevation/ElevationServer'
+import {
+    JOURNEYS_STORE, ORIGIN_STORE,
+} from './LGS1920Context.js'
 import {
     MapElement,
-}                                       from './MapElement'
-import { POI, POI_VERTICAL_ALIGN_TOP }  from './POI'
-import { Track }                        from './Track'
+}                                      from './MapElement'
+import { POI, POI_VERTICAL_ALIGN_TOP } from './POI'
+import { Track }                       from './Track'
 import {
     Camera,
-}                                       from './ui/Camera.js'
-import { JOURNEYS_STORE, ORIGIN_STORE } from './LGS1920Context.js'
+}                                      from './ui/Camera.js'
 
 export class Journey extends MapElement {
 
@@ -36,6 +41,9 @@ export class Journey extends MapElement {
     metrics = {}
     camera = {}
     cameraOrigin = {}
+
+    hasElevation = false
+    hasTime = false
 
     constructor(title, type, options) {
         super()
@@ -55,8 +63,6 @@ export class Journey extends MapElement {
             this.POIsVisible = options.POIsVisible ?? true
 
             this.description = options.description ?? ''
-
-            this.DEMServer = options.DEMServer ?? NO_DEM_SERVER
 
             this.camera = options.camera ?? null
 
@@ -88,7 +94,7 @@ export class Journey extends MapElement {
          * If we're on the current journey, we register to the camera updates events
          * in order to save camera information
          */
-        lgs.events.on(Camera.UPDATE_EVENT, (data) => {
+        lgs.events.on(Camera.UPDATE_EVENT, () => {
             if (this.isCurrent()) {
                 this.camera = __.ui.camera.get()
                 lgs.saveJourney(this)
@@ -158,6 +164,24 @@ export class Journey extends MapElement {
         return lgs.theJourney && lgs.theJourney.slug === this.slug
     }
 
+    /**
+     * Set some global  parameters
+     *
+     *   hasTime  =>  null, true , false
+     *   hasElevation  =>  null, true , false
+     *
+     */
+    globalSettings = () => {
+        const tracks = Array.from(this.tracks.values())
+        this.hasTime = tracks.every(track => track.hasTime) ? true :
+                       (tracks.some(track => track.hasTime) ? null : false)
+
+        this.hasElevation = tracks.every(track => track.hasAltitude) ? true :
+                            (tracks.some(track => track.hasAltitude) ? null : false)
+
+        this.elevationServer = this.hasElevation ? ElevationServer.FILE_CONTENT : ElevationServer.NONE
+    }
+
     prepareDrawing = async () => {
         await TrackUtils.prepareDrawing(this)
     }
@@ -194,6 +218,7 @@ export class Journey extends MapElement {
                 case KML:
                     this.geoJson = kml(new DOMParser().parseFromString(content, 'text/xml'))
                     break
+                case JSON_:
                 case GEOJSON :
                     this.geoJson = JSON.parse(content)
             }
@@ -215,27 +240,34 @@ export class Journey extends MapElement {
      *
      * Populate this.tracks
      *
+     * @param keepContext {boolean} when true, we update only some data related to position
+     *                              and elevation.
+     *
      */
-    getTracksFromGeoJson = () => {
+    getTracksFromGeoJson = (keepContext = false) => {
         if (this.geoJson.type === FEATURE_COLLECTION) {
             this.geoJson.features.forEach((feature) => {
                 const geometry = getGeom(feature)
                 const title = feature.properties.name
+                const slug = this.#setTrackSlug(feature.properties.name)
+                const track = keepContext?this.tracks.get(slug):null
                 if ([FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING].includes(geometry.type)) {
                     // Let's define some tracks parameters
                     const parameters = {
                         parent: this.slug,
-                        name: feature.properties.name,
+                        name: keepContext?track.name:feature.properties.name,
                         slug: this.#setTrackSlug(feature.properties.name),
                         hasTime: this.#hasTime(feature.properties),
                         hasAltitude: this.#hasAltitude(geometry),
-                        description: feature.properties.desc ?? '',
+                        description: keepContext?track.description:feature.properties.desc ?? '',
                         segments: geometry.coordinates.length,
+                        visible: keepContext?track.visible:true,
+                        color :  keepContext?track.color: lgs.configuration.journey.color,
+                        thickness :  keepContext?track.thickness: lgs.configuration.journey.thickness,
+                        flags: keepContext?track.flags: {start: undefined, stop: undefined},
                         content: feature,
-                        visible: true,
-                        geoJson: feature,
                     }
-                    this.tracks.set(parameters.slug, new Track(title, parameters))
+                    this.tracks.set(slug, new Track(title, parameters))
                 }
             })
         }
@@ -486,8 +518,13 @@ export class Journey extends MapElement {
         await Promise.all(promises)
 
         //Ready
+        const texts = new Map([
+                                  [INITIAL_LOADING, 'loaded succesfully!'],
+                                  [SIMULATE_ALTITUDE, 'redrawn succesfully!'],
+                                  [RE_LOADING, 'redrawn succesfully!'],
+                              ])
         UIToast.success({
-            caption: `${this.title}`, text: 'loaded succesfully!',
+                            caption: `${this.title}`, text: texts.get(action),
         })
 
         if (mode === FOCUS_ON_FEATURE) {
@@ -503,7 +540,7 @@ export class Journey extends MapElement {
     }
 
     showAfterHeightSimulation = async () => {
-        await this.draw(SIMULATE_ALTITUDE)
+        await this.draw({action: SIMULATE_ALTITUDE})
     }
 
     updateVisibility = (visibility) => {
@@ -605,6 +642,7 @@ export const GPX = 'gpx'
 export const KML = 'kml'
 export const KMZ = 'kmz'
 export const GEOJSON = 'geojson'
+export const JSON_='json'
 
 export const FLAG_START = 'start'
 export const FLAG_STOP = 'stop'
@@ -612,8 +650,7 @@ export const POI_FLAG = 'flag'
 export const POI_STD = 'poi'
 export const TRACK_SLUG = 'track'
 
-export const NO_DEM_SERVER = 'none'
-export const SIMULATE_ALTITUDE = 'simulate-altitude'
+export const SIMULATE_ALTITUDE = 99
 export const INITIAL_LOADING = 1
 export const RE_LOADING = 2
 export const FOCUS_ON_FEATURE = 1

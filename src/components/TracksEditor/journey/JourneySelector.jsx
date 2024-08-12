@@ -2,14 +2,9 @@ import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-i
 import { faRoute, faSquare }                from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlOption, SlSelect }       from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                            from '@Utils/FA2SL'
-import { forwardRef }                       from 'react'
 import { useSnapshot }                      from 'valtio'
 
-export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
-
-    const handleRequestClose = event => {
-        event.preventDefault()
-    }
+export const JourneySelector = (props) => {
     const mainStore = lgs.mainProxy.components.journeyEditor
     const mainSnapshot = useSnapshot(mainStore)
     const editorStore = lgs.theJourneyEditorProxy
@@ -91,9 +86,9 @@ export const JourneySelector = forwardRef(function JourneySelector(props, ref) {
                         color: (theJourney.tracks.size === 1) ? editorSnapshot?.track?.color : 'black',
                     }}
             />
-                {lgs.theJourney.title}
+                {editorSnapshot.journey.title}
                 </span>
         </>}
 
     </>)
-})
+}

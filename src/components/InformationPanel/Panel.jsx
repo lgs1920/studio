@@ -37,6 +37,7 @@ export const Panel = () => {
                   open={infoPanel.visible}
                   onSlAfterHide={togglePanelVisibility}
                   ref={drawerRef}
+                  className={'lgs-theme'}
         >
             <SlTabGroup>
                 <SlTab slot="nav" panel="tab-whats-new">
