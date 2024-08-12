@@ -17,7 +17,7 @@ import {
 import { Utils }      from '@Editor/Utils'
 import {
     faCircleDot, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList, faTelescope,
-    faTrashCan,
+    faTrashCan,faCrosshairsSimple
 }                     from '@fortawesome/pro-regular-svg-icons'
 import {
     SlIcon, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
@@ -292,6 +292,15 @@ export const JourneySettings = function JourneySettings() {
             // TODO
         }
     }
+
+    /**
+     * Focus on Journey
+     */
+    const focusOnJourney = async () => {
+        await setJourneyVisibility(true)
+        lgs.theJourney.focus({resetCamera:true})
+    }
+
     /**
      * Remove journey confirmation
      */
@@ -474,6 +483,11 @@ export const JourneySettings = function JourneySettings() {
 
                     <div id="journey-visibility" className={'editor-vertical-menu'}>
                         <span>
+                        <SlTooltip hoist content={'Focus on journey'}>
+                            <a onClick={focusOnJourney}>
+                                <SlIcon library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
+                            </a>
+                        </SlTooltip>
                         <SlTooltip hoist content={textVisibilityJourney}>
                             <ToggleStateIcon change={setJourneyVisibility}
                                              initial={editorSnapshot.journey.visible}/>

@@ -126,7 +126,13 @@ export class TrackUtils {
      * @param {Track} track
      * @param {boolean} showBbox
      */
-    static focus = async ({action = 0, journey = null, track = null, showBbox = false}) => {
+    static focus = async (
+        {action = 0,
+            journey = null,
+            track = null,
+            showBbox = false,
+            resetCamera=false
+        }) => {
 
         // If track not provided, we'll get the first one of the journey
         if (track === null) {
@@ -147,7 +153,7 @@ export class TrackUtils {
 
         // Get the right camera information
         let camera,destination
-        if (journey.camera === null) {
+        if (journey.camera === null || resetCamera) {
             // Let's center to the rectangle
             destination = lgs.camera.getRectangleCameraCoordinates(rectangle)
 
@@ -166,6 +172,7 @@ export class TrackUtils {
             })
             camera.pitch = -90
 
+            journey.camera =camera
 
 
         } else {
