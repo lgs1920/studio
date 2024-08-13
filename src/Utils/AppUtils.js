@@ -100,7 +100,7 @@ export class AppUtils {
         FA2SL.useFontAwesomeInShoelace('fa')
 
         // Backend  @vite
-        lgs.BACKEND_API = `${import.meta.env.VITE_BACKEND_API}/`
+        lgs.BACKEND_API = `${import.meta.env.VITE_PROXY_BACKEND}${import.meta.env.VITE_BACKEND_API}/`
 
         // Ping server
         const server = await __.app.pingBackend()
@@ -190,6 +190,7 @@ export class AppUtils {
      * @return {alive:boolean}
      */
     static pingBackend = async () => {
+        console.log(`${lgs.BACKEND_API}ping`)
         return axios({
                          method:  'get',
                          url:     `${lgs.BACKEND_API}ping`,
@@ -201,9 +202,11 @@ export class AppUtils {
                          signal:  AbortSignal.timeout(2 * MILLIS),
                      })
             .then(function (response) {
+                console.log(response.data)
                 return response.data
             })
-            .catch(function () {
+            .catch(function (error) {
+                console.log(error)
                 return {alive: false}
             })
     }
