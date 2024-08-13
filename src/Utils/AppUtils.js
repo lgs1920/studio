@@ -190,7 +190,6 @@ export class AppUtils {
      * @return {alive:boolean}
      */
     static pingBackend = async () => {
-        console.log(`${lgs.BACKEND_API}ping`)
         return axios({
                          method:  'get',
                          url:     `${lgs.BACKEND_API}ping`,
@@ -202,7 +201,6 @@ export class AppUtils {
                          signal:  AbortSignal.timeout(2 * MILLIS),
                      })
             .then(function (response) {
-                console.log(response.data)
                 return response.data
             })
             .catch(function (error) {
