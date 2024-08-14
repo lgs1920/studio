@@ -200,13 +200,53 @@ export class AppUtils {
                          timeout: 2 * MILLIS,
                          signal:  AbortSignal.timeout(2 * MILLIS),
                      })
-            .then(function (response) {
-                return response.data
+            .then(async function (response) {
+                if (response.data !=='') {
+                    return response.data
+                }
+                return await __.app.startBackend()
             })
-            .catch(function (error) {
-                console.log(error)
-                return {alive: false}
+            .catch(async function () {
+                return await __.app.startBackend()
             })
+    }
+    /**
+     * Start Backend server
+     *
+     * Timeouts for connections and response are the same, 2 seconds
+     * This works on production only
+     *
+     *
+     * @return {alive:boolean}
+     */
+    static startBackend = async () => {
+        if (import.meta.env.PROD) {
+            // Only on production
+            return axios({
+                             method: 'get',
+                             url:    `start-backend.php`,
+                         })
+                .then(function (response) {
+                    return response.data
+                })
+                .catch(function (error) {
+                    console.log(error)
+                    return {alive: false}
+                })
+        }
+        return  {alive: false}
+    }
+
+    /**
+     * Build a URL from protocol and domain
+     *
+     * @param protocol{string}
+     * @param domain {string}
+     *
+     * @return {string}
+     */
+    static buildUrl = ({protocol='https', domain}) => {
+        return `${protocol}://${domain}`
     }
 
 }

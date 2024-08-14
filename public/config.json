@@ -18,7 +18,8 @@
     "name" : "Backend",
     "domain" : "api.lgs1920.fr",
     "protocol" : "http",
-    "command" : "pm2 start backend.config.js"
+    "pm2" : "/home/.bun/bin/pm2",
+    "command" : "start backend.config.js"
   },
 
   "api": {
