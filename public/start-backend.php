@@ -4,7 +4,7 @@
  */
 $config = json_decode(file_get_contents('./config.json'), true);
 // Start backend
-shell_exec(sprintf('%s %s > text.txt',$config['backend']['pm2'],$config['backend']['command'])) ;
+shell_exec(sprintf('%s %s',$config['backend']['pm2'],$config['backend']['command'])) ;
 // Now verify if it is online
 $list = json_decode(shell_exec(sprintf('%s jlist',$config['backend']['pm2'])),true) ;
 
