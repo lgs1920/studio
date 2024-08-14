@@ -9,13 +9,13 @@ export const DrawerFooter = function DrawerFooter() {
 
     return (
         <div id="credits-pane-footer" className="drawer-pane-footer" slot={'footer'}>
-            <div><strong>{lgs.configuration.applicationName}</strong><span>{lgs.versions.studio}</span></div>
-            <div><strong>Backend</strong><span>{lgs.versions.backend}</span></div>
-            <div><strong>API</strong><span>{lgs.versions.api}</span></div>
+            <div><strong>{lgs.configuration.studio.name}</strong><span>{lgs.versions.studio}</span></div>
+            <div><strong>{lgs.configuration.backend.name}</strong><span>{lgs.versions.backend}</span></div>
+            <div><strong>{lgs.configuration.api.name}</strong><span>{lgs.versions.api}</span></div>
             <div className="drawer-footer-url">
                     <SlIconButton library="fa" name={FA2SL.set(faGlobePointer)}
                                   target={'_blank'}
-                                  href={lgs.configuration.website}
+                                  href={__.app.buildUrl(lgs.configuration.website)}
                                   title={"Our Site"}
                     />
                     <SlIconButton library="fa" name={FA2SL.set(faGithub)}
