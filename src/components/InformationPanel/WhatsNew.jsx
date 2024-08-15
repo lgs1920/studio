@@ -19,6 +19,8 @@ const readNews =  () => {
             name: news.file.slice(0, -3).replace(/_/gi, ' '), // suppress .md and change _
             date: DateTime.fromMillis(news.time).toLocaleString(DateTime.DATE_MED),
             time: news.time,
+            version:news.version
+
         }
         file.content=await changelog.read(news.file)
         state.data.push(file)
@@ -42,7 +44,7 @@ export const WhatsNew = () => {
                                key={file.name}
                                className={'lgs-theme'}
                     >
-                        <h2 slot="summary">[{file.name}] {file.date}</h2>
+                        <h2 slot="summary">[{file.version}] {file.date}</h2>
                         <SlDivider></SlDivider>
                         <Markdown>
                             {file.content}
