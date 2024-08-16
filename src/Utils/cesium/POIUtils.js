@@ -20,7 +20,7 @@ export class POIUtils {
         const location = {
             top: Cesium.VerticalOrigin.TOP, bottom: Cesium.VerticalOrigin.BOTTOM, center: Cesium.VerticalOrigin.CENTER,
         }
-        return location[origin]
+        return location?.origin ??  Cesium.VerticalOrigin.CENTER
     })
 
     static setIcon = (icon = '') => {
@@ -47,6 +47,7 @@ export class POIUtils {
             return
         }
 
+        // Else we'll draw it
         poi.drawn = true
 
         let poiOptions = {
@@ -56,15 +57,17 @@ export class POIUtils {
             description: poi.description,
             position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1], poi.coordinates[2]),
             show: POIUtils.setPOIVisibility(poi, parentVisibility),
-            //disableDepthTestDistance: new Cesium.ConstantProperty(0),
+            disableDepthTestDistance: new Cesium.ConstantProperty(0),
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
+            scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 1.5e7, 0.5),
 
         }
         const pinBuilder = new Cesium.PinBuilder()
 
-        poiOptions.billboard = {
+        const billboard = {
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-            verticalOrigin: POIUtils.verticalOrigin(poi.vertical ?? 'center'),
+            verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
             disableDepthTestDistance: new Cesium.ConstantProperty(0),//Number.POSITIVE_INFINITY,
         }
 
@@ -72,8 +75,7 @@ export class POIUtils {
         const foregroundColor = poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : ''
 
         // Check data source
-        const dataSource = lgs.viewer.dataSources.getByName(poi.journey ?? APP_KEY, true)[0]
-
+        const dataSource = lgs.viewer.dataSources.getByName(poi.journey, true)[0]
         // We remove the existing if it exists
         dataSource.entities.removeById(poiOptions.id)
 
@@ -86,23 +88,35 @@ export class POIUtils {
                         outlineColor: backgroundColor,
                         outlineWidth: poi.border,
                         disableDepthTestDistance: new Cesium.ConstantProperty(0),
+                        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                        show:poiOptions.show,
+                        translucencyByDistance: new Cesium.NearFarScalar(
+                            1.5e2,
+                            1.0,
+                            1.5e7,
+                            0.2
+                        ),
                     },
                 })
             case PIN_COLOR:
-                poiOptions.billboard.image = pinBuilder.fromColor(backgroundColor, poi.size).toDataURL()
+                billboard.image = pinBuilder.fromColor(backgroundColor, poi.size).toDataURL()
+                poiOptions.billboard={...billboard}
                 return await dataSource.entities.add(poiOptions)
             case PIN_TEXT:
-                poiOptions.billboard.image = pinBuilder.fromText(poi.text, backgroundColor, poi.size).toDataURL()
+                billboard.image = pinBuilder.fromText(poi.text, backgroundColor, poi.size).toDataURL()
+                poiOptions.billboard={...billboard}
                 return await dataSource.entities.add(poiOptions)
             case PIN_ICON:
                 pinBuilder.fromUrl(POIUtils.useFontAwesome(poi).src, backgroundColor, poi.size).then(async image => {
-                    poiOptions.billboard.image = image
+                    billboard.image = image
+                    poiOptions.billboard={...billboard}
                     return await dataSource.entities.add(poiOptions)
                 })
             case JUST_ICON:
 
                 return POIUtils.useOnlyFontAwesome(poi).then(async canvas => {
-                    poiOptions.billboard.image = canvas
+                    billboard.image = canvas
+                    poiOptions.billboard={...billboard}
                     return await dataSource.entities.add(poiOptions)
                 })
         }

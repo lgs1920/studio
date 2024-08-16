@@ -26,9 +26,9 @@ export class POI {
 
     constructor(options) {
         this.type = options.type
+        this.parent = options.parent ?? undefined
         this.slug = options.slug
         this.name = options.name
-        this.parent = options.parent
         this.coordinates = options.coordinates || {}
         this.altitude = options.altitude || false
         this.time = options.time || false
