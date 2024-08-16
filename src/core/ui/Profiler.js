@@ -145,10 +145,10 @@ export class Profiler {
         const data = options.w.config.series[options.seriesIndex].data
         const coords = data[options.dataPointIndex]
 
-        if (!lgs.profileTrackMarker.drawn) {
-            lgs.profileTrackMarker.draw()
+        if (!lgs.theTrack.profileTrackMarker.drawn) {
+           lgs.theTrack.profileTrackMarker.draw()
         } else {
-            lgs.profileTrackMarker.moveTo([coords.point.longitude, coords.point.latitude])
+           lgs.theTrack.profileTrackMarker.moveTo([coords.point.longitude, coords.point.latitude])
         }
 
     }
@@ -164,7 +164,7 @@ export class Profiler {
         PROFILE_CHARTS.forEach(id => {
             this.charts.get(id).updateSeries(series)
         })
-        lgs.profileTrackMarker.update()
+       lgs.theTrack.profileTrackMarker.update()
     }
 
     /**
@@ -196,20 +196,22 @@ export class Profiler {
     draw = () => {
         lgs.mainProxy.components.profile.key++
         if (lgs.configuration.profile.marker.show) {
-            lgs.profileTrackMarker.draw()
+           lgs.theTrack.profileTrackMarker.draw()
         }
     }
 
     initMarker = () => {
-        if (lgs.profileTrackMarker === undefined) {
-            lgs.profileTrackMarker = new ProfileTrackMarker()
+        if (lgs.theTrack && lgs.theTrack.profileTrackMarker === undefined) {
+           lgs.theTrack.profileTrackMarker = new ProfileTrackMarker(
+               {color:lgs.theTrack.color}
+           )
         }
     }
 
     drawMarker = () => {
         if (lgs.configuration.profile.marker.show) {
             this.initMarker()
-            lgs.profileTrackMarker.draw()
+           lgs.theTrack.profileTrackMarker.draw()
         }
     }
     resetChart = () => {

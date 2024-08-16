@@ -84,7 +84,7 @@ export class POIUtils {
                         pixelSize: poi.size,
                         color: foregroundColor,
                         outlineColor: backgroundColor,
-                        outlineWidth: 3,
+                        outlineWidth: poi.border,
                         disableDepthTestDistance: new Cesium.ConstantProperty(0),
                     },
                 })
