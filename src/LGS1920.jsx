@@ -134,7 +134,10 @@ export function LGS1920() {
             <Scene verticalExaggeration={1.15}
                    verticalExaggerationRelativeHeight={2400.0}>
             </Scene>
-            <Globe enableLighting={false}></Globe>
+            <Globe enableLighting={false}
+                   depthTestAgainstTerrain ={true}
+            >
+            </Globe>
             <Camera>
                 <CameraFlyTo
                     orientation={lgs.cameraOrientation}

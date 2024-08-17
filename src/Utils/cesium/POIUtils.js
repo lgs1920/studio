@@ -55,12 +55,10 @@ export class POIUtils {
             parent: poi.parent,
             id: poi.slug,
             description: poi.description,
-            position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1], poi.coordinates[2]),
+            position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1]),
             show: POIUtils.setPOIVisibility(poi, parentVisibility),
-            disableDepthTestDistance: new Cesium.ConstantProperty(0),
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-            verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
-            scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 1.5e7, 0.5),
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+           verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
 
         }
         const pinBuilder = new Cesium.PinBuilder()
@@ -68,7 +66,6 @@ export class POIUtils {
         const billboard = {
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
-            disableDepthTestDistance: new Cesium.ConstantProperty(0),//Number.POSITIVE_INFINITY,
         }
 
         const backgroundColor = poi.backgroundColor?Cesium.Color.fromCssColorString(poi.backgroundColor):''
@@ -87,15 +84,9 @@ export class POIUtils {
                         color: foregroundColor,
                         outlineColor: backgroundColor,
                         outlineWidth: poi.border,
-                        disableDepthTestDistance: new Cesium.ConstantProperty(0),
+                        disableDepthTestDistance:0,
                         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-                        show:poiOptions.show,
-                        translucencyByDistance: new Cesium.NearFarScalar(
-                            1.5e2,
-                            1.0,
-                            1.5e7,
-                            0.2
-                        ),
+                        verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
                     },
                 })
             case PIN_COLOR:
