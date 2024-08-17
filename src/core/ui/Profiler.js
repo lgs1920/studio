@@ -203,7 +203,7 @@ export class Profiler {
     initMarker = () => {
         if (lgs.theTrack && lgs.theTrack.profileTrackMarker === undefined) {
            lgs.theTrack.profileTrackMarker = new ProfileTrackMarker(
-               {color:lgs.theTrack.color}
+               {color:lgs.theTrack.color,border:{color:'transparent'}}
            )
         }
     }

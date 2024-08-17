@@ -55,10 +55,11 @@ export class POIUtils {
             parent: poi.parent,
             id: poi.slug,
             description: poi.description,
-            position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1]),
+            position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1], 0),
             show: POIUtils.setPOIVisibility(poi, parentVisibility),
-            disableDepthTestDistance: Number.POSITIVE_INFINITY,
-           verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
+            backgroundColor : poi.backgroundColor?Cesium.Color.fromCssColorString(poi.backgroundColor):'',
+            foregroundColor : poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : '',
+            disableDepthTestDistance: 1.2742018*10**7 // Diameter of Earth
 
         }
         const pinBuilder = new Cesium.PinBuilder()
@@ -66,6 +67,7 @@ export class POIUtils {
         const billboard = {
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
+            disableDepthTestDistance: 1.2742018*10**7 // Diameter of Earth
         }
 
         const backgroundColor = poi.backgroundColor?Cesium.Color.fromCssColorString(poi.backgroundColor):''
@@ -79,16 +81,15 @@ export class POIUtils {
         switch (poi.type) {
             case PIN_CIRCLE:
                 return await dataSource.entities.add({
-                    ...poiOptions, point: {
-                        pixelSize: poi.size,
-                        color: foregroundColor,
-                        outlineColor: backgroundColor,
-                        outlineWidth: poi.border,
-                        disableDepthTestDistance:0,
-                        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-                        verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
-                    },
-                })
+                                                         ...poiOptions,
+                                                         point: {
+                                                             pixelSize:                poi.size,
+                                                             color:                    foregroundColor,
+                                                             outlineColor:             backgroundColor,
+                                                             outlineWidth:             poi.border,
+                                                             verticalOrigin:           POIUtils.verticalOrigin(poi.vertical),
+                                                         }
+                                                     })
             case PIN_COLOR:
                 billboard.image = pinBuilder.fromColor(backgroundColor, poi.size).toDataURL()
                 poiOptions.billboard={...billboard}
@@ -104,7 +105,6 @@ export class POIUtils {
                     return await dataSource.entities.add(poiOptions)
                 })
             case JUST_ICON:
-
                 return POIUtils.useOnlyFontAwesome(poi).then(async canvas => {
                     billboard.image = canvas
                     poiOptions.billboard={...billboard}
@@ -141,7 +141,8 @@ export class POIUtils {
         // Get SVG
         const svg = (new DOMParser()).parseFromString(html, 'image/svg+xml').querySelector('svg')
         // add foreground
-        svg.querySelector('path').setAttribute('fill', marker.foregroundColor)
+         svg.querySelector('path').setAttribute('fill', marker.foregroundColor)
+
         if (marker.backgroundColor !== lgs.POI_TRANSPARENT_COLOR) {
             // add background
             const rectangle = document.createElement('rect')
