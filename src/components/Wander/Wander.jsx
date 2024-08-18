@@ -102,7 +102,7 @@ export const Wander = (props) => {
     <SlSelect hoist
                   onSlChange={changeDuration}
                   value={wanderSnapshot.duration}
-                  size={'small'}
+                  size={'medium'}
                   className={'wanderDuration'}>
         {Wanderer.DURATIONS.map(duration =>
                 <SlOption key={duration.text} value={duration.time}>{duration.text}</SlOption>,
@@ -118,7 +118,7 @@ export const Wander = (props) => {
             </SlButton>
         </SlTooltip>
 
-        {/* <MarkerStyleSettings></MarkerStyleSettings> */}
+        {/* TODO <MarkerStyleSettings></MarkerStyleSettings> */}
     </div>)
 
 }
