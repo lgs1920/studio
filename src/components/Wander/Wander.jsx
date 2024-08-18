@@ -5,7 +5,8 @@ import { SlButton, SlIcon, SlOption, SlSelect, SlTooltip } from '@shoelace-style
 import { FA2SL }                                           from '@Utils/FA2SL'
 import { useSnapshot } from 'valtio'
 import { Wanderer }    from '../../core/ui/Wanderer.js'
-import { WanderUtils } from '../../Utils/cesium/WanderUtils.js'
+import { WanderUtils }         from '../../Utils/cesium/WanderUtils.js'
+import { MarkerStyleSettings } from './MarkerStyleSettings'
 
 export const Wander = (props) => {
 
@@ -116,6 +117,8 @@ export const Wander = (props) => {
                 />
             </SlButton>
         </SlTooltip>
+
+        <MarkerStyleSettings></MarkerStyleSettings>
     </div>)
 
 }
