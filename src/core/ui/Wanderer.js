@@ -1,6 +1,5 @@
 import { MILLIS }                          from '@Utils/AppUtils.js'
-import { DISTANCE_UNITS, ELEVATION_UNITS } from '../../Utils/UnitUtils.js'
-import { ELEVATION_VS_DISTANCE }           from './Profiler.js'
+import { POIUtils }                             from '@Utils/cesium/POIUtils.js'
 
 export class Wanderer {
     /**
@@ -101,12 +100,19 @@ export class Wanderer {
      */
     #timer
 
+    /**
+     * ProfileTrackMarker
+     * @type {ProfileTrackMarker|null}
+     */
+    #marker
+
     constructor(options) {
         // Singleton
         if (Wanderer.instance) {
             return Wanderer.instance
         }
         this.forward = true
+        this.marker ==null
         this.update(options)
 
         Wanderer.instance = this
@@ -128,7 +134,7 @@ export class Wanderer {
             this.duration = options.duration ?? this.duration
             this.#interval = this.duration / this.#points
             this.forward = options.forward ?? this.forward
-
+            this.#marker = options.marker ?? this.marker
 
             this.#start = (this.forward) ? 0 : this.#points - 1
             this.#end = (this.forward) ? this.#points - 1 : 0
@@ -210,6 +216,22 @@ export class Wanderer {
      */
     set forward(initialDirection) {
         this.#initialDirection = initialDirection
+    }
+
+    /**
+     *
+     * @return {ProfileTrackMarker}
+     */
+    get marker() {
+        return this.#marker
+    }
+
+    /**
+     *
+     * @param {ProfileTrackMarker} marker
+     */
+    set marker(marker) {
+        this.#marker = marker
     }
 
     /**
@@ -322,7 +344,7 @@ export class Wanderer {
             return
         }
         const data=[]
-        lgs.theJourney.tracks.forEach((track, slug) => {
+        lgs.theJourney.tracks.forEach((track) => {
             if (track.visible && track.metrics.points !== undefined) {
                 track.metrics.points.forEach(point => {
                     data.push({
@@ -335,6 +357,11 @@ export class Wanderer {
             }
         })
         return data
+    }
+
+    updateColor = ()=> {
+        POIUtils.remove( lgs.theTrack.profileTrackMarker)
+__.ui.profiler.initMarker({force:true})
     }
 
 

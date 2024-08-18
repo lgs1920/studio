@@ -76,7 +76,7 @@ export class Profiler {
         }
 
         let distance = 0
-        lgs.theJourney.tracks.forEach((track, slug) => {
+        lgs.theJourney.tracks.forEach((track) => {
             if (track.visible && track.metrics.points !== undefined) {
                 const dataSet = {
                     data: [],
@@ -172,7 +172,7 @@ export class Profiler {
      */
     updateTitle = () => {
         const series = []
-        lgs.theJourney.tracks.forEach((track, slug) => {
+        lgs.theJourney.tracks.forEach((track) => {
             series.push({name: track.title})
         })
         PROFILE_CHARTS.forEach(id => {
@@ -219,6 +219,8 @@ export class Profiler {
                    color:color??lgs.theTrack.color,
                    border:{color:borderColor??'transparent'}}
            )
+
+            __.ui.wanderer.marker  =lgs.theTrack.profileTrackMarker
         }
     }
 

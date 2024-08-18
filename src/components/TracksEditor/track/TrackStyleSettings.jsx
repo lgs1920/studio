@@ -25,6 +25,7 @@ export const TrackStyleSettings = function TrackSettings() {
         editorStore.track.color = event.target.value
         await Utils.updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
         __.ui.profiler.updateColor()
+        __.ui.wanderer.updateColor()
     })
 
 

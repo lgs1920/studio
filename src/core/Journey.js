@@ -10,10 +10,11 @@ import {
 }                                      from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
-} from '@Utils/UIToast'
+}                                        from '@Utils/UIToast'
+import { FLAG_START, POI_FLAG, POI_STD } from '../Utils/cesium/POIUtils'
 import {
     ElevationServer,
-} from './Elevation/ElevationServer'
+}                                        from './Elevation/ElevationServer'
 import {
     JOURNEYS_STORE, ORIGIN_STORE,
 } from './LGS1920Context.js'
@@ -340,7 +341,7 @@ export class Journey extends MapElement {
                         const point = geometry.coordinates
                         const parameters = {
                             journey: this.slug,
-                            usage: POI_TYPE,
+                            usage: POI_STD,
                             name: feature.properties.name,
                             slug: this.#setPOISlug(index),
                             coordinates: [point[0], point[1]],

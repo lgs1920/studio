@@ -34,7 +34,6 @@ export class POIUtils {
             case FLAG_START:
             case FLAG_STOP:
                 return faLocationPin
-                break
             default:
                 return faLocationDot
 
@@ -65,7 +64,7 @@ export class POIUtils {
             show: POIUtils.setPOIVisibility(poi, parentVisibility),
             backgroundColor : poi.backgroundColor?Cesium.Color.fromCssColorString(poi.backgroundColor):'',
             foregroundColor : poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : '',
-            disableDepthTestDistance: 1.2742018*10**7 // Diameter of Earth
+            disableDepthTestDistance: 1.2742018E7 // Diameter of Earth
 
         }
         const pinBuilder = new Cesium.PinBuilder()
@@ -73,14 +72,14 @@ export class POIUtils {
         const billboard = {
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
-            disableDepthTestDistance: 1.2742018*10**7 // Diameter of Earth
+            disableDepthTestDistance: 1.2742018E7 // Diameter of Earth
         }
 
         const backgroundColor = poi.backgroundColor?Cesium.Color.fromCssColorString(poi.backgroundColor):''
         const foregroundColor = poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : ''
 
         const dataSource=POIUtils.getDataSource(poi)
-        POIUtils.remove(poi)
+        await POIUtils.remove(poi)
 
         switch (poi.type) {
             case PIN_CIRCLE:
@@ -108,6 +107,7 @@ export class POIUtils {
                     poiOptions.billboard={...billboard}
                     return await dataSource.entities.add(poiOptions)
                 })
+                break;
             case JUST_ICON:
                 return POIUtils.useOnlyFontAwesome(poi).then(async canvas => {
                     billboard.image = canvas
@@ -119,7 +119,7 @@ export class POIUtils {
     }
 
     static update = (poi, options) => {
-        const dataSource = lgs.viewer.dataSources.getByName(poi.journey ?? APP_KEY, true)[0]
+        const dataSource = POIUtils.getDataSource(poi)
         const entity = dataSource.entities.getById(poi.slug)
         if (entity) {
             // Update positions
@@ -180,6 +180,10 @@ export class POIUtils {
         return canvas
     }
 
+    /**
+     *
+     * @type {DataSource}
+     */
     static getDataSource = (poi => {
         let target
                 switch (poi.usage) {
@@ -196,11 +200,12 @@ export class POIUtils {
 
     static remove = async (poi) => {
         const dataSource = POIUtils.getDataSource(poi)
-        dataSource.entities.values.forEach(entity => {
+        console.log(dataSource.name)
+        for (const entity of dataSource.entities.values) {
             if (entity.id === poi.id) {
-                dataSource.entities.remove(entity)
+                await dataSource.entities.remove(entity)
             }
-        })
+        }
     }
 
     /**
