@@ -51,7 +51,7 @@
     "show": true,
     "marker": {
       "show": true,
-      "size": 8,
+      "size":13,
       "color": "#f2c55c",
       "border": {
         "color": "#fff",
