@@ -45,6 +45,8 @@ export class Journey extends MapElement {
     hasElevation = false
     hasTime = false
 
+    marker = {color:null,marker:null }//wander mode marker settings
+
     constructor(title, type, options) {
         super()
 
