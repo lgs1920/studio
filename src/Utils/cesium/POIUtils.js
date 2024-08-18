@@ -200,7 +200,6 @@ export class POIUtils {
 
     static remove = async (poi) => {
         const dataSource = POIUtils.getDataSource(poi)
-        console.log(dataSource.name)
         for (const entity of dataSource.entities.values) {
             if (entity.id === poi.id) {
                 await dataSource.entities.remove(entity)
