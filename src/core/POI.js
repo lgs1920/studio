@@ -1,4 +1,4 @@
-import { PIN_CIRCLE, POIUtils } from '@Utils/cesium/POIUtils'
+import { PIN_CIRCLE, POIUtils, POI_STD  } from '@Utils/cesium/POIUtils'
 
 export class POI {
 
@@ -26,6 +26,7 @@ export class POI {
 
     constructor(options) {
         this.type = options.type
+        this.usage = options.usage ?? POI_STD,
         this.parent = options.parent ?? undefined
         this.slug = options.slug
         this.name = options.name

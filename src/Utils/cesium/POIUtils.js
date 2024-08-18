@@ -4,7 +4,6 @@ import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 
 import { Canvg }                          from 'canvg'
 import * as Cesium                        from 'cesium'
-import { FLAG_START, FLAG_STOP, POI_STD } from '../../core/Journey'
 import { APP_KEY }                        from '../../core/LGS1920Context.js'
 
 // Pin Marker Type
@@ -14,6 +13,13 @@ export const PIN_COLOR = 3
 //Other paths
 export const PIN_CIRCLE = 4
 export const JUST_ICON = 5
+
+export const FLAG_START = 'start'
+export const FLAG_STOP = 'stop'
+export const POI_FLAG = 'flag'
+export const POI_STD = 'poi'
+export const POI_MARKER = 'marker'
+
 
 export class POIUtils {
     static verticalOrigin = (origin => {
@@ -73,10 +79,8 @@ export class POIUtils {
         const backgroundColor = poi.backgroundColor?Cesium.Color.fromCssColorString(poi.backgroundColor):''
         const foregroundColor = poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : ''
 
-        // Check data source
-        const dataSource = lgs.viewer.dataSources.getByName(poi.journey, true)[0]
-        // We remove the existing if it exists
-        dataSource.entities.removeById(poiOptions.id)
+        const dataSource=POIUtils.getDataSource(poi)
+        POIUtils.remove(poi)
 
         switch (poi.type) {
             case PIN_CIRCLE:
@@ -176,14 +180,27 @@ export class POIUtils {
         return canvas
     }
 
+    static getDataSource = (poi => {
+        let target
+                switch (poi.usage) {
+                case POI_MARKER:
+                case POI_FLAG:
+                    target = poi.track
+                    break
+                    case POI_STD:
+                default:
+                    target = poi.journey
+                }
+       return lgs.viewer.dataSources.getByName(target)[0]
+    })
+
     static remove = async (poi) => {
-        const dataSource = lgs.viewer.dataSources.getByName(poi.slug.startsWith(POI_STD) ? poi.journey : poi.track)[0]
+        const dataSource = POIUtils.getDataSource(poi)
         dataSource.entities.values.forEach(entity => {
             if (entity.id === poi.id) {
                 dataSource.entities.remove(entity)
             }
         })
-
     }
 
     /**
@@ -199,6 +216,6 @@ export class POIUtils {
      *
      */
     static setPOIVisibility = (poi, visibility) => {
-        return visibility ? poi.visible : false
+        return visibility ? poi?.visible : false
     }
 }

@@ -80,7 +80,7 @@ export const Profile = function Profile(props, ref) {
 
     const data = __.ui.profiler.prepareData()
     __.ui.profiler.setVisibility()
-    __.ui.profiler.initMarker()
+    __.ui.profiler.initMarker({})
 
     return (<>
         {mainSnap.canViewProfile && <div id="profile-container" key={mainSnap.components.profile.key}>

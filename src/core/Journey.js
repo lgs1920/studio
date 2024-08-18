@@ -340,6 +340,7 @@ export class Journey extends MapElement {
                         const point = geometry.coordinates
                         const parameters = {
                             journey: this.slug,
+                            usage: POI_TYPE,
                             name: feature.properties.name,
                             slug: this.#setPOISlug(index),
                             coordinates: [point[0], point[1]],
@@ -361,6 +362,7 @@ export class Journey extends MapElement {
                         const startParameters = {
                             track: parentSlug,
                             journey: this.slug,
+                            usage:POI_FLAG,
                             name: 'Track start',
                             slug: this.#setPOISlug(`${__.app.slugify(feature.properties.name)}-${FLAG_START}`, POI_FLAG),
                             coordinates: [start[0], start[1]],
@@ -384,6 +386,7 @@ export class Journey extends MapElement {
                         const stopParameters = {
                             track: parentSlug,
                             journey: this.slug,
+                            usage:POI_FLAG,
                             name: 'Track stop',
                             slug: this.#setPOISlug(`#${__.app.slugify(feature.properties.name)}-${FLAG_STOP}`, POI_FLAG),
                             coordinates: [stop[0], stop[1]],
@@ -646,10 +649,6 @@ export const KMZ = 'kmz'
 export const GEOJSON = 'geojson'
 export const JSON_='json'
 
-export const FLAG_START = 'start'
-export const FLAG_STOP = 'stop'
-export const POI_FLAG = 'flag'
-export const POI_STD = 'poi'
 export const TRACK_SLUG = 'track'
 
 export const SIMULATE_ALTITUDE = 99

@@ -200,17 +200,31 @@ export class Profiler {
         }
     }
 
-    initMarker = () => {
-        if (lgs.theTrack && lgs.theTrack.profileTrackMarker === undefined) {
+    /**
+     *
+     * @param force
+     * @param color
+     * @param borderColor
+     */
+    initMarker = (
+        {
+            force=false,
+            color=null,
+            borderColor= null,
+        }
+    ) => {
+        if (lgs.theTrack && (lgs.theTrack.profileTrackMarker === undefined || force)) {
            lgs.theTrack.profileTrackMarker = new ProfileTrackMarker(
-               {color:lgs.theTrack.color,border:{color:'transparent'}}
+               {
+                   color:color??lgs.theTrack.color,
+                   border:{color:borderColor??'transparent'}}
            )
         }
     }
 
     drawMarker = () => {
         if (lgs.configuration.profile.marker.show) {
-            this.initMarker()
+            this.initMarker({})
            lgs.theTrack.profileTrackMarker.draw()
         }
     }

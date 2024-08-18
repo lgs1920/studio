@@ -1,19 +1,12 @@
-import { default as extent }                                         from '@mapbox/geojson-extent'
-import { default as centroid }                                       from '@turf/centroid'
-import * as Cesium                                                   from 'cesium'
-import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 } from 'cesium'
-import { ElevationServer }                                           from '../../core/Elevation/ElevationServer'
-import {
-    FLAG_START, FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS, POI_FLAG, POI_STD,
-}                                                                    from '../../core/Journey'
-import {
-    APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK,
-}                                                                    from '../../core/LGS1920Context.js'
-import {
-    Camera as CameraManager,
-}                                                                    from '../../core/ui/Camera.js'
-import { UIToast }                                                   from '../UIToast.js'
-import { POIUtils }                                                  from './POIUtils'
+import { default as extent }                                                   from '@mapbox/geojson-extent'
+import { default as centroid }                                                 from '@turf/centroid'
+import * as Cesium                                                             from 'cesium'
+import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 }           from 'cesium'
+import { FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS }                from '../../core/Journey'
+import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/LGS1920Context.js'
+import { Camera as CameraManager }                                             from '../../core/ui/Camera.js'
+import { UIToast }                                                             from '../UIToast.js'
+import { FLAG_START, POI_FLAG, POI_STD, POIUtils }                             from './POIUtils'
 
 export const SUPPORTED_EXTENSIONS = ['geojson', 'json','kml', 'gpx' /* TODO 'kmz'*/]
 export const FEATURE                  = 'Feature',
