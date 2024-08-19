@@ -1,10 +1,4 @@
-import { faLocationDot }                   from '@fortawesome/pro-solid-svg-icons'
-import { POI }                             from '../../core/POI'
-import { ELEVATION_VS_DISTANCE }           from '../../core/ui/Profiler.js'
 import { Wanderer }                        from '../../core/ui/Wanderer.js'
-import { DISTANCE_UNITS, ELEVATION_UNITS } from '../UnitUtils.js'
-import { NOT_AN_ENTITY }                   from './EntitiesUtils'
-import { JUST_ICON }                       from './POIUtils'
 
 export const WANDER_MODE_MARKER = 'wander-mode'
 
