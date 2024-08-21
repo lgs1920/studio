@@ -38,7 +38,7 @@ export const Profile = function Profile(props, ref) {
         if (window.isOK(event)) {
             mainStore.components.profile.show = false
             //TODO manage 'profile/close' event and externalise
-            lgs.profileTrackMarker.toggleVisibility()
+            toggleMarker()
         }
     }
 
@@ -46,7 +46,7 @@ export const Profile = function Profile(props, ref) {
         __.ui.profiler.resetChart()
     }
     const toggleMarker = () => {
-        lgs.profileTrackMarker.toggleVisibility()
+        lgs.theTrack.marker.toggleVisibility()
     }
 
     const snapshot = () => {
@@ -80,7 +80,7 @@ export const Profile = function Profile(props, ref) {
 
     const data = __.ui.profiler.prepareData()
     __.ui.profiler.setVisibility()
-    __.ui.profiler.initMarker({})
+    //__.ui.profiler.initMarker({force:true})
 
     return (<>
         {mainSnap.canViewProfile && <div id="profile-container" key={mainSnap.components.profile.key}>

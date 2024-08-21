@@ -27,8 +27,6 @@ export class LGS1920Context {
     floatingMenu = {}
     journeys = new Map()
 
-    profileTrackMarker = undefined
-    initialized=false
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
         // Track Editor store is used to manage the settings of the theJourney in edit
@@ -117,7 +115,9 @@ export class LGS1920Context {
     set theJourney(journey) {
         this.#mainProxy.theJourney = journey
         if (journey === null) {
-            this.db.lgs1920.delete(CURRENT_JOURNEY, CURRENT_STORE).then()
+            this.db.lgs1920.delete(CURRENT_JOURNEY, CURRENT_STORE).then(
+                this.db.lgs1920.delete(CURRENT_TRACK, CURRENT_STORE).then()
+            )
             return
         }
         this.db.lgs1920.put(CURRENT_JOURNEY, journey.slug, CURRENT_STORE).then(journey.addToEditor())

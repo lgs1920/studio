@@ -2,20 +2,21 @@ import { POI }                       from '@Core/POI'
 import { faCircle }                  from '@fortawesome/pro-solid-svg-icons'
 import { JUST_ICON, POI_MARKER }     from '../Utils/cesium/POIUtils'
 import { POI_VERTICAL_ALIGN_CENTER } from './POI'
+import { APP_KEY }                        from '@Core/LGS1920Context.js'
 
 export class ProfileTrackMarker extends POI {
 
     constructor(options) {
-        const track = options?.track ?? lgs.theTrack
+        let track = options?.parent ?? lgs.theTrack
+        track = (typeof track === 'string')?track:track.slug
         const POIOptions = {
             type:            JUST_ICON,
             usage: POI_MARKER,
             size:  options?.size ?? lgs.configuration.profile.marker.size,
-            name:  `${POI_MARKER}#${track.slug}`,
-            slug:  `${POI_MARKER}#${track.slug}`,
+            name:  options?.name ?? `${POI_MARKER}#${track}`,
+            slug: options?.slug ?? `${POI_MARKER}#${track}`,
             icon:faCircle,
-            journey: track.parent,
-            track:track.slug,
+            parent : options?.parent,
             coordinates:     [lgs.configuration.starter.longitude, lgs.configuration.starter.latitude],
             altitude:        false,
             time:            false,
@@ -24,6 +25,7 @@ export class ProfileTrackMarker extends POI {
             border:          options?.border?.width ??  lgs.configuration.profile.marker.border.width,
             backgroundColor: options?.border?.color ?? lgs.configuration.profile.marker.border.color,
             foregroundColor: options?.color ?? lgs.configuration.profile.marker.color,
+            drawn:false,
         }
 
         super(POIOptions)
@@ -36,6 +38,7 @@ export class ProfileTrackMarker extends POI {
         } else {
             await this.moveTo(coordinates)
         }
+        this.visible =true
     }
 
     changeColor = async (color) => {

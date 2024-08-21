@@ -19,15 +19,17 @@ export class POI {
     icon
     size
     marker
+    drawn
     name
     border
     description
     image
+    usage
 
     constructor(options) {
         this.type = options.type
         this.usage = options.usage ?? POI_STD,
-        this.parent = options.parent ?? undefined
+        this.parent = options.parent
         this.slug = options.slug
         this.name = options.name
         this.coordinates = options.coordinates || {}
@@ -43,8 +45,6 @@ export class POI {
         this.image = options.image ?? undefined
         this.visible = options.visible ?? true
         this.vertical = options.vertical ?? POI_VERTICAL_ALIGN_CENTER
-        this.track = options.track ?? undefined
-        this.journey = options.journey ?? undefined
         this.drawn = false
     }
 

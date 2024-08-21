@@ -1,8 +1,8 @@
-import { MainUI }         from '@Components/MainUI/MainUI.jsx'
+import { MainUI }           from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { LGS1920Context } from '@Core/LGS1920Context'
-import { CameraUtils }    from '@Utils/cesium/CameraUtils'
-import { TrackUtils }     from '@Utils/cesium/TrackUtils'
+import { LGS1920Context }   from '@Core/LGS1920Context'
+import { CameraUtils }      from '@Utils/cesium/CameraUtils'
+import { TrackUtils }       from '@Utils/cesium/TrackUtils'
 import * as Cesium                                   from 'cesium'
 import { useEffect, useRef }                         from 'react'
 import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
@@ -85,10 +85,10 @@ export function LGS1920() {
         __.app.setTheme()
 
         // Read DB
-        readAllFromDB()
-
-        // Let's instantiate some elements Managers
-        lgs.initManagers()
+            readAllFromDB().then(
+                // Let's instantiate some elements Managers
+                lgs.initManagers(),
+            )
 
         //Ready
         UIToast.success({

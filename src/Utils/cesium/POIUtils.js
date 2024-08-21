@@ -57,13 +57,10 @@ export class POIUtils {
 
         let poiOptions = {
             name: poi.name,
-            parent: poi.parent,
             id: poi.slug,
             description: poi.description,
             position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1], 0),
             show: POIUtils.setPOIVisibility(poi, parentVisibility),
-            backgroundColor : poi.backgroundColor?Cesium.Color.fromCssColorString(poi.backgroundColor):'',
-            foregroundColor : poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : '',
             disableDepthTestDistance: 1.2742018E7 // Diameter of Earth
 
         }
@@ -72,6 +69,7 @@ export class POIUtils {
         const billboard = {
             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
+            show: true,
             disableDepthTestDistance: 1.2742018E7 // Diameter of Earth
         }
 
@@ -185,23 +183,13 @@ export class POIUtils {
      * @type {DataSource}
      */
     static getDataSource = (poi => {
-        let target
-                switch (poi.usage) {
-                case POI_MARKER:
-                case POI_FLAG:
-                    target = poi.track
-                    break
-                    case POI_STD:
-                default:
-                    target = poi.journey
-                }
-       return lgs.viewer.dataSources.getByName(target)[0]
+       return lgs.viewer.dataSources.getByName(poi.parent)[0]
     })
 
     static remove = async (poi) => {
         const dataSource = POIUtils.getDataSource(poi)
         for (const entity of dataSource.entities.values) {
-            if (entity.id === poi.id) {
+            if (entity.id === poi.slug) {
                 await dataSource.entities.remove(entity)
             }
         }

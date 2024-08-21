@@ -6,7 +6,7 @@ import { FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS }                f
 import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/LGS1920Context.js'
 import { Camera as CameraManager }                                             from '../../core/ui/Camera.js'
 import { UIToast }                                                             from '../UIToast.js'
-import { FLAG_START, POI_FLAG, POI_STD, POIUtils }                             from './POIUtils'
+import { FLAG_START,POI_FLAG, POI_STD, POIUtils }                             from './POIUtils'
 
 export const SUPPORTED_EXTENSIONS = ['geojson', 'json','kml', 'gpx' /* TODO 'kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -83,7 +83,6 @@ export class TrackUtils {
         await Promise.all(dataSources)
 
     }
-
 
     /**
      * Show the TRack on the map
@@ -640,6 +639,7 @@ export class TrackUtils {
                     theJourney.addToEditor()
 
                     const theTrack = lgs.theJourney.tracks.entries().next().value[1]
+                    theTrack.addToContext()
                     theTrack.addToEditor()
 
                     TrackUtils.setProfileVisibility(lgs.theJourney)
@@ -669,6 +669,7 @@ export class TrackUtils {
             }
         }
         catch (e) {
+            console.log(e)
             UIToast.error({
                                 caption: `We have encountered problems reading this file!`,
                                 text:    'Maybe the format is wrong!',

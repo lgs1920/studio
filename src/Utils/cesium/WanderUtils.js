@@ -1,4 +1,5 @@
-import { Wanderer }                        from '../../core/ui/Wanderer.js'
+import { Track }    from '../../core/Track'
+import { Wanderer } from '../../core/ui/Wanderer.js'
 
 export const WANDER_MODE_MARKER = 'wander-mode'
 
@@ -16,7 +17,8 @@ export class WanderUtils {
                     // [Wanderer.START_TICK_EVENT, () => {}],
                     // [Wanderer.PAUSE_TICK_EVENT, () => {}],
                     [Wanderer.UPDATE_TICK_EVENT, async (args) => {
-                        await lgs.theTrack.profileTrackMarker.showOnTrack([args[1].longitude, args[1].latitude, args[1].height])
+                        const track = Track.deserialize({object: Track.unproxify(lgs.theTrack)}) // TODO Check
+                        await track.marker.showOnTrack([args[1].longitude, args[1].latitude, args[1].height])
                     }],
                     [Wanderer.STOP_TICK_EVENT, () => {
                        // Change UI

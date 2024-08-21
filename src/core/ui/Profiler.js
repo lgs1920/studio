@@ -7,6 +7,7 @@ import {
 import { FA2SL }                           from '../../Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS } from '../../Utils/UnitUtils'
 import { ProfileTrackMarker }              from '../ProfileTrackMarker'
+import { Track }                                                              from '../Track'
 
 export class Profiler {
 
@@ -144,11 +145,12 @@ export class Profiler {
     showOnMap = (options) => {
         const data = options.w.config.series[options.seriesIndex].data
         const coords = data[options.dataPointIndex]
+        const track = Track.deserialize({object: Track.unproxify(lgs.theTrack)}) // TODO Check
 
-        if (!lgs.theTrack.profileTrackMarker.drawn) {
-           lgs.theTrack.profileTrackMarker.draw()
+        if (track.marker.drawn) {
+           track.marker.draw()
         } else {
-           lgs.theTrack.profileTrackMarker.moveTo([coords.point.longitude, coords.point.latitude])
+           track.marker.moveTo([coords.point.longitude, coords.point.latitude])
         }
 
     }
@@ -164,7 +166,7 @@ export class Profiler {
         PROFILE_CHARTS.forEach(id => {
             this.charts.get(id).updateSeries(series)
         })
-       lgs.theTrack.profileTrackMarker.update()
+       lgs.theTrack.marker.update()
     }
 
     /**
@@ -196,7 +198,7 @@ export class Profiler {
     draw = () => {
         lgs.mainProxy.components.profile.key++
         if (lgs.configuration.profile.marker.show) {
-           lgs.theTrack.profileTrackMarker.draw()
+           lgs.theTrack?.marker.draw()
         }
     }
 
@@ -213,23 +215,17 @@ export class Profiler {
             borderColor= null,
         }
     ) => {
-        if (lgs.theTrack && (lgs.theTrack.profileTrackMarker === undefined || force)) {
-           lgs.theTrack.profileTrackMarker = new ProfileTrackMarker(
+        if (lgs.theTrack && (lgs.theTrack.marker === undefined || force)) {
+           lgs.theTrack.marker = new ProfileTrackMarker(
                {
+                   track:lgs.theTrack,
                    color:color??lgs.theTrack.color,
                    border:{color:borderColor??'transparent'}}
            )
-
-            __.ui.wanderer.marker  =lgs.theTrack.profileTrackMarker
+            __.ui.wanderer.marker  =lgs.theTrack.marker
         }
     }
 
-    drawMarker = () => {
-        if (lgs.configuration.profile.marker.show) {
-            this.initMarker({})
-           lgs.theTrack.profileTrackMarker.draw()
-        }
-    }
     resetChart = () => {
         PROFILE_CHARTS.forEach(id => {
             ApexCharts.exec(id, 'resetSeries', true, true)

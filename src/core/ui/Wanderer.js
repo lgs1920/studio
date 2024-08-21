@@ -1,5 +1,6 @@
-import { MILLIS }                          from '@Utils/AppUtils.js'
-import { POIUtils }                             from '@Utils/cesium/POIUtils.js'
+import { MILLIS }   from '@Utils/AppUtils.js'
+import { POIUtils } from '@Utils/cesium/POIUtils.js'
+import { Track }    from '../Track'
 
 export class Wanderer {
     /**
@@ -147,6 +148,7 @@ export class Wanderer {
                 lgs.events.off(event)
                 lgs.events.on(event, callback)
             })
+
         }
 
         return this
@@ -279,7 +281,8 @@ export class Wanderer {
     stop = () => {
         if (this.running) {
             this.running = undefined
-           lgs.theTrack.profileTrackMarker.hide()
+            const track = Track.deserialize({object: Track.unproxify(lgs.theTrack)}) // TODO Check
+            track.marker.hide()
             clearInterval(this.#timer)
             lgs.events.emit(Wanderer.STOP_TICK_EVENT, this.current, this.#pathway[this.#current] ?? null)
             this.#events.forEach((callback, event) => {
@@ -360,7 +363,7 @@ export class Wanderer {
     }
 
     updateColor = ()=> {
-        POIUtils.remove( lgs.theTrack.profileTrackMarker)
+        POIUtils.remove(lgs.theTrack.marker)
 __.ui.profiler.initMarker({force:true})
     }
 

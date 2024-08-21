@@ -15,24 +15,38 @@ export class AppUtils {
      *
      * @param {string} string
      */
-    static  slugify = (string => {
-
+    static  slugify = string => {
         if (string === undefined || string === null) {
             return ''
         }
-        const a = 'àáâäæãåāăąçćčđďèéêëēėęěğǵḧîïíīįìıİłḿñńǹňôöòóœøōõőṕŕřßśšşșťțûüùúūǘůűųẃẍÿýžźż·/_,:;'
+
+        const a = 'àáâäæãåāăąçćčđďèéêëēėęěğǵḧîïíīįìıİłḿñńǹňôöòóœøōõőṕŕřßśšşșťțûüùúūǘůűųẃẍÿýžźż·/_,:;#'
         const b = 'aaaaaaaaaacccddeeeeeeeegghiiiiiiiilmnnnnoooooooooprrsssssttuuuuuuuuuwxyyzzz------'
         const p = new RegExp(a.split('').join('|'), 'g')
 
-        return string.toString().toLowerCase()
+        // # is a special character
+        const chunks = string.split('#')
+
+        const slug = chunks.map(string=> string.toString().toLowerCase()
             .replace(/\s+/g, '-') // Replace spaces with -
             .replace(p, c => b.charAt(a.indexOf(c))) // Replace special characters
             .replace(/&/g, '-and-') // Replace & with 'and'
-            .replace(/[^\w\-]+/g, '') // Remove all non-word characters
-            .replace(/\-\-+/g, '-') // Replace multiple - with single -
+            .replace(/[^\w-]+/g, '') // Remove all non-word characters
+            .replace(/--+/g, '-') // Replace multiple - with single -
             .replace(/^-+/, '') // Trim - from start of text
-            .replace(/-+$/, '') // Trim - from end of text
-    })
+            .replace(/-+$/, '') // Trim - from end of text)
+        )
+
+        return slug.join('#')
+    }
+
+    /**
+     * Split a slug using '#'
+     *
+     * @return {array}
+     */
+    static splitSlug = (slug =>  slug.split(`#`))
+
 
     static deepClone = ((obj, parent) => {
         if (obj === null) return null
@@ -247,6 +261,38 @@ export class AppUtils {
      */
     static buildUrl = ({protocol='https', domain}) => {
         return `${protocol}://${domain}`
+    }
+
+    /**
+     * Define a generic slug in the form of:
+     *
+     *    <prefix>#<content>#<suffix>
+     *        or
+     *    <prefix>#<content[0]>#<cotent[1]># ...<content[n]>#<suffix>
+     *
+     *    Prefix an suffix are optional (but it's better to have some :) )
+     *
+     * @param suffix {string|number}
+     * @param content {string|number|array}
+     * @param prefix {string|number}
+     *
+     * @return {string}
+     */
+    static setSlug = ({suffix = '', content = '', prefix = ''}) => {
+
+        // Array could be an array, let's join it into a single string
+        // Slugify each term
+        if (Array.isArray(content)) {
+           content = content.map(text => __.app.slugify(text)).join('#')
+        } else {
+            content= __.app.slugify(content)
+        }
+
+        const start =  (prefix.length > 0) ?`${__.app.slugify(prefix)}#`:``
+        const end =  (suffix.length > 0) ?`#${__.app.slugify(suffix)}`:``
+
+        //
+        return `${start}${(content.length > 0) ?content:``}${end}`
     }
 
 }
