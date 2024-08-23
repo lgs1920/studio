@@ -45,7 +45,7 @@ export class POI {
         this.image = options.image ?? undefined
         this.visible = options.visible ?? true
         this.vertical = options.vertical ?? POI_VERTICAL_ALIGN_CENTER
-        this.drawn = false
+        this.drawn = options.drawn??false
     }
 
     static clone = (source, exceptions = {}) => {

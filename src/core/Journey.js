@@ -124,6 +124,7 @@ export class Journey extends MapElement {
             const journeyPromises = slugs.map(async (slug) => {
                 return Journey.deserialize({
                                                object: await lgs.db.lgs1920.get(slug, JOURNEYS_STORE),
+                    reset:true
                                            })
             })
             return await Promise.all(journeyPromises)
@@ -149,7 +150,12 @@ export class Journey extends MapElement {
             object.flags.start = new POI(object.flags.start)
             object.flags.stop = new POI(object.flags.stop)
             object.marker = new ProfileTrackMarker(object.marker)
-            instance.tracks.set(slug, new Track(track.title, track))
+            if (props.reset) {
+                object.flags.start.drawn  = false
+                object.flags.stop.drawn  = false
+                object.marker.drawn  = false
+            }
+            instance.tracks.set(slug, new Track(track.title, object))
         })
 
         return instance
@@ -462,6 +468,9 @@ export class Journey extends MapElement {
      * @return {string}
      */
     #setPOISlug = ({suffix='', content='', prefix= POI_STD}) => {
+        if (typeof content === 'number') {
+            content=content.toString()
+        }
         return __.app.setSlug({suffix : suffix, content : content, prefix : prefix})
     }
 

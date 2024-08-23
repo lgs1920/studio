@@ -14,11 +14,12 @@ export class WanderUtils {
                     // args[0] = index,
                     // args[1] = {longitude,latitude,height}
 
-                    // [Wanderer.START_TICK_EVENT, () => {}],
+                     [Wanderer.START_TICK_EVENT, () => {}],
                     // [Wanderer.PAUSE_TICK_EVENT, () => {}],
                     [Wanderer.UPDATE_TICK_EVENT, async (args) => {
                         const track = Track.deserialize({object: Track.unproxify(lgs.theTrack)}) // TODO Check
                         await track.marker.showOnTrack([args[1].longitude, args[1].latitude, args[1].height])
+                        lgs.theTrack.marker = track.marker
                     }],
                     [Wanderer.STOP_TICK_EVENT, () => {
                        // Change UI

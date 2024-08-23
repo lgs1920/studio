@@ -64,7 +64,8 @@ export const Profile = function Profile(props, ref) {
             <SlTooltip hoist placement={props.placement} content="Toggle Marker Visibility">
                 {<SlButton id={'toggle-marker-visibility'} className={'square-icon'}>
                     <SlIcon  slot="prefix" library="fa"
-                            onClick={toggleMarker} name={FA2SL.set(faSolidCircleSlash)}></SlIcon>
+                            onClick={toggleMarker} name={FA2SL.set(faSolidCircleSlash)}>
+                    </SlIcon>
                 </SlButton>}
             </SlTooltip>
 
@@ -80,7 +81,6 @@ export const Profile = function Profile(props, ref) {
 
     const data = __.ui.profiler.prepareData()
     __.ui.profiler.setVisibility()
-    //__.ui.profiler.initMarker({force:true})
 
     return (<>
         {mainSnap.canViewProfile && <div id="profile-container" key={mainSnap.components.profile.key}>

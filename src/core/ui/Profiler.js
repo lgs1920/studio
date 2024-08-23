@@ -147,7 +147,7 @@ export class Profiler {
         const coords = data[options.dataPointIndex]
         const track = Track.deserialize({object: Track.unproxify(lgs.theTrack)}) // TODO Check
 
-        if (track.marker.drawn) {
+        if (!track.marker.drawn) {
            track.marker.draw()
         } else {
            track.marker.moveTo([coords.point.longitude, coords.point.latitude])

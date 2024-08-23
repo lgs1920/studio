@@ -2,7 +2,6 @@ import { POI }                       from '@Core/POI'
 import { faCircle }                  from '@fortawesome/pro-solid-svg-icons'
 import { JUST_ICON, POI_MARKER }     from '../Utils/cesium/POIUtils'
 import { POI_VERTICAL_ALIGN_CENTER } from './POI'
-import { APP_KEY }                        from '@Core/LGS1920Context.js'
 
 export class ProfileTrackMarker extends POI {
 
@@ -25,7 +24,7 @@ export class ProfileTrackMarker extends POI {
             border:          options?.border?.width ??  lgs.configuration.profile.marker.border.width,
             backgroundColor: options?.border?.color ?? lgs.configuration.profile.marker.border.color,
             foregroundColor: options?.color ?? lgs.configuration.profile.marker.color,
-            drawn:false,
+            drawn:options?.drawn??false
         }
 
         super(POIOptions)
