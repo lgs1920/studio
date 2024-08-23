@@ -49,7 +49,7 @@ export class TrackUtils {
     })
 
     /**
-     * We need to create a common data source for some elements that are note related to tracks nor journeys
+     * We need to create a common data source for some elements that are not related to tracks nor journeys
      */
     static createCommonMapObjectsStore = async () => {
         if (lgs.viewer.dataSources.getByName(APP_KEY, true).length === 0) {
