@@ -451,7 +451,6 @@ export class Journey extends MapElement {
             if (this.poisOnLimits) {
                 flags.forEach((poi, index) => {
                     const track = poi.slug.split('#').slice(1,-1).join('#')
-                    console.log(track)
                     this.tracks.get(track).flags[(poi.slug.endsWith(FLAG_START)) ? 'start' : 'stop'].visible = (index === 0 || index === (flags.length - 1))
                 })
             }
