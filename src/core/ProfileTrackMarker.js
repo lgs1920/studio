@@ -15,7 +15,7 @@ export class ProfileTrackMarker extends POI {
             name:  options?.name ?? `${POI_MARKER}#${track}`,
             slug: options?.slug ?? `${POI_MARKER}#${track}`,
             icon:faCircle,
-            parent : options?.parent,
+            parent : track,
             coordinates:     [lgs.configuration.starter.longitude, lgs.configuration.starter.latitude],
             altitude:        false,
             time:            false,
