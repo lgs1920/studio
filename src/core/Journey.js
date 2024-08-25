@@ -433,8 +433,8 @@ export class Journey extends MapElement {
                         // Create marker flag
                         this.tracks.get(parentSlug).marker = new ProfileTrackMarker(
                             {
-                                // color:color??this.tracks.get(parentSlug).color,
-                                // border:{color:borderColor??'transparent'},
+                                color:this.tracks.get(parentSlug).marker?.color??this.tracks.get(parentSlug).color,
+                                border:{color:'transparent'},
                                 parent:this.slug,
                                 slug:this.#setPOISlug({content:`${theSlug}`,prefix: POI_MARKER}),
                             visible: false,
