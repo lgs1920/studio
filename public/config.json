@@ -57,7 +57,8 @@
         "color": "#fff",
         "width": 2
       }
-    }
+    },
+    "minInterval" : 150
   },
 
   "journey": {

@@ -1,5 +1,6 @@
 import { MILLIS }   from '@Utils/AppUtils.js'
 import { POIUtils } from '@Utils/cesium/POIUtils.js'
+import { DateTime } from 'luxon'
 import { Track }    from '../Track'
 
 export class Wanderer {
@@ -107,6 +108,10 @@ export class Wanderer {
      */
     #marker
 
+    /** step between path, to maintain required time
+     * @type {Number}
+     */
+    #step
     constructor(options) {
         // Singleton
         if (Wanderer.instance) {
@@ -115,6 +120,7 @@ export class Wanderer {
         this.forward = true
         this.marker ==null
         this.update(options)
+        this.#current = 1
 
         Wanderer.instance = this
 
@@ -132,8 +138,17 @@ export class Wanderer {
         if (options) {
             this.#pathway = options.coordinates ?? this.#pathway
             this.#points = this.#pathway.length
-            this.duration = options.duration ?? this.duration
-            this.#interval = this.duration / this.#points
+            this.duration = (options.duration ?? this.duration)*MILLIS
+            this.#step =1
+
+            this.#interval = this.#duration/this.#points
+            if ( this.#interval< lgs.configuration.profile.minInterval) {
+                this.#interval = lgs.configuration.profile.minInterval
+                this.#step = Number.parseInt(this.#points/this.#duration*this.#interval)
+                this.#duration = this.#step *this.#interval/MILLIS
+                console.log(this.#step, this.#interval, Number.parseInt(this.#duration))
+            }
+
             this.forward = options.forward ?? this.forward
             this.#marker = options.marker ?? this.marker
 
@@ -185,7 +200,7 @@ export class Wanderer {
      * @param {number} pointsNumber
      */
     set interval(pointsNumber) {
-        this.#interval = this.#duration / pointsNumber
+        this.#interval = this.#duration *MILLIS/ pointsNumber
     }
 
     /**
@@ -242,7 +257,7 @@ export class Wanderer {
     play = () => {
         this.running = true
         this.#clearTimer()
-        this.#timer = setInterval(this.tick, this.interval * MILLIS)
+        this.#timer = setInterval(this.tick, this.interval)
     }
 
     /**
@@ -280,7 +295,7 @@ export class Wanderer {
      */
     stop = () => {
         if (this.running) {
-            this.running = undefined
+            this.running = false
             const track = Track.deserialize({object: Track.unproxify(lgs.theTrack)}) // TODO Check
             track.marker.hide()
             clearInterval(this.#timer)
@@ -317,7 +332,7 @@ export class Wanderer {
     tick = () => {
         if (this.running) {
             if (this.forward) {
-                this.#current++
+                this.#current+=this.#step
                 if (this.#current >= this.#points) {
                     if (this.#loop) {
                         this.#current = 0
@@ -326,7 +341,7 @@ export class Wanderer {
                     }
                 }
             } else {
-                this.#current--
+                this.#current-=this.#step
                 if (this.#current < 0) {
                     if (this.#loop) {
                         this.#current = this.#points - 1

@@ -21,9 +21,9 @@ export class ProfileTrackMarker extends POI {
             time:            false,
             visible:         true,
             vertical:        POI_VERTICAL_ALIGN_CENTER,
-            border:          options?.border?.width ??  lgs.configuration.profile.marker.border.width,
-            backgroundColor: options?.border?.color ?? lgs.configuration.profile.marker.border.color,
-            foregroundColor: options?.color ?? lgs.configuration.profile.marker.color,
+            border:          options?.border?.width ?? options?.foregroundColor?.border ?? lgs.configuration.profile.marker.border.width,
+            backgroundColor: options?.border?.color ??  options?.backgroundColor ?? lgs.configuration.profile.marker.border.color,
+            foregroundColor: options?.color ??  options?.foregroundColor  ?? lgs.configuration.profile.marker.color,
             drawn:options?.drawn??false
         }
 
