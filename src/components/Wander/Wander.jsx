@@ -3,8 +3,8 @@ import {  faStop }                                            from '@fortawesome
 import {faRegularArrowsRepeatSlash}              from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { SlButton, SlIcon, SlOption, SlSelect, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                           from '@Utils/FA2SL'
-import { useSnapshot } from 'valtio'
-import { Wanderer }    from '../../core/ui/Wanderer.js'
+import { useSnapshot }         from 'valtio'
+import { Wanderer }            from '../../core/ui/Wanderer.js'
 import { WanderUtils }         from '../../Utils/cesium/WanderUtils.js'
 import { MarkerStyleSettings } from './MarkerStyleSettings'
 
@@ -22,9 +22,7 @@ export const Wander = (props) => {
     const changeDuration = (event) => {
         wanderStore.duration = event.target.value
         __.ui.wanderer.update({duration: parseInt(wanderStore.duration)})
-        if (wanderStore.duration) {
-            __.ui.wanderer.resume()
-        }
+        __.ui.wanderer.stop()
     }
 
     const toggleWander = () => {
