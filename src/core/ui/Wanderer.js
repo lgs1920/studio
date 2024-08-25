@@ -146,7 +146,6 @@ export class Wanderer {
                 this.#interval = lgs.configuration.profile.minInterval
                 this.#step = Number.parseInt(this.#points/this.#duration*this.#interval)
                 this.#duration = this.#step *this.#interval/MILLIS
-                console.log(this.#step, this.#interval, Number.parseInt(this.#duration))
             }
 
             this.forward = options.forward ?? this.forward
