@@ -437,9 +437,8 @@ export class Journey extends MapElement {
                                 border:{color:'transparent'},
                                 parent:this.slug,
                                 slug:this.#setPOISlug({content:`${theSlug}`,prefix: POI_MARKER}),
-                            visible: false,
-                            },
-                        )
+                                visible: false,
+                            })
                     }
                         break
                 }
