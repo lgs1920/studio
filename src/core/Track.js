@@ -368,6 +368,10 @@ export class Track extends MapElement {
                 if (this.flags.stop) {
                     this.flags.stop.draw(!forcedToHide)
                 }
+
+                if (this.marker) {
+                    this.marker.draw(forcedToHide)
+                }
             }
         })
 
