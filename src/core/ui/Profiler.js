@@ -111,8 +111,11 @@ export class Profiler {
      * @param options
      * @return {string}  HTML
      */
-    tooltipElevationVsDistance = (options) => {
+    tooltipElevationVsDistance =  (options) => {
 
+        if (__.ui.wanderer.running) {
+            return ''
+        }
         // Display in
         //TODO Use renderToString from react: touse  ???
         //TODO here : https://react.dev/reference/react-dom/server/renderToString
@@ -122,7 +125,7 @@ export class Profiler {
 
         // Show on map
         if (lgs.configuration.profile.marker.show) {
-            this.showOnMap(options)
+             this.showOnMap(options)
         }
 
         // Show on Profile
@@ -142,16 +145,15 @@ export class Profiler {
     `
     }
 
-    showOnMap = (options) => {
+    showOnMap = async (options) => {
         const data = options.w.config.series[options.seriesIndex].data
         const coords = data[options.dataPointIndex]
         const track = Track.deserialize({object: Track.unproxify(lgs.theTrack)}) // TODO Check
 
         if (!track.marker.drawn) {
-           track.marker.draw()
-        } else {
-           track.marker.moveTo([coords.point.longitude, coords.point.latitude])
+            await track.marker.draw()
         }
+            await track.marker.move([coords.point.longitude, coords.point.latitude, coords.point.elevation])
 
     }
 

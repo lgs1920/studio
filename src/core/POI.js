@@ -1,4 +1,4 @@
-import { PIN_CIRCLE, POIUtils, POI_STD  } from '@Utils/cesium/POIUtils'
+import { PIN_CIRCLE, POI_STD, POIUtils } from '@Utils/cesium/POIUtils'
 
 export class POI {
 
@@ -85,7 +85,14 @@ export class POI {
         await POIUtils.remove(this)
     }
 
-    moveTo = async (coordinates) => {
+    move = async (coordinates = []) => {
+        if (coordinates.length === 0) {
+            coordinates = this.coordinates
+        }
+        else {
+            this.coordinates = coordinates
+        }
+        this.visibility = true
         await this.update({coordinates: coordinates, visibility: true})
     }
 
