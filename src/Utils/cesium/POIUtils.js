@@ -4,7 +4,6 @@ import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 
 import { Canvg }                          from 'canvg'
 import * as Cesium                        from 'cesium'
-import { APP_KEY }                        from '../../core/LGS1920Context.js'
 
 // Pin Marker Type
 export const PIN_ICON = 1
@@ -19,15 +18,16 @@ export const FLAG_STOP = 'stop'
 export const POI_FLAG = 'flag'
 export const POI_STD = 'poi'
 export const POI_MARKER = 'marker'
+export const POI_PROFILER = 'profiler'
 
 
 export class POIUtils {
-    static verticalOrigin = (origin => {
+    static verticalOrigin = () => {
         const location = {
             top: Cesium.VerticalOrigin.TOP, bottom: Cesium.VerticalOrigin.BOTTOM, center: Cesium.VerticalOrigin.CENTER,
         }
         return location?.origin ??  Cesium.VerticalOrigin.CENTER
-    })
+    }
 
     static setIcon = (icon = '') => {
         switch (icon) {
@@ -59,7 +59,7 @@ export class POIUtils {
             name: poi.name,
             id: poi.slug,
             description: poi.description,
-            position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1], 0),
+            position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1],  poi.coordinates[2],),
             show: POIUtils.setPOIVisibility(poi, parentVisibility),
             disableDepthTestDistance: 1.2742018E7 // Diameter of Earth
 
