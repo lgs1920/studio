@@ -32,16 +32,10 @@ export class ProfileTrackMarker extends POI {
 
     showOnTrack = async (coordinates) => {
         if (!this.drawn) {
-            this.coordinates = coordinates
             await this.draw()
-        } else {
-            await this.moveTo(coordinates)
         }
+            await this.move(coordinates)
         this.visible =true
-    }
-
-    changeColor = async (color) => {
-        console.log(this.clone())
     }
 
 }
