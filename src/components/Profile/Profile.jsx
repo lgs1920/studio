@@ -15,7 +15,7 @@ import { Utils }                                 from '../TracksEditor/Utils'
 import { Wander }                                from '../Wander/Wander'
 import { ProfileChart }                          from './ProfileChart'
 
-export const Profile = function Profile(props, ref) {
+export const Profile = function Profile() {
 
     const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
