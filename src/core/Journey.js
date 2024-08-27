@@ -292,6 +292,16 @@ export class Journey extends MapElement {
     }
 
     /**
+     * Get track index
+     *
+     * @param slug {string} track slug
+     * @return {number}
+     */
+    getTrackIndex = slug => {
+         return Array.from(this.tracks.keys()).indexOf(slug)
+    }
+
+    /**
      * Check if data contains time information
      *
      * @param properties
