@@ -19,8 +19,8 @@ export class WanderUtils {
                     // [Wanderer.PAUSE_TICK_EVENT, () => {}],
                     [Wanderer.UPDATE_TICK_EVENT, async (args) => {
                        const [serie,index,point] =args
-                        const track = Track.deserialize({object: Track.unproxify(lgs.theTrack)}) // TODO Check
-                        track.marker.showOnTrack([point.longitude,point.latitude, point.height]).then( lgs.theTrack.marker = track.marker)
+                        lgs.theTrack = Track.deserialize({object: Track.unproxify(Array.from(lgs.theJourney.tracks.values())[serie])}) // TODO Ameliorer
+                       await  lgs.theTrack.marker.showOnTrack([point.longitude,point.latitude, point.height])
                        __.ui.profiler.updateChartMarker(serie,index)
                     }],
                     [Wanderer.STOP_TICK_EVENT, () => {

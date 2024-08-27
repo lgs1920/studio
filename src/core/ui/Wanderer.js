@@ -349,10 +349,8 @@ export class Wanderer {
                     }
                 }
             }
-
             // New tick, we dispatch a new event    //TODO Change 0 to series index
-            lgs.events.emit(Wanderer.UPDATE_TICK_EVENT, [0,this.#current, this.#pathway[this.#current]??null])
-
+            lgs.events.emit(Wanderer.UPDATE_TICK_EVENT, [lgs.theJourney.getTrackIndex(lgs.theTrack.slug),this.#current, this.#pathway[this.#current]??null])
         }
     }
 

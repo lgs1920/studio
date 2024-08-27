@@ -73,10 +73,11 @@ export class Profiler {
         }
 
         const data = {
-            series: [], options: options,
+            series: [], options: options
         }
 
         let distance = 0
+        const colors=[]
         lgs.theJourney.tracks.forEach((track) => {
             if (track.visible && track.metrics.points !== undefined) {
                 const dataSet = {
@@ -97,8 +98,13 @@ export class Profiler {
                     dataSet.data.push(coords)
                 })
                 data.series.push(dataSet)
+                colors.push(track.marker.foregroundColor)
             }
         })
+        data.options.markers={
+            colors:colors,
+            size:6
+        }
 
         return data
     }
@@ -148,13 +154,13 @@ export class Profiler {
     showOnMap = async (options) => {
         const data = options.w.config.series[options.seriesIndex].data
         const coords = data[options.dataPointIndex]
-        const track = Track.deserialize({object: Track.unproxify(lgs.theTrack)}) // TODO Check
+        lgs.theTrack = Track.deserialize({object: Track.unproxify(Array.from(lgs.theJourney.tracks.values())[options.seriesIndex])}) // TODO Ameliorer
 
-        if (!track.marker.drawn) {
-            await track.marker.draw()
+        if (!lgs.theTrack.marker.drawn) {
+            await lgs.theTrack.marker.draw()
         }
 
-        await track.marker.move([coords.point.longitude, coords.point.latitude, coords.point.elevation])
+        await lgs.theTrack.marker.move([coords.point.longitude, coords.point.latitude, coords.point.elevation])
     }
 
     /**
@@ -225,7 +231,7 @@ export class Profiler {
         })
         PROFILE_CHARTS.forEach(id => {
             this.charts.get(id).updateSeries(series)
-            this.charts.get(id).updateOptions({marker:this.chartMarker('#ff0000')})
+           // this.charts.get(id).updateOptions({marker:this.chartMarker('#ff0000')})
         })
        lgs.theTrack.marker.update()
     }
