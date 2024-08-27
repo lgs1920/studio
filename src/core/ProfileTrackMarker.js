@@ -11,7 +11,7 @@ export class ProfileTrackMarker extends POI {
         const POIOptions = {
             type:            JUST_ICON,
             usage: POI_MARKER,
-            size:  options?.size ?? lgs.configuration.profile.marker.size,
+            size:  options?.size ?? lgs.configuration.profile.marker.track.size,
             name:  options?.name ?? `${POI_MARKER}#${track}`,
             slug: options?.slug ?? `${POI_MARKER}#${track}`,
             icon:faCircle,
@@ -21,9 +21,9 @@ export class ProfileTrackMarker extends POI {
             time:            false,
             visible:         true,
             vertical:        POI_VERTICAL_ALIGN_CENTER,
-            border:          options?.border?.width ?? options?.foregroundColor?.border ?? lgs.configuration.profile.marker.border.width,
-            backgroundColor: options?.border?.color ??  options?.backgroundColor ?? lgs.configuration.profile.marker.border.color,
-            foregroundColor: options?.color ??  options?.foregroundColor  ?? lgs.configuration.profile.marker.color,
+            border:          options?.border?.width ?? options?.foregroundColor?.border ?? lgs.configuration.profile.marker.track.border.width,
+            backgroundColor: options?.border?.color ??  options?.backgroundColor ?? lgs.configuration.profile.marker.track.border.color,
+            foregroundColor: options?.color ??  options?.foregroundColor  ?? lgs.configuration.profile.marker.track.color,
             drawn:options?.drawn??false
         }
 
@@ -35,6 +35,7 @@ export class ProfileTrackMarker extends POI {
             await this.draw()
         }
             await this.move(coordinates)
+
         this.visible =true
     }
 

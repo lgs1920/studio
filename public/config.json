@@ -50,12 +50,22 @@
   "profile": {
     "show": true,
     "marker": {
-      "show": true,
-      "size":13,
-      "color": "#f2c55c",
-      "border": {
-        "color": "#fff",
-        "width": 2
+      "track": {
+        "show": true,
+        "size": 13,
+        "color": "#f2c55c",
+        "border": {
+          "color": "#fff",
+          "width": 2
+        }
+      },
+      "chart": {
+        "size": 6,
+        "color": "#f2c55c",
+        "border": {
+          "color": "#fff",
+          "width": 2
+        }
       }
     },
     "minInterval" : 150

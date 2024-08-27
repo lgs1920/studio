@@ -124,7 +124,7 @@ export class Profiler {
         const length = data[data.length - 1].x
 
         // Show on map
-        if (lgs.configuration.profile.marker.show) {
+        if (lgs.configuration.profile.marker.track.show) {
              this.showOnMap(options)
         }
 
@@ -153,9 +153,67 @@ export class Profiler {
         if (!track.marker.drawn) {
             await track.marker.draw()
         }
-            await track.marker.move([coords.point.longitude, coords.point.latitude, coords.point.elevation])
 
+        await track.marker.move([coords.point.longitude, coords.point.latitude, coords.point.elevation])
     }
+
+    /**
+     * Display a marker on the profil Chart
+     *
+     * @param serie {number}
+     * @param index {number}
+     */
+    updateChartMarker = (serie, index) => {
+        const MARKER = 'wander-marker'
+        PROFILE_CHARTS.forEach(id => {
+            const chart = this.charts.get(id)
+            const data = chart.ctx.opts.series[serie].data[index]
+            chart.removeAnnotation(MARKER)
+            chart.addPointAnnotation({
+                                         id:     MARKER,
+                                         x:      data.x,
+                                         y:      data.y,
+                                         marker: this.chartMarker()
+                                     })
+        })
+    }
+
+    /**
+     * Define a marker for the chart
+     *
+     * @param color
+     * @return {{fillColor: (string|*|string), strokeWidth, size, strokeColor: (string|*|string)}}
+     */
+    chartMarker =(color = null)=>{
+        return  {
+            size: lgs.configuration.profile.marker.chart.size,
+                fillColor: color??lgs.theTrack.marker.foregroundColor,
+                strokeColor: lgs.configuration.profile.marker.chart.border.color,
+                strokeWidth: lgs.configuration.profile.marker.chart.border.width,
+        }
+    }
+
+    getMarkerCoordinates=() =>{
+        // Sélectionnez l'élément du marqueur par son identifiant unique
+        var markerElement = document.querySelector('#chart .apexcharts-point-annotation-marker[rel="unique-marker-id"]');
+
+        if (markerElement) {
+            // Obtenez les coordonnées du marqueur par rapport à l'élément DOM contenant le graphique
+            var rect = markerElement.getBoundingClientRect();
+            var chartElement = document.querySelector('#chart');
+            var chartRect = chartElement.getBoundingClientRect();
+
+            var x = rect.left - chartRect.left;
+            var y = rect.top - chartRect.top;
+
+            console.log('Coordonnées du marqueur en pixels:', { x: x, y: y });
+            return { x: x, y: y };
+        } else {
+            console.log('Marqueur non trouvé');
+            return null;
+        }
+    }
+
 
     /**
      * Update Color of tracks
@@ -167,6 +225,7 @@ export class Profiler {
         })
         PROFILE_CHARTS.forEach(id => {
             this.charts.get(id).updateSeries(series)
+            this.charts.get(id).updateOptions({marker:this.chartMarker('#ff0000')})
         })
        lgs.theTrack.marker.update()
     }
@@ -199,7 +258,7 @@ export class Profiler {
      */
     draw = () => {
         lgs.mainProxy.components.profile.key++
-        if (lgs.configuration.profile.marker.show) {
+        if (lgs.configuration.profile.marker.track.show) {
            lgs.theTrack?.marker.draw()
         }
     }

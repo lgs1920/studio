@@ -18,9 +18,10 @@ export class WanderUtils {
                      [Wanderer.START_TICK_EVENT, () => {}],
                     // [Wanderer.PAUSE_TICK_EVENT, () => {}],
                     [Wanderer.UPDATE_TICK_EVENT, async (args) => {
+                       const [serie,index,point] =args
                         const track = Track.deserialize({object: Track.unproxify(lgs.theTrack)}) // TODO Check
-                        track.marker.showOnTrack([args[1].longitude, args[1].latitude, args[1].height]).then( lgs.theTrack.marker = track.marker)
-
+                        track.marker.showOnTrack([point.longitude,point.latitude, point.height]).then( lgs.theTrack.marker = track.marker)
+                       __.ui.profiler.updateChartMarker(serie,index)
                     }],
                     [Wanderer.STOP_TICK_EVENT, () => {
                        // Change UI
