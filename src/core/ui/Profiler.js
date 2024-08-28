@@ -1,4 +1,5 @@
 import { faArrowDownToLine, faArrowLeftToLine, faArrowRightToLine, faCircle } from '@fortawesome/pro-regular-svg-icons'
+import { DateTime }                                                           from 'luxon'
 import { sprintf }                                                            from 'sprintf-js'
 import { subscribe }                       from 'valtio'
 import {
@@ -59,6 +60,7 @@ export class Profiler {
                 title: {
                     text: `${titles.x} - ${units.x[lgs.configuration.unitsSystem]}`,
                 },
+
             },
             yaxis: {
                 title: {
@@ -68,7 +70,7 @@ export class Profiler {
                 tickAmount: 4,
             },
             tooltip: {
-                custom: this.tooltipElevationVsDistance,
+              custom: this.tooltipElevationVsDistance,
             },
         }
 
@@ -127,26 +129,39 @@ export class Profiler {
         //TODO here : https://react.dev/reference/react-dom/server/renderToString
         const data = options.w.config.series[options.seriesIndex].data
         const coords = data[options.dataPointIndex]
-        const length = data[data.length - 1].x
+        const length = data.pop().x
 
         // Show on map
         if (lgs.configuration.profile.marker.track.show) {
-             this.showOnMap(options)
+            this.showOnMap(options)
+        }
+        let date={day: '',time:''}
+        if (coords.point.time) {
+             date = {
+                day:  DateTime.fromISO(coords.point.time).toLocaleString(DateTime.DATE_SIMPLE),
+                time: DateTime.fromISO(coords.point.time).toLocaleString(DateTime.TIME_SIMPLE),
+            }
         }
 
         // Show on Profile
         return `
 <div id="elevation-distance-tooltip">
-         <span>[ ${coords.point.latitude} , ${coords.point.longitude} ]</span>
-         <span class="point-distance">
-           <sl-icon library="fa" name="${FA2SL.set(faArrowLeftToLine)}"></sl-icon>
-            ${sprintf('%\' .1f', coords.x)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
-            <sl-icon library="fa" name="${FA2SL.set(faCircle)}"></sl-icon>
-            ${sprintf('%\' .1f', length - coords.x)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
+         <div class="point-distance">
+           <span>
+            <sl-icon library="fa" name="${FA2SL.set(faArrowLeftToLine)}"></sl-icon>
+            ${sprintf('%\' .1f', coords?.x??0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
+            </span>
+            <span>- ${sprintf('%\' .1f', coords?.y??0)} ${ELEVATION_UNITS[lgs.configuration.unitsSystem]} -</span>
+            <span>
+            ${sprintf('%\' .1f', coords?.x ? length - coords.x:0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
             <sl-icon library="fa" name="${FA2SL.set(faArrowRightToLine)}"></sl-icon>
-        </span>                       
-        <span>${sprintf('%\' .1f', coords.y)} ${ELEVATION_UNITS[lgs.configuration.unitsSystem]}</span>
-        <sl-icon library="fa" name="${FA2SL.set(faArrowDownToLine)}"></sl-icon>
+            </span>
+        </div>                       
+         <div class="point-distance">
+         <span>
+            <span>lat: ${coords.point.latitude}</span> - <span>lon:${coords.point.longitude}</span>
+         </span>
+            <span>${date.day} ${date.time}</span>
     </div>
     `
     }
@@ -154,13 +169,14 @@ export class Profiler {
     showOnMap = async (options) => {
         const data = options.w.config.series[options.seriesIndex].data
         const coords = data[options.dataPointIndex]
-        lgs.theTrack = Track.deserialize({object: Track.unproxify(Array.from(lgs.theJourney.tracks.values())[options.seriesIndex])}) // TODO Ameliorer
+        const theTrack = Track.deserialize({object: Track.unproxify(Array.from(lgs.theJourney.tracks.values())[options.seriesIndex])}) // TODO Ameliorer
 
-        if (!lgs.theTrack.marker.drawn) {
-            await lgs.theTrack.marker.draw()
+        if (!theTrack.marker.drawn) {
+            await theTrack.marker.draw()
         }
-
-        await lgs.theTrack.marker.move([coords.point.longitude, coords.point.latitude, coords.point.elevation])
+        if (coords) {
+            await theTrack.marker.move([coords.point.longitude, coords.point.latitude, coords.point.elevation])
+        }
     }
 
     /**
@@ -171,16 +187,18 @@ export class Profiler {
      */
     updateChartMarker = (serie, index) => {
         const MARKER = 'wander-marker'
+        const AXE_VERTICAL = 'wander-yaxis'
+        const AXE_HORIZONTAL = 'wander-xaxis'
+
         PROFILE_CHARTS.forEach(id => {
             const chart = this.charts.get(id)
             const data = chart.ctx.opts.series[serie].data[index]
             chart.removeAnnotation(MARKER)
-            chart.addPointAnnotation({
-                                         id:     MARKER,
-                                         x:      data.x,
-                                         y:      data.y,
-                                         marker: this.chartMarker()
-                                     })
+            chart.addPointAnnotation({id: MARKER, x: data.x, y: data.y, marker: this.chartMarker()})
+            chart.removeAnnotation(AXE_VERTICAL)
+            chart.addXaxisAnnotation({id: AXE_VERTICAL, x: data.x})
+            // chart.removeAnnotation(AXE_HORIZONTAL)
+            // chart.addYaxisAnnotation({id: AXE_HORIZONTAL, y: data.y, borderColor: '#00E396'})
         })
     }
 
@@ -198,6 +216,7 @@ export class Profiler {
                 strokeWidth: lgs.configuration.profile.marker.chart.border.width,
         }
     }
+
 
     getMarkerCoordinates=() =>{
         // Sélectionnez l'élément du marqueur par son identifiant unique

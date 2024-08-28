@@ -3,6 +3,7 @@ import { useEffect }                   from 'react'
 import { default as Chart }            from 'react-apexcharts'
 import { useSnapshot }                 from 'valtio'
 import { CHART_ELEVATION_VS_DISTANCE } from '../../core/ui/Profiler'
+import { ProfileTimeAxis } from './ProfileTimeAxis'
 
 
 export const ProfileChart = function ProfileChart(props) {
@@ -30,7 +31,7 @@ export const ProfileChart = function ProfileChart(props) {
             }, tooltip: {
                 enabled: false,
             },
-            forceNiceScale: true,
+            //forceNiceScale: true,
         }, yaxis: {
             type: 'numeric',
             title: {
@@ -45,11 +46,13 @@ export const ProfileChart = function ProfileChart(props) {
             custom: props.options.tooltip.custom,
             followCursor: true,
         }, grid: {
-            show: true, xaxis: {
+            show: true,
+            xaxis: {
                 lines: {
                     show: true,
                 },
-            }, yaxis: {
+            },
+            yaxis: {
                 lines: {
                     show: true,
                 },
@@ -63,7 +66,7 @@ export const ProfileChart = function ProfileChart(props) {
                 horizontal: 5, vertical: 0,
             },
             onItemClick: {
-                toggleDataSeries: false,
+                toggleDataSeries: true,
             },
 
         },
@@ -95,12 +98,15 @@ export const ProfileChart = function ProfileChart(props) {
 
     return (<>
             {props.series &&
+                <>
+                    {/* <ProfileTimeAxis/> */}
                 <Chart options={options}
                        series={props.series}
                        height={props.height}
                        width={'100%'}
                        type={'area'}
                 />
+                </>
             }
         </>
     )

@@ -85,7 +85,7 @@
     text-align: center;
 }
 
-#elevation-distance-tooltip > span {
+#elevation-distance-tooltip > div {
     display: flex;
     justify-content: space-between;
     padding: 0;
@@ -157,5 +157,12 @@
     .lgs-ui-toolbar:not(.lgs-ui-dropdown-toolbar) {
         display: none
     }
+}
+
+.profiler-time-axis {
+    position: absolute;
+    left: 73px;
+    width: 1027px;
+    background: antiquewhite;
 }
 
