@@ -61,20 +61,16 @@ export const Profile = function Profile() {
 
     const ProfileToolbar = (props) => {
         return (<div className={'profile-additional'}>
-            <SlTooltip hoist placement={props.placement} content="Toggle Marker Visibility">
-                {<SlButton id={'toggle-marker-visibility'} className={'square-icon'}>
-                    <SlIcon  slot="prefix" library="fa"
-                            onClick={toggleMarker} name={FA2SL.set(faSolidCircleSlash)}>
-                    </SlIcon>
-                </SlButton>}
+            <SlTooltip hoist placement={props.placement} content="Hide Marker">
+                <SlButton id={'toggle-marker-visibility'} className={'square-icon'} onClick={toggleMarker}>
+                    <SlIcon  slot="prefix" library="fa" name={FA2SL.set(faSolidCircleSlash)}/>
+                </SlButton>
             </SlTooltip>
 
             <SlTooltip hoist placement={props.placement} content="Reset Chart">
-                {<SlButton id={'open-the-profile-panel'} className={'square-icon'}>
-                    <SlIcon  slot="prefix"library="fa"
-                            onClick={resetChart}
-                            name={FA2SL.set(faRegularArrowsRotateReverseMagnifyingGlass)}></SlIcon>
-                </SlButton>}
+                <SlButton id={'open-the-profile-panel'} className={'square-icon'} onClick={resetChart}>
+                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRegularArrowsRotateReverseMagnifyingGlass)}/>
+                </SlButton>
             </SlTooltip>
         </div>)
     }
