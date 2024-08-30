@@ -1,4 +1,4 @@
-import { PIN_CIRCLE, POIUtils } from '@Utils/cesium/POIUtils'
+import { PIN_CIRCLE, POI_STD, POIUtils } from '@Utils/cesium/POIUtils'
 
 export class POI {
 
@@ -19,16 +19,19 @@ export class POI {
     icon
     size
     marker
+    drawn
     name
     border
     description
     image
+    usage
 
     constructor(options) {
         this.type = options.type
+        this.usage = options.usage ?? POI_STD,
+        this.parent = options.parent
         this.slug = options.slug
         this.name = options.name
-        this.parent = options.parent
         this.coordinates = options.coordinates || {}
         this.altitude = options.altitude || false
         this.time = options.time || false
@@ -42,9 +45,7 @@ export class POI {
         this.image = options.image ?? undefined
         this.visible = options.visible ?? true
         this.vertical = options.vertical ?? POI_VERTICAL_ALIGN_CENTER
-        this.track = options.track ?? undefined
-        this.journey = options.journey ?? undefined
-        this.drawn = false
+        this.drawn = options.drawn??false
     }
 
     static clone = (source, exceptions = {}) => {
@@ -84,7 +85,14 @@ export class POI {
         await POIUtils.remove(this)
     }
 
-    moveTo = async (coordinates) => {
+    move = async (coordinates = []) => {
+        if (coordinates.length === 0) {
+            coordinates = this.coordinates
+        }
+        else {
+            this.coordinates = coordinates
+        }
+        this.visibility = true
         await this.update({coordinates: coordinates, visibility: true})
     }
 

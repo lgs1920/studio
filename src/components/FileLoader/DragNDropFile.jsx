@@ -194,6 +194,7 @@ export const DragNDropFile = (props) => {
                       ? event.dataTransfer.files
                       : event.target.files
 
+
         for (const file of files) {
             const tmp = validate(file)
             list.set(__.app.slugify(file.name),
@@ -265,11 +266,10 @@ export const DragNDropFile = (props) => {
 
                 fileList.set(__.app.slugify(file.name), item)
             }
-
-
-
-
         }
+        // reset internal file selector choice
+        inputRef.current.value=''
+
     }
 
     /**

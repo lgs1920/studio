@@ -3,9 +3,10 @@ import {  faStop }                                            from '@fortawesome
 import {faRegularArrowsRepeatSlash}              from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { SlButton, SlIcon, SlOption, SlSelect, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                           from '@Utils/FA2SL'
-import { useSnapshot } from 'valtio'
-import { Wanderer }    from '../../core/ui/Wanderer.js'
-import { WanderUtils } from '../../Utils/cesium/WanderUtils.js'
+import { useSnapshot }         from 'valtio'
+import { Wanderer }            from '../../core/ui/Wanderer.js'
+import { WanderUtils }         from '../../Utils/cesium/WanderUtils.js'
+import { MarkerStyleSettings } from './MarkerStyleSettings'
 
 export const Wander = (props) => {
 
@@ -21,9 +22,7 @@ export const Wander = (props) => {
     const changeDuration = (event) => {
         wanderStore.duration = event.target.value
         __.ui.wanderer.update({duration: parseInt(wanderStore.duration)})
-        if (wanderStore.duration) {
-            __.ui.wanderer.resume()
-        }
+        __.ui.wanderer.stop()
     }
 
     const toggleWander = () => {
@@ -101,7 +100,7 @@ export const Wander = (props) => {
     <SlSelect hoist
                   onSlChange={changeDuration}
                   value={wanderSnapshot.duration}
-                  size={'small'}
+                  size={'medium'}
                   className={'wanderDuration'}>
         {Wanderer.DURATIONS.map(duration =>
                 <SlOption key={duration.text} value={duration.time}>{duration.text}</SlOption>,
@@ -116,6 +115,8 @@ export const Wander = (props) => {
                 />
             </SlButton>
         </SlTooltip>
+
+        {/* TODO <MarkerStyleSettings></MarkerStyleSettings> */}
     </div>)
 
 }

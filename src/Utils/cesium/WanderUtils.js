@@ -1,10 +1,6 @@
-import { faLocationDot }                   from '@fortawesome/pro-solid-svg-icons'
-import { POI }                             from '../../core/POI'
-import { ELEVATION_VS_DISTANCE }           from '../../core/ui/Profiler.js'
-import { Wanderer }                        from '../../core/ui/Wanderer.js'
-import { DISTANCE_UNITS, ELEVATION_UNITS } from '../UnitUtils.js'
-import { NOT_AN_ENTITY }                   from './EntitiesUtils'
-import { JUST_ICON }                       from './POIUtils'
+import { DateTime } from 'luxon'
+import { Track }    from '../../core/Track'
+import { Wanderer } from '../../core/ui/Wanderer.js'
 
 export const WANDER_MODE_MARKER = 'wander-mode'
 
@@ -19,10 +15,13 @@ export class WanderUtils {
                     // args[0] = index,
                     // args[1] = {longitude,latitude,height}
 
-                    // [Wanderer.START_TICK_EVENT, () => {}],
+                     [Wanderer.START_TICK_EVENT, () => {}],
                     // [Wanderer.PAUSE_TICK_EVENT, () => {}],
                     [Wanderer.UPDATE_TICK_EVENT, async (args) => {
-                        await lgs.profileTrackMarker.showOnTrack([args[1].longitude, args[1].latitude, args[1].height])
+                       const [serie,index,point] =args
+                        lgs.theTrack = Track.deserialize({object: Track.unproxify(Array.from(lgs.theJourney.tracks.values())[serie])}) // TODO Ameliorer
+                       await  lgs.theTrack.marker.showOnTrack([point.longitude,point.latitude, point.height])
+                       __.ui.profiler.updateChartMarker(serie,index)
                     }],
                     [Wanderer.STOP_TICK_EVENT, () => {
                        // Change UI

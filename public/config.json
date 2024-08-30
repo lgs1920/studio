@@ -2,7 +2,29 @@
   "ionToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4ZmZkZjZkYS1iODgwLTQzYzUtOTM5ZS1iYTc2Nzk0OTM1ZjQiLCJpZCI6MTkwODA4LCJpYXQiOjE3MDU2ODQ3OTZ9.BV6yuYzhp8A_cgEs5MbqZWZaCtyOW-08aSORPflJ3dw",
   "applicationName": "LGS1920",
   "githubURL": "https://github.com/lgs1920",
-  "website": "https://lgs1920.fr",
+
+  "website" : {
+    "domain" : "lgs1920.fr",
+    "protocol" : "https"
+  },
+
+  "studio" : {
+    "name": "Studio",
+    "domain" : "studio.lgs1920.fr",
+    "protocol" : "https"
+  },
+
+  "backend": {
+    "name" : "Backend",
+    "domain" : "api.lgs1920.fr",
+    "protocol" : "http",
+    "pm2" : "/home/.bun/bin/pm2",
+    "command" : "start backend.config.js"
+  },
+
+  "api": {
+    "name" : "API"
+  },
 
   "starter": {
     "longitude": 5.70291,
@@ -28,10 +50,25 @@
   "profile": {
     "show": true,
     "marker": {
-      "show": true,
-      "size": 13,
-      "color": "#f2c55c"
-    }
+      "track": {
+        "show": true,
+        "size": 13,
+        "color": "#f2c55c",
+        "border": {
+          "color": "#fff",
+          "width": 2
+        }
+      },
+      "chart": {
+        "size": 6,
+        "color": "#f2c55c",
+        "border": {
+          "color": "#fff",
+          "width": 2
+        }
+      }
+    },
+    "minInterval" : 150
   },
 
   "journey": {

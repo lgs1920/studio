@@ -2,9 +2,8 @@ import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE }            from '@Core/LGS1920Conte
 import { SlColorPicker, SlDivider, SlRange, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
 import { useSnapshot } from 'valtio'
-import { Utils }       from '../Utils'
 
-export const TrackStyleSettings = function TrackSettings() {
+export const MarkerStyleSettings = function MarkerSettings() {
 
     const editorStore = lgs.theJourneyEditorProxy
 
@@ -16,62 +15,53 @@ export const TrackStyleSettings = function TrackSettings() {
     const editorSnapshot = useSnapshot(editorStore)
 
     /**
-     * Change track Color
+     * Change Marker Color
      *
      * @param {CustomEvent} event
      *
      */
     const setColor = (async event => {
-        editorStore.track.color = event.target.value
-        editorStore.track.marker.foregroundColor = event.target.value
-        await Utils.updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
+        editorStore.journey.marker.color = event.target.value
         __.ui.profiler.updateColor()
-        __.ui.wanderer.updateColor()
     })
 
 
     /**
-     * Change track thickness
+     * Change Marker thickness
      *
      * @param {CustomEvent} event
      */
     const setThickness = (async event => {
-        editorStore.track.thickness = event.target.value
-        await Utils.updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
+        editorStore.journey.marker.thickness = event.target.value
     })
 
     return (
-        <div id="track-line-settings">
+        <div id="Marker-line-settings">
             <SlTooltip hoist content="Color">
-                <SlColorPicker opacity
+                <SlColorPicker hoist opacity
                                size={'small'}
                                label={'Color'}
-                               value={editorSnapshot.track.color}
+                               value={editorStore?.journey?.marker?.color ?? ''}
                                swatches={lgs.configuration.defaultTrackColors.join(';')}
                                onSlChange={setColor}
                                onSlInput={setColor}
-                               disabled={!editorSnapshot.track.visible}
+                             //  disabled={!editorSnapshot.track.visible}
                                noFormatToggle
+                               inline={false}
                 />
             </SlTooltip>
             <SlTooltip hoist content="Thickness">
                 <SlRange min={1} max={10} step={1}
-                         value={editorSnapshot.track.thickness}
+                         value={editorSnapshot.editorStore?.journey?.marker?.thickness}
                          style={{'--thumb-size': '1rem'}}
                          onSlInput={setThickness}
                          onSlChange={setThickness}
-                         disabled={!editorSnapshot.track.visible}
+                        // disabled={!editorSnapshot.track.visible}
                          tooltip={'bottom'}
                 />
             </SlTooltip>
 
-            <SlDivider id="test-line" style={{
-                '--color': editorSnapshot.track.visible ? editorSnapshot.track.color : 'transparent',
-                '--width': `${editorSnapshot.track.thickness}px`,
-                '--spacing': 0,
-            }}
-                       disabled={!editorSnapshot.track.visible}
-            />
+            {/* TODO add a pseudo marker to see the change */}
         </div>
     )
 

@@ -53,7 +53,6 @@ export const JourneyLoaderUI = (props) => {
             if (status === JOURNEY_OK) {
                 // Get some initial settings
                 lgs.theJourney.globalSettings()
-                console.log(lgs.theJourney)
             }
         }
         const item = fileList.get(__.app.slugify(file.name))

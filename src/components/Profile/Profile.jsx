@@ -15,7 +15,7 @@ import { Utils }                                 from '../TracksEditor/Utils'
 import { Wander }                                from '../Wander/Wander'
 import { ProfileChart }                          from './ProfileChart'
 
-export const Profile = function Profile(props, ref) {
+export const Profile = function Profile() {
 
     const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
@@ -38,7 +38,7 @@ export const Profile = function Profile(props, ref) {
         if (window.isOK(event)) {
             mainStore.components.profile.show = false
             //TODO manage 'profile/close' event and externalise
-            lgs.profileTrackMarker.toggleVisibility()
+            toggleMarker()
         }
     }
 
@@ -46,7 +46,7 @@ export const Profile = function Profile(props, ref) {
         __.ui.profiler.resetChart()
     }
     const toggleMarker = () => {
-        lgs.profileTrackMarker.toggleVisibility()
+        lgs.theTrack.marker.toggleVisibility()
     }
 
     const snapshot = () => {
@@ -61,26 +61,22 @@ export const Profile = function Profile(props, ref) {
 
     const ProfileToolbar = (props) => {
         return (<div className={'profile-additional'}>
-            <SlTooltip hoist placement={props.placement} content="Toggle Marker Visibility">
-                {<SlButton id={'toggle-marker-visibility'} className={'square-icon'}>
-                    <SlIcon  slot="prefix" library="fa"
-                            onClick={toggleMarker} name={FA2SL.set(faSolidCircleSlash)}></SlIcon>
-                </SlButton>}
+            <SlTooltip hoist placement={props.placement} content="Hide Marker">
+                <SlButton id={'toggle-marker-visibility'} className={'square-icon'} onClick={toggleMarker}>
+                    <SlIcon  slot="prefix" library="fa" name={FA2SL.set(faSolidCircleSlash)}/>
+                </SlButton>
             </SlTooltip>
 
             <SlTooltip hoist placement={props.placement} content="Reset Chart">
-                {<SlButton id={'open-the-profile-panel'} className={'square-icon'}>
-                    <SlIcon  slot="prefix"library="fa"
-                            onClick={resetChart}
-                            name={FA2SL.set(faRegularArrowsRotateReverseMagnifyingGlass)}></SlIcon>
-                </SlButton>}
+                <SlButton id={'open-the-profile-panel'} className={'square-icon'} onClick={resetChart}>
+                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRegularArrowsRotateReverseMagnifyingGlass)}/>
+                </SlButton>
             </SlTooltip>
         </div>)
     }
 
     const data = __.ui.profiler.prepareData()
     __.ui.profiler.setVisibility()
-    __.ui.profiler.initMarker()
 
     return (<>
         {mainSnap.canViewProfile && <div id="profile-container" key={mainSnap.components.profile.key}>

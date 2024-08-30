@@ -1,6 +1,7 @@
 import { FOCUS_ON_FEATURE, INITIAL_LOADING } from '@Core/Journey'
 import { MapElement }                        from '@Core/MapElement'
 import { POI }                               from '@Core/POI'
+import { ProfileTrackMarker } from '@Core/ProfileTrackMarker'
 import { FEATURE_LINE_STRING, TrackUtils }   from '@Utils/cesium/TrackUtils'
 import { Mobility }                          from '@Utils/Mobility'
 import { DateTime }                          from 'luxon'
@@ -25,6 +26,8 @@ export class Track extends MapElement {
     content     // GEo JSON
     /** @type {{start:POI|undefined,stop:POI|undefined}} */
     flags = {start: undefined, stop: undefined}
+    /** @type {ProfileTrackMarker | null} */
+    marker = null
 
     constructor(title, options = {}) {
         super()
@@ -37,12 +40,15 @@ export class Track extends MapElement {
         this.visible = options.visible ?? true
         this.description = options.description ?? undefined
 
+
         this.name = options.name
         this.hasTime = options.hasTime ?? false
         this.hasAltitude = options.hasAltitude ?? false
         this.segments = options.segments ?? 0
         this.content = options.content
         this.flags = options.flags ?? {start: undefined, stop: undefined}
+        this.marker = options.marker ?? null
+
         this.metrics = options.metrics ?? {}
     }
 
@@ -53,6 +59,7 @@ export class Track extends MapElement {
         // Transform Flags from object to class
         instance.flags.start = new POI(instance.flags.start)
         instance.flags.stop = new POI(instance.flags.stop)
+        instance.marker = new ProfileTrackMarker(instance.marker)
 
         return instance
     }
@@ -360,6 +367,10 @@ export class Track extends MapElement {
                 }
                 if (this.flags.stop) {
                     this.flags.stop.draw(!forcedToHide)
+                }
+
+                if (this.marker) {
+                    this.marker.draw(forcedToHide)
                 }
             }
         })

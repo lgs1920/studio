@@ -4,8 +4,10 @@
  * Place here any hosts for which we are to be a proxy -
  * e.g. the host on which the J2EE APIs we'll be proxying are running
  * */
+
+$config = json_decode(file_get_contents('./config.json'), true);
 $SETTING_ALLOWED_HOSTS = array(
-    'api.lgs1920.fr',
+    $config['backend']['domain'],
     '127.0.0.1',
 );
 
@@ -36,7 +38,7 @@ define( 'CSAJAX_FILTER_DOMAIN', true );
 /**
  * Set debugging to true to receive additional messages - really helpful on development
  */
-define( 'CSAJAX_DEBUG', true );
+define( 'CSAJAX_DEBUG', false );
 
 /**
  * A set of valid cross domain requests
@@ -176,11 +178,13 @@ if ( 'POST' == $request_method ) {
 	curl_setopt( $ch, CURLOPT_POSTFIELDS, $request_params );
 }
 
+
 // retrieve response (headers and content)
 $response = curl_exec( $ch );
 curl_close( $ch );
 
 // split response to header and content
+if ($response) {
 list($response_headers, $response_content) = preg_split( '/(\r\n){2}/', $response, 2 );
 
 // (re-)send the headers
@@ -198,7 +202,9 @@ foreach ( $response_headers as $key => $response_header ) {
 
 // finally, output the content
 print( $response_content );
-
+} else {
+print '';
+}
 function csajax_debug_message( $message )
 {
 	if ( true == CSAJAX_DEBUG ) {

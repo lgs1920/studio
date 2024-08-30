@@ -12,6 +12,9 @@ import {
     UIToast,
 } from '@Utils/UIToast'
 import {
+    FLAG_START, FLAG_STOP, POI_FLAG, POI_MARKER, POI_STD,
+} from '../Utils/cesium/POIUtils'
+import {
     ElevationServer,
 } from './Elevation/ElevationServer'
 import {
@@ -21,10 +24,11 @@ import {
     MapElement,
 }                                      from './MapElement'
 import { POI, POI_VERTICAL_ALIGN_TOP } from './POI'
-import { Track }                       from './Track'
-import {
-    Camera,
-}                                      from './ui/Camera.js'
+
+import { ProfileTrackMarker } from './ProfileTrackMarker'
+import { Track }              from './Track'
+import { Camera }             from './ui/Camera.js'
+
 
 export class Journey extends MapElement {
 
@@ -58,7 +62,7 @@ export class Journey extends MapElement {
 
             // If options property exists, we get them, else
             // we set the value to a default.
-            this.slug = options.slug ?? __.app.slugify(`${title}-${type}`)
+            this.slug = options.slug ?? __.app.setSlug({ content : [title,type]})
             this.visible = options.visible ?? true
             this.POIsVisible = options.POIsVisible ?? true
 
@@ -118,9 +122,10 @@ export class Journey extends MapElement {
             const slugs = await lgs.db.lgs1920.keys(JOURNEYS_STORE)
             // Get each journey content
             const journeyPromises = slugs.map(async (slug) => {
-                const object = await lgs.db.lgs1920.get(slug, JOURNEYS_STORE)
-                const journey = Journey.deserialize({object: object})
-                return journey
+                return Journey.deserialize({
+                                               object: await lgs.db.lgs1920.get(slug, JOURNEYS_STORE),
+                    reset:true
+                                           })
             })
             return await Promise.all(journeyPromises)
         } catch (error) {
@@ -144,7 +149,13 @@ export class Journey extends MapElement {
             const object = new Track(track.title, track)
             object.flags.start = new POI(object.flags.start)
             object.flags.stop = new POI(object.flags.stop)
-            instance.tracks.set(slug, new Track(track.title, track))
+            object.marker = new ProfileTrackMarker(object.marker)
+            if (props.reset) {
+                object.flags.start.drawn  = false
+                object.flags.stop.drawn  = false
+                object.marker.drawn  = false
+            }
+            instance.tracks.set(slug, new Track(track.title, object))
         })
 
         return instance
@@ -249,14 +260,20 @@ export class Journey extends MapElement {
             this.geoJson.features.forEach((feature) => {
                 const geometry = getGeom(feature)
                 const title = feature.properties.name
-                const slug = this.#setTrackSlug(feature.properties.name)
+
+                const slug = this.#setTrackSlug({
+                                                    content:[
+                                                        this.slug,
+                                                        feature.properties.name
+                                                        ]
+                })
                 const track = keepContext?this.tracks.get(slug):null
                 if ([FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING].includes(geometry.type)) {
                     // Let's define some tracks parameters
                     const parameters = {
                         parent: this.slug,
-                        name: keepContext?track.name:feature.properties.name,
-                        slug: this.#setTrackSlug(feature.properties.name),
+                        name: keepContext?track.name:slug,
+                        slug: slug,
                         hasTime: this.#hasTime(feature.properties),
                         hasAltitude: this.#hasAltitude(geometry),
                         description: keepContext?track.description:feature.properties.desc ?? '',
@@ -266,11 +283,22 @@ export class Journey extends MapElement {
                         thickness :  keepContext?track.thickness: lgs.configuration.journey.thickness,
                         flags: keepContext?track.flags: {start: undefined, stop: undefined},
                         content: feature,
+                        marker:keepContext?track.marker:null
                     }
                     this.tracks.set(slug, new Track(title, parameters))
                 }
             })
         }
+    }
+
+    /**
+     * Get track index
+     *
+     * @param slug {string} track slug
+     * @return {number}
+     */
+    getTrackIndex = slug => {
+         return Array.from(this.tracks.keys()).indexOf(slug)
     }
 
     /**
@@ -306,13 +334,14 @@ export class Journey extends MapElement {
      *
      */
     getPOIsFromGeoJson = () => {
-
         if (this.geoJson.type === FEATURE_COLLECTION) {
             const flags = []
             // Extracts all POIs from FEATURE_POINT data and adds
             // POI on track limits
             this.geoJson.features.forEach((feature, index) => {
                 const geometry = getGeom(feature)
+                const theSlug = this.#setTrackSlug({content:[this.slug,feature.properties.name]})
+
                 const common = {
                     description: feature.properties.desc, size: lgs.POI_DEFAULT_SIZE, visible: true,
                 }
@@ -337,9 +366,10 @@ export class Journey extends MapElement {
                         // Create a POI
                         const point = geometry.coordinates
                         const parameters = {
-                            journey: this.slug,
+                            parent: this.slug,
+                            usage: POI_STD,
                             name: feature.properties.name,
-                            slug: this.#setPOISlug(index),
+                            slug: this.#setPOISlug({content:index}),
                             coordinates: [point[0], point[1]],
                             altitude: point[2] ?? undefined,
                             time: feature.properties?.time ?? undefined,
@@ -352,15 +382,24 @@ export class Journey extends MapElement {
                     }
                     case FEATURE_LINE_STRING :
                     case FEATURE_MULTILINE_STRING: {
-                        const parentSlug = this.#setTrackSlug(feature.properties.name)
+                        const parentSlug = this.#setTrackSlug({
+                            content:[
+                                this.slug,
+                                feature.properties.name
+                            ]
+                        })
                         // Create Track Start Flag
                         const start = coordinates[0][0]
                         const timeStart = this.#hasTime(feature.properties) ? times[0][0] : undefined
                         const startParameters = {
-                            track: parentSlug,
-                            journey: this.slug,
+                            parent: this.slug,
+                            usage:POI_FLAG,
                             name: 'Track start',
-                            slug: this.#setPOISlug(`${__.app.slugify(feature.properties.name)}-${FLAG_START}`, POI_FLAG),
+                            slug: this.#setPOISlug({
+                                                       suffix:  FLAG_START,
+                                                       content: theSlug,
+                                                       prefix:  POI_FLAG,
+                                                   }),
                             coordinates: [start[0], start[1]],
                             altitude: start[2] ?? undefined,
                             time: timeStart,
@@ -380,10 +419,15 @@ export class Journey extends MapElement {
 
                         const timeStop = this.#hasTime(feature.properties) ? times[length][last] : undefined
                         const stopParameters = {
-                            track: parentSlug,
-                            journey: this.slug,
+                            parent: this.slug,
+                            usage:POI_FLAG,
                             name: 'Track stop',
-                            slug: this.#setPOISlug(`#${__.app.slugify(feature.properties.name)}-${FLAG_STOP}`, POI_FLAG),
+                            slug: this.#setPOISlug({
+                                                       suffix:FLAG_STOP,
+                                                       content:theSlug,
+                                                       prefix:POI_FLAG
+                                                   }
+                            , ),
                             coordinates: [stop[0], stop[1]],
                             altitude: stop[2] ?? undefined,
                             time: timeStop,
@@ -395,6 +439,16 @@ export class Journey extends MapElement {
                         const stopFlag = new POI({...common, ...stopParameters})
                         this.tracks.get(parentSlug).flags.stop = stopFlag
                         flags.push(stopFlag)
+
+                        // Create marker flag
+                        this.tracks.get(parentSlug).marker = new ProfileTrackMarker(
+                            {
+                                color:this.tracks.get(parentSlug).marker?.color??this.tracks.get(parentSlug).color,
+                                border:{color:'transparent'},
+                                parent:this.slug,
+                                slug:this.#setPOISlug({content:`${theSlug}`,prefix: POI_MARKER}),
+                                visible: false,
+                            })
                     }
                         break
                 }
@@ -405,7 +459,8 @@ export class Journey extends MapElement {
             // we adapt the visibility for the flagged POIs
             if (this.poisOnLimits) {
                 flags.forEach((poi, index) => {
-                    this.tracks.get(poi.track).flags[(poi.slug.endsWith(FLAG_START)) ? 'start' : 'stop'].visible = (index === 0 || index === (flags.length - 1))
+                    const track = poi.slug.split('#').slice(1,-1).join('#')
+                    this.tracks.get(track).flags[(poi.slug.endsWith(FLAG_START)) ? 'start' : 'stop'].visible = (index === 0 || index === (flags.length - 1))
                 })
             }
         }
@@ -415,36 +470,29 @@ export class Journey extends MapElement {
      * Define the slug of a POI
      *
      * @param suffix {string|number}
+     * @param content {string|number}
      * @param prefix  {string|number} optional (default = poi)
      *
      * @return {string}
      */
-    #setPOISlug = (suffix, prefix = 'poi') => {
-        return this.#setSlug(suffix, prefix)
+    #setPOISlug = ({suffix='', content='', prefix= POI_STD}) => {
+        if (typeof content === 'number') {
+            content=content.toString()
+        }
+        return __.app.setSlug({suffix : suffix, content : content, prefix : prefix})
     }
 
     /**
      * Define the slug of a track
      **
      * @param suffix {string|number}
+     * @param content {string|number}
      * @param prefix {string|number}
      *
      * @return {string}
      */
-    #setTrackSlug = (suffix, prefix = 'track') => {
-        return this.#setSlug(suffix, prefix)
-    }
-
-    /**
-     * Define ageneric slug
-     *
-     * @param suffix {string|number}
-     * @param prefix {string|number}
-     *
-     * @return {string}
-     */
-    #setSlug = (suffix, prefix = '') => {
-        return `${__.app.slugify(prefix)}#${this.slug}#${__.app.slugify(suffix)}`
+    #setTrackSlug = ({suffix = '', content = '', prefix = TRACK_SLUG}) => {
+        return __.app.setSlug({suffix : suffix, content : content, prefix : prefix})
     }
 
     /**
@@ -644,10 +692,6 @@ export const KMZ = 'kmz'
 export const GEOJSON = 'geojson'
 export const JSON_='json'
 
-export const FLAG_START = 'start'
-export const FLAG_STOP = 'stop'
-export const POI_FLAG = 'flag'
-export const POI_STD = 'poi'
 export const TRACK_SLUG = 'track'
 
 export const SIMULATE_ALTITUDE = 99

@@ -1,6 +1,7 @@
-import { MILLIS }                          from '@Utils/AppUtils.js'
-import { DISTANCE_UNITS, ELEVATION_UNITS } from '../../Utils/UnitUtils.js'
-import { ELEVATION_VS_DISTANCE }           from './Profiler.js'
+import { MILLIS }   from '@Utils/AppUtils.js'
+import { POIUtils } from '@Utils/cesium/POIUtils.js'
+import { DateTime } from 'luxon'
+import { Track }    from '../Track'
 
 export class Wanderer {
     /**
@@ -101,13 +102,25 @@ export class Wanderer {
      */
     #timer
 
+    /**
+     * ProfileTrackMarker
+     * @type {ProfileTrackMarker|null}
+     */
+    #marker
+
+    /** step between path, to maintain required time
+     * @type {Number}
+     */
+    #step
     constructor(options) {
         // Singleton
         if (Wanderer.instance) {
             return Wanderer.instance
         }
         this.forward = true
+        this.marker ==null
         this.update(options)
+        this.#current = 1
 
         Wanderer.instance = this
 
@@ -125,10 +138,18 @@ export class Wanderer {
         if (options) {
             this.#pathway = options.coordinates ?? this.#pathway
             this.#points = this.#pathway.length
-            this.duration = options.duration ?? this.duration
-            this.#interval = this.duration / this.#points
-            this.forward = options.forward ?? this.forward
+            this.duration = (options.duration ?? this.duration)*MILLIS
+            this.#step =1
 
+            this.#interval = this.#duration/this.#points
+            if ( this.#interval< lgs.configuration.profile.minInterval) {
+                this.#interval = lgs.configuration.profile.minInterval
+                this.#step = Number.parseInt(this.#points/this.#duration*this.#interval)
+                this.#duration = this.#step *this.#interval/MILLIS
+            }
+
+            this.forward = options.forward ?? this.forward
+            this.#marker = options.marker ?? this.marker
 
             this.#start = (this.forward) ? 0 : this.#points - 1
             this.#end = (this.forward) ? this.#points - 1 : 0
@@ -141,6 +162,7 @@ export class Wanderer {
                 lgs.events.off(event)
                 lgs.events.on(event, callback)
             })
+
         }
 
         return this
@@ -177,7 +199,7 @@ export class Wanderer {
      * @param {number} pointsNumber
      */
     set interval(pointsNumber) {
-        this.#interval = this.#duration / pointsNumber
+        this.#interval = this.#duration *MILLIS/ pointsNumber
     }
 
     /**
@@ -213,12 +235,28 @@ export class Wanderer {
     }
 
     /**
+     *
+     * @return {ProfileTrackMarker}
+     */
+    get marker() {
+        return this.#marker
+    }
+
+    /**
+     *
+     * @param {ProfileTrackMarker} marker
+     */
+    set marker(marker) {
+        this.#marker = marker
+    }
+
+    /**
      * Run or continue the wanderer
      */
     play = () => {
         this.running = true
         this.#clearTimer()
-        this.#timer = setInterval(this.tick, this.interval * MILLIS)
+        this.#timer = setInterval(this.tick, this.interval)
     }
 
     /**
@@ -256,8 +294,9 @@ export class Wanderer {
      */
     stop = () => {
         if (this.running) {
-            this.running = undefined
-            lgs.profileTrackMarker.hide()
+            this.running = false
+            const track = Track.deserialize({object: Track.unproxify(lgs.theTrack)}) // TODO Check
+            track.marker.hide()
             clearInterval(this.#timer)
             lgs.events.emit(Wanderer.STOP_TICK_EVENT, this.current, this.#pathway[this.#current] ?? null)
             this.#events.forEach((callback, event) => {
@@ -292,7 +331,7 @@ export class Wanderer {
     tick = () => {
         if (this.running) {
             if (this.forward) {
-                this.#current++
+                this.#current+=this.#step
                 if (this.#current >= this.#points) {
                     if (this.#loop) {
                         this.#current = 0
@@ -301,7 +340,7 @@ export class Wanderer {
                     }
                 }
             } else {
-                this.#current--
+                this.#current-=this.#step
                 if (this.#current < 0) {
                     if (this.#loop) {
                         this.#current = this.#points - 1
@@ -310,10 +349,8 @@ export class Wanderer {
                     }
                 }
             }
-
-            // New tick, we dispatch a new event
-            lgs.events.emit(Wanderer.UPDATE_TICK_EVENT, [this.#current, this.#pathway[this.#current]??null])
-
+            // New tick, we dispatch a new event    //TODO Change 0 to series index
+            lgs.events.emit(Wanderer.UPDATE_TICK_EVENT, [lgs.theJourney.getTrackIndex(lgs.theTrack.slug),this.#current, this.#pathway[this.#current]??null])
         }
     }
 
@@ -322,7 +359,7 @@ export class Wanderer {
             return
         }
         const data=[]
-        lgs.theJourney.tracks.forEach((track, slug) => {
+        lgs.theJourney.tracks.forEach((track) => {
             if (track.visible && track.metrics.points !== undefined) {
                 track.metrics.points.forEach(point => {
                     data.push({
@@ -335,6 +372,11 @@ export class Wanderer {
             }
         })
         return data
+    }
+
+    updateColor = ()=> {
+        POIUtils.remove(lgs.theTrack.marker)
+__.ui.profiler.initMarker({force:true})
     }
 
 
