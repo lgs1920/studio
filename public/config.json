@@ -60,7 +60,7 @@
         }
       },
       "chart": {
-        "size": 6,
+        "size": 8,
         "color": "#f2c55c",
         "border": {
           "color": "#fff",
