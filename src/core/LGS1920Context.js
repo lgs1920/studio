@@ -1,6 +1,8 @@
 import { AppUtils }                from '@Utils/AppUtils'
 import { MouseUtils }              from '@Utils/cesium/MouseUtils'
 import { CSSUtils }                from '@Utils/CSSUtils'
+import { UIUtils }                from '@Utils/UIUtils'
+
 import { proxy }                   from 'valtio'
 import { UnitUtils }               from '../Utils/UnitUtils'
 import { LocalDB }                 from './db/LocalDB'
@@ -58,6 +60,7 @@ export class LGS1920Context {
             ui: {
                 css: CSSUtils,
                 mouse: MouseUtils,
+                ui:UIUtils
             },
             convert: UnitUtils.convert,
         }
