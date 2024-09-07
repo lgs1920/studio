@@ -37,12 +37,12 @@
     "axios": "^1.7.7",
     "babel-plugin-module-resolver": "^5.0.2",
     "canvg": "^4.0.2",
-    "cesium": "^1.120.0",
+    "cesium": "^1.121.1",
     "dotenv": "^16.4.5",
     "easy-file-picker": "^1.1.0",
     "echarts": "^5.5.1",
     "echarts-for-react": "^3.0.2",
-    "elysia": "^1.1.11",
+    "elysia": "^1.1.12",
     "fs": "^0.0.1-security",
     "fs.promises": "^0.1.2",
     "geojson-extent": "^0.3.2",
@@ -69,13 +69,13 @@
   "devDependencies": {
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
-    "@typescript-eslint/eslint-plugin": "^8.3.0",
-    "@typescript-eslint/parser": "^8.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.4.0",
+    "@typescript-eslint/parser": "^8.4.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "eslint": "^9.9.1",
+    "eslint": "^9.10.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.11",
     "typescript": "^5.5.4",
-    "vite": "^5.4.2"
+    "vite": "^5.4.3"
   }
 }
