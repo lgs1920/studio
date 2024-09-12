@@ -1,6 +1,7 @@
 import { default as html2canvas } from 'html2canvas'
 import { jsPDF }                  from 'jspdf'
 import { DateTime }               from 'luxon'
+import { CHART_ELEVATION_VS_DISTANCE } from './Profiler'
 // dummy...
 let dummy = jsPDF
 dummy = html2canvas
@@ -66,6 +67,20 @@ export class Export {
             canvas.toBlob((blob) => Export.toFile(blob, `${file}.png`))
         })
     }
+
+    /**
+     * Export Echart to SVG
+     *
+     * @param chart {Echart} chart identifier
+     */
+    static async chartToSVG(chart, file) {
+        await fetch(chart.getDataURL({type: 'svg'}))
+            .then(response => response.text())
+            .then(svgContent => {
+                Export.toFile(svgContent, `${file}.svg`, 'image/svg+xml')
+            });
+    }
+
     /**
      * Copy a string to the clipboard
      *
@@ -114,11 +129,12 @@ export class Export {
      *
      * @param content
      * @param file
+     * @param type
      */
 
-    static toFile = async (content = '', file = 'sample.txt') => {
+    static toFile = async (content = '', file = 'sample.txt', type = 'text/Plain') => {
         const link = document.createElement('a')
-        const blob = new Blob([content], {type: 'text/plain'})
+        const blob = new Blob([content], {type: type})
         link.href = URL.createObjectURL(blob)
         link.download = file
         link.click()
