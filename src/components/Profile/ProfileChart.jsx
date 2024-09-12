@@ -158,6 +158,7 @@ export const ProfileChart = (props) => {
                 },
                 axisLabel:     {
                     alignMaxLabel: 'right', // hide the last....
+                    showMaxLabel:false
                 },
                 axisLine:      {onZero: false},
                 nameGap:       0,
