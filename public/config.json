@@ -49,6 +49,9 @@
   },
   "profile": {
     "show": true,
+    "line": {
+      "width": 2
+    },
     "marker": {
       "track": {
         "show": true,

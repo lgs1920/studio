@@ -301,6 +301,7 @@ export class Journey extends MapElement {
          return Array.from(this.tracks.keys()).indexOf(slug)
     }
 
+
     /**
      * Check if data contains time information
      *
@@ -682,6 +683,15 @@ export class Journey extends MapElement {
             return
         }
         this.metrics = this.setGlobalMetrics()
+    }
+
+    /**
+     * Check if the current journey contains only one track
+     *
+     * @return {boolean}
+     */
+    hasOneTrack = ()=> {
+        return this.tracks.size === 1
     }
 
 }

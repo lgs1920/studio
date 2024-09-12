@@ -75,29 +75,45 @@
     line-height: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    padding: var(--lgs-gutter-xs);
+    margin: var(--lgs-gutter-xs);
     gap: var(--lgs-gutter-xs);
 }
 
-#elevation-distance-tooltip > span:first-child {
-    display: inline-flex;
-    text-align: center;
+#elevation-distance-tooltip .tooltip-icon{
+    display: flex;
+    align-items: center;
 }
+#elevation-distance-tooltip .tooltip-data{
+    display: flex;
+    align-items: center;
+    background:white;
+    padding: var(--lgs-gutter-xs);
+    z-index: 1;
+}
+#elevation-distance-tooltip .tooltip-data.altitude{
+    margin-left: auto;
+    margin-right: auto;text-align: center;
+    }
 
-#elevation-distance-tooltip > div {
+#elevation-distance-tooltip .point-distance {
     display: flex;
     justify-content: space-between;
     padding: 0;
     align-items: center;
-}
-
-#elevation-distance-tooltip .point-distance {
+    align-content: center;
     gap: var(--lgs-gutter-s);
+    position: relative;
+    --line-color:black
 }
 
-#elevation-distance-tooltip .point-distance sl-icon {
-    width: 15px;
+#elevation-distance-tooltip .point-distance.line span:first-child .tooltip-icon{
+    text-align:left
+}
+#elevation-distance-tooltip .point-distance.line span:last-child  .tooltip-icon {
+    text-align:right
+}
+#elevation-distance-tooltip .point-distance .tooltip-icon sl-icon:host {
+    width: 20p;
 }
 
 .profile-toolbar {

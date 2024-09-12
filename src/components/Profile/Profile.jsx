@@ -14,6 +14,8 @@ import { JourneySelector }                       from '../TracksEditor/journey/J
 import { Utils }                                 from '../TracksEditor/Utils'
 import { Wander }                                from '../Wander/Wander'
 import { ProfileChart }                          from './ProfileChart'
+import { SlResizeObserver } from '@shoelace-style/shoelace/dist/react';
+
 
 export const Profile = function Profile() {
 
@@ -75,13 +77,28 @@ export const Profile = function Profile() {
         </div>)
     }
 
-    const data = __.ui.profiler.prepareData()
     __.ui.profiler.setVisibility()
+
+    //prepare datafromtrckto profile
+    const data = __.ui.profiler.prepareData()
+
+    const resizeProfile=event => {
+            const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
+            const container = document.getElementById('profile-chart')
+            const dimensions = container.getBoundingClientRect()
+            if (dimensions.width > 0) {
+                mainStore.components.profile.width = dimensions.width
+                mainStore.components.profile.height = dimensions.height
+            }
+    }
 
     return (<>
         {mainSnap.canViewProfile && <div id="profile-container" key={mainSnap.components.profile.key}>
             <SlDrawer id="profile-pane" open={mainSnap.components.profile.show}
                       onSlRequestClose={handleRequestClose}
+                      onSlAfterShow={()=> {
+                          window.dispatchEvent(new Event('resize'))
+                      }}
                       contained
                       onSlHide={closeProfile}
                       placement="bottom"
@@ -116,10 +133,15 @@ export const Profile = function Profile() {
                     </div>
                 </div>
                 {data &&
-                    <ProfileChart series={data.series}
-                                  options={data.options}
+                    <SlResizeObserver onSlResize={resizeProfile}>
+
+                    <div id={'profile-chart'} style={{width: '100%', height: '100%'}}>
+                    <ProfileChart data={data}
                                   height={__.ui.css.getCSSVariable('--lgs-profile-chart-height')}
                     />
+                    </div>
+                    </SlResizeObserver>
+
                 }
             </SlDrawer>
         </div>}
