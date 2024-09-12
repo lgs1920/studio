@@ -2,8 +2,8 @@ import './style.css'
 import * as echarts                                         from 'echarts'
 import ReactECharts                                         from 'echarts-for-react'
 import { useEffect, useRef }                                from 'react'
-import { useSnapshot }                                      from 'valtio'
-import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION } from '../../core/ui/Profiler'
+import { useSnapshot }                                                             from 'valtio'
+import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION, ELEVATION_VS_DISTANCE } from '../../core/ui/Profiler'
 
 /**
  *
@@ -196,7 +196,7 @@ export const ProfileChart = (props) => {
     const resize = () => {
         if (mainSnap.components.profile.show) {
             const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
-            const container = document.getElementById('profile-chart')
+            const container = document.getElementById(`profile-${CHART_ELEVATION_VS_DISTANCE}`)
             const dimensions = container.getBoundingClientRect()
             if (dimensions.width > 0) {
                 mainStore.components.profile.width = dimensions.width
@@ -219,7 +219,6 @@ export const ProfileChart = (props) => {
                               style={{width: mainSnap.components.profile.width, height: mainSnap.components.profile.height}}
                               opts={{renderer: 'svg'}}
                               ref={instance}
-                              id={'profile-chart'}
                               onEvents = {dispatchEvents}
                 />
             }

@@ -4,9 +4,9 @@ import {
 import { SlButton, SlDrawer, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { useSnapshot }                           from 'valtio'
-import { Export }                                from '../../core/ui/Export'
-import { CHART_ELEVATION_VS_DISTANCE }           from '../../core/ui/Profiler'
-import { FA2SL }                                 from '../../Utils/FA2SL'
+import { Export }                                             from '../../core/ui/Export'
+import { CHART_ELEVATION_VS_DISTANCE, ELEVATION_VS_DISTANCE } from '../../core/ui/Profiler'
+import { FA2SL }                                              from '../../Utils/FA2SL'
 import { UIToast }                               from '../../Utils/UIToast'
 import { DropdownToolbar } from '../MainUI/DropdownToolbar'
 import { Toolbar }         from '../MainUI/Toolbar'
@@ -21,7 +21,6 @@ export const Profile = function Profile() {
 
     const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
-
 
     /**
      * Avoid click outside drawer
@@ -53,7 +52,7 @@ export const Profile = function Profile() {
 
     const snapshot = () => {
         const file = `${CHART_ELEVATION_VS_DISTANCE}-${__.app.slugify(lgs.theJourney.title)}`
-        Export.toPNG(`#apexcharts${CHART_ELEVATION_VS_DISTANCE}`, file).then(() => {
+        Export.toPNG(`#profile-${CHART_ELEVATION_VS_DISTANCE}`, file).then(() => {
             UIToast.success({
                 caption: `Your chart has been exported successfully !`,
                 text: `into ${file}.png`,
@@ -84,7 +83,7 @@ export const Profile = function Profile() {
 
     const resizeProfile=event => {
             const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
-            const container = document.getElementById('profile-chart')
+            const container = document.getElementById(`profile-${CHART_ELEVATION_VS_DISTANCE}`)
             const dimensions = container.getBoundingClientRect()
             if (dimensions.width > 0) {
                 mainStore.components.profile.width = dimensions.width
@@ -135,7 +134,7 @@ export const Profile = function Profile() {
                 {data &&
                     <SlResizeObserver onSlResize={resizeProfile}>
 
-                    <div id={'profile-chart'} style={{width: '100%', height: '100%'}}>
+                    <div id={`profile-${CHART_ELEVATION_VS_DISTANCE}`} style={{width: '100%', height: '100%'}}>
                     <ProfileChart data={data}
                                   height={__.ui.css.getCSSVariable('--lgs-profile-chart-height')}
                     />
