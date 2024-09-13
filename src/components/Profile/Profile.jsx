@@ -52,7 +52,8 @@ export const Profile = function Profile() {
 
     const snapshot = () => {
         const file = `${CHART_ELEVATION_VS_DISTANCE}-${__.app.slugify(lgs.theJourney.title)}`
-        Export.toPNG(`#profile-${CHART_ELEVATION_VS_DISTANCE}`, file).then(() => {
+        const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
+        Export.toPNG( chart.getDom(), file).then(() => {
             UIToast.success({
                 caption: `Your chart has been exported successfully !`,
                 text: `into ${file}.png`,
