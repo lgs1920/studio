@@ -75,7 +75,6 @@
   },
 
   "journey": {
-    "color": "#B22222ff",
     "thickness": 2,
     "pois": {
       "color": "#f2c55c",
@@ -99,13 +98,8 @@
     "thickness": 2
   },
   "theme": "dark",
-  "defaultTrackColors": [
-    "#7FFF00",
-    "#6c2e84",
-    "#B22222ff",
-    "#1E90FFFF",
-    "#f2c55c"
-  ],
+  "colorSwatches": ["#ee6666", "#fac858","#5470c6", "#91cc75","#73c0de", "#fc8452", "#9a60b4", "#ea7ccc"],
+  "colorDistribution": "serie",
   "unitSystems": {
     "international": 0,
     "imperial": 1
