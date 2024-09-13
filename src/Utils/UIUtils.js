@@ -34,9 +34,9 @@ export class UIUtils {
 
         // Extract colors
         let bigint = parseInt(hex, 16);
-        let r = (bigint >> 24) & 255;
-        let g = (bigint >> 16) & 255;
-        let b = (bigint >> 8) & 255;
+        let r = (bigint >> 16) & 255;
+        let g = (bigint >> 8) & 255;
+        let b = bigint & 255;
 
         if (format === 'rgb') {
             return `rgb(${r},${g},${b})`;
