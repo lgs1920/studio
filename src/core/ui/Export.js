@@ -58,14 +58,16 @@ export class Export {
         if (typeof element === 'string') {
             element = document.querySelector(element)
         }
-        element.classList.toggle('snapshot-in-progress')
+        element.parentElement.classList.toggle('snapshot-in-progress')
         await html2canvas(element, {
             dpi: 600,
         }).then((canvas) => {
-            element.classList.toggle('snapshot-in-progress')
             const orientation = canvas.width >= canvas.height ? 'l' : 'p'
             canvas.toBlob((blob) => Export.toFile(blob, `${file}.png`))
+            element.parentElement.classList.toggle('snapshot-in-progress')
+
         })
+
     }
 
     /**
@@ -73,11 +75,13 @@ export class Export {
      *
      * @param chart {Echart} chart identifier
      */
-    static async chartToSVG(chart, file) {
+    static async chartToSVG(svg, file) {
+        svg.parentElement.classList.toggle('snapshot-in-progress')
         await fetch(chart.getDataURL({type: 'svg'}))
             .then(response => response.text())
             .then(svgContent => {
                 Export.toFile(svgContent, `${file}.svg`, 'image/svg+xml')
+                svg.parentElement.classList.toggle('snapshot-in-progress')
             });
     }
 
