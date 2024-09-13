@@ -58,6 +58,6 @@ The app is based on :
 * Valtio - https://valtio.pmnd.rs - state management
 * Shoelace - https://shoelace.style/ - The web components used for UI
 * fontawesome - https://fontawesome.com/ - The icons library
-* ApexCharts - https://apexcharts.com/ - Chart library
+* Echarts - https://echarts.apache.org/en/index.html - Charts library
 * Bun - https://bun.sh/ - javascript runtime
 
