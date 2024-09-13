@@ -15,7 +15,7 @@ export const DropdownToolbar = (props) => {
             className={['lgs-ui-toolbar', 'lgs-ui-dropdown-toolbar', props.mode, props.icons ? 'just-icons' : ''].join(' ')}>
             <SlDropdown>
                 <div slot="trigger">
-                    <SlTooltip hoist placement={props.tooltip} content="Edit Tracks">
+                    <SlTooltip hoist placement={props.tooltip} content="Toolbar">
                         <SlButton size={'small'} className={'square-icon'}>
                             <SlIcon slot="prefix" library="fa" name={FA2SL.set(faEllipsisVertical)}></SlIcon>
                         </SlButton>
