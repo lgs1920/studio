@@ -65,3 +65,17 @@ sl-progress-bar {
 .cesium-widget-credits {
     display: none !important;
 }
+
+/**
+ * Animations
+ */
+
+.snapshot-in-progress {
+    animation: flashBackground 2s infinite;
+}
+
+@keyframes flashBackground {
+    0% { background-color: white; }
+    10% { background-color: yellow; }
+    100% { background-color: white; }
+}
