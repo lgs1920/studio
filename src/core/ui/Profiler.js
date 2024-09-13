@@ -97,9 +97,6 @@ export class Profiler {
                                   })
 
             }
-            data.legend.data.push({
-                name:'aaa'
-                             })
         })
 
         data.axisNames = {
