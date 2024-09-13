@@ -137,7 +137,7 @@ export const ProfileChart = (props) => {
             orient:       'horizontal',
             bottom:       0,
             data:      props.legends,
-            //selectedMode: lgs.theJourney.hasOneTrack() ? false : 'multiple',
+            selectedMode: false // lgs.theJourney.hasOneTrack() ? false : 'multiple',
         },
         grid:    {
             top:          0.5 * gutter,
