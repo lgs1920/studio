@@ -71,17 +71,18 @@ export class Export {
     }
 
     /**
-     * Export Echart to SVG
+     * Export to SVG
      *
-     * @param chart {Echart} chart identifier
+     * @param svg  {{dom:{Element},content:{string}}} svg dom and content
+     * @param file
      */
-    static async chartToSVG(svg, file) {
-        svg.parentElement.classList.toggle('snapshot-in-progress')
-        await fetch(chart.getDataURL({type: 'svg'}))
+    static async toSVG(svg, file) {
+        svg.dom.parentElement.classList.toggle('snapshot-in-progress')
+        await fetch(svg.content)
             .then(response => response.text())
-            .then(svgContent => {
-                Export.toFile(svgContent, `${file}.svg`, 'image/svg+xml')
-                svg.parentElement.classList.toggle('snapshot-in-progress')
+            .then(content => {
+                Export.toFile(content, `${file}.svg`, 'image/svg+xml')
+                svg.dom.parentElement.classList.toggle('snapshot-in-progress')
             });
     }
 

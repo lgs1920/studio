@@ -50,14 +50,27 @@ export const Profile = function Profile() {
         lgs.theTrack.marker.toggleVisibility()
     }
 
-    const snapshot = () => {
+    const snapshotAsImage = () => {
         const file = `${CHART_ELEVATION_VS_DISTANCE}-${__.app.slugify(lgs.theJourney.title)}`
         const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
         Export.toPNG( chart.getDom(), file).then(() => {
             UIToast.success({
-                caption: `Your chart has been exported successfully !`,
-                text: `into ${file}.png`,
-            })
+                                caption: `Your chart has been exported successfully !`,
+                                text: `into ${file}.png`,
+                            })
+        })
+    }
+    const snapshotAsVector = () => {
+        const file = `${CHART_ELEVATION_VS_DISTANCE}-${__.app.slugify(lgs.theJourney.title)}`
+        const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
+        Export.toSVG( {
+                          dom: chart.getDom(),
+                          content:chart.getDataURL({type: 'svg'})
+                      }, file).then(() => {
+            UIToast.success({
+                                caption: `Your chart has been exported successfully !`,
+                                text: `into ${file}.svg`,
+                            })
         })
     }
 
@@ -114,7 +127,7 @@ export const Profile = function Profile() {
                         <Toolbar editor={true}
                                  profile={false}
                                  fileLoader={true}
-                                 snapshot={snapshot}
+                                 snapshot={{png:snapshotAsImage,svg:snapshotAsVector}}
                                  position={'horizontal'}
                                  tooltip={'top'}
                                  mode={'embed'}
@@ -123,7 +136,7 @@ export const Profile = function Profile() {
                         <DropdownToolbar editor={true}
                                          profile={false}
                                          fileLoader={true}
-                                         snapshot={snapshot}
+                                         snapshot={{png:snapshotAsImage,svg:snapshotAsVector}}
                                          tooltip={'left'}
                                          center={<ProfileToolbar placement={'left'}/>}
                                          mode={'embed'}

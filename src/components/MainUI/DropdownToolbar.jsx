@@ -6,14 +6,15 @@ import {
 import { faEllipsisVertical }                                          from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                       from '../../Utils/FA2SL.js'
-import { JourneyLoaderButton }                                           from '../FileLoader/JourneyLoaderButton'
-import { SnapshotButton }                                              from './Snapshot'
+import { JourneyLoaderButton }                           from '../FileLoader/JourneyLoaderButton'
+import { SnapshotButton, SnapshotMenu, SnapshotTrigger } from './Snapshot'
 
 export const DropdownToolbar = (props) => {
+
     return (
         <div
             className={['lgs-ui-toolbar', 'lgs-ui-dropdown-toolbar', props.mode, props.icons ? 'just-icons' : ''].join(' ')}>
-            <SlDropdown>
+            <SlDropdown  distance={-10}>
                 <div slot="trigger">
                     <SlTooltip hoist placement={props.tooltip} content="Toolbar">
                         <SlButton size={'small'} className={'square-icon'}>
@@ -39,7 +40,12 @@ export const DropdownToolbar = (props) => {
                         </>
                     }
                     {props.snapshot &&
-                        <SlMenuItem><SnapshotButton tooltip={props.tooltip} snapshot={props.snapshot}/></SlMenuItem>
+                        <SlMenuItem>
+                            <SnapshotTrigger tooltip={'top-start'}/>
+                            <SlMenu slot="submenu">
+                                <SnapshotMenu {...props}/>
+                            </SlMenu>
+                        </SlMenuItem>
                     }
                 </SlMenu>
             </SlDropdown>

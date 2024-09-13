@@ -71,11 +71,10 @@ sl-progress-bar {
  */
 
 .snapshot-in-progress {
-    animation: flashBackground 2s infinite;
+    animation: flashBackground 1s infinite;
 }
-
 @keyframes flashBackground {
     0% { background-color: white; }
-    10% { background-color: yellow; }
+    50% { background-color: yellow; }
     100% { background-color: white; }
 }
