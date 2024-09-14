@@ -2,6 +2,7 @@ import { SlDrawer }        from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { forwardRef }      from 'react'
 import { useSnapshot }     from 'valtio'
+import { CHART_ELEVATION_VS_DISTANCE } from '../../core/ui/Profiler'
 import { Toolbar }         from '../MainUI/Toolbar'
 import { JourneySelector } from './journey/JourneySelector'
 import { JourneySettings } from './journey/JourneySettings'
@@ -36,6 +37,8 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
     const closeTracksEditor = (event) => {
         if (window.isOK(event)) {
             lgs.journeyEditorStore.show = false
+            window.dispatchEvent(new Event('resize'))
+
         }
     }
 
@@ -46,7 +49,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                           open={mainSnap.components.journeyEditor.show}
                           onSlRequestClose={handleRequestClose}
                           contained
-                          onSlHide={closeTracksEditor}
+                          onSlAfterHide={closeTracksEditor}
                           className={'lgs-theme'}
                 >
                     <div slot="header-actions">

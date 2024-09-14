@@ -86,6 +86,16 @@ export const JourneySettings = function JourneySettings() {
         }
         // title should not been already used for another journey.
         editorStore.journey.title = editorStore.journey.singleTitle(title)
+        // If it is a mono track, we need to sync track title
+        if(lgs.theJourney.hasOneTrack()) {
+            const [slug,track] = lgs.theJourney.tracks.entries().next().value
+            track.title = editorStore.journey.title
+            editorStore.journey.tracks.set(slug,track)
+            track.addToEditor()
+            __.ui.profiler.updateTitle()
+
+        }
+
         // Then use it
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneysList()

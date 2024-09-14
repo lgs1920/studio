@@ -102,7 +102,6 @@
 .lgs-ui-dropdown-toolbar.just-icons sl-menu {
     align-items: center;
     padding: 0;
-    --lgs-dimension: 1.4rem;
     overflow-x: hidden;
 }
 .lgs-ui-dropdown-toolbar.just-icons ::part(submenu-icon),

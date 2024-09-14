@@ -279,7 +279,7 @@ export class Journey extends MapElement {
                         description: keepContext?track.description:feature.properties.desc ?? '',
                         segments: geometry.coordinates.length,
                         visible: keepContext?track.visible:true,
-                        color :  keepContext?track.color: lgs.configuration.journey.color,
+                        color :  keepContext?track.color: __.ui.editor.journey.newColor(),
                         thickness :  keepContext?track.thickness: lgs.configuration.journey.thickness,
                         flags: keepContext?track.flags: {start: undefined, stop: undefined},
                         content: feature,
@@ -300,6 +300,7 @@ export class Journey extends MapElement {
     getTrackIndex = slug => {
          return Array.from(this.tracks.keys()).indexOf(slug)
     }
+
 
     /**
      * Check if data contains time information
@@ -682,6 +683,15 @@ export class Journey extends MapElement {
             return
         }
         this.metrics = this.setGlobalMetrics()
+    }
+
+    /**
+     * Check if the current journey contains only one track
+     *
+     * @return {boolean}
+     */
+    hasOneTrack = ()=> {
+        return this.tracks.size === 1
     }
 
 }

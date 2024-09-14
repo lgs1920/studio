@@ -59,6 +59,9 @@ export const main = {
             visible: false,
             show: false,
             key: 0,
+            width:'100%',
+            height:'100%',
+            zoom:false,
         },
         wanderer: {
             run: false,

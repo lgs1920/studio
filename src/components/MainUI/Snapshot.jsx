@@ -1,43 +1,55 @@
-import { faRegularCameraCircleArrowDown } from '@awesome.me/kit-938bf84c0d/icons/kit/custom'
-import { SlButton, SlIcon, SlTooltip }    from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                          from '@Utils/FA2SL'
-import { useSnapshot }                    from 'valtio'
+import { faRegularCameraCircleArrowDown }                              from '@awesome.me/kit-938bf84c0d/icons/kit/custom'
+import { faImage, faVectorSquare }                                     from '@fortawesome/pro-regular-svg-icons'
+import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                       from '@Utils/FA2SL'
+import { useSnapshot }                                                 from 'valtio'
 
+export const SnapshotMenu = (props) => {
+    return(
+        <SlMenu>
+            {props.snapshot?.png &&
+                <SlMenuItem onClick={props.snapshot.png}>
+                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faImage)}></SlIcon>
+                    {'Image'}
+                </SlMenuItem>
+            }
 
-export const SnapshotButton = (props, ref) => {
+            {props.snapshot?.svg &&
+                <SlMenuItem onClick={props.snapshot.svg}>
+                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faVectorSquare)}></SlIcon>
+                    {'Vector'}
+                </SlMenuItem>
+            }
+        </SlMenu>
+    )
+}
 
-    const mainStore = lgs.mainProxy
-    const mainSnap = useSnapshot(mainStore)
+export const SnapshotTrigger = (props=> {
+    return (<SlTooltip hoist placement={props.tooltip} content="Snapshot">
+        <SlButton size={'small'} className={'square-icon snapshot'}>
+            <SlIcon slot="prefix" library="fa"
+                    name={FA2SL.set(faRegularCameraCircleArrowDown)}>
+            </SlIcon>
+        </SlButton>
+    </SlTooltip>)
+})
 
-    const editorStore = lgs.theJourneyEditorProxy
-    const editorSnapshot = useSnapshot(editorStore)
+export const SnapshotButton = props  => {
 
-    /**
-     * Close tracks editor pane
-     *
-     * @param event
-     */
-    const closeTracksEditor = (event) => {
-        if (window.isOK(event)) {
-            mainStore.components.journeyEditor.show = false
-        }
+    const items = Object.keys(props.snapshot).length
+
+    if (!props.snapshot || items === 0) {
+        return ('')
     }
 
-    /**
-     * Open tracks editor pane
-     *
-     * @param event
-     */
-    const toggleTracksEditor = (event) => {
-        mainStore.components.journeyEditor.show = !mainStore.components.journeyEditor.show
-    }
-
-    return (<>
-        <SlTooltip hoist placement={props.tooltip} content="Snapshot">
-            <SlButton size={'small'} className={'square-icon snapshot'}
-                      onClick={props.snapshot}>
-                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRegularCameraCircleArrowDown)}></SlIcon>
-            </SlButton>
-        </SlTooltip>
-    </>)
+    return (
+        <div className={['lgs-ui-toolbar', props.mode, props.icons ? 'just-icons' : ''].join(' ')}>
+            <SlDropdown distance={-10}>
+                <div slot="trigger">
+                    <SnapshotTrigger {...props}/>
+                </div>
+                <SnapshotMenu {...props}/>
+            </SlDropdown>
+        </div>
+    )
 }

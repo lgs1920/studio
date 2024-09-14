@@ -1,14 +1,15 @@
-import { faArrowDownToLine, faArrowLeftToLine, faArrowRightToLine, faCircle } from '@fortawesome/pro-regular-svg-icons'
-import { DateTime }                                                           from 'luxon'
-import { sprintf }                                                            from 'sprintf-js'
-import { subscribe }                       from 'valtio'
-import {
-    Utils,
-}                                          from '../../components/TracksEditor/Utils.js'
+import { faCircle, faMountains }                         from '@fortawesome/pro-regular-svg-icons'
+import { faArrowLeftLongToLine, faArrowRightLongToLine } from '@fortawesome/pro-solid-svg-icons'
+import * as echarts                                      from 'echarts'
+
+import { DateTime } from 'luxon'
+import { sprintf }  from 'sprintf-js'
+import { subscribe,proxy }                       from 'valtio'
+import { Utils }    from '../../components/TracksEditor/Utils.js'
 import { FA2SL }                           from '../../Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS } from '../../Utils/UnitUtils'
 import { ProfileTrackMarker }              from '../ProfileTrackMarker'
-import { Track }                                                              from '../Track'
+import { Track }    from '../Track'
 
 export class Profiler {
 
@@ -48,64 +49,59 @@ export class Profiler {
         }
 
         // For each typeof chart and according to units System, we set the units to each axis
-        let units, titles
+        let units, titles, tooltip
         switch (type) {
             case ELEVATION_VS_DISTANCE :
                 units = {x: DISTANCE_UNITS, y: ELEVATION_UNITS}
-                titles = {x: 'Distance', y: 'Elevation'}
-        }
-
-        const options = {
-            xaxis: {
-                title: {
-                    text: `${titles.x} - ${units.x[lgs.configuration.unitsSystem]}`,
-                },
-
-            },
-            yaxis: {
-                title: {
-                    text: `${titles.y} - ${units.y[lgs.configuration.unitsSystem]}`,
-                },
-                decimalsInFloat: 1,
-                tickAmount: 4,
-            },
-            tooltip: {
-              custom: this.tooltipElevationVsDistance,
-            },
+                titles = {x: DISTANCE, y: ELEVATION}
+                tooltip = this.tooltipElevationVsDistance
         }
 
         const data = {
-            series: [], options: options
+            legend: {data:[]},
+            dataset:    [],
+            options:    [],
+            axisNames:  {},
+            dimensions: [DISTANCE, ELEVATION, TIME, POINT],
         }
 
+        // Let's define missing values
         let distance = 0
-        const colors=[]
         lgs.theJourney.tracks.forEach((track) => {
             if (track.visible && track.metrics.points !== undefined) {
-                const dataSet = {
-                    data: [],
-                    color: track.color,
-                    name: track.title,
+                const trackDataset = {
+                    id:     track.slug,
+                    source: [],
                 }
                 track.metrics.points.forEach(point => {
                     distance += point.distance
-                    let coords = {}
+                    let coords = []
                     switch (type) {
                         case ELEVATION_VS_DISTANCE : {
-                            coords.x = __.convert(distance).to(units.x[lgs.configuration.unitsSystem])
-                            coords.y = __.convert(point.altitude).to(units.y[lgs.configuration.unitsSystem])
-                            coords.point = point
+                            coords = [
+                                __.convert(distance).to(units.x[lgs.configuration.unitsSystem]),
+                                __.convert(point.altitude).to(units.y[lgs.configuration.unitsSystem]),
+                                null, //TODO Time
+                                point,
+                            ]
                         }
                     }
-                    dataSet.data.push(coords)
+                    trackDataset.source.push(coords)
                 })
-                data.series.push(dataSet)
-                colors.push(track.marker.foregroundColor)
+                data.dataset.push(trackDataset)
+                data.options.push({
+                                      color:   track.color,
+                                      name:    track.title,
+                                      marker:  track.marker.foregroundColor,
+                                      dataset: track.slug,
+                                  })
+
             }
         })
-        data.options.markers={
-            colors:colors,
-            size:6
+
+        data.axisNames = {
+            x: `${titles.x} - ${units.x[lgs.configuration.unitsSystem]}`,
+            y: `${titles.y} - ${units.y[lgs.configuration.unitsSystem]}`,
         }
 
         return data
@@ -113,70 +109,81 @@ export class Profiler {
 
     /**
      * This overloads the default tooltip for the chart Elevation vs Distance
-     * THis is a function defined for ApexChart.
-     * See https://apexcharts.com/docs/options/tooltip/# (custom option)
      *
-     * @param options
      * @return {string}  HTML
      */
-    tooltipElevationVsDistance =  (options) => {
+    tooltipElevationVsDistance = ([serie, index, distance, elevation, time, point, distances, colors]) => {
 
         if (__.ui.wanderer.running) {
             return ''
         }
-        // Display in
-        //TODO Use renderToString from react: touse  ???
-        //TODO here : https://react.dev/reference/react-dom/server/renderToString
-        const data = options.w.config.series[options.seriesIndex].data
-        const coords = data[options.dataPointIndex]
-        const length = data.pop().x
 
         // Show on map
         if (lgs.configuration.profile.marker.track.show) {
-            this.showOnMap(options)
+            this.showOnMap(serie, point.longitude, point.latitude, elevation)
         }
-        let date={day: '',time:''}
-        if (coords.point.time) {
-             date = {
-                day:  DateTime.fromISO(coords.point.time).toLocaleString(DateTime.DATE_SIMPLE),
-                time: DateTime.fromISO(coords.point.time).toLocaleString(DateTime.TIME_SIMPLE),
+
+        let date = {day: '', time: ''}
+        if (point.time) {
+            date = {
+                time: DateTime.fromISO(point.time).toLocaleString(DateTime.TIME_SIMPLE),
             }
         }
+        const distance1 = distances[distances.length - 1].end
+        const start2 = distances[serie].start
+        const distance2 = distances[serie].end
 
-        // Show on Profile
-        return `
-<div id="elevation-distance-tooltip">
-         <div class="point-distance">
-           <span>
-            <sl-icon library="fa" name="${FA2SL.set(faArrowLeftToLine)}"></sl-icon>
-            ${sprintf('%\' .1f', coords?.x??0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
+        // Build tooltip
+        const header = `
+            <div id="elevation-distance-tooltip">
+                <div class="point-distance">
+                    <span>[${point.latitude}, ${point.longitude}]</span>
+                    <span>${date.time}</span>
+            </div>`
+
+        const altitude = `<sl-icon library="fa" name="${FA2SL.set(faMountains)}"  style="color:${colors[serie]}"></sl-icon>&nbsp;
+${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsSystem]}`
+        const global = distances.length > 1 ? `
+            <div class="point-distance line" style="--line-color=${colors[serie]}">
+            <span class="tooltip-icon"><sl-icon library="fa" name="${FA2SL.set(faArrowLeftLongToLine)}"></sl-icon></span>
+            <span class="tooltip-data">
+                ${sprintf('%\' .1f', distance ?? 0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
             </span>
-            <span>- ${sprintf('%\' .1f', coords?.y??0)} ${ELEVATION_UNITS[lgs.configuration.unitsSystem]} -</span>
-            <span>
-            ${sprintf('%\' .1f', coords?.x ? length - coords.x:0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
-            <sl-icon library="fa" name="${FA2SL.set(faArrowRightToLine)}"></sl-icon>
+            <span class="tooltip-data altitude">${altitude}</span>
+            <span class="tooltip-data">
+            ${sprintf('%\' .1f', distance1 ? distance1 - distance : 0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}</span>
+            <span  class="tooltip-icon">
+            <sl-icon library="fa" name="${FA2SL.set(faArrowRightLongToLine)}"></sl-icon>
             </span>
-        </div>                       
-         <div class="point-distance">
-         <span>
-            <span>lat: ${coords.point.latitude}</span> - <span>lon:${coords.point.longitude}</span>
-         </span>
-            <span>${date.day} ${date.time}</span>
-    </div>
-    `
+        </div> 
+        ` : `<span class="tooltip-data altitude">${altitude}</span>`
+        const relative = `
+        <div class="point-distance line" style="--line-color:${colors[serie]}">
+           <span class="tooltip-icon">
+            <sl-icon library="fa" name="${FA2SL.set(faArrowLeftLongToLine)}"  style="color:${colors[serie]}"></sl-icon>
+            </span>
+            <span class="tooltip-data">
+
+            ${sprintf('%\' .1f', distance - start2 ?? 0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
+            </span>
+                        <span  class="tooltip-icon"><sl-icon library="fa" name="${FA2SL.set(faCircle)}" style="color:${colors[serie]}"></sl-icon></span>
+
+            <span class="tooltip-data">
+            ${sprintf('%\' .1f', distance2 ? distance2 - distance : 0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
+            </span>
+            <span class="tooltip-icon">
+            <sl-icon library="fa" name="${FA2SL.set(faArrowRightLongToLine)}"  style="color:${colors[serie]}"></sl-icon>
+            </span>
+        </div>`
+        return header + global + relative
     }
 
-    showOnMap = async (options) => {
-        const data = options.w.config.series[options.seriesIndex].data
-        const coords = data[options.dataPointIndex]
-        const theTrack = Track.deserialize({object: Track.unproxify(Array.from(lgs.theJourney.tracks.values())[options.seriesIndex])}) // TODO Ameliorer
-
+    showOnMap = async (serie, longitude, latitude, elevation) => {
+        const theTrack = Track.deserialize({object: Track.unproxify(Array.from(lgs.theJourney.tracks.values())[serie])})
         if (!theTrack.marker.drawn) {
             await theTrack.marker.draw()
         }
-        if (coords) {
-            await theTrack.marker.move([coords.point.longitude, coords.point.latitude, coords.point.elevation])
-        }
+        await theTrack.marker.move([longitude, latitude, elevation])
     }
 
     /**
@@ -186,86 +193,65 @@ export class Profiler {
      * @param index {number}
      */
     updateChartMarker = (serie, index) => {
-        const MARKER = 'wander-marker'
-        const AXE_VERTICAL = 'wander-yaxis'
-        const AXE_HORIZONTAL = 'wander-xaxis'
-
-        PROFILE_CHARTS.forEach(id => {
-            const chart = this.charts.get(id)
-            const data = chart.ctx.opts.series[serie].data[index]
-            chart.removeAnnotation(MARKER)
-            chart.addPointAnnotation({id: MARKER, x: data.x, y: data.y, marker: this.chartMarker()})
-            chart.removeAnnotation(AXE_VERTICAL)
-            chart.addXaxisAnnotation({id: AXE_VERTICAL, x: data.x})
-            // chart.removeAnnotation(AXE_HORIZONTAL)
-            // chart.addYaxisAnnotation({id: AXE_HORIZONTAL, y: data.y, borderColor: '#00E396'})
-        })
-    }
-
-    /**
-     * Define a marker for the chart
-     *
-     * @param color
-     * @return {{fillColor: (string|*|string), strokeWidth, size, strokeColor: (string|*|string)}}
-     */
-    chartMarker =(color = null)=>{
-        return  {
-            size: lgs.configuration.profile.marker.chart.size,
-                fillColor: color??lgs.theTrack.marker.foregroundColor,
-                strokeColor: lgs.configuration.profile.marker.chart.border.color,
-                strokeWidth: lgs.configuration.profile.marker.chart.border.width,
-        }
+        const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
+        chart.dispatchAction({
+                                 type:        'showTip',
+                                 seriesIndex: serie,
+                                 dataIndex:   index, // Index du point marqué
+                             })
     }
 
 
-    getMarkerCoordinates=() =>{
-        // Sélectionnez l'élément du marqueur par son identifiant unique
-        var markerElement = document.querySelector('#chart .apexcharts-point-annotation-marker[rel="unique-marker-id"]');
-
-        if (markerElement) {
-            // Obtenez les coordonnées du marqueur par rapport à l'élément DOM contenant le graphique
-            var rect = markerElement.getBoundingClientRect();
-            var chartElement = document.querySelector('#chart');
-            var chartRect = chartElement.getBoundingClientRect();
-
-            var x = rect.left - chartRect.left;
-            var y = rect.top - chartRect.top;
-
-            console.log('Coordonnées du marqueur en pixels:', { x: x, y: y });
-            return { x: x, y: y };
-        } else {
-            console.log('Marqueur non trouvé');
-            return null;
-        }
-    }
 
 
     /**
      * Update Color of tracks
      */
     updateColor = () => {
-        const series = []
-        lgs.theJourney.tracks.forEach((track) => {
-            series.push({color: track.color})
+        const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
+        const options = {series: []}
+
+        Array.from(lgs.theJourney.tracks).forEach(([slug,track]) => {
+            const color = __.ui.ui.hexToRGBA(track.color, 'rgb')
+            options.series.push({
+                             itemStyle: {
+                                 color: color,
+                             },
+
+                             lineStyle: {
+                                 color: color,
+                             },
+
+                             areaStyle: {
+                                 color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                     {offset: 0.5, color: __.ui.ui.RGB2RGBA(color, 0.5)},
+                                     {offset: 1, color: __.ui.ui.RGB2RGBA(color, 0.0)},
+                                 ]),
+                             },
+                         })
         })
-        PROFILE_CHARTS.forEach(id => {
-            this.charts.get(id).updateSeries(series)
-           // this.charts.get(id).updateOptions({marker:this.chartMarker('#ff0000')})
-        })
-       lgs.theTrack.marker.update()
+
+        chart.setOption(options)
+        this.draw()
+        __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+
+        lgs.theTrack.marker.update()
     }
 
     /**
-     * Update Titles of Profile
+     * Update Titles  and legends of Profile
      */
     updateTitle = () => {
-        const series = []
-        lgs.theJourney.tracks.forEach((track) => {
-            series.push({name: track.title})
+        const options = {legend:{data:[]},series: []}
+        const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
+        Array.from(lgs.theJourney.tracks).forEach(([slug,track]) => {
+            options.series.push({name: track.title})
+            options.legend.data.push({name:track.title})
         })
-        PROFILE_CHARTS.forEach(id => {
-            this.charts.get(id).updateSeries(series)
-        })
+
+        chart.setOption(options)
+        this.draw()
+        __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
 
     }
 
@@ -274,18 +260,37 @@ export class Profiler {
      *
      * We draw all
      */
-    updateTrackVisibility = () => {
-        this.prepareData()
+    updateTrackVisibility = (event = null) => {
+        const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
+        if (event) {
+            // We come from chart legend selection
+            const [slug,track] = Array.from(lgs.theJourney.tracks).find(([slug,track]) => track.title === event.name);
+            lgs.theJourney.tracks.get(slug).visible = false
+//TODO mettre la legend
+        } else {
+
+            const selected = {}
+            Array.from(lgs.theJourney.tracks).forEach(([slug, track]) => {
+                selected[track.title] = track.visible
+            })
+            chart.setOption({selected: selected})
+            this.prepareData()
+        }
+        this.draw()
+        __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
     }
+
 
     /**
      * Force Profile to be redrawn
      */
     draw = () => {
+
         lgs.mainProxy.components.profile.key++
         if (lgs.configuration.profile.marker.track.show) {
            lgs.theTrack?.marker.draw()
         }
+        this.resetZoom()
     }
 
     /**
@@ -312,10 +317,9 @@ export class Profiler {
         }
     }
 
-    resetChart = () => {
-        PROFILE_CHARTS.forEach(id => {
-            ApexCharts.exec(id, 'resetSeries', true, true)
-        })
+    resetZoom = () => {
+        const proxy=lgs.mainProxy
+        proxy.components.profile.zoom=false
     }
 
     /**
@@ -332,10 +336,13 @@ export class Profiler {
             lgs.mainProxy.canViewJourneyData &&            // can view data
             Array.from(journey.tracks.values())             // Has Altitude for each track
                 .every(track => track.hasAltitude)
-
     }
 }
 
 export const ELEVATION_VS_DISTANCE = 0
-export const CHART_ELEVATION_VS_DISTANCE = 'elevation-distance'
+export const ELEVATION = 'Elevation'
+export const DISTANCE = 'Distance'
+export const TIME = 'Time'
+export const POINT = 'point'
+export const CHART_ELEVATION_VS_DISTANCE = `${ELEVATION}-${DISTANCE}`
 export const PROFILE_CHARTS = [CHART_ELEVATION_VS_DISTANCE]

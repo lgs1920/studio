@@ -1,18 +1,20 @@
-import { AppUtils }                from '@Utils/AppUtils'
-import { MouseUtils }              from '@Utils/cesium/MouseUtils'
-import { CSSUtils }                from '@Utils/CSSUtils'
+import { AppUtils }   from '@Utils/AppUtils'
+import { MouseUtils } from '@Utils/cesium/MouseUtils'
+import { CSSUtils }   from '@Utils/CSSUtils'
+import { UIUtils }    from '@Utils/UIUtils'
+
 import { proxy }                   from 'valtio'
 import { UnitUtils }               from '../Utils/UnitUtils'
 import { LocalDB }                 from './db/LocalDB'
 import { Layer }                   from './Layer.js'
 import { MouseEventHandler }       from './MouseEventHandler'
-import { SettingsSection }         from './settings/SettingsSection.js'
 import { main }                    from './stores/main'
 import { theJourneyEditor }        from './stores/theJourneyEditor'
 import { Camera as CameraManager } from './ui/Camera'
 import { JourneyEditor }           from './ui/JourneyEditor'
 import { Profiler }                from './ui/Profiler'
 import { Wanderer }                from './ui/Wanderer'
+
 //import config from 'dotenv'
 
 export class LGS1920Context {
@@ -58,6 +60,7 @@ export class LGS1920Context {
             ui: {
                 css: CSSUtils,
                 mouse: MouseUtils,
+                ui:UIUtils
             },
             convert: UnitUtils.convert,
         }
@@ -226,7 +229,9 @@ export class LGS1920Context {
 
     initManagers = () => {
         __.ui.profiler = new Profiler(this)
-        __.ui.journeyEditor = new JourneyEditor()
+        __.ui.editor = {
+            journey:new JourneyEditor()
+        }
         __.ui.wanderer = new Wanderer()
         __.ui.camera = new CameraManager()
     }
@@ -247,3 +252,7 @@ export const CURRENT_POI = 'poi'
 export const DRAW_THEN_SAVE = 1
 export const DRAW_WITHOUT_SAVE = 2
 export const JUST_SAVE = 3
+
+export const COLOR_SWATCHES_NONE = 'none'
+export const COLOR_SWATCHES_SERIE = 'serie'
+export const COLOR_SWATCHES_RANDOM = 'random'

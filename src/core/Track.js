@@ -35,7 +35,7 @@ export class Track extends MapElement {
         this.parent = options.parent
         this.slug = options.slug
 
-        this.color = options.color ?? lgs.configuration.journey.color
+        this.color = options.color ??__.ui.editor.journey.newColor()
         this.thickness = options.thickness ?? lgs.configuration.journey.thickness
         this.visible = options.visible ?? true
         this.description = options.description ?? undefined

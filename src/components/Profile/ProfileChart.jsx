@@ -1,112 +1,234 @@
 import './style.css'
-import { useEffect }                   from 'react'
-import { default as Chart }            from 'react-apexcharts'
-import { useSnapshot }                 from 'valtio'
-import { CHART_ELEVATION_VS_DISTANCE } from '../../core/ui/Profiler'
-import { ProfileTimeAxis } from './ProfileTimeAxis'
+import * as echarts                                         from 'echarts'
+import ReactECharts                                         from 'echarts-for-react'
+import { useEffect, useRef }                                from 'react'
+import { useSnapshot }                                                             from 'valtio'
+import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION, ELEVATION_VS_DISTANCE } from '../../core/ui/Profiler'
+
+/**
+ *
+ * @param props
+ *
+ * props
+ * @return {JSX.Element}
+ * @constructor
+ */
+export const ProfileChart = (props) => {
+
+    const getMax = (name) => {
+        const index = props.data.dimensions.indexOf(name)
+        return props.data.dataset.map(dataset => {
+            return Math.max(...dataset.source.map(row => row[index]))
+        })
+    }
+    const mainStore = lgs.mainProxy
+    const mainSnap = useSnapshot(mainStore)
+    const instance = useRef(null)
 
 
-export const ProfileChart = function ProfileChart(props) {
+    /**
+     * Dans le dataset, rajouter time si existe t dans ce cas créer un second axis
+     * TODO : rajouter toutes les info nécessaires au tooltip dans un objet point
+     * */
 
-    const options = {
-        chart: {
-            id: CHART_ELEVATION_VS_DISTANCE,
-            toolbar: {
-                show: false,
-            }, offsetX: 0, offsetY: 0, parentHeightOffset: 0, zoom: {
-                type: 'x', enabled: true, autoScaleYaxis: true,
-            }, events: {
-                beforeMount: function (chartContext, config) {
-                    __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, ApexCharts.getChartByID(CHART_ELEVATION_VS_DISTANCE))
-                },
+    /**
+     *
+     * @param params name     : title
+     *               dataset  : datasetId
+     *               color    : color in hex format
+     */
+    const buildSerie = (params) => {
+        const rgbColor = __.ui.ui.hexToRGBA(params.color, 'rgb')
+        return {
+            name:       params.name,
+            type:       'line',
+            datasetId:  params.dataset,
+            smooth:     true,
+            encode:     {
+                x: DISTANCE,
+                y: ELEVATION,
             },
+            showSymbol: false,
+            symbolSize: lgs.configuration.profile.marker.chart.size         // we need it fo tooltip
+                            + lgs.configuration.profile.marker.chart.border.width,
 
-        }, fill: {
-            type: 'gradient', gradient: {
-                shadeIntensity: 1, opacityFrom: 0.5, opacityTo: 0.9, stops: [0, 100],
-            },
-        }, xaxis: {
-            type: 'numeric', title: {
-                text: props.options.xaxis.title.text ?? '',
-            }, tooltip: {
-                enabled: false,
-            },
-            //forceNiceScale: true,
-        }, yaxis: {
-            type: 'numeric',
-            title: {
-                text: props.options.yaxis.title.text ?? '',
-            },
-            // tickAmount: props.options.yaxis.tickAmount,
-            decimalsInFloat: props.options.yaxis.title.decimalsInFloat ?? 0,
-            forceNiceScale: true,
-        }, dataLabels: {
-            enabled: false,
-        }, tooltip: {
-            custom: props.options.tooltip.custom,
-            followCursor: true,
-        }, grid: {
-            show: true,
-            xaxis: {
-                lines: {
-                    show: true,
-                },
-            },
-            yaxis: {
-                lines: {
-                    show: true,
-                },
-            },
-        }, legend: {
-            markers: {
-                radius: 3,
-                //onClick: __.ui.profilerupdateTrackVisibility,
-            },
-            itemMargin: {
-                horizontal: 5, vertical: 0,
-            },
-            onItemClick: {
-                toggleDataSeries: true,
+            emphasis:  {disabled: true},
+            itemStyle: {
+                color:       rgbColor,
+                borderColor: lgs.configuration.profile.marker.chart.border.color,
+                borderWidth: lgs.configuration.profile.marker.chart.border.width,
+                opacity:     1,
             },
 
+            lineStyle: {
+                color:   rgbColor,
+                width:   lgs.configuration.profile.line.width,
+                opacity: 1,
+            },
+
+            areaStyle:  {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    {offset: 0.5, color: __.ui.ui.RGB2RGBA(rgbColor, 0.5)},
+                    {offset: 1, color: __.ui.ui.RGB2RGBA(rgbColor, 0.0)},
+                ]),
+            },
+            dimensions: params.dimensions,
+        }
+    }
+
+    const gutter = 15 // lgs-gutter 1rem
+
+    const series = []
+    props.data.dataset.forEach((dataset, index) => {
+        series.push(buildSerie({
+                                   name:       props.data.options[index].name,
+                                   dataset:    props.data.options[index].dataset,
+                                   color:      props.data.options[index].color,
+                                   dimensions: props.data.dimensions,
+                               }),
+        )
+    })
+
+    // We need distance information for each serie
+    const distances = props.data.dataset.map(dataset => {
+        return {
+            start: dataset.source[0][0],
+            end:   dataset.source[dataset.source.length - 1][0],
+        }
+    })
+    // We need color for each serie
+    const colors = props.data.options.map(option => {
+        return option.color
+    })
+
+
+    const option = {
+        toolbox: {
+            show: false,
         },
-        // title: {
-        //     text: lgs?.theJourney?.title ?? '',
-        //     align: 'left',
-        //     margin: 0,
-        //     style: {
-        //         fontSize: '14px', //__.ui.css.getCSSVariable('--lgs-font-size'),
-        //         fontWeight: 700,
-        //         fontFamily: __.ui.css.getCSSVariable('--lgs-font-family'),
-        //     },
-        // },
-        plotOptions: {
-            area: {
-                fillTo: 'origin',
-            },
+        title:   {
+            show: false,
         },
+        tooltip: {
+            trigger:            'axis',
+            axisPointer:        {
+                type: 'line',
+            },
+            formatter:          (params) => {
+                // We need to get the last point to compute remaining distance
+                const data = params[0].data
+                return __.ui.profiler.tooltipElevationVsDistance(
+                    [
+                        ...[
+                            params[0].seriesIndex,
+                            params[0].dataIndex,
+                        ],
+                        ...params[0].data,
+                        ...[distances],
+                        ...[colors],
+                    ],
+                )
+            },
+            padding:            0,
+            enterable:          true,
+            animationThreshold: 0,
+        },
+        legend:  {
+            orient:       'horizontal',
+            bottom:       0,
+            data:      props.legends,
+            selectedMode: false // lgs.theJourney.hasOneTrack() ? false : 'multiple',
+        },
+        grid:    {
+            top:          0.5 * gutter,
+            left:         2 * gutter,
+            right:        gutter,
+            bottom:       2 * gutter,
+            containLabel: true,
+        },
+        xAxis:   [
+            {
+                type:          'value',
+                name:          props.data.axisNames.x ?? '',
+                nameTextStyle: {
+                    align:         'right',
+                    verticalAlign: 'top',
+                    fontWeight:    'bold',
+                    padding:       [1.5 * gutter, 0, 0, 0],
+                },
+                axisLabel:     {
+                    alignMaxLabel: 'right', // hide the last....
+                    showMaxLabel:false
+                },
+                axisLine:      {onZero: false},
+                nameGap:       0,
+                minInterval:5,
+                max:           'dataMax',// value=>value.max
+            },
+        ],
+        yAxis:   [
+            {
+                type:          'value',
+                name:          props.data.axisNames.y ?? '',
+                nameRotate:    90,
+                nameLocation:  'end',
+                nameTextStyle: {
+                    align:         'right',
+                    verticalAlign: 'bottom',
+                    fontWeight:    'bold',
+                    padding:       [0, 0, 3.5 * gutter, 0],
+                },
+                minInterval:5,
+                min: (value) => Math.floor(value.min / 10) * 10,
+                splitNumber:   7, //TODO
+                nameGap:       0,
+            },
+        ],
+        dataset: props.data.dataset,
+        series:  series,
+        dataZoom: [{type: 'inside'}]
 
     }
 
-    const mainStore = lgs.mainProxy
-    const mainSnap = useSnapshot(mainStore)
 
     useEffect(() => {
-        // Force chart to re render
-        window.dispatchEvent(new Event('resize'))
+        const chart = instance.current.getEchartsInstance()
+        __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+        chart.on('dataZoom', function () {
+            // Zoom state activated
+            mainStore.components.profile.zoom=true
+        });
     })
 
+    const resize = () => {
+        if (mainSnap.components.profile.show) {
+            const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
+            const container = document.getElementById(`profile-${CHART_ELEVATION_VS_DISTANCE}`)
+            const dimensions = container.getBoundingClientRect()
+            if (dimensions.width > 0) {
+                mainStore.components.profile.width = dimensions.width
+                mainStore.components.profile.height = dimensions.height
+            }
+        }
+    }
+
+    window.addEventListener('resize', resize)
+
+    const dispatchEvents = {
+        'rendered': (time,chart)=> {
+            resize()
+        },
+    }
+
     return (<>
-            {props.series &&
-                <>
-                    {/* <ProfileTimeAxis/> */}
-                <Chart options={options}
-                       series={props.series}
-                       height={props.height}
-                       width={'100%'}
-                       type={'area'}
+            {props.data &&
+
+                <ReactECharts option={option}
+                              style={{width: mainSnap.components.profile.width, height: mainSnap.components.profile.height}}
+                              opts={{renderer: 'svg'}}
+                              ref={instance}
+                              onEvents = {dispatchEvents}
                 />
-                </>
             }
         </>
     )

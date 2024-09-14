@@ -1,6 +1,7 @@
 import { default as html2canvas } from 'html2canvas'
 import { jsPDF }                  from 'jspdf'
 import { DateTime }               from 'luxon'
+import { CHART_ELEVATION_VS_DISTANCE } from './Profiler'
 // dummy...
 let dummy = jsPDF
 dummy = html2canvas
@@ -57,15 +58,34 @@ export class Export {
         if (typeof element === 'string') {
             element = document.querySelector(element)
         }
-        element.classList.toggle('snapshot-in-progress')
+        element.parentElement.classList.toggle('snapshot-in-progress')
         await html2canvas(element, {
             dpi: 600,
         }).then((canvas) => {
-            element.classList.toggle('snapshot-in-progress')
             const orientation = canvas.width >= canvas.height ? 'l' : 'p'
             canvas.toBlob((blob) => Export.toFile(blob, `${file}.png`))
+            element.parentElement.classList.toggle('snapshot-in-progress')
+
         })
+
     }
+
+    /**
+     * Export to SVG
+     *
+     * @param svg  {{dom:{Element},content:{string}}} svg dom and content
+     * @param file
+     */
+    static async toSVG(svg, file) {
+        svg.dom.parentElement.classList.toggle('snapshot-in-progress')
+        await fetch(svg.content)
+            .then(response => response.text())
+            .then(content => {
+                Export.toFile(content, `${file}.svg`, 'image/svg+xml')
+                svg.dom.parentElement.classList.toggle('snapshot-in-progress')
+            });
+    }
+
     /**
      * Copy a string to the clipboard
      *
@@ -114,11 +134,12 @@ export class Export {
      *
      * @param content
      * @param file
+     * @param type
      */
 
-    static toFile = async (content = '', file = 'sample.txt') => {
+    static toFile = async (content = '', file = 'sample.txt', type = 'text/Plain') => {
         const link = document.createElement('a')
-        const blob = new Blob([content], {type: 'text/plain'})
+        const blob = new Blob([content], {type: type})
         link.href = URL.createObjectURL(blob)
         link.download = file
         link.click()

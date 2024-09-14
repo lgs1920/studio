@@ -15,8 +15,14 @@ export class WanderUtils {
                     // args[0] = index,
                     // args[1] = {longitude,latitude,height}
 
-                     [Wanderer.START_TICK_EVENT, () => {}],
-                    // [Wanderer.PAUSE_TICK_EVENT, () => {}],
+                     [Wanderer.START_TICK_EVENT, () => {
+
+                     }],
+                     [Wanderer.PAUSE_TICK_EVENT, (args) => {
+                         const [serie,index,point] =args
+                         __.ui.profiler.updateChartMarker(serie,index)
+
+                     }],
                     [Wanderer.UPDATE_TICK_EVENT, async (args) => {
                        const [serie,index,point] =args
                         lgs.theTrack = Track.deserialize({object: Track.unproxify(Array.from(lgs.theJourney.tracks.values())[serie])}) // TODO Ameliorer
