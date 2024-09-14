@@ -162,6 +162,7 @@ export const ProfileChart = (props) => {
                 },
                 axisLine:      {onZero: false},
                 nameGap:       0,
+                minInterval:5,
                 max:           'dataMax',// value=>value.max
             },
         ],
@@ -177,13 +178,15 @@ export const ProfileChart = (props) => {
                     fontWeight:    'bold',
                     padding:       [0, 0, 3.5 * gutter, 0],
                 },
-                axisLine:      {onZero: false},
+                minInterval:5,
+                min: (value) => Math.floor(value.min / 10) * 10,
                 splitNumber:   7, //TODO
                 nameGap:       0,
             },
         ],
         dataset: props.data.dataset,
         series:  series,
+        dataZoom: [{type: 'inside'}]
 
     }
 
@@ -191,6 +194,10 @@ export const ProfileChart = (props) => {
     useEffect(() => {
         const chart = instance.current.getEchartsInstance()
         __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+        chart.on('dataZoom', function () {
+            // Zoom state activated
+            mainStore.components.profile.zoom=true
+        });
     })
 
     const resize = () => {
@@ -208,8 +215,9 @@ export const ProfileChart = (props) => {
     window.addEventListener('resize', resize)
 
     const dispatchEvents = {
-     //  'legendselectchanged': __.ui.profiler.updateTrackVisibility,
-        'rendered': ()=> {resize()},
+        'rendered': (time,chart)=> {
+            resize()
+        },
     }
 
     return (<>
