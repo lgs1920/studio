@@ -290,7 +290,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
         if (lgs.configuration.profile.marker.track.show) {
            lgs.theTrack?.marker.draw()
         }
-        this.resetChart()
+        this.resetZoom()
     }
 
     /**
