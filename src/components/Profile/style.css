@@ -68,6 +68,9 @@
 .lgs-ui-toolbar.lgs-ui-dropdown-toolbar {
     display: none
 }
+.lgs-ui-toolbar sl-divider +sl-divider {
+    display:none
+}
 
 #elevation-distance-tooltip {
     font-size: var(--lgs-font-size-s);

@@ -4,7 +4,7 @@ import * as echarts                                      from 'echarts'
 
 import { DateTime } from 'luxon'
 import { sprintf }  from 'sprintf-js'
-import { subscribe }                       from 'valtio'
+import { subscribe,proxy }                       from 'valtio'
 import { Utils }    from '../../components/TracksEditor/Utils.js'
 import { FA2SL }                           from '../../Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS } from '../../Utils/UnitUtils'
@@ -317,8 +317,9 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
         }
     }
 
-    resetChart = () => {
-       // window.dispatchEvent(new Event('resize'))  //TODO reset zoom
+    resetZoom = () => {
+        const proxy=lgs.mainProxy
+        proxy.components.profile.zoom=false
     }
 
     /**

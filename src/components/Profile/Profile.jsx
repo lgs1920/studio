@@ -43,9 +43,6 @@ export const Profile = function Profile() {
         }
     }
 
-    const resetChart = () => {
-        __.ui.profiler.resetChart()
-    }
     const toggleMarker = () => {
         lgs.theTrack.marker.toggleVisibility()
     }
@@ -75,19 +72,23 @@ export const Profile = function Profile() {
     }
 
     const ProfileToolbar = (props) => {
-        return (<div className={'profile-additional'}>
-            <SlTooltip hoist placement={props.placement} content="Hide Marker">
-                <SlButton id={'toggle-marker-visibility'} className={'square-icon'} onClick={toggleMarker}>
-                    <SlIcon  slot="prefix" library="fa" name={FA2SL.set(faSolidCircleSlash)}/>
-                </SlButton>
-            </SlTooltip>
-
-            <SlTooltip hoist placement={props.placement} content="Reset Chart">
-                <SlButton id={'open-the-profile-panel'} className={'square-icon'} onClick={resetChart}>
+        return (
+            <>
+            {        mainSnap.components.profile.zoom &&
+            <div className={'profile-additional'}>
+            {/* <SlTooltip hoist placement={props.placement} content="Hide Marker"> */}
+            {/*     <SlButton id={'toggle-marker-visibility'} className={'square-icon'} onClick={toggleMarker}> */}
+            {/*         <SlIcon  slot="prefix" library="fa" name={FA2SL.set(faSolidCircleSlash)}/> */}
+            {/*     </SlButton> */}
+            {/* </SlTooltip> */}
+            <SlTooltip hoist placement={props.placement} content="Reset zoom">
+                <SlButton id={'open-the-profile-panel'} className={'square-icon'} onClick={__.ui.profiler.resetZoom}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRegularArrowsRotateReverseMagnifyingGlass)}/>
                 </SlButton>
             </SlTooltip>
-        </div>)
+        </div>
+            }
+            </>)
     }
 
     __.ui.profiler.setVisibility()
