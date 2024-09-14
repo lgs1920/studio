@@ -92,7 +92,7 @@ export const Profile = function Profile() {
 
     __.ui.profiler.setVisibility()
 
-    //prepare datafromtrckto profile
+    //prepare data from track to profile
     const data = __.ui.profiler.prepareData()
 
     const resizeProfile=event => {
