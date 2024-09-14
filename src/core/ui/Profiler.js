@@ -239,7 +239,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
     }
 
     /**
-     * Update Titles of Profile
+     * Update Titles  and legends of Profile
      */
     updateTitle = () => {
         const options = {legend:{data:[]},series: []}
