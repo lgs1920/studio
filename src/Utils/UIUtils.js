@@ -22,29 +22,30 @@ export class UIUtils {
      * @return {string}       rgb() or rgba()
      */
     static hexToRGBA=(hex, format = 'rgba')=> {
-        hex = hex.replace(/^#/, '');
+        hex = hex.replace(/^#/, '0x')
 
         // Transform #RGB to #RRGGBB orRRRRRGBFF
-        if (hex.length === 3) {
+        if (hex.length === 5) {
             hex = hex.split('').map(char => char + char).join('');
             if (format === 'rgba') {
                 hex +='FF'
             }
         }
 
+        const alpha = hex.length === 10
+
         // Extract colors
-        let bigint = parseInt(hex, 16);
-        let r = (bigint >> 16) & 255;
-        let g = (bigint >> 8) & 255;
-        let b = bigint & 255;
+        const r = hex >> (alpha ? 24 : 16) & 0xff
+        const g = hex >> (alpha ? 16 : 8 )& 0xff
+        const b = hex >> (alpha ? 8 : 0) & 0xff
 
         if (format === 'rgb') {
-            return `rgb(${r},${g},${b})`;
+            return `rgb(${r},${g},${b})`
         }
         // and alpha,if it exists
-        if (hex.length === 8) {
-            let a = (bigint & 255) / 255;
-            return `rgba(${r},${g},${b},${a})`;
+        if (alpha) {
+            const a = (hex & 0xff) / 0xff
+            return `rgba(${r},${g},${b},${a})`
         }
     }
 
