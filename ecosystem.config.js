@@ -10,8 +10,8 @@ module.exports = {
       "user" : "p5077",
       "host" : '91.207.254.129',
       "ref"  : "origin/main",
-      "repo" : "git@github.com:Username/repository.git",
-      "path" : "~/lgs1920/studio",
+      "repo" : "git@github.com:lgs1920/studio.git",
+      "path" : "/home/lgs1920/studio",
       "post-deploy" : "bun install"
     }
   }
