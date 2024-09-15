@@ -1,5 +1,6 @@
 import './style.css'
-import * as echarts                                         from 'echarts'
+import * as echarts from 'echarts/core';
+
 import ReactECharts                                         from 'echarts-for-react'
 import { useEffect, useRef }                                from 'react'
 import { useSnapshot }                                                             from 'valtio'
