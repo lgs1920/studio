@@ -1,9 +1,4 @@
 module.exports = {
-  apps : [{
-    name   : "app1",
-    script : "./app.js"
-  }],
-
   // Deployment Configuration
   deploy : {
     production : {
@@ -12,7 +7,7 @@ module.exports = {
       "ref"  : "origin/main",
       "repo" : "git@github.com:lgs1920/studio.git",
       "path" : "/home/www/lgs1920/studio",
-      "post-deploy" : "bun install"
+      "post-deploy" : "bun run build"
     }
   }
 }
