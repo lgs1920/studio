@@ -2,7 +2,7 @@
   "name": "lgs1920",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "dev": "bunx --bun vite --mode development",
     "build": "NODE_ENV=production bunx --bun vite build --mode production",
