@@ -7,7 +7,7 @@ module.exports = {
       "ref"  : "origin/main",
       "repo" : "git@github.com:lgs1920/studio.git",
       "path" : "/home/www/lgs1920/studio",
-      "post-deploy" : "bun run build"
+      "post-deploy" : "/home/.bun/bin/bun run build"
     }
   }
 }
