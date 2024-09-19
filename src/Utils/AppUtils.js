@@ -107,6 +107,7 @@ export class AppUtils {
         lgs.configuration =  await fetch(CONFIGURATION).then(
             res => res.json()
         )
+        lgs.platform = process.env.NODE_ENV
 
         lgs.setDefaultConfiguration()
 
@@ -116,6 +117,20 @@ export class AppUtils {
         // Backend  @vite
         lgs.BACKEND_API = `${import.meta.env.VITE_PROXY_BACKEND}${import.meta.env.VITE_BACKEND_API}/`
 
+        // Create an Axios instance
+        lgs.axios = axios.create();
+
+        // Add a request interceptor
+        lgs.axios.interceptors.request.use(config => {
+            // Add the platform information to the headers
+            config.headers['studio-platform'] = lgs.platform;
+            return config;
+        }, error => {
+            // Do something with request error
+            return Promise.reject(error);
+        });
+
+
         // Ping server
         const server = await __.app.pingBackend()
 
@@ -123,10 +138,12 @@ export class AppUtils {
 
             try {
                 // Versions
-                lgs.versions = await fetch(`${lgs.BACKEND_API}versions`)
-                    .then(res => res.json())
-                    .catch(error => console.error(error),
-                    )
+                try {
+                    const response = await lgs.axios.get(`${lgs.BACKEND_API}versions`);
+                    lgs.versions = response.data;
+                } catch (error) {
+                    console.error(error);
+                }
 
                 lgs.events = new EventEmitter()
 
@@ -204,7 +221,7 @@ export class AppUtils {
      * @return {alive:boolean}
      */
     static pingBackend = async () => {
-        return axios({
+        return lgs.axios({
                          method:  'get',
                          url:     `${lgs.BACKEND_API}ping`,
                          headers: {
@@ -236,7 +253,7 @@ export class AppUtils {
     static startBackend = async () => {
         if (import.meta.env.PROD) {
             // Only on production
-            return axios({
+            return lgs.axios({
                              method: 'get',
                              url:    `start-backend.php`,
                          })
