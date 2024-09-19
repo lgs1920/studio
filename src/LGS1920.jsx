@@ -96,7 +96,7 @@ export function LGS1920() {
             text: 'We\'re ready to assist you !',
         })
 
-            console.log('LGS1920 has been loaded and is ready !')
+            console.log(`LGS1920 has been loaded and is ready on ${lgs.platform} platform !`)
         }
         else {
             // Init was wrong, let'stop here
