@@ -5,7 +5,6 @@ import cesium from 'vite-plugin-cesium';
 import data from './public/version.json' with { type: "json" };
 
 const version =data.studio
-console.log(`Building Studio ${version}...`)
 
 // https://vitejs.dev/config/
 export default defineConfig({
