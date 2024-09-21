@@ -5,7 +5,7 @@
  * e.g. the host on which the J2EE APIs we'll be proxying are running
  * */
 
-$config = json_decode(file_get_contents('./config.json'), true);
+$config = json_decode(file_get_contents('./servers.json'), true);
 $SETTING_ALLOWED_HOSTS = array(
     $config['backend']['domain'],
     '127.0.0.1',
