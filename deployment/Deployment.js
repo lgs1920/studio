@@ -289,10 +289,22 @@ export class Deployment {
         this.configuration.backend[this.platform].pm2.command = `cd ${this.remotePath}/${this.current} && ${start}  &&  ${this.pm2.bin} save`
 
         //configure servers home
-        this.configuration.backend[this.platform].home=`${this.configuration.remote[this.platforms.production].path}/${this.platform}/backend/${this.configuration.remote.current}`
-        this.configuration.studio[this.platform].home=`${this.configuration.remote[this.platforms.production].path}/${this.platform}/studio/${this.configuration.remote.current}`
+        this.configuration.backend[this.platform].home=path.join(
+            this.configuration.remote[this.platforms.production].path,
+            this.platform,
+            'backend',
+            this.configuration.remote.current
+        )
+
+        this.configuration.studio[this.platform].home=path.join(
+            this.configuration.remote[this.platforms.production].path,
+            this.platform,
+            'studio',
+            this.configuration.remote.current
+        )
+
         // We save servers configuration in servers.yml
-        fs.writeFileSync(`${this.localDistPath}/servers.yml`, yaml.stringify({
+        fs.writeFileSync(`${this.localDistPath}/servers.json`, JSON.stringify({
                                                                                  platform:this.platform,
                                                                                  backend: this.configuration.backend[this.platform],
                                                                                  studio:  this.configuration.studio[this.platform],

@@ -1,0 +1,15 @@
+{
+  "platform": "development",
+  "backend": {
+    "name": "LGS1920 Development Backend server",
+    "domain": "localhost",
+    "protocol": "http",
+    "port": 3333,
+    "proxy": null
+  },
+  "studio": {
+    "name": "LGS1920 Development Studio",
+    "domain": "localhost",
+    "protocol": "http"
+  }
+}
