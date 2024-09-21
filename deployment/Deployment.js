@@ -199,12 +199,12 @@ export class Deployment {
             let buildCommand
             switch (this.product) {
                 case 'studio': {
-                    buildCommand = `bun run build-${this.platform}`
+                    buildCommand = `bun run build`
                     break
                 }
                 case 'backend': {
                     const minify = this.platform === 'production' ? '-m' : ''
-                    buildCommand = `bun build.js ${minify} -v=${this.version} -e=${this.platform}  `
+                    buildCommand = `bun build.js ${minify} -v=${this.version}`
                     break
                 }
             }
@@ -288,9 +288,12 @@ export class Deployment {
         const start = `${this.pm2.bin} start  --cwd ${this.remotePath}/${this.current} ecosystem.config.js`
         this.configuration.backend[this.platform].pm2.command = `cd ${this.remotePath}/${this.current} && ${start}  &&  ${this.pm2.bin} save`
 
-        // We save server configuration in servers.yml
+        //configure servers home
+        this.configuration.backend[this.platform].home=`${this.configuration.remote[this.platforms.production].path}/${this.platform}/backend/${this.configuration.remote.current}`
+        this.configuration.studio[this.platform].home=`${this.configuration.remote[this.platforms.production].path}/${this.platform}/studio/${this.configuration.remote.current}`
+        // We save servers configuration in servers.yml
         fs.writeFileSync(`${this.localDistPath}/servers.yml`, yaml.stringify({
-            platform:this.platform,
+                                                                                 platform:this.platform,
                                                                                  backend: this.configuration.backend[this.platform],
                                                                                  studio:  this.configuration.studio[this.platform],
                                                                              }), 'utf8')
