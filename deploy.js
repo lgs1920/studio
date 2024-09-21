@@ -10,8 +10,8 @@
  * Author : Christian Denat                                                                                           *
  * email: christian.denat@orange.fr                                                                                   *
  *                                                                                                                    *
- * Created on: 2024-09-20                                                                                             *
- * Last modified: 2024-09-20                                                                                          *
+ * Created on: 2024-09-21                                                                                             *
+ * Last modified: 2024-09-21                                                                                          *
  *                                                                                                                    *
  *                                                                                                                    *
  * Copyright © 2024 LGS1920                                                                                           *
@@ -52,10 +52,9 @@ parser.add_argument('--test', '-t', {
     help:   'Deploy to test platform',
 })
 const args = parser.parse_args()
-
 new Deployment(
     {
-        local:   path.dirname(__dirname),
+        local:   path.dirname(process.cwd()),
         platform:args.prod ? platforms.production : args.staging ? platforms.staging : platforms.test,
-        product:import.meta.env.LGS1920_PRODUCT
+        product:path.basename(process.cwd())
     })
