@@ -4,30 +4,30 @@ backend:
   #
   production:
     name: LGS1920 Backend server
+    shortname: Backend
     domain: api.lgs1920.fr
     protocol: http
     port: 3333
-    proxy: /proxy.php?csurl=
     pm2:
       bin: /home/.bun/bin/pm2
       config: backend-production.config.js
 
   staging:
     name: LGS1920 Staging Backend server
+    shortname: Backend
     domain: api.lgs1920.fr
     protocol: http
     port: 3334
-    proxy: /proxy.php?csurl=
     pm2:
       bin: /home/.bun/bin/pm2
       config: backend-staging.config.js
 
   test:
     name: LGS1920 Staging Backend server
+    shortname: Backend
     domain: api.lgs1920.fr
     protocol: http
     port: 3335
-    proxy: /proxy.php?csurl=
     pm2:
       bin: /home/.bun/bin/pm2
       config: backend-test.config.js
@@ -38,18 +38,24 @@ studio:
   #
   production:
     name: LGS1920 Studio
+    shortname: Studio
     domain: studio.lgs1920.fr
     protocol: https
+    proxy: /proxy.php?csurl=
 
   staging:
     name: LGS1920 Staging Studio
+    shortname: Studio
     domain: staging.lgs1920.fr
     protocol: https
+    proxy: /proxy.php?csurl=
 
   test:
     name:  LGS1920 Test Studio
+    shortname: Studio
     domain: test.lgs1920.fr
     protocol: https
+    proxy: /proxy.php?csurl=
 
 local:
    dist: dist # where we put builds during deployment phase

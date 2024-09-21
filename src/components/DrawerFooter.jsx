@@ -9,8 +9,8 @@ export const DrawerFooter = function DrawerFooter() {
 
     return (
         <div id="credits-pane-footer" className="drawer-pane-footer" slot={'footer'}>
-            <div><strong>{lgs.configuration.studio.name}</strong><span>{lgs.versions.studio}</span></div>
-            <div><strong>{lgs.configuration.backend.name}</strong><span>{lgs.versions.backend}</span></div>
+            <div><strong>{lgs.servers.studio.shortname}</strong><span>{lgs.versions.studio}</span></div>
+            <div><strong>{lgs.servers.backend.shortname}</strong><span>{lgs.versions.backend}</span></div>
             <div><strong>{lgs.configuration.api.name}</strong><span>{lgs.versions.api}</span></div>
             <div className="drawer-footer-url">
                     <SlIconButton library="fa" name={FA2SL.set(faGlobePointer)}
