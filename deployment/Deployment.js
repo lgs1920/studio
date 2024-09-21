@@ -285,8 +285,8 @@ export class Deployment {
         }
 
         // Build the post deployment launch command
-        const start = `${this.pm2.bin} start  --cwd ${this.remotePath}/${this.current} ecosystem.config.js`
-        this.configuration.backend[this.platform].pm2.command = `cd ${this.remotePath}/${this.current} && ${start}  &&  ${this.pm2.bin} save`
+        const where = path.join(this.configuration.remote[this.platform].path,this.platform,'backend',this.current)
+        this.configuration.backend[this.platform].pm2.command = `cd ${where} && ${this.pm2.bin} start  --cwd ${where} ecosystem.config.js  &&  ${this.pm2.bin} save`
 
         //configure servers home
         this.configuration.backend[this.platform].home=path.join(
