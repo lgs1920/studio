@@ -1,0 +1,85 @@
+backend:
+  #
+  # Backend deployment configuration
+  #
+  production:
+    name: LGS1920 Backend server
+    domain: api.lgs1920.fr
+    protocol: http
+    port: 3333
+    proxy: /proxy.php?csurl=
+    pm2:
+      bin: /home/.bun/bin/pm2
+      config: backend-production.config.js
+
+  staging:
+    name: LGS1920 Staging Backend server
+    domain: api.lgs1920.fr
+    protocol: http
+    port: 3334
+    proxy: /proxy.php?csurl=
+    pm2:
+      bin: /home/.bun/bin/pm2
+      config: backend-staging.config.js
+
+  test:
+    name: LGS1920 Staging Backend server
+    domain: api.lgs1920.fr
+    protocol: http
+    port: 3335
+    proxy: /proxy.php?csurl=
+    pm2:
+      bin: /home/.bun/bin/pm2
+      config: backend-test.config.js
+
+studio:
+  #
+  # Studio deployment configuration
+  #
+  production:
+    name: LGS1920 Studio
+    domain: studio.lgs1920.fr
+    protocol: https
+
+  staging:
+    name: LGS1920 Staging Studio
+    domain: staging.lgs1920.fr
+    protocol: https
+
+  test:
+    name:  LGS1920 Test Studio
+    domain: test.lgs1920.fr
+    protocol: https
+
+local:
+   dist: dist # where we put builds during deployment phase
+
+remote:
+  #
+  # Contains the servers and directories information where we deploy
+  #
+  # Note that credentials are defined as secrets :
+  #      - LGS1920_<CREDENTIAL>_<PLATFORM>
+  #        (all in uppercase)
+  #
+  releases: releases   # where are deployed the releases
+  current: current     # the servers are pointing to this link
+
+  # backend and studio are always deployed on the same server
+  # so we need only one set of information per server
+  production:
+    user: p5077
+    host: p5077.webmo.fr
+    path: /home/www/lgs1920
+
+  staging:
+    user: p5077
+    host: p5077.webmo.fr
+    path: /home/www/lgs1920
+
+  test:
+    user: p5077
+    host: p5077.webmo.fr
+    path: /home/www/lgs1920
+
+
