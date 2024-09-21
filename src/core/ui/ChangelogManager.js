@@ -1,4 +1,3 @@
-import axios from 'axios'
 
 export class ChangelogManager {
 
@@ -15,7 +14,7 @@ export class ChangelogManager {
      * @return {{files:[],last:{}}}
      */
     list = async () => {
-      return lgs.axios.get(`${lgs.BACKEND_API}changelog/list?extension=md`)
+      return lgs.axios.get(`${[lgs.BACKEND_API,'changelog','list'].join('/')}?extension=md`)
             .then(function (response) {
                 return response.data
             })
@@ -40,7 +39,7 @@ export class ChangelogManager {
      * Read  changelog file
      */
     read =async(file)=> {
-        return lgs.axios.get(`${lgs.BACKEND_API}changelog/read/${file}`)
+        return lgs.axios.get([lgs.BACKEND_API,'changelog','read',file].join('/'))
             .then(function (response) {
                 return response.data.content
             })
