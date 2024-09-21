@@ -5,7 +5,8 @@ import { ElevationServer }  from '../core/Elevation/ElevationServer'
 import { ChangelogManager } from '../core/ui/ChangelogManager'
 import { FA2SL }   from './FA2SL'
 
-export const CONFIGURATION ='/config.json'
+export const CONFIGURATION ='config.json'
+export const SERVERS= 'servers.json'
 
 export class AppUtils {
     /**
@@ -107,29 +108,21 @@ export class AppUtils {
         lgs.configuration =  await fetch(CONFIGURATION).then(
             res => res.json()
         )
-        lgs.platform = process.env.NODE_ENV
+        lgs.servers=await fetch(SERVERS).then(
+            res => res.json()
+        )
+        lgs.platform = lgs.servers.platform
 
         lgs.setDefaultConfiguration()
 
         // Register Font Awesome icons in ShoeLace
         FA2SL.useFontAwesomeInShoelace('fa')
 
-        // Backend  @vite
-        lgs.BACKEND_API = `${import.meta.env.VITE_PROXY_BACKEND}${import.meta.env.VITE_BACKEND_API}/`
+        // Backend
+        lgs.BACKEND_API= `${lgs.servers.studio.proxy}${lgs.servers.backend.protocol}://${lgs.servers.backend.domain}:${lgs.servers.backend.port}`
 
         // Create an Axios instance
         lgs.axios = axios.create();
-
-        // Add a request interceptor
-        lgs.axios.interceptors.request.use(config => {
-            // Add the platform information to the headers
-            config.headers['studio-platform'] = lgs.platform;
-            return config;
-        }, error => {
-            // Do something with request error
-            return Promise.reject(error);
-        });
-
 
         // Ping server
         const server = await __.app.pingBackend()
@@ -139,7 +132,7 @@ export class AppUtils {
             try {
                 // Versions
                 try {
-                    const response = await lgs.axios.get(`${lgs.BACKEND_API}versions`);
+                    const response = await lgs.axios.get([lgs.BACKEND_API,'versions'].join('/'));
                     lgs.versions = response.data;
                 } catch (error) {
                     console.error(error);
@@ -223,7 +216,7 @@ export class AppUtils {
     static pingBackend = async () => {
         return lgs.axios({
                          method:  'get',
-                         url:     `${lgs.BACKEND_API}ping`,
+                         url:     [lgs.BACKEND_API,'ping'].join('/'),
                          headers: {
                              'content-type': 'application/json',
                              'Accept':       'application/json',
@@ -251,11 +244,11 @@ export class AppUtils {
      * @return {alive:boolean}
      */
     static startBackend = async () => {
-        if (import.meta.env.PROD) {
+        if (lgs.platform !== 'development') {
             // Only on production
             return lgs.axios({
                              method: 'get',
-                             url:    `start-backend.php`,
+                             url:    `start-backend.php?platform=${lgs.platform}`,
                          })
                 .then(function (response) {
                     return response.data
