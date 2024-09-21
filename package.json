@@ -5,7 +5,9 @@
   "type": "commonjs",
   "scripts": {
     "dev": "bunx --bun vite --mode development",
-    "build": "NODE_ENV=production bunx --bun vite build --mode production",
+    "build-production": "NODE_ENV=production bunx --bun vite build --mode production",
+    "build-staging": "NODE_ENV=staging bunx --bun vite build --mode staging",
+    "build-test": "NODE_ENV=test bunx --bun vite build --mode test",
     "deploy": "bun deploy.js",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "bunx --bun vite preview"
@@ -23,7 +25,7 @@
     "@mapbox/extent": "^0.4.0",
     "@mapbox/geojson-extent": "^1.0.1",
     "@mapbox/togeojson": "^0.16.2",
-    "@shoelace-style/shoelace": "^2.16.0",
+    "@shoelace-style/shoelace": "^2.17.0",
     "@tmcw/togeojson": "^5.8.1",
     "@turf/boolean-clockwise": "^7.1.0",
     "@turf/centroid": "^7.1.0",
@@ -71,18 +73,19 @@
     "turf-point": "^2.0.1",
     "valtio": "^1.13.2",
     "vite-plugin-cesium": "^1.2.23",
+    "yaml": "^2.5.1",
     "zip-a-folder": "^3.1.7"
   },
   "devDependencies": {
-    "@types/react": "^18.3.7",
+    "@types/react": "^18.3.8",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^8.6.0",
     "@typescript-eslint/parser": "^8.6.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "eslint": "^9.10.0",
+    "eslint": "^9.11.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.12",
     "typescript": "^5.6.2",
-    "vite": "^5.4.6"
+    "vite": "^5.4.7"
   }
 }
