@@ -72,9 +72,16 @@
 }
 
 #used-platform {
-    background: rgba(255,255,255,0.5);
-    color:darkred;
-    padding: 0 5px;
+    background: rgba(255,255,255,0.75);
+    border: 1px solid var(--sl-color-gray-300);
+    color:var(--lgs-warning-color);
+    padding: 0 var(--lgs-gutter-xs);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: var(--lgs-border-radius-xs);
+    box-shadow: var(--sl-shadow-x-large);
+
 }
 
 /***************************************
