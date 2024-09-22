@@ -167,7 +167,6 @@ export class AppUtils {
                 return {status: true}
             }
             catch (error) {
-                console.log(error)
                 return {status: false, error: error}
             }
         }
@@ -214,51 +213,53 @@ export class AppUtils {
      * @return {alive:boolean}
      */
     static pingBackend = async () => {
-        return lgs.axios({
-                         method:  'get',
-                         url:     [lgs.BACKEND_API,'ping'].join('/'),
-                         headers: {
-                             'content-type': 'application/json',
-                             'Accept':       'application/json',
-                         },
-                         timeout: 2 * MILLIS,
-                         signal:  AbortSignal.timeout(2 * MILLIS),
-                     })
-            .then(async function (response) {
-                if (response.data !=='') {
-                    return response.data
-                }
-                return await __.app.startBackend()
-            })
-            .catch(async function () {
-                return await __.app.startBackend()
-            })
+        try {
+            return lgs.axios({
+                                 method:  'get',
+                                 url:     [lgs.BACKEND_API, 'ping'].join('/'),
+                                 headers: {
+                                     'content-type': 'application/json',
+                                     'Accept':       'application/json',
+                                 },
+                                 timeout: 2 * MILLIS,
+                                 signal:  AbortSignal.timeout(2 * MILLIS),
+                             })
+                .then(async function (response) {
+                    if (response.data !== '') {
+                        return response.data
+                    }
+                    return await __.app.startBackend()
+                })
+                .catch(async function () {
+                    return await __.app.startBackend()
+                })
+        } catch(error) {
+            console.error(error)
+        }
     }
     /**
      * Start Backend server
      *
      * Timeouts for connections and response are the same, 2 seconds
-     * This works on production only
-     *
+     * This works on production, staging and test only
      *
      * @return {alive:boolean}
      */
     static startBackend = async () => {
-        if (lgs.platform !== 'development') {
-            // Only on production
+        if (!__.app.isDevelopment()) {
             return lgs.axios({
                              method: 'get',
-                             url:    `start-backend.php?platform=${lgs.platform}`,
+                             url:    `start-backend.php`,
                          })
                 .then(function (response) {
                     return response.data
                 })
                 .catch(function (error) {
-                    console.log(error)
+                    console.error(error)
                     return {alive: false}
                 })
         }
-        return  {alive: false}
+        return  {alive: true}
     }
 
     /**
@@ -305,6 +306,42 @@ export class AppUtils {
         return `${start}${(content.length > 0) ?content:``}${end}`
     }
 
+    /**
+     * Check if it is running on development
+     *
+     * @return {boolean}
+     */
+    static isDevelopment = () => {
+        return lgs.platform === platforms.DEV
+    }
+
+    /**
+     * Check if it is running on production
+     *
+     * @return {boolean}
+     */
+    static isProduction = () => {
+        return lgs.platform === platforms.PROD
+    }
+
+    /**
+     * Check if it is running on test
+     *
+     * @return {boolean}
+     */
+    static isTest = () => {
+        return lgs.platform === platforms.TEST
+    }
+
+    /**
+     * Check if it is running on staging
+     *
+     * @return {boolean}
+     */
+    static isStaging = () => {
+        return lgs.platform === platforms.STAGING
+    }
+
 }
 
 /** Time ans duration constants in seconds */
@@ -320,3 +357,9 @@ export { MILLIS, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR }
 
 /** other */
 export const WRONG = -99999999999
+export const platforms = {
+    DEV:'development',
+    STAGING:'staging',
+    PROD:'production',
+    TEST:'test'
+}
