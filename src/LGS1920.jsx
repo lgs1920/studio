@@ -81,8 +81,11 @@ export function LGS1920() {
                 await TrackUtils.readAllFromDB()
             }
 
-        // Set DefaultTheme
+            // Set DefaultTheme
         __.app.setTheme()
+
+            // Set body class to manage css versus platform
+            document.body.classList.add(lgs.platform)
 
         // Read DB
             readAllFromDB().then(
