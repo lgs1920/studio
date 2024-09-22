@@ -252,6 +252,7 @@ export class AppUtils {
                              url:    `start-backend.php`,
                          })
                 .then(function (response) {
+                    console.log(response)
                     return response.data
                 })
                 .catch(function (error) {
@@ -259,7 +260,7 @@ export class AppUtils {
                     return {alive: false}
                 })
         }
-        return  {alive: true}
+        return  {alive: false}
     }
 
     /**
