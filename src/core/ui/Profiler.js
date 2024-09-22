@@ -1,6 +1,6 @@
 import { faCircle, faMountains }                         from '@fortawesome/pro-regular-svg-icons'
 import { faArrowLeftLongToLine, faArrowRightLongToLine } from '@fortawesome/pro-solid-svg-icons'
-import * as echarts                                      from 'echarts'
+import * as echarts from 'echarts/core'
 
 import { DateTime } from 'luxon'
 import { sprintf }  from 'sprintf-js'

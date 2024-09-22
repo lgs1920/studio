@@ -1,11 +1,12 @@
-import axios       from 'axios'
-import * as Cesium from 'cesium'
+import axios                from 'axios'
+import * as Cesium          from 'cesium'
 import { EventEmitter }     from '../assets/libs/EventEmitter/EventEmitter'
 import { ElevationServer }  from '../core/Elevation/ElevationServer'
 import { ChangelogManager } from '../core/ui/ChangelogManager'
-import { FA2SL }   from './FA2SL'
+import { FA2SL }            from './FA2SL'
 
-export const CONFIGURATION ='/config.json'
+export const CONFIGURATION ='config.json'
+export const SERVERS= 'servers.json'
 
 export class AppUtils {
     /**
@@ -107,14 +108,21 @@ export class AppUtils {
         lgs.configuration =  await fetch(CONFIGURATION).then(
             res => res.json()
         )
+        lgs.servers=await fetch(SERVERS).then(
+            res => res.json()
+        )
+        lgs.platform = lgs.servers.platform
 
         lgs.setDefaultConfiguration()
 
         // Register Font Awesome icons in ShoeLace
         FA2SL.useFontAwesomeInShoelace('fa')
 
-        // Backend  @vite
-        lgs.BACKEND_API = `${import.meta.env.VITE_PROXY_BACKEND}${import.meta.env.VITE_BACKEND_API}/`
+        // Backend
+        lgs.BACKEND_API= `${lgs.servers.studio.proxy}${lgs.servers.backend.protocol}://${lgs.servers.backend.domain}:${lgs.servers.backend.port}`
+
+        // Create an Axios instance
+        lgs.axios = axios.create();
 
         // Ping server
         const server = await __.app.pingBackend()
@@ -123,10 +131,12 @@ export class AppUtils {
 
             try {
                 // Versions
-                lgs.versions = await fetch(`${lgs.BACKEND_API}versions`)
-                    .then(res => res.json())
-                    .catch(error => console.error(error),
-                    )
+                try {
+                    const response = await lgs.axios.get([lgs.BACKEND_API,'versions'].join('/'));
+                    lgs.versions = response.data;
+                } catch (error) {
+                    console.error(error);
+                }
 
                 lgs.events = new EventEmitter()
 
@@ -157,12 +167,15 @@ export class AppUtils {
                 return {status: true}
             }
             catch (error) {
-                console.log(error)
                 return {status: false, error: error}
             }
         }
         else {
-            return {status: false, error: new Error(`${lgs.configuration.applicationName} Backend server seems to be unreachable!`)}
+            const info = __.app.isDevelopment() ? `'<br/>Try "bun run dev" to restart the application'` : ''
+            return {
+                status: false,
+                error:  new Error(`${lgs.configuration.applicationName} Backend server seems to be unreachable!${info}`),
+            }
         }
 
     }
@@ -204,47 +217,50 @@ export class AppUtils {
      * @return {alive:boolean}
      */
     static pingBackend = async () => {
-        return axios({
-                         method:  'get',
-                         url:     `${lgs.BACKEND_API}ping`,
-                         headers: {
-                             'content-type': 'application/json',
-                             'Accept':       'application/json',
-                         },
-                         timeout: 2 * MILLIS,
-                         signal:  AbortSignal.timeout(2 * MILLIS),
-                     })
-            .then(async function (response) {
-                if (response.data !=='') {
-                    return response.data
-                }
-                return await __.app.startBackend()
-            })
-            .catch(async function () {
-                return await __.app.startBackend()
-            })
+        try {
+            return lgs.axios({
+                                 method:  'get',
+                                 url:     [lgs.BACKEND_API, 'ping'].join('/'),
+                                 headers: {
+                                     'content-type': 'application/json',
+                                     'Accept':       'application/json',
+                                 },
+                                 timeout: 2 * MILLIS,
+                                 signal:  AbortSignal.timeout(2 * MILLIS),
+                             })
+                .then(async function (response) {
+                    if (response.data !== '') {
+                        return response.data
+                    }
+                    return await __.app.startBackend()
+                })
+                .catch(async function () {
+                    return await __.app.startBackend()
+                })
+        } catch(error) {
+            console.error(error)
+        }
     }
     /**
      * Start Backend server
      *
      * Timeouts for connections and response are the same, 2 seconds
-     * This works on production only
-     *
+     * This works on production, staging and test only
      *
      * @return {alive:boolean}
      */
     static startBackend = async () => {
-        if (import.meta.env.PROD) {
-            // Only on production
-            return axios({
+        if (!__.app.isDevelopment()) {
+            return lgs.axios({
                              method: 'get',
                              url:    `start-backend.php`,
                          })
                 .then(function (response) {
+                    console.log(response)
                     return response.data
                 })
                 .catch(function (error) {
-                    console.log(error)
+                    console.error(error)
                     return {alive: false}
                 })
         }
@@ -295,6 +311,42 @@ export class AppUtils {
         return `${start}${(content.length > 0) ?content:``}${end}`
     }
 
+    /**
+     * Check if it is running on development
+     *
+     * @return {boolean}
+     */
+    static isDevelopment = () => {
+        return lgs.platform === platforms.DEV
+    }
+
+    /**
+     * Check if it is running on production
+     *
+     * @return {boolean}
+     */
+    static isProduction = () => {
+        return lgs.platform === platforms.PROD
+    }
+
+    /**
+     * Check if it is running on test
+     *
+     * @return {boolean}
+     */
+    static isTest = () => {
+        return lgs.platform === platforms.TEST
+    }
+
+    /**
+     * Check if it is running on staging
+     *
+     * @return {boolean}
+     */
+    static isStaging = () => {
+        return lgs.platform === platforms.STAGING
+    }
+
 }
 
 /** Time ans duration constants in seconds */
@@ -310,3 +362,9 @@ export { MILLIS, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR }
 
 /** other */
 export const WRONG = -99999999999
+export const platforms = {
+    DEV:'development',
+    STAGING:'staging',
+    PROD:'production',
+    TEST:'test'
+}

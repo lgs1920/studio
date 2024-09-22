@@ -201,7 +201,7 @@ export class ElevationServer {
         }
 
         return new Promise((resolve, reject) => {
-            axios.post(ElevationServer.SERVERS.get(ElevationServer.IGN_GEOPORTAIL).url, payload)
+            lgs.axios.post(ElevationServer.SERVERS.get(ElevationServer.IGN_GEOPORTAIL).url, payload)
                 .then(function (response) {
                     const data = []
                     response.data.elevations.forEach((point, index) => {
@@ -235,7 +235,7 @@ export class ElevationServer {
         })
 
         return new Promise((resolve, reject) => {
-            axios({
+            lgs.axios({
                       method:  'post',
                       url:     ElevationServer.SERVERS.get(ElevationServer.OPEN_ELEVATION).url,
                       data:    payload,

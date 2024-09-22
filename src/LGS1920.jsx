@@ -81,8 +81,11 @@ export function LGS1920() {
                 await TrackUtils.readAllFromDB()
             }
 
-        // Set DefaultTheme
+            // Set DefaultTheme
         __.app.setTheme()
+
+            // Set body class to manage css versus platform
+            document.body.classList.add(lgs.platform)
 
         // Read DB
             readAllFromDB().then(
@@ -95,8 +98,8 @@ export function LGS1920() {
             caption: `Welcome on ${lgs.configuration.applicationName}!`,
             text: 'We\'re ready to assist you !',
         })
-
-            console.log('LGS1920 has been loaded and is ready !')
+            console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
+            console.log(`Connected to backend ${lgs.versions.backend}.`)
         }
         else {
             // Init was wrong, let'stop here

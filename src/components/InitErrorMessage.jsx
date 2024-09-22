@@ -1,6 +1,7 @@
 import { faArrowsRotate, faTriangleExclamation } from '@fortawesome/pro-regular-svg-icons'
 import { SlAlert, SlButton, SlDialog, SlIcon }   from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                 from '@Utils/FA2SL'
+import parse                                     from 'html-react-parser'
 
 
 /**
@@ -21,7 +22,7 @@ export const InitErrorMessage = (props) => {
             <p>{'The application was stopped due to this error:'}</p>
             <SlAlert variant="danger" open>
                 <SlIcon slot="icon" library="fa" name={FA2SL.set(faTriangleExclamation)}/>
-                {props.message}
+                {parse(props.message)}
             </SlAlert>
 
             <div slot="footer">

@@ -8,19 +8,6 @@
     "protocol" : "https"
   },
 
-  "studio" : {
-    "name": "Studio",
-    "domain" : "studio.lgs1920.fr",
-    "protocol" : "https"
-  },
-
-  "backend": {
-    "name" : "Backend",
-    "domain" : "api.lgs1920.fr",
-    "protocol" : "http",
-    "pm2" : "/home/.bun/bin/pm2",
-    "command" : "start backend.config.js"
-  },
 
   "api": {
     "name" : "API"
