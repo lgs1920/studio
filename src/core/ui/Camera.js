@@ -15,7 +15,7 @@ export class Camera {
     constructor(settings) {
 
         // Singleton
-        if (!!Camera.instance) {
+        if (Camera.instance) {
             return Camera.instance
         }
 
