@@ -1,9 +1,9 @@
-import axios       from 'axios'
-import * as Cesium from 'cesium'
+import axios                from 'axios'
+import * as Cesium          from 'cesium'
 import { EventEmitter }     from '../assets/libs/EventEmitter/EventEmitter'
 import { ElevationServer }  from '../core/Elevation/ElevationServer'
 import { ChangelogManager } from '../core/ui/ChangelogManager'
-import { FA2SL }   from './FA2SL'
+import { FA2SL }            from './FA2SL'
 
 export const CONFIGURATION ='config.json'
 export const SERVERS= 'servers.json'
@@ -171,7 +171,11 @@ export class AppUtils {
             }
         }
         else {
-            return {status: false, error: new Error(`${lgs.configuration.applicationName} Backend server seems to be unreachable!`)}
+            const info = __.app.isDevelopment() ? `'<br/>Try "bun run dev" to restart the application'` : ''
+            return {
+                status: false,
+                error:  new Error(`${lgs.configuration.applicationName} Backend server seems to be unreachable!${info}`),
+            }
         }
 
     }
