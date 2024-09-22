@@ -95,8 +95,8 @@ export function LGS1920() {
             caption: `Welcome on ${lgs.configuration.applicationName}!`,
             text: 'We\'re ready to assist you !',
         })
-
-            console.log(`LGS1920 has been loaded and is ready on ${lgs.platform} platform !`)
+            console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
+            console.log(`Connected to backend ${lgs.versions.backend}.`)
         }
         else {
             // Init was wrong, let'stop here
