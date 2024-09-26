@@ -10,11 +10,6 @@
     gap: var(--lgs-gutter)
 }
 
-.download-columns > div {
-    display: flex;
-    gap: var(--lgs-gutter-s);
-}
-
 .drag-and-drop-container {
     display: flex;
     flex-direction: column;
@@ -137,12 +132,22 @@
     padding: var(--lgs-gutter-xs);
 }
 
-.add-url sl-input {
-    flex-grow: 1;
+.add-url, .load-sample {
+    display: flex;
+    font-size: var(--lgs-font-size);
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lgs-gutter);
+    line-height: 1.2;
 }
 
 .add-url sl-input {
+    flex-grow: 1;
     flex-shrink: 0;
+}
+
+.add-url sl-button, .load-sample sl-button {
+    width: 8rem;
 }
 
 .drag-and-drop-container .comment {
@@ -153,3 +158,4 @@
 .drag-and-drop-container sl-icon {
     font-size: var(--sl-font-size-large);
 }
+
