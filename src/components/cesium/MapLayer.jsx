@@ -1,7 +1,7 @@
 import { OpenStreetMapImageryProvider, WebMapTileServiceImageryProvider } from 'cesium'
 import { ImageryLayer }                                                   from 'resium'
-import { useSnapshot } from 'valtio'
-import { Layer }       from '../../core/Layer.js'
+import { useSnapshot }                                                    from 'valtio'
+import { Layer }                                                          from '../../core/Layer.js'
 
 export const MapLayer = (layer) => {
 
@@ -20,7 +20,7 @@ export const MapLayer = (layer) => {
             {
                 mainSnap.layer === Layer.IGN_PLAN &&
                 <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                    url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
+                                                                                        url: 'https://wmts.geopf.fr/wmts',
                     layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
                     style: 'normal',
                     format: 'image/png',
@@ -43,7 +43,7 @@ export const MapLayer = (layer) => {
             {
                 mainSnap.layer === Layer.IGN_CADASTRAL &&
                 <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                    url: 'https://wxs.ign.fr/cartes/geoportail/wmts',
+                                                                                        url: 'https://wmts.geopf.fr/wmts',
                     layer: 'CADASTRALPARCELS.PARCELLAIRE_EXPRESS',
                     style: 'normal',
                     format: 'image/png',
