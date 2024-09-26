@@ -217,6 +217,7 @@ export class AppUtils {
      * @return {alive:boolean}
      */
     static pingBackend = async () => {
+
         try {
             return lgs.axios({
                                  method:  'get',
@@ -225,8 +226,8 @@ export class AppUtils {
                                      'content-type': 'application/json',
                                      'Accept':       'application/json',
                                  },
-                                 timeout: 2 * MILLIS,
-                                 signal:  AbortSignal.timeout(2 * MILLIS),
+                                 timeout: 3 * MILLIS,
+                                 signal:  AbortSignal.timeout(3 * MILLIS),
                              })
                 .then(async function (response) {
                     if (response.data !== '') {
