@@ -49,10 +49,13 @@ export const JourneyLoaderUI = (props) => {
             const journey = FileUtils.getFileNameAndExtension(file.name)
             journey.content = content
             status = await TrackUtils.loadJourneyFromFile(journey)
-            // Reading is OK, so we set some readonly parameters
+            // If reading is OK we set some readonly parameters
             if (status === JOURNEY_OK) {
-                // Get some initial settings
                 lgs.theJourney.globalSettings()
+            }
+            else {
+                // There's nothing left to do here
+                return
             }
         }
         const item = fileList.get(__.app.slugify(file.name))
