@@ -6,7 +6,7 @@ import { FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS }                f
 import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/LGS1920Context.js'
 import { Camera as CameraManager }                                             from '../../core/ui/Camera.js'
 import { UIToast }                                                             from '../UIToast.js'
-import { FLAG_START,POI_FLAG, POI_STD, POIUtils }                             from './POIUtils'
+import { FLAG_START, POI_FLAG, POI_STD, POIUtils }                             from './POIUtils'
 
 export const SUPPORTED_EXTENSIONS = ['geojson', 'json','kml', 'gpx' /* TODO 'kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -624,11 +624,13 @@ export class TrackUtils {
                 //     journey.content = JSON.parse(journey.content)
                 // }
 
-                let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
+                let theJourney = new Journey(journey.name, journey.extension, {
+                    content:     journey.content,
+                    allowRename: false,
+                })
                 // Check if the track already exists in context
                 // If not we manage and show it.
                 if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
-
 
                    theJourney.globalSettings()
 

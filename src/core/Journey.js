@@ -10,16 +10,16 @@ import {
 }                                      from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
-} from '@Utils/UIToast'
+}                                      from '@Utils/UIToast'
 import {
     FLAG_START, FLAG_STOP, POI_FLAG, POI_MARKER, POI_STD,
-} from '../Utils/cesium/POIUtils'
+}                                      from '../Utils/cesium/POIUtils'
 import {
     ElevationServer,
-} from './Elevation/ElevationServer'
+}                                      from './Elevation/ElevationServer'
 import {
     JOURNEYS_STORE, ORIGIN_STORE,
-} from './LGS1920Context.js'
+}                                      from './LGS1920Context.js'
 import {
     MapElement,
 }                                      from './MapElement'
@@ -57,7 +57,8 @@ export class Journey extends MapElement {
         }
 
         if (title) {
-            this.title = this.singleTitle(title)
+            this.title = (options.allowRename ?? true) ? this.singleTitle(title) : title
+
             this.type = type
 
             // If options property exists, we get them, else
