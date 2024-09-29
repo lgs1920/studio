@@ -208,16 +208,28 @@ sl-card[variant="primary"]::part(base) {
     --border-color: var(--lgs-card-ui-border-color);
 }
 
-
 .lgs-card {
+    display: flex;
     background-color: rgba(255, 255, 255, 0.15);
+
     border: 1px solid  var(--sl-color-gray-300);
     padding: var(--lgs-gutter-s);
     border-radius: var(--lgs-border-radius-s);
 }
 
-.lgs-card:hover {
-    background-color: rgba(255, 255, 255, 0.25);
+.lgs-card.on-map {
+    gap: var(--lgs-gutter-s);
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: var(--lgs-border-radius-xs);
+    box-shadow: var(--sl-shadow-medium);
+    color: white;
+    backdrop-filter: blur(3px);
+    border-color: var(--sl-color-gray-400);
+}
+
+.lgs-card:not(.on-map):hover {
+    background: rgba(255, 255, 255, 0.25);
+
 }
 
 .lgs-card-wrapper {

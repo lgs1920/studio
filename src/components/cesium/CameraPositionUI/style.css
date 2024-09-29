@@ -3,14 +3,51 @@
     gap: var(--lgs-gutter-s);
 }
 
+.camera-data-panel {
+    background: transparent;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    max-width: calc(--100);
+}
+
+.camera-data-panel > sl-icon:first-child {
+    width: 2rem;
+    border-right: 1px solid white;
+}
+
+.camera-data-panel > div {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+    line-height: 1.4
+}
+
+.camera-data-panel > div:nth-child(3) {
+    padding-left: calc(2rem + var(--lgs-gutter-s));
+}
+
+.camera-data-panel > sl-icon {
+    align-items: center;
+}
+
 .camera-data-panel::part(base) {
     --padding: 0 var(--lgs-gutter-s);
-    min-height: var(--lgs-dimension);
 }
 
 .camera-data-panel::part(body) {
     display: flex;
     gap: var(--lgs-gutter-s);
     align-items: center;
+}
+
+#camera-and-target-position-panel {
+    position: absolute;
+    width: calc(100vw - var(--left) - var(--right));
+    display: flex;
+    top: var(--top);
+    left: var(--left);
+    justify-content: center;
+    flex-wrap: wrap;
 }
 

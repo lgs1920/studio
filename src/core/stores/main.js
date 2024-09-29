@@ -24,8 +24,6 @@ export const main = {
         },
 
         camera: {
-            show: false,
-            showTarget: false,
             position: {},
             event: false,
         },
