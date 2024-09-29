@@ -8,7 +8,6 @@
     flex-direction: row;
     align-items: center;
     flex-wrap: wrap;
-    max-width: calc(--100);
 }
 
 .camera-data-panel > sl-icon:first-child {
