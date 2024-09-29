@@ -122,5 +122,9 @@
         "image": ""
       }
     }
+  },
+  "ui": {
+    "showCameraPosition": true,
+    "showCameraTargetPosition": true
   }
 }
