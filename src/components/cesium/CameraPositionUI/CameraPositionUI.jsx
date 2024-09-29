@@ -1,13 +1,13 @@
 import './style.css'
 import { TextValueUI } from '@Components/TextValueUI/TextValueUI.jsx'
 
-import { faAngle, faMountains, faVideo } from '@fortawesome/pro-regular-svg-icons'
-import { SlAnimation }                   from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                         from '@Utils/FA2SL'
-import { forwardRef }                    from 'react'
-import { useCesium }                     from 'resium'
-import { proxy, useSnapshot }            from 'valtio'
-import { meter, mile }                   from '../../../Utils/UnitUtils'
+import { faAngle, faDistributeSpacingHorizontal, faMountains, faVideo } from '@fortawesome/pro-regular-svg-icons'
+import { SlAnimation }                                                  from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                        from '@Utils/FA2SL'
+import { forwardRef }                                                   from 'react'
+import { useCesium }                                                    from 'resium'
+import { proxy, useSnapshot }                                           from 'valtio'
+import { meter, mile }                                                  from '../../../Utils/UnitUtils'
 
 
 export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref) {
@@ -38,9 +38,12 @@ export const CameraPositionUI = forwardRef(function CameraPositionUI(props, ref)
                         <div>
                             <sl-icon library="fa" name={FA2SL.set(faAngle)}></sl-icon>
                             <TextValueUI value={cameraUI.position.heading?.toFixed()}
-                                     className={'camera-heading'} text={'Heading:'} units={'°'}/>
+                                         className={'camera-heading'} text={'Heading:'} units={'°'}/>
+                            <sl-icon library="fa" name={FA2SL.set(faDistributeSpacingHorizontal)}
+                                     style={{rotate: '90deg'}}></sl-icon>
+
                             <TextValueUI value={(cameraUI.position?.pitch)?.toFixed()}
-                                     className={'camera-pitch'} text={'Pitch:'} units={'°'}/>
+                                         className={'camera-pitch'} text={'Pitch:'} units={'°'}/>
                         </div>
                     </div>
                 </SlAnimation>
