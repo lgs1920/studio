@@ -73,7 +73,8 @@
 }
 
 #used-platform {
-    color:var(--lgs-warning-color);
+    line-height: 1;
+    color: var(--sl-color-gray-600);
 }
 
 /***************************************
