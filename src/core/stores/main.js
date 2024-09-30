@@ -25,6 +25,7 @@ export const main = {
 
         camera: {
             position: {},
+            target: {},
             event: false,
         },
 
