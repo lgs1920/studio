@@ -210,16 +210,9 @@ export const DragNDropFile = (props) => {
             // Read and manage content
             for (const file of files) {
                 const item = fileList.get(__.app.slugify(file.name))
-                item.fileReadSuccess = false
 
-                try {
-                    if(item.validated) {
+                if (item.validated) {
                         FileUtils.readFileAsText(file, props.manageContent ?? null)
-                        item.fileReadSuccess = true
-                    }
-                }
-                catch {
-                    item.fileReadSuccess = false
                 }
 
                 fileList.set(__.app.slugify(file.name), item)
