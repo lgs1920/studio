@@ -224,7 +224,7 @@ sl-card[variant="primary"]::part(base) {
     box-shadow: var(--sl-shadow-medium);
     color: white;
     backdrop-filter: blur(3px);
-    border-color: var(--sl-color-gray-400);
+    border-color: var(--sl-color-neutral-400);
 }
 
 .lgs-card:not(.on-map):hover {
