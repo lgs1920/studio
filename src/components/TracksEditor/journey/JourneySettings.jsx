@@ -1,34 +1,34 @@
-import { useConfirm } from '@Components/Modals/ConfirmUI'
+import { useConfirm }  from '@Components/Modals/ConfirmUI'
 import {
     ToggleStateIcon,
-}                     from '@Components/ToggleStateIcon'
+}                      from '@Components/ToggleStateIcon'
 import {
     TrackData,
-}                     from '@Editor/track/TrackData'
+}                      from '@Editor/track/TrackData'
 import {
     TrackFlagsSettings,
-}                     from '@Editor/track/TrackFlagsSettings'
+}                      from '@Editor/track/TrackFlagsSettings'
 import {
     TrackPoints,
-}                     from '@Editor/track/TrackPoints'
+}                      from '@Editor/track/TrackPoints'
 import {
     TrackStyleSettings,
-}                     from '@Editor/track/TrackStyleSettings'
-import { Utils }      from '@Editor/Utils'
+}                      from '@Editor/track/TrackStyleSettings'
+import { Utils }       from '@Editor/Utils'
 import {
-    faCircleDot, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList, faTelescope,
-    faTrashCan,faCrosshairsSimple
-}                     from '@fortawesome/pro-regular-svg-icons'
+    faCircleDot, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList,
+    faTelescope, faTrashCan,
+}                      from '@fortawesome/pro-regular-svg-icons'
 import {
     SlIcon, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                     from '@shoelace-style/shoelace/dist/react'
+}                      from '@shoelace-style/shoelace/dist/react'
 import {
     FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                     from '@Utils/cesium/TrackUtils'
-import { FA2SL }      from '@Utils/FA2SL'
-import { UIToast }    from '@Utils/UIToast'
-import parse          from 'html-react-parser'
-import { sprintf }    from 'sprintf-js'
+}                      from '@Utils/cesium/TrackUtils'
+import { FA2SL }       from '@Utils/FA2SL'
+import { UIToast }     from '@Utils/UIToast'
+import parse           from 'html-react-parser'
+import { sprintf }     from 'sprintf-js'
 import { useSnapshot } from 'valtio'
 import {
     ElevationServer,
@@ -38,7 +38,7 @@ import {
 }                      from '../../../core/Journey'
 import {
     SelectElevationSource,
-}                     from '../../MainUI/SelectElevationSource'
+}                      from '../../MainUI/SelectElevationSource'
 import { JourneyData } from './JourneyData'
 import { JourneyPOIs } from './JourneyPOIs'
 
@@ -368,6 +368,7 @@ export const JourneySettings = function JourneySettings() {
                 __.ui.profiler.draw()
             } else {
                 lgs.theJourney = null
+                lgs.theTrack = null
                 lgs.cleanEditor()
                 text = 'There are no others journeys.'
                 mainStore.canViewJourneyData = false
