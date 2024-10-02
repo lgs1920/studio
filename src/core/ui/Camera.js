@@ -1,3 +1,4 @@
+//import camera          from 'resium/src/Camera'
 import { CameraUtils } from '../../Utils/cesium/CameraUtils.js'
 
 export class Camera {
@@ -6,11 +7,8 @@ export class Camera {
     static UPDATE_EVENT = 'camera/update'
 
     starter = {}
-    heading
-    pitch
-    roll
-    range
     target = {}
+    position = {}
 
     constructor(settings) {
 
@@ -23,14 +21,14 @@ export class Camera {
         this.target.latitude = settings?.target?.latitude ?? lgs.configuration.starter.latitude
         this.target.height = settings?.target?.height ?? lgs.configuration.starter.height
 
-        this.longitude = undefined
-        this.latitude = undefined
-        this.height = undefined
+        this.position.longitude = undefined
+        this.position.latitude = undefined
+        this.position.height = undefined
 
-        this.heading = settings?.heading ?? lgs.configuration.camera.heading
-        this.pitch = settings?.pitch ?? lgs.configuration.camera.pitch
-        this.roll = settings?.roll ?? lgs.configuration.camera.roll
-        this.range = settings?.range ?? lgs.configuration.camera.range
+        this.position.heading = settings?.heading ?? lgs.configuration.camera.heading
+        this.position.pitch = settings?.pitch ?? lgs.configuration.camera.pitch
+        this.position.roll = settings?.roll ?? lgs.configuration.camera.roll
+        this.position.range = settings?.range ?? lgs.configuration.camera.range
         this.clockwise = Camera.CLOCKWISE
 
         Camera.instance = this
@@ -51,57 +49,34 @@ export class Camera {
         if (!__.ui.camera.event) {
             lgs.camera.percentageChanged = lgs.configuration.camera.percentageChanged
             lgs.camera.changed.addEventListener(() => {
-                __.ui.camera.update().then(data => {
-                    lgs.mainProxy.components.camera.position = data
-                    lgs.events.emit(this.UPDATE_EVENT, [data])
+                __.ui.camera.update().then(camera => {
+                    lgs.mainProxy.components.camera.position = camera.position
+                    lgs.mainProxy.components.camera.target = camera.target
+
+                    lgs.events.emit(this.UPDATE_EVENT, [camera])
                 })
             })
         }
         __.ui.camera.event = true
     }
 
-    update = async (data = null) => {
-        data = (data === null) ? await CameraUtils.updateCamera() : data[0]
+    update = async () => {
+        const data = await CameraUtils.updateCamera()
         if (data) {
-            this.target = {
-                longitude: data.target.longitude??this.target.longitude,
-                latitude: data.target.latitude??this.target.latitude,
-                height: data.target.height??this.target.height,
-            }
-            this.longitude = data.longitude??this.longitude
-            this.latitude = data.latitude??this.latitude
-            this.height = data.height??this.height
-            this.heading = data.heading??this.heading
-            this.pitch = data.pitch??this.pitch
-            this.roll = data.roll??this.roll
-            this.range = data.range?? this.range
+            this.target = data.target
+            this.position = data.position
         } else {
             this.reset()
         }
-
         lgs.events.emit(Camera.UPDATE_EVENT)
         return this
-
     }
 
     /**
      * Get the data of the camera instance
      */
     get = () => {
-        return {
-            target: {
-                longitude: this.target.longitude,
-                latitude: this.target.latitude,
-                height: this.target.height,
-            },
-            longitude: this.longitude,
-            latitude: this.latitude,
-            height: this.height,
-            heading: this.heading,
-            pitch: this.pitch,
-            roll: this.roll,
-            range: this.range,
-        }
+        return this
     }
 
     reset = () => {
@@ -110,16 +85,19 @@ export class Camera {
             latitude: lgs.configuration.starter.latitude,
             height: lgs.configuration.starter.height,
         }
-        this.longitude = undefined
-        this.latitude = undefined
-        this.height = undefined
-        this.heading = lgs.configuration.camera.heading
-        this.pitch = lgs.configuration.camera.pitch
-        this.roll = lgs.configuration.camera.roll
-        this.range = lgs.configuration.camera.range
+        this.position = {
+            longitude: undefined,
+            latitude:  undefined,
+            height:    undefined,
+            heading:   lgs.configuration.camera.heading,
+            pitch:     lgs.configuration.camera.pitch,
+            roll:      lgs.configuration.camera.roll,
+            range:     lgs.configuration.camera.range,
+        }
 
         return this
     }
+
 
 }
 

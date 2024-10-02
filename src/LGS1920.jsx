@@ -38,7 +38,7 @@ export function LGS1920() {
    // const mainUISnapshot = useSnapshot(lgs.mainUIStore)
 
     const starter = lgs.configuration.starter
-    lgs.windowCenter = Cesium.Cartesian3.fromDegrees(starter.longitude, starter.latitude, starter.height)
+    lgs.startCameraPoint = Cesium.Cartesian3.fromDegrees(starter.camera.longitude, starter.camera.latitude, starter.camera.height)
 
     lgs.cameraOrientation = {
         heading: Cesium.Math.toRadians(starter.camera.heading),
@@ -51,19 +51,21 @@ export function LGS1920() {
         lgs.camera.changed.addEventListener(updateCameraPosition)
         lgs.camera.percentageChanged=lgs.configuration.camera.percentageChanged
         __.ui.camera.event = true
-        CameraUtils.run360()
+        CameraUtils.run360(lgs.configuration.starter)
     }
 
     const updateCameraPosition = () => {
         if (__?.ui?.camera) {
             __.ui.camera.update().then(data => {
-                cameraStore.position = data
+                cameraStore.position = data.position
+                cameraStore.target = data.target
                 lgs.events.emit(CameraManager.UPDATE_EVENT, [data])
             })
         } else {
             CameraUtils.updateCamera().then(data => {
                 if (data !== undefined) {
-                    cameraStore.position = data
+                    cameraStore.position = data.position
+                    cameraStore.target = data.target
                 }
                 lgs.events.emit(CameraManager.UPDATE_EVENT, [data])
             })
@@ -123,10 +125,13 @@ export function LGS1920() {
                 fullscreenButton={false}
 
                 sceneModePicker={false}
-            // terrain={Cesium.Terrain.fromWorldTerrain({
+
+            //terrain={Cesium.Terrain.fromWorldTerrain({
+
                 terrain={new Cesium.Terrain(Cesium.CesiumTerrainProvider.fromUrl(`https://api.maptiler.com/tiles/terrain-quantized-mesh-v2/?key=${'Y6VgRYi3iKQEttoa3G0v'}`, {
                     requestVertexNormals: false,
                 }))}
+
                 id="viewTrack3DViewer"
             // Avoid consuming Cesium Ion Sessions
             // DONOT CHANGE
@@ -135,8 +140,8 @@ export function LGS1920() {
                 ref={viewerRef}>
             <MapLayer/>
 
-            <Scene verticalExaggeration={1.15}
-                   verticalExaggerationRelativeHeight={2400.0}>
+            <Scene verticalExaggeration={1.25}
+                   verticalExaggerationRelativeHeight={3000.0}>
             </Scene>
             <Globe enableLighting={false}
                    depthTestAgainstTerrain ={true}
@@ -146,7 +151,7 @@ export function LGS1920() {
                 <CameraFlyTo
                     orientation={lgs.cameraOrientation}
                     duration={3}
-                    destination={lgs.windowCenter}
+                    destination={lgs.startCameraPoint}
                     once={true}
                     onComplete={run360}
                 />
