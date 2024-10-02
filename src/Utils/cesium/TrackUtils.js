@@ -623,7 +623,6 @@ export class TrackUtils {
                 // if (journey.extension === 'json' && typeof journey.content === 'string') {
                 //     journey.content = JSON.parse(journey.content)
                 // }
-
                 let theJourney = new Journey(journey.name, journey.extension, {
                     content:     journey.content,
                     allowRename: false,
@@ -670,8 +669,8 @@ export class TrackUtils {
                 }
             }
         }
-        catch (e) {
-            console.log(e)
+        catch (error) {
+            console.error(error)
             UIToast.error({
                                 caption: `We have encountered problems reading this file!`,
                                 text:    'Maybe the format is wrong!',
