@@ -78,6 +78,9 @@ export class Journey extends MapElement {
             // Get all tracks
             this.getTracksFromGeoJson()
 
+            this.globalSettings()
+
+
             // Get Metrics
             this.metrics = options.metrics ?? {}
 
@@ -680,9 +683,11 @@ export class Journey extends MapElement {
         })
 
         if (this.tracks.size === 1) {
+            // If there's ontrack we'll use the track metrics
             this.metrics = this.tracks.entries().next().value[1].metrics
             return
         }
+        // For a multi track journey, let's compute journey level metrics
         this.metrics = this.setGlobalMetrics()
     }
 
