@@ -18,21 +18,21 @@
     "latitude": 45.33524,
     "height": 1920,
     "camera": {
-      "heading": 360,
-      "pitch": -45,
-      "roll": 360,
-      "range": 4000,
-      "longitude": 5.66934,
-      "latitude": 45.3173,
-      "height": 3621
+      "heading": 115,
+      "pitch": -34,
+      "roll": 4,
+      "range": 3000,
+      "longitude": 5.65330,
+      "latitude": 45.34623,
+      "height": 4300
     }
   },
   "camera": {
     "heading":0,
     "pitch": -45,
     "roll": 0,
-    "range": 4000,
-    "percentageChanged": 0.2
+    "range": 3000,
+    "percentageChanged": 0.02
   },
   "profile": {
     "show": true,
@@ -125,6 +125,7 @@
   },
   "ui": {
     "showCameraPosition": true,
-    "showCameraTargetPosition": true
+    "showCameraTargetPosition": true,
+    "showCameraHPR": true
   }
 }
