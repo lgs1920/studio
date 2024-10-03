@@ -7,6 +7,7 @@ import { useSnapshot }                            from 'valtio'
 import welcomeBack                                from '../../../public/assets/modals/welcome-back.md'
 import welcome                                    from '../../../public/assets/modals/welcome.md'
 import { FA2SL }                                  from '../../Utils/FA2SL.js'
+import { StudioLogo }                             from './StudioLogo'
 
 
 export const WelcomeModal = () => {
@@ -71,9 +72,7 @@ export const WelcomeModal = () => {
                       onSlRequestClose={close}
                       onSlAfterHide={hide}>
 
-                <div className={'main-logo'}>
-                    <img src={'assets/images/lgs1920-studio.png'}/>
-                </div>
+                <StudioLogo/>
                 <TheText/>
 
                 <div slot="footer">
