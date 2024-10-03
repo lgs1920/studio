@@ -141,7 +141,7 @@ export class CameraUtils {
         CameraUtils.lookAt(lgs.camera, Cartesian3.fromDegrees(target.longitude, target.latitude, target.height))
 
         const step = (lgs.camera.clockwise) ? M.PI / 800 : -M.PI / 800
-        lgs.stop360 = lgs.viewer.clock.onTick.addEventListener((event) => {
+        lgs.stop360 = lgs.viewer.clock.onTick.addEventListener(() => {
             lgs.camera.rotateLeft(step)
         })
     }

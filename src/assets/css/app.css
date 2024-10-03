@@ -11,7 +11,7 @@ body {
 }
 
 /** Hide the main toolbar */
-#viewTrack3DViewer .cesium-viewer-toolbar {
+#studioMapViewer .cesium-viewer-toolbar {
     display: none;
 }
 
