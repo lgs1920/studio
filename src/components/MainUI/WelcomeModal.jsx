@@ -1,15 +1,12 @@
-import { faMountains, faRoute }                   from '@fortawesome/pro-regular-svg-icons'
+import { faRegularRouteCirclePlus }               from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import { faMountains }                            from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlCheckbox, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { useEffect, useState }                    from 'react'
 import { default as ReactMarkdown }               from 'react-markdown'
-import { useSnapshot }      from 'valtio'
-import { TrackUtils }       from '../../Utils/cesium/TrackUtils.js'
-import { FA2SL }   from '../../Utils/FA2SL.js'
-import welcome     from '../../../public/assets/modals/welcome.md'
-import welcomeBack from '../../../public/assets/modals/welcome-back.md'
-
-
-import {faRegularRouteCirclePlus}              from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import { useSnapshot }                            from 'valtio'
+import welcomeBack                                from '../../../public/assets/modals/welcome-back.md'
+import welcome                                    from '../../../public/assets/modals/welcome.md'
+import { FA2SL }                                  from '../../Utils/FA2SL.js'
 
 
 export const WelcomeModal = () => {
@@ -74,6 +71,9 @@ export const WelcomeModal = () => {
                       onSlRequestClose={close}
                       onSlAfterHide={hide}>
 
+                <div className={'main-logo'}>
+                    <img src={'assets/images/lgs1920-studio.png'}/>
+                </div>
                 <TheText/>
 
                 <div slot="footer">

@@ -78,3 +78,15 @@ sl-progress-bar {
     50% { background-color: yellow; }
     100% { background-color: white; }
 }
+
+.main-logo {
+    padding: var(--lgs-gutter);
+    background: var(--lgs-direction-panel-bg-color);
+    border-color: var(--lgs-direction-panel-border-color);
+    border-radius: var(--lgs-border-radius-s);
+    box-shadow: var(--sl-shadow-medium);
+}
+
+.main-logo img {
+    width: 100%;
+}
