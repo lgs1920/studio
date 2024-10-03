@@ -57,9 +57,9 @@
 }
 
 #bottom-right-ui {
-    height: var(--lgs-gutter-s);
-    width: var(--lgs-gutter-s);
-    align-self: flex-end;
+    position: absolute;
+    bottom: var(--bottom);
+    right: var(--right);
 }
 
 #bottom-left-ui {

@@ -72,7 +72,7 @@ export const WelcomeModal = () => {
                       onSlRequestClose={close}
                       onSlAfterHide={hide}>
 
-                <StudioLogo/>
+                <StudioLogo width={'100%'}/>
                 <TheText/>
 
                 <div slot="footer">

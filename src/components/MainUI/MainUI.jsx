@@ -14,6 +14,7 @@ import { JourneyLoaderUI }      from '../FileLoader/JourneyLoaderUI'
 import { Panel }                from '../InformationPanel/Panel'
 import { PanelButton }          from '../InformationPanel/PanelButton'
 import { Utils }                from '../TracksEditor/Utils.js'
+import { StudioLogo }           from './StudioLogo'
 import { SupportUI }            from './SupportUI'
 import { SupportUIButton }      from './SupportUIButton'
 
@@ -60,6 +61,9 @@ export const MainUI = function VT3D_UI() {
                     </div>
                     <div id={'profile-ui'}>
                         <Profile/>
+                    </div>
+                    <div id={'bottom-right-ui'}>
+                        <StudioLogo xsmall width={'80px'}/>
                     </div>
                     {/* <div id={'bottom-right-ui'}></div> */}
                 </div>
