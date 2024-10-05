@@ -4,8 +4,8 @@ import { SlButton, SlCheckbox, SlDialog, SlIcon } from '@shoelace-style/shoelace
 import { useEffect, useState }                    from 'react'
 import { default as ReactMarkdown }               from 'react-markdown'
 import { useSnapshot }                            from 'valtio'
-import welcomeBack                                from '../../../public/assets/modals/welcome-back.md'
-import welcome                                    from '../../../public/assets/modals/welcome.md'
+import welcomeBack                                from '../../../src/assets/modals/welcome-back.md'
+import welcome                                    from '../../../src/assets/modals/welcome.md'
 import { FA2SL }                                  from '../../Utils/FA2SL.js'
 import { StudioLogo }                             from './StudioLogo'
 
