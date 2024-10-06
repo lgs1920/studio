@@ -82,7 +82,7 @@ sl-progress-bar {
 }
 
 .main-logo {
-    --padding: calc(1.2 * var(--lgs-gutter));
+    --padding: calc(8 * var(--lgs-gutter));
     padding: var(--padding);
     background: var(--lgs-direction-panel-bg-color);
     border-color: var(--lgs-direction-panel-border-color);
@@ -96,11 +96,11 @@ sl-progress-bar {
 }
 
 main-logo.xlarge {
-    --padding: calc(3 * var(--lgs-gutter));
+    --padding: calc(6 * var(--lgs-gutter));
 }
 
 .main-logo.large {
-    --padding: calc(2 * var(--lgs-gutter-s));
+    --padding: calc(4 * var(--lgs-gutter-s));
 }
 
 .main-logo.small {
@@ -109,7 +109,7 @@ main-logo.xlarge {
 }
 
 .main-logo.xsmall {
-    --padding: calc(2 * var(--lgs-gutter-xs));
+    --padding: calc(var(--lgs-gutter-xs));
     border-radius: var(--lgs-border-radius-xs);
 }
 
