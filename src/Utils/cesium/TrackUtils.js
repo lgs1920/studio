@@ -4,7 +4,7 @@ import * as Cesium                                                             f
 import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 }           from 'cesium'
 import { FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS }                from '../../core/Journey'
 import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/LGS1920Context.js'
-import { Camera as CameraManager }                                             from '../../core/ui/Camera.js'
+import { CameraManager as CameraManager }                                      from '../../core/ui/CameraManager.js'
 import { UIToast }                                                             from '../UIToast.js'
 import { FLAG_START, POI_FLAG, POI_STD, POIUtils }                             from './POIUtils'
 
@@ -157,9 +157,12 @@ export class TrackUtils {
                 height:Cesium.Math.toDegrees(destination.z), // We take the same
             }
             camera = new CameraManager({
-                longitude:Cesium.Math.toDegrees(destination.x),
-                latitude:Cesium.Math.toDegrees(destination.y),
-                height:Cesium.Math.toDegrees(destination.z),
+                                           position: {
+                                               longitude: Cesium.Math.toDegrees(destination.x),
+                                               latitude:  Cesium.Math.toDegrees(destination.y),
+                                               height:    Cesium.Math.toDegrees(destination.z),
+                                           },
+
                 target:target,
             })
             camera.pitch = -90
@@ -171,8 +174,6 @@ export class TrackUtils {
             camera = (action === INITIAL_LOADING) ? journey.cameraOrigin : journey.camera
             destination =Cesium.Cartesian3.fromDegrees(camera.longitude, camera.latitude, camera.height)
         }
-//      destination =Cesium.Cartesian3.fromDegrees(camera.longitude, camera.latitude, camera.height)
-
 
         lgs.camera.flyTo({
             destination: destination,                               // Camera
@@ -334,9 +335,6 @@ export class TrackUtils {
         // Let's read tracks in DB
         const journeys = await Journey.readAllFromDB()
 
-        // The add event for the camera
-        __.ui.camera.addUpdateEvent()
-
         // Bail early if there's nothing to read
         if (journeys.length === 0) {
             lgs.theJourney = null
@@ -366,7 +364,7 @@ export class TrackUtils {
 
         // We're ready for rendering so let's save journeys
         journeys.forEach(journey => {
-            lgs.saveJourney(journey)
+            lgs.saveJourneyInContext(journey)
         })
 
         // Now instantiate some contexts
@@ -655,7 +653,7 @@ export class TrackUtils {
                     __.ui.profiler.draw()
 
                     await __.ui.camera.stop360()
-                    __.ui.camera.addUpdateEvent()
+
 
                     return JOURNEY_OK
                 }
