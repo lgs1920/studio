@@ -37,6 +37,9 @@ import {
     Journey, SIMULATE_ALTITUDE,
 }                      from '../../../core/Journey'
 import {
+    ORIGIN_STORE,
+}                      from '../../../core/LGS1920Context'
+import {
     SelectElevationSource,
 }                      from '../../MainUI/SelectElevationSource'
 import { JourneyData } from './JourneyData'
@@ -132,17 +135,19 @@ export const JourneySettings = function JourneySettings() {
 
         editorStore.longTask = editorStore.journey.elevationServer !== ElevationServer.NONE
 
-        // use a Elevationserver
+        // use an Elevation server
         const server = new ElevationServer(editorStore.journey.elevationServer)
 
         // Extract coordinates
-
         let allCoordinates = []
+        // And Origin Data
+        lgs.origin = await lgs.db.lgs1920.get(editorStore.journey.slug, ORIGIN_STORE)
+
         let allOrigin = []
 
         lgs.theJourney.geoJson.features.forEach((feature, index) => {
             let coordinates = feature.geometry.coordinates
-            let origin = lgs.theJourney.origin.features[index].geometry.coordinates
+            let origin = lgs.origin.features[index].geometry.coordinates
 
             switch (feature.geometry.type) {
                 case FEATURE_POINT:
@@ -253,7 +258,7 @@ export const JourneySettings = function JourneySettings() {
                     // Then we redraw the journey
                    await Utils.updateJourney(SIMULATE_ALTITUDE)
 
-                    // And update editor
+                    // And updatePositionInformation editor
                     Utils.updateJourneyEditor(theJourney.slug)
 
                     // If the Profile UI is open, we re-sync it
@@ -370,7 +375,7 @@ export const JourneySettings = function JourneySettings() {
                 lgs.theJourney = null
                 lgs.theTrack = null
                 lgs.cleanEditor()
-                text = 'There are no others journeys.'
+                text = 'There are no other journeys available!'
                 mainStore.canViewJourneyData = false
                 mainStore.components.journeyEditor.show = false
                 mainStore.components.profile.show = false
