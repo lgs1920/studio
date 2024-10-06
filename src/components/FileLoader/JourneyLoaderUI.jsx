@@ -253,7 +253,6 @@ export const JourneyLoaderUI = (props) => {
     const loadFile = async ({file, name}) => {
         try {
             fileList.clear()
-            console.log(`${[lgs.BACKEND_API, 'read'].join('/')}?file=${file}`)
             const content = await lgs.axios.get(`${[lgs.BACKEND_API, 'read'].join('/')}?file=${file}`)
             if (content.data.success) {
                 const file = new File([content.data.content], name, {
