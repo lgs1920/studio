@@ -49,17 +49,29 @@ export class AppUtils {
     static splitSlug = (slug =>  slug.split(`#`))
 
 
-    static deepClone = ((obj, parent) => {
+    static deepClone = ((obj, parent = null, map = new Map()) => {
         if (obj === null) return null
-        let clone = Object.assign({}, obj, parent)
-        Object.keys(clone).forEach(
-            key =>
-                (clone[key] =
-                    typeof obj[key] === 'object' ? AppUtils.deepClone(obj[key]) : obj[key]),
-        )
+        if (typeof obj !== 'object') {
+            return obj
+        }
+        if (map.has(obj)) {
+            return map.get(obj)
+        }
+
+        let clone
         if (Array.isArray(obj)) {
-            clone.length = obj.length
-            return Array.from(clone)
+            clone = []
+            map.set(obj, clone)
+            obj.forEach((item, index) => {
+                clone[index] = AppUtils.deepClone(item, null, map)
+            })
+        }
+        else {
+            clone = Object.assign({}, obj, parent)
+            map.set(obj, clone)
+            Object.keys(clone).forEach(key => {
+                clone[key] = AppUtils.deepClone(obj[key], null, map)
+            })
         }
         return clone
     })
@@ -171,7 +183,7 @@ export class AppUtils {
             }
         }
         else {
-            const info = __.app.isDevelopment() ? `'<br/>Try "bun run dev" to restart the application'` : ''
+            const info = __.app.isDevelopment() ? `'<br/>Try "bun run dev" to restart the application!` : ''
             return {
                 status: false,
                 error:  new Error(`${lgs.configuration.applicationName} Backend server seems to be unreachable!${info}`),
