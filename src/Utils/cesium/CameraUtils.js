@@ -75,7 +75,7 @@ export class CameraUtils {
      *
      * @return {position:{object},target:{object}}
      */
-    static  updateCamera = async (camera) => {
+    static updatePositionInformation = async (camera) => {
 
         // If we do not have camera, we try to set one or return
         if (!camera) {
