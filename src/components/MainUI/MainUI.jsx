@@ -21,6 +21,8 @@ import { SupportUIButton }      from './SupportUIButton'
 export const MainUI = function VT3D_UI() {
 
     lgs.viewer = useCesium().viewer
+    lgs.camera.changed.addEventListener(updateCameraPosition)
+    lgs.camera.percentageChanged = lgs.configuration.camera.percentageChanged
 
     useEffect(() => {
 
@@ -63,7 +65,7 @@ export const MainUI = function VT3D_UI() {
                         <Profile/>
                     </div>
                     <div id={'bottom-right-ui'}>
-                        <StudioLogo xsmall width={'80px'}/>
+                        <StudioLogo xsmall width={'50px'}/>
                     </div>
                     {/* <div id={'bottom-right-ui'}></div> */}
                 </div>
