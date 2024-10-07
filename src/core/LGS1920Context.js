@@ -3,17 +3,17 @@ import { MouseUtils } from '@Utils/cesium/MouseUtils'
 import { CSSUtils }   from '@Utils/CSSUtils'
 import { UIUtils }    from '@Utils/UIUtils'
 
-import { proxy }                   from 'valtio'
-import { UnitUtils }               from '../Utils/UnitUtils'
-import { LocalDB }                 from './db/LocalDB'
-import { Layer }                   from './Layer.js'
-import { MouseEventHandler }       from './MouseEventHandler'
-import { main }                    from './stores/main'
-import { theJourneyEditor }        from './stores/theJourneyEditor'
-import { Camera as CameraManager } from './ui/Camera'
-import { JourneyEditor }           from './ui/JourneyEditor'
-import { Profiler }                from './ui/Profiler'
-import { Wanderer }                from './ui/Wanderer'
+import { proxy }                          from 'valtio'
+import { UnitUtils }                      from '../Utils/UnitUtils'
+import { LocalDB }                        from './db/LocalDB'
+import { Layer }                          from './Layer.js'
+import { MouseEventHandler }              from './MouseEventHandler'
+import { main }                           from './stores/main'
+import { theJourneyEditor }               from './stores/theJourneyEditor'
+import { CameraManager as CameraManager } from './ui/CameraManager'
+import { JourneyEditor }                  from './ui/JourneyEditor'
+import { Profiler }                       from './ui/Profiler'
+import { Wanderer }                       from './ui/Wanderer'
 
 //import config from 'dotenv'
 
@@ -193,7 +193,7 @@ export class LGS1920Context {
      *
      * @param journey
      */
-    saveJourney = (journey) => {
+    saveJourneyInContext = (journey) => {
         if (journey) {
             const index = this.mainProxy.components.journeyEditor.list.findIndex(item => item === journey.slug)
             if (index >= 0) {
@@ -213,7 +213,7 @@ export class LGS1920Context {
      *
      */
     addToContext = (setToCurrent = true) => {
-        lgs.saveJourney(this)
+        lgs.saveJourneyInContext(this)
         if (setToCurrent) {
             lgs.theJourney = this
         }

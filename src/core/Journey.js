@@ -27,7 +27,6 @@ import { POI, POI_VERTICAL_ALIGN_TOP } from './POI'
 
 import { ProfileTrackMarker } from './ProfileTrackMarker'
 import { Track }              from './Track'
-import { Camera }             from './ui/Camera.js'
 
 
 export class Journey extends MapElement {
@@ -98,20 +97,10 @@ export class Journey extends MapElement {
 
         }
 
-        /**
-         * If we're on the current journey, we register to the camera updates events
-         * in order to save camera information
-         */
-        lgs.events.on(Camera.UPDATE_EVENT, () => {
-            if (this.isCurrent()) {
-                this.camera = __.ui.camera.get()
-                lgs.saveJourney(this)
-                this.addToContext()
-                lgs.theJourney.camera = this.camera
-                save()
-            }
-        })
     }
+
+
+
 
     /**
      * Get all journeys from DB
@@ -237,8 +226,6 @@ export class Journey extends MapElement {
                 case GEOJSON :
                     this.geoJson = JSON.parse(content)
             }
-            //Save original data
-            this.origin = this.geoJson
 
         } catch (error) {
             console.error(error)
@@ -255,7 +242,7 @@ export class Journey extends MapElement {
      *
      * Populate this.tracks
      *
-     * @param keepContext {boolean} when true, we update only some data related to position
+     * @param keepContext {boolean} when true, we updatePositionInformation only some data related to position
      *                              and elevation.
      *
      */
@@ -533,7 +520,7 @@ export class Journey extends MapElement {
      *
      */
     addToContext = (setToCurrent = true) => {
-        lgs.saveJourney(this)
+        lgs.saveJourneyInContext(this)
         if (setToCurrent) {
             lgs.theJourney = this
         }
