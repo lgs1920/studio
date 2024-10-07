@@ -1,8 +1,8 @@
 import { Journey, NO_FOCUS, RE_LOADING }                from '@Core/Journey'
-import { Track }                                        from '@Core/Track'
 import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE } from '@Core/LGS1920Context'
-import { TrackUtils }              from '@Utils/cesium/TrackUtils'
-import { UPDATE_JOURNEY_SILENTLY } from './journey/JourneySettings'
+import { Track }                                        from '@Core/Track'
+import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
+import { UPDATE_JOURNEY_SILENTLY }                      from './journey/JourneySettings'
 
 export class Utils {
 
@@ -28,56 +28,56 @@ export class Utils {
         return __.ui.css.getCSSVariable('--lgs-journey-editor-offset')
     }
 
-    static initJourneyEdition = (event = undefined) => {
+    static initJourneyEdition = async (event = undefined) => {
         if (window.isOK(event)) {
             Utils.updateJourneyEditor(event.target.value)
         }
     }
-    static updateJourneyEditor = (journeySlug) => {
-        if (window.isOK(event)) {
-            const editorStore = lgs.theJourneyEditorProxy
-            editorStore.journey = lgs.getJourneyBySlug(journeySlug)
-            lgs.saveJourney(editorStore.journey)
+    static updateJourneyEditor = async (journeySlug) => {
+        const editorStore = lgs.theJourneyEditorProxy
+        editorStore.journey = lgs.getJourneyBySlug(journeySlug)
+        lgs.saveJourneyInContext(editorStore.journey)
 
-            editorStore.journey.addToContext()
-            // Force Tab to Data
-            editorStore.tabs.journey.data = true
 
-            // Force Track and POI in editor
-            editorStore.track = Array.from(editorStore.journey.tracks.values())[0]
-            editorStore.track.addToContext()
-            // Force tab to data
-            editorStore.tabs.track.data = true
-            editorStore.track.addToEditor()
+        editorStore.journey.addToContext()
+        // Force Tab to Data
+        editorStore.tabs.journey.data = true
 
-            editorStore.poi = null
-            // Force rerender
-            Utils.renderJourneysList()
-            Utils.renderJourneySettings()
-            Utils.renderTracksList()
-            Utils.renderTrackSettings()
+        // Force Track and POI in editor
+        editorStore.track = Array.from(editorStore.journey.tracks.values())[0]
+        editorStore.track.addToContext()
+        // Force tab to data
+        editorStore.tabs.track.data = true
+        editorStore.track.addToEditor()
 
-            //TODO manage 'journey/change' event and externalise profile management
+        editorStore.poi = null
+        // Force rerender
+        Utils.renderJourneysList()
+        Utils.renderJourneySettings()
+        Utils.renderTracksList()
+        Utils.renderTrackSettings()
 
-            // Profile management
-            TrackUtils.setProfileVisibility(editorStore.journey)
-           lgs.theTrack.marker.toggleVisibility()
+        //TODO manage 'journey/change' event and externalise profile management
 
-            // Update Profile to show the correct Journey
-            __.ui.profiler.draw()
+        // Profile management
+        TrackUtils.setProfileVisibility(editorStore.journey)
+        lgs.theTrack.marker.toggleVisibility()
 
-            // Save information
-            TrackUtils.saveCurrentJourneyToDB(event.target.value).then(async () => {
-                if (editorStore.journey.visible) {
-                    lgs.theJourney.focus()
-                }
+        // Update Profile to show the correct Journey
+        __.ui.profiler.draw()
 
-                await TrackUtils.saveCurrentTrackToDB(null)
-                await TrackUtils.saveCurrentPOIToDB(null)
-            })
-        }
+        // Save information
+        TrackUtils.saveCurrentJourneyToDB(event.target.value).then(async () => {
+            if (editorStore.journey.visible) {
+                lgs.theJourney.focus()
+            }
+
+            await TrackUtils.saveCurrentTrackToDB(null)
+            await TrackUtils.saveCurrentPOIToDB(null)
+        })
     }
-    static initTrackEdition = (event) => {
+
+    static initTrackEdition = async (event) => {
         if (window.isOK(event)) {
             const editorStore = lgs.theJourneyEditorProxy
             editorStore.track = lgs.getTrackBySlug(event.target.value)
@@ -115,7 +115,7 @@ export class Utils {
 
 
         if (action === DRAW_THEN_SAVE || action === JUST_SAVE) {
-            lgs.saveJourney(journey)
+            lgs.saveJourneyInContext(journey)
             // saveToDB toDB
             await journey.saveToDB()
         }
@@ -137,7 +137,7 @@ export class Utils {
 
         const journey = Journey.deserialize({object: Journey.unproxify(lgs.theJourneyEditorProxy.journey)})
         await journey.extractMetrics()
-        lgs.saveJourney(journey)
+        lgs.saveJourneyInContext(journey)
         // saveToDB toDB
         await journey.saveToDB()
 
