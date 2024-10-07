@@ -88,10 +88,10 @@ export const Profile = function Profile() {
             </>)
     }
 
-    __.ui.profiler.setVisibility()
+    __.ui.profiler?.setVisibility()
 
     //prepare data from track to profile
-    const data = __.ui.profiler.prepareData()
+    const data = __.ui.profiler?.prepareData()
 
     const resizeProfile=event => {
             const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
