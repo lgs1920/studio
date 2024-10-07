@@ -313,7 +313,6 @@ export class Deployment {
 
         // We zip the distrib
         await this.zip()
-        console.log('')
 
     }
 
