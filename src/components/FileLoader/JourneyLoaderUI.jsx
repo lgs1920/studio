@@ -111,7 +111,6 @@ export const JourneyLoaderUI = (props) => {
      * @constructor
      */
     const FileList = () => {
-        console.log('redraw')
         return (
             <ul>
                 {Array.from(fileList.values()).map(
