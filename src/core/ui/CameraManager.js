@@ -35,11 +35,6 @@ export class CameraManager {
 
         this.move = {type: null, releaseEvent: null}
 
-        // Add event on camera move
-        lgs.camera?.changed.addEventListener(async () => {
-            await this.updatePositionInformation()
-        })
-
         CameraManager.instance = this
 
     }
@@ -133,7 +128,7 @@ export class CameraManager {
         CameraUtils.unlock(lgs.camera)
 
         // Set move event
-        lgs.camera.percentageChanged = lgs.configuration.camera.orbitalPercentageChanged
+        lgs.camera.percentageChanged = lgs.configuration.camera.percentageChanged
 
         // Run it
         this.move = {
@@ -144,6 +139,10 @@ export class CameraManager {
                 }
             }),
         }
+    }
+
+    raiseUpdateEvent = () => {
+        this.updatePositionInformation()
     }
 
     updatePositionInformation = async () => {

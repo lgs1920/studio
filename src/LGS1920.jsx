@@ -33,8 +33,12 @@ export function LGS1920() {
 
     const cameraStore = lgs.mainProxy.components.camera
 
-    const run360 = async () => {
+    const rotate = async () => {
         await (new CameraManager()).runOrbital({})
+    }
+
+    const raiseCameraUpdateEvent = async () => {
+        await (new CameraManager()).raiseUpdateEvent({})
     }
 
     useEffect(() => {
@@ -122,13 +126,13 @@ export function LGS1920() {
 
             <Scene verticalExaggeration={1.3}></Scene>
             <Globe enableLighting={false} depthTestAgainstTerrain={true}></Globe>
-            <Camera>
+            <Camera onChange={raiseCameraUpdateEvent}>
                 <CameraFlyTo
                     orientation={lgs.cameraOrientation}
                     duration={3}
                     destination={lgs.startCameraPoint}
                     once={true}
-                    onComplete={run360}
+                    onComplete={rotate}
                 />
             </Camera>
 
