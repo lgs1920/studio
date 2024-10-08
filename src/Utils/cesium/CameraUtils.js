@@ -76,7 +76,6 @@ export class CameraUtils {
      * @return {position:{object},target:{object}}
      */
     static updatePositionInformation = async (camera) => {
-
         // If we do not have camera, we try to set one or return
         if (!camera) {
             camera = lgs.camera
@@ -92,64 +91,6 @@ export class CameraUtils {
         } catch (e) {
             console.error(e)
             return undefined
-        }
-
-
-    }
-
-
-    /**
-     * Turn around the camera target by PI/1000 on each Camera rotation.
-     *
-     *
-     *
-     */
-    static run360 = (target = null) => {
-        const camera = __.ui.camera.get()
-        if (target) {
-            camera.target = {
-                longitude: target.longitude,
-                latitude:  target.latitude,
-                height:    target.height,
-            }
-
-            camera.position.heading = target.camera.heading
-            camera.position.pitch = target.camera.pitch
-            camera.position.roll = target.camera.roll
-            camera.position.range = target.camera.range
-        }
-        else {
-            if (!camera.target) {
-                return // Bail early if no target at all
-            }
-            target = {
-                longitude: camera.target.longitude,
-                latitude:  camera.target.latitude,
-                height:    camera.target.height,
-                camera:    {
-                    heading: M.toRadians(camera.position.heading),
-                    pitch:   M.toRadians(camera.position.pitch),
-                    range:   camera.position.range,
-                },
-            }
-        }
-
-
-        // TODO hpr as parameter
-        // const hpr = new HeadingPitchRange(camera.position.heading, camera.position.pitch, camera.position.range)
-
-        CameraUtils.lookAt(lgs.camera, Cartesian3.fromDegrees(target.longitude, target.latitude, target.height))
-
-        const step = (lgs.camera.clockwise) ? M.PI / 800 : -M.PI / 800
-        lgs.stop360 = lgs.viewer.clock.onTick.addEventListener(() => {
-            lgs.camera.rotateLeft(step)
-        })
-    }
-
-    static stop360 =() => {
-        if (lgs.stop360) {
-            lgs.stop360()
-            lgs.stop360=undefined
         }
     }
 

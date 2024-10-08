@@ -47,14 +47,16 @@ export function LGS1920() {
                 // Set DefaultTheme
                 __.app.setTheme()
 
+                // Init UI managers
+                lgs.initManagers()
+
                 // Set body class to manage css versus platform
                 document.body.classList.add(lgs.platform);
 
                 (async () => {
                     // Read DB
                     await TrackUtils.readAllFromDB()
-                    // Init UI managers
-                    lgs.initManagers()
+
                     //Ready
                     UIToast.success({
                                         caption: `Welcome on ${lgs.configuration.applicationName}!`,

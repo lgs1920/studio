@@ -32,7 +32,9 @@
     "pitch": -45,
     "roll": 0,
     "range": 3000,
-    "percentageChanged": 0.02
+    "orbitalPercentageChanged": 0.02,
+    "percentageChanged": 0.1
+
   },
   "profile": {
     "show": true,

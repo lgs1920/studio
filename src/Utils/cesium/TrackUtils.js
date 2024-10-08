@@ -652,7 +652,8 @@ export class TrackUtils {
                     await TrackUtils.createCommonMapObjectsStore()
                     __.ui.profiler.draw()
 
-                    await __.ui.camera.stop360()
+                    await __.ui.camera.stopOrbital()
+                    await __.ui.camera.runNormal()
 
 
                     return JOURNEY_OK
