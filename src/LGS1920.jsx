@@ -33,8 +33,10 @@ export function LGS1920() {
 
     const cameraStore = lgs.mainProxy.components.camera
 
-    const rotate = async () => {
-        await (new CameraManager()).runOrbital({})
+    const rotateCamera = async () => {
+        if (lgs.journeys.size === 0) {
+            await (new CameraManager()).runOrbital({})
+        }
     }
 
     const raiseCameraUpdateEvent = async () => {
@@ -132,7 +134,7 @@ export function LGS1920() {
                     duration={3}
                     destination={lgs.startCameraPoint}
                     once={true}
-                    onComplete={rotate}
+                    onComplete={rotateCamera}
                 />
             </Camera>
 
