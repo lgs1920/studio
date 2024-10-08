@@ -254,7 +254,6 @@ export class LGS1920Context {
         }
         __.ui.wanderer = new Wanderer()
         __.ui.camera = new CameraManager()
-        console.log('init managers')
     }
 
 
