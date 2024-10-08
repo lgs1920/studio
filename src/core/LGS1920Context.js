@@ -15,7 +15,14 @@ import { JourneyEditor }                  from './ui/JourneyEditor'
 import { Profiler }                       from './ui/Profiler'
 import { Wanderer }                       from './ui/Wanderer'
 
-//import config from 'dotenv'
+export const CONFIGURATION = 'config.json'
+export const SERVERS = 'servers.json'
+export const platforms = {
+    DEV:     'development',
+    STAGING: 'staging',
+    PROD:    'production',
+    TEST:    'test',
+}
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -63,20 +70,33 @@ export class LGS1920Context {
                 ui:UIUtils
             },
             convert: UnitUtils.convert,
-        }
+        };
 
+        (async (o) => await o.initializeConfig())(this)
 
-        //Init DBs
+    }
+
+    createDB = () => {
+        const dbPrefix = (this.platform === platforms.PROD) ? '' : `-${this.platform}`
         this.db = {
             lgs1920: new LocalDB({
-                name: `${APP_KEY}`,
-                store: [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, SETTINGS_STORE],
-                manageTransients: true,
-                version: '0.1',
-            }),
+                                     name:             `${APP_KEY}${dbPrefix}`,
+                                     store:            [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, SETTINGS_STORE],
+                                     manageTransients: true,
+                                     version:          '0.1',
+                                 }),
         }
+    }
 
 
+    initializeConfig = async () => {
+        this.configuration = await fetch(CONFIGURATION).then(
+            res => res.json(),
+        )
+        this.servers = await await fetch(SERVERS).then(
+            res => res.json(),
+        )
+        this.platform = lgs.servers.platform
     }
 
     /** @return {Viewer} */

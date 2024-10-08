@@ -1,12 +1,14 @@
-import axios                from 'axios'
-import * as Cesium          from 'cesium'
-import { EventEmitter }     from '../assets/libs/EventEmitter/EventEmitter'
-import { ElevationServer }  from '../core/Elevation/ElevationServer'
-import { ChangelogManager } from '../core/ui/ChangelogManager'
-import { FA2SL }            from './FA2SL'
+import axios                                 from 'axios'
+import * as Cesium                           from 'cesium'
+import { EventEmitter }                      from '../assets/libs/EventEmitter/EventEmitter'
+import { ElevationServer }                   from '../core/Elevation/ElevationServer'
+import { CONFIGURATION, platforms, SERVERS } from '../core/LGS1920Context'
+import { Settings }                          from '../core/settings/Settings'
+import { SettingsSection }                   from '../core/settings/SettingsSection'
+import { APP_SETTINGS_SECTION }              from '../core/stores/settings/app'
+import { ChangelogManager }                  from '../core/ui/ChangelogManager'
+import { FA2SL }                             from './FA2SL'
 
-export const CONFIGURATION ='config.json'
-export const SERVERS= 'servers.json'
 
 export class AppUtils {
     /**
@@ -125,6 +127,8 @@ export class AppUtils {
         )
         lgs.platform = lgs.servers.platform
 
+        lgs.createDB()
+
         lgs.setDefaultConfiguration()
 
         // Register Font Awesome icons in ShoeLace
@@ -135,6 +139,14 @@ export class AppUtils {
 
         // Create an Axios instance
         lgs.axios = axios.create();
+
+        /***************************************
+         * Application settings
+         */
+        lgs.settings = new Settings()
+
+        // Add settings sections
+        lgs.settings.add(new SettingsSection(APP_SETTINGS_SECTION))
 
         // Ping server
         const server = await __.app.pingBackend()
@@ -375,9 +387,3 @@ export { MILLIS, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR }
 
 /** other */
 export const WRONG = -99999999999
-export const platforms = {
-    DEV:'development',
-    STAGING:'staging',
-    PROD:'production',
-    TEST:'test'
-}
