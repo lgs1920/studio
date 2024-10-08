@@ -41,7 +41,6 @@ export class CameraManager {
 
     runOrbital = async ({target = lgs.configuration.starter, divider = 800}) => {
 
-        console.log('run orbital')
         // Bail early if there is a rotation already in action
         if (this.move.type === CameraManager.ORBITAL) {
             return
