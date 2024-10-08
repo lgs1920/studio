@@ -27,6 +27,7 @@
       "height": 4300
     }
   },
+
   "camera": {
     "heading":0,
     "pitch": -45,
@@ -34,8 +35,12 @@
     "range": 3000,
     "orbitalPercentageChanged": 0.02,
     "percentageChanged": 0.1
-
   },
+  "db": {
+    "IDBDelay": 2000,
+    "extDelay": 5000
+  },
+
   "profile": {
     "show": true,
     "line": {

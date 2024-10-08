@@ -131,11 +131,30 @@ export class CameraManager {
         lgs.camera.percentageChanged = lgs.configuration.camera.percentageChanged
 
         // Run it
+        let lastMouseMoveTime = 0
+        let saveInterval
+        const saveDelay = lgs.configuration.db.IDBDelay
+
+        // If the camera is in movement, we sav the journey in DB every <saveDelay> ms
+        // We save the last movement <saveDelay> ms after the last camera change
+
+        const saveData = async () => {
+            const currentTime = Date.now()
+            if (currentTime - lastMouseMoveTime >= saveDelay) {
+                clearInterval(saveInterval)
+                saveInterval = null
+            }
+            await lgs.theJourney.saveToDB()
+        }
+
         this.move = {
             type:         CameraManager.NORMAL,
             releaseEvent: lgs.camera.changed.addEventListener(async () => {
                 if (lgs.theJourney) {
-                    //  await lgs.theJourney.saveToDB()
+                    lastMouseMoveTime = Date.now()
+                    if (!saveInterval) {
+                        saveInterval = setInterval(saveData, saveDelay)
+                    }
                 }
             }),
         }
