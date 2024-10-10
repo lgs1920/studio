@@ -71,7 +71,7 @@
     "terser": "^5.34.1",
     "turf-linestring": "^1.0.2",
     "turf-point": "^2.0.1",
-    "valtio": "^1.13.2",
+    "valtio": "^2.0.0",
     "vite-plugin-cesium": "^1.2.23",
     "yaml": "^2.5.1",
     "zip-a-folder": "^3.1.7"
