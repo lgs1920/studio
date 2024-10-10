@@ -1,11 +1,10 @@
-import { faFileWaveform }       from '@fortawesome/pro-regular-svg-icons'
-import { SlDetails, SlDivider } from '@shoelace-style/shoelace/dist/react'
-import { DateTime }             from 'luxon'
-import React, { useEffect }     from 'react'
-import { Scrollbars }           from 'react-custom-scrollbars'
-import Markdown                 from 'react-markdown'
-import { proxy, useSnapshot }   from 'valtio'
-import { ChangelogManager }     from '../../core/ui/ChangelogManager'
+import { SlDetails, SlDivider }     from '@shoelace-style/shoelace/dist/react'
+import { DateTime }                 from 'luxon'
+import React, { useEffect }         from 'react'
+import { Scrollbars }               from 'react-custom-scrollbars'
+import { default as ReactMarkdown } from 'react-markdown'
+import { proxy, useSnapshot }       from 'valtio'
+import { ChangelogManager }         from '../../core/ui/ChangelogManager'
 
 // Créer un état proxy avec Valtio
 const state = proxy({
@@ -21,8 +20,9 @@ const readNews =  async () => {
         })
         await Promise.all(fileContent)
 
+        const tmp = []
         lgs.changelog.files.list.forEach((news, index) => {
-                                             state.data.push({
+            tmp.push({
                                                                  open:    (news.file === lgs.changelog.files.last.file),
                                                                  name:    news.file.slice(0, -3).replace(/_/gi, ' '), // suppress .md and change _
                                                                  date:    DateTime.fromMillis(news.time).toLocaleString(DateTime.DATE_MED),
@@ -32,6 +32,9 @@ const readNews =  async () => {
                                                              })
                                          }
         )
+        await Promise.all(state)
+        state.data = tmp
+
     } catch (error) {
         console.log(error)
     }
@@ -39,12 +42,14 @@ const readNews =  async () => {
 
 
 export const WhatsNew = () => {
-    const snap = useSnapshot(state)
 
     useEffect(() => {
-        readNews()
-        state.loading = false
+        ;(async () => {
+            await readNews()
+            state.loading = false
+        })()
     }, []);
+    const snap = useSnapshot(state)
 
     return (<Scrollbars style={{height: '100%'}}>
             <h1>{'What\'s new?'}</h1>
@@ -56,9 +61,7 @@ export const WhatsNew = () => {
                     >
                         <h3 slot="summary">[{file.version}] {file.date}</h3>
                         <SlDivider></SlDivider>
-                        <Markdown>
-                            {file.content}
-                        </Markdown>
+                        <ReactMarkdown children={file.content}/>
                     </SlDetails>
 
                 ))}
