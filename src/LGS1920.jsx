@@ -19,33 +19,51 @@ window.lgs = new LGS1920Context()
 
 // Application initialisation
 const initApp = await __.app.init()
+const cameraManager = new CameraManager()
+
 
 export function LGS1920() {
 
-    const starter = lgs.configuration.starter
-    lgs.startCameraPoint = Cesium.Cartesian3.fromDegrees(starter.camera.longitude, starter.camera.latitude, starter.camera.height)
-    lgs.cameraOrientation = {
-        heading: Cesium.Math.toRadians(starter.camera.heading),
-        pitch: Cesium.Math.toRadians(starter.camera.pitch),
-        roll: Cesium.Math.toRadians(starter.camera.roll),
+    const coordinates = {
+        position: {
+            longitude: lgs.configuration.starter.camera.longitude,
+            latitude:  lgs.configuration.starter.camera.latitude,
+            height:    lgs.configuration.starter.camera.height,
+            heading:   lgs.configuration.starter.camera.heading,
+            pitch:     lgs.configuration.starter.camera.pitch,
+            roll:      lgs.configuration.starter.camera.roll,
+        },
     }
 
+    const startCameraPoint = () => {
+        return Cesium.Cartesian3.fromDegrees(
+            coordinates.position.longitude,
+            coordinates.position.latitude,
+            coordinates.position.height,
+        )
+    }
+
+    const cameraOrientation = () => {
+        return {
+            heading: Cesium.Math.toRadians(coordinates.position.heading),
+            pitch:   Cesium.Math.toRadians(coordinates.position.pitch),
+            roll:    Cesium.Math.toRadians(coordinates.position.roll),
+        }
+    }
 
     const cameraStore = lgs.mainProxy.components.camera
 
     const rotateCamera = async () => {
         if (lgs.journeys.size === 0) {
-            await (new CameraManager()).runOrbital({})
+            await cameraManager.runOrbital({})
         }
     }
 
     const raiseCameraUpdateEvent = async () => {
-        await (new CameraManager()).raiseUpdateEvent({})
+        await cameraManager.raiseUpdateEvent({})
     }
 
     useEffect(() => {
-
-
         try {
             if (initApp.status) {
                 // Init was OK, we have somme additional tasks to do.
@@ -112,7 +130,8 @@ export function LGS1920() {
                 showRenderLoopErrors={false}
             //terrain={Cesium.Terrain.fromWorldTerrain({
 
-                terrain={new Cesium.Terrain(Cesium.CesiumTerrainProvider.fromUrl(`https://api.maptiler.com/tiles/terrain-quantized-mesh-v2/?key=${'Y6VgRYi3iKQEttoa3G0v'}`, {
+            /* Y6VgRYi3iKQEttoa3G0v */
+                terrain={new Cesium.Terrain(Cesium.CesiumTerrainProvider.fromUrl(`https://api.maptiler.com/tiles/terrain-quantized-mesh-v2/?key=${'qiE5uSYF7NoDFKCbfpfc'}`, {
                     requestVertexNormals: false,
                 }))}
 
@@ -130,9 +149,9 @@ export function LGS1920() {
             <Globe enableLighting={false} depthTestAgainstTerrain={true}></Globe>
             <Camera onChange={raiseCameraUpdateEvent}>
                 <CameraFlyTo
-                    orientation={lgs.cameraOrientation}
+                    orientation={cameraOrientation()}
                     duration={3}
-                    destination={lgs.startCameraPoint}
+                    destination={startCameraPoint()}
                     once={true}
                     onComplete={rotateCamera}
                 />

@@ -253,7 +253,7 @@ export class LGS1920Context {
             journey:new JourneyEditor()
         }
         __.ui.wanderer = new Wanderer()
-        __.ui.camera = new CameraManager()
+        __.ui.cameraManager = new CameraManager()
     }
 
 

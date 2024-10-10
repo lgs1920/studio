@@ -1,6 +1,10 @@
 import { Cartesian3, Math as M } from 'cesium'
 import { snapshot }              from 'valtio'
-import { CameraUtils }           from '../../Utils/cesium/CameraUtils.js'
+import { deepClone }             from 'valtio/utils'
+
+import { CameraUtils }    from '../../Utils/cesium/CameraUtils.js'
+import { Journey }        from '../Journey'
+import { JOURNEYS_STORE } from '../LGS1920Context'
 
 export class CameraManager {
     static CLOCKWISE = true
@@ -17,26 +21,55 @@ export class CameraManager {
             return CameraManager.instance
         }
 
-        this.target.longitude = settings?.target?.longitude ?? lgs.configuration.starter.longitude
-        this.target.latitude = settings?.target?.latitude ?? lgs.configuration.starter.latitude
-        this.target.height = settings?.target?.height ?? lgs.configuration.starter.height
+        this.settings = settings
 
-        this.position.longitude = undefined
-        this.position.latitude = undefined
-        this.position.height = undefined
-
-        this.position.heading = settings?.heading ?? lgs.configuration.camera.heading
-        this.position.pitch = settings?.pitch ?? lgs.configuration.camera.pitch
-        this.position.roll = settings?.roll ?? lgs.configuration.camera.roll
-        this.position.range = settings?.range ?? lgs.configuration.camera.range
         this.clockwise = CameraManager.CLOCKWISE
-
-        this.store = snapshot(lgs.mainProxy.components.camera)
-
+        this.store = lgs.mainProxy.components.camera
         this.move = {type: null, releaseEvent: null}
+
 
         CameraManager.instance = this
 
+    }
+
+    get settings() {
+        return {
+            position: this.position,
+            target:   this.target,
+        }
+    }
+
+    /**
+     * We stop tracking the camera's orbital movements
+     *
+     * @return {Promise<void>}
+     */
+    stopOrbital = async () => {
+        if (this.move.type === CameraManager.ORBITAL) {
+            this.move.releaseEvent()
+            CameraUtils.unlock(lgs.camera)
+            this.move.type = undefined
+        }
+    }
+
+    set settings(settings) {
+        this.target.longitude = settings?.position?.target?.longitude ?? lgs.configuration.starter.longitude
+        this.target.latitude = settings?.position?.target?.latitude ?? lgs.configuration.starter.latitude
+        this.target.height = settings?.position?.target?.height ?? lgs.configuration.starter.height
+
+        this.position.longitude = settings?.position?.longitude ?? lgs.configuration.camera.longitude
+        this.position.latitude = settings?.position?.latitude ?? lgs.configuration.camera.latitude
+        this.position.height = settings?.position?.height ?? lgs.configuration.camera.height
+
+        this.position.heading = settings?.position?.heading ?? lgs.configuration.camera.heading
+        this.position.pitch = settings?.position?.pitch ?? lgs.configuration.camera.pitch
+        this.position.roll = settings?.position?.roll ?? lgs.configuration.camera.roll
+        this.position.range = settings?.position?.range ?? lgs.configuration.camera.range
+
+    }
+
+    raiseUpdateEvent = () => {
+        this.updatePositionInformation()
     }
 
     runOrbital = async ({target = lgs.configuration.starter, divider = 800}) => {
@@ -52,35 +85,35 @@ export class CameraManager {
         }
 
         if (target) {
-            this.target = {
-                longitude: target.longitude,
-                latitude:  target.latitude,
-                height:    target.height,
+            this.settings = {
+                target:   {
+                    longitude: target.longitude,
+                    latitude:  target.latitude,
+                    height:    target.height,
+                },
+                position: {
+                    heading: target.camera.heading,
+                    pitch:   target.camera.pitch,
+                    roll:    target.camera.roll,
+                    range:   target.camera.range,
+                },
             }
-
-            this.position.heading = target.camera.heading
-            this.position.pitch = target.camera.pitch
-            this.position.roll = target.camera.roll
-            this.position.range = target.camera.range
         }
         else {
             if (!this.target) {
                 return // Bail early if no target at all
             }
-            target = {
-                longitude: this.target.longitude,
-                latitude:  this.target.latitude,
-                height:    this.target.height,
-                camera:    {
-                    heading: M.toRadians(this.position.heading),
-                    pitch:   M.toRadians(this.position.pitch),
-                    range:   this.position.range,
+            this.settings = {
+                target: {
+                    longitude: this.target.longitude,
+                    latitude:  this.target.latitude,
+                    height:    this.target.height,
                 },
             }
         }
 
         // TODO hpr as parameter
-        // const hpr = new HeadingPitchRange(camera.position.heading, camera.position.pitch, camera.position.range)
+        //const hpr = new HeadingPitchRange(M.toRadians(this.position.heading), M.toRadians(this.position.pitch), M.toRadians(this.position.range))
 
         // Set move event
         lgs.camera.percentageChanged = lgs.configuration.camera.orbitalPercentageChanged
@@ -97,19 +130,6 @@ export class CameraManager {
             }),
         }
 
-    }
-
-    /**
-     * We stop tracking the camera's orbital movements
-     *
-     * @return {Promise<void>}
-     */
-    stopOrbital = async () => {
-        if (this.move.type === CameraManager.ORBITAL) {
-            this.move.releaseEvent()
-            CameraUtils.unlock(lgs.camera)
-            this.move.type = undefined
-        }
     }
 
     runNormal = () => {
@@ -134,7 +154,7 @@ export class CameraManager {
         let saveInterval
         const saveDelay = lgs.configuration.db.IDBDelay
 
-        // If the camera is in movement, we sav the journey in DB every <saveDelay> ms
+        // If the camera is in movement, we save the journey in DB every <saveDelay> ms
         // We save the last movement <saveDelay> ms after the last camera change
 
         const saveData = async () => {
@@ -143,7 +163,8 @@ export class CameraManager {
                 clearInterval(saveInterval)
                 saveInterval = null
             }
-            await lgs.theJourney.saveToDB()
+            lgs.theJourney.camera = snapshot(this.store)
+            await lgs.db.lgs1920.put(lgs.theJourney.slug, Journey.unproxify(snapshot(lgs.theJourney)), JOURNEYS_STORE)
         }
 
         this.move = {
@@ -159,24 +180,29 @@ export class CameraManager {
         }
     }
 
-    raiseUpdateEvent = () => {
-        this.updatePositionInformation()
-    }
-
     updatePositionInformation = async () => {
         const data = await CameraUtils.updatePositionInformation()
         // Update Camera Manager information
         if (data) {
-            this.target = data.target
-            this.position = data.position
+            this.settings = data
         }
         else {
             this.reset()
         }
         // Update camera proxy
-        lgs.mainProxy.components.camera.position = this.position
-        lgs.mainProxy.components.camera.target = this.target
+        this.proxy()
+
+        // Update Journey Camera if needed
+        if (lgs.theJourney) {
+            lgs.theJourney.camera = snapshot(lgs.mainProxy.components.camera)
+        }
         return this
+    }
+
+    proxy = () => {
+        lgs.mainProxy.components.camera.position = deepClone(this.position)
+        console.log(this.position.longitude, lgs.mainProxy.components.camera.position.longitude)
+        lgs.mainProxy.components.camera.target = this.target
     }
 
 
@@ -188,22 +214,23 @@ export class CameraManager {
     }
 
     reset = () => {
-        this.target = {
-            longitude: lgs.configuration.starter.longitude,
-            latitude:  lgs.configuration.starter.latitude,
-            height:    lgs.configuration.starter.height,
-        }
-        this.position = {
-            longitude: undefined,
-            latitude:  undefined,
-            height:    undefined,
-            heading:   lgs.configuration.camera.heading,
-            pitch:     lgs.configuration.camera.pitch,
-            roll:      lgs.configuration.camera.roll,
-            range:     lgs.configuration.camera.range,
-        }
+        this.settings = {
+            target: {
+                longitude: lgs.configuration.starter.longitude,
+                latitude:  lgs.configuration.starter.latitude,
+                height:    lgs.configuration.starter.height,
+            },
 
-        return this
+            position: {
+                longitude: undefined,
+                latitude:  undefined,
+                height:    undefined,
+                heading:   lgs.configuration.camera.heading,
+                pitch:     lgs.configuration.camera.pitch,
+                roll:      lgs.configuration.camera.roll,
+                range:     lgs.configuration.camera.range,
+            },
+        }
     }
 
 

@@ -51,9 +51,6 @@ export class Journey extends MapElement {
     constructor(title, type, options) {
         super()
 
-        const save = async () => {
-            await this.saveToDB()
-        }
 
         if (title) {
             this.title = (options.allowRename ?? true) ? this.singleTitle(title) : title
@@ -87,7 +84,7 @@ export class Journey extends MapElement {
             this.getPOIsFromGeoJson()
 
             // Finally saveToDB
-            save().then()
+            ;(async () => await this.saveToDB())()
 
 
             const prepare = async () => {
@@ -115,10 +112,12 @@ export class Journey extends MapElement {
             const slugs = await lgs.db.lgs1920.keys(JOURNEYS_STORE)
             // Get each journey content
             const journeyPromises = slugs.map(async (slug) => {
-                return Journey.deserialize({
-                                               object: await lgs.db.lgs1920.get(slug, JOURNEYS_STORE),
-                    reset:true
-                                           })
+                return Journey.deserialize(
+                    {
+                        object: await lgs.db.lgs1920.get(slug, JOURNEYS_STORE),
+                        reset:  true,
+                    },
+                )
             })
             return await Promise.all(journeyPromises)
         } catch (error) {

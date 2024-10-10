@@ -11,7 +11,6 @@ import { subscribe }            from 'valtio'
 import { CanvasEvents }         from '../../core/events/CanvasEvents.js'
 import { CameraAndTargetPanel } from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
 import { JourneyLoaderUI }      from '../FileLoader/JourneyLoaderUI'
-import { Panel }                from '../InformationPanel/Panel'
 import { PanelButton }          from '../InformationPanel/PanelButton'
 import { Utils }                from '../TracksEditor/Utils.js'
 import { StudioLogo }           from './StudioLogo'
@@ -75,7 +74,7 @@ export const MainUI = function VT3D_UI() {
                     </>
 
 
-            <Panel/>
+                {/* <Panel/> */}
             <TracksEditor/>
                 <CameraAndTargetPanel/>
             </div>
