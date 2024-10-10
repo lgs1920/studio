@@ -210,7 +210,7 @@ export class Deployment {
             }
             exec(buildCommand, (error) => {
                 if (error) {
-                    console.error(err)
+                    console.error(error)
                     reject(`${this.red}Build error: ${error.message}${this.reset}`)
                     return
                 }
