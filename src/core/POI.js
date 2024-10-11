@@ -28,7 +28,7 @@ export class POI {
 
     constructor(options) {
         this.type = options.type
-        this.usage = options.usage ?? POI_STD,
+        this.usage = options.usage ?? POI_STD
         this.parent = options.parent
         this.slug = options.slug
         this.name = options.name
@@ -48,7 +48,7 @@ export class POI {
         this.drawn = options.drawn??false
     }
 
-    static clone = (source, exceptions = {}) => {
+    static clone = (source) => {
         return new POI(POI.extractObject(source))
     }
 

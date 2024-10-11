@@ -2,8 +2,8 @@ import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 
-import { Canvg }                          from 'canvg'
-import * as Cesium                        from 'cesium'
+import { Canvg }   from 'canvg'
+import * as Cesium from 'cesium'
 
 // Pin Marker Type
 export const PIN_ICON = 1
@@ -43,6 +43,7 @@ export class POIUtils {
     /**
      *
      * @param poi
+     * @param parentVisibility
      * @return {Promise<*>}
      */
     static draw = async (poi, parentVisibility = true) => {
