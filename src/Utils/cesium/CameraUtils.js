@@ -1,3 +1,4 @@
+import * as Cesium                                                                         from 'cesium'
 import { Cartesian2, Cartesian3, Cartographic, Ellipsoid, Math as M, Matrix4, Transforms } from 'cesium'
 
 export class CameraUtils {
@@ -134,22 +135,12 @@ export class CameraUtils {
         }
     }
 
-    addCrossAtPosition(position) {
-        if (position) {
-            viewer.entities.add({
-                                    position: position,
-                                    polyline: {
-                                        positions: [
-                                            Cesium.Cartesian3.add(position, new Cesium.Cartesian3(-10, 0, 0), new Cesium.Cartesian3()),
-                                            Cesium.Cartesian3.add(position, new Cesium.Cartesian3(10, 0, 0), new Cesium.Cartesian3()),
-                                            Cesium.Cartesian3.add(position, new Cesium.Cartesian3(0, -10, 0), new Cesium.Cartesian3()),
-                                            Cesium.Cartesian3.add(position, new Cesium.Cartesian3(0, 10, 0), new Cesium.Cartesian3()),
-                                        ],
-                                        width:     2,
-                                        material:  Cesium.Color.RED,
-                                    },
-                                })
+    static getTargetPositionInPixels(position) {
+        if (position?.longitude && position?.latitude) {
+            const cartesian = Cartographic.toCartesian(new Cesium.Cartographic(Cesium.Math.toRadians(position.longitude), Cesium.Math.toRadians(position.latitude)))
+            return lgs.scene.cartesianToCanvasCoordinates(cartesian)
         }
+        return null
     }
 
 

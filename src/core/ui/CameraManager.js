@@ -27,9 +27,32 @@ export class CameraManager {
         this.store = lgs.mainProxy.components.camera
         this.move = {type: null, releaseEvent: null}
 
+        // we track window resizing to get
+        // target coordinates in pixels
+        window.addEventListener('resize', () => {
+            this.targetInPixels()
+            this.raiseUpdateEvent()
+        })
 
         CameraManager.instance = this
 
+    }
+
+    set settings(settings) {
+        this.target.longitude = settings?.target?.longitude //?? lgs.configuration.starter.longitude
+        this.target.latitude = settings?.target?.latitude //?? lgs.configuration.starter.latitude
+        this.target.height = settings?.target?.height //?? lgs.configuration.starter.height;
+        this.targetInPixels()
+
+
+        this.position.longitude = settings?.position?.longitude ?? lgs.configuration.camera.longitude
+        this.position.latitude = settings?.position?.latitude ?? lgs.configuration.camera.latitude
+        this.position.height = settings?.position?.height ?? lgs.configuration.camera.height
+
+        this.position.heading = settings?.position?.heading ?? lgs.configuration.camera.heading
+        this.position.pitch = settings?.position?.pitch ?? lgs.configuration.camera.pitch
+        this.position.roll = settings?.position?.roll ?? lgs.configuration.camera.roll
+        this.position.range = settings?.position?.range ?? lgs.configuration.camera.range
     }
 
     get settings() {
@@ -52,19 +75,10 @@ export class CameraManager {
         }
     }
 
-    set settings(settings) {
-        this.target.longitude = settings?.target?.longitude //?? lgs.configuration.starter.longitude
-        this.target.latitude = settings?.target?.latitude //?? lgs.configuration.starter.latitude
-        this.target.height = settings?.target?.height //?? lgs.configuration.starter.height
-
-        this.position.longitude = settings?.position?.longitude ?? lgs.configuration.camera.longitude
-        this.position.latitude = settings?.position?.latitude ?? lgs.configuration.camera.latitude
-        this.position.height = settings?.position?.height ?? lgs.configuration.camera.height
-
-        this.position.heading = settings?.position?.heading ?? lgs.configuration.camera.heading
-        this.position.pitch = settings?.position?.pitch ?? lgs.configuration.camera.pitch
-        this.position.roll = settings?.position?.roll ?? lgs.configuration.camera.roll
-        this.position.range = settings?.position?.range ?? lgs.configuration.camera.range
+    targetInPixels = () => {
+        const pixels = CameraUtils.getTargetPositionInPixels(this.target)
+        this.target.x = pixels?.x
+        this.target.y = pixels?.y
     }
 
     /**
