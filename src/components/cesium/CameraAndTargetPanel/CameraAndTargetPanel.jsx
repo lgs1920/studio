@@ -17,7 +17,7 @@ export const CameraAndTargetPanel = () => {
 
     return (
         <div id={'camera-and-target-position-panel'}>
-            {ui.showCameraTargetPosition &&
+            {ui.showCameraTargetPosition && !__.ui.cameraManager.isLookingAtTheSky(camera.target) &&
                 <SlAnimation size="small" easing="bounceInLeft" duration={1000} iterations={1}
                              play={ui.showCameraTargetPosition}>
                     <div className="camera-data-panel lgs-card on-map">
@@ -29,10 +29,11 @@ export const CameraAndTargetPanel = () => {
                             <TextValueUI value={camera.target.latitude?.toFixed(5)}
                                          className={'camera-latitude'}
                                          text={'Lat:'}/>
-                            <sl-icon library="fa" name={FA2SL.set(faMountains)}></sl-icon>
-                            <TextValueUI value={camera.target.height?.toFixed()}
-                                         className={'camera-altitude'}
-                                         units={[meter, mile]}/>
+                            {/* hide elevation as it is not precise enough. TODO fix this  */}
+                            {/* <sl-icon library="fa" name={FA2SL.set(faMountains)}></sl-icon> */}
+                            {/* <TextValueUI value={camera.target.height?.toFixed()} */}
+                            {/*              className={'camera-altitude'} */}
+                            {/*              units={[meter, mile]}/> */}
                         </div>
                     </div>
                 </SlAnimation>

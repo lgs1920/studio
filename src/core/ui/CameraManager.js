@@ -53,9 +53,9 @@ export class CameraManager {
     }
 
     set settings(settings) {
-        this.target.longitude = settings?.position?.target?.longitude ?? lgs.configuration.starter.longitude
-        this.target.latitude = settings?.position?.target?.latitude ?? lgs.configuration.starter.latitude
-        this.target.height = settings?.position?.target?.height ?? lgs.configuration.starter.height
+        this.target.longitude = settings?.target?.longitude //?? lgs.configuration.starter.longitude
+        this.target.latitude = settings?.target?.latitude //?? lgs.configuration.starter.latitude
+        this.target.height = settings?.target?.height //?? lgs.configuration.starter.height
 
         this.position.longitude = settings?.position?.longitude ?? lgs.configuration.camera.longitude
         this.position.latitude = settings?.position?.latitude ?? lgs.configuration.camera.latitude
@@ -65,7 +65,17 @@ export class CameraManager {
         this.position.pitch = settings?.position?.pitch ?? lgs.configuration.camera.pitch
         this.position.roll = settings?.position?.roll ?? lgs.configuration.camera.roll
         this.position.range = settings?.position?.range ?? lgs.configuration.camera.range
+    }
 
+    /**
+     *
+     * @param target
+     * @return {boolean}
+     */
+    isLookingAtTheSky = (target = this.target) => {
+        return (target.longitude === undefined)
+            && (target.latitude === undefined)
+            && (target.height === undefined)
     }
 
     raiseUpdateEvent = () => {
@@ -201,8 +211,7 @@ export class CameraManager {
 
     proxy = () => {
         lgs.mainProxy.components.camera.position = deepClone(this.position)
-        console.log(this.position.longitude, lgs.mainProxy.components.camera.position.longitude)
-        lgs.mainProxy.components.camera.target = this.target
+        lgs.mainProxy.components.camera.target = deepClone(this.target)
     }
 
 
