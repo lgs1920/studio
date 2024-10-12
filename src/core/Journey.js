@@ -501,7 +501,7 @@ export class Journey extends MapElement {
      * @type {boolean}
      */
     saveOriginDataToDB = async () => {
-        await lgs.db.lgs1920.put(this.slug, this.geoJson, ORIGIN_STORE)
+        await lgs.db.lgs1920.put(this.slug, JSON.stringify(this.geoJson), ORIGIN_STORE)
     }
 
     /**

@@ -141,7 +141,7 @@ export const JourneySettings = function JourneySettings() {
         // Extract coordinates
         let allCoordinates = []
         // And Origin Data
-        lgs.origin = await lgs.db.lgs1920.get(editorStore.journey.slug, ORIGIN_STORE)
+        lgs.origin = JSON.parse(await lgs.db.lgs1920.get(editorStore.journey.slug, ORIGIN_STORE))
 
         let allOrigin = []
 
