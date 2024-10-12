@@ -94,9 +94,6 @@ export class CameraManager {
 
     raiseUpdateEvent = () => {
         this.updatePositionInformation()
-        if (lgs.configuration.ui.cameraTarget.show && !this.lookingAtTheSky()) {
-            CameraUtils.drawCameraTarget(this.target)
-        }
     }
 
     runOrbital = async ({target = lgs.configuration.starter, divider = 800}) => {
