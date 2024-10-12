@@ -133,6 +133,11 @@
   "ui": {
     "showCameraPosition": true,
     "showCameraTargetPosition": true,
-    "showCameraHPR": true
+    "showCameraHPR": true,
+    "cameraTargetIcon": {
+      "show": true,
+      "color": "white",
+      "size": "4rem"
+    }
   }
 }

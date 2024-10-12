@@ -27,6 +27,7 @@ export const main = {
             position: {},
             target: {},
             event: false,
+            targetIcon: {},
         },
 
         journeyEditor: {
