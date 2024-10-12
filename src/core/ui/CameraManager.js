@@ -86,7 +86,7 @@ export class CameraManager {
      * @param target
      * @return {boolean}
      */
-    isLookingAtTheSky = (target = this.target) => {
+    lookingAtTheSky = (target = this.target) => {
         return (target.longitude === undefined)
             && (target.latitude === undefined)
             && (target.height === undefined)
@@ -94,6 +94,9 @@ export class CameraManager {
 
     raiseUpdateEvent = () => {
         this.updatePositionInformation()
+        if (lgs.configuration.ui.cameraTarget.show && !this.lookingAtTheSky()) {
+            CameraUtils.drawCameraTarget(this.target)
+        }
     }
 
     runOrbital = async ({target = lgs.configuration.starter, divider = 800}) => {

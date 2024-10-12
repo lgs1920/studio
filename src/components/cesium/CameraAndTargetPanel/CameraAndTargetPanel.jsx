@@ -17,7 +17,7 @@ export const CameraAndTargetPanel = () => {
 
     return (
         <div id={'camera-and-target-position-panel'}>
-            {ui.showCameraTargetPosition && !__.ui.cameraManager.isLookingAtTheSky(camera.target) &&
+            {ui.showCameraTargetPosition && !__.ui.cameraManager.lookingAtTheSky(camera.target) &&
                 <SlAnimation size="small" easing="bounceInLeft" duration={1000} iterations={1}
                              play={ui.showCameraTargetPosition}>
                     <div className="camera-data-panel lgs-card on-map">
