@@ -1,4 +1,4 @@
-import { faArrowsToDot }     from '@fortawesome/pro-regular-svg-icons'
+import { faArrowsToCircle }  from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon }            from '@shoelace-style/shoelace/dist/react'
 import { useEffect, useRef } from 'react'
 import { FA2SL }             from '../../Utils/FA2SL'
@@ -27,7 +27,7 @@ export const CameraTarget = () => {
                 height: lgs.configuration.ui.cameraTargetIcon.size,
                 color:  lgs.configuration.ui.cameraTargetIcon.color,
             }}>
-            <SlIcon library="fa" name={FA2SL.set(faArrowsToDot)}></SlIcon>
+            <SlIcon library="fa" name={FA2SL.set(faArrowsToCircle)}></SlIcon>
         </div>
     )
 }
