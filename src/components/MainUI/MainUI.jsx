@@ -14,6 +14,7 @@ import { JourneyLoaderUI }      from '../FileLoader/JourneyLoaderUI'
 import { Panel }                from '../InformationPanel/Panel'
 import { PanelButton }          from '../InformationPanel/PanelButton'
 import { Utils }                from '../TracksEditor/Utils.js'
+import { CameraTarget }         from './CameraTarget'
 import { StudioLogo }           from './StudioLogo'
 import { SupportUI }            from './SupportUI'
 import { SupportUIButton }      from './SupportUIButton'
@@ -76,10 +77,11 @@ export const MainUI = function VT3D_UI() {
 
 
                 <Panel/>
-            <TracksEditor/>
+                <TracksEditor/>
                 <CameraAndTargetPanel/>
             </div>
 
+            <CameraTarget/>
             <SupportUI/>
             <JourneyLoaderUI multiple/>
 
