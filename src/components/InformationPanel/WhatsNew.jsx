@@ -18,22 +18,28 @@ const readNews =  async () => {
         lgs.changelog.files.list.forEach(news => {
             fileContent.push(changelog.read(encodeURIComponent(news.file)))
         })
-        await Promise.all(fileContent)
+        Promise.all(fileContent).then((fileContent) => {
+            const tmp = []
+            lgs.changelog.files.list.forEach((news, index) => {
+                                                 tmp.push({
+                                                              open:    (news.file === lgs.changelog.files.last.file),
+                                                              name:    news.file.slice(0, -3).replace(/_/gi, ' '), // suppress
+                                                                                                                   // .md
+                                                                                                                   // and
+                                                                                                                   // change
+                                                                                                                   // _
+                                                              date:    DateTime.fromMillis(news.time).toLocaleString(DateTime.DATE_MED),
+                                                              time:    news.time,
+                                                              version: news.version,
+                                                              content: fileContent[index],
+                                                          })
+                                             },
+            )
+            Promise.all(tmp).then(tmp => state.data = tmp)
+        })
 
-        const tmp = []
-        lgs.changelog.files.list.forEach((news, index) => {
-            tmp.push({
-                                                                 open:    (news.file === lgs.changelog.files.last.file),
-                                                                 name:    news.file.slice(0, -3).replace(/_/gi, ' '), // suppress .md and change _
-                                                                 date:    DateTime.fromMillis(news.time).toLocaleString(DateTime.DATE_MED),
-                                                                 time:    news.time,
-                                                                 version: news.version,
-                                                                 content: fileContent[index]
-                                                             })
-                                         }
-        )
-        await Promise.all(state)
-        state.data = tmp
+
+
 
     } catch (error) {
         console.log(error)
