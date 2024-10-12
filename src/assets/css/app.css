@@ -117,3 +117,16 @@ main-logo.xlarge {
     width: 100%;
     height: auto;
 }
+
+#camera-target {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.5s ease;
+}
+
+#camera-target sl-icon {
+    font-size: 100%;
+    line-height: 1;
+}
