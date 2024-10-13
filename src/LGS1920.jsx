@@ -152,6 +152,7 @@ export function LGS1920() {
                     orientation={cameraOrientation()}
                     duration={3}
                     destination={startCameraPoint()}
+                    maximumHeight={10000}
                     once={true}
                     onComplete={rotateCamera}
                 />

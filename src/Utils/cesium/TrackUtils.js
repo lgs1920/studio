@@ -174,18 +174,21 @@ export class TrackUtils {
                 __.ui.cameraManager.settings.position.height,
             )
         }
-
         lgs.camera.flyTo({
+
             destination: destination,                               // Camera
              orientation: {                                         // Offset and Orientation
                  heading: Math.toRadians(__.ui.cameraManager.settings.position.heading),
                  pitch:   Math.toRadians(__.ui.cameraManager.settings.position.pitch),
                  roll:    Math.toRadians(__.ui.cameraManager.settings.position.roll),
              },
-                             maximumHeight: __.ui.cameraManager.settings.target.height + 2000,
-            pitchAdjustHeight: 200,
+                             maximumHeight:     lgs.camera.maximumHeight,
+                             pitchAdjustHeight: lgs.camera.pitchAdjustHeight,
+
+                             duration:       4,
             endTransform:Matrix4.IDENTITY,
-        })
+                             easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT,
+                         })
         //Show BBox if requested
         if (showBbox) {
             lgs.viewer.entities.add({
@@ -654,12 +657,11 @@ export class TrackUtils {
                     mainStore.canViewJourneyData = true
                     await theJourney.draw({})
 
-                    await TrackUtils.createCommonMapObjectsStore()
-
-                    __.ui.profiler.draw()
-
                     await __.ui.cameraManager.stopOrbital()
                     await __.ui.cameraManager.runNormal()
+
+                    __.ui.profiler.draw()
+                    await TrackUtils.createCommonMapObjectsStore()
 
 
                     return JOURNEY_OK

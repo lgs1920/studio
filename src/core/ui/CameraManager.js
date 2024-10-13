@@ -96,7 +96,7 @@ export class CameraManager {
         this.updatePositionInformation()
     }
 
-    runOrbital = async ({target = lgs.configuration.starter, divider = 800}) => {
+    runOrbital = async ({target = lgs.configuration.starter, divider = 360}) => {
 
         // Bail early if there is a rotation already in action
         if (this.move.type === CameraManager.ORBITAL) {
@@ -150,7 +150,13 @@ export class CameraManager {
         this.move = {
             type:         CameraManager.ORBITAL,
             releaseEvent: lgs.viewer.clock.onTick.addEventListener(() => {
-                lgs.camera.rotateLeft(step)
+                try {
+                    lgs.camera.rotateLeft(step)
+                }
+                catch (error) {
+                    console.log(error)
+                }
+
             }),
         }
 

@@ -33,8 +33,10 @@
     "pitch": -45,
     "roll": 0,
     "range": 3000,
-    "orbitalPercentageChanged": 0.02,
-    "percentageChanged": 0.1
+    "orbitalPercentageChanged": 0.1,
+    "percentageChanged": 0.02,
+    "maximumHeight": 10000,
+    "pitchAdjustHeight": 200
   },
   "db": {
     "IDBDelay": 2000,
