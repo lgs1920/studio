@@ -268,6 +268,7 @@ export const JourneyLoaderUI = (props) => {
 
     const loadSample = async () => {
         loadFile({file: GPX_SAMPLE, name: GPX_SAMPLE_FILENAME})
+        journeyLoaderStore.visible = false
     }
 
     const urlToLoad = useRef(null)
@@ -366,7 +367,7 @@ export const JourneyLoaderUI = (props) => {
 
                 <div className={'load-sample'}>
                     {`Don't have any`}{lgs.journeys.size ? ' more ' : ' '}{`files handy?`}<br/>{'Play with a sample!'}
-                    <SlButton onClick={loadSample} size="small">
+                    <SlButton onClick={loadSample}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFileCirclePlus)}/>{'Load Sample'}
                     </SlButton>
                 </div>
