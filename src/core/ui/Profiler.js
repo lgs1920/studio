@@ -236,10 +236,11 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
         })
 
         chart.setOption(options)
-        this.draw()
-        __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+        this.draw().then(() => {
+            __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+            lgs.theTrack.marker.update()
+        })
 
-        lgs.theTrack.marker.update()
     }
 
     /**
@@ -254,9 +255,9 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
         })
 
         chart.setOption(options)
-        this.draw()
-        __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
-
+        this.draw().then(() => {
+            __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+        })
     }
 
     /**
@@ -280,19 +281,20 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
             chart.setOption({selected: selected})
             this.prepareData()
         }
-        this.draw()
-        __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+        this.draw().then(() => {
+            __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+        })
     }
 
 
     /**
      * Force Profile to be redrawn
      */
-    draw = () => {
+    draw = async () => {
 
         lgs.mainProxy.components.profile.key++
         if (lgs.configuration.profile.marker.track.show) {
-           lgs.theTrack?.marker.draw()
+            await lgs.theTrack?.marker.draw()
         }
         this.resetZoom()
     }
