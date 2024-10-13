@@ -8,7 +8,7 @@ import {
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                      from '@Utils/FA2SL'
 import parse                          from 'html-react-parser'
-import { useRef }                     from 'react'
+import { useEffect, useRef }          from 'react'
 import { Scrollbars }                 from 'react-custom-scrollbars'
 import { sprintf }                    from 'sprintf-js'
 import { useSnapshot }                from 'valtio'
@@ -32,6 +32,8 @@ export const JourneyLoaderUI = (props) => {
     const setState = lgs.mainProxy.components.fileLoader
     const getState = useSnapshot(setState)
     const fileList = setState.fileList
+
+    const fileLoaderRef = useRef(null)
 
     const GPX_SAMPLE_FILENAME = 'LGS1920.gpx'
     const GPX_SAMPLE = [__.app.isDevelopment() ? '/public' : '/', 'assets', 'samples', GPX_SAMPLE_FILENAME].join('/')
@@ -322,6 +324,22 @@ export const JourneyLoaderUI = (props) => {
     }
 
 
+    useEffect(() => {
+        const dialogPanel = fileLoaderRef.current.shadowRoot.querySelector('[part="panel"]')
+
+        dialogPanel.addEventListener('mouseover', __.ui.cameraManager.pauseOrbital)
+        dialogPanel.addEventListener('mouseout', __.ui.cameraManager.relaunchOrbital)
+
+        return () => {
+            dialogPanel.removeEventListener('mouseover', __.ui.cameraManager.pauseOrbital)
+            dialogPanel.removeEventListener('mouseout', __.ui.cameraManager.relaunchOrbital)
+        }
+    }, [])
+
+    const manageHover = () => {
+
+    }
+
     return (
 
         <SlDialog open={journeyLoaderSnap.visible}
@@ -329,6 +347,7 @@ export const JourneyLoaderUI = (props) => {
                   label={'Add Journeys'}
                   onSlRequestClose={close}
                   className={'lgs-theme'}
+                  ref={fileLoaderRef}
 
         >
             <div className="download-columns">

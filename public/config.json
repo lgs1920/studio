@@ -33,7 +33,7 @@
     "pitch": -45,
     "roll": 0,
     "range": 3000,
-    "orbitalPercentageChanged": 0.1,
+    "orbitalPercentageChanged": 0.05,
     "percentageChanged": 0.02,
     "maximumHeight": 10000,
     "pitchAdjustHeight": 200

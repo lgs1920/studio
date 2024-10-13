@@ -13,6 +13,7 @@ export class CameraManager {
 
     target = {}
     position = {}
+    orbitalInPause = false
 
     constructor(settings) {
 
@@ -69,10 +70,28 @@ export class CameraManager {
      */
     stopOrbital = async () => {
         if (this.move.type === CameraManager.ORBITAL) {
+            lgs.viewer.clock.canAnimate = false
+            lgs.viewer.clock.shouldAnimate = false
             this.move.releaseEvent()
             CameraUtils.unlock(lgs.camera)
             this.move.type = undefined
         }
+    }
+
+    /**
+     * Pause orbital movements
+     *
+     */
+    pauseOrbital = () => {
+        this.orbitalInPause = true
+    }
+
+    /**
+     * relaunch Orbital movements after a pause
+     *
+     */
+    relaunchOrbital = () => {
+        this.orbitalInPause = false
     }
 
     targetInPixels = () => {
@@ -147,11 +166,14 @@ export class CameraManager {
 
         // Run orbital moves
         const step = (lgs.camera.clockwise) ? M.PI / divider : -M.PI / divider
+
         this.move = {
             type:         CameraManager.ORBITAL,
             releaseEvent: lgs.viewer.clock.onTick.addEventListener(() => {
                 try {
-                    lgs.camera.rotateLeft(step)
+                    if (!this.orbitalInPause) {
+                        lgs.camera.rotateLeft(step)
+                    }
                 }
                 catch (error) {
                     console.log(error)

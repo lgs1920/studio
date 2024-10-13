@@ -39,12 +39,12 @@
     "axios": "^1.7.7",
     "babel-plugin-module-resolver": "^5.0.2",
     "canvg": "^4.0.2",
-    "cesium": "^1.122.0",
+    "cesium": "1.116.0",
     "dotenv": "^16.4.5",
     "easy-file-picker": "^1.1.0",
     "echarts": "^5.5.1",
     "echarts-for-react": "^3.0.2",
-    "elysia": "^1.1.21",
+    "elysia": "^1.1.22",
     "eslint-plugin-import": "^2.31.0",
     "fs": "^0.0.1-security",
     "fs.promises": "^0.1.2",
@@ -73,7 +73,7 @@
     "turf-point": "^2.0.1",
     "valtio": "^2.0.0",
     "vite-plugin-cesium": "^1.2.23",
-    "yaml": "^2.5.1",
+    "yaml": "^2.6.0",
     "zip-a-folder": "^3.1.7"
   },
   "devDependencies": {
