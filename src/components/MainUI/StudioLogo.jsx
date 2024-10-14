@@ -1,3 +1,5 @@
+import { DateTime } from 'luxon'
+
 export const StudioLogo = (props) => {
     let style = {}
     if (props.width) {
@@ -16,9 +18,15 @@ export const StudioLogo = (props) => {
                                                                 : (props.large) ? 'xlarge'
                                                                                 : 'normal'
     const src = `/assets/images/logo-lgs1920-studio${sizes[size]}.png`
+
+    const date = `${DateTime.fromMillis(lgs.build.date ?? Date.now()).toLocaleString(DateTime.DATE_MED)} \
+    ${DateTime.fromMillis(lgs.build.date ?? Date.now()).toLocaleString(DateTime.TIME_SIMPLE)}`
     return (
         <div className={`main-logo ${size}`} style={style}>
             <img src={src}/>
+            {props.version &&
+                <div className={'version-info'}>{lgs.versions.studio} - {date}</div>
+            }
         </div>
     )
 }
