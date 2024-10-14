@@ -303,13 +303,16 @@ export class Deployment {
             this.configuration.remote.current
         )
 
-        // We save servers configuration in servers.yml
+        // We save servers configuration in servers.json
         fs.writeFileSync(`${this.localDistPath}/servers.json`, JSON.stringify({
                                                                                  platform:this.platform,
                                                                                  backend: this.configuration.backend[this.platform],
                                                                                  studio:  this.configuration.studio[this.platform],
                                                                              }), 'utf8')
 
+
+        // We save build date in build.json
+        fs.writeFileSync(`${this.localDistPath}/build.json`, JSON.stringify({date: Date.now()}))
 
         // We zip the distrib
         await this.zip()

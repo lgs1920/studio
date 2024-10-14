@@ -17,6 +17,8 @@ import { Wanderer }                       from './ui/Wanderer'
 
 export const CONFIGURATION = 'config.json'
 export const SERVERS = 'servers.json'
+export const BUILD = 'build.json'
+
 export const platforms = {
     DEV:     'development',
     STAGING: 'staging',

@@ -1,13 +1,13 @@
-import axios                                 from 'axios'
-import * as Cesium                           from 'cesium'
-import { EventEmitter }                      from '../assets/libs/EventEmitter/EventEmitter'
-import { ElevationServer }                   from '../core/Elevation/ElevationServer'
-import { CONFIGURATION, platforms, SERVERS } from '../core/LGS1920Context'
-import { Settings }                          from '../core/settings/Settings'
-import { SettingsSection }                   from '../core/settings/SettingsSection'
-import { APP_SETTINGS_SECTION }              from '../core/stores/settings/app'
-import { ChangelogManager }                  from '../core/ui/ChangelogManager'
-import { FA2SL }                             from './FA2SL'
+import axios                                        from 'axios'
+import * as Cesium                                  from 'cesium'
+import { EventEmitter }                             from '../assets/libs/EventEmitter/EventEmitter'
+import { ElevationServer }                          from '../core/Elevation/ElevationServer'
+import { BUILD, CONFIGURATION, platforms, SERVERS } from '../core/LGS1920Context'
+import { Settings }                                 from '../core/settings/Settings'
+import { SettingsSection }                          from '../core/settings/SettingsSection'
+import { APP_SETTINGS_SECTION }                     from '../core/stores/settings/app'
+import { ChangelogManager }                         from '../core/ui/ChangelogManager'
+import { FA2SL }                                    from './FA2SL'
 
 
 export class AppUtils {
@@ -125,6 +125,11 @@ export class AppUtils {
         lgs.servers=await fetch(SERVERS).then(
             res => res.json()
         )
+
+        lgs.build = await fetch(BUILD).then(
+            res => res.json(),
+        )
+
         lgs.platform = lgs.servers.platform
 
         lgs.createDB()
