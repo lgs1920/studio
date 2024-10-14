@@ -82,6 +82,7 @@ sl-progress-bar {
 }
 
 .main-logo {
+    position: relative;
     --padding: calc(8 * var(--lgs-gutter));
     padding: var(--padding);
     background: var(--lgs-direction-panel-bg-color);
@@ -116,6 +117,16 @@ main-logo.xlarge {
 .main-logo img {
     width: 100%;
     height: auto;
+}
+
+.main-logo .version-info {
+    display: flex;
+    align-items: center;
+    position: absolute;
+    left: var(--lgs-gutter-xs);
+    bottom: var(--lgs-gutter-xs);
+    font-size: var(--lgs-font-size-xs);
+    line-height: 1;
 }
 
 #camera-target {
