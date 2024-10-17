@@ -22,7 +22,7 @@ export default defineConfig({
         global: {},
     },
     build: {
-        minify:'terser',
+        //minify:'terser',
         target: 'esnext',
         chunkSizeWarningLimit:500000,
         outDir:`./dist/${version}`,
