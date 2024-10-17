@@ -25,7 +25,7 @@ export const StudioLogo = (props) => {
         <div className={`main-logo ${size}`} style={style}>
             <img src={src}/>
             {props.version &&
-                <div className={'version-info'}>{lgs.versions.studio} - {date}</div>
+                <div className={'version-info'}>{lgs.versions.studio} - {'build'}:{date}</div>
             }
         </div>
     )
