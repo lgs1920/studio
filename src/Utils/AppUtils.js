@@ -119,14 +119,14 @@ export class AppUtils {
      */
     static init = async () => {
         // Set Context
-        lgs.configuration =  await fetch(CONFIGURATION).then(
+        lgs.configuration = await fetch(CONFIGURATION, {cache: 'no-store'}).then(
             res => res.json()
         )
-        lgs.servers=await fetch(SERVERS).then(
+        lgs.servers = await fetch(SERVERS, {cache: 'no-store'}).then(
             res => res.json()
         )
 
-        lgs.build = await fetch(BUILD).then(
+        lgs.build = await fetch(BUILD, {cache: 'no-store'}).then(
             res => res.json(),
         )
 
