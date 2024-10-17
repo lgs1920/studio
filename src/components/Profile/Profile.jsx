@@ -1,20 +1,17 @@
-import {
-    faRegularArrowsRotateReverseMagnifyingGlass, faSolidCircleSlash,
-}                                                from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import { SlButton, SlDrawer, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { faRegularArrowsRotateReverseMagnifyingGlass }             from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import { SlButton, SlDrawer, SlIcon, SlResizeObserver, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { useSnapshot }                           from 'valtio'
-import { Export }                                             from '../../core/ui/Export'
-import { CHART_ELEVATION_VS_DISTANCE, ELEVATION_VS_DISTANCE } from '../../core/ui/Profiler'
-import { FA2SL }                                              from '../../Utils/FA2SL'
-import { UIToast }                               from '../../Utils/UIToast'
-import { DropdownToolbar } from '../MainUI/DropdownToolbar'
-import { Toolbar }         from '../MainUI/Toolbar'
-import { JourneySelector }                       from '../TracksEditor/journey/JourneySelector'
-import { Utils }                                 from '../TracksEditor/Utils'
-import { Wander }                                from '../Wander/Wander'
-import { ProfileChart }                          from './ProfileChart'
-import { SlResizeObserver } from '@shoelace-style/shoelace/dist/react';
+import { useSnapshot }                                             from 'valtio'
+import { Export }                                                  from '../../core/ui/Export'
+import { CHART_ELEVATION_VS_DISTANCE }                             from '../../core/ui/Profiler'
+import { FA2SL }                                                   from '../../Utils/FA2SL'
+import { UIToast }                                                 from '../../Utils/UIToast'
+import { DropdownToolbar }                                         from '../MainUI/DropdownToolbar'
+import { Toolbar }                                                 from '../MainUI/Toolbar'
+import { JourneySelector }                                         from '../TracksEditor/journey/JourneySelector'
+import { Utils }                                                   from '../TracksEditor/Utils'
+import { Wander }                                                  from '../Wander/Wander'
+import { ProfileChart }                                            from './ProfileChart'
 
 
 export const Profile = function Profile() {
@@ -91,10 +88,10 @@ export const Profile = function Profile() {
             </>)
     }
 
-    __.ui.profiler.setVisibility()
+    __.ui.profiler?.setVisibility()
 
     //prepare data from track to profile
-    const data = __.ui.profiler.prepareData()
+    const data = __.ui.profiler?.prepareData()
 
     const resizeProfile=event => {
             const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
@@ -121,7 +118,7 @@ export const Profile = function Profile() {
 
 
                 <div className="profile-toolbar" slot={'header-actions'}>
-                    <JourneySelector size={'small'} onChange={Utils.initJourneyEdition}/>
+                    <JourneySelector size={'small'} onChange={Utils.initJourneyEdition} single={true}/>
 
                     <div className={'profile-tools-part'}>
                         <Wander id={'profile-wander'}/>

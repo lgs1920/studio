@@ -26,6 +26,7 @@
 
     --lgs-font-size: 0.9rem;
     --lgs-font-size-s: 0.75rem;
+    --lgs-font-size-xs: 0.5rem;
 
     --lgs-ui-layer-zindex: 200;
     --lgs-drop-zone-zindex: 10;
@@ -67,6 +68,9 @@
     --lgs-theme-gradient-1: linear-gradient(to right, rgba(192, 134, 24, 0.75), rgba(142, 120, 6, 0.65));
     --lgs-theme-gradient-1: linear-gradient(61deg, rgba(142, 212, 244, 0.64) 20%, rgba(13, 127, 204, 0.55) 90%);
     --lgs-theme-background-image: var(--lgs-theme-gradient-1);
+
+    --lgs-direction-panel-bg-color: #f3bb35;
+    --lgs-direction-panel-border-color: #2b1f02;
 }
 
 .lgs-theme, .lgs-theme::part(panel) {
@@ -208,16 +212,28 @@ sl-card[variant="primary"]::part(base) {
     --border-color: var(--lgs-card-ui-border-color);
 }
 
-
 .lgs-card {
+    display: flex;
     background-color: rgba(255, 255, 255, 0.15);
+
     border: 1px solid  var(--sl-color-gray-300);
     padding: var(--lgs-gutter-s);
     border-radius: var(--lgs-border-radius-s);
 }
 
-.lgs-card:hover {
-    background-color: rgba(255, 255, 255, 0.25);
+.lgs-card.on-map {
+    gap: var(--lgs-gutter-s);
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: var(--lgs-border-radius-xs);
+    box-shadow: var(--sl-shadow-medium);
+    color: white;
+    backdrop-filter: blur(3px);
+    border-color: var(--sl-color-neutral-400);
+}
+
+.lgs-card:not(.on-map):hover {
+    background: rgba(255, 255, 255, 0.25);
+
 }
 
 .lgs-card-wrapper {

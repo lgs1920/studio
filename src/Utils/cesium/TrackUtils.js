@@ -4,9 +4,8 @@ import * as Cesium                                                             f
 import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 }           from 'cesium'
 import { FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS }                from '../../core/Journey'
 import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/LGS1920Context.js'
-import { Camera as CameraManager }                                             from '../../core/ui/Camera.js'
 import { UIToast }                                                             from '../UIToast.js'
-import { FLAG_START,POI_FLAG, POI_STD, POIUtils }                             from './POIUtils'
+import { FLAG_START, POI_FLAG, POI_STD, POIUtils }                             from './POIUtils'
 
 export const SUPPORTED_EXTENSIONS = ['geojson', 'json','kml', 'gpx' /* TODO 'kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -19,7 +18,7 @@ export const JOURNEY_KO      = 0,
              JOURNEY_OK      = 1,
              JOURNEY_EXISTS  = 2,
              JOURNEY_WAITING = 3,
-            JOURNEY_DENIED = 4
+             JOURNEY_DENIED = 4
 
 
 export class TrackUtils {
@@ -144,54 +143,59 @@ export class TrackUtils {
         let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
 
         // Get the right camera information
-        let camera,destination
+        let destination
         if (journey.camera === null || resetCamera) {
             // Let's center to the rectangle
             destination = lgs.camera.getRectangleCameraCoordinates(rectangle)
 
             // Get the camera target that we defined to the centroid of the track
             const centroiid = centroid(track.content)
-            const target = {
-                longitude:centroiid.geometry.coordinates[1],
-                latitude:centroiid.geometry.coordinates[0],
-                height:Cesium.Math.toDegrees(destination.z), // We take the same
+            __.ui.cameraManager.settings = {
+                position: {
+                    longitude: Cesium.Math.toDegrees(destination.x),
+                    latitude:  Cesium.Math.toDegrees(destination.y),
+                    height:    Cesium.Math.toDegrees(destination.z),
+                    pitch:     -90,
+                },
+                target:   {
+                    longitude: centroiid.geometry.coordinates[1],
+                    latitude:  centroiid.geometry.coordinates[0],
+                    height:    Cesium.Math.toDegrees(destination.z), // We take the same
+                },
             }
-            camera = new CameraManager({
-                longitude:Cesium.Math.toDegrees(destination.x),
-                latitude:Cesium.Math.toDegrees(destination.y),
-                height:Cesium.Math.toDegrees(destination.z),
-                target:target,
-            })
-            camera.pitch = -90
 
-            journey.camera =camera
-
+            journey.camera = __.ui.cameraManager.settings
 
         } else {
-            camera = (action === INITIAL_LOADING) ? journey.cameraOrigin : journey.camera
-            destination =Cesium.Cartesian3.fromDegrees(camera.longitude, camera.latitude, camera.height)
+            __.ui.cameraManager.settings = (action === INITIAL_LOADING) ? journey.cameraOrigin : journey.camera
+            destination = Cesium.Cartesian3.fromDegrees(
+                __.ui.cameraManager.settings.position.longitude,
+                __.ui.cameraManager.settings.position.latitude,
+                __.ui.cameraManager.settings.position.height,
+            )
         }
-//      destination =Cesium.Cartesian3.fromDegrees(camera.longitude, camera.latitude, camera.height)
-
-
         lgs.camera.flyTo({
+
             destination: destination,                               // Camera
              orientation: {                                         // Offset and Orientation
-                heading: Math.toRadians(camera.heading),
-                 pitch: Math.toRadians(camera.pitch),
-                 roll: Math.toRadians(camera.roll),
+                 heading: Math.toRadians(__.ui.cameraManager.settings.position.heading),
+                 pitch:   Math.toRadians(__.ui.cameraManager.settings.position.pitch),
+                 roll:    Math.toRadians(__.ui.cameraManager.settings.position.roll),
              },
-            maximumHeight: camera.target.height + 2000,
-            pitchAdjustHeight: 200,
+                             maximumHeight:     lgs.camera.maximumHeight,
+                             pitchAdjustHeight: lgs.camera.pitchAdjustHeight,
+
+                             duration:       4,
             endTransform:Matrix4.IDENTITY,
-        })
+                             easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT,
+                         })
         //Show BBox if requested
         if (showBbox) {
             lgs.viewer.entities.add({
                 name: `BBox#${track.slug}`,
                 rectangle: {
                     coordinates: rectangle,
-                    material: Cesium.Color.WHITE.withAlpha(0.1),
+                    material: Cesium.Color.WHITE.withAlpha(0.5),
                 },
             })
         }
@@ -334,9 +338,6 @@ export class TrackUtils {
         // Let's read tracks in DB
         const journeys = await Journey.readAllFromDB()
 
-        // The add event for the camera
-        __.ui.camera.addUpdateEvent()
-
         // Bail early if there's nothing to read
         if (journeys.length === 0) {
             lgs.theJourney = null
@@ -366,7 +367,7 @@ export class TrackUtils {
 
         // We're ready for rendering so let's save journeys
         journeys.forEach(journey => {
-            lgs.saveJourney(journey)
+            lgs.saveJourneyInContext(journey)
         })
 
         // Now instantiate some contexts
@@ -395,6 +396,11 @@ export class TrackUtils {
         await Promise.all(items)
 
         await TrackUtils.createCommonMapObjectsStore()
+
+        __.ui.cameraManager.settings = lgs.theJourney.cameraOrigin
+
+        await __.ui.cameraManager.stopOrbital()
+        await __.ui.cameraManager.runNormal()
 
     }
 
@@ -623,12 +629,13 @@ export class TrackUtils {
                 // if (journey.extension === 'json' && typeof journey.content === 'string') {
                 //     journey.content = JSON.parse(journey.content)
                 // }
-
-                let theJourney = new Journey(journey.name, journey.extension, {content: journey.content})
+                let theJourney = new Journey(journey.name, journey.extension, {
+                    content:     journey.content,
+                    allowRename: false,
+                })
                 // Check if the track already exists in context
                 // If not we manage and show it.
                 if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
-
 
                    theJourney.globalSettings()
 
@@ -650,28 +657,29 @@ export class TrackUtils {
                     mainStore.canViewJourneyData = true
                     await theJourney.draw({})
 
-                    await TrackUtils.createCommonMapObjectsStore()
-                    __.ui.profiler.draw()
+                    await __.ui.cameraManager.stopOrbital()
+                    await __.ui.cameraManager.runNormal()
 
-                    await __.ui.camera.stop360()
-                    __.ui.camera.addUpdateEvent()
+                    __.ui.profiler.draw()
+                    await TrackUtils.createCommonMapObjectsStore()
+
 
                     return JOURNEY_OK
                 }
                 else {
                     // It exists, we notify it
                     UIToast.warning({
-                                        caption: `This journey has already been loaded!`,
+                                        caption: `This file has already been loaded!`,
                                         text:    'Please select another one!',
                                     })
                     return JOURNEY_EXISTS
                 }
             }
         }
-        catch (e) {
-            console.log(e)
+        catch (error) {
+            console.error(error)
             UIToast.error({
-                                caption: `We have encountered problems reading this file!`,
+                              caption: `We're having problems reading this file!`,
                                 text:    'Maybe the format is wrong!',
                             })
             return JOURNEY_KO

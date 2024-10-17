@@ -2,7 +2,7 @@ import { faXmark }                    from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'
-import support                        from '../../../public/assets/modals/support.md'
+import support                        from '../../../src/assets/modals/support.md'
 import { FA2SL }                      from '../../Utils/FA2SL'
 
 

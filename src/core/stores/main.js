@@ -24,10 +24,10 @@ export const main = {
         },
 
         camera: {
-            show: false,
-            showTarget: false,
             position: {},
+            target: {},
             event: false,
+            targetIcon: {},
         },
 
         journeyEditor: {

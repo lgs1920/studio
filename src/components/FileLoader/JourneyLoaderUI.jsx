@@ -2,25 +2,24 @@ import './style.css'
 import { faArrowRotateRight, faFileCirclePlus, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import {
     faBan, faCaretRight, faDoNotEnter, faFileCircleCheck, faFileCircleExclamation, faLocationExclamation,
-    faLocationSmile,
-    faLocationXmark, faWarning,
-} from '@fortawesome/pro-solid-svg-icons'
+    faLocationSmile, faLocationXmark, faWarning,
+}                                                        from '@fortawesome/pro-solid-svg-icons'
 
-import { SlButton, SlDialog, SlIcon, SlInput } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                               from '@Utils/FA2SL'
-import { Scrollbars }                          from 'react-custom-scrollbars'
-import { sprintf }                             from 'sprintf-js'
-import { useSnapshot }                                   from 'valtio'
-
+import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                      from '@Utils/FA2SL'
+import parse                          from 'html-react-parser'
+import { useEffect, useRef }          from 'react'
+import { Scrollbars }                 from 'react-custom-scrollbars'
+import { sprintf }                    from 'sprintf-js'
+import { useSnapshot }                from 'valtio'
 import {
     JOURNEY_DENIED, JOURNEY_OK, JOURNEY_WAITING, SUPPORTED_EXTENSIONS, TrackUtils,
-} from '../../Utils/cesium/TrackUtils'
+}                                     from '../../Utils/cesium/TrackUtils'
 import {
     DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
     FileUtils,
-}                                                                        from '../../Utils/FileUtils'
-import { DragNDropFile }                                     from './DragNDropFile'
-
+}                                     from '../../Utils/FileUtils'
+import { DragNDropFile }              from './DragNDropFile'
 
 /**
  * https://react-dropzone.js.org/
@@ -32,9 +31,12 @@ export const JourneyLoaderUI = (props) => {
 
     const setState = lgs.mainProxy.components.fileLoader
     const getState = useSnapshot(setState)
-    var fileList = setState.fileList
+    const fileList = setState.fileList
 
-    const notYetUrl = true
+    const fileLoaderRef = useRef(null)
+
+    const GPX_SAMPLE_FILENAME = 'LGS1920.gpx'
+    const GPX_SAMPLE = [__.app.isDevelopment() ? '/public' : '/', 'assets', 'samples', GPX_SAMPLE_FILENAME].join('/')
 
     /**
      * Callback after loading a file. We load the journey
@@ -43,16 +45,19 @@ export const JourneyLoaderUI = (props) => {
      * @param content
      * @param result
      */
-    const loadJourney = async (file, content, result) => {
+    const loadJourney = async (file, content, result = true) => {
         let status = JOURNEY_WAITING
         if (result) {
             const journey = FileUtils.getFileNameAndExtension(file.name)
             journey.content = content
             status = await TrackUtils.loadJourneyFromFile(journey)
-            // Reading is OK, so we set some readonly parameters
+            // If reading is OK we set some readonly parameters
             if (status === JOURNEY_OK) {
-                // Get some initial settings
                 lgs.theJourney.globalSettings()
+            }
+            else {
+                // There's nothing left to do here
+                return
             }
         }
         const item = fileList.get(__.app.slugify(file.name))
@@ -81,9 +86,8 @@ export const JourneyLoaderUI = (props) => {
         if(item.journeyStatus === undefined) {
             item.journeyStatus = JOURNEY_WAITING
         }
-
         return (
-            <li key={new Date()}>
+            <li>
                 {item.validated &&
                 <SlIcon className={'read-journey-success'} library="fa" name={FA2SL.set(faFileCircleCheck)}></SlIcon>
                 }
@@ -93,8 +97,8 @@ export const JourneyLoaderUI = (props) => {
                 <span>{item.file.fullName}</span>
 
                 {item.journeyStatus !== undefined &&
-                    <SlIcon className={classes[item.journeyStatus]}
-                            library="fa" name={FA2SL.set(icons[item.journeyStatus])}>
+                    <SlIcon className={classes[fileList.get(item.slug).journeyStatus]}
+                            library="fa" name={FA2SL.set(icons[fileList.get(item.slug).journeyStatus])}>
                     </SlIcon>
                 }
 
@@ -111,7 +115,9 @@ export const JourneyLoaderUI = (props) => {
     const FileList = () => {
         return (
             <ul>
-                {Array.from(fileList.values()).map((item, index) => <FileItem key={index} item={item}/>)}
+                {Array.from(fileList.values()).map(
+                    (item, index) => <FileItem key={index} item={item}/>,
+                )}
             </ul>
         )
     }
@@ -157,9 +163,8 @@ export const JourneyLoaderUI = (props) => {
                     {'Drop your files here !'}
                 </span>
                 <span>
-                    {'Or click to browse and select files on your device!'}
+                    {parse('Or click to browse <br/>and select files on your device!')}
                 </span>
-
                 <AllowedFormatsMessage/>
             </section>
         )
@@ -246,6 +251,95 @@ export const JourneyLoaderUI = (props) => {
         journeyLoaderStore.visible = false
     }
 
+    const loadFile = async ({file, name}) => {
+        try {
+            fileList.clear()
+            const content = await lgs.axios.get(`${[lgs.BACKEND_API, 'read'].join('/')}?file=${file}`)
+            if (content.data.success) {
+                const file = new File([content.data.content], name, {
+                    type: 'application/gpx+xml',
+                })
+                fileList.set(__.app.slugify(file.name), setListItem(file, validate(file)))
+                FileUtils.readFileAsText(file, loadJourney)
+            }
+        }
+        catch (error) {
+            console.error(error)
+        }
+    }
+
+    const loadSample = async () => {
+        loadFile({file: GPX_SAMPLE, name: GPX_SAMPLE_FILENAME})
+        journeyLoaderStore.visible = false
+    }
+
+    const urlToLoad = useRef(null)
+    const loadURL = async () => {
+        //TODO extract real download links from share links. Target : Onedrive, Dropbox, Google
+        loadFile({file: urlToLoad.current.value, name: GPX_SAMPLE_FILENAME})
+    }
+
+    /**
+     * Validate file
+     *
+     * The only test done here consists of testing the extendion.
+     * Other can be done in  props.validateCB function that returns {status:boolean,error:message}
+     *
+     * @param file
+     *
+     * @return {{error: string, validated: boolean}}
+     */
+    const validate = (file) => {
+        let check = {validated: true, message: ''}
+        const fileInfo = FileUtils.getFileNameAndExtension(file.name)
+
+        if (SUPPORTED_EXTENSIONS.includes(fileInfo.extension)) {
+            if (props.validateCB) {
+                check = props.validateCB(file)
+            }
+        }
+        else {
+            check.validated = false
+            check.error = IMPROPER_FORMAT
+        }
+
+        check.file = fileInfo
+        return check
+    }
+
+    const setListItem = (file, validate) => {
+        return {
+            slug:      __.app.slugify(file.name),
+            file:      {
+                date:      file.lastModified,
+                fullName:  file.name,
+                name:      validate.file.name,
+                extension: validate.file.extension,
+                type:      file.type,
+                size:      file.size,
+            },
+            validated: validate.validated,
+            error:     validate.error,
+        }
+    }
+
+
+    useEffect(() => {
+        const dialogPanel = fileLoaderRef.current.shadowRoot.querySelector('[part="panel"]')
+
+        dialogPanel.addEventListener('mouseover', __.ui.cameraManager.pauseOrbital)
+        dialogPanel.addEventListener('mouseout', __.ui.cameraManager.relaunchOrbital)
+
+        return () => {
+            dialogPanel.removeEventListener('mouseover', __.ui.cameraManager.pauseOrbital)
+            dialogPanel.removeEventListener('mouseout', __.ui.cameraManager.relaunchOrbital)
+        }
+    }, [])
+
+    const manageHover = () => {
+
+    }
+
     return (
 
         <SlDialog open={journeyLoaderSnap.visible}
@@ -253,6 +347,7 @@ export const JourneyLoaderUI = (props) => {
                   label={'Add Journeys'}
                   onSlRequestClose={close}
                   className={'lgs-theme'}
+                  ref={fileLoaderRef}
 
         >
             <div className="download-columns">
@@ -263,6 +358,8 @@ export const JourneyLoaderUI = (props) => {
                     manageContent={loadJourney}
                     detectWindowDrag={true}
                     multiple
+                    validate={validate}
+                    setList={setListItem}
                 >
                     {getState.accepted === DRAG_AND_DROP_FILE_WAITING && <Message/>}
                     {getState.accepted === DRAG_AND_DROP_FILE_ACCEPTED && <Accepted/>}
@@ -271,28 +368,35 @@ export const JourneyLoaderUI = (props) => {
 
                 </DragNDropFile>
 
-                    {!notYetUrl &&
-                    <div className={'add-url'}>
-                        <SlInput type={'url'} placeholder={'Or enter/paste a file URL here:'}></SlInput>
-
-                        <SlButton>
-                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFileCirclePlus)}/>{'Add'}
-                        </SlButton>
+                {fileList.size > 0 &&
+                    <div className={'drag-and-drop-list lgs-card'}>
+                        <Scrollbars>
+                            <FileList key={fileList.size}/>
+                        </Scrollbars>
                     </div>
-                    }
-                    {fileList.size > 0 &&
-                        <div className={'drag-and-drop-list lgs-card'}>
-                            <Scrollbars>
-                                <FileList/>
-                            </Scrollbars>
-                        </div>
-                    }
+                }
 
-                    <div className="buttons-bar">
-                        <SlButton variant="primary" onClick={close}><ButtonLabel/></SlButton>
-                    </div>
+                {/* <div className={'add-url'}> */}
+                {/*     <SlInput type={'url'} ref={urlToLoad} size="small" placeholder={'A URL or sharing link ? Paste it here.'}></SlInput> */}
+
+                {/*     <SlButton onClick={loadURL} size="small"> */}
+                {/*         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFileCirclePlus)}/>{'Download'} */}
+                {/*     </SlButton> */}
+                {/* </div> */}
+
+                <div className={'load-sample'}>
+                    {`Don't have any`}{lgs.journeys.size ? ' more ' : ' '}{`files handy?`}<br/>{'Play with a sample!'}
+                    <SlButton onClick={loadSample}>
+                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFileCirclePlus)}/>{'Load Sample'}
+                    </SlButton>
                 </div>
-            </SlDialog>
+
+
+                <div className="buttons-bar">
+                    <SlButton variant="primary" onClick={close}><ButtonLabel/></SlButton>
+                </div>
+            </div>
+        </SlDialog>
 
     )
 

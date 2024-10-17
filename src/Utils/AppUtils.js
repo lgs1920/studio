@@ -1,12 +1,14 @@
-import axios                from 'axios'
-import * as Cesium          from 'cesium'
-import { EventEmitter }     from '../assets/libs/EventEmitter/EventEmitter'
-import { ElevationServer }  from '../core/Elevation/ElevationServer'
-import { ChangelogManager } from '../core/ui/ChangelogManager'
-import { FA2SL }            from './FA2SL'
+import axios                                        from 'axios'
+import * as Cesium                                  from 'cesium'
+import { EventEmitter }                             from '../assets/libs/EventEmitter/EventEmitter'
+import { ElevationServer }                          from '../core/Elevation/ElevationServer'
+import { BUILD, CONFIGURATION, platforms, SERVERS } from '../core/LGS1920Context'
+import { Settings }                                 from '../core/settings/Settings'
+import { SettingsSection }                          from '../core/settings/SettingsSection'
+import { APP_SETTINGS_SECTION }                     from '../core/stores/settings/app'
+import { ChangelogManager }                         from '../core/ui/ChangelogManager'
+import { FA2SL }                                    from './FA2SL'
 
-export const CONFIGURATION ='config.json'
-export const SERVERS= 'servers.json'
 
 export class AppUtils {
     /**
@@ -49,17 +51,29 @@ export class AppUtils {
     static splitSlug = (slug =>  slug.split(`#`))
 
 
-    static deepClone = ((obj, parent) => {
+    static deepClone = ((obj, parent = null, map = new Map()) => {
         if (obj === null) return null
-        let clone = Object.assign({}, obj, parent)
-        Object.keys(clone).forEach(
-            key =>
-                (clone[key] =
-                    typeof obj[key] === 'object' ? AppUtils.deepClone(obj[key]) : obj[key]),
-        )
+        if (typeof obj !== 'object') {
+            return obj
+        }
+        if (map.has(obj)) {
+            return map.get(obj)
+        }
+
+        let clone
         if (Array.isArray(obj)) {
-            clone.length = obj.length
-            return Array.from(clone)
+            clone = []
+            map.set(obj, clone)
+            obj.forEach((item, index) => {
+                clone[index] = AppUtils.deepClone(item, null, map)
+            })
+        }
+        else {
+            clone = Object.assign({}, obj, parent)
+            map.set(obj, clone)
+            Object.keys(clone).forEach(key => {
+                clone[key] = AppUtils.deepClone(obj[key], null, map)
+            })
         }
         return clone
     })
@@ -105,13 +119,20 @@ export class AppUtils {
      */
     static init = async () => {
         // Set Context
-        lgs.configuration =  await fetch(CONFIGURATION).then(
+        lgs.configuration = await fetch(CONFIGURATION, {cache: 'no-store'}).then(
             res => res.json()
         )
-        lgs.servers=await fetch(SERVERS).then(
+        lgs.servers = await fetch(SERVERS, {cache: 'no-store'}).then(
             res => res.json()
         )
+
+        lgs.build = await fetch(BUILD, {cache: 'no-store'}).then(
+            res => res.json(),
+        )
+
         lgs.platform = lgs.servers.platform
+
+        lgs.createDB()
 
         lgs.setDefaultConfiguration()
 
@@ -123,6 +144,14 @@ export class AppUtils {
 
         // Create an Axios instance
         lgs.axios = axios.create();
+
+        /***************************************
+         * Application settings
+         */
+        lgs.settings = new Settings()
+
+        // Add settings sections
+        lgs.settings.add(new SettingsSection(APP_SETTINGS_SECTION))
 
         // Ping server
         const server = await __.app.pingBackend()
@@ -171,7 +200,7 @@ export class AppUtils {
             }
         }
         else {
-            const info = __.app.isDevelopment() ? `'<br/>Try "bun run dev" to restart the application'` : ''
+            const info = __.app.isDevelopment() ? `'<br/>Try "bun run dev" to restart the application!` : ''
             return {
                 status: false,
                 error:  new Error(`${lgs.configuration.applicationName} Backend server seems to be unreachable!${info}`),
@@ -217,6 +246,7 @@ export class AppUtils {
      * @return {alive:boolean}
      */
     static pingBackend = async () => {
+
         try {
             return lgs.axios({
                                  method:  'get',
@@ -225,8 +255,8 @@ export class AppUtils {
                                      'content-type': 'application/json',
                                      'Accept':       'application/json',
                                  },
-                                 timeout: 2 * MILLIS,
-                                 signal:  AbortSignal.timeout(2 * MILLIS),
+                                 timeout: 3 * MILLIS,
+                                 signal:  AbortSignal.timeout(3 * MILLIS),
                              })
                 .then(async function (response) {
                     if (response.data !== '') {
@@ -362,9 +392,3 @@ export { MILLIS, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR }
 
 /** other */
 export const WRONG = -99999999999
-export const platforms = {
-    DEV:'development',
-    STAGING:'staging',
-    PROD:'production',
-    TEST:'test'
-}

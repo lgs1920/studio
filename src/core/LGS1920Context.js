@@ -3,19 +3,28 @@ import { MouseUtils } from '@Utils/cesium/MouseUtils'
 import { CSSUtils }   from '@Utils/CSSUtils'
 import { UIUtils }    from '@Utils/UIUtils'
 
-import { proxy }                   from 'valtio'
-import { UnitUtils }               from '../Utils/UnitUtils'
-import { LocalDB }                 from './db/LocalDB'
-import { Layer }                   from './Layer.js'
-import { MouseEventHandler }       from './MouseEventHandler'
-import { main }                    from './stores/main'
-import { theJourneyEditor }        from './stores/theJourneyEditor'
-import { Camera as CameraManager } from './ui/Camera'
-import { JourneyEditor }           from './ui/JourneyEditor'
-import { Profiler }                from './ui/Profiler'
-import { Wanderer }                from './ui/Wanderer'
+import { proxy }                          from 'valtio'
+import { UnitUtils }                      from '../Utils/UnitUtils'
+import { LocalDB }                        from './db/LocalDB'
+import { Layer }                          from './Layer.js'
+import { MouseEventHandler }              from './MouseEventHandler'
+import { main }                           from './stores/main'
+import { theJourneyEditor }               from './stores/theJourneyEditor'
+import { CameraManager as CameraManager } from './ui/CameraManager'
+import { JourneyEditor }                  from './ui/JourneyEditor'
+import { Profiler }                       from './ui/Profiler'
+import { Wanderer }                       from './ui/Wanderer'
 
-//import config from 'dotenv'
+export const CONFIGURATION = 'config.json'
+export const SERVERS = 'servers.json'
+export const BUILD = 'build.json'
+
+export const platforms = {
+    DEV:     'development',
+    STAGING: 'staging',
+    PROD:    'production',
+    TEST:    'test',
+}
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -63,20 +72,33 @@ export class LGS1920Context {
                 ui:UIUtils
             },
             convert: UnitUtils.convert,
-        }
+        };
 
+        (async (o) => await o.initializeConfig())(this)
 
-        //Init DBs
+    }
+
+    createDB = () => {
+        const dbPrefix = (this.platform === platforms.PROD) ? '' : `-${this.platform}`
         this.db = {
             lgs1920: new LocalDB({
-                name: `${APP_KEY}`,
-                store: [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, SETTINGS_STORE],
-                manageTransients: true,
-                version: '0.1',
-            }),
+                                     name:             `${APP_KEY}${dbPrefix}`,
+                                     store:            [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, SETTINGS_STORE],
+                                     manageTransients: true,
+                                     version:          '0.1',
+                                 }),
         }
+    }
 
 
+    initializeConfig = async () => {
+        this.configuration = await fetch(CONFIGURATION).then(
+            res => res.json(),
+        )
+        this.servers = await await fetch(SERVERS).then(
+            res => res.json(),
+        )
+        this.platform = lgs.servers.platform
     }
 
     /** @return {Viewer} */
@@ -193,7 +215,7 @@ export class LGS1920Context {
      *
      * @param journey
      */
-    saveJourney = (journey) => {
+    saveJourneyInContext = (journey) => {
         if (journey) {
             const index = this.mainProxy.components.journeyEditor.list.findIndex(item => item === journey.slug)
             if (index >= 0) {
@@ -213,7 +235,7 @@ export class LGS1920Context {
      *
      */
     addToContext = (setToCurrent = true) => {
-        lgs.saveJourney(this)
+        lgs.saveJourneyInContext(this)
         if (setToCurrent) {
             lgs.theJourney = this
         }
@@ -233,7 +255,7 @@ export class LGS1920Context {
             journey:new JourneyEditor()
         }
         __.ui.wanderer = new Wanderer()
-        __.ui.camera = new CameraManager()
+        __.ui.cameraManager = new CameraManager()
     }
 
 

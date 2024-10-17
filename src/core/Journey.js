@@ -10,16 +10,16 @@ import {
 }                                      from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
-} from '@Utils/UIToast'
+}                                      from '@Utils/UIToast'
 import {
     FLAG_START, FLAG_STOP, POI_FLAG, POI_MARKER, POI_STD,
-} from '../Utils/cesium/POIUtils'
+}                                      from '../Utils/cesium/POIUtils'
 import {
     ElevationServer,
-} from './Elevation/ElevationServer'
+}                                      from './Elevation/ElevationServer'
 import {
     JOURNEYS_STORE, ORIGIN_STORE,
-} from './LGS1920Context.js'
+}                                      from './LGS1920Context.js'
 import {
     MapElement,
 }                                      from './MapElement'
@@ -27,7 +27,6 @@ import { POI, POI_VERTICAL_ALIGN_TOP } from './POI'
 
 import { ProfileTrackMarker } from './ProfileTrackMarker'
 import { Track }              from './Track'
-import { Camera }             from './ui/Camera.js'
 
 
 export class Journey extends MapElement {
@@ -52,12 +51,10 @@ export class Journey extends MapElement {
     constructor(title, type, options) {
         super()
 
-        const save = async () => {
-            await this.saveToDB()
-        }
 
         if (title) {
-            this.title = this.singleTitle(title)
+            this.title = (options.allowRename ?? true) ? this.singleTitle(title) : title
+
             this.type = type
 
             // If options property exists, we get them, else
@@ -77,6 +74,9 @@ export class Journey extends MapElement {
             // Get all tracks
             this.getTracksFromGeoJson()
 
+            this.globalSettings()
+
+
             // Get Metrics
             this.metrics = options.metrics ?? {}
 
@@ -84,7 +84,7 @@ export class Journey extends MapElement {
             this.getPOIsFromGeoJson()
 
             // Finally saveToDB
-            save().then()
+            ;(async () => await this.saveToDB())()
 
 
             const prepare = async () => {
@@ -94,20 +94,10 @@ export class Journey extends MapElement {
 
         }
 
-        /**
-         * If we're on the current journey, we register to the camera updates events
-         * in order to save camera information
-         */
-        lgs.events.on(Camera.UPDATE_EVENT, () => {
-            if (this.isCurrent()) {
-                this.camera = __.ui.camera.get()
-                lgs.saveJourney(this)
-                this.addToContext()
-                lgs.theJourney.camera = this.camera
-                save()
-            }
-        })
     }
+
+
+
 
     /**
      * Get all journeys from DB
@@ -122,10 +112,12 @@ export class Journey extends MapElement {
             const slugs = await lgs.db.lgs1920.keys(JOURNEYS_STORE)
             // Get each journey content
             const journeyPromises = slugs.map(async (slug) => {
-                return Journey.deserialize({
-                                               object: await lgs.db.lgs1920.get(slug, JOURNEYS_STORE),
-                    reset:true
-                                           })
+                return Journey.deserialize(
+                    {
+                        object: await lgs.db.lgs1920.get(slug, JOURNEYS_STORE),
+                        reset:  true,
+                    },
+                )
             })
             return await Promise.all(journeyPromises)
         } catch (error) {
@@ -233,8 +225,6 @@ export class Journey extends MapElement {
                 case GEOJSON :
                     this.geoJson = JSON.parse(content)
             }
-            //Save original data
-            this.origin = this.geoJson
 
         } catch (error) {
             console.error(error)
@@ -251,7 +241,7 @@ export class Journey extends MapElement {
      *
      * Populate this.tracks
      *
-     * @param keepContext {boolean} when true, we update only some data related to position
+     * @param keepContext {boolean} when true, we updatePositionInformation only some data related to position
      *                              and elevation.
      *
      */
@@ -511,7 +501,7 @@ export class Journey extends MapElement {
      * @type {boolean}
      */
     saveOriginDataToDB = async () => {
-        await lgs.db.lgs1920.put(this.slug, this.geoJson, ORIGIN_STORE)
+        await lgs.db.lgs1920.put(this.slug, JSON.stringify(this.geoJson), ORIGIN_STORE)
     }
 
     /**
@@ -529,7 +519,7 @@ export class Journey extends MapElement {
      *
      */
     addToContext = (setToCurrent = true) => {
-        lgs.saveJourney(this)
+        lgs.saveJourneyInContext(this)
         if (setToCurrent) {
             lgs.theJourney = this
         }
@@ -679,9 +669,11 @@ export class Journey extends MapElement {
         })
 
         if (this.tracks.size === 1) {
+            // If there's ontrack we'll use the track metrics
             this.metrics = this.tracks.entries().next().value[1].metrics
             return
         }
+        // For a multi track journey, let's compute journey level metrics
         this.metrics = this.setGlobalMetrics()
     }
 

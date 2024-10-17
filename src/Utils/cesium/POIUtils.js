@@ -2,8 +2,8 @@ import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 
-import { Canvg }                          from 'canvg'
-import * as Cesium                        from 'cesium'
+import { Canvg }   from 'canvg'
+import * as Cesium from 'cesium'
 
 // Pin Marker Type
 export const PIN_ICON = 1
@@ -43,6 +43,7 @@ export class POIUtils {
     /**
      *
      * @param poi
+     * @param parentVisibility
      * @return {Promise<*>}
      */
     static draw = async (poi, parentVisibility = true) => {
@@ -77,6 +78,9 @@ export class POIUtils {
         const foregroundColor = poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : ''
 
         const dataSource=POIUtils.getDataSource(poi)
+        if (!dataSource) {
+            return
+        }
         await POIUtils.remove(poi)
 
         switch (poi.type) {
@@ -118,18 +122,21 @@ export class POIUtils {
 
     static update = (poi, options) => {
         const dataSource = POIUtils.getDataSource(poi)
-        const entity = dataSource.entities.getById(poi.slug)
-        if (entity) {
-            // Update positions
-            entity.position = options?.coordinates ? Cesium.Cartesian3.fromDegrees(options.coordinates[0], options.coordinates[1], options.coordinates[2]) : entity.position
-            // Update visibility
-            if (options?.visibility !== undefined) {
-                entity.show = options.visibility
-            }
-            if (options?.foregroundColor !== undefined) {
-                entity.color = Cesium.Color.fromCssColorString(options.foregroundColor)
-            } else {
-                entity.color = Cesium.Color.fromCssColorString(lgs.theTrack.color)
+        if (dataSource?.entities) {
+            const entity = dataSource.entities.getById(poi.slug)
+            if (entity) {
+                // Update positions
+                entity.position = options?.coordinates ? Cesium.Cartesian3.fromDegrees(options.coordinates[0], options.coordinates[1], options.coordinates[2]) : entity.position
+                // Update visibility
+                if (options?.visibility !== undefined) {
+                    entity.show = options.visibility
+                }
+                if (options?.foregroundColor !== undefined) {
+                    entity.color = Cesium.Color.fromCssColorString(options.foregroundColor)
+                }
+                else {
+                    entity.color = Cesium.Color.fromCssColorString(lgs.theTrack.color)
+                }
             }
         }
 
@@ -188,9 +195,11 @@ export class POIUtils {
 
     static remove = async (poi) => {
         const dataSource = POIUtils.getDataSource(poi)
-        for (const entity of dataSource.entities.values) {
-            if (entity.id === poi.slug) {
-                await dataSource.entities.remove(entity)
+        if (dataSource?.entities) {
+            for (const entity of dataSource.entities.values) {
+                if (entity.id === poi.slug) {
+                    await dataSource.entities.remove(entity)
+                }
             }
         }
     }

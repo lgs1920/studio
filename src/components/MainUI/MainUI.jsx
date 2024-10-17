@@ -1,22 +1,23 @@
-import { CameraPositionUI }       from '@Components/cesium/CameraPositionUI/CameraPositionUI'
-import { CompassUI }              from '@Components/cesium/CompassUI/CompassUI'
-import { FullScreenButton } from '@Components/FullScreenButton/FullScreenButton'
-import { Toolbar }                from '@Components/MainUI/Toolbar'
-import { Profile }                from '@Components/Profile/Profile'
-import { TracksEditor }           from '@Components/TracksEditor/TracksEditor'
-import { useEffect }              from 'react'
-import { useCesium }              from 'resium'
+import { CompassUI }            from '@Components/cesium/CompassUI/CompassUI'
+import { FullScreenButton }     from '@Components/FullScreenButton/FullScreenButton'
+import { Toolbar }              from '@Components/MainUI/Toolbar'
+import { Profile }              from '@Components/Profile/Profile'
+import { TracksEditor }         from '@Components/TracksEditor/TracksEditor'
+import { useEffect }            from 'react'
+import { useCesium }            from 'resium'
 
 import './style.css'
-import { subscribe }        from 'valtio'
-import { CanvasEvents }           from '../../core/events/CanvasEvents.js'
-import { CameraTargetPositionUI } from '../cesium/CameraPositionUI/CameraTargetPositionUI.jsx'
-import { JourneyLoaderUI }        from '../FileLoader/JourneyLoaderUI'
-import { Panel }                  from '../InformationPanel/Panel'
-import { PanelButton }            from '../InformationPanel/PanelButton'
-import { Utils }                  from '../TracksEditor/Utils.js'
-import { SupportUI }        from './SupportUI'
-import { SupportUIButton }        from './SupportUIButton'
+import { subscribe }            from 'valtio'
+import { CanvasEvents }         from '../../core/events/CanvasEvents.js'
+import { CameraAndTargetPanel } from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
+import { JourneyLoaderUI }      from '../FileLoader/JourneyLoaderUI'
+import { Panel }                from '../InformationPanel/Panel'
+import { PanelButton }          from '../InformationPanel/PanelButton'
+import { Utils }                from '../TracksEditor/Utils.js'
+import { CameraTarget }         from './CameraTarget'
+import { StudioLogo }           from './StudioLogo'
+import { SupportUI }            from './SupportUI'
+import { SupportUIButton }      from './SupportUIButton'
 
 export const MainUI = function VT3D_UI() {
 
@@ -41,9 +42,6 @@ export const MainUI = function VT3D_UI() {
             <div id="lgs-main-ui">
                     <>
                 <div id={'top-left-ui'}>
-                    <CameraPositionUI/>
-                    <CameraTargetPositionUI/>
-
                     <Toolbar editor={true}
                              profile={true}
                              fileLoader={true}
@@ -58,11 +56,15 @@ export const MainUI = function VT3D_UI() {
                     <div id={'bottom-left-ui'}>
                         {
                             lgs.platform !== 'production' &&
-                            <div id="used-platform"> [{lgs.platform}-{lgs.versions.studio}]</div>
+                            <div id="used-platform"
+                                 className={'lgs-card on-map'}> [{lgs.platform}-{lgs.versions.studio}]</div>
                         }
                     </div>
                     <div id={'profile-ui'}>
                         <Profile/>
+                    </div>
+                    <div id={'bottom-right-ui'}>
+                        <StudioLogo xsmall width={'50px'}/>
                     </div>
                     {/* <div id={'bottom-right-ui'}></div> */}
                 </div>
@@ -73,11 +75,16 @@ export const MainUI = function VT3D_UI() {
                 {/* <FloatingMenu/> */}
                     </>
 
+
+                <Panel/>
+                <TracksEditor/>
+                <CameraAndTargetPanel/>
             </div>
-            <JourneyLoaderUI multiple/>
-            <Panel/>
+
+            <CameraTarget/>
             <SupportUI/>
-            <TracksEditor/>
+            <JourneyLoaderUI multiple/>
+
         </>
     )
 }

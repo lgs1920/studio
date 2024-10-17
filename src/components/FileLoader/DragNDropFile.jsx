@@ -147,34 +147,6 @@ export const DragNDropFile = (props) => {
     }
 
     /**
-     * Validate file
-     *
-     * The only test done here consists of testing the extendion.
-     * Other can be done in  props.validateCB function that returns {status:boolean,error:message}
-     *
-     * @param file
-     *
-     * @return {{error: string, validated: boolean}}
-     */
-    const validate = (file) => {
-        let check = {validated: true, message: ''}
-        const fileInfo = FileUtils.getFileNameAndExtension(file.name)
-
-        if (props.types.includes(fileInfo.extension)) {
-            if (props.validateCB) {
-                check = props.validateCB(file)
-            }
-        }
-        else {
-            check.validated = false
-            check.error = IMPROPER_FORMAT
-        }
-
-        check.file = fileInfo
-        return check
-    }
-
-    /**
      * Validate file selection
      *
      * @param event  (change or drop)
@@ -196,22 +168,8 @@ export const DragNDropFile = (props) => {
 
 
         for (const file of files) {
-            const tmp = validate(file)
-            list.set(__.app.slugify(file.name),
-                     {
-                              file:   {
-                                  date: file.lastModified,
-                                  fullName:  file.name,
-                                  name:      tmp.file.name,
-                                  extension: tmp.file.extension,
-                                  type: file.type,
-                                  size: file.size,
-                              },
-                         validated: tmp.validated,
-                              error:  tmp.error,
-                     }
-            )
-
+            const tmp = props.validate(file)
+            list.set(__.app.slugify(file.name), props.setList(file, tmp))
         }
         if (list.size >0) {
             // Add to existing file list
@@ -252,16 +210,9 @@ export const DragNDropFile = (props) => {
             // Read and manage content
             for (const file of files) {
                 const item = fileList.get(__.app.slugify(file.name))
-                item.fileReadSuccess = false
 
-                try {
-                    if(item.validated) {
+                if (item.validated) {
                         FileUtils.readFileAsText(file, props.manageContent ?? null)
-                        item.fileReadSuccess = true
-                    }
-                }
-                catch {
-                    item.fileReadSuccess = false
                 }
 
                 fileList.set(__.app.slugify(file.name), item)

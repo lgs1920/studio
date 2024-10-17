@@ -1,7 +1,5 @@
-
-import {
-    Cartesian2, Cartesian3, Cartographic, Ellipsoid, HeadingPitchRange, Math as M, Matrix4, Transforms,
-} from 'cesium'
+import * as Cesium                                                                         from 'cesium'
+import { Cartesian2, Cartesian3, Cartographic, Ellipsoid, Math as M, Matrix4, Transforms } from 'cesium'
 
 export class CameraUtils {
 
@@ -54,9 +52,9 @@ export class CameraUtils {
             }
         }
 
-        const target = CameraUtils.lookAtPoint()
-
+        const target = CameraUtils.getCameraTargetPosition()
         const {longitude, latitude, height} = await camera.positionCartographic
+
         return {
             target: {
                 longitude: target?.longitude,
@@ -75,78 +73,30 @@ export class CameraUtils {
     /**
      *
      * @param camera
+     *
+     * @return {position:{object},target:{object}}
      */
-    static  updateCamera = async (camera) => {
-
+    static updatePositionInformation = async (camera) => {
         // If we do not have camera, we try to set one or return
         if (!camera) {
             camera = lgs.camera
             if (camera === undefined) {
-                return
+                return undefined
             }
         }
 
         try {
-            const cameraPositions = await CameraUtils.getPositions(camera)
-            const hpr = await CameraUtils.getHeadingPitchRoll(camera)
-            lgs.mainProxy.components.camera.position = {
-                target: cameraPositions.target,
-                longitude: cameraPositions.position.longitude,
-                latitude: cameraPositions.position.latitude,
-                height: cameraPositions.position.height,
-                heading: hpr.heading,
-                pitch: hpr.pitch,
-                roll: hpr.roll,
-                range: cameraPositions.position.range,
-            }
-            return lgs.mainProxy.components.camera.position
+            const cameraData = await CameraUtils.getPositions(camera)
+            cameraData.position = {...cameraData.position, ...await CameraUtils.getHeadingPitchRoll(camera)}
+            return cameraData
         } catch (e) {
             console.error(e)
             return undefined
         }
-
-
-    }
-
-
-    /**
-     * Turn around the camera target by PI/1000 on each Camera rotation.
-     *
-     *
-     *
-     */
-    static run360 = () => {
-        const camera = __.ui.camera.get()
-        if (camera.target) {
-            CameraUtils.lookAt(lgs.camera,
-                Cartesian3.fromDegrees(
-                    camera.target.longitude,
-                    camera.target.latitude,
-                    camera.target.height,
-                ),
-                new HeadingPitchRange(
-                    M.toRadians(camera.heading),
-                    M.toRadians(camera.pitch),
-                    camera.range,
-                ))
-
-            const step = (camera.clockwise) ? M.PI / 1000 : -M.PI / 1000
-            lgs.stop360 = lgs.viewer.clock.onTick.addEventListener(async () => {
-                lgs.camera.rotateLeft(step)
-            })
-        }
-
-    }
-
-    static stop360 =() => {
-        if (lgs.stop360) {
-            lgs.stop360()
-            lgs.stop360=undefined
-        }
     }
 
     //https://groups.google.com/g/cesium-dev/c/QSFf3RxNRfE
-    static lookAtPoint = () => {
+    static getCameraTargetPosition = () => {
         const ray = lgs.camera.getPickRay(new Cartesian2(
             Math.round(lgs.canvas.clientWidth / 2),
             Math.round(lgs.canvas.clientHeight / 2),
@@ -184,6 +134,15 @@ export class CameraUtils {
             height : cartographicPosition.height
         }
     }
+
+    static getTargetPositionInPixels(position) {
+        if (position?.longitude && position?.latitude) {
+            const cartesian = Cartographic.toCartesian(new Cesium.Cartographic(Cesium.Math.toRadians(position.longitude), Cesium.Math.toRadians(position.latitude)))
+            return lgs.scene.cartesianToCanvasCoordinates(cartesian)
+        }
+        return null
+    }
+
 
 
 }

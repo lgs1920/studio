@@ -1,7 +1,7 @@
 import { FOCUS_ON_FEATURE, INITIAL_LOADING } from '@Core/Journey'
 import { MapElement }                        from '@Core/MapElement'
 import { POI }                               from '@Core/POI'
-import { ProfileTrackMarker } from '@Core/ProfileTrackMarker'
+import { ProfileTrackMarker }                from '@Core/ProfileTrackMarker'
 import { FEATURE_LINE_STRING, TrackUtils }   from '@Utils/cesium/TrackUtils'
 import { Mobility }                          from '@Utils/Mobility'
 import { DateTime }                          from 'luxon'
@@ -394,7 +394,7 @@ export class Track extends MapElement {
     }
 
     addToContext = (setToCurrent = true) => {
-        lgs.saveJourney(lgs.getJourneyBySlug(this.parent))
+        lgs.saveJourneyInContext(lgs.getJourneyBySlug(this.parent))
         if (setToCurrent) {
             lgs.theTrack = this
         }

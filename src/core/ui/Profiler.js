@@ -1,15 +1,15 @@
-import { faCircle, faMountains }                         from '@fortawesome/pro-regular-svg-icons'
+import { faMountains }                                   from '@fortawesome/pro-regular-svg-icons'
 import { faArrowLeftLongToLine, faArrowRightLongToLine } from '@fortawesome/pro-solid-svg-icons'
-import * as echarts from 'echarts/core'
+import * as echarts                                      from 'echarts/core'
 
-import { DateTime } from 'luxon'
-import { sprintf }  from 'sprintf-js'
-import { subscribe,proxy }                       from 'valtio'
-import { Utils }    from '../../components/TracksEditor/Utils.js'
+import { DateTime }                        from 'luxon'
+import { sprintf }                         from 'sprintf-js'
+import { subscribe }                       from 'valtio'
+import { Utils }                           from '../../components/TracksEditor/Utils.js'
 import { FA2SL }                           from '../../Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS } from '../../Utils/UnitUtils'
 import { ProfileTrackMarker }              from '../ProfileTrackMarker'
-import { Track }    from '../Track'
+import { Track }                           from '../Track'
 
 export class Profiler {
 
@@ -133,6 +133,7 @@ export class Profiler {
         const start2 = distances[serie].start
         const distance2 = distances[serie].end
 
+
         // Build tooltip
         const header = `
             <div id="elevation-distance-tooltip">
@@ -153,7 +154,6 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
             <span class="tooltip-data">
             ${sprintf('%\' .1f', distance1 ? distance1 - distance : 0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}</span>
             <span  class="tooltip-icon">
-            <sl-icon library="fa" name="${FA2SL.set(faArrowRightLongToLine)}"></sl-icon>
             </span>
         </div> 
         ` : `<span class="tooltip-data altitude">${altitude}</span>`
@@ -163,10 +163,14 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
             <sl-icon library="fa" name="${FA2SL.set(faArrowLeftLongToLine)}"  style="color:${colors[serie]}"></sl-icon>
             </span>
             <span class="tooltip-data">
-
             ${sprintf('%\' .1f', distance - start2 ?? 0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
             </span>
-                        <span  class="tooltip-icon"><sl-icon library="fa" name="${FA2SL.set(faCircle)}" style="color:${colors[serie]}"></sl-icon></span>
+            <span  class="tooltip-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="27px" height="17px">
+                <path stroke="${colors[serie]}" d="M0 7L25 7" stroke-width="2" stroke-linecap="butt" stroke-miterlimit="10"></path>
+                <path stroke="${colors[serie]}"  fill="${__.ui.css.getCSSVariable('--sl-panel-background-color')}" d="M18.1 7A5.6 5.6 0 1 1 18.1 6.9994" stroke-width="2" stroke-linecap="butt" stroke-miterlimit="10"></path>
+            </svg>
+            </span>
 
             <span class="tooltip-data">
             ${sprintf('%\' .1f', distance2 ? distance2 - distance : 0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
@@ -232,10 +236,11 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
         })
 
         chart.setOption(options)
-        this.draw()
-        __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+        this.draw().then(() => {
+            __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+            lgs.theTrack.marker.update()
+        })
 
-        lgs.theTrack.marker.update()
     }
 
     /**
@@ -250,9 +255,9 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
         })
 
         chart.setOption(options)
-        this.draw()
-        __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
-
+        this.draw().then(() => {
+            __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+        })
     }
 
     /**
@@ -276,19 +281,20 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
             chart.setOption({selected: selected})
             this.prepareData()
         }
-        this.draw()
-        __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+        this.draw().then(() => {
+            __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+        })
     }
 
 
     /**
      * Force Profile to be redrawn
      */
-    draw = () => {
+    draw = async () => {
 
         lgs.mainProxy.components.profile.key++
         if (lgs.configuration.profile.marker.track.show) {
-           lgs.theTrack?.marker.draw()
+            await lgs.theTrack?.marker.draw()
         }
         this.resetZoom()
     }
