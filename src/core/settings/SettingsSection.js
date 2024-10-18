@@ -10,35 +10,34 @@ export class SettingsSection {
 
     /**
      *
-     * @param {object} section {key,content}
+     * @param {string} key  section key
      */
-    constructor(section) {
-        this.key = section.key
-        this.#content = proxy(section.content)
-        let data = {};
+    constructor(key) {
+        this.key = key
+    }
 
-        (async () => {
-            data = await this.read()
-            if (data === null) {
-                (async () => {
-                    await this.save()
-
-                })()
-            } else {
-                this.#content = proxy(data)
-            }
-
-            // Each time we update a parameter in this store, we save it
-            this.subscribeToChange()
-        })()
-
-
+    init = async () => {
+        const data = await this.read()
+        if (data === null) {
+            this.#content = proxy(lgs.configuration[this.key])
+            await this.save()
+        }
+        else {
+            this.#content = proxy(data)
+            lgs.configuration[this.key] = data
+        }
+        this.subscribeToChange()
 
 
     }
+
+    /**
+     * Each time a section content change, we save it
+     *
+     * @return {{}}
+     */
     subscribeToChange=()=> {
         return subscribe(this.#content, async () => {
-            //console.log('subscribe =>', this.#content)
             await this.save()
         })
     }
@@ -59,6 +58,7 @@ export class SettingsSection {
      */
     save = async () => {
         await lgs.db.settings.put(this.key, JSON.parse(JSON.stringify(this.#content)), SETTINGS_STORE)
+        lgs.configuration[this.key] = this.#content
     }
 
     /**
@@ -70,6 +70,27 @@ export class SettingsSection {
      */
     read = async (parameter = undefined) => {
         const all = await lgs.db.settings.get(this.key, SETTINGS_STORE)
-        return parameter ? all[parameter] ?? undefined : all
+        if (!all) {
+            return all
+        }
+        const value = parameter ? all[parameter] ?? undefined : all
+        if (parameter) {
+            lgs.configuration[this.key][parameter] = value
+        }
+        else {
+            lgs.configuration[this.key] = value
+        }
+        return value
+    }
+
+    /**
+     * Reset to factory setting
+     *
+     * @return {Promise<void>}
+     */
+    reset = async () => {
+        this.#content = lgs.savedConfiguration[this.key]
+        lgs.configuration[this.key] = this.#content
+
     }
 }

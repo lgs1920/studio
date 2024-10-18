@@ -61,3 +61,9 @@ export const JUST_SAVE = 3
 export const COLOR_SWATCHES_NONE = 'none'
 export const COLOR_SWATCHES_SERIE = 'serie'
 export const COLOR_SWATCHES_RANDOM = 'random'
+
+/**
+ * Settings sections
+ */
+export const APP_SETTING_SECTION = 'app'
+export const SETTING_SECTIONS = [APP_SETTING_SECTION]

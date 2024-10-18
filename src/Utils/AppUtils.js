@@ -1,13 +1,14 @@
-import axios                                                from 'axios'
-import * as Cesium                                          from 'cesium'
-import { EventEmitter }                                     from '../assets/libs/EventEmitter/EventEmitter'
-import { BUILD, CONFIGURATION, MILLIS, platforms, SERVERS } from '../core/constants'
-import { ElevationServer }                                  from '../core/Elevation/ElevationServer'
-import { Settings }                                         from '../core/settings/Settings'
-import { SettingsSection }                                  from '../core/settings/SettingsSection'
-import { APP_SETTINGS_SECTION }                             from '../core/stores/settings/app'
-import { ChangelogManager }                                 from '../core/ui/ChangelogManager'
-import { FA2SL }                                            from './FA2SL'
+import { BUILD, CONFIGURATION, MILLIS, platforms, SERVERS, SETTING_SECTIONS } from '@Core/constants'
+import { ElevationServer }                                                    from '@Core/Elevation/ElevationServer'
+import { Settings }                                                           from '@Core/settings/Settings'
+import { SettingsSection }                                                    from '@Core/settings/SettingsSection'
+import { ChangelogManager }                                                   from '@Core/ui/ChangelogManager'
+import axios                                                                  from 'axios'
+import * as Cesium                                                            from 'cesium'
+import {
+    EventEmitter,
+}                                                                             from '../assets/libs/EventEmitter/EventEmitter'
+import { FA2SL }                                                              from './FA2SL'
 
 
 export class AppUtils {
@@ -122,6 +123,8 @@ export class AppUtils {
         lgs.configuration = await fetch(CONFIGURATION, {cache: 'no-store'}).then(
             res => res.json()
         )
+        lgs.savedConfiguration = lgs.configuration
+
         lgs.servers = await fetch(SERVERS, {cache: 'no-store'}).then(
             res => res.json()
         )
@@ -151,7 +154,12 @@ export class AppUtils {
         lgs.settings = new Settings()
 
         // Add settings sections
-        lgs.settings.add(new SettingsSection(APP_SETTINGS_SECTION))
+        for (const section of SETTING_SECTIONS) {
+            const setting = new SettingsSection(section)
+            await setting.init()
+            await lgs.settings.add(setting)
+        }
+        lgs.settings.app.showIntro = !lgs.settings.app.showIntro
 
         // Ping server
         const server = await __.app.pingBackend()
@@ -286,7 +294,6 @@ export class AppUtils {
                              url:    `start-backend.php`,
                          })
                 .then(function (response) {
-                    console.log(response)
                     return response.data
                 })
                 .catch(function (error) {

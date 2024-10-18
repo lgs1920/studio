@@ -7,7 +7,12 @@
     "domain" : "lgs1920.fr",
     "protocol" : "https"
   },
-
+  "app": {
+    "lastVisit": null,
+    "firstVisit": true,
+    "showIntro": true,
+    "changelogToRead": true
+  },
 
   "api": {
     "name" : "API"
