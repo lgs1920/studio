@@ -6,7 +6,6 @@ class Transient {
     #key
     #dataBase
     return
-    #content
 
     constructor(transientName, dataBase = lgs.db.tracks) {
         this.#key = transientName
@@ -32,6 +31,7 @@ class Transient {
             }
             return false
         })
+        return false
     }
 
     #expired = data => {

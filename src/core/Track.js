@@ -338,7 +338,7 @@ export class Track extends MapElement {
                              ? [this.content.geometry.coordinates]
                              : this.content.geometry.coordinates
 
-            segments.forEach((segment, index) => {
+            segments.forEach(() => {
                 // Use title as feature name
                 this.content.properties.name = this.title
 
@@ -359,7 +359,7 @@ export class Track extends MapElement {
      * @return {Promise<void>}
      */
     draw = async ({action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
-        TrackUtils.draw(this, {action: action, mode: mode, forcedToHide: forcedToHide}).then(result => {
+        TrackUtils.draw(this, {action: action, mode: mode, forcedToHide: forcedToHide}).then(() => {
             // Let's draw flags for the first time.
             if (action === INITIAL_LOADING) {
                 if (this.flags.start) {

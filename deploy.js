@@ -18,12 +18,9 @@
  *                                                                                                                    *
  **********************************************************************************************************************/
 
-import argparse     from 'argparse'
-import path         from 'path'
-import {Deployment} from './deployment/Deployment.js'
-
-const fs = require('fs')
-const yaml = require('yaml')
+import argparse       from 'argparse'
+import path           from 'path'
+import { Deployment } from './deployment/Deployment.js'
 
 const platforms = {production: 'production', staging: 'staging', test: 'test'}
 

@@ -29,7 +29,7 @@ export class UIToast {
         [LGS_ERROR_TOAST]: faHexagonExclamation,
     }
 
-    static #notify = (message, type = LGS_INFORMATION_TOAST, duration = UINotifier.DURATION) => {
+    static #notify = (message, type = LGS_INFORMATION_TOAST, duration = this.DURATION) => {
         if (typeof message === 'string') {
             message = {caption: message}
         }
@@ -83,9 +83,9 @@ export class UIToast {
         if (!Array.isArray(errors)) {
             errors = [errors]
         }
-       errors.forEach(error => {
+        //errors.forEach(error => {
        //    content +=` <div class="toast-error">${error.message}</div>`
-        })
+        // })
         return content
     }
 }

@@ -10,7 +10,7 @@ export class MapElement {
     visible    // Is it visible ?
 
 
-    constructor(props) {
+    constructor() {
     }
 
     /**

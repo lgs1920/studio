@@ -236,7 +236,7 @@ export class Deployment {
                 resolve()
             }
             catch (error) {
-                console.error(err)
+                console.error(error)
                 reject(`${this.red}Zip failed: ${error.message}${this.reset}`)
             }
         })
