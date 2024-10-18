@@ -81,7 +81,7 @@ export class LGS1920Context {
                                      version:          '0.1',
                                  }),
             settings: new LocalDB({
-                                      name:             `${APP_KEY}-settings${dbPrefix}`,
+                                      name: `settings-${APP_KEY}${dbPrefix}`,
                                       store:            [SETTINGS_STORE],
                                       manageTransients: true,
                                       version:          '0.1',
