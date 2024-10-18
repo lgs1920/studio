@@ -94,10 +94,7 @@
       }
     }
   },
-  "route": {
-    "color": "#1E90FFFF",
-    "thickness": 2
-  },
+
   "theme": "dark",
   "colorSwatches": ["#ee6666", "#fac858","#5470c6", "#91cc75","#73c0de", "#fc8452", "#9a60b4", "#ea7ccc"],
   "colorDistribution": "serie",
@@ -137,6 +134,7 @@
       }
     }
   },
+  "terrains": {},
   "ui": {
     "showCameraPosition": true,
     "showCameraTargetPosition": true,
