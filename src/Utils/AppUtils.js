@@ -1,13 +1,13 @@
-import axios                                        from 'axios'
-import * as Cesium                                  from 'cesium'
-import { EventEmitter }                             from '../assets/libs/EventEmitter/EventEmitter'
-import { ElevationServer }                          from '../core/Elevation/ElevationServer'
-import { BUILD, CONFIGURATION, platforms, SERVERS } from '../core/LGS1920Context'
-import { Settings }                                 from '../core/settings/Settings'
-import { SettingsSection }                          from '../core/settings/SettingsSection'
-import { APP_SETTINGS_SECTION }                     from '../core/stores/settings/app'
-import { ChangelogManager }                         from '../core/ui/ChangelogManager'
-import { FA2SL }                                    from './FA2SL'
+import axios                                                from 'axios'
+import * as Cesium                                          from 'cesium'
+import { EventEmitter }                                     from '../assets/libs/EventEmitter/EventEmitter'
+import { BUILD, CONFIGURATION, MILLIS, platforms, SERVERS } from '../core/constants'
+import { ElevationServer }                                  from '../core/Elevation/ElevationServer'
+import { Settings }                                         from '../core/settings/Settings'
+import { SettingsSection }                                  from '../core/settings/SettingsSection'
+import { APP_SETTINGS_SECTION }                             from '../core/stores/settings/app'
+import { ChangelogManager }                                 from '../core/ui/ChangelogManager'
+import { FA2SL }                                            from './FA2SL'
 
 
 export class AppUtils {
@@ -378,17 +378,3 @@ export class AppUtils {
     }
 
 }
-
-/** Time ans duration constants in seconds */
-const MILLIS = 1000
-const SECOND = MILLIS
-const MINUTE = 60 * SECOND
-const HOUR = 60 * MINUTE
-const DAY = 24 * HOUR
-const WEEK = 7 * DAY
-const MONTH = 30 * DAY
-const YEAR = 365 * DAY
-export { MILLIS, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR }
-
-/** other */
-export const WRONG = -99999999999

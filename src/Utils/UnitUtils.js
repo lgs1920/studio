@@ -1,5 +1,5 @@
 import { Duration }                  from 'luxon'
-import { DAY, HOUR, MILLIS, MINUTE } from './AppUtils'
+import { DAY, HOUR, MILLIS, MINUTE } from '../core/constants'
 
 //check configuration.unitSystems for the values
 export const INTERNATIONAL = 1

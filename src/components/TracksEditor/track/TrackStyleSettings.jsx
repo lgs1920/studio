@@ -1,8 +1,8 @@
-import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE }            from '@Core/LGS1920Context'
+import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE }            from '@Core/constants'
 import { SlColorPicker, SlDivider, SlRange, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
-import { useSnapshot } from 'valtio'
-import { Utils }       from '../Utils'
+import { useSnapshot }                                  from 'valtio'
+import { Utils }                                        from '../Utils'
 
 export const TrackStyleSettings = function TrackSettings() {
 

@@ -31,14 +31,14 @@ import parse           from 'html-react-parser'
 import { sprintf }     from 'sprintf-js'
 import { useSnapshot } from 'valtio'
 import {
+    ORIGIN_STORE,
+}                      from '../../../core/constants'
+import {
     ElevationServer,
 }                      from '../../../core/Elevation/ElevationServer'
 import {
     Journey, SIMULATE_ALTITUDE,
 }                      from '../../../core/Journey'
-import {
-    ORIGIN_STORE,
-}                      from '../../../core/LGS1920Context'
 import {
     SelectElevationSource,
 }                      from '../../MainUI/SelectElevationSource'

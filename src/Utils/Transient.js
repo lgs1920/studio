@@ -1,5 +1,5 @@
+import { MINUTE }   from '@Core/constant'
 import { DateTime } from 'luxon'
-import { MINUTE }   from './AppUtils'
 
 class Transient {
     #store

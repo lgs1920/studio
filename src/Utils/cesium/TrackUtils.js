@@ -1,9 +1,9 @@
+import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '@Core/constants'
+import { FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS }                from '@Core/Journey'
 import { default as extent }                                                   from '@mapbox/geojson-extent'
 import { default as centroid }                                                 from '@turf/centroid'
 import * as Cesium                                                             from 'cesium'
 import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 }           from 'cesium'
-import { FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS }                from '../../core/Journey'
-import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '../../core/LGS1920Context.js'
 import { UIToast }                                                             from '../UIToast.js'
 import { FLAG_START, POI_FLAG, POI_STD, POIUtils }                             from './POIUtils'
 

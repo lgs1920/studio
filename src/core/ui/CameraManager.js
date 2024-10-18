@@ -3,8 +3,8 @@ import { snapshot }              from 'valtio'
 import { deepClone }             from 'valtio/utils'
 
 import { CameraUtils }    from '../../Utils/cesium/CameraUtils.js'
+import { JOURNEYS_STORE } from '../constants'
 import { Journey }        from '../Journey'
-import { JOURNEYS_STORE } from '../LGS1920Context'
 
 export class CameraManager {
     static CLOCKWISE = true

@@ -1,29 +1,29 @@
-import { gpx, kml }                    from '@tmcw/togeojson'
+import { JOURNEYS_STORE, ORIGIN_STORE } from '@Core/constants'
+import {
+    gpx, kml,
+}                                        from '@tmcw/togeojson'
 import {
     getGeom,
-}                                      from '@turf/invariant'
+}                                        from '@turf/invariant'
 import {
     JUST_ICON,
-}                                      from '@Utils/cesium/POIUtils'
+}                                        from '@Utils/cesium/POIUtils'
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                                      from '@Utils/cesium/TrackUtils'
+}                                        from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
-}                                      from '@Utils/UIToast'
+}                                        from '@Utils/UIToast'
 import {
     FLAG_START, FLAG_STOP, POI_FLAG, POI_MARKER, POI_STD,
-}                                      from '../Utils/cesium/POIUtils'
+}                                        from '../Utils/cesium/POIUtils'
 import {
     ElevationServer,
-}                                      from './Elevation/ElevationServer'
-import {
-    JOURNEYS_STORE, ORIGIN_STORE,
-}                                      from './LGS1920Context.js'
+}                                        from './Elevation/ElevationServer'
 import {
     MapElement,
-}                                      from './MapElement'
-import { POI, POI_VERTICAL_ALIGN_TOP } from './POI'
+}                                        from './MapElement'
+import { POI, POI_VERTICAL_ALIGN_TOP }   from './POI'
 
 import { ProfileTrackMarker } from './ProfileTrackMarker'
 import { Track }              from './Track'

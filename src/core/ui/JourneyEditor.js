@@ -1,5 +1,5 @@
 import { subscribe }                                                        from 'valtio'
-import { COLOR_SWATCHES_NONE, COLOR_SWATCHES_RANDOM, COLOR_SWATCHES_SERIE } from '../LGS1920Context'
+import { COLOR_SWATCHES_NONE, COLOR_SWATCHES_RANDOM, COLOR_SWATCHES_SERIE } from '../constants'
 
 
 export class JourneyEditor {

@@ -1,5 +1,5 @@
 import { proxy, subscribe } from 'valtio'
-import { SETTINGS_STORE }   from '../LGS1920Context.js'
+import { SETTINGS_STORE }   from '../constants'
 
 export class SettingsSection {
 
