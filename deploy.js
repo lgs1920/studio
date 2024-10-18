@@ -51,7 +51,9 @@ parser.add_argument('--test', '-t', {
 const args = parser.parse_args()
 new Deployment(
     {
+        // eslint-disable-next-line no-undef
         local:   path.dirname(process.cwd()),
         platform:args.prod ? platforms.production : args.staging ? platforms.staging : platforms.test,
+        // eslint-disable-next-line no-undef
         product:path.basename(process.cwd())
     })
