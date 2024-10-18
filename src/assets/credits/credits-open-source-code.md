@@ -1,12 +1,12 @@
 ## Open Source Code
 
-Licence : As of today, there's no licence.  
+Licence : As of today, there's not yet any licence.
 
 The application (studio, backend,APIs) is based on : 
   
 ### Map and 3d:
 * [cesiumjs](https://cesium.com/)  - The Map engine
-* [Rhesium](https://resium.reearth.io/) - React components for Cesium
+* [Resium](https://resium.reearth.io/) - React components for Cesium
 
 ### Code and devs:
 * [Bun](https://bun.sh/) - javascript runtime
@@ -18,7 +18,7 @@ The application (studio, backend,APIs) is based on :
 * [Valtio](https://valtio.pmnd.rs) - state management
 * [Shoelace](https://shoelace.style/) - The web components used for UI
 * [fontawesome](https://fontawesome.com/) - The icons library
-* [ApexCharts](https://apexcharts.com/) - Chart library
+* [echarts](https://echarts.apache.org/) - Chart library
 
 ### Other dependencies:
 * TODO
