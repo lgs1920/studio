@@ -76,10 +76,16 @@ export class LGS1920Context {
         this.db = {
             lgs1920: new LocalDB({
                                      name:             `${APP_KEY}${dbPrefix}`,
-                                     store:            [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, SETTINGS_STORE],
+                                     store: [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE],
                                      manageTransients: true,
                                      version:          '0.1',
                                  }),
+            settings: new LocalDB({
+                                      name:             `${APP_KEY}-settings${dbPrefix}`,
+                                      store:            [SETTINGS_STORE],
+                                      manageTransients: true,
+                                      version:          '0.1',
+                                  }),
         }
     }
 

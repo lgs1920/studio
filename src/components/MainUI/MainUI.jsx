@@ -1,23 +1,25 @@
-import { CompassUI }            from '@Components/cesium/CompassUI/CompassUI'
-import { FullScreenButton }     from '@Components/FullScreenButton/FullScreenButton'
-import { Toolbar }              from '@Components/MainUI/Toolbar'
-import { Profile }              from '@Components/Profile/Profile'
-import { TracksEditor }         from '@Components/TracksEditor/TracksEditor'
-import { useEffect }            from 'react'
-import { useCesium }            from 'resium'
+import { CompassUI }                        from '@Components/cesium/CompassUI/CompassUI'
+import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
+import { Toolbar }                          from '@Components/MainUI/Toolbar'
+import { Profile }                          from '@Components/Profile/Profile'
+import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
+import { useEffect }                        from 'react'
+import { useCesium }                        from 'resium'
 
 import './style.css'
-import { subscribe }            from 'valtio'
-import { CanvasEvents }         from '../../core/events/CanvasEvents.js'
-import { CameraAndTargetPanel } from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
-import { JourneyLoaderUI }      from '../FileLoader/JourneyLoaderUI'
-import { Panel }                from '../InformationPanel/Panel'
-import { PanelButton }          from '../InformationPanel/PanelButton'
-import { Utils }                from '../TracksEditor/Utils.js'
-import { CameraTarget }         from './CameraTarget'
-import { StudioLogo }           from './StudioLogo'
-import { SupportUI }            from './SupportUI'
-import { SupportUIButton }      from './SupportUIButton'
+import { subscribe }                        from 'valtio'
+import { CanvasEvents }                     from '../../core/events/CanvasEvents.js'
+import { CameraAndTargetPanel }             from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
+import { JourneyLoaderUI }                  from '../FileLoader/JourneyLoaderUI'
+import { Panel as InformationPanel }        from '../InformationPanel/Panel'
+import { PanelButton as InformationButton } from '../InformationPanel/PanelButton'
+import { Panel as SettingsPanel }           from '../SettingsPanel/Panel'
+import { PanelButton as SettingsButton }    from '../SettingsPanel/PanelButton'
+import { Utils }                            from '../TracksEditor/Utils.js'
+import { CameraTarget }                     from './CameraTarget'
+import { StudioLogo }                       from './StudioLogo'
+import { SupportUI }                        from './SupportUI'
+import { SupportUIButton }                  from './SupportUIButton'
 
 export const MainUI = function VT3D_UI() {
 
@@ -42,12 +44,13 @@ export const MainUI = function VT3D_UI() {
             <div id="lgs-main-ui">
                     <>
                 <div id={'top-left-ui'}>
+                    <SettingsButton tooltip={'right'}/>
                     <Toolbar editor={true}
                              profile={true}
                              fileLoader={true}
                              position={'vertical'}
                              tooltip={'right'}/>
-                    <PanelButton/>
+                    <InformationButton/>
                     <SupportUIButton/>
                     <FullScreenButton/>
                 </div>
@@ -76,7 +79,8 @@ export const MainUI = function VT3D_UI() {
                     </>
 
 
-                <Panel/>
+                <InformationPanel/>
+                <SettingsPanel/>
                 <TracksEditor/>
                 <CameraAndTargetPanel/>
             </div>

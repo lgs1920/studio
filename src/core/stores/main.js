@@ -63,6 +63,12 @@ export const main = {
             height:'100%',
             zoom:false,
         },
+
+        settings: {
+            key:     0,
+            visible: false,
+        },
+
         wanderer: {
             run: false,
             pause:false,

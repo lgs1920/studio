@@ -58,7 +58,7 @@ export class SettingsSection {
      * @return {Promise<void>}
      */
     save = async () => {
-        await lgs.db.lgs1920.put(this.key, JSON.parse(JSON.stringify(this.#content)), SETTINGS_STORE)
+        await lgs.db.settings.put(this.key, JSON.parse(JSON.stringify(this.#content)), SETTINGS_STORE)
     }
 
     /**
@@ -69,7 +69,7 @@ export class SettingsSection {
      *  @return {Promise<void>}
      */
     read = async (parameter = undefined) => {
-        const all = await lgs.db.lgs1920.get(this.key, SETTINGS_STORE)
+        const all = await lgs.db.settings.get(this.key, SETTINGS_STORE)
         return parameter ? all[parameter] ?? undefined : all
     }
 }
