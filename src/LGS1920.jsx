@@ -128,12 +128,14 @@ export function LGS1920() {
                 infoBox={false}
                 sceneModePicker={false}
                 showRenderLoopErrors={false}
-            //terrain={Cesium.Terrain.fromWorldTerrain({
-
+                terrain={Cesium.Terrain.fromWorldTerrain({
+                                                             requestVertexNormals: false,
+                                                         })}
             /* Y6VgRYi3iKQEttoa3G0v */
-                terrain={new Cesium.Terrain(Cesium.CesiumTerrainProvider.fromUrl(`https://api.maptiler.com/tiles/terrain-quantized-mesh-v2/?key=${'qiE5uSYF7NoDFKCbfpfc'}`, {
-                    requestVertexNormals: false,
-                }))}
+
+            // terrain={new
+            // Cesium.Terrain(Cesium.CesiumTerrainProvider.fromUrl(`https://api.maptiler.com/tiles/terrain-quantized-mesh-v2/?key=${'qiE5uSYF7NoDFKCbfpfc'}`,
+            // { requestVertexNormals: false, }))}
 
                 id="studioMapViewer"
 
