@@ -64,7 +64,7 @@ export class SettingsSection {
      * @return {Promise<void>}
      */
     save = async () => {
-        await lgs.db.settings.put(this.key, JSON.parse(JSON.stringify(this.#content)), SETTINGS_STORE)
+        await lgs.db.settings.put(this.key, JSON.parse(JSON.stringify(this.content)), SETTINGS_STORE)
         lgs.configuration[this.key] = this.content
     }
 
