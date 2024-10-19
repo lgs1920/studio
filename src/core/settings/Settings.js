@@ -31,7 +31,7 @@ export class Settings {
             })
 
         // snapKey
-        Object.defineProperty(this, __.app.camelCase(`snap-${section.key}`), {
+        Object.defineProperty(this, __.app.camelCase(`get-${section.key}`), {
             get: function () {
                 return snapshot(this.#sections.get(section.key).content)
             }

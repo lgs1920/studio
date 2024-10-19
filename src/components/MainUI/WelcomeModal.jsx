@@ -63,7 +63,7 @@ export const WelcomeModal = () => {
 
     return (
         <>
-            {lgs.settings.snapApp.showIntro &&
+            {lgs.settings.getApp.showIntro &&
             <SlDialog open={open}
                       modal
                       no-header
@@ -82,7 +82,7 @@ export const WelcomeModal = () => {
 
                         {editorPanel.list !== undefined &&
                         <div className="buttons-bar">
-                            {lgs.settings.snapApp.changelogToRead &&
+                            {lgs.settings.getApp.changelogToRead &&
                             <SlButton  onClick={showNews} variant="text">{'What\'s new ?'}</SlButton>
                             }
                             {editorPanel.list.length > 0 &&
