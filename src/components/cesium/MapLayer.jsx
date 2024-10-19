@@ -1,26 +1,28 @@
+import { LayerManager }                                                   from '@Core/layers/LayerManager.js'
 import { OpenStreetMapImageryProvider, WebMapTileServiceImageryProvider } from 'cesium'
 import { ImageryLayer }                                                   from 'resium'
-import { useSnapshot }                                                    from 'valtio'
-import { Layer }                                                          from '../../core/Layer.js'
+import { subscribe, useSnapshot }                                         from 'valtio'
 
 export const MapLayer = (layer) => {
 
-    const mainStore = lgs.mainProxy
-    const mainSnap = useSnapshot(mainStore)
-
+    let snapshot = useSnapshot(lgs.settings.layers)
+    subscribe(lgs.settings.layers, () => {
+                  let snapshot = useSnapshot(lgs.settings.layers)
+              },
+    )
     return (<>
 
             {
-                mainSnap.layer === Layer.OSM_PLAN &&
+                snapshot.current === LayerManager.OSM_PLAN &&
                 <ImageryLayer imageryProvider={new OpenStreetMapImageryProvider({
                     url: 'https://tile.openstreetmap.org/',
                 })}/>
             }
 
             {
-                mainSnap.layer === Layer.IGN_PLAN &&
+                snapshot.current === LayerManager.IGN_PLAN &&
                 <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                                                                                        url: 'https://wmts.geopf.fr/wmts',
+                                                                                        url: 'https://data.geopf.fr/wmts',
                     layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
                     style: 'normal',
                     format: 'image/png',
@@ -29,10 +31,10 @@ export const MapLayer = (layer) => {
             }
 
             {
-                mainSnap.layer === Layer.IGN_AERIAL &&
+                snapshot.current === LayerManager.IGN_AERIAL &&
                 <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                    url: 'https://wmts.geopf.fr/wmts',
-                    layer: 'ORTHOIMAGERY.ORTHOPHOTOS',
+                                                                                        url:   'https://data.geopf.fr/wmts',
+                                                                                        layer: 'ORTHOIMAGERY.ORTHOPHOTOS.ORTHO-EXPRESS.2024',
                     style: 'normal',
                     format: 'image/jpeg',
                     tileMatrixSetID: 'PM',
@@ -41,9 +43,9 @@ export const MapLayer = (layer) => {
             }
 
             {
-                mainSnap.layer === Layer.IGN_CADASTRAL &&
+                snapshot.current === LayerManager.IGN_CADASTRAL &&
                 <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                                                                                        url: 'https://wmts.geopf.fr/wmts',
+                                                                                        url: 'https://data.geopf.fr/wmts',
                     layer: 'CADASTRALPARCELS.PARCELLAIRE_EXPRESS',
                     style: 'normal',
                     format: 'image/png',

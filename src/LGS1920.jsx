@@ -8,6 +8,7 @@ import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
 import { MapLayer }                                  from './components/cesium/MapLayer'
 import { InitErrorMessage }                          from './components/InitErrorMessage'
 import { WelcomeModal }                              from './components/MainUI/WelcomeModal'
+import { LayerManager }                              from './core/layers/LayerManager'
 import { UIToast }                                   from './Utils/UIToast'
 
 /***************************************
@@ -27,6 +28,11 @@ if (initApp.status) {
 
     // Init UI managers
     lgs.initManagers()
+
+    // Init Layer
+    __.layer = new LayerManager()
+
+
 }
 
 export function LGS1920() {
