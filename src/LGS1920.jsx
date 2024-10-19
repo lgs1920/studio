@@ -8,7 +8,6 @@ import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
 import { MapLayer }                                  from './components/cesium/MapLayer'
 import { InitErrorMessage }                          from './components/InitErrorMessage'
 import { WelcomeModal }                              from './components/MainUI/WelcomeModal'
-import { CameraManager as CameraManager }            from './core/ui/CameraManager'
 import { UIToast }                                   from './Utils/UIToast'
 
 /***************************************
@@ -19,8 +18,16 @@ window.lgs = new LGS1920Context()
 
 // Application initialisation
 const initApp = await __.app.init()
-const cameraManager = new CameraManager()
 
+// If Init is OK, we have some additional tasks to do.
+
+if (initApp.status) {
+    // Set DefaultTheme
+    __.app.setTheme()
+
+    // Init UI managers
+    lgs.initManagers()
+}
 
 export function LGS1920() {
 
@@ -55,24 +62,18 @@ export function LGS1920() {
 
     const rotateCamera = async () => {
         if (lgs.journeys.size === 0) {
-            await cameraManager.runOrbital({})
+            await __.ui.cameraManager.runOrbital({})
         }
     }
 
     const raiseCameraUpdateEvent = async () => {
-        await cameraManager.raiseUpdateEvent({})
+        await __.ui.cameraManager.raiseUpdateEvent({})
     }
 
     useEffect(() => {
         try {
             if (initApp.status) {
                 // Init was OK, we have somme additional tasks to do.
-
-                // Set DefaultTheme
-                __.app.setTheme()
-
-                // Init UI managers
-                lgs.initManagers()
 
                 // Set body class to manage css versus platform
                 document.body.classList.add(lgs.platform);
