@@ -75,6 +75,7 @@ export const UNITS_SETTING_SECTION = 'unitsSystem'
 export const LAYERS_SETTING_SECTION = 'layers'
 export const TERRAINS_SETTING_SECTION = 'terrains'
 export const UI_SETTING_SECTION = 'ui'
+export const THEME_SETTING_SECTION = 'theme'
 
 export const SETTING_SECTIONS = [
     APP_SETTING_SECTION,
@@ -87,4 +88,5 @@ export const SETTING_SECTIONS = [
     LAYERS_SETTING_SECTION,
     TERRAINS_SETTING_SECTION,
     UI_SETTING_SECTION,
+    THEME_SETTING_SECTION,
 ]
