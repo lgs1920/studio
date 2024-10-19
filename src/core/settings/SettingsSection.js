@@ -16,19 +16,13 @@ export class SettingsSection {
         this.key = key
     }
 
-    init = async () => {
-        const data = await this.read()
-        if (data === null) {
-            this.#content = proxy(lgs.configuration[this.key])
-            await this.save()
-        }
-        else {
-            this.#content = proxy(data)
-            lgs.configuration[this.key] = data
-        }
-        this.subscribeToChange()
-
-
+    /**
+     * Content getter
+     *
+     * @return {Proxy}
+     */
+    get content() {
+        return (this.#content.__value !== undefined) ? this.#content.__value : this.#content
     }
 
     /**
@@ -42,13 +36,26 @@ export class SettingsSection {
         })
     }
 
-    /**
-     * Content getter
-     *
-     * @return {Proxy}
-     */
-    get content() {
-        return this.#content
+    init = async () => {
+        const data = await this.read()
+        if (data === null) {
+            if (lgs.configuration[this.key] !== undefined) {
+                if (lgs.configuration[this.key] instanceof Object) {
+                    this.#content = proxy(lgs.configuration[this.key])
+                }
+                else {
+                    this.#content = proxy({__value: lgs.configuration[this.key]})
+                }
+                await this.save()
+                this.subscribeToChange()
+            }
+        }
+        else {
+            this.#content = proxy(data)
+            lgs.configuration[this.key] = this.content
+            this.subscribeToChange()
+        }
+
     }
 
     /**
@@ -58,7 +65,7 @@ export class SettingsSection {
      */
     save = async () => {
         await lgs.db.settings.put(this.key, JSON.parse(JSON.stringify(this.#content)), SETTINGS_STORE)
-        lgs.configuration[this.key] = this.#content
+        lgs.configuration[this.key] = this.content
     }
 
     /**
@@ -75,10 +82,10 @@ export class SettingsSection {
         }
         const value = parameter ? all[parameter] ?? undefined : all
         if (parameter) {
-            lgs.configuration[this.key][parameter] = value
+            lgs.configuration[this.key][parameter] = (value.__value !== undefined) ? value.__value : value
         }
         else {
-            lgs.configuration[this.key] = value
+            lgs.configuration[this.key] = (value.__value !== undefined) ? value.__value : value
         }
         return value
     }
@@ -90,7 +97,7 @@ export class SettingsSection {
      */
     reset = async () => {
         this.#content = lgs.savedConfiguration[this.key]
-        lgs.configuration[this.key] = this.#content
+        lgs.configuration[this.key] = this.content
 
     }
 }
