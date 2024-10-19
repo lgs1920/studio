@@ -10,7 +10,6 @@ import { UIUtils }    from '@Utils/UIUtils'
 import { proxy }                          from 'valtio'
 import { UnitUtils }                      from '../Utils/UnitUtils'
 import { LocalDB }                        from './db/LocalDB'
-import { Layer }                          from './Layer.js'
 import { MouseEventHandler }              from './MouseEventHandler'
 import { main }                           from './stores/main'
 import { theJourneyEditor }               from './stores/theJourneyEditor'
@@ -40,8 +39,6 @@ export class LGS1920Context {
         this.#mainProxy = proxy(main)
         this.journeyEditorStore = this.#mainProxy.components.journeyEditor
         this.mainUIStore = this.#mainProxy.components.mainUI
-
-        this.#mainProxy.layer = Layer.IGN_AERIAL
 
         // Get the first as current theJourney
         if (this.journeys.size) {
@@ -255,6 +252,7 @@ export class LGS1920Context {
         }
         __.ui.wanderer = new Wanderer()
         __.ui.cameraManager = new CameraManager()
+
     }
 
 
