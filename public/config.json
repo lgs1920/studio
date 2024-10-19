@@ -109,6 +109,7 @@
     "stopSpeedLimit": 0.2
   },
   "layers": {
+    "current": "osm-plan",
     "IGN": {
       "CADASTRAL": {
         "name": "IGN Cadastral",
