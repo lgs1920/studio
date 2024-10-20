@@ -110,30 +110,72 @@
   },
   "layers": {
     "current": "osm-plan",
-    "IGN": {
-      "CADASTRAL": {
-        "name": "IGN Cadastral",
-        "id": "ign-cadastral",
-        "image": ""
+    "providers": [
+      {
+        "id": "ign",
+        "name": "IGN (France)",
+        "credits": "",
+        "logo": "",
+        "type": "WMTS",
+        "url": "",
+        "layers": [
+          {
+            "name": "IGN Cadastral",
+            "id": "ign-cadastral",
+            "image": "",
+            "authentification": false,
+            "url": "https://data.geopf.fr/wmts",
+            "layer": "CADASTRALPARCELS.PARCELLAIRE_EXPRESS",
+            "style": "normal",
+            "format": "image/png",
+            "tileMatrixSetID": "PM",
+            "doc": ""
+          },
+          {
+            "name": "IGN Plan",
+            "id": "ign-plan",
+            "image": "",
+            "authentification": false,
+            "url": "https://data.geopf.fr/wmts",
+            "layer": "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2",
+            "style": "normal",
+            "format": "image/png",
+            "tileMatrixSetID": "PM",
+            "doc": ""
+          },
+          {
+            "name": "IGN Aerial",
+            "id": "ign-photo",
+            "image": "x",
+            "authentification": false,
+            "url": "https://data.geopf.fr/wmts",
+            "layer": "ORTHOIMAGERY.ORTHOPHOTOS",
+            "style": "normal",
+            "format": "image/jpeg",
+            "tileMatrixSetID": "PM",
+            "doc": ""
+          }
+        ]
       },
-      "PLAN": {
-        "name": "IGN Plan",
-        "id": "ign-plan",
-        "image": ""
-      },
-      "PHOTO": {
-        "name": "IGN Aerial",
-        "id": "ign-photo",
-        "image": ""
+      {
+        "id": "osm",
+        "name": "Open Source Map",
+        "credits": "",
+        "logo": "",
+        "url": "",
+        "type": "Slippy",
+        "layers": [
+          {
+            "name": "OSM Plan",
+            "id": "osm-plan",
+            "image": "",
+            "authentification": false,
+            "url": "https://tile.openstreetmap.org/",
+            "doc": ""
+          }
+        ]
       }
-    },
-    "OSM": {
-      "PLAN": {
-        "name": "OSM Plan",
-        "id": "osm-plan",
-        "image": ""
-      }
-    }
+    ]
   },
   "terrains": {},
   "ui": {
