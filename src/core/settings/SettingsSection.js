@@ -40,19 +40,17 @@ export class SettingsSection {
         const data = await this.read()
         if (data === null) {
             if (lgs.configuration[this.key] !== undefined) {
-                if (lgs.configuration[this.key] instanceof Object) {
-                    this.#content = proxy(lgs.configuration[this.key])
-                }
-                else {
-                    this.#content = proxy({__value: lgs.configuration[this.key]})
-                }
+                this.#content = proxy(
+                    (lgs.configuration[this.key] instanceof Object) ? lgs.configuration[this.key]
+                                                                    : {__value: lgs.configuration[this.key]},
+                )
                 await this.save()
                 this.subscribeToChange()
             }
         }
         else {
-            this.#content = proxy(data)
-            lgs.configuration[this.key] = this.content
+            this.#content = proxy((data instanceof Object) ? data : {__value: data})
+            lgs.configuration[this.key] = JSON.parse(JSON.stringify(data))
             this.subscribeToChange()
         }
 
@@ -65,7 +63,7 @@ export class SettingsSection {
      */
     save = async () => {
         await lgs.db.settings.put(this.key, JSON.parse(JSON.stringify(this.content)), SETTINGS_STORE)
-        lgs.configuration[this.key] = this.content
+        lgs.configuration[this.key] = JSON.parse(JSON.stringify(this.content))
     }
 
     /**
@@ -97,7 +95,7 @@ export class SettingsSection {
      */
     reset = async () => {
         this.#content = lgs.savedConfiguration[this.key]
-        lgs.configuration[this.key] = this.content
+        lgs.configuration[this.key] = JSON.parse(JSON.stringify(this.content))
 
     }
 }
