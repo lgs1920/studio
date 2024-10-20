@@ -110,7 +110,7 @@
   },
   "layers": {
     "current": "osm-plan",
-    "overlay": "",
+    "overlay": null,
     "providers": [
       {
         "id": "ign",
@@ -175,6 +175,25 @@
             "image": "",
             "authentification": false,
             "url": "https://tile.openstreetmap.org/",
+            "doc": "",
+            "type": "base"
+          }
+        ]
+      },
+      {
+        "id": "arcgis",
+        "name": "ArcGIS",
+        "credits": "",
+        "logo": "",
+        "url": "",
+        "type": "ARCGIS",
+        "layers": [
+          {
+            "name": "World Street Maps",
+            "id": "arcgis-plan",
+            "image": "",
+            "authentification": false,
+            "url": "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer",
             "doc": "",
             "type": "base"
           }

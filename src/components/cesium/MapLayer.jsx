@@ -1,9 +1,10 @@
-import { OpenStreetMapImageryProvider, WebMapTileServiceImageryProvider } from 'cesium'
-import { ImageryLayer }                                                   from 'resium'
-import { subscribe, useSnapshot }                                         from 'valtio'
+import { ArcGisMapServerImageryProvider, OpenStreetMapImageryProvider, WebMapTileServiceImageryProvider } from 'cesium'
+import { ImageryLayer }                                                                                   from 'resium'
+import { subscribe, useSnapshot }                                                                         from 'valtio'
 
 export const SLIPPY = 'Slippy'
 export const WMTS = 'WMTS'
+export const ARCGIS = 'ARCGIS'
 export const BASE_LAYERS = 'base'
 export const OVERLAY_LAYERS = 'overlay'
 
@@ -45,7 +46,7 @@ export const MapLayer = (props) => {
 
             {
                 theProvider.type === WMTS && theLayer.type === props.type &&
-                <ImageryLayer alpha={props.type === OVERLAY_LAYERS ? 0.5 : 1} imageryProvider={
+                <ImageryLayer imageryProvider={
                     new WebMapTileServiceImageryProvider({
                                                              url:             theLayer.url,
                                                              layer:           theLayer.layer,
@@ -54,6 +55,15 @@ export const MapLayer = (props) => {
                                                              tileMatrixSetID: theLayer.tileMatrixSetID,
 
                                                          }/*,{transparent:props.type === OVERLAY_LAYERS}*/)
+                }/>
+            }
+
+            {
+                theProvider.type === ARCGIS && theLayer.type === props.type &&
+                <ImageryLayer imageryProvider={
+                    ArcGisMapServerImageryProvider.fromUrl(
+                        'https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer',
+                    )
                 }/>
             }
         </>
