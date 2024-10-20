@@ -11,6 +11,10 @@ export class LayerManager {
      */
     #layer = null
     /**
+     * Current overlay layer
+     */
+    #overlay = null
+    /**
      * current provider
      * @type {null|string}
      */
@@ -33,6 +37,7 @@ export class LayerManager {
         }
 
         this.#layer = lgs.configuration.layers.current
+        this.#overlay = lgs.configuration.layers.overlay
         this.#provider = this.#layer.split('-')[0]
 
         // Let's transform layers and provider in order to be more efficient in code
@@ -50,7 +55,11 @@ export class LayerManager {
     }
 
     get layer() {
-        return this.#layer
+        return this.#layers.get(this.#layer)
+    }
+
+    get overlay() {
+        return this.#layers.get(this.#overlay)
     }
 
     set layer(layer) {
@@ -62,7 +71,7 @@ export class LayerManager {
     }
 
     get provider() {
-        return this.#provider
+        return this.#providers.get(this.#provider)
     }
 
     get providers() {

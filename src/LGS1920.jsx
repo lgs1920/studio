@@ -30,8 +30,7 @@ if (initApp.status) {
     lgs.initManagers()
 
     // Init Layer
-    __.layer = new LayerManager()
-
+    __.layerManager = new LayerManager()
 
 }
 
@@ -150,7 +149,10 @@ export function LGS1920() {
                 imageryProvider={false}
                 baseLayerPicker={false}
         >
-            <MapLayer/>
+
+
+            <MapLayer type={'base'}/>
+            <MapLayer type={'overlay'}/>
 
             <Scene verticalExaggeration={1.3}></Scene>
             <Globe enableLighting={false} depthTestAgainstTerrain={true}></Globe>

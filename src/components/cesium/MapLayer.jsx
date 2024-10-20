@@ -1,58 +1,61 @@
-import { LayerManager }                                                   from '@Core/layers/LayerManager.js'
 import { OpenStreetMapImageryProvider, WebMapTileServiceImageryProvider } from 'cesium'
 import { ImageryLayer }                                                   from 'resium'
 import { subscribe, useSnapshot }                                         from 'valtio'
 
-export const MapLayer = (layer) => {
+export const SLIPPY = 'Slippy'
+export const WMTS = 'WMTS'
+export const BASE_LAYERS = 'base'
+export const OVERLAY_LAYERS = 'overlay'
+
+export const MapLayer = (props) => {
+
+    const manager = __.layerManager
+    if (![BASE_LAYERS, OVERLAY_LAYERS].includes(props.type)) {
+        return (<></>)
+    }
 
     let snapshot = useSnapshot(lgs.settings.layers)
+    let snapLayer = props.type === BASE_LAYERS ? snapshot.current : snapshot.overlay
+
+    if (snapLayer === null) {
+        return (<></>)
+    }
+
+    lgs.mainProxy.theLayer = manager.layers.get(snapLayer)
+    let theLayer = manager.layers.get(snapLayer)
+    let theProvider = manager.providers.get(theLayer.provider)
+
     subscribe(lgs.settings.layers, () => {
-                  let snapshot = useSnapshot(lgs.settings.layers)
-              },
-    )
+        let snapshot = useSnapshot(lgs.settings.layers)
+        const snapLayer = props.type === BASE_LAYERS ? snapshot.current : snapshot.overlay
+        lgs.mainProxy.theLayer = manager.layers.get(snapLayer)
+        let theLayer = manager.layers.get(snapLayer)
+        let theProvider = manager.providers.get(theLayer.provider)
+    })
+
     return (<>
 
             {
-                snapshot.current === LayerManager.OSM_PLAN &&
-                <ImageryLayer imageryProvider={new OpenStreetMapImageryProvider({
-                    url: 'https://tile.openstreetmap.org/',
+                theProvider.type === SLIPPY && theLayer.type === props.type &&
+                <ImageryLayer imageryProvider={
+                    new OpenStreetMapImageryProvider({
+                                                         url: theLayer.url,
                 })}/>
             }
 
             {
-                snapshot.current === LayerManager.IGN_PLAN &&
-                <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                                                                                        url: 'https://data.geopf.fr/wmts',
-                    layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
-                    style: 'normal',
-                    format: 'image/png',
-                    tileMatrixSetID: 'PM',
-                })}/>
-            }
+                theProvider.type === WMTS && theLayer.type === props.type &&
+                <ImageryLayer alpha={props.type === OVERLAY_LAYERS ? 0.5 : 1} imageryProvider={
+                    new WebMapTileServiceImageryProvider({
+                                                             url:             theLayer.url,
+                                                             layer:           theLayer.layer,
+                                                             style:           theLayer.style,
+                                                             format:          theLayer.format,
+                                                             tileMatrixSetID: theLayer.tileMatrixSetID,
 
-            {
-                snapshot.current === LayerManager.IGN_AERIAL &&
-                <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                                                                                        url:   'https://data.geopf.fr/wmts',
-                                                                                        layer: 'ORTHOIMAGERY.ORTHOPHOTOS.ORTHO-EXPRESS.2024',
-                    style: 'normal',
-                    format: 'image/jpeg',
-                    tileMatrixSetID: 'PM',
-                    service: 'WMTS',
-                })}/>
+                                                         }/*,{transparent:props.type === OVERLAY_LAYERS}*/)
+                }/>
             }
-
-            {
-                snapshot.current === LayerManager.IGN_CADASTRAL &&
-                <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                                                                                        url: 'https://data.geopf.fr/wmts',
-                    layer: 'CADASTRALPARCELS.PARCELLAIRE_EXPRESS',
-                    style: 'normal',
-                    format: 'image/png',
-                    tileMatrixSetID: 'PM',
-                })}/>
-            }
-
         </>
     )
 }
