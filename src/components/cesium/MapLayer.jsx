@@ -10,42 +10,66 @@ export const OVERLAY_LAYERS = 'overlay'
 
 export const MapLayer = (props) => {
 
+    const isBase = props.type === BASE_LAYERS
     const manager = __.layerManager
     if (![BASE_LAYERS, OVERLAY_LAYERS].includes(props.type)) {
         return (<></>)
     }
 
     let snapshot = useSnapshot(lgs.settings.layers)
-    let snapLayer = props.type === BASE_LAYERS ? snapshot.current : snapshot.overlay
+    let snapLayer = isBase ? snapshot.current : snapshot.overlay
 
     if (snapLayer === null) {
         return (<></>)
     }
 
-    lgs.mainProxy.theLayer = manager.layers.get(snapLayer)
+    if (isBase) {
+        lgs.mainProxy.theLayer = manager.layers.get(snapLayer)
+    }
+    else {
+        lgs.mainProxy.theLayerOverlay = manager.layers.get(snapLayer)
+    }
+
     let theLayer = manager.layers.get(snapLayer)
+
+    // Bail if there is no layer
+    if (theLayer === undefined) {
+        return (<></>)
+    }
     let theProvider = manager.providers.get(theLayer.provider)
 
     subscribe(lgs.settings.layers, () => {
         let snapshot = useSnapshot(lgs.settings.layers)
-        const snapLayer = props.type === BASE_LAYERS ? snapshot.current : snapshot.overlay
-        lgs.mainProxy.theLayer = manager.layers.get(snapLayer)
+        const snapLayer = isBase ? snapshot.current : snapshot.overlay
+        if (isBase) {
+            lgs.mainProxy.theLayer = manager.layers.get(snapLayer)
+        }
+        else {
+            lgs.mainProxy.theLayerOverlay = manager.layers.get(snapLayer)
+        }
         let theLayer = manager.layers.get(snapLayer)
-        let theProvider = manager.providers.get(theLayer.provider)
+        // Bail if there is no layer
+        if (theLayer === undefined) {
+            theProvider = undefined
+            return (<></>)
+        }
+        theProvider = manager.providers.get(theLayer.provider)
     })
 
     return (<>
 
-            {
-                theProvider.type === SLIPPY && theLayer.type === props.type &&
-                <ImageryLayer imageryProvider={
-                    new OpenStreetMapImageryProvider({
-                                                         url: theLayer.url,
+            {  //Open Map layers
+                theProvider && theProvider.type === SLIPPY && theLayer.type === props.type &&
+                <ImageryLayer imageryProvider={new OpenStreetMapImageryProvider({
+                                                                                    url: theLayer.url,
+                                                                                    // We credit to get if it is base
+                                                                                    // or overlay.
+                                                                                    credit: props.type,
                 })}/>
             }
 
-            {
-                theProvider.type === WMTS && theLayer.type === props.type &&
+            {   // WMTS layers
+                theProvider && theProvider.type === WMTS && theLayer.type === props.type &&
                 <ImageryLayer imageryProvider={
                     new WebMapTileServiceImageryProvider({
                                                              url:             theLayer.url,
@@ -53,18 +77,19 @@ export const MapLayer = (props) => {
                                                              style:           theLayer.style,
                                                              format:          theLayer.format,
                                                              tileMatrixSetID: theLayer.tileMatrixSetID,
-
-                                                         }/*,{transparent:props.type === OVERLAY_LAYERS}*/)
+                                                             // We credit to get if it is base or overlay.
+                                                             credit: props.type,
+                                                         })
                 }/>
             }
 
-            {
-                theProvider.type === ARCGIS && theLayer.type === props.type &&
-                <ImageryLayer imageryProvider={
-                    ArcGisMapServerImageryProvider.fromUrl(
-                        'https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer',
-                    )
-                }/>
+            {   // ArcGIS layers
+                theProvider && theProvider.type === ARCGIS && theLayer.type === props.type &&
+                <ImageryLayer
+                    imageryProvider={ArcGisMapServerImageryProvider.fromUrl(theLayer.url, {
+                        // We credit to get if it is base or overlay.
+                        credit: props.type,
+                    })}/>
             }
         </>
     )

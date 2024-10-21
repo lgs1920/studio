@@ -1,15 +1,16 @@
-import { MainUI }                                    from '@Components/MainUI/MainUI.jsx'
+import { MainUI }                                                            from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { LGS1920Context }                            from '@Core/LGS1920Context'
-import { TrackUtils }                                from '@Utils/cesium/TrackUtils'
-import * as Cesium                                   from 'cesium'
-import { useEffect }                                 from 'react'
-import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
-import { MapLayer }                                  from './components/cesium/MapLayer'
-import { InitErrorMessage }                          from './components/InitErrorMessage'
-import { WelcomeModal }                              from './components/MainUI/WelcomeModal'
-import { LayerManager }                              from './core/layers/LayerManager'
-import { UIToast }                                   from './Utils/UIToast'
+import { LGS1920Context }                                                    from '@Core/LGS1920Context'
+import { TrackUtils }                                                        from '@Utils/cesium/TrackUtils'
+import * as Cesium                                                           from 'cesium'
+import { useEffect }                                                         from 'react'
+import { Camera, CameraFlyTo, Globe, ImageryLayerCollection, Scene, Viewer } from 'resium'
+import { MapLayer }                                                          from './components/cesium/MapLayer'
+import { InitErrorMessage }                                                  from './components/InitErrorMessage'
+import { WelcomeModal }                                                      from './components/MainUI/WelcomeModal'
+import { LayerManager }                                                      from './core/layers/LayerManager'
+import { LayersUtils }                                                       from './Utils/cesium/LayersUtils'
+import { UIToast }                                                           from './Utils/UIToast'
 
 /***************************************
  * Init Application context
@@ -150,9 +151,10 @@ export function LGS1920() {
                 baseLayerPicker={false}
         >
 
-
+            <ImageryLayerCollection onLayerAdd={LayersUtils.layerOrder}>
             <MapLayer type={'base'}/>
             <MapLayer type={'overlay'}/>
+            </ImageryLayerCollection>
 
             <Scene verticalExaggeration={1.3}></Scene>
             <Globe enableLighting={false} depthTestAgainstTerrain={true}></Globe>
