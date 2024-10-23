@@ -10,6 +10,10 @@ body {
     color: var(--lgs-dark-ui-fg-color);
 }
 
+* {
+    box-sizing: border-box;
+}
+
 /** Hide the main toolbar */
 #studioMapViewer .cesium-viewer-toolbar {
     display: none;
@@ -89,7 +93,6 @@ sl-progress-bar {
     border-color: var(--lgs-direction-panel-border-color);
     border-radius: var(--lgs-border-radius-s);
     box-shadow: var(--sl-shadow-medium);
-    box-sizing: border-box;
     aspect-ratio: 2.813;
     display: flex;
     justify-content: center;
