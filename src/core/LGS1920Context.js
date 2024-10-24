@@ -12,6 +12,7 @@ import { UnitUtils }                      from '../Utils/UnitUtils'
 import { LocalDB }                        from './db/LocalDB'
 import { MouseEventHandler }              from './MouseEventHandler'
 import { main }                           from './stores/main'
+import { settingsEditor }                 from './stores/settingsEditor'
 import { theJourneyEditor }               from './stores/theJourneyEditor'
 import { CameraManager as CameraManager } from './ui/CameraManager'
 import { JourneyEditor }                  from './ui/JourneyEditor'
@@ -23,6 +24,8 @@ export class LGS1920Context {
     #mainProxy
     /** @type {Proxy} */
     #theJourneyEditorProxy
+    /** @type {Proxy} */
+    #settingsEditorProxy
 
     eventHandler = new MouseEventHandler()
     #viewer
@@ -32,11 +35,16 @@ export class LGS1920Context {
 
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
-        // Track Editor store is used to manage the settings of the theJourney in edit
-        this.#theJourneyEditorProxy = proxy(theJourneyEditor)
 
+        // Journey Editor store is used to manage the settings of the theJourney in edit
+        this.#theJourneyEditorProxy = proxy(theJourneyEditor)
         // Main is global to the app
         this.#mainProxy = proxy(main)
+        // SettingsEditor is used to maintain settings UI states
+        this.#settingsEditorProxy = proxy(settingsEditor)
+
+
+
         this.journeyEditorStore = this.#mainProxy.components.journeyEditor
         this.mainUIStore = this.#mainProxy.components.mainUI
 
@@ -167,6 +175,10 @@ export class LGS1920Context {
 
     get theJourneyEditorProxy() {
         return this.#theJourneyEditorProxy
+    }
+
+    get settingsEditorProxy() {
+        return this.#settingsEditorProxy
     }
 
     set theJourneyEditorProxy(proxy) {

@@ -1,5 +1,6 @@
 import { MainUI }                                                            from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
+import { BASE_LAYERS, OVERLAY_LAYERS }                                       from '@Core/constants'
 import { LGS1920Context }                                                    from '@Core/LGS1920Context'
 import { TrackUtils }                                                        from '@Utils/cesium/TrackUtils'
 import * as Cesium                                                           from 'cesium'
@@ -152,8 +153,8 @@ export function LGS1920() {
         >
 
             <ImageryLayerCollection onLayerAdd={LayersUtils.layerOrder}>
-            <MapLayer type={'base'}/>
-            <MapLayer type={'overlay'}/>
+                <MapLayer type={BASE_LAYERS}/>
+                <MapLayer type={OVERLAY_LAYERS}/>
             </ImageryLayerCollection>
 
             <Scene verticalExaggeration={1.3}></Scene>

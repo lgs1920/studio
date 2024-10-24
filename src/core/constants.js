@@ -90,3 +90,13 @@ export const SETTING_SECTIONS = [
     UI_SETTING_SECTION,
     THEME_SETTING_SECTION,
 ]
+
+
+/**
+ * Layers and Terrains
+ */
+export const BASE_LAYERS = 'base'
+export const OVERLAY_LAYERS = 'overlay'
+export const TERRAIN_LAYERS = 'terrain'
+
+export const LAYERS_THUMBS_DIR = '/assets/images/layers/thumbnails'

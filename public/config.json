@@ -109,7 +109,7 @@
     "stopSpeedLimit": 0.2
   },
   "layers": {
-    "current": "osm-plan",
+    "base": "osm-map",
     "overlay": null,
     "providers": [
       {
@@ -123,7 +123,7 @@
           {
             "name": "IGN Cadastral",
             "id": "ign-cadastral",
-            "image": "",
+            "image": "ign-cadastral.png",
             "authentification": false,
             "url": "https://data.geopf.fr/wmts",
             "layer": "CADASTRALPARCELS.PARCELLAIRE_EXPRESS",
@@ -134,9 +134,9 @@
             "type": "overlay"
           },
           {
-            "name": "IGN Plan",
-            "id": "ign-plan",
-            "image": "",
+            "name": "IGN Map",
+            "id": "ign-map",
+            "image": "ign-map.png",
             "authentification": false,
             "url": "https://data.geopf.fr/wmts",
             "layer": "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2",
@@ -147,9 +147,9 @@
             "type": "base"
           },
           {
-            "name": "IGN Aerial",
+            "name": "IGN Photo",
             "id": "ign-photo",
-            "image": "x",
+            "image": "ign-photo.png",
             "authentification": false,
             "url": "https://data.geopf.fr/wmts",
             "layer": "ORTHOIMAGERY.ORTHOPHOTOS",
@@ -170,11 +170,30 @@
         "type": "Slippy",
         "layers": [
           {
-            "name": "OSM Plan",
-            "id": "osm-plan",
-            "image": "",
+            "name": "OSM Map",
+            "id": "osm-map",
+            "image": "osm-map.png",
             "authentification": false,
             "url": "https://tile.openstreetmap.org/",
+            "doc": "",
+            "type": "base"
+          }
+        ]
+      },
+      {
+        "id": "osmorg",
+        "name": "Open Snow Map",
+        "credits": "",
+        "logo": "",
+        "url": "",
+        "type": "Slippy",
+        "layers": [
+          {
+            "name": "OSM Snow",
+            "id": "osmorg-map",
+            "image": "osmorg-map.png",
+            "authentification": false,
+            "url": "http://tiles.skimap.org/openskimap/",
             "doc": "",
             "type": "base"
           }
@@ -190,8 +209,8 @@
         "layers": [
           {
             "name": "World Street Maps",
-            "id": "arcgis-plan",
-            "image": "",
+            "id": "arcgis-map",
+            "image": "arcgis-map.png",
             "authentification": false,
             "url": "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer",
             "doc": "",

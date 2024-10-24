@@ -1,10 +1,5 @@
 export class LayerManager {
 
-    static IGN_CADASTRAL = 'ign-cadastral'
-    static IGN_PLAN = 'ign-plan'
-    static IGN_AERIAL = 'ign-photo'
-    static OSM_PLAN = 'osm-plan'
-
     /**
      * current layer
      * @type {null|string}
@@ -36,7 +31,7 @@ export class LayerManager {
             return LayerManager.instance
         }
 
-        this.#layer = lgs.configuration.layers.current
+        this.#layer = lgs.configuration.layers.base
         this.#overlay = lgs.configuration.layers.overlay
         this.#provider = this.#layer.split('-')[0]
 

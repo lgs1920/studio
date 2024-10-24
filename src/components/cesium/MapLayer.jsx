@@ -1,3 +1,4 @@
+import { BASE_LAYERS, OVERLAY_LAYERS }                                                                    from '@Core/constants'
 import { ArcGisMapServerImageryProvider, OpenStreetMapImageryProvider, WebMapTileServiceImageryProvider } from 'cesium'
 import { ImageryLayer }                                                                                   from 'resium'
 import { subscribe, useSnapshot }                                                                         from 'valtio'
@@ -5,8 +6,6 @@ import { subscribe, useSnapshot }                                               
 export const SLIPPY = 'Slippy'
 export const WMTS = 'WMTS'
 export const ARCGIS = 'ARCGIS'
-export const BASE_LAYERS = 'base'
-export const OVERLAY_LAYERS = 'overlay'
 
 export const MapLayer = (props) => {
 
@@ -17,7 +16,7 @@ export const MapLayer = (props) => {
     }
 
     let snapshot = useSnapshot(lgs.settings.layers)
-    let snapLayer = isBase ? snapshot.current : snapshot.overlay
+    let snapLayer = isBase ? snapshot.base : snapshot.overlay
 
     if (snapLayer === null) {
         return (<></>)
@@ -39,8 +38,8 @@ export const MapLayer = (props) => {
     let theProvider = manager.providers.get(theLayer.provider)
 
     subscribe(lgs.settings.layers, () => {
-        let snapshot = useSnapshot(lgs.settings.layers)
-        const snapLayer = isBase ? snapshot.current : snapshot.overlay
+        let settings = lgs.settings.layers
+        const snapLayer = isBase ? settings.base : settings.overlay
         if (isBase) {
             lgs.mainProxy.theLayer = manager.layers.get(snapLayer)
         }
