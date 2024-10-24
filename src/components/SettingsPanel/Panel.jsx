@@ -32,11 +32,12 @@ export const Panel = () => {
         settingsPanelStore.visible = !settingsPanelStore.visible
     }
 
-    return (<>
+    return (<div className={'drawer-wrapper'}>
             <SlDrawer id="settings-pane"
                       open={settingsPanel.visible}
                       onSlAfterHide={togglePanelVisibility}
                       ref={drawerRef}
+                      contained
                       className={'lgs-theme'}>
                 <SlTabGroup>
                     <SlTab slot="nav" panel="tab-layers">
@@ -54,6 +55,6 @@ export const Panel = () => {
 
             </SlDrawer>
 
-        </>
+        </div>
     )
 }

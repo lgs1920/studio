@@ -145,3 +145,15 @@ main-logo.xlarge {
 #camera-target sl-icon {
 
 }
+
+
+/** Drawers **/
+
+.drawer-wrapper {
+    z-index: var(--lgs-ui-layer-zindex);
+    left: 0;
+    right: var(--right);
+    width: calc(100vw - var(--right) - var(--left));
+    height: calc(100vh - var(--top) - var(--bottom));
+    pointer-events: none;
+}

@@ -32,32 +32,33 @@ export const Panel = () => {
         infoPanelStore.visible = !infoPanelStore.visible
     }
 
-    return (<>
-        <SlDrawer id="info-pane"
-                  open={infoPanel.visible}
-                  onSlAfterHide={togglePanelVisibility}
-                  ref={drawerRef}
-                  className={'lgs-theme'}
-        >
-            <SlTabGroup>
-                <SlTab slot="nav" panel="tab-whats-new">
-                    What's New ?
-                </SlTab>
-                <SlTab slot="nav" panel="tab-credits">
-                    Credits
-                </SlTab>
-                <SlTabPanel  name="tab-credits">
-                    <CreditsPanel/>
-                </SlTabPanel>
-                <SlTabPanel  name="tab-whats-new">
-                    <WhatsNew/>
-                </SlTabPanel>
-            </SlTabGroup>
+    return (<div className={'drawer-wrapper'}>
+            <SlDrawer id="info-pane"
+                      open={infoPanel.visible}
+                      onSlAfterHide={togglePanelVisibility}
+                      ref={drawerRef}
+                      contained
+                      className={'lgs-theme'}
+            >
+                <SlTabGroup>
+                    <SlTab slot="nav" panel="tab-whats-new">
+                        What's New ?
+                    </SlTab>
+                    <SlTab slot="nav" panel="tab-credits">
+                        Credits
+                    </SlTab>
+                    <SlTabPanel name="tab-credits">
+                        <CreditsPanel/>
+                    </SlTabPanel>
+                    <SlTabPanel name="tab-whats-new">
+                        <WhatsNew/>
+                    </SlTabPanel>
+                </SlTabGroup>
 
-            <DrawerFooter/>
+                <DrawerFooter/>
 
-        </SlDrawer>
+            </SlDrawer>
 
-        </>
+        </div>
     )
 }
