@@ -121,19 +121,6 @@ sl-tab::part(base) {
     padding: var(--lgs-gutter-s);
 }
 
-sl-tab-panel {
-    overflow-y: hidden;
-}
-
-sl-tab-panel sl-icon {
-    margin-right: var(--lgs-gutter-xs);
-    width: 1rem;
-}
-
-sl-tab-panel sl-icon::part(svg) {
-    width: 1.1rem;
-}
-
 
 .element-data {
     width: 100%;
