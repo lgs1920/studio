@@ -39,11 +39,6 @@
     --lgs-button-hover-color: var(--lgs-dark-ui-secondary-color);
     --lgs-button-bg-hover-color: var(--lgs-dark-ui-primary-color);
 
-    --lgs-button-height: 2.5rem;
-
-    --lgs-input-height-s: 1.5rem;
-    --lgs-border-width-s: 1px;
-
     --lgs-compass-stroke-color: var(--lgs-dark-ui-secondary-color);
     --lgs-compass-fill-color: var(--lgs-dark-ui-secondary-color);
 
@@ -51,6 +46,12 @@
     --lgs-card-ui-color: var(--lgs-dark-ui-5th-color);
     --lgs-card-ui-opacity: 0.8;
     --lgs-card-ui-border-color: var(--lgs-dark-ui-primary-color);
+
+    --lgs-button-height: 2.5rem;
+
+    --lgs-input-height-s: 1.5rem;
+    --lgs-border-width-s: 1px;
+    --lgs-border-s: var(--lgs-border-width-s) solid var(--sl-color-gray-400);
 
     --lgs-error-color:var(--sl-color-red-500);
     --lgs-error-bg-color:var(--sl-color-red-50);
@@ -159,6 +160,19 @@ sl-drawer {
     --header-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
     --body-spacing: var(--lgs-gutter);
     --footer-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
+}
+
+sl-tab-panel {
+    overflow-y: hidden;
+}
+
+sl-tab-panel sl-icon {
+    margin-right: var(--lgs-gutter-xs);
+    width: 1.2rem;
+}
+
+sl-tab-panel sl-icon::part(svg) {
+    width: 1.2rem;
 }
 
 sl-drawer[placement="end"] sl-tab-group::part(base),
@@ -280,4 +294,12 @@ dialog__header-actions sl-icon-button, .dialog__header-actions ::slotted(sl-icon
     flex: 0 0 auto;
     display: flex;
     align-items: flex-start;
+}
+
+/*******************************************************************************
+ * Misc.
+ */
+:root {
+    --lgs-freemium-color: dodgerblue;
+    --lgs-premium-color: goldenrod;
 }
