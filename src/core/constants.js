@@ -1,3 +1,5 @@
+import { faCrown, faLock, faUnlock, faUser } from '@fortawesome/pro-solid-svg-icons'
+
 /**
  * Time and duration constants in seconds
  */
@@ -47,6 +49,7 @@ export const platforms = {
 
 export const APP_KEY = 'LGS1920'
 export const SETTINGS_STORE = 'settings'
+export const VAULT_STORE = 'vault'
 export const CURRENT_STORE = 'current'
 export const JOURNEYS_STORE = 'journeys'
 export const ORIGIN_STORE = 'origin'
@@ -98,5 +101,37 @@ export const SETTING_SECTIONS = [
 export const BASE_LAYERS = 'base'
 export const OVERLAY_LAYERS = 'overlay'
 export const TERRAIN_LAYERS = 'terrain'
-
 export const LAYERS_THUMBS_DIR = '/assets/images/layers/thumbnails'
+export const PREMIUM_ACCESS = 'premium'
+export const FREEMIUM_ACCESS = 'freemium'
+export const FREE_ANONYMOUS_ACCESS = 'free'
+export const FREE_ACCOUNT_ACCESS = 'account'
+export const UNLOCKED_ACCESS = 'unlocked'
+export const LOCKED_ACCESS = 'locked'
+
+export const ACCESS_ICONS = {
+    [FREEMIUM_ACCESS]:       {
+        icon: faCrown,
+        text: 'Freemium Access',
+    },
+    [PREMIUM_ACCESS]:        {
+        icon: faCrown,
+        text: 'Premium Access',
+    },
+    [FREE_ANONYMOUS_ACCESS]: {
+        icon: faUnlock,
+        text: '',
+    },
+    [FREE_ACCOUNT_ACCESS]:   {
+        icon: faUser,
+        text: 'Need account',
+    },
+    [UNLOCKED_ACCESS]:       {
+        icon: faUnlock,
+        text: 'Unlocked',
+    },
+    [LOCKED_ACCESS]:         {
+        icon: faLock,
+        text: 'locked',
+    },
+}

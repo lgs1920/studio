@@ -5,4 +5,7 @@ export const settingsEditor = {
     layers: {
         selectedType: BASE_LAYERS,
     },
+    layerInfoDialog:  false,
+    layerTokenDialog: false,
+    tmpEntity:        null,
 }

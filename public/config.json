@@ -116,64 +116,98 @@
         "id": "ign",
         "name": "IGN (France)",
         "credits": "",
-        "logo": "",
-        "type": "WMTS",
-        "url": "",
+        "logo": "https://design-system.ign.fr/img/styleguide/sg_logos/Logo_IGN_svg/IGN_logo-simplifie_Q.svg",
+        "type": "wmts",
+        "url": "https://ign.fr",
         "layers": [
           {
             "name": "IGN Cadastral",
             "id": "ign-cadastral",
             "image": "ign-cadastral.png",
-            "authentification": false,
+            "usage": {
+              "type": "free",
+              "doc": ""
+            },
             "url": "https://data.geopf.fr/wmts",
             "layer": "CADASTRALPARCELS.PARCELLAIRE_EXPRESS",
             "style": "normal",
             "format": "image/png",
             "tileMatrixSetID": "PM",
-            "doc": "",
+            "doc": "https://data.geopf.fr",
             "type": "overlay"
           },
           {
             "name": "IGN Map",
             "id": "ign-map",
             "image": "ign-map.png",
-            "authentification": false,
+            "usage": {
+              "type": "free",
+              "doc": ""
+            },
             "url": "https://data.geopf.fr/wmts",
             "layer": "GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2",
             "style": "normal",
             "format": "image/png",
             "tileMatrixSetID": "PM",
-            "doc": "",
+            "doc": "https://data.geopf.fr",
             "type": "base"
           },
           {
             "name": "IGN Photo",
             "id": "ign-photo",
             "image": "ign-photo.png",
-            "authentification": false,
+            "usage": {
+              "type": "free",
+              "doc": ""
+            },
             "url": "https://data.geopf.fr/wmts",
             "layer": "ORTHOIMAGERY.ORTHOPHOTOS",
             "style": "normal",
             "format": "image/jpeg",
             "tileMatrixSetID": "PM",
-            "doc": "",
+            "doc": "https://data.geopf.fr",
             "type": "base"
           }
         ]
       },
       {
-        "id": "osm",
-        "name": "Open Source Map",
+        "id": "wmt",
+        "name": "WayMarked Trail",
         "credits": "",
         "logo": "",
         "url": "",
-        "type": "Slippy",
+        "type": "slippy",
+        "layers": [
+          {
+            "name": "Hiking",
+            "id": "wmt-map-hiking",
+            "image": "wmt-map-hiking.png",
+            "usage": {
+              "type": "free",
+              "doc": ""
+            },
+            "url": "https://tile.waymarkedtrails.org/hiking/",
+            "doc": "",
+            "type": "overlay"
+          }
+        ]
+      },
+      {
+        "id": "osm",
+        "name": "OpenStreet Map",
+        "credits": "",
+        "logo": "",
+        "url": "",
+        "type": "slippy",
         "layers": [
           {
             "name": "OSM Map",
             "id": "osm-map",
             "image": "osm-map.png",
-            "authentification": false,
+            "usage": {
+              "type": "free",
+              "doc": ""
+            },
             "url": "https://tile.openstreetmap.org/",
             "doc": "",
             "type": "base"
@@ -181,27 +215,52 @@
         ]
       },
       {
-        "id": "osmorg",
-        "name": "Open Snow Map",
+        "id": "otm",
+        "name": "OpenTopo Map",
         "credits": "",
         "logo": "",
         "url": "",
-        "type": "Slippy",
+        "type": "slippy",
         "layers": [
           {
-            "name": "OSM Snow",
-            "id": "osmorg-map",
-            "image": "osmorg-map.png",
-            "authentification": false,
-            "url": "http://tiles.skimap.org/openskimap/",
+            "name": "OT Map",
+            "id": "otm-map",
+            "image": "otm-map.png",
+            "usage": {
+              "type": "free",
+              "doc": ""
+            },
+            "url": "https://tile.opentopomap.org/",
             "doc": "",
             "type": "base"
           }
         ]
       },
       {
+        "id": "osmorg",
+        "name": "OpenSnowMap",
+        "credits": "",
+        "logo": "",
+        "url": "",
+        "type": "slippy",
+        "layers": [
+          {
+            "name": "OpenSnowMap",
+            "id": "osmorg-tracks",
+            "image": "osmorg-map.png",
+            "usage": {
+              "type": "free",
+              "doc": ""
+            },
+            "url": "https://tiles.opensnowmap.org/pistes/",
+            "doc": "",
+            "type": "overlay"
+          }
+        ]
+      },
+      {
         "id": "arcgis",
-        "name": "ArcGIS",
+        "name": "arcgis",
         "credits": "",
         "logo": "",
         "url": "",
@@ -211,16 +270,70 @@
             "name": "World Street Maps",
             "id": "arcgis-map",
             "image": "arcgis-map.png",
-            "authentification": false,
+            "usage": {
+              "type": "free",
+              "doc": ""
+            },
             "url": "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer",
             "doc": "",
+            "type": "base"
+          }
+        ]
+      },
+      {
+        "id": "thdfrst",
+        "name": "Thunderforest",
+        "credits": "",
+        "logo": "",
+        "type": "thunderforest",
+        "url": "https://www.thunderforest.com/",
+        "layers": [
+          {
+            "name": "OpenCycleMap",
+            "id": "thdfrst-cycle",
+            "image": "thdfrst-cycle.png",
+            "usage": {
+              "type": "freemium",
+              "doc": "https://www.thunderforest.com/maps/opencyclemap/",
+              "signin": "https://www.thunderforest.com/pricing/"
+            },
+            "url": "https://tile.thunderforest.com/cycle/",
+            "doc": "https://www.thunderforest.com/",
+            "type": "base"
+          },
+          {
+            "name": "Landscape",
+            "id": "thdfrst-ldscp",
+            "image": "thdfrst-ldscp.png",
+            "usage": {
+              "type": "freemium",
+              "doc": "https://www.thunderforest.com/maps/landscape/",
+              "signin": "https://www.thunderforest.com/pricing/"
+            },
+            "url": "https://tile.thunderforest.com/landscape/",
+            "doc": "https://www.thunderforest.com/",
+            "type": "base"
+          },
+          {
+            "name": "Outdoors",
+            "id": "thdfrst-out",
+            "image": "thdfrst-out.png",
+            "usage": {
+              "type": "freemium",
+              "doc": "https://www.thunderforest.com/maps/outdoors/",
+              "signin": "https://www.thunderforest.com/pricing/"
+            },
+            "url": "https://tile.thunderforest.com/outdoors/",
+            "doc": "https://www.thunderforest.com/",
             "type": "base"
           }
         ]
       }
     ]
   },
-  "terrains": {},
+  "terrains": {
+    "TEST": "https://sandcastle.cesium.com/?src=Terrain.html"
+  },
   "ui": {
     "showCameraPosition": true,
     "showCameraTargetPosition": true,

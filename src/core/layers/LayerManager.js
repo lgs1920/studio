@@ -49,6 +49,10 @@ export class LayerManager {
 
     }
 
+    getALayer = (layer = this.#layer) => {
+        return this.#layers.get(layer)
+    }
+
     get layer() {
         return this.#layers.get(this.#layer)
     }
@@ -71,6 +75,18 @@ export class LayerManager {
 
     get providers() {
         return this.#providers
+    }
+
+    getProviderIdByLayerId = (layerId) => {
+        return layerId?.split('-')[0] ?? null
+    }
+    getProviderProxy = (providerId) => {
+        return lgs.settings.layers.providers.find(provider => provider.id === providerId)
+    }
+
+    getLayerProxy = (layerId) => {
+        const provider = this.getProviderProxy(this.getProviderIdByLayerId(layerId))
+        return provider.layers.find(layer => layer.id === layerId)
     }
 
 }

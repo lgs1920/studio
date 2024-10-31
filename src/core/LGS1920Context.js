@@ -9,6 +9,7 @@ import { UIUtils }    from '@Utils/UIUtils'
 
 import { proxy }                          from 'valtio'
 import { UnitUtils }                      from '../Utils/UnitUtils'
+import { VAULT_STORE }                    from './constants'
 import { LocalDB }                        from './db/LocalDB'
 import { MouseEventHandler }              from './MouseEventHandler'
 import { main }                           from './stores/main'
@@ -42,8 +43,6 @@ export class LGS1920Context {
         this.#mainProxy = proxy(main)
         // SettingsEditor is used to maintain settings UI states
         this.#settingsEditorProxy = proxy(settingsEditor)
-
-
 
         this.journeyEditorStore = this.#mainProxy.components.journeyEditor
         this.mainUIStore = this.#mainProxy.components.mainUI
@@ -91,15 +90,21 @@ export class LGS1920Context {
                                       manageTransients: true,
                                       version:          '0.1',
                                   }),
+            vault:    new LocalDB({
+                                      name:             `vault-${APP_KEY}${dbPrefix}`,
+                                      store:            [VAULT_STORE],
+                                      manageTransients: false,
+                                      version:          '0.1',
+                                  }),
         }
     }
 
 
     initializeConfig = async () => {
-        this.configuration = await fetch(CONFIGURATION).then(
+        this.configuration = await fetch(CONFIGURATION, {cache: 'no-store'}).then(
             res => res.json(),
         )
-        this.servers = await await fetch(SERVERS).then(
+        this.servers = await await fetch(SERVERS, {cache: 'no-store'}).then(
             res => res.json(),
         )
         this.platform = lgs.servers.platform

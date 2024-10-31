@@ -1,42 +1,82 @@
-import { LAYERS_THUMBS_DIR } from '@Core/constants'
-import { faCircleCheck }     from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon }            from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }             from '@Utils/FA2SL'
-import { Fragment, useRef }  from 'react'
+import {
+    ACCESS_ICONS, FREE_ANONYMOUS_ACCESS, LAYERS_THUMBS_DIR, OVERLAY_LAYERS, UNLOCKED_ACCESS,
+}                        from '@Core/constants'
+import { faCircleCheck } from '@fortawesome/pro-solid-svg-icons'
+import { SlIcon }        from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }         from '@Utils/FA2SL'
+import { Fragment }      from 'react'
 
-import { useSnapshot }    from 'valtio'
-import { OVERLAY_LAYERS } from '../../../core/constants'
+import { useSnapshot }   from 'valtio'
+import { LOCKED_ACCESS } from '../../../core/constants'
 
 export const SelectEntity = (props) => {
 
     const thumbnailBackground = image => `url("${LAYERS_THUMBS_DIR}/${image}")`
 
     let settings = useSnapshot(lgs.settings.layers)
-    const entityRef = useRef(null)
+
+    const editorProxy = lgs.settingsEditorProxy
+    const snap = useSnapshot(editorProxy)
 
     const Thumbnail = (props) => {
+        const theEntity = __.layerManager.getLayerProxy(props.entity.id)
+        const theEntitySnap = useSnapshot(theEntity)
 
-        const selected = props.entity.id === settings[props.entity.type]
-        const classes = ['layers-entity', 'lgs-card']
+        const accountType = theEntity.usage.type
+
+        const accountUnlocked = theEntity.usage.type === FREE_ANONYMOUS_ACCESS || (theEntity.usage.unlocked ?? false)
+        const type = accountUnlocked ? UNLOCKED_ACCESS : accountType
+
+        let selected = false
+        lgs.settings.layerTokenDialog = true
+        if (accountUnlocked) {
+            selected = theEntity.id === settings[theEntity.type]
+        }
+
+        const classes = ['layer-entity', 'lgs-card', type]
         if (selected) {
             classes.push('entity-selected')
         }
+
         return (
 
-            <sl-tooltip content={props.entity.name}>
-                <div className={classes.join(' ')}
-                     style={{backgroundImage: thumbnailBackground(props.entity.image)}}>
-                    <a onClick={props.onClick} type={props.entity.type} name={props.entity.id}>
-                        <div className={'entity-checkbox'}>
-                            {selected &&
+            <sl-tooltip className={`entity-${type}`}>
+                <div slot="content">
+                    <strong>{props.entity.name}</strong><br/>
+                    {ACCESS_ICONS[type].text}
+                </div>
+                <div className={classes.join(' ')}>
+                    <div className={'thumbnail-background'}
+                         style={{backgroundImage: thumbnailBackground(props.entity.image)}}></div>
+                    <a onClick={props.onClick} type={theEntity.type} name={theEntity.id}>
+
+                        {/* green check box for the current entity */}
+                        {selected &&
+                            <div className={'entity-checkbox'}>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCircleCheck)}/>
-                            }
                         </div>
+                        }
+
+                        {/* show the entity access type */}
+                        {
+                            <div className={['entity-access', type, theEntity.usage.type].join(' ')}>
+                                <SlIcon slot="prefix" library="fa"
+                                        name={FA2SL.set(ACCESS_ICONS[theEntity.usage.type].icon)}/>
+                            </div>
+                        }
+
+                        {/* show the lock */}
+                        {accountType !== FREE_ANONYMOUS_ACCESS && !accountUnlocked &&
+                            <div className={['entity-lock-status', type].join(' ')}>
+                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(ACCESS_ICONS[LOCKED_ACCESS].icon)}/>
+                            </div>
+                        }
                     </a>
                 </div>
             </sl-tooltip>
         )
     }
+
 
     let tmp = ''
     const list = props.list
@@ -50,15 +90,35 @@ export const SelectEntity = (props) => {
 
     const selectEntityHandler = (event) => {
         const type = event.target.getAttribute('type')
-        const name = event.target.getAttribute('name')
-        lgs.settings.layers[event.target.getAttribute('type')] =
-            // Clicking on the same overlay will deselect it
-            (type === OVERLAY_LAYERS && lgs.settings.layers[event.target.getAttribute('type')] === name) ? '' : name
+        const id = event.target.getAttribute('name')
+        const theEntity = __.layerManager.getALayer(id)
+        if (theEntity.usage.type === FREE_ANONYMOUS_ACCESS) {
+            // We're on a free access, so we can select it.
+            lgs.settings.layers[type] =
+                // Clicking on the same overlay will deselect it
+                (type === OVERLAY_LAYERS && lgs.settings.layers[type] === id) ? '' : id
+        }
+        else {
+            // We need to know if  the account has been unlocked
+            const theProxy = __.layerManager.getLayerProxy(id)
+            // If not unlocked, we launch the dialog else select it
+            if (theProxy.usage.unlocked) {
+                lgs.settings.layers[type] =
+                    // Clicking on the same overlay will deselect it
+                    (type === OVERLAY_LAYERS && lgs.settings.layers[type] === id) ? '' : id
+                editorProxy.layerTokenDialog = false
+            }
+            else {
+                editorProxy.tmpEntity = theProxy
+                editorProxy.layerTokenDialog = true
+            }
+        }
+
     }
 
     return (
 
-        <div className={'layers-entities-wrapper lgs-card'}>
+        <div className={'layer-entities-wrapper lgs-card'}>
 
             {list.map((entity, index) => {
                 return (
