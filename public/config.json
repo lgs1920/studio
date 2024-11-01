@@ -111,6 +111,10 @@
   "layers": {
     "base": "osm-map",
     "overlay": null,
+    "filter": {
+      "byType": "all",
+      "byName": ""
+    },
     "providers": [
       {
         "id": "ign",
