@@ -136,13 +136,15 @@ export function LGS1920() {
                 infoBox={false}
                 sceneModePicker={false}
                 showRenderLoopErrors={false}
-            //terrain={Cesium.Terrain.fromWorldTerrain({
+                terrain={Cesium.Terrain.fromWorldTerrain({
 
-            /* Y6VgRYi3iKQEttoa3G0v */
-                terrain={new Cesium.Terrain(Cesium.CesiumTerrainProvider.fromUrl(`https://api.maptiler.com/tiles/terrain-quantized-mesh-v2/?key=${'qiE5uSYF7NoDFKCbfpfc'}`, {
-                    requestVertexNormals: false,
-                }))}
-
+                                                             /* Y6VgRYi3iKQEttoa3G0v */
+                                                             //    terrain={new
+                                                             // Cesium.Terrain(Cesium.CesiumTerrainProvider.fromUrl(`https://api.maptiler.com/tiles/terrain-quantized-mesh-v2/?key=${'qiE5uSYF7NoDFKCbfpfc'}`,
+                                                             // {
+                                                             requestVertexNormals: false,
+                                                             //    }))}
+                                                         })}
                 id="studioMapViewer"
 
             /***********************/
@@ -158,7 +160,10 @@ export function LGS1920() {
             </ImageryLayerCollection>
 
             <Scene verticalExaggeration={1.3}></Scene>
-            <Globe enableLighting={false} depthTestAgainstTerrain={true}></Globe>
+            <Globe enableLighting={false}
+                   depthTestAgainstTerrain={true}
+                   baseColor={Cesium.Color.GAINSBORO}>
+            </Globe>
             <Camera onChange={raiseCameraUpdateEvent}>
                 <CameraFlyTo
                     orientation={cameraOrientation()}
