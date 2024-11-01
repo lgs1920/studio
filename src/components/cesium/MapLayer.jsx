@@ -14,57 +14,53 @@ export const THUNDERFOREST = 'thunderforest'
 
 export const MapLayer = (props) => {
 
+    const layers = useSnapshot(lgs.settings.layers)
+    const main = useSnapshot(lgs.mainProxy)
+
     const isBase = props.type === BASE_LAYERS
     const manager = __.layerManager
     if (![BASE_LAYERS, OVERLAY_LAYERS].includes(props.type)) {
         return (<></>)
     }
 
-    let snapshot = useSnapshot(lgs.settings.layers)
-    let snapLayer = isBase ? snapshot.base : snapshot.overlay
-
-    if (snapLayer === null) {
-        return (<></>)
-    }
-
-    if (isBase) {
-        lgs.mainProxy.theLayer = manager.layers.get(snapLayer)
-    }
-    else {
-        lgs.mainProxy.theLayerOverlay = manager.layers.get(snapLayer)
-    }
-
-    let theLayer = manager.layers.get(snapLayer)
-
-    // Bail if there is no layer
-    if (theLayer === undefined) {
-        return (<></>)
-    }
-    let theProvider = manager.providers.get(theLayer.provider)
-
+    // Apply changes on settings
     subscribe(lgs.settings.layers, () => {
-        console.log('change')
         let settings = lgs.settings.layers
         const snapLayer = isBase ? settings.base : settings.overlay
         if (isBase) {
             lgs.mainProxy.theLayer = manager.getLayerProxy(snapLayer)
         }
         else {
-            lgs.mainProxy.theLayerOverlay = manager.getLayerProxy(snapLayer)
+            lgs.mainProxy.theLayerOverlay = snapLayer ? manager.getLayerProxy(snapLayer) : null
         }
-        let theLayer = manager.getLayerProxy(snapLayer)
-        // Bail if there is no layer
-        if (theLayer === undefined) {
-            theProvider = undefined
-            return (<></>)
-        }
-        theProvider = manager.providers.get(theLayer.provider)
     })
+
+    let snapLayer = isBase ? layers.base : layers.overlay
+    if (snapLayer === null || snapLayer === '') {
+        return (<></>)
+    }
+
+    let theLayer
+    if (isBase) {
+        lgs.mainProxy.theLayer = manager.getLayerProxy(snapLayer)
+        theLayer = main.theLayer
+    }
+    else {
+        lgs.mainProxy.theLayerOverlay = manager.getLayerProxy(snapLayer)
+        theLayer = main.theLayerOverlay
+    }
+
+    // Bail if there is no layer
+    if (!theLayer) {
+        return (<></>)
+    }
+    const theProvider = manager.getProviderProxyByLayerId(theLayer.id)
+
 
     return (<>
             {  //OpenStreet Map type  layers (ie slippy)
                 theProvider && theProvider.type === SLIPPY && theLayer.type === props.type &&
-                <ImageryLayer imageryProvider={
+                <ImageryLayer key={theLayer.url + '-' + theLayer.type} imageryProvider={
                     new OpenStreetMapImageryProvider(
                         {
                             url:               theLayer.url,
@@ -77,7 +73,7 @@ export const MapLayer = (props) => {
 
             {  // Thunderforest Map Type Layers
                 theProvider && theProvider.type === THUNDERFOREST && theLayer.type === props.type &&
-                <ImageryLayer imageryProvider={
+                <ImageryLayer key={theLayer.url + '-' + theLayer.type} imageryProvider={
                     new UrlTemplateImageryProvider({
                                                        url:               theLayer.url + '{z}/{x}/{y}.png?apikey=' + theLayer.usage.token,
                                                        credit:            props.type,
@@ -89,7 +85,7 @@ export const MapLayer = (props) => {
 
             {   // WMTS layers
                 theProvider && theProvider.type === WMTS && theLayer.type === props.type &&
-                <ImageryLayer imageryProvider={
+                <ImageryLayer key={theLayer.url + '-' + theLayer.type} imageryProvider={
                     new WebMapTileServiceImageryProvider({
                                                              url:             theLayer.url,
                                                              layer:           theLayer.layer,
@@ -105,8 +101,8 @@ export const MapLayer = (props) => {
 
             {   // ArcGIS layers
                 theProvider && theProvider.type === ARCGIS && theLayer.type === props.type &&
-                <ImageryLayer
-                    imageryProvider={ArcGisMapServerImageryProvider.fromUrl(theLayer.url, {
+                <ImageryLayer key={theLayer.url + '-' + theLayer.type}
+                              imageryProvider={ArcGisMapServerImageryProvider.fromUrl(theLayer.url, {
                         // We credit to get if it is base or overlay.
                         credit: props.type,
                     })}/>

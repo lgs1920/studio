@@ -1,5 +1,6 @@
 import {
-    ACCESS_ICONS, FREE_ANONYMOUS_ACCESS, LAYERS_THUMBS_DIR, OVERLAY_LAYERS, UNLOCKED_ACCESS,
+    ACCESS_ICONS, FREE_ANONYMOUS_ACCESS, FREEMIUM_ACCESS, LAYERS_THUMBS_DIR, OVERLAY_LAYERS, PREMIUM_ACCESS,
+    UNLOCKED_ACCESS,
 }                        from '@Core/constants'
 import { faCircleCheck } from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon }        from '@shoelace-style/shoelace/dist/react'
@@ -58,7 +59,7 @@ export const SelectEntity = (props) => {
                         }
 
                         {/* show the entity access type */}
-                        {
+                        {theEntity.usage.type === PREMIUM_ACCESS || theEntity.usage.type === FREEMIUM_ACCESS &&
                             <div className={['entity-access', type, theEntity.usage.type].join(' ')}>
                                 <SlIcon slot="prefix" library="fa"
                                         name={FA2SL.set(ACCESS_ICONS[theEntity.usage.type].icon)}/>

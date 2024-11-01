@@ -68,11 +68,6 @@ export const LayersAndTerrains = () => {
         const providerUrl = sprintf('<a href="%s" target="_blank">%s</a>', provider.url, 'Visit Provider')
 
         const setAPIKey = (event) => {
-            // TODO : creer un boolean qui permet de savoir si on utilisé lpoubelle et si la clé  a changé d'état
-            // TODO : maintenir une clé = apikey.current.value ( la clé doit etre un etat dans valtio jepnse)
-            // TODO : des lorsque la clé et non videou si la poubelle a été utilisé , lebouton vliat est enabled
-            // TODO : ce qui veut dire quel seul cas ou i est disabled c'est quand laclé rrive vide
-            // TODO faire lib de gestionde vault.
             // TODO :creer l'element, recuperer le timestamp, l'utiliser  créer la clé de cryptage, sauver apikey
             // cryptée TODO  lire timestamp creation, crerr la clé de cryptage, lire et decrypter apikey
 
@@ -91,10 +86,17 @@ export const LayersAndTerrains = () => {
             const valued = apikey.current.value.length > 0
 
             tmp.usage.token = apikey.current.value
+            tmp.usage.unlocked = valued
+
+            if (tmp.type === BASE_LAYERS) {
+                lgs.mainProxy.theLayer = tmp
+            }
+            else {
+                lgs.mainProxy.theLayerOverlay = tmp
+            }
 
             if (valued) {
-                // Set by default and unlocked
-                tmp.usage.unlocked = valued
+                // Set by default
                 lgs.settings.layers[snap.tmpEntity.type] = snap.tmpEntity.id
             }
         }
@@ -165,13 +167,13 @@ export const LayersAndTerrains = () => {
                 <div>
                     {snap.layers.selectedType === BASE_LAYERS &&
                     <SelectEntity list={bases.sort(sortByProvider)}/>
-                }
-                {snap.layers.selectedType === OVERLAY_LAYERS &&
-                    <SelectEntity list={overlays.sort(sortByProvider)}/>
-                }
-                {snap.layers.selectedType === TERRAIN_LAYERS &&
-                    <SelectEntity list={terrains.sort(sortByProvider)}/>
-                }
+                    }
+                    {snap.layers.selectedType === OVERLAY_LAYERS &&
+                        <SelectEntity list={overlays.sort(sortByProvider)}/>
+                    }
+                    {snap.layers.selectedType === TERRAIN_LAYERS &&
+                        <SelectEntity list={terrains.sort(sortByProvider)}/>
+                    }
             </div>
 
             </div>
