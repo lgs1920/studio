@@ -72,6 +72,10 @@
 
     --lgs-direction-panel-bg-color: #f3bb35;
     --lgs-direction-panel-border-color: #2b1f02;
+
+    --lgs-slogan-font-family: "Cookie";
+    --lgs-slogan-font-size: calc(2.5 * var(--lgs-gutter));
+    --lgs-slogan-color: black;
 }
 
 .lgs-theme, .lgs-theme::part(panel) {

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Cookie&display=swap');
 @import-normalize; /* bring in normalize.css styles */
 
 html {
@@ -13,6 +14,9 @@ body {
 * {
     box-sizing: border-box;
 }
+
+/** The Slogan **/
+font
 
 /** Hide the main toolbar */
 #studioMapViewer .cesium-viewer-toolbar {
@@ -150,7 +154,7 @@ main-logo.xlarge {
 /** Drawers **/
 
 .drawer-wrapper {
-    z-index: var(--lgs-ui-layer-zindex);
+    /*   z-index: var(--lgs-ui-layer-zindex);*/
     left: 0;
     right: var(--right);
     width: calc(100vw - var(--right) - var(--left));

@@ -1,5 +1,7 @@
 import { faCrown, faLock, faUnlock, faUser } from '@fortawesome/pro-solid-svg-icons'
 
+
+export const SLOGAN = 'Replay Your Adventures!'
 /**
  * Time and duration constants in seconds
  */
@@ -135,3 +137,7 @@ export const ACCESS_ICONS = {
         text: 'locked',
     },
 }
+
+export const ALL = 'all'
+export const LOCKED = 'locked'
+export const UNLOCKED = 'unlocked'

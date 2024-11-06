@@ -165,3 +165,18 @@
     display: flex;
     justify-content: space-between;
 }
+
+#welcome-modal .welcome-logo {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    gap: var(--lgs-gutter);
+
+    box-shadow: var(--sl-shadow-medium);
+}
+
+#welcome-modal .the-slogan {
+    color: var(--lgs-slogan-color);
+    font-family: var(--lgs-slogan-font-family);
+    font-size: var(--lgs-slogan-font-size);
+}

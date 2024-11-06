@@ -6,6 +6,7 @@ import { default as ReactMarkdown }               from 'react-markdown'
 import { useSnapshot }                            from 'valtio'
 import welcomeBack                                from '../../../src/assets/modals/welcome-back.md'
 import welcome                                    from '../../../src/assets/modals/welcome.md'
+import { SLOGAN }                                 from '../../core/constants'
 import { FA2SL }                                  from '../../Utils/FA2SL.js'
 import { StudioLogo }                             from './StudioLogo'
 
@@ -72,7 +73,8 @@ export const WelcomeModal = () => {
                       onSlRequestClose={close}
                       onSlAfterHide={hide}>
 
-                <StudioLogo width={'100%'} version={true}/>
+                <StudioLogo width={'100%'} version={true} slogan={SLOGAN} addClassName={'welcome-logo'}/>
+
                 <TheText/>
 
                 <div slot="footer">

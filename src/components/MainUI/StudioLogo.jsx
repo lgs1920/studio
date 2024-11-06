@@ -1,4 +1,5 @@
 import { DateTime } from 'luxon'
+import { SLOGAN }   from '../../core/constants'
 
 export const StudioLogo = (props) => {
     let style = {}
@@ -12,6 +13,8 @@ export const StudioLogo = (props) => {
         xsmall: '-xs', small: '-s', 'normal': '', 'large': '-l', 'xlarge': '-xl',
     }
 
+    const addClass = props.addClassName ? props.addClassName : ''
+
     const size = (props.small) ? 'small'
                                : (props.xsmall) ? 'xsmall'
                                                 : (props.large) ? 'large'
@@ -22,11 +25,12 @@ export const StudioLogo = (props) => {
     const date = `${DateTime.fromMillis(lgs.build.date ?? Date.now()).toLocaleString(DateTime.DATE_MED)} \
     ${DateTime.fromMillis(lgs.build.date ?? Date.now()).toLocaleString(DateTime.TIME_SIMPLE)}`
     return (
-        <div className={`main-logo ${size}`} style={style}>
+        <div className={`main-logo ${size} ${addClass}`} style={style}>
             <img src={src}/>
             {props.version &&
                 <div className={'version-info'}>{lgs.versions.studio} - {'build'}:{date}</div>
             }
+            {props.slogan && <span className={'the-slogan'}>{SLOGAN}</span>}
         </div>
     )
 }

@@ -13,13 +13,16 @@ import { CameraAndTargetPanel }             from '../cesium/CameraAndTargetPanel
 import { JourneyLoaderUI }                  from '../FileLoader/JourneyLoaderUI'
 import { Panel as InformationPanel }        from '../InformationPanel/Panel'
 import { PanelButton as InformationButton } from '../InformationPanel/PanelButton'
+import { Panel as LayersPanel }             from '../SettingsPanel/layers/Panel'
+import { PanelButton as LayersButton }      from '../SettingsPanel/LayersButton'
 import { Panel as SettingsPanel }           from '../SettingsPanel/Panel'
 import { PanelButton as SettingsButton }    from '../SettingsPanel/PanelButton'
-import { Utils }                            from '../TracksEditor/Utils.js'
-import { CameraTarget }                     from './CameraTarget'
-import { StudioLogo }                       from './StudioLogo'
-import { SupportUI }                        from './SupportUI'
-import { SupportUIButton }                  from './SupportUIButton'
+
+import { Utils }           from '../TracksEditor/Utils.js'
+import { CameraTarget }    from './CameraTarget'
+import { StudioLogo }      from './StudioLogo'
+import { SupportUI }       from './SupportUI'
+import { SupportUIButton } from './SupportUIButton'
 
 export const MainUI = function VT3D_UI() {
 
@@ -45,6 +48,8 @@ export const MainUI = function VT3D_UI() {
                     <>
                 <div id={'top-left-ui'}>
                     <SettingsButton tooltip={'right'}/>
+                    <LayersButton tooltip={'right'}/>
+
                     <Toolbar editor={true}
                              profile={true}
                              fileLoader={true}
@@ -81,6 +86,7 @@ export const MainUI = function VT3D_UI() {
 
                 <InformationPanel/>
                 <SettingsPanel/>
+                <LayersPanel/>
                 <TracksEditor/>
                 <CameraAndTargetPanel/>
             </div>
