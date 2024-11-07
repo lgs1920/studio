@@ -12,8 +12,8 @@ import { UnitUtils }                      from '../Utils/UnitUtils'
 import { VAULT_STORE }                    from './constants'
 import { LocalDB }                        from './db/LocalDB'
 import { MouseEventHandler }              from './MouseEventHandler'
+import { editorSettings }                 from './stores/editorSettings'
 import { main }                           from './stores/main'
-import { settingsEditor }                 from './stores/settingsEditor'
 import { theJourneyEditor }               from './stores/theJourneyEditor'
 import { CameraManager as CameraManager } from './ui/CameraManager'
 import { JourneyEditor }                  from './ui/JourneyEditor'
@@ -26,7 +26,7 @@ export class LGS1920Context {
     /** @type {Proxy} */
     #theJourneyEditorProxy
     /** @type {Proxy} */
-    #settingsEditorProxy
+    #editorSettingsProxy
 
     eventHandler = new MouseEventHandler()
     #viewer
@@ -42,7 +42,7 @@ export class LGS1920Context {
         // Main is global to the app
         this.#mainProxy = proxy(main)
         // SettingsEditor is used to maintain settings UI states
-        this.#settingsEditorProxy = proxy(settingsEditor)
+        this.#editorSettingsProxy = proxy(editorSettings)
 
         this.journeyEditorStore = this.#mainProxy.components.journeyEditor
         this.mainUIStore = this.#mainProxy.components.mainUI
@@ -182,8 +182,8 @@ export class LGS1920Context {
         return this.#theJourneyEditorProxy
     }
 
-    get settingsEditorProxy() {
-        return this.#settingsEditorProxy
+    get editorSettingsProxy() {
+        return this.#editorSettingsProxy
     }
 
     set theJourneyEditorProxy(proxy) {

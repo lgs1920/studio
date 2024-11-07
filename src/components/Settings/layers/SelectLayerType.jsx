@@ -6,16 +6,16 @@ import { FA2SL }                                       from '../../../Utils/FA2S
 
 export const SelectLayerType = () => {
 
-    const settings = lgs.settingsEditorProxy
+    const settings = lgs.editorSettingsProxy
     const snap = useSnapshot(settings)
 
     const changeHandler = (event) => {
-        settings.layers.selectedType = event.target.value
+        settings.layer.selectedType = event.target.value
     }
 
     return (
         <SlSelect placeholder="Select type"
-                  value={snap.layers.selectedType}
+                  value={snap.layer.selectedType}
                   onSlChange={changeHandler}>
             <SlOption value="base">
                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faSendBackward)}/> {'Base'}

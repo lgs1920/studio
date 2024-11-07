@@ -69,6 +69,11 @@ export const main = {
             visible: false,
         },
 
+        layers: {
+            key:     0,
+            visible: false,
+        },
+
         wanderer: {
             run: false,
             pause:false,

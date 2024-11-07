@@ -159,7 +159,7 @@ export class AppUtils {
             await setting.init()
             await lgs.settings.add(setting)
         }
-        lgs.settings.app.showIntro = !lgs.settings.app.showIntro
+        // lgs.settings.app.showIntro = !lgs.settings.app.showIntro
 
         // Ping server
         const server = await __.app.pingBackend()
