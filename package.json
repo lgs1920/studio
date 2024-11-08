@@ -39,7 +39,7 @@
     "axios": "^1.7.7",
     "babel-plugin-module-resolver": "^5.0.2",
     "canvg": "^4.0.2",
-    "cesium": "^1.123.0",
+    "cesium": "^1.123.1",
     "deep-object-diff": "^1.1.9",
     "dotenv": "^16.4.5",
     "easy-file-picker": "^1.1.0",
