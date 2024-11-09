@@ -31,8 +31,6 @@ export const main = {
         },
 
         journeyEditor: {
-            visible: false,
-            show: false,
             list: [],
             keys: {
                 journey: {
@@ -66,12 +64,10 @@ export const main = {
 
         settings: {
             key:     0,
-            visible: false,
         },
 
         layers: {
             key:     0,
-            visible: false,
         },
 
         wanderer: {
@@ -83,7 +79,6 @@ export const main = {
         },
 
         informationPanel:{
-            visible:false,
             tab:null
         }
 

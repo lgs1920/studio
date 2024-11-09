@@ -1,43 +1,37 @@
-import { SlDrawer, SlTabGroup }     from '@shoelace-style/shoelace/dist/react'
-import React, { useEffect, useRef } from 'react'
-import { useSnapshot }              from 'valtio'
+import { faTriangleExclamation }     from '@fortawesome/pro-solid-svg-icons'
+import { SlAlert, SlDrawer, SlIcon } from '@shoelace-style/shoelace/dist/react'
+import React                         from 'react'
+import { useSnapshot }               from 'valtio'
 import './style.css'
-import { DrawerFooter }             from '../DrawerFooter'
+import { SETTINGS_EDITOR_DRAWER }    from '../../core/constants'
+import { FA2SL }                     from '../../Utils/FA2SL'
+import { DrawerFooter }              from '../DrawerFooter'
 
 export const Panel = () => {
-    const settingsPanelStore = lgs.mainProxy.components.settings
-    const settingsPanel = useSnapshot(settingsPanelStore)
-    const drawerRef = useRef(null)
+    const drawers = useSnapshot(lgs.mainProxy.drawers)
+    const openInfoModal = () => lgs.editorSettingsProxy.layer.infoDialog = true
 
-    useEffect(() => {
-        //search the link and add external target (as it is not possible in markdown)
-        if (drawerRef.current) {
-            const slotBody = drawerRef.current.shadowRoot.querySelector('slot[part="body"]')
-            const assignedElements = slotBody.assignedElements()
-            assignedElements[0].querySelectorAll('a').forEach(link => {
-                link.target = '_blank'
-            })
+    const closePanel = (event) => {
+        if (window.isOK(event)) {
+            window.dispatchEvent(new Event('resize'))
+            if (__.ui.drawerManager.isCurrent(SETTINGS_EDITOR_DRAWER)) {
+                __.ui.drawerManager.close()
+            }
         }
-
-    }, [])
-
-    const togglePanelVisibility = (event) => {
-        if (event.target !== 'sl-drawer') {
-            event.preventDefault()
-            return
-        }
-        settingsPanelStore.visible = !settingsPanelStore.visible
     }
 
     return (<div className={'drawer-wrapper'}>
             <SlDrawer id="settings-pane"
-                      open={settingsPanel.visible}
-                      onSlAfterHide={togglePanelVisibility}
-                      ref={drawerRef}
+                      open={drawers.open === SETTINGS_EDITOR_DRAWER}
+                      onSlRequestClose={closePanel}
                       contained
                       className={'lgs-theme'}>
-                <SlTabGroup>
-                </SlTabGroup>
+                <SlAlert variant="warning" open>
+                    <SlIcon slot="icon" library="fa" name={FA2SL.set(faTriangleExclamation)}/>
+                    {'Sorry, there\'s nothing to see here right now!'}
+                </SlAlert>
+                {/* <SlTabGroup> */}
+                {/* </SlTabGroup> */}
                 <DrawerFooter/>
 
             </SlDrawer>
