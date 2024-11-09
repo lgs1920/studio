@@ -14,7 +14,7 @@ import { JourneyLoaderUI }                  from '../FileLoader/JourneyLoaderUI'
 import { Panel as InformationPanel }        from '../InformationPanel/Panel'
 import { PanelButton as InformationButton } from '../InformationPanel/PanelButton'
 import { Panel as LayersPanel }             from '../Settings/layers/Panel'
-import { PanelButton as LayersButton }      from '../Settings/LayersButton'
+import { PanelButton as LayersButton }      from '../Settings/layers/PanelButton'
 import { Panel as SettingsPanel }           from '../Settings/Panel'
 import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
 

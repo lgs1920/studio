@@ -154,10 +154,10 @@ main-logo.xlarge {
 /** Drawers **/
 
 .drawer-wrapper {
-    /*   z-index: var(--lgs-ui-layer-zindex);*/
-    left: 0;
+    position: fixed;
     right: var(--right);
+    top: var(--top);
     width: calc(100vw - var(--right) - var(--left));
     height: calc(100vh - var(--top) - var(--bottom));
-    pointer-events: none;
+    pointer-events: none;;
 }

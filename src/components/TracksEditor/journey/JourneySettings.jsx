@@ -377,7 +377,7 @@ export const JourneySettings = function JourneySettings() {
                 lgs.cleanEditor()
                 text = 'There are no other journeys available!'
                 mainStore.canViewJourneyData = false
-                mainStore.components.journeyEditor.show = false
+                __.ui.drawerManager.close()
                 mainStore.components.profile.show = false
                 mainStore.canViewProfile = false
             }

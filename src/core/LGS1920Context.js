@@ -7,18 +7,19 @@ import { MouseUtils } from '@Utils/cesium/MouseUtils'
 import { CSSUtils }   from '@Utils/CSSUtils'
 import { UIUtils }    from '@Utils/UIUtils'
 
-import { proxy }                          from 'valtio'
-import { UnitUtils }                      from '../Utils/UnitUtils'
-import { VAULT_STORE }                    from './constants'
-import { LocalDB }                        from './db/LocalDB'
-import { MouseEventHandler }              from './MouseEventHandler'
-import { editorSettings }                 from './stores/editorSettings'
-import { main }                           from './stores/main'
-import { theJourneyEditor }               from './stores/theJourneyEditor'
-import { CameraManager as CameraManager } from './ui/CameraManager'
-import { JourneyEditor }                  from './ui/JourneyEditor'
-import { Profiler }                       from './ui/Profiler'
-import { Wanderer }                       from './ui/Wanderer'
+import { proxy }             from 'valtio'
+import { UnitUtils }         from '../Utils/UnitUtils'
+import { VAULT_STORE }       from './constants'
+import { LocalDB }           from './db/LocalDB'
+import { MouseEventHandler } from './MouseEventHandler'
+import { editorSettings }    from './stores/editorSettings'
+import { main }              from './stores/main'
+import { theJourneyEditor }  from './stores/theJourneyEditor'
+import { CameraManager }     from './ui/CameraManager'
+import { DrawerManager }     from './ui/DrawerManager'
+import { JourneyEditor }     from './ui/JourneyEditor'
+import { Profiler }          from './ui/Profiler'
+import { Wanderer }          from './ui/Wanderer'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -269,6 +270,7 @@ export class LGS1920Context {
         }
         __.ui.wanderer = new Wanderer()
         __.ui.cameraManager = new CameraManager()
+        __.ui.drawerManager = new DrawerManager()
 
     }
 

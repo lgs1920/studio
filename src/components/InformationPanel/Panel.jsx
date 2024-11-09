@@ -3,13 +3,13 @@ import { SlDrawer, SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelac
 import React, { useEffect, useRef }                from 'react'
 import { useSnapshot }                             from 'valtio'
 import './style.css'
+import { INFO_DRAWER }                             from '../../core/constants'
 
 import { CreditsPanel } from './CreditsPanel'
 import { WhatsNew }     from './WhatsNew'
 
 export const Panel = () => {
-    const infoPanelStore= lgs.mainProxy.components.informationPanel
-    const infoPanel = useSnapshot(infoPanelStore)
+    const snap = useSnapshot(lgs.mainProxy.drawers)
     const drawerRef = useRef(null)
 
     useEffect(() => {
@@ -24,18 +24,10 @@ export const Panel = () => {
 
     }, [])
 
-    const togglePanelVisibility= (event) => {
-        if (event.target !== 'sl-drawer' ) {
-            event.preventDefault()
-            return
-        }
-        infoPanelStore.visible = !infoPanelStore.visible
-    }
 
-    return (<div className={'drawer-wrapper'}>
-            <SlDrawer id="info-pane"
-                      open={infoPanel.visible}
-                      onSlAfterHide={togglePanelVisibility}
+    return <div className={'drawer-wrapper'}>
+        <SlDrawer id={INFO_DRAWER}
+                  open={snap.open === INFO_DRAWER}
                       ref={drawerRef}
                       contained
                       className={'lgs-theme'}
@@ -60,5 +52,4 @@ export const Panel = () => {
             </SlDrawer>
 
         </div>
-    )
 }

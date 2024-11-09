@@ -1,3 +1,4 @@
+import { INFO_DRAWER }                 from '@Core/constants'
 import { faCircleInfo }                from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                       from '@Utils/FA2SL'
@@ -9,8 +10,8 @@ export const PanelButton = () => {
 
     return (<>
         <SlTooltip hoist placement="right" content="Show Information">
-            <SlButton className={'square-icon'} size="small" id={'open-info-pane'}
-                      onClick={() => infoPanelStore.visible = !infoPanelStore.visible}>
+            <SlButton className={'square-icon'} size="small" id={'open-info-drawer'}
+                      onClick={() => __.ui.drawerManager.toggle(INFO_DRAWER)}>
                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCircleInfo)}></SlIcon>
             </SlButton>
         </SlTooltip>

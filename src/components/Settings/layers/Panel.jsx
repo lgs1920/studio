@@ -5,31 +5,19 @@ import { FA2SL }                  from '@Utils/FA2SL'
 import React                      from 'react'
 import { useSnapshot }            from 'valtio'
 import './style.css'
+import { LAYERS_DRAWER }          from '../../../core/constants'
 import { InfoLayerModal }         from './InfoLayerModal'
 import { LayersAndTerrains }      from './LayersAndTerrains'
 
 export const Panel = () => {
-    const layersPanelStore = lgs.mainProxy.components.layers
-    const layersPanel = useSnapshot(layersPanelStore)
-
-    const editor = lgs.editorSettingsProxy
-
-    const togglePanelVisibility = (event) => {
-        if (event.target !== 'sl-drawer') {
-            event.preventDefault()
-            return
-        }
-        layersPanelStore.visible = !layersPanelStore.visible
-    }
-
-    const openInfoModal = () => editor.layer.infoDialog = true
+    const drawers = useSnapshot(lgs.mainProxy.drawers)
+    const openInfoModal = () => lgs.editorSettingsProxy.layer.infoDialog = true
 
     return (
         <>
             <div className={'drawer-wrapper'}>
-                <SlDrawer id="layers-pane"
-                          open={layersPanel.visible}
-                          onSlAfterHide={togglePanelVisibility}
+                <SlDrawer id={LAYERS_DRAWER}
+                          open={drawers.open === LAYERS_DRAWER}
                           contained
                           className={'lgs-theme'}>
                     <div slot={'label'}>{'Layers and Terrains'}</div>

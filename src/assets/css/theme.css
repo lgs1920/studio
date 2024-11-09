@@ -166,6 +166,10 @@ sl-drawer {
     --footer-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
 }
 
+sl-drawer::part(panel) {
+    border-radius: var(--sl-border-radius-medium);
+}
+
 sl-tab-panel {
     overflow-y: hidden;
 }

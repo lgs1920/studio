@@ -141,3 +141,13 @@ export const ACCESS_ICONS = {
 export const ALL = 'all'
 export const LOCKED = 'locked'
 export const UNLOCKED = 'unlocked'
+
+/*******************************************************************************
+ * UI Elements
+ ******************************************************************************/
+
+/** Drawers **/
+
+export const INFO_DRAWER = 'info-drawer'
+export const LAYERS_DRAWER = 'layers-drawer'
+export const JOURNEY_EDITOR_DRAWER = 'journey-editor-drawer'
