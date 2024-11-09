@@ -48,12 +48,12 @@ export const JourneySelector = (props) => {
     }
 
     return (<>
-        {mainSnapshot.list.length > 1 && <SlSelect hoist label={props.label}
-                                                   value={editorSnapshot.journey.slug}
-                                                   onSlChange={props.onChange}
-                                                   key={mainSnapshot.keys.journey.list}
-                                                   size={props.size ?? 'medium'}
-                                                   className="journey-selector"
+        {mainSnapshot.list.length > 1 &&
+            <SlSelect label={props.label}
+                      value={editorSnapshot.journey.slug}
+                      onSlChange={props.onChange}
+                      key={mainSnapshot.keys.journey.list}
+                      className="journey-selector"
         >
             <SlIcon library="fa"
                     name={FA2SL.set(faRoute)}
