@@ -16,7 +16,6 @@ import { PanelButton as InformationButton } from '../InformationPanel/PanelButto
 import { Panel as LayersPanel }             from '../Settings/layers/Panel'
 import { PanelButton as LayersButton }      from '../Settings/layers/PanelButton'
 import { Panel as SettingsPanel }           from '../Settings/Panel'
-import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
 
 import { Utils }           from '../TracksEditor/Utils.js'
 import { CameraTarget }    from './CameraTarget'
@@ -48,7 +47,7 @@ export const MainUI = function VT3D_UI() {
             <div id="lgs-main-ui">
                     <>
                 <div id={'top-left-ui'}>
-                    <SettingsButton tooltip={'right'}/>
+                    {/* <SettingsButton tooltip={'right'}/> */}
                     <LayersButton tooltip={'right'}/>
 
                     <Toolbar editor={true}
