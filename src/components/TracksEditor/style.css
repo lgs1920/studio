@@ -3,15 +3,6 @@
     --lgs-journey-editor-offset: calc( var(--lgs-journey-editor-width) + var(--lgs-gutter-s));
 }
 
-#journey-editor-container {
-    z-index: var(--lgs-ui-layer-zindex);
-    left: 0;
-    right: var(--right);
-    width: calc(100vw - var(--right) - var(--left));
-    height: calc(100vh - var(--top) - var(--bottom));
-    pointer-events: none;
-}
-
 #journey-editor-drawer {
     position: fixed;
     bottom: var(--lgs-gutter);

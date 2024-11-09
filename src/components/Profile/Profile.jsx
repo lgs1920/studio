@@ -104,7 +104,7 @@ export const Profile = function Profile() {
     }
 
     return (<>
-        {mainSnap.canViewProfile && <div id="profile-container" key={mainSnap.components.profile.key}>
+        {mainSnap.canViewProfile && <div key={mainSnap.components.profile.key} className={'drawer-wrapper horizontal'}>
             <SlDrawer id="profile-pane" open={mainSnap.components.profile.show}
                       onSlRequestClose={handleRequestClose}
                       onSlAfterShow={()=> {

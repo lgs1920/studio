@@ -47,7 +47,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
     }
 
     return (<>
-        <div id="journey-editor-container" key={mainSnap.components.journeyEditor.key}>
+        <div key={mainSnap.components.journeyEditor.key} className={'drawer-wrapper'}>
             {mainSnap.canViewJourneyData &&
                 <SlDrawer id={JOURNEY_EDITOR_DRAWER}
                           open={mainSnap.drawers.open === JOURNEY_EDITOR_DRAWER}

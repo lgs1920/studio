@@ -5,11 +5,7 @@
     --lgs-profile-pane-width:100%;
 }
 #profile-container {
-    position: relative;
     max-width:var(--lgs-profile-pane-width);
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
 }
 
 #profile-pane {
