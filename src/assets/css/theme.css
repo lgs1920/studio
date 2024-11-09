@@ -156,11 +156,14 @@ sl-button sl-icon, sl-icon-button  {
  * Drawers
  */
 :root {
-    --lgs-drawer-size: 28rem
+    --lgs-vertical-panel-width: 400px;
+    --lgs-horizontal-panel-width: 100%;
+    --lgs-vertical-panel-add: calc(3 * var(--lgs-gutter-s)); /** padding left+right + gutter **/
+    --lgs-vertical-panel-offset: calc(var(--lgs-vertical-panel-width) + var(--lgs-vertical-panel-add));
 }
 
 sl-drawer {
-    --size: var(--lgs-drawer-size);
+    --size: var(--lgs-vertical-panel-width);
     --header-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
     --body-spacing: var(--lgs-gutter);
     --footer-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
@@ -218,6 +221,7 @@ sl-drawer[placement="end"] sl-tab-panel::part(base) {
     display: flex;
     gap: var(--lgs-gutter-s);
 }
+
 
 /*******************************************************************************
  * Cards

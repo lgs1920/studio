@@ -15,9 +15,6 @@ body {
     box-sizing: border-box;
 }
 
-/** The Slogan **/
-font
-
 /** Hide the main toolbar */
 #studioMapViewer .cesium-viewer-toolbar {
     display: none;
@@ -160,4 +157,10 @@ main-logo.xlarge {
     width: calc(100vw - var(--right) - var(--left));
     height: calc(100vh - var(--top) - var(--bottom));
     pointer-events: none;;
+}
+
+.drawer-wrapper.horizontal {
+    left: var(--left);
+
+    max-width: var(--lgs-horizontal-panel-width);
 }

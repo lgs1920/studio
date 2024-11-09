@@ -9,10 +9,6 @@ export const TracksEditorButton =  (props) => {
 
     const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
-    
-    const toggleTracksEditor = () => {
-        lgs.journeyEditorStore.show = !lgs.journeyEditorStore.show
-    }
 
     return (<>
         <SlTooltip hoist placement={props.tooltip} content="Edit Tracks">

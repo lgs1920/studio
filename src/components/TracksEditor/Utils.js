@@ -25,7 +25,7 @@ export class Utils {
     }
 
     static panelOffset = () => {
-        return __.ui.css.getCSSVariable('--lgs-journey-editor-offset')
+        return __.ui.css.getCSSVariable('--lgs-vertical-panel-offset')
     }
 
     static initJourneyEdition = async (event = undefined) => {

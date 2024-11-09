@@ -1,7 +1,3 @@
-:root {
-    --lgs-journey-editor-width: 28rem;
-    --lgs-journey-editor-offset: calc( var(--lgs-journey-editor-width) + var(--lgs-gutter-s));
-}
 
 #journey-editor-drawer {
     position: fixed;

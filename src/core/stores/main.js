@@ -90,7 +90,7 @@ export const main = {
 
     },
     drawers:    {
-        open: 'wait',
+        open: null,
     },
     modals: {
         altitudeChoice: {

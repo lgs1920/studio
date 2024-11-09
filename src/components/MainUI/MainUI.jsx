@@ -37,9 +37,10 @@ export const MainUI = function VT3D_UI() {
     }, [])
 
     // We need to interact with  Editor
-    subscribe(lgs.journeyEditorStore,() => {
-        const offset = lgs.journeyEditorStore.show ? Utils.panelOffset() : 0
+    subscribe(lgs.mainProxy.drawers, () => {
+        const offset = (lgs.mainProxy.drawers.open === null) ? 0 : Utils.panelOffset()
         __.ui.css.setCSSVariable('--top-right-ui-right-margin', offset)
+        __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( 100% - ${offset})`)
     })
 
     return (

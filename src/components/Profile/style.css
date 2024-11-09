@@ -1,12 +1,9 @@
 :root {
     --lgs-profile-pane-height: 280px;
     --lgs-profile-chart-height: 200px;
-    --lgs-journey-editor-open-offset:0;
-    --lgs-profile-pane-width:100%;
+    --lgs-vertical-panel-open-offset: 0;
 }
-#profile-container {
-    max-width:var(--lgs-profile-pane-width);
-}
+
 
 #profile-pane {
     --header-spacing: 0;
