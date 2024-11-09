@@ -12,6 +12,15 @@ export const Panel = () => {
     const snap = useSnapshot(lgs.mainProxy.drawers)
     const drawerRef = useRef(null)
 
+    const closePanel = (event) => {
+        if (window.isOK(event)) {
+            window.dispatchEvent(new Event('resize'))
+            if (__.ui.drawerManager.isCurrent(INFO_DRAWER)) {
+                __.ui.drawerManager.close()
+            }
+        }
+    }
+
     useEffect(() => {
         //search the link and add external target (as it is not possible in markdown)
         if (drawerRef.current) {
@@ -28,6 +37,7 @@ export const Panel = () => {
     return <div className={'drawer-wrapper'}>
         <SlDrawer id={INFO_DRAWER}
                   open={snap.open === INFO_DRAWER}
+                  onSlRequestClose={closePanel}
                       ref={drawerRef}
                       contained
                       className={'lgs-theme'}

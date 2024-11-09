@@ -13,11 +13,20 @@ export const Panel = () => {
     const drawers = useSnapshot(lgs.mainProxy.drawers)
     const openInfoModal = () => lgs.editorSettingsProxy.layer.infoDialog = true
 
+    const closePanel = (event) => {
+        if (window.isOK(event)) {
+            window.dispatchEvent(new Event('resize'))
+            if (__.ui.drawerManager.isCurrent(LAYERS_DRAWER)) {
+                __.ui.drawerManager.close()
+            }
+        }
+    }
     return (
         <>
             <div className={'drawer-wrapper'}>
                 <SlDrawer id={LAYERS_DRAWER}
                           open={drawers.open === LAYERS_DRAWER}
+                          onSlRequestClose={closePanel}
                           contained
                           className={'lgs-theme'}>
                     <div slot={'label'}>{'Layers and Terrains'}</div>
