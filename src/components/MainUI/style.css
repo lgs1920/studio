@@ -10,17 +10,18 @@ html {
     height: 100vh;
     left: 0;
     width: 100vw;
-    pointer-events: none;
-    z-index: var(--lgs-ui-layer-zindex);
+    pointer-events: auto;
 }
 
 #lgs-main-ui > div {
+    position: absolute;
     display: flex;
     gap: var(--lgs-gutter-s);
     --top: var(--lgs-gutter-s);
     --left: var(--lgs-gutter-s);
     --bottom: var(--lgs-gutter-s);
     --right: var(--lgs-gutter-s);
+    z-index: var(--lgs-ui-layer-zindex);
 }
 
 #top-left-ui {
@@ -49,6 +50,7 @@ html {
 #bottom-ui {
     display: flex;
     height: 50vh;
+    width: 100vw;
     flex-direction: row;
     padding: var(--lgs-gutter-s);
     position: absolute;
@@ -64,8 +66,8 @@ html {
 
 #bottom-left-ui {
     position: absolute;
-    bottom: var(--lgs-gutter-s);
-    left: var(--lgs-gutter-s);
+    bottom: var(--bottom);
+    left: var(--right);
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-s);
