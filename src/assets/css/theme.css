@@ -249,16 +249,21 @@ sl-card[variant="primary"]::part(base) {
 
 .lgs-card.on-map {
     gap: var(--lgs-gutter-s);
-    background: rgba(255, 255, 255, 0.25);
+    /*background: rgba(255, 255, 255, 0.25);*/
+    background: rgba(103, 104, 21, 0.35);
+
     border-radius: var(--lgs-border-radius-xs);
     box-shadow: var(--sl-shadow-medium);
     color: white;
     backdrop-filter: blur(3px);
-    border-color: var(--sl-color-neutral-400);
+    /*border-color: var(--sl-color-neutral-400);*/
+    border-color: rgba(103, 104, 21, 0.3);
+
+
 }
 
 .lgs-card:not(.on-map):hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.45);
 
 }
 
