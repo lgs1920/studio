@@ -11,9 +11,7 @@ html {
     left: 0;
     width: 100vw;
     pointer-events: none;
-
     z-index: var(--lgs-ui-layer-zindex);
-
 }
 
 #lgs-main-ui > div {
