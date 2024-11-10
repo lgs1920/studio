@@ -72,8 +72,8 @@ export const JourneySelector = (props) => {
                         style={prefixColor(journey)}
                 />
 
-                {journey.visible ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/> : <SlIcon
-                    slot="suffix" library="fa" name={FA2SL.set(faEyeSlash)}/>}
+                <SlIcon slot="suffix" library="fa" name={FA2SL.set(journey.visible ? faEye : faEyeSlash)}/>
+
                 {journey.title}
             </SlOption>)}
         </SlSelect>}
