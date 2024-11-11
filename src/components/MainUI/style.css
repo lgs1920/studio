@@ -10,7 +10,7 @@ html {
     height: 100vh;
     left: 0;
     width: 100vw;
-    pointer-events: auto;
+    pointer-events: none;
 }
 
 #lgs-main-ui > div {

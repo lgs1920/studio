@@ -19,7 +19,7 @@ import { Panel as SettingsPanel }           from '../Settings/Panel'
 
 import { Utils }           from '../TracksEditor/Utils.js'
 import { CameraTarget }    from './CameraTarget'
-import { StudioLogo }      from './StudioLogo'
+import { CreditsBar }      from './credits/CreditsBar'
 import { SupportUI }       from './SupportUI'
 import { SupportUIButton } from './SupportUIButton'
 
@@ -30,7 +30,7 @@ export const MainUI = function VT3D_UI() {
     useEffect(() => {
 
         // Manage canvas related events
-         CanvasEvents.attach()
+        CanvasEvents.attach()
         // CanvasEvents.addListeners()
 
     }, [])
@@ -45,7 +45,6 @@ export const MainUI = function VT3D_UI() {
     return (
         <>
             <div id="lgs-main-ui">
-                    <>
                 <div id={'top-left-ui'}>
                     {/* <SettingsButton tooltip={'right'}/> */}
                     <LayersButton tooltip={'right'}/>
@@ -60,30 +59,26 @@ export const MainUI = function VT3D_UI() {
                     <FullScreenButton/>
                 </div>
 
-                <div id={'bottom-ui'}>
                     <div id={'bottom-left-ui'}>
                         {
                             lgs.platform !== 'production' &&
                             <div id="used-platform"
-                                 className={'lgs-card on-map'}> [{lgs.platform}-{lgs.versions.studio}]</div>
+                                 className={'lgs-card on-map'}> [{lgs.platform}-{lgs.versions.studio}]
+                            </div>
                         }
                     </div>
-                    <div id={'profile-ui'}>
-                        <Profile/>
-                    </div>
+
                     <div id={'bottom-right-ui'}>
-                        <StudioLogo xsmall width={'50px'}/>
+                        <CreditsBar/>
                     </div>
-                    {/* <div id={'bottom-right-ui'}></div> */}
-                </div>
+
                 <div id={'top-right-ui'}>
                     <CompassUI scene={lgs.scene}/>
                 </div>
 
                 {/* <FloatingMenu/> */}
-                    </>
 
-
+                <Profile/>
                 <InformationPanel/>
                 <SettingsPanel/>
                 <LayersPanel/>
