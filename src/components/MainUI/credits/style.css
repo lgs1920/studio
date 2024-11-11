@@ -3,7 +3,7 @@
  */
 
 :root {
-    --lgs-credits-bar-height: calc(20px);
+    --lgs-credits-bar-height: 12px;
 }
 
 .credits-bar {
@@ -12,9 +12,10 @@
     flex-direction: row-reverse;
     justify-content: right;
     align-items: center;
-    gap: var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-xs);
     margin-bottom: var(--lgs-gutter-s);
     pointer-events: auto;
+    font-size: var(--lgs-font-size-s);
 }
 
 .credits-bar > div {
