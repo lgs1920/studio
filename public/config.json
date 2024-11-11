@@ -178,9 +178,9 @@
       {
         "id": "wmt",
         "name": "WayMarked Trail",
-        "credits": "",
+        "credits": "Credits https://waymarkedtrails.org/",
         "logo": "",
-        "url": "",
+        "url": "https://waymarkedtrails.org/",
         "type": "slippy",
         "layers": [
           {
@@ -200,9 +200,9 @@
       {
         "id": "osm",
         "name": "OpenStreetMap",
-        "credits": "",
-        "logo": "",
-        "url": "",
+        "credits": "Credits Openstreetmap.org & contributors",
+        "logo": "a changer ...",
+        "url": "https://www.openstreetmap.org",
         "type": "slippy",
         "layers": [
           {
@@ -222,9 +222,9 @@
       {
         "id": "otm",
         "name": "OpenTopoMap",
-        "credits": "",
-        "logo": "",
-        "url": "",
+        "credits": "Credits OpenTopoMap.org",
+        "logo": "https://opentopomap.org/img/OpenTopoMap_rechts.png",
+        "url": "https://opentopomap.org",
         "type": "slippy",
         "layers": [
           {
@@ -244,9 +244,9 @@
       {
         "id": "osmorg",
         "name": "OpenSnowMap",
-        "credits": "",
+        "credits": "Credits OpenSnowMap.org",
         "logo": "",
-        "url": "",
+        "url": "https://OpenSnowMap.org",
         "type": "slippy",
         "layers": [
           {
@@ -266,7 +266,7 @@
       {
         "id": "thdfrst",
         "name": "Thunderforest",
-        "credits": "",
+        "credits": "Credits Gravitystorm Limited",
         "logo": "",
         "type": "thunderforest",
         "url": "https://www.thunderforest.com/",
