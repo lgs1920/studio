@@ -8,7 +8,7 @@ export class JourneyEditor {
     swatchIndex=0
 
     /** @param swatchesLength {number} : length of color palette */
-    swatchesLength = lgs.configuration.colorSwatches.length
+    swatchesLength = lgs.configuration.swatches.list.length
 
     constructor() {
         // Singleton
@@ -34,18 +34,18 @@ export class JourneyEditor {
      */
      newColor=(reset = false)=> {
 
-        switch(lgs.configuration.colorDistribution) {
+         switch (lgs.configuration.swatches.distribution) {
             case COLOR_SWATCHES_NONE:       // Always the first
                 this.swatchIndex =0
-                return lgs.configuration.colorSwatches[this.swatchIndex]
+                return lgs.configuration.swatches.list[this.swatchIndex]
             case COLOR_SWATCHES_SERIE:      // Increment index each time
                 if (this.swatchIndex  ===  this.swatchesLength || reset ) {
                     this.swatchIndex =0
                 }
-                return lgs.configuration.colorSwatches[this.swatchIndex++]
+                return lgs.configuration.swatches.list[this.swatchIndex++]
             case COLOR_SWATCHES_RANDOM:      // Randomize
                 this.swatchIndex =Math.floor(Math.random() * this.swatchesLength)
-                return lgs.configuration.colorSwatches[this.swatchIndex]
+                return lgs.configuration.swatches.list[this.swatchIndex]
         }
     }
 
