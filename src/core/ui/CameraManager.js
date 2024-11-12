@@ -176,7 +176,7 @@ export class CameraManager {
                     }
                 }
                 catch (error) {
-                    console.log(error)
+                    console.error(error)
                 }
 
             }),

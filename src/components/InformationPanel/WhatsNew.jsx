@@ -42,7 +42,7 @@ const readNews =  async () => {
 
 
     } catch (error) {
-        console.log(error)
+        console.error(error)
     }
 }
 
