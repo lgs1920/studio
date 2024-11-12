@@ -96,13 +96,24 @@
   },
 
   "theme": "dark",
-  "colorSwatches": ["#ee6666", "#fac858","#5470c6", "#91cc75","#73c0de", "#fc8452", "#9a60b4", "#ea7ccc"],
-  "colorDistribution": "serie",
-  "unitSystems": {
-    "international": 0,
-    "imperial": 1
+  "swatches": {
+    "list": [
+      "#ee6666",
+      "#fac858",
+      "#5470c6",
+      "#91cc75",
+      "#73c0de",
+      "#fc8452",
+      "#9a60b4",
+      "#ea7ccc"
+    ],
+    "distribution": "serie"
   },
-  "unitsSystem": 0,
+  "unitSystem": {
+    "international": 1,
+    "imperial": 2,
+    "current": 1
+  },
   "metrics": {
     "minSlope": 2,
     "stopDuration": 60,
@@ -120,7 +131,7 @@
       {
         "id": "ign",
         "name": "IGN (France)",
-        "credits": "",
+        "credits": "Credits IGN",
         "logo": "https://design-system.ign.fr/img/styleguide/sg_logos/Logo_IGN_svg/IGN_logo-simplifie_Q.svg",
         "type": "wmts",
         "url": "https://ign.fr",

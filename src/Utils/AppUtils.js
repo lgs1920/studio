@@ -8,6 +8,7 @@ import * as Cesium                                                            fr
 import {
     EventEmitter,
 }                                                                             from '../assets/libs/EventEmitter/EventEmitter'
+import { SETTINGS_STORE }                                                     from '../core/constants'
 import { FA2SL }                                                              from './FA2SL'
 
 
@@ -154,12 +155,19 @@ export class AppUtils {
         lgs.settings = new Settings()
 
         // Add settings sections
-        for (const section of SETTING_SECTIONS) {
-            const setting = new SettingsSection(section)
-            await setting.init()
-            await lgs.settings.add(setting)
-        }
-        // lgs.settings.app.showIntro = !lgs.settings.app.showIntro
+        const promises = SETTING_SECTIONS.map(async (sectionID) => {
+            const section = new SettingsSection(sectionID)
+            await section.init()
+            await lgs.settings.add(section)
+        })
+        await Promise.all(promises)
+
+        // Removed useless sections in DB
+        const DBSections = await lgs.db.settings.keys(SETTINGS_STORE)
+        const removedSections = DBSections.filter(element => !SETTING_SECTIONS.includes(element))
+        removedSections.forEach(async (key) => {
+            lgs.db.settings.delete(key, SETTINGS_STORE)
+        })
 
         // Ping server
         const server = await __.app.pingBackend()
