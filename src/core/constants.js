@@ -95,7 +95,30 @@ export const SETTING_SECTIONS = [
     UI_SETTING_SECTION,
     THEME_SETTING_SECTION,
 ]
+// List of settings exclusions (ie we keep the user choice)
+// This array is then sorted alphabetically by object depth.
+export const SETTING_EXCLUSIONS = [
+    'layers.base', 'layers.terrain', 'layers.overlay', 'app',
+].sort((a, b) => {
+    const segmentsA = a.split('.')
+    const segmentsB = b.split('.')
 
+    for (let i = 0; i < Math.max(segmentsA.length, segmentsB.length); i++) {
+        if (segmentsA[i] === undefined) {
+            return -1
+        }
+        if (segmentsB[i] === undefined) {
+            return 1
+        }
+        if (segmentsA[i] < segmentsB[i]) {
+            return -1
+        }
+        if (segmentsA[i] > segmentsB[i]) {
+            return 1
+        }
+    }
+    return 0;
+});
 
 /**
  * Layers and Terrains

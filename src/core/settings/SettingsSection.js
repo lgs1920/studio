@@ -1,6 +1,6 @@
-import { detailedDiff }     from 'deep-object-diff'
-import { proxy, subscribe } from 'valtio'
-import { SETTINGS_STORE }   from '../constants'
+import { detailedDiff }                       from 'deep-object-diff'
+import { proxy, subscribe }                   from 'valtio'
+import { SETTING_EXCLUSIONS, SETTINGS_STORE } from '../constants'
 
 
 export class SettingsSection {
@@ -146,8 +146,9 @@ export class SettingsSection {
         }
 
         // Update settings
-        if (this.#data.deleted) {
-            newConfig = this.#syncUpdatingValues(newConfig, diffs.updated)
+        if (this.#data.updated && !SETTING_EXCLUSIONS.includes(this.key)) {
+            console.log(this.key)
+            newConfig = this.#syncUpdatingValues(newConfig, diffs.updated, SETTING_EXCLUSIONS, this.key)
         }
         return newConfig
 
