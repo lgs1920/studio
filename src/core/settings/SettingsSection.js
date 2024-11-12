@@ -147,7 +147,6 @@ export class SettingsSection {
 
         // Update settings
         if (this.#data.updated && !SETTING_EXCLUSIONS.includes(this.key)) {
-            console.log(this.key)
             newConfig = this.#syncUpdatingValues(newConfig, diffs.updated, SETTING_EXCLUSIONS, this.key)
         }
         return newConfig
