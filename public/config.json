@@ -107,7 +107,7 @@
       "#9a60b4",
       "#ea7ccc"
     ],
-    "distribution": "serie"
+    "distribution": "sequence"
   },
   "unitSystem": {
     "international": 1,

@@ -64,7 +64,7 @@ export const DRAW_WITHOUT_SAVE = 2
 export const JUST_SAVE = 3
 
 export const COLOR_SWATCHES_NONE = 'none'
-export const COLOR_SWATCHES_SERIE = 'serie'
+export const COLOR_SWATCHES_SEQUENCE = 'sequence'
 export const COLOR_SWATCHES_RANDOM = 'random'
 
 /**
