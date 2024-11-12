@@ -122,6 +122,7 @@
   "layers": {
     "base": "osm-map",
     "overlay": null,
+    "terrain": null,
     "filter": {
       "byUsage": "all",
       "byName": "",
