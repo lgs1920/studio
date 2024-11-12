@@ -13,47 +13,15 @@ import { FA2SL }                                                              fr
 
 export class AppUtils {
     /**
-     * Slugification
-     *
-     * from https://gist.github.com/hagemann/382adfc57adbd5af078dc93feef01fe1
-     *
-     * @param {string} string
-     */
-    static  slugify = string => {
-        if (string === undefined || string === null) {
-            return ''
-        }
-
-        const a = 'àáâäæãåāăąçćčđďèéêëēėęěğǵḧîïíīįìıİłḿñńǹňôöòóœøōõőṕŕřßśšşșťțûüùúūǘůűųẃẍÿýžźż·/_,:;#'
-        const b = 'aaaaaaaaaacccddeeeeeeeegghiiiiiiiilmnnnnoooooooooprrsssssttuuuuuuuuuwxyyzzz------'
-        const p = new RegExp(a.split('').join('|'), 'g')
-
-        // # is a special character
-        const chunks = string.split('#')
-
-        const slug = chunks.map(string=> string.toString().toLowerCase()
-            .replace(/\s+/g, '-') // Replace spaces with -
-            .replace(p, c => b.charAt(a.indexOf(c))) // Replace special characters
-            .replace(/&/g, '-and-') // Replace & with 'and'
-            .replace(/[^\w-]+/g, '') // Remove all non-word characters
-            .replace(/--+/g, '-') // Replace multiple - with single -
-            .replace(/^-+/, '') // Trim - from start of text
-            .replace(/-+$/, '') // Trim - from end of text)
-        )
-
-        return slug.join('#')
-    }
-
-    /**
      * Split a slug using '#'
      *
      * @return {array}
      */
-    static splitSlug = (slug =>  slug.split(`#`))
-
-
+    static splitSlug = (slug => slug.split(`#`))
     static deepClone = ((obj, parent = null, map = new Map()) => {
-        if (obj === null) return null
+        if (obj === null) {
+            return null
+        }
         if (typeof obj !== 'object') {
             return obj
         }
@@ -79,6 +47,38 @@ export class AppUtils {
         return clone
     })
 
+    /**
+     * Slugification
+     *
+     * from https://gist.github.com/hagemann/382adfc57adbd5af078dc93feef01fe1
+     *
+     * @param {string} string
+     */
+    static slugify = string => {
+        if (string === undefined || string === null) {
+            return ''
+        }
+
+        const a = 'àáâäæãåāăąçćčđďèéêëēėęěğǵḧîïíīįìıİłḿñńǹňôöòóœøōõőṕŕřßśšşșťțûüùúūǘůűųẃẍÿýžźż·/_,:;#'
+        const b = 'aaaaaaaaaacccddeeeeeeeegghiiiiiiiilmnnnnoooooooooprrsssssttuuuuuuuuuwxyyzzz------'
+        const p = new RegExp(a.split('').join('|'), 'g')
+
+        // # is a special character
+        const chunks = string.split('#')
+
+        const slug = chunks.map(string => string.toString().toLowerCase()
+            .replace(/\s+/g, '-') // Replace spaces with -
+            .replace(p, c => b.charAt(a.indexOf(c))) // Replace special characters
+            .replace(/&/g, '-and-') // Replace & with 'and'
+            .replace(/[^\w-]+/g, '') // Remove all non-word characters
+            .replace(/--+/g, '-') // Replace multiple - with single -
+            .replace(/^-+/, '') // Trim - from start of text
+            .replace(/-+$/, ''), // Trim - from end of text)
+        )
+
+        return slug.join('#')
+    }
+
     static MapToObject = map => Object.fromEntries(map.entries())
 
     static setTheme = (theme = null) => {
@@ -94,7 +94,7 @@ export class AppUtils {
      * @param string {string}
      * @return {string}
      */
-    static  capitalize = (string) => {
+    static capitalize = (string) => {
         return string[0].toUpperCase() + string.slice(1)
     }
 
@@ -121,12 +121,12 @@ export class AppUtils {
     static init = async () => {
         // Set Context
         lgs.configuration = await fetch(CONFIGURATION, {cache: 'no-store'}).then(
-            res => res.json()
+            res => res.json(),
         )
         lgs.savedConfiguration = lgs.configuration
 
         lgs.servers = await fetch(SERVERS, {cache: 'no-store'}).then(
-            res => res.json()
+            res => res.json(),
         )
 
         lgs.build = await fetch(BUILD, {cache: 'no-store'}).then(
@@ -143,10 +143,10 @@ export class AppUtils {
         FA2SL.useFontAwesomeInShoelace('fa')
 
         // Backend
-        lgs.BACKEND_API= `${lgs.servers.studio.proxy}${lgs.servers.backend.protocol}://${lgs.servers.backend.domain}:${lgs.servers.backend.port}`
+        lgs.BACKEND_API = `${lgs.servers.studio.proxy}${lgs.servers.backend.protocol}://${lgs.servers.backend.domain}:${lgs.servers.backend.port}`
 
         // Create an Axios instance
-        lgs.axios = axios.create();
+        lgs.axios = axios.create()
 
         /***************************************
          * Application settings
@@ -169,10 +169,11 @@ export class AppUtils {
             try {
                 // Versions
                 try {
-                    const response = await lgs.axios.get([lgs.BACKEND_API,'versions'].join('/'));
-                    lgs.versions = response.data;
-                } catch (error) {
-                    console.error(error);
+                    const response = await lgs.axios.get([lgs.BACKEND_API, 'versions'].join('/'))
+                    lgs.versions = response.data
+                }
+                catch (error) {
+                    console.error(error)
                 }
 
                 lgs.events = new EventEmitter()
@@ -275,7 +276,8 @@ export class AppUtils {
                 .catch(async function () {
                     return await __.app.startBackend()
                 })
-        } catch(error) {
+        }
+        catch (error) {
             console.error(error)
         }
     }
@@ -290,9 +292,9 @@ export class AppUtils {
     static startBackend = async () => {
         if (!__.app.isDevelopment()) {
             return lgs.axios({
-                             method: 'get',
-                             url:    `start-backend.php`,
-                         })
+                                 method: 'get',
+                                 url:    `start-backend.php`,
+                             })
                 .then(function (response) {
                     return response.data
                 })
@@ -301,7 +303,7 @@ export class AppUtils {
                     return {alive: false}
                 })
         }
-        return  {alive: false}
+        return {alive: false}
     }
 
     /**
@@ -312,7 +314,7 @@ export class AppUtils {
      *
      * @return {string}
      */
-    static buildUrl = ({protocol='https', domain}) => {
+    static buildUrl = ({protocol = 'https', domain}) => {
         return `${protocol}://${domain}`
     }
 
@@ -336,16 +338,17 @@ export class AppUtils {
         // Array could be an array, let's join it into a single string
         // Slugify each term
         if (Array.isArray(content)) {
-           content = content.map(text => __.app.slugify(text)).join('#')
-        } else {
-            content= __.app.slugify(content)
+            content = content.map(text => __.app.slugify(text)).join('#')
+        }
+        else {
+            content = __.app.slugify(content)
         }
 
-        const start =  (prefix.length > 0) ?`${__.app.slugify(prefix)}#`:``
-        const end =  (suffix.length > 0) ?`#${__.app.slugify(suffix)}`:``
+        const start = (prefix.length > 0) ? `${__.app.slugify(prefix)}#` : ``
+        const end = (suffix.length > 0) ? `#${__.app.slugify(suffix)}` : ``
 
         //
-        return `${start}${(content.length > 0) ?content:``}${end}`
+        return `${start}${(content.length > 0) ? content : ``}${end}`
     }
 
     /**
@@ -383,5 +386,16 @@ export class AppUtils {
     static isStaging = () => {
         return lgs.platform === platforms.STAGING
     }
+
+    /**
+     * Checks if an object is empty
+     *
+     * @param obj
+     * @return {boolean} true if empty
+     */
+    static isEmpty = (obj) => {
+        return Object.keys(obj).length === 0
+    }
+
 
 }
