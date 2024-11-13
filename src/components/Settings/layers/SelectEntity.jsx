@@ -3,13 +3,13 @@ import {
     ACCESS_ICONS, FREE_ACCOUNT_ACCESS, FREE_ANONYMOUS_ACCESS, FREEMIUM_ACCESS, LAYERS_THUMBS_DIR, LOCKED_ACCESS,
     OVERLAY_LAYERS, PREMIUM_ACCESS, UNLOCKED_ACCESS,
 }                                                                    from '@Core/constants'
-import { faTrashCan }                                                from '@fortawesome/pro-regular-svg-icons'
+import { faFilter, faTrashCan }                                      from '@fortawesome/pro-regular-svg-icons'
 import {
     faArrowDownUpLock, faArrowUpRightFromSquare, faCircleCheck, faEllipsisVertical, faLock, faTriangleExclamation,
 }                                                                    from '@fortawesome/pro-solid-svg-icons'
 import { SlAlert, SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                     from '@Utils/FA2SL'
-import { Fragment }                                                  from 'react'
+import React, { Fragment }                                           from 'react'
 
 import { useSnapshot } from 'valtio'
 
@@ -20,6 +20,7 @@ export const SelectEntity = (props) => {
 
     let settings = useSnapshot(lgs.settings.layers)
     const editor = lgs.editorSettingsProxy
+    const snap = useSnapshot(editor)
 
     const [ConfirmRemoveTokenDialog, confirmRemoveToken] = useConfirm(`Remove Token ?`, 'Are you sure you want to remove this access ?',
                                                                       {icon: faTrashCan, text: 'Remove'})
@@ -218,10 +219,18 @@ export const SelectEntity = (props) => {
             {!fill &&
                 <SlAlert variant="warning" open>
                     <SlIcon slot="icon" library="fa" name={FA2SL.set(faTriangleExclamation)}/>
-                    {'Nothing to display! Check your filter criteria.'}
+                    <div id="filter-alert-content">
+                        {'Nothing to display!'}<br/>{'Check your filter criteria.'}
+                        {!snap.openFilter &&
+                            <SlButton small onClick={() => editor.openFilter = true}>
+                                <SlIcon library="fa" slot="prefix" name={FA2SL.set(faFilter)}/>
+                                {'Open'}
+                            </SlButton>
+                        }
+                    </div>
                 </SlAlert>
             }
-            <ConfirmRemoveTokenDialog/>
+                <ConfirmRemoveTokenDialog/>
         </>
 
     )

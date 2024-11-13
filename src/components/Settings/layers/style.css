@@ -219,3 +219,14 @@
     position: relative;
     z-index: 250000
 }
+
+#filter-alert-content {
+    display: flex;
+    gap: var(--lgs-gutter-s);
+    align-content: center;
+}
+
+#filter-alert-content sl-button {
+    margin-left: auto;
+    margin-top: var(--lgs-gutter-s);
+}
