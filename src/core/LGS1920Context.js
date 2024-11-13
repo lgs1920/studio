@@ -193,7 +193,7 @@ export class LGS1920Context {
         return lgs.configuration.units
     }
 
-    setDefaultConfiguration = () => {
+    setDefaultPOIConfiguration = () => {
         // Defaults
         this.POI_DEFAULT_SIZE = this.configuration.journey.pois.size
         this.POI_PIN_DEFAULT_SIZE = this.configuration.journey.pois.size
