@@ -1,12 +1,11 @@
+import { MINUTE }   from '@Core/constant'
 import { DateTime } from 'luxon'
-import { MINUTE }   from './AppUtils'
 
 class Transient {
     #store
     #key
     #dataBase
     return
-    #content
 
     constructor(transientName, dataBase = lgs.db.tracks) {
         this.#key = transientName
@@ -32,6 +31,7 @@ class Transient {
             }
             return false
         })
+        return false
     }
 
     #expired = data => {

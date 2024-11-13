@@ -30,7 +30,6 @@ export class EntitiesUtils {
      */
     static getEntitiesByDataSourceName = (name) => {
         // if we do not have datasource name, we'll find in all datasource
-        let dataSource
         for (let i = 0; i < lgs.viewer.dataSources.length; i++) {
             const item = lgs.viewer.dataSources.get(i)
             if (item.name === name) {

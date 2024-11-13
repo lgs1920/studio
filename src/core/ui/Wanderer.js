@@ -1,6 +1,5 @@
-import { MILLIS }   from '@Utils/AppUtils.js'
+import { MILLIS }   from '@Core/constants'
 import { POIUtils } from '@Utils/cesium/POIUtils.js'
-import { DateTime } from 'luxon'
 import { Track }    from '../Track'
 
 export class Wanderer {
@@ -142,8 +141,8 @@ export class Wanderer {
             this.#step =1
 
             this.#interval = this.#duration/this.#points
-            if ( this.#interval< lgs.configuration.profile.minInterval) {
-                this.#interval = lgs.configuration.profile.minInterval
+            if (this.#interval < lgs.settings.getProfile.minInterval) {
+                this.#interval = lgs.settings.getProfile.minInterval
                 this.#step = Number.parseInt(this.#points/this.#duration*this.#interval)
                 this.#duration = this.#step *this.#interval/MILLIS
             }

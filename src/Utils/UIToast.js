@@ -1,11 +1,17 @@
+import { SECOND } from '@Core/constants'
 import {
     faCircleCheck, faCircleInfo, faHexagonExclamation, faTriangleExclamation,
-}                       from '@fortawesome/pro-regular-svg-icons'
-import { slideInUp }    from '@shoelace-style/animations/dist/sliding_entrances/slideInUp'
-import { slideOutLeft } from '@shoelace-style/animations/dist/sliding_exits/slideOutLeft'
-import { setAnimation } from '@shoelace-style/shoelace/dist/utilities/animation-registry'
-import { SECOND }       from '@Utils/AppUtils'
-import { FA2SL }        from '@Utils/FA2SL'
+}                 from '@fortawesome/pro-regular-svg-icons'
+import {
+    slideInUp,
+}                 from '@shoelace-style/animations/dist/sliding_entrances/slideInUp'
+import {
+    slideOutLeft,
+}                 from '@shoelace-style/animations/dist/sliding_exits/slideOutLeft'
+import {
+    setAnimation,
+}                 from '@shoelace-style/shoelace/dist/utilities/animation-registry'
+import { FA2SL }  from '@Utils/FA2SL'
 
 export const LGS_INFORMATION_TOAST = 'information'
 export const LGS_SUCCESS_TOAST = 'success'
@@ -23,7 +29,7 @@ export class UIToast {
         [LGS_ERROR_TOAST]: faHexagonExclamation,
     }
 
-    static #notify = (message, type = LGS_INFORMATION_TOAST, duration = UINotifier.DURATION) => {
+    static #notify = (message, type = LGS_INFORMATION_TOAST, duration = this.DURATION) => {
         if (typeof message === 'string') {
             message = {caption: message}
         }
@@ -77,9 +83,9 @@ export class UIToast {
         if (!Array.isArray(errors)) {
             errors = [errors]
         }
-       errors.forEach(error => {
+        //errors.forEach(error => {
        //    content +=` <div class="toast-error">${error.message}</div>`
-        })
+        // })
         return content
     }
 }

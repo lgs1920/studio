@@ -1,5 +1,5 @@
-import { subscribe }                                                        from 'valtio'
-import { COLOR_SWATCHES_NONE, COLOR_SWATCHES_RANDOM, COLOR_SWATCHES_SERIE } from '../LGS1920Context'
+import { subscribe }                                                           from 'valtio'
+import { COLOR_SWATCHES_NONE, COLOR_SWATCHES_RANDOM, COLOR_SWATCHES_SEQUENCE } from '../constants'
 
 
 export class JourneyEditor {
@@ -8,7 +8,7 @@ export class JourneyEditor {
     swatchIndex=0
 
     /** @param swatchesLength {number} : length of color palette */
-    swatchesLength = lgs.configuration.colorSwatches.length
+    swatchesLength = lgs.settings.getSwatches.list.length
 
     constructor() {
         // Singleton
@@ -28,24 +28,24 @@ export class JourneyEditor {
     /**
      * Set new color from color swatches
      *
-     * @param reset {boolean} if true, index is set to 0 (only in the the case of COLOR_SWATCHES_SERIE)
+     * @param reset {boolean} if true, index is set to 0 (only in the the case of COLOR_SWATCHES_SEQUENCE)
      *
      * @return color {string}
      */
      newColor=(reset = false)=> {
 
-        switch(lgs.configuration.colorDistribution) {
+         switch (lgs.settings.getSwatches.distribution) {
             case COLOR_SWATCHES_NONE:       // Always the first
                 this.swatchIndex =0
-                return lgs.configuration.colorSwatches[this.swatchIndex]
-            case COLOR_SWATCHES_SERIE:      // Increment index each time
+                return lgs.settings.getSwatches.list[this.swatchIndex]
+             case COLOR_SWATCHES_SEQUENCE:      // Increment index each time
                 if (this.swatchIndex  ===  this.swatchesLength || reset ) {
                     this.swatchIndex =0
                 }
-                return lgs.configuration.colorSwatches[this.swatchIndex++]
+                 return lgs.settings.getSwatches.list[this.swatchIndex++]
             case COLOR_SWATCHES_RANDOM:      // Randomize
                 this.swatchIndex =Math.floor(Math.random() * this.swatchesLength)
-                return lgs.configuration.colorSwatches[this.swatchIndex]
+                return lgs.settings.getSwatches.list[this.swatchIndex]
         }
     }
 

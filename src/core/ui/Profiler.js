@@ -4,8 +4,6 @@ import * as echarts                                      from 'echarts/core'
 
 import { DateTime }                        from 'luxon'
 import { sprintf }                         from 'sprintf-js'
-import { subscribe }                       from 'valtio'
-import { Utils }                           from '../../components/TracksEditor/Utils.js'
 import { FA2SL }                           from '../../Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS } from '../../Utils/UnitUtils'
 import { ProfileTrackMarker }              from '../ProfileTrackMarker'
@@ -22,21 +20,8 @@ export class Profiler {
         }
         this.charts = new Map()
 
-        // We need to interact with  Editor
-        subscribe(lgs.journeyEditorStore, this.adaptWidth)
-
-
         Profiler.instance = this
 
-    }
-
-    /**
-     * Adapt the profiler width, according to editor pane usage
-     *
-     */
-    adaptWidth = () => {
-        const offset = lgs.journeyEditorStore.show ? Utils.panelOffset() : 0
-        __.ui.css.setCSSVariable('--lgs-profile-pane-width', `calc( 100% - ${offset})`)
     }
 
     /**
@@ -79,8 +64,8 @@ export class Profiler {
                     switch (type) {
                         case ELEVATION_VS_DISTANCE : {
                             coords = [
-                                __.convert(distance).to(units.x[lgs.configuration.unitsSystem]),
-                                __.convert(point.altitude).to(units.y[lgs.configuration.unitsSystem]),
+                                __.convert(distance).to(units.x[lgs.settings.getUnitSystem.current]),
+                                __.convert(point.altitude).to(units.y[lgs.settings.getUnitSystem.current]),
                                 null, //TODO Time
                                 point,
                             ]
@@ -100,8 +85,8 @@ export class Profiler {
         })
 
         data.axisNames = {
-            x: `${titles.x} - ${units.x[lgs.configuration.unitsSystem]}`,
-            y: `${titles.y} - ${units.y[lgs.configuration.unitsSystem]}`,
+            x: `${titles.x} - ${units.x[lgs.settings.getUnitSystem.current]}`,
+            y: `${titles.y} - ${units.y[lgs.settings.getUnitSystem.current]}`,
         }
 
         return data
@@ -119,7 +104,7 @@ export class Profiler {
         }
 
         // Show on map
-        if (lgs.configuration.profile.marker.track.show) {
+        if (lgs.settings.getProfile.marker.track.show) {
             this.showOnMap(serie, point.longitude, point.latitude, elevation)
         }
 
@@ -143,16 +128,16 @@ export class Profiler {
             </div>`
 
         const altitude = `<sl-icon library="fa" name="${FA2SL.set(faMountains)}"  style="color:${colors[serie]}"></sl-icon>&nbsp;
-${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsSystem]}`
+${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.getUnitSystem.current]}`
         const global = distances.length > 1 ? `
             <div class="point-distance line" style="--line-color=${colors[serie]}">
             <span class="tooltip-icon"><sl-icon library="fa" name="${FA2SL.set(faArrowLeftLongToLine)}"></sl-icon></span>
             <span class="tooltip-data">
-                ${sprintf('%\' .1f', distance ?? 0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
+                ${sprintf('%\' .1f', distance ?? 0)}  ${DISTANCE_UNITS[lgs.settings.getUnitSystem.current]}
             </span>
             <span class="tooltip-data altitude">${altitude}</span>
             <span class="tooltip-data">
-            ${sprintf('%\' .1f', distance1 ? distance1 - distance : 0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}</span>
+            ${sprintf('%\' .1f', distance1 ? distance1 - distance : 0)}  ${DISTANCE_UNITS[lgs.settings.getUnitSystem.current]}</span>
             <span  class="tooltip-icon">
             </span>
         </div> 
@@ -163,7 +148,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
             <sl-icon library="fa" name="${FA2SL.set(faArrowLeftLongToLine)}"  style="color:${colors[serie]}"></sl-icon>
             </span>
             <span class="tooltip-data">
-            ${sprintf('%\' .1f', distance - start2 ?? 0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
+            ${sprintf('%\' .1f', distance - start2 ?? 0)}  ${DISTANCE_UNITS[lgs.settings.getUnitSystem.current]}
             </span>
             <span  class="tooltip-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="27px" height="17px">
@@ -173,7 +158,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
             </span>
 
             <span class="tooltip-data">
-            ${sprintf('%\' .1f', distance2 ? distance2 - distance : 0)}  ${DISTANCE_UNITS[lgs.configuration.unitsSystem]}
+            ${sprintf('%\' .1f', distance2 ? distance2 - distance : 0)}  ${DISTANCE_UNITS[lgs.settings.getUnitSystem.current]}
             </span>
             <span class="tooltip-icon">
             <sl-icon library="fa" name="${FA2SL.set(faArrowRightLongToLine)}"  style="color:${colors[serie]}"></sl-icon>
@@ -293,7 +278,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
     draw = async () => {
 
         lgs.mainProxy.components.profile.key++
-        if (lgs.configuration.profile.marker.track.show) {
+        if (lgs.settings.getProfile.marker.track.show) {
             await lgs.theTrack?.marker.draw()
         }
         this.resetZoom()
@@ -335,7 +320,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.configuration.unitsS
      */
     setVisibility = (journey = lgs.theJourney) => {
         lgs.mainProxy.canViewProfile =
-            lgs.configuration.profile.show &&              // By configuration
+            lgs.settings.getProfile.show &&              // By configuration
             journey !== undefined &&                        // During init
             journey !== null &&                             // same
             journey.visible &&                              // Journey visible

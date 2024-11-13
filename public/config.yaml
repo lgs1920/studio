@@ -1,0 +1,21 @@
+################################################################################
+# LGS1920 Application configuration
+#
+# These parameters will not be changed while the application is running.
+################################################################################
+
+applicationName: LGS1920
+githubURL: 'https://github.com/lgs1920'
+
+## Main website
+website:
+  domain: lgs1920.fr
+  protocol: https
+
+api:
+  name: API
+
+db:
+  IDBDelay: 2000
+  extDelay: 5000
+

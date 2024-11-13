@@ -1,4 +1,4 @@
-import { MILLIS } from './AppUtils'
+import { MILLIS } from '@Core/constants'
 
 /* https://github.com/danisss9/easy-file-picker */
 export class FileUtils {

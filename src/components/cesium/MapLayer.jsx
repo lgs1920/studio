@@ -1,56 +1,112 @@
-import { OpenStreetMapImageryProvider, WebMapTileServiceImageryProvider } from 'cesium'
-import { ImageryLayer }                                                   from 'resium'
-import { useSnapshot }                                                    from 'valtio'
-import { Layer }                                                          from '../../core/Layer.js'
+import { BASE_LAYERS, OVERLAY_LAYERS } from '@Core/constants'
+import {
+    ArcGisMapServerImageryProvider, NeverTileDiscardPolicy, OpenStreetMapImageryProvider, UrlTemplateImageryProvider,
+    WebMapTileServiceImageryProvider,
+}                                      from 'cesium'
+import { ImageryLayer }                from 'resium'
+import { subscribe, useSnapshot }      from 'valtio'
+import { LayersUtils }                 from '../../Utils/cesium/LayersUtils'
 
-export const MapLayer = (layer) => {
+export const SLIPPY = 'slippy'
+export const WMTS = 'wmts'
+export const ARCGIS = 'arcgis'
+export const THUNDERFOREST = 'thunderforest'
 
-    const mainStore = lgs.mainProxy
-    const mainSnap = useSnapshot(mainStore)
+export const MapLayer = (props) => {
+
+    const layers = useSnapshot(lgs.settings.layers)
+    const main = useSnapshot(lgs.mainProxy)
+
+    const isBase = props.type === BASE_LAYERS
+    const manager = __.layerManager
+    if (![BASE_LAYERS, OVERLAY_LAYERS].includes(props.type)) {
+        return (<></>)
+    }
+
+    // Apply changes on settings
+    subscribe(lgs.settings.layers, () => {
+        let settings = lgs.settings.layers
+        const snapLayer = isBase ? settings.base : settings.overlay
+        if (isBase) {
+            lgs.mainProxy.theLayer = manager.getLayerProxy(snapLayer)
+        }
+        else {
+            lgs.mainProxy.theLayerOverlay = snapLayer ? manager.getLayerProxy(snapLayer) : null
+        }
+    })
+
+    let snapLayer = isBase ? layers.base : layers.overlay
+    if (snapLayer === null || snapLayer === '') {
+        return (<></>)
+    }
+
+    let theLayer
+    if (isBase) {
+        lgs.mainProxy.theLayer = manager.getLayerProxy(snapLayer)
+        theLayer = main.theLayer
+    }
+    else {
+        lgs.mainProxy.theLayerOverlay = manager.getLayerProxy(snapLayer)
+        theLayer = main.theLayerOverlay
+    }
+
+    // Bail if there is no layer
+    if (!theLayer) {
+        return (<></>)
+    }
+    const theProvider = manager.getProviderProxyByLayerId(theLayer.id)
+
 
     return (<>
-
-            {
-                mainSnap.layer === Layer.OSM_PLAN &&
-                <ImageryLayer imageryProvider={new OpenStreetMapImageryProvider({
-                    url: 'https://tile.openstreetmap.org/',
-                })}/>
+            {  //OpenStreet Map type  layers (ie slippy)
+                theProvider && theProvider.type === SLIPPY && theLayer.type === props.type &&
+                <ImageryLayer key={theLayer.url + '-' + theLayer.type} imageryProvider={
+                    new OpenStreetMapImageryProvider(
+                        {
+                            url:               theLayer.url,
+                            credit:            props.type,
+                            tileDiscardPolicy: NeverTileDiscardPolicy(),
+                            customShader:      LayersUtils.testShader,
+                        })}
+                />
             }
 
-            {
-                mainSnap.layer === Layer.IGN_PLAN &&
-                <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                                                                                        url: 'https://wmts.geopf.fr/wmts',
-                    layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
-                    style: 'normal',
-                    format: 'image/png',
-                    tileMatrixSetID: 'PM',
-                })}/>
+            {  // Thunderforest Map Type Layers
+                theProvider && theProvider.type === THUNDERFOREST && theLayer.type === props.type &&
+                <ImageryLayer key={theLayer.url + '-' + theLayer.type} imageryProvider={
+                    new UrlTemplateImageryProvider({
+                                                       url:               theLayer.url + '{z}/{x}/{y}.png?apikey=' + theLayer.usage.token,
+                                                       credit:            props.type,
+                                                       tileDiscardPolicy: NeverTileDiscardPolicy(),
+                                                       customShader:      LayersUtils.testShader,
+                                                   })}
+                />
             }
 
-            {
-                mainSnap.layer === Layer.IGN_AERIAL &&
-                <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                    url: 'https://wmts.geopf.fr/wmts',
-                    layer: 'ORTHOIMAGERY.ORTHOPHOTOS',
-                    style: 'normal',
-                    format: 'image/jpeg',
-                    tileMatrixSetID: 'PM',
-                    service: 'WMTS',
-                })}/>
+            {   // WMTS layers
+                theProvider && theProvider.type === WMTS && theLayer.type === props.type &&
+                <ImageryLayer key={theLayer.url + '-' + theLayer.type} imageryProvider={
+                    new WebMapTileServiceImageryProvider({
+                                                             url:             theLayer.url,
+                                                             layer:           theLayer.layer,
+                                                             style:           theLayer.style,
+                                                             format:          theLayer.format,
+                                                             tileMatrixSetID: theLayer.tileMatrixSetID,
+                                                             // We credit to get if it is base or overlay.
+                                                             credit: props.type,
+                                                             apikey: 'ign_scan_ws',
+                                                         })
+                }/>
             }
 
-            {
-                mainSnap.layer === Layer.IGN_CADASTRAL &&
-                <ImageryLayer imageryProvider={new WebMapTileServiceImageryProvider({
-                                                                                        url: 'https://wmts.geopf.fr/wmts',
-                    layer: 'CADASTRALPARCELS.PARCELLAIRE_EXPRESS',
-                    style: 'normal',
-                    format: 'image/png',
-                    tileMatrixSetID: 'PM',
-                })}/>
+            {   // ArcGIS layers
+                theProvider && theProvider.type === ARCGIS && theLayer.type === props.type &&
+                <ImageryLayer key={theLayer.url + '-' + theLayer.type}
+                              imageryProvider={ArcGisMapServerImageryProvider.fromUrl(theLayer.url, {
+                        // We credit to get if it is base or overlay.
+                        credit: props.type,
+                    })}/>
             }
-
         </>
     )
 }

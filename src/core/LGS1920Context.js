@@ -1,36 +1,33 @@
+import {
+    APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, JOURNEYS_STORE, ORIGIN_STORE, platforms,
+    SERVERS, SETTINGS_STORE,
+}                     from '@Core/constants'
 import { AppUtils }   from '@Utils/AppUtils'
 import { MouseUtils } from '@Utils/cesium/MouseUtils'
 import { CSSUtils }   from '@Utils/CSSUtils'
 import { UIUtils }    from '@Utils/UIUtils'
 
-import { proxy }                          from 'valtio'
-import { UnitUtils }                      from '../Utils/UnitUtils'
-import { LocalDB }                        from './db/LocalDB'
-import { Layer }                          from './Layer.js'
-import { MouseEventHandler }              from './MouseEventHandler'
-import { main }                           from './stores/main'
-import { theJourneyEditor }               from './stores/theJourneyEditor'
-import { CameraManager as CameraManager } from './ui/CameraManager'
-import { JourneyEditor }                  from './ui/JourneyEditor'
-import { Profiler }                       from './ui/Profiler'
-import { Wanderer }                       from './ui/Wanderer'
-
-export const CONFIGURATION = 'config.json'
-export const SERVERS = 'servers.json'
-export const BUILD = 'build.json'
-
-export const platforms = {
-    DEV:     'development',
-    STAGING: 'staging',
-    PROD:    'production',
-    TEST:    'test',
-}
+import { proxy }             from 'valtio'
+import { UnitUtils }         from '../Utils/UnitUtils'
+import { VAULT_STORE }       from './constants'
+import { LocalDB }           from './db/LocalDB'
+import { MouseEventHandler } from './MouseEventHandler'
+import { editorSettings }    from './stores/editorSettings'
+import { main }              from './stores/main'
+import { theJourneyEditor }  from './stores/theJourneyEditor'
+import { CameraManager }     from './ui/CameraManager'
+import { DrawerManager }     from './ui/DrawerManager'
+import { JourneyEditor }     from './ui/JourneyEditor'
+import { Profiler }          from './ui/Profiler'
+import { Wanderer }          from './ui/Wanderer'
 
 export class LGS1920Context {
     /** @type {Proxy} */
     #mainProxy
     /** @type {Proxy} */
     #theJourneyEditorProxy
+    /** @type {Proxy} */
+    #editorSettingsProxy
 
     eventHandler = new MouseEventHandler()
     #viewer
@@ -40,15 +37,16 @@ export class LGS1920Context {
 
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
-        // Track Editor store is used to manage the settings of the theJourney in edit
-        this.#theJourneyEditorProxy = proxy(theJourneyEditor)
 
+        // Journey Editor store is used to manage the settings of the theJourney in edit
+        this.#theJourneyEditorProxy = proxy(theJourneyEditor)
         // Main is global to the app
         this.#mainProxy = proxy(main)
+        // SettingsEditor is used to maintain settings UI states
+        this.#editorSettingsProxy = proxy(editorSettings)
+
         this.journeyEditorStore = this.#mainProxy.components.journeyEditor
         this.mainUIStore = this.#mainProxy.components.mainUI
-
-        this.#mainProxy.layer = Layer.IGN_AERIAL
 
         // Get the first as current theJourney
         if (this.journeys.size) {
@@ -74,8 +72,6 @@ export class LGS1920Context {
             convert: UnitUtils.convert,
         };
 
-        (async (o) => await o.initializeConfig())(this)
-
     }
 
     createDB = () => {
@@ -83,19 +79,31 @@ export class LGS1920Context {
         this.db = {
             lgs1920: new LocalDB({
                                      name:             `${APP_KEY}${dbPrefix}`,
-                                     store:            [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, SETTINGS_STORE],
+                                     store: [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE],
                                      manageTransients: true,
                                      version:          '0.1',
                                  }),
+            settings: new LocalDB({
+                                      name: `settings-${APP_KEY}${dbPrefix}`,
+                                      store:            [SETTINGS_STORE],
+                                      manageTransients: true,
+                                      version:          '0.1',
+                                  }),
+            vault:    new LocalDB({
+                                      name:             `vault-${APP_KEY}${dbPrefix}`,
+                                      store:            [VAULT_STORE],
+                                      manageTransients: false,
+                                      version:          '0.1',
+                                  }),
         }
     }
 
 
     initializeConfig = async () => {
-        this.configuration = await fetch(CONFIGURATION).then(
+        this.configuration = await fetch(CONFIGURATION, {cache: 'no-store'}).then(
             res => res.json(),
         )
-        this.servers = await await fetch(SERVERS).then(
+        this.servers = await await fetch(SERVERS, {cache: 'no-store'}).then(
             res => res.json(),
         )
         this.platform = lgs.servers.platform
@@ -173,6 +181,10 @@ export class LGS1920Context {
         return this.#theJourneyEditorProxy
     }
 
+    get editorSettingsProxy() {
+        return this.#editorSettingsProxy
+    }
+
     set theJourneyEditorProxy(proxy) {
         this.#theJourneyEditorProxy = proxy
     }
@@ -181,7 +193,7 @@ export class LGS1920Context {
         return lgs.configuration.units
     }
 
-    setDefaultConfiguration = () => {
+    setDefaultPOIConfiguration = () => {
         // Defaults
         this.POI_DEFAULT_SIZE = this.configuration.journey.pois.size
         this.POI_PIN_DEFAULT_SIZE = this.configuration.journey.pois.size
@@ -256,25 +268,10 @@ export class LGS1920Context {
         }
         __.ui.wanderer = new Wanderer()
         __.ui.cameraManager = new CameraManager()
+        __.ui.drawerManager = new DrawerManager()
+
     }
 
 
 }
 
-
-export const APP_KEY = 'LGS1920'
-export const SETTINGS_STORE = 'settings'
-export const CURRENT_STORE = 'current'
-export const JOURNEYS_STORE = 'journeys'
-export const ORIGIN_STORE = 'origin'
-export const CURRENT_JOURNEY = 'journey'
-export const CURRENT_TRACK = 'track'
-export const CURRENT_POI = 'poi'
-
-export const DRAW_THEN_SAVE = 1
-export const DRAW_WITHOUT_SAVE = 2
-export const JUST_SAVE = 3
-
-export const COLOR_SWATCHES_NONE = 'none'
-export const COLOR_SWATCHES_SERIE = 'serie'
-export const COLOR_SWATCHES_RANDOM = 'random'

@@ -1,6 +1,5 @@
 import { faRegularMountainsSlash }                   from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { faFileWaveform, faMapLocation, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
-import axios                                         from 'axios'
 
 export class ElevationServer {
 

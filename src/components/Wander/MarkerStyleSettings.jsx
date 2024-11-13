@@ -1,7 +1,6 @@
-import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE }            from '@Core/LGS1920Context'
-import { SlColorPicker, SlDivider, SlRange, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
-import { useSnapshot } from 'valtio'
+import { SlColorPicker, SlRange, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { TrackUtils }                        from '@Utils/cesium/TrackUtils'
+import { useSnapshot }                       from 'valtio'
 
 export const MarkerStyleSettings = function MarkerSettings() {
 
@@ -42,7 +41,7 @@ export const MarkerStyleSettings = function MarkerSettings() {
                                size={'small'}
                                label={'Color'}
                                value={editorStore?.journey?.marker?.color ?? ''}
-                               swatches={lgs.configuration.colorSwatches.join(';')}
+                               swatches={lgs.settings.getSwatches.list.join(';')}
                                onSlChange={setColor}
                                onSlInput={setColor}
                              //  disabled={!editorSnapshot.track.visible}

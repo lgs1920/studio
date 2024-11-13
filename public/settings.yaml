@@ -1,0 +1,353 @@
+################################################################################
+# LGS1920 Application settings
+#
+# These parameters can be updated by the user while the application is running.
+#
+# Note that this is not currently the case, as many of them cannot be modified
+# using a user interface! Let's do it!
+################################################################################
+
+#Cesium Ion Token  # Please do not use It
+ionToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4ZmZkZjZkYS1iODgwLTQzYzUtOTM5ZS1iYTc2Nzk0OTM1ZjQiLCJpZCI6MTkwODA4LCJpYXQiOjE3MDU2ODQ3OTZ9.BV6yuYzhp8A_cgEs5MbqZWZaCtyOW-08aSORPflJ3dw
+
+########################################
+# Application settings
+########################################
+app:
+  lastVisit: null         # Last visit date
+  firstVisit: true        # Is it the first visit ?
+  showIntro: true         # Se afin intro ?
+  changelogToRead: true   # Used to check if there are news to read
+
+########################################
+# Theme
+########################################
+theme: 'dark'
+
+########################################
+# Initial Starter Point
+########################################
+starter:
+  ## Starter Camera Target
+  longitude: 5.70291
+  latitude: 45.33524
+  height: 1920
+  ## Camera position
+  camera:
+    heading: 115
+    pitch: -34
+    roll: 4
+    range: 3000
+    longitude: 5.6533
+    latitude: 45.34623
+    height: 4300
+
+########################################
+# Initial Camera Settings
+########################################
+camera:
+  heading: 0
+  pitch: -45
+  roll: 0
+  range: 3000
+  orbitalPercentageChanged: 0.05
+  percentageChanged: 0.02
+  maximumHeight: 10000
+  pitchAdjustHeight: 200
+
+########################################
+# Color palette
+########################################
+swatches:
+  list:
+    - '#ee6666'
+    - '#fac858'
+    - '#5470c6'
+    - '#91cc75'
+    - '#73c0de'
+    - '#fc8452'
+    - '#9a60b4'
+    - '#ea7ccc'
+  distribution: 'sequence'
+
+########################################
+# Tracks and POIs
+########################################
+journey:
+  thickness: 2            # Initial track thickness (pixels)
+  ## POIs
+  pois:
+    # Default POI
+    color: '#f2c55c'      # Color
+    border: '#ffffff99'   # Border
+    size: 13              # Size (pixels)
+    sizePin: 10           # TODO
+    ## Wanderer mode
+    wanderer:
+      color: '#1689CCff'
+      border: '#FFF'
+    ## Start POI
+    start:
+      color: '#DC143Cff'
+    ## Stop POI
+    stop:
+      color: '#228B22ff'
+
+########################################
+# Profile
+########################################
+profile:
+  show: true
+  ## Line chart
+  line:
+    width: 2   # pixels
+  ## Marker
+  marker:
+    ## On track
+    track:
+      show: true
+      size: 13          # Pixels
+      color: '#f2c55c'
+      border:
+        color: '#fff'
+        width: 2        # Pixels
+    ## On chart
+    chart:
+      size: 8           # Pixels
+      color: '#f2c55c'
+      border:
+        color: '#fff'
+        width: 2        # Pixel
+  minInterval: 150      # TODO
+
+########################################
+# Metrics and computations
+########################################
+metrics:
+  # To check if it is flat (< minSlope)
+  minSlope: 2
+  # To check movements
+  # > stopDuration && > Stop Speed Limit
+  stopDuration: 60
+  stopSpeedLimit: 0.2
+########################################
+# Layers and Terrains
+########################################
+layers:
+  ## Current IDs
+  base: osm-map                         # ID of the current base
+  overlay: null                         # ID of the current overlay
+  terrain: null                         # ID of the current terrain
+
+  ## Filter criteria
+  filter:
+    byUsage: all
+    byName: ''
+    active: false
+
+  ## Providers List
+  providers:
+
+    ## IGN Provider
+    - id: ign                           # Provider ID
+      name: IGN (France)                # Provider name
+      credits: 'Credits IGN'            # Credits added to logo
+      # Logo
+      logo: https://design-system.ign.fr/img/styleguide/sg_logos/Logo_IGN_svg/IGN_logo-simplifie_Q.svg
+      url: 'https://ign.fr'             # Provider Url
+
+      type: wmts                        # Tile type
+
+      ## Layers
+      layers:
+        ## IGN Cadastral
+        - name: IGN Cadastral           # Layer Name
+          id: ign-cadastral             # Layer ID
+          image: ign-cadastral.png      # Thumbnail filename
+          doc: 'https://data.geopf.fr'  # Layer documentation
+          type: overlay                 # Layer type (base/overlay/terrains)
+
+          ## Usage management
+          usage: # Usage
+            type: free                  # free/fremium/premium/account
+            doc: ''                     # Sign In documentation URL
+            signin:                     # Signin URL (freemium/premium)
+
+          ## Tile management
+          url: 'https://data.geopf.fr/wmts'
+          layer: CADASTRALPARCELS.PARCELLAIRE_EXPRESS
+          style: normal
+          format: image/png
+          tileMatrixSetID: PM
+
+        ## IGN Map
+        - name: IGN Map
+          id: ign-map
+          image: ign-map.png
+          usage:
+            type: free
+            doc: ''
+          url: 'https://data.geopf.fr/wmts'
+          layer: GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2
+          style: normal
+          format: image/png
+          tileMatrixSetID: PM
+          doc: 'https://data.geopf.fr'
+          type: base
+
+        ## IGN Photo
+        - name: IGN Photo
+          id: ign-photo
+          image: ign-photo.png
+          usage:
+            type: free
+            doc: ''
+          url: 'https://data.geopf.fr/wmts'
+          layer: ORTHOIMAGERY.ORTHOPHOTOS
+          style: normal
+          format: image/jpeg
+          tileMatrixSetID: PM
+          doc: 'https://data.geopf.fr'
+          type: base
+
+    ## WayMarked Trail Provider
+    - id: wmt
+      name: WayMarked Trail
+      credits: 'Credits https://waymarkedtrails.org/'
+      logo: ''
+      url: 'https://waymarkedtrails.org/'
+      type: slippy
+      layers:
+        ## Hiking
+        - name: Hiking
+          id: wmt-map-hiking
+          image: wmt-map-hiking.png
+          usage:
+            type: free
+            doc: ''
+          url: 'https://tile.waymarkedtrails.org/hiking/'
+          doc: ''
+          type: overlay
+
+    ## Open Street Map
+
+    - id: osm
+      name: OpenStreetMap
+      credits: Credits Openstreetmap.org & contributors
+      logo: a changer ...
+      url: 'https://www.openstreetmap.org'
+      type: slippy
+      layers:
+        # OpenStreetMap standard
+        - name: OpenStreetMap
+          id: osm-map
+          image: osm-map.png
+          usage:
+            type: free
+            doc: ''
+          url: 'https://tile.openstreetmap.org/'
+          doc: ''
+          type: base
+
+    ## Open Topo Map Provider
+    - id: otm
+      name: OpenTopoMap
+      credits: Credits OpenTopoMap.org
+      logo: 'https://opentopomap.org/img/OpenTopoMap_rechts.png'
+      url: 'https://opentopomap.org'
+      type: slippy
+      layers:
+        ## Open Topo Map standard
+        - name: OpenTopoMap
+          id: otm-map
+          image: otm-map.png
+          usage:
+            type: free
+            doc: ''
+          url: 'https://tile.opentopomap.org/'
+          doc: ''
+          type: base
+
+    ## Open Snow Map
+    - id: osmorg
+      name: OpenSnowMap
+      credits: Credits OpenSnowMap.org
+      logo: ''
+      url: 'https://OpenSnowMap.org'
+      type: slippy
+      layers:
+        # Tracks
+        - name: OpenSnowMap
+          id: osmorg-tracks
+          image: osmorg-map.png
+          usage:
+            type: free
+            doc: ''
+          url: 'https://tiles.opensnowmap.org/pistes/'
+          doc: ''
+          type: overlay
+
+    ## ThunderForest
+    - id: thdfrst
+      name: Thunderforest
+      credits: Credits Gravitystorm Limited
+      logo: ''
+      type: thunderforest
+      url: 'https://www.thunderforest.com/'
+      layers:
+        ## Open Cycle Map
+        - name: OpenCycleMap
+          id: thdfrst-cycle
+          image: thdfrst-cycle.png
+          usage:
+            type: freemium
+            doc: 'https://www.thunderforest.com/maps/opencyclemap/'
+            signin: 'https://www.thunderforest.com/pricing/'
+          url: 'https://tile.thunderforest.com/cycle/'
+          doc: 'https://www.thunderforest.com/'
+          type: base
+
+        ## Landscape
+        - name: OpenStreetMap Landscape
+          id: thdfrst-ldscp
+          image: thdfrst-ldscp.png
+          usage:
+            type: freemium
+            doc: 'https://www.thunderforest.com/maps/landscape/'
+            signin: 'https://www.thunderforest.com/pricing/'
+          url: 'https://tile.thunderforest.com/landscape/'
+          doc: 'https://www.thunderforest.com/'
+          type: base
+
+        ## Outdoors
+        - name: OpenStreetMap Outdoors
+          id: thdfrst-out
+          image: thdfrst-out.png
+          usage:
+            type: freemium
+            doc: 'https://www.thunderforest.com/maps/outdoors/'
+            signin: 'https://www.thunderforest.com/pricing/'
+          url: 'https://tile.thunderforest.com/outdoors/'
+          doc: 'https://www.thunderforest.com/'
+          type: base
+
+########################################
+# Unit system
+########################################
+unitSystem:
+  international: 0  # Metrics
+  imperial: 1       # UK,US
+  current: 0
+
+########################################
+# UI : general
+########################################
+ui:
+  showCameraPosition: true          # Display Camera position
+  showCameraTargetPosition: true    # Display Camera View point
+  showCameraHPR: true               # Display Camera HPR
+
+  cameraTargetIcon: # Camera Target Icon
+    show: true
+    color: white
+    size: 1.5rem

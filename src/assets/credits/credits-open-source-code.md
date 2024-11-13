@@ -20,5 +20,8 @@ The application (studio, backend,APIs) is based on :
 * [fontawesome](https://fontawesome.com/) - The icons library
 * [echarts](https://echarts.apache.org/) - Chart library
 
+### Deployment
+
+* [PM2](https://pm2.keymetrics.io/)- Online application management
 ### Other dependencies:
 * TODO

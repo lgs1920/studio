@@ -31,8 +31,6 @@ export const main = {
         },
 
         journeyEditor: {
-            visible: false,
-            show: false,
             list: [],
             keys: {
                 journey: {
@@ -63,6 +61,15 @@ export const main = {
             height:'100%',
             zoom:false,
         },
+
+        settings: {
+            key:     0,
+        },
+
+        layers: {
+            key:     0,
+        },
+
         wanderer: {
             run: false,
             pause:false,
@@ -72,11 +79,13 @@ export const main = {
         },
 
         informationPanel:{
-            visible:false,
             tab:null
         }
 
 
+    },
+    drawers:    {
+        open: null,
     },
     modals: {
         altitudeChoice: {
@@ -88,5 +97,5 @@ export const main = {
     fullSize: false,
     canViewJourneyData: false,
     canViewProfile: false,
-    layer: false,
+    theLayer: null,
 }

@@ -18,5 +18,18 @@ module.exports = {
     "globals": {
       "lgs": false,
       "__":false
-    }
+    },
+  settings:    {
+    'import/resolver': {
+      alias: {
+        map:        [
+          ['@Utils', path.resolve(__dirname, './src/Utils')],
+          ['@Editor', path.resolve(__dirname, './src/components/TracksEditor')],
+          ['@Components', path.resolve(__dirname, './src/components')],
+          ['@Core', path.resolve(__dirname, './src/core')],
+        ],
+        extensions: ['.js', '.jsx', '.ts', '.tsx'],
+      },
+    },
+  },
 }

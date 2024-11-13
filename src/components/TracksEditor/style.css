@@ -1,17 +1,5 @@
-:root {
-    --lgs-journey-editor-width: 28rem;
-    --lgs-journey-editor-offset: calc( var(--lgs-journey-editor-width) + var(--lgs-gutter-s));
-}
-#journeys-editor-container {
-    z-index: var(--lgs-ui-layer-zindex);
-    left: 0;
-    right: var(--right);
-    width: calc(100vw - var(--right) - var(--left));
-    height: calc(100vh - var(--top) - var(--bottom));
-    pointer-events: none;
-}
 
-#journeys-editor-pane {
+#journey-editor-drawer {
     position: fixed;
     bottom: var(--lgs-gutter);
     left: var(--lgs-gutter);
@@ -20,7 +8,7 @@
     pointer-events: none;
 }
 
-#journeys-editor-pane::part(panel) {
+#journey-editor-drawer::part(panel) {
     border-radius: var(--sl-border-radius-medium);
 }
 
@@ -28,13 +16,13 @@ sl-tab sl-icon {
     margin-right: var(--lgs-gutter-xs);
 }
 
-#journeys-editor-footer {
+#journey-editor-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-#journeys-editor-footer strong:after {
+#journey-editor-footer strong:after {
     content: ' - ';
     font-weight: normal;
 }
@@ -119,19 +107,6 @@ sl-tab sl-icon {
 
 sl-tab::part(base) {
     padding: var(--lgs-gutter-s);
-}
-
-sl-tab-panel {
-    overflow-y: hidden;
-}
-
-sl-tab-panel sl-icon {
-    margin-right: var(--lgs-gutter-xs);
-    width: 1rem;
-}
-
-sl-tab-panel sl-icon::part(svg) {
-    width: 1.1rem;
 }
 
 

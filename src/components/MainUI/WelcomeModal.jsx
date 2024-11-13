@@ -6,6 +6,7 @@ import { default as ReactMarkdown }               from 'react-markdown'
 import { useSnapshot }                            from 'valtio'
 import welcomeBack                                from '../../../src/assets/modals/welcome-back.md'
 import welcome                                    from '../../../src/assets/modals/welcome.md'
+import { SLOGAN }                                 from '../../core/constants'
 import { FA2SL }                                  from '../../Utils/FA2SL.js'
 import { StudioLogo }                             from './StudioLogo'
 
@@ -63,7 +64,7 @@ export const WelcomeModal = () => {
 
     return (
         <>
-            {lgs.settings.snapApp.showIntro &&
+            {lgs.settings.getApp.showIntro &&
             <SlDialog open={open}
                       modal
                       no-header
@@ -72,7 +73,8 @@ export const WelcomeModal = () => {
                       onSlRequestClose={close}
                       onSlAfterHide={hide}>
 
-                <StudioLogo width={'100%'} version={true}/>
+                <StudioLogo width={'100%'} version={true} slogan={SLOGAN} addClassName={'welcome-logo'}/>
+
                 <TheText/>
 
                 <div slot="footer">
@@ -82,7 +84,7 @@ export const WelcomeModal = () => {
 
                         {editorPanel.list !== undefined &&
                         <div className="buttons-bar">
-                            {lgs.settings.snapApp.changelogToRead &&
+                            {lgs.settings.getApp.changelogToRead &&
                             <SlButton  onClick={showNews} variant="text">{'What\'s new ?'}</SlButton>
                             }
                             {editorPanel.list.length > 0 &&

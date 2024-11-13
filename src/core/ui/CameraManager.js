@@ -3,8 +3,8 @@ import { snapshot }              from 'valtio'
 import { deepClone }             from 'valtio/utils'
 
 import { CameraUtils }    from '../../Utils/cesium/CameraUtils.js'
+import { JOURNEYS_STORE } from '../constants'
 import { Journey }        from '../Journey'
-import { JOURNEYS_STORE } from '../LGS1920Context'
 
 export class CameraManager {
     static CLOCKWISE = true
@@ -40,20 +40,20 @@ export class CameraManager {
     }
 
     set settings(settings) {
-        this.target.longitude = settings?.target?.longitude //?? lgs.configuration.starter.longitude
-        this.target.latitude = settings?.target?.latitude //?? lgs.configuration.starter.latitude
-        this.target.height = settings?.target?.height //?? lgs.configuration.starter.height;
+        this.target.longitude = settings?.target?.longitude //?? lgs.settings.getStarter.longitude
+        this.target.latitude = settings?.target?.latitude //?? lgs.settings.getStarter.latitude
+        this.target.height = settings?.target?.height //?? lgs.settings.getStarter.height;
         this.targetInPixels()
 
 
-        this.position.longitude = settings?.position?.longitude ?? lgs.configuration.camera.longitude
-        this.position.latitude = settings?.position?.latitude ?? lgs.configuration.camera.latitude
-        this.position.height = settings?.position?.height ?? lgs.configuration.camera.height
+        this.position.longitude = settings?.position?.longitude ?? lgs.settings.getCamera.longitude
+        this.position.latitude = settings?.position?.latitude ?? lgs.settings.getCamera.latitude
+        this.position.height = settings?.position?.height ?? lgs.settings.getCamera.height
 
-        this.position.heading = settings?.position?.heading ?? lgs.configuration.camera.heading
-        this.position.pitch = settings?.position?.pitch ?? lgs.configuration.camera.pitch
-        this.position.roll = settings?.position?.roll ?? lgs.configuration.camera.roll
-        this.position.range = settings?.position?.range ?? lgs.configuration.camera.range
+        this.position.heading = settings?.position?.heading ?? lgs.settings.getCamera.heading
+        this.position.pitch = settings?.position?.pitch ?? lgs.settings.getCamera.pitch
+        this.position.roll = settings?.position?.roll ?? lgs.settings.getCamera.roll
+        this.position.range = settings?.position?.range ?? lgs.settings.getCamera.range
     }
 
     get settings() {
@@ -159,7 +159,7 @@ export class CameraManager {
         //const hpr = new HeadingPitchRange(M.toRadians(this.position.heading), M.toRadians(this.position.pitch), M.toRadians(this.position.range))
 
         // Set move event
-        lgs.camera.percentageChanged = lgs.configuration.camera.orbitalPercentageChanged
+        lgs.camera.percentageChanged = lgs.settings.getCamera.orbitalPercentageChanged
 
         // Look at target
         CameraUtils.lookAt(lgs.camera, Cartesian3.fromDegrees(target.longitude, target.latitude, target.height))
@@ -176,7 +176,7 @@ export class CameraManager {
                     }
                 }
                 catch (error) {
-                    console.log(error)
+                    console.error(error)
                 }
 
             }),
@@ -199,7 +199,7 @@ export class CameraManager {
         CameraUtils.unlock(lgs.camera)
 
         // Set move event
-        lgs.camera.percentageChanged = lgs.configuration.camera.percentageChanged
+        lgs.camera.percentageChanged = lgs.settings.getCamera.percentageChanged
 
         // Run it
         let lastMouseMoveTime = 0
@@ -267,19 +267,19 @@ export class CameraManager {
     reset = () => {
         this.settings = {
             target: {
-                longitude: lgs.configuration.starter.longitude,
-                latitude:  lgs.configuration.starter.latitude,
-                height:    lgs.configuration.starter.height,
+                longitude: lgs.settings.getStarter.longitude,
+                latitude:  lgs.settings.getStarter.latitude,
+                height:    lgs.settings.getStarter.height,
             },
 
             position: {
                 longitude: undefined,
                 latitude:  undefined,
                 height:    undefined,
-                heading:   lgs.configuration.camera.heading,
-                pitch:     lgs.configuration.camera.pitch,
-                roll:      lgs.configuration.camera.roll,
-                range:     lgs.configuration.camera.range,
+                heading: lgs.settings.getCamera.heading,
+                pitch:   lgs.settings.getCamera.pitch,
+                roll:    lgs.settings.getCamera.roll,
+                range:   lgs.settings.getCamera.range,
             },
         }
     }

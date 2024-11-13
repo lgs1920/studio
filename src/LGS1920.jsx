@@ -1,15 +1,17 @@
-import { MainUI }                                    from '@Components/MainUI/MainUI.jsx'
+import { MainUI }                                                            from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { LGS1920Context }                            from '@Core/LGS1920Context'
-import { TrackUtils }                                from '@Utils/cesium/TrackUtils'
-import * as Cesium                                   from 'cesium'
-import { useEffect }                                 from 'react'
-import { Camera, CameraFlyTo, Globe, Scene, Viewer } from 'resium'
-import { MapLayer }                                  from './components/cesium/MapLayer'
-import { InitErrorMessage }                          from './components/InitErrorMessage'
-import { WelcomeModal }                              from './components/MainUI/WelcomeModal'
-import { CameraManager as CameraManager }            from './core/ui/CameraManager'
-import { UIToast }                                   from './Utils/UIToast'
+import { BASE_LAYERS, OVERLAY_LAYERS }                                       from '@Core/constants'
+import { LGS1920Context }                                                    from '@Core/LGS1920Context'
+import { TrackUtils }                                                        from '@Utils/cesium/TrackUtils'
+import * as Cesium                                                           from 'cesium'
+import { useEffect }                                                         from 'react'
+import { Camera, CameraFlyTo, Globe, ImageryLayerCollection, Scene, Viewer } from 'resium'
+import { MapLayer }                                                          from './components/cesium/MapLayer'
+import { InitErrorMessage }                                                  from './components/InitErrorMessage'
+import { WelcomeModal }                                                      from './components/MainUI/WelcomeModal'
+import { LayerManager }                                                      from './core/layers/LayerManager'
+import { LayersUtils }                                                       from './Utils/cesium/LayersUtils'
+import { UIToast }                                                           from './Utils/UIToast'
 
 /***************************************
  * Init Application context
@@ -19,19 +21,31 @@ window.lgs = new LGS1920Context()
 
 // Application initialisation
 const initApp = await __.app.init()
-const cameraManager = new CameraManager()
 
+// If Init is OK, we have some additional tasks to do.
+
+if (initApp.status) {
+    // Set DefaultTheme
+    __.app.setTheme()
+
+    // Init UI managers
+    lgs.initManagers()
+
+    // Init Layer
+    __.layerManager = new LayerManager()
+
+}
 
 export function LGS1920() {
 
     const coordinates = {
         position: {
-            longitude: lgs.configuration.starter.camera.longitude,
-            latitude:  lgs.configuration.starter.camera.latitude,
-            height:    lgs.configuration.starter.camera.height,
-            heading:   lgs.configuration.starter.camera.heading,
-            pitch:     lgs.configuration.starter.camera.pitch,
-            roll:      lgs.configuration.starter.camera.roll,
+            longitude: lgs.settings.getStarter.camera.longitude,
+            latitude:  lgs.settings.getStarter.camera.latitude,
+            height:    lgs.settings.getStarter.camera.height,
+            heading:   lgs.settings.getStarter.camera.heading,
+            pitch:     lgs.settings.getStarter.camera.pitch,
+            roll:      lgs.settings.getStarter.camera.roll,
         },
     }
 
@@ -55,24 +69,18 @@ export function LGS1920() {
 
     const rotateCamera = async () => {
         if (lgs.journeys.size === 0) {
-            await cameraManager.runOrbital({})
+            await __.ui.cameraManager.runOrbital({})
         }
     }
 
     const raiseCameraUpdateEvent = async () => {
-        await cameraManager.raiseUpdateEvent({})
+        await __.ui.cameraManager.raiseUpdateEvent({})
     }
 
     useEffect(() => {
         try {
             if (initApp.status) {
                 // Init was OK, we have somme additional tasks to do.
-
-                // Set DefaultTheme
-                __.app.setTheme()
-
-                // Init UI managers
-                lgs.initManagers()
 
                 // Set body class to manage css versus platform
                 document.body.classList.add(lgs.platform);
@@ -83,7 +91,7 @@ export function LGS1920() {
 
                     //Ready
                     UIToast.success({
-                                        caption: `Welcome on ${lgs.configuration.applicationName}!`,
+                                        caption: `Welcome on ${lgs.settings.applicationName}!`,
                                         text:    'We\'re ready to assist you !',
                                     })
                     console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
@@ -129,14 +137,15 @@ export function LGS1920() {
                 sceneModePicker={false}
                 showRenderLoopErrors={false}
                 terrain={Cesium.Terrain.fromWorldTerrain({
+
+
+                                                             /* Y6VgRYi3iKQEttoa3G0v */
+                                                             //    terrain={new
+                                                             // Cesium.Terrain(Cesium.CesiumTerrainProvider.fromUrl(`https://api.maptiler.com/tiles/terrain-quantized-mesh-v2/?key=${'qiE5uSYF7NoDFKCbfpfc'}`,
+                                                             // {
                                                              requestVertexNormals: false,
+                                                             //    }))}
                                                          })}
-            /* Y6VgRYi3iKQEttoa3G0v */
-
-            // terrain={new
-            // Cesium.Terrain(Cesium.CesiumTerrainProvider.fromUrl(`https://api.maptiler.com/tiles/terrain-quantized-mesh-v2/?key=${'qiE5uSYF7NoDFKCbfpfc'}`,
-            // { requestVertexNormals: false, }))}
-
                 id="studioMapViewer"
 
             /***********************/
@@ -145,10 +154,17 @@ export function LGS1920() {
                 imageryProvider={false}
                 baseLayerPicker={false}
         >
-            <MapLayer/>
+
+            <ImageryLayerCollection onLayerAdd={LayersUtils.layerOrder}>
+                <MapLayer type={BASE_LAYERS}/>
+                <MapLayer type={OVERLAY_LAYERS}/>
+            </ImageryLayerCollection>
 
             <Scene verticalExaggeration={1.3}></Scene>
-            <Globe enableLighting={false} depthTestAgainstTerrain={true}></Globe>
+            <Globe enableLighting={false}
+                   depthTestAgainstTerrain={true}
+                   baseColor={Cesium.Color.GAINSBORO}>
+            </Globe>
             <Camera onChange={raiseCameraUpdateEvent}>
                 <CameraFlyTo
                     orientation={cameraOrientation()}

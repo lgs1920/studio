@@ -44,7 +44,7 @@ export class ChangelogManager {
                 return response.data.content
             })
             .catch(function (error) {
-                console.log(error)
+                console.error(error)
                 return ''
             })
     }

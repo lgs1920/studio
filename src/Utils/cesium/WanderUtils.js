@@ -1,4 +1,3 @@
-import { DateTime } from 'luxon'
 import { Track }    from '../../core/Track'
 import { Wanderer } from '../../core/ui/Wanderer.js'
 
@@ -19,7 +18,7 @@ export class WanderUtils {
 
                      }],
                      [Wanderer.PAUSE_TICK_EVENT, (args) => {
-                         const [serie,index,point] =args
+                         const [serie, index] = args
                          __.ui.profiler.updateChartMarker(serie,index)
 
                      }],

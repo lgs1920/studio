@@ -14,7 +14,7 @@ import parse                                     from 'html-react-parser'
  */
 export const InitErrorMessage = (props) => {
     return (
-        <SlDialog label={`${lgs.configuration.applicationName}  stopped!`}
+        <SlDialog label={`${lgs.settings.applicationName}  stopped!`}
                   open={true}
                   id={'init-error-modal'}
                   className={'lgs-theme'}

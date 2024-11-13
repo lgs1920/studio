@@ -1,7 +1,6 @@
 import { default as html2canvas } from 'html2canvas'
 import { jsPDF }                  from 'jspdf'
 import { DateTime }               from 'luxon'
-import { CHART_ELEVATION_VS_DISTANCE } from './Profiler'
 // dummy...
 let dummy = jsPDF
 dummy = html2canvas
@@ -107,7 +106,9 @@ export class Export {
             c.select()
             try {
                 document.execCommand('copy')
-            } catch (e) {
+            }
+            catch (error) {
+                console.error(error)
                 result = false
             } finally {
                 document.body.removeChild(c)
@@ -115,7 +116,9 @@ export class Export {
         } else {
             try {
                 await navigator.clipboard.writeText(text)
-            } catch (e) {
+            }
+            catch (error) {
+                console.error(error)
                 result = false
             }
         }

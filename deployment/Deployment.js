@@ -85,10 +85,12 @@ export class Deployment {
     getVersion = async () => {
         switch (this.product) {
             case 'studio': {
+                // eslint-disable-next-line no-undef
                 const file = Bun.file('./public/version.json')
                 return (await file.json()).studio
             }
             case 'backend': {
+                // eslint-disable-next-line no-undef
                 const file = Bun.file('./version.json')
                 return (await file.json()).backend
             }
@@ -236,7 +238,7 @@ export class Deployment {
                 resolve()
             }
             catch (error) {
-                console.error(err)
+                console.error(error)
                 reject(`${this.red}Zip failed: ${error.message}${this.reset}`)
             }
         })

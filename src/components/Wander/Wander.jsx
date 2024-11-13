@@ -1,12 +1,19 @@
-import { faPause, faPlay,faArrowRotateLeft, faArrowRotateRight,faArrowsRepeat } from '@fortawesome/pro-regular-svg-icons'
-import {  faStop }                                            from '@fortawesome/pro-solid-svg-icons'
-import {faRegularArrowsRepeatSlash}              from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import { SlButton, SlIcon, SlOption, SlSelect, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                           from '@Utils/FA2SL'
-import { useSnapshot }         from 'valtio'
-import { Wanderer }            from '../../core/ui/Wanderer.js'
-import { WanderUtils }         from '../../Utils/cesium/WanderUtils.js'
-import { MarkerStyleSettings } from './MarkerStyleSettings'
+import { faRegularArrowsRepeatSlash } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import {
+    faArrowRotateLeft, faArrowRotateRight, faArrowsRepeat, faPause, faPlay,
+}                                     from '@fortawesome/pro-regular-svg-icons'
+import {
+    faStop,
+}                                     from '@fortawesome/pro-solid-svg-icons'
+import {
+    SlButton, SlIcon, SlOption, SlSelect, SlTooltip,
+}                                     from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                      from '@Utils/FA2SL'
+import { useSnapshot }                from 'valtio'
+import { Wanderer }                   from '../../core/ui/Wanderer.js'
+import {
+    WanderUtils,
+}                                     from '../../Utils/cesium/WanderUtils.js'
 
 export const Wander = (props) => {
 
@@ -97,7 +104,7 @@ export const Wander = (props) => {
             </SlButton>
         </SlTooltip>
 
-    <SlSelect hoist
+        <SlSelect
                   onSlChange={changeDuration}
                   value={wanderSnapshot.duration}
                   size={'medium'}

@@ -1,5 +1,5 @@
 import { ToggleStateIcon } from '@Components/ToggleStateIcon'
-import { JUST_SAVE }       from '@Core/LGS1920Context'
+import { JUST_SAVE }       from '@Core/constants'
 import {
     faRectangleList,
 }                          from '@fortawesome/pro-regular-svg-icons'
@@ -12,13 +12,13 @@ import {
 
 import { TrackUtils }         from '@Utils/cesium/TrackUtils'
 import { FA2SL }              from '@Utils/FA2SL'
+import parse                  from 'html-react-parser'
 import { useSnapshot }        from 'valtio'
 import { Utils }              from '../Utils'
 import { TrackData }          from './TrackData'
 import { TrackFlagsSettings } from './TrackFlagsSettings'
 import { TrackPoints }        from './TrackPoints'
 import { TrackStyleSettings } from './TrackStyleSettings'
-import parse from 'html-react-parser'
 
 
 export const TrackSettings = function TrackSettings() {

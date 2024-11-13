@@ -1,0 +1,13 @@
+{
+  "name": "IGN25",
+  "id": "ign-25",
+  "image": "ign-25.png",
+  "usage": "free",
+  "url": "https://data.geopf.fr/wmts",
+  "layer": "GEOGRAPHICALGRIDSYSTEMS.MAPS",
+  "style": "normal",
+  "format": "image/png",
+  "tileMatrixSetID": "PM",
+  "doc": " https://data.geopf.fr/private/wmts",
+  "type": "base"
+}

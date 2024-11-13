@@ -1,10 +1,10 @@
 import { ToggleStateIcon }                   from '@Components/ToggleStateIcon'
-import { JUST_SAVE }                         from '@Core/LGS1920Context'
+import { JUST_SAVE }                         from '@Core/constants'
 import { faLocationPin, faLocationPinSlash } from '@fortawesome/pro-solid-svg-icons'
 import { SlTooltip }                         from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                        from '@Utils/cesium/TrackUtils'
-import { useSnapshot } from 'valtio'
-import { Utils }       from '../Utils'
+import { useSnapshot }                       from 'valtio'
+import { Utils }                             from '../Utils'
 
 export const TrackFlagsSettings = function TrackSettings() {
 
@@ -53,7 +53,7 @@ export const TrackFlagsSettings = function TrackSettings() {
                                  icons={{
                                      shown: faLocationPin, hidden: faLocationPinSlash,
                                  }}
-                                 style={{color: lgs.configuration.journey.pois.start.color}}
+                                 style={{color: lgs.settings.getJourney.pois.start.color}}
                                  initial={editorSnapshot?.track.flags.start.visible}/>
             </SlTooltip>
             <SlTooltip hoist content={textVisibilityStopFlag}>
@@ -62,7 +62,7 @@ export const TrackFlagsSettings = function TrackSettings() {
                                  icons={{
                                      shown: faLocationPin, hidden: faLocationPinSlash,
                                  }}
-                                 style={{color: lgs.configuration.journey.pois.stop.color}}
+                                 style={{color: lgs.settings.getJourney.pois.stop.color}}
                                  initial={editorSnapshot?.track.flags.stop.visible}/>
             </SlTooltip>
         </>

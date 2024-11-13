@@ -33,7 +33,7 @@ export const TextValueUI = forwardRef(function TextValueUI(props, ref) {
     }
 
     if (unitsList.includes(units[0])) {
-        toShow = __.convert(toShow).to(units[lgs.configuration.unitsSystem])
+        toShow = __.convert(toShow).to(units[lgs.settings.getUnitSystem.current])
     }
 
     if (toShow && props.callback) {
@@ -49,8 +49,8 @@ export const TextValueUI = forwardRef(function TextValueUI(props, ref) {
             {props.text && <span className="lgs-tv-text">{props.text}</span>}
             <span>
             {toShow && <span className="lgs-tv-value">{toShow}</span>}
-                {units[lgs.configuration.unitsSystem !== INTERNATIONAL] !== '' &&
-                    <span className="lgs-tv-unit">{units[lgs.configuration.unitsSystem]}</span>}
+                {units[lgs.settings?.getUnitSystem.current !== INTERNATIONAL] !== '' &&
+                    <span className="lgs-tv-unit">{units[lgs.settings?.getUnitSystem.current]}</span>}
         </span>
         </div>
     )

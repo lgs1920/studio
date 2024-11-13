@@ -1,14 +1,14 @@
-import { SlDrawer }        from '@shoelace-style/shoelace/dist/react'
+import { SlDrawer }              from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { forwardRef }      from 'react'
-import { useSnapshot }     from 'valtio'
-import { CHART_ELEVATION_VS_DISTANCE } from '../../core/ui/Profiler'
-import { Toolbar }         from '../MainUI/Toolbar'
-import { JourneySelector } from './journey/JourneySelector'
-import { JourneySettings } from './journey/JourneySettings'
-import { TrackSelector }   from './track/TrackSelector'
-import { TrackSettings }   from './track/TrackSettings'
-import { Utils }           from './Utils'
+import { forwardRef }            from 'react'
+import { useSnapshot }           from 'valtio'
+import { JOURNEY_EDITOR_DRAWER } from '../../core/constants'
+import { Toolbar }               from '../MainUI/Toolbar'
+import { JourneySelector }       from './journey/JourneySelector'
+import { JourneySettings }       from './journey/JourneySettings'
+import { TrackSelector }         from './track/TrackSelector'
+import { TrackSettings }         from './track/TrackSettings'
+import { Utils }                 from './Utils'
 
 //read version
 
@@ -28,6 +28,9 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
         if (event.detail.source === 'overlay') {
             event.preventDefault()
         }
+        else {
+            __.ui.drawerManager.close()
+        }
     }
     /**
      * Close tracks editor pane
@@ -36,17 +39,18 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
      */
     const closeTracksEditor = (event) => {
         if (window.isOK(event)) {
-            lgs.journeyEditorStore.show = false
             window.dispatchEvent(new Event('resize'))
-
+            if (__.ui.drawerManager.isCurrent(JOURNEY_EDITOR_DRAWER)) {
+                __.ui.drawerManager.close()
+            }
         }
     }
 
     return (<>
-        <div id="journeys-editor-container" key={mainSnap.components.journeyEditor.key}>
+        <div key={mainSnap.components.journeyEditor.key} className={'drawer-wrapper'}>
             {mainSnap.canViewJourneyData &&
-                <SlDrawer id="journeys-editor-pane"
-                          open={mainSnap.components.journeyEditor.show}
+                <SlDrawer id={JOURNEY_EDITOR_DRAWER}
+                          open={mainSnap.drawers.open === JOURNEY_EDITOR_DRAWER}
                           onSlRequestClose={handleRequestClose}
                           contained
                           onSlAfterHide={closeTracksEditor}
@@ -73,7 +77,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                             <TrackSettings/>
                         </>}
                     </div>}
-                    <div id="journeys-editor-footer" slot={'footer'}></div>
+                    <div id="journey-editor-footer" slot={'footer'}></div>
                 </SlDrawer>}
         </div>
     </>)

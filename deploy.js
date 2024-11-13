@@ -18,12 +18,9 @@
  *                                                                                                                    *
  **********************************************************************************************************************/
 
-import argparse     from 'argparse'
-import path         from 'path'
-import {Deployment} from './deployment/Deployment.js'
-
-const fs = require('fs')
-const yaml = require('yaml')
+import argparse       from 'argparse'
+import path           from 'path'
+import { Deployment } from './deployment/Deployment.js'
 
 const platforms = {production: 'production', staging: 'staging', test: 'test'}
 
@@ -54,7 +51,9 @@ parser.add_argument('--test', '-t', {
 const args = parser.parse_args()
 new Deployment(
     {
+        // eslint-disable-next-line no-undef
         local:   path.dirname(process.cwd()),
         platform:args.prod ? platforms.production : args.staging ? platforms.staging : platforms.test,
+        // eslint-disable-next-line no-undef
         product:path.basename(process.cwd())
     })

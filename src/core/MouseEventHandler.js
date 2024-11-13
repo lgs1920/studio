@@ -56,7 +56,7 @@ export class MouseEventHandler {
         return this.eventManagers.get(eventManager)
     }
 
-    #addEventManager = (eventManager, name, context) => {
+    #addEventManager = (eventManager, name) => {
         let manager = this.getSubscriptionsTo(eventManager)
         if (!manager) {
             this.eventManagers.set(eventManager, [])
