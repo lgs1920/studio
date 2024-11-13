@@ -6,7 +6,7 @@ import { ChangelogManager }                                 from '@Core/ui/Chang
 import axios                                                from 'axios'
 import * as Cesium                                          from 'cesium'
 import YAML                                                 from 'yaml'
-import { EventEmitter }                                    from '../assets/libs/EventEmitter/EventEmitter'
+import { EventEmitter }                                     from '../assets/libs/EventEmitter/EventEmitter'
 import { SETTINGS, SETTINGS_STORE }                         from '../core/constants'
 import { FA2SL }                                            from './FA2SL'
 
@@ -82,7 +82,7 @@ export class AppUtils {
 
     static setTheme = (theme = null) => {
         if (!theme) {
-            theme = lgs.configuration.theme
+            theme = lgs.settings.theme
         }
         document.documentElement.classList.add(`sl-theme-${theme}`)
     }
@@ -98,7 +98,7 @@ export class AppUtils {
     }
 
     /**
-     * CamelCase a string ( aaa-bbb => aaaBbb)
+     * CamelCase a string ( aaa-bbb => aaaBbb, aaa-bbbCcc => aaaBbbCcc)
      *
      * @param string {string}
      * @return {string}
@@ -107,7 +107,12 @@ export class AppUtils {
         return string
             .split('-')
             .map((s, index) => {
-                return ((index === 0 ? s[0].toLowerCase() : s[0].toUpperCase()) + s.slice(1).toLowerCase())
+                if (index === 0) {
+                    return s[0].toLowerCase() + s.slice(1)
+                }
+                else {
+                    return s[0].toUpperCase() + s.slice(1)
+                }
             })
             .join('')
     }
@@ -228,7 +233,7 @@ export class AppUtils {
             const info = __.app.isDevelopment() ? `'<br/>Try "bun run dev" to restart the application!` : ''
             return {
                 status: false,
-                error:  new Error(`${lgs.configuration.applicationName} Backend server seems to be unreachable!${info}`),
+                error: new Error(`${lgs.settings.applicationName} Backend server seems to be unreachable!${info}`),
             }
         }
 

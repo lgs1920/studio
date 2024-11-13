@@ -1,29 +1,29 @@
 import { JOURNEYS_STORE, ORIGIN_STORE } from '@Core/constants'
 import {
     gpx, kml,
-}                                        from '@tmcw/togeojson'
+}                                       from '@tmcw/togeojson'
 import {
     getGeom,
-}                                        from '@turf/invariant'
+}                                       from '@turf/invariant'
 import {
     JUST_ICON,
-}                                        from '@Utils/cesium/POIUtils'
+}                                       from '@Utils/cesium/POIUtils'
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                                        from '@Utils/cesium/TrackUtils'
+}                                       from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
-}                                        from '@Utils/UIToast'
+}                                       from '@Utils/UIToast'
 import {
     FLAG_START, FLAG_STOP, POI_FLAG, POI_MARKER, POI_STD,
-}                                        from '../Utils/cesium/POIUtils'
+}                                       from '../Utils/cesium/POIUtils'
 import {
     ElevationServer,
-}                                        from './Elevation/ElevationServer'
+}                                       from './Elevation/ElevationServer'
 import {
     MapElement,
-}                                        from './MapElement'
-import { POI, POI_VERTICAL_ALIGN_TOP }   from './POI'
+}                                       from './MapElement'
+import { POI, POI_VERTICAL_ALIGN_TOP }  from './POI'
 
 import { ProfileTrackMarker } from './ProfileTrackMarker'
 import { Track }              from './Track'
@@ -270,7 +270,7 @@ export class Journey extends MapElement {
                         segments: geometry.coordinates.length,
                         visible: keepContext?track.visible:true,
                         color :  keepContext?track.color: __.ui.editor.journey.newColor(),
-                        thickness :  keepContext?track.thickness: lgs.configuration.journey.thickness,
+                        thickness: keepContext ? track.thickness : lgs.settings.getJourney.thickness,
                         flags: keepContext?track.flags: {start: undefined, stop: undefined},
                         content: feature,
                         marker:keepContext?track.marker:null
@@ -366,7 +366,7 @@ export class Journey extends MapElement {
                             time: feature.properties?.time ?? undefined,
                             type: JUST_ICON,
                             icon: feature.properties?.sym ?? feature.properties?.type,
-                            foregroundColor: lgs.configuration.journey.pois.color,
+                            foregroundColor: lgs.settings.getJourney.pois.color,
                         }
                         this.pois.set(parameters.slug, new POI({...common, ...parameters}))
                         break
@@ -397,7 +397,7 @@ export class Journey extends MapElement {
                             type: JUST_ICON,
                             icon: FLAG_START,
                             verticalOrigin: POI_VERTICAL_ALIGN_TOP,
-                            foregroundColor: lgs.configuration.journey.pois.start.color,
+                            foregroundColor: lgs.settings.getJourney.pois.start.color,
                         }
                         const startFlag = new POI({...common, ...startParameters})
                         this.tracks.get(parentSlug).flags.start = startFlag
@@ -425,7 +425,7 @@ export class Journey extends MapElement {
                             type: JUST_ICON,
                             icon: FLAG_STOP,
                             verticalOrigin: POI_VERTICAL_ALIGN_TOP,
-                            foregroundColor: lgs.configuration.journey.pois.stop.color,
+                            foregroundColor: lgs.settings.getJourney.pois.stop.color,
                         }
                         const stopFlag = new POI({...common, ...stopParameters})
                         this.tracks.get(parentSlug).flags.stop = stopFlag

@@ -23,9 +23,9 @@ export const CameraTarget = () => {
     return (
         <div id="camera-target" ref={box} style={
             {
-                width:  lgs.configuration.ui.cameraTargetIcon.size,
-                height: lgs.configuration.ui.cameraTargetIcon.size,
-                color:  lgs.configuration.ui.cameraTargetIcon.color,
+                width:  lgs.settings.getUi.cameraTargetIcon.size,
+                height: lgs.settings.getUi.cameraTargetIcon.size,
+                color:  lgs.settings.getUi.cameraTargetIcon.color,
             }}>
             <SlIcon library="fa" name={FA2SL.set(faArrowsToCircle)}></SlIcon>
         </div>

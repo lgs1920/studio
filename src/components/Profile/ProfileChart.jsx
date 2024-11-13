@@ -1,10 +1,10 @@
 import './style.css'
-import * as echarts from 'echarts/core';
 
 import ReactECharts                                         from 'echarts-for-react'
+import * as echarts                                         from 'echarts/core'
 import { useEffect, useRef }                                from 'react'
-import { useSnapshot }                                                             from 'valtio'
-import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION, ELEVATION_VS_DISTANCE } from '../../core/ui/Profiler'
+import { useSnapshot }                                      from 'valtio'
+import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION } from '../../core/ui/Profiler'
 
 /**
  *
@@ -50,20 +50,20 @@ export const ProfileChart = (props) => {
                 y: ELEVATION,
             },
             showSymbol: false,
-            symbolSize: lgs.configuration.profile.marker.chart.size         // we need it fo tooltip
-                            + lgs.configuration.profile.marker.chart.border.width,
+            symbolSize: lgs.settings.getProfile.marker.chart.size         // we need it fo tooltip
+                            + lgs.settings.getProfile.marker.chart.border.width,
 
             emphasis:  {disabled: true},
             itemStyle: {
                 color:       rgbColor,
-                borderColor: lgs.configuration.profile.marker.chart.border.color,
-                borderWidth: lgs.configuration.profile.marker.chart.border.width,
+                borderColor: lgs.settings.getProfile.marker.chart.border.color,
+                borderWidth: lgs.settings.getProfile.marker.chart.border.width,
                 opacity:     1,
             },
 
             lineStyle: {
                 color:   rgbColor,
-                width:   lgs.configuration.profile.line.width,
+                width: lgs.settings.getProfile.line.width,
                 opacity: 1,
             },
 

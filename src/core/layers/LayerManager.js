@@ -31,12 +31,12 @@ export class LayerManager {
             return LayerManager.instance
         }
 
-        this.#layer = lgs.configuration.layers.base
-        this.#overlay = lgs.configuration.layers.overlay
+        this.#layer = lgs.settings.getLayers.base
+        this.#overlay = lgs.settings.getLayers.overlay
         this.#provider = this.#layer.split('-')[0]
 
         // Let's transform layers and provider in order to be more efficient in code
-        lgs.configuration.layers.providers.forEach(provider => {
+        lgs.settings.layers.providers.forEach(provider => {
             provider.layers.forEach(layer => {
                 layer.provider = provider.id
                 this.#layers.set(layer.id, layer)

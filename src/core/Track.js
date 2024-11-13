@@ -36,7 +36,7 @@ export class Track extends MapElement {
         this.slug = options.slug
 
         this.color = options.color ??__.ui.editor.journey.newColor()
-        this.thickness = options.thickness ?? lgs.configuration.journey.thickness
+        this.thickness = options.thickness ?? lgs.settings.getJourney.thickness
         this.visible = options.visible ?? true
         this.description = options.description ?? undefined
 
@@ -163,8 +163,8 @@ export class Track extends MapElement {
                         pointData.speed = Mobility.speed(pointData.distance, pointData.duration)
                         pointData.pace = Mobility.pace(pointData.distance, pointData.duration)
                         pointData.activity =
-                            pointData.speed > lgs.configuration.metrics.stopSpeedLimit ||
-                            pointData.duration > lgs.configuration.metrics.stopDuration
+                            pointData.speed > lgs.settings.getMetrics.stopSpeedLimit ||
+                            pointData.duration > lgs.settings.getMetrics.stopDuration
                     }
                     if (this.hasAltitude) {
                         pointData.elevation = Mobility.elevation(prev, current)
@@ -254,7 +254,7 @@ export class Track extends MapElement {
             global.flat = {elevation: 0, distance: 0, duration: 0, pace: 0, speed: 0, points: 0}
 
             featureMetrics.forEach((point) => {
-                if (point.slope > lgs.configuration.metrics.minSlope) {
+                if (point.slope > lgs.settings.getMetrics.minSlope) {
                     // We sum all data when we get a positive slope
                     global.positive.elevation += point.elevation
                     global.positive.distance += point.distance
@@ -262,7 +262,8 @@ export class Track extends MapElement {
                     global.positive.speed += point.speed
                     global.positive.pace += point.pace
                     global.positive.points++
-                } else if (point.slope < -lgs.configuration.metrics.minSlope) {
+                }
+                else if (point.slope < -lgs.settings.getMetrics.minSlope) {
                     // We sum all data when we get a negative slope
                     global.negative.elevation += point.elevation
                     global.negative.distance += point.distance

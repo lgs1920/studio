@@ -594,7 +594,7 @@ export class TrackUtils {
      */
     static setProfileVisibility(journey) {
         lgs.mainProxy.canViewProfile =
-            lgs.configuration.profile.show &&              // By configuration
+            lgs.settings.getProfile.show &&              // By configuration
             journey !== undefined &&                        // During init
             journey !== null &&                             // same
             journey.visible &&                              // Journey visible

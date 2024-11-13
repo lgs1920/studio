@@ -335,9 +335,9 @@ layers:
 # Unit system
 ########################################
 unitSystem:
-  international: 1  # Metrics
-  imperial: 2       # UK,US
-  current: 1
+  international: 0  # Metrics
+  imperial: 1       # UK,US
+  current: 0
 
 ########################################
 # UI : general

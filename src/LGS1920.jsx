@@ -40,12 +40,12 @@ export function LGS1920() {
 
     const coordinates = {
         position: {
-            longitude: lgs.configuration.starter.camera.longitude,
-            latitude:  lgs.configuration.starter.camera.latitude,
-            height:    lgs.configuration.starter.camera.height,
-            heading:   lgs.configuration.starter.camera.heading,
-            pitch:     lgs.configuration.starter.camera.pitch,
-            roll:      lgs.configuration.starter.camera.roll,
+            longitude: lgs.settings.getStarter.camera.longitude,
+            latitude:  lgs.settings.getStarter.camera.latitude,
+            height:    lgs.settings.getStarter.camera.height,
+            heading:   lgs.settings.getStarter.camera.heading,
+            pitch:     lgs.settings.getStarter.camera.pitch,
+            roll:      lgs.settings.getStarter.camera.roll,
         },
     }
 
@@ -91,7 +91,7 @@ export function LGS1920() {
 
                     //Ready
                     UIToast.success({
-                                        caption: `Welcome on ${lgs.configuration.applicationName}!`,
+                                        caption: `Welcome on ${lgs.settings.applicationName}!`,
                                         text:    'We\'re ready to assist you !',
                                     })
                     console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)

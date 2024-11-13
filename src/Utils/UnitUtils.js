@@ -2,8 +2,8 @@ import { Duration }                  from 'luxon'
 import { DAY, HOUR, MILLIS, MINUTE } from '../core/constants'
 
 //check configuration.unitSystems for the values
-export const INTERNATIONAL = 1
-export const IMPERIAL = 2
+export const INTERNATIONAL = 0
+export const IMPERIAL = 1
 
 export class UnitUtils {
     /**
