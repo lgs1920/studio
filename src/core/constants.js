@@ -72,7 +72,7 @@ export const COLOR_SWATCHES_RANDOM = 'random'
 // List of settings exclusions (ie we keep the user choice)
 // This array is then sorted alphabetically by object depth.
 export const SETTING_EXCLUSIONS = [
-    'layers.base', 'layers.terrain', 'layers.overlay', 'app',
+    'layers.base', 'layers.terrain', 'layers.overlay', 'app', 'layers.filter',
 ].sort((a, b) => {
     const segmentsA = a.split('.')
     const segmentsB = b.split('.')
