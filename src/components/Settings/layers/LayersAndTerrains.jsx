@@ -94,7 +94,16 @@ export const LayersAndTerrains = () => {
                     <SlTab slot="nav" panel="tab-bases">{'Bases'}</SlTab>
                     <SlTab slot="nav" panel="tab-overlays">{'Overlays'}</SlTab>
                     <SlTab slot="nav" panel="tab-terrains">{'Terrains'}</SlTab>
+                    <div slot="nav" id={'layers-and-terrains-filter'}>
+                        <SlTooltip hoist content={snap.openFilter ? 'Hide Filters' : 'Show Filters'}>
+                            <SlIconButton library="fa"
+                                          name={FA2SL.set(snap.openFilter ? faFilterSlash : faFilter)}
+                                          onClick={handleFilter}
+                                          className={layersSnap.filter.active ? 'layer-filter-active' : 'layer-filter-inactive'}/>
+                        </SlTooltip>
+                    </div>
                     <FilterEntities/>
+
                     <SlTabPanel name="tab-bases">
 
                         {snap.layer.refreshList &&
@@ -123,14 +132,7 @@ export const LayersAndTerrains = () => {
                     </SlTabPanel>
                 </SlTabGroup>
                 {editor.layer.refreshList = false}
-                <div id={'layers-and-terrains-filter'}>
-                    <SlTooltip content={snap.openFilter ? 'Hide Filters' : 'Show Filters'}>
-                        <SlIconButton library="fa"
-                                      name={FA2SL.set(snap.openFilter ? faFilterSlash : faFilter)}
-                                      onClick={handleFilter}
-                                      className={layersSnap.filter.active ? 'layer-filter-active' : 'layer-filter-inactive'}/>
-                    </SlTooltip>
-                </div>
+
                 <TokenLayerModal/>
             </div>
         </>
