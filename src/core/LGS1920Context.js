@@ -72,8 +72,6 @@ export class LGS1920Context {
             convert: UnitUtils.convert,
         };
 
-        (async (o) => await o.initializeConfig())(this)
-
     }
 
     createDB = () => {
