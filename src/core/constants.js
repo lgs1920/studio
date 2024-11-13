@@ -23,7 +23,9 @@ export const WRONG = -99999999999
  *
  * @type {string}
  */
-export const CONFIGURATION = 'config.json'
+export const CONFIGURATION = 'config.yaml'
+export const SETTINGS = 'settings.yaml'
+
 /**
  * Servers identification
  *
@@ -67,34 +69,6 @@ export const COLOR_SWATCHES_NONE = 'none'
 export const COLOR_SWATCHES_SEQUENCE = 'sequence'
 export const COLOR_SWATCHES_RANDOM = 'random'
 
-/**
- * Settings sections
- */
-export const APP_SETTING_SECTION = 'app'
-export const STARTER_SETTING_SECTION = 'starter'
-export const CAMERA_SETTING_SECTION = 'camera'
-export const PROFILE_SETTING_SECTION = 'profile'
-export const TRACK_SETTING_SECTION = 'journey'
-export const SWATCHES_SETTING_SECTION = 'swatches'
-export const UNITS_SETTING_SECTION = 'unitSystem'
-export const LAYERS_SETTING_SECTION = 'layers'
-export const TERRAINS_SETTING_SECTION = 'terrains'
-export const UI_SETTING_SECTION = 'ui'
-export const THEME_SETTING_SECTION = 'theme'
-export const METRICS_SETTING_SECTION = 'metrics'
-export const SETTING_SECTIONS = [
-    APP_SETTING_SECTION,
-    STARTER_SETTING_SECTION,
-    CAMERA_SETTING_SECTION,
-    PROFILE_SETTING_SECTION,
-    TRACK_SETTING_SECTION,
-    SWATCHES_SETTING_SECTION,
-    UNITS_SETTING_SECTION,
-    LAYERS_SETTING_SECTION,
-    METRICS_SETTING_SECTION,
-    UI_SETTING_SECTION,
-    THEME_SETTING_SECTION,
-]
 // List of settings exclusions (ie we keep the user choice)
 // This array is then sorted alphabetically by object depth.
 export const SETTING_EXCLUSIONS = [

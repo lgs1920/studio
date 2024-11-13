@@ -1,16 +1,14 @@
-import { BUILD, CONFIGURATION, MILLIS, platforms, SERVERS, SETTING_SECTIONS } from '@Core/constants'
-import { ElevationServer }                                                    from '@Core/Elevation/ElevationServer'
-import { Settings }                                                           from '@Core/settings/Settings'
-import { SettingsSection }                                                    from '@Core/settings/SettingsSection'
-import { ChangelogManager }                                                   from '@Core/ui/ChangelogManager'
-import axios                                                                  from 'axios'
-import * as Cesium                                                            from 'cesium'
-import {
-    EventEmitter,
-}                                                                             from '../assets/libs/EventEmitter/EventEmitter'
-import { SETTINGS_STORE }                                                     from '../core/constants'
-import { FA2SL }                                                              from './FA2SL'
-
+import { BUILD, CONFIGURATION, MILLIS, platforms, SERVERS } from '@Core/constants'
+import { ElevationServer }                                  from '@Core/Elevation/ElevationServer'
+import { Settings }                                         from '@Core/settings/Settings'
+import { SettingsSection }                                  from '@Core/settings/SettingsSection'
+import { ChangelogManager }                                 from '@Core/ui/ChangelogManager'
+import axios                                                from 'axios'
+import * as Cesium                                          from 'cesium'
+import YAML                                                 from 'yaml'
+import { EventEmitter }                                    from '../assets/libs/EventEmitter/EventEmitter'
+import { SETTINGS, SETTINGS_STORE }                         from '../core/constants'
+import { FA2SL }                                            from './FA2SL'
 
 export class AppUtils {
     /**
@@ -120,11 +118,22 @@ export class AppUtils {
      * @return {Promise<void>}
      */
     static init = async () => {
-        // Set Context
-        lgs.configuration = await fetch(CONFIGURATION, {cache: 'no-store'}).then(
-            res => res.json(),
-        )
-        lgs.savedConfiguration = lgs.configuration
+        // Read App configuration
+        const appConfig = await fetch(CONFIGURATION, {cache: 'no-store'})
+            .then(res => res.text())
+            .then(text => YAML.parse(text),
+            )
+        // Read Settings
+        const settings = await fetch(SETTINGS, {cache: 'no-store'})
+            .then(res => res.text())
+            .then(text => YAML.parse(text),
+            )
+
+        // Get the setting sections ID
+        lgs.settingSections = Object.keys(settings)
+
+        lgs.configuration = {...appConfig, ...settings}
+        lgs.savedConfiguration = {...appConfig, ...settings}
 
         lgs.servers = await fetch(SERVERS, {cache: 'no-store'}).then(
             res => res.json(),
@@ -138,7 +147,7 @@ export class AppUtils {
 
         lgs.createDB()
 
-        lgs.setDefaultConfiguration()
+        lgs.setDefaultPOIConfiguration()
 
         // Register Font Awesome icons in ShoeLace
         FA2SL.useFontAwesomeInShoelace('fa')
@@ -155,25 +164,24 @@ export class AppUtils {
         lgs.settings = new Settings()
 
         // Add settings sections
-        const promises = SETTING_SECTIONS.map(async (sectionID) => {
-            const section = new SettingsSection(sectionID)
+        const promises = lgs.settingSections.map(async (key) => {
+            const section = new SettingsSection(key)
             await section.init()
             await lgs.settings.add(section)
         })
         await Promise.all(promises)
 
-        // Removed useless sections in DB
+        // Removed useless sections in DB  //TODO do not read and check if nothing changed
         const DBSections = await lgs.db.settings.keys(SETTINGS_STORE)
-        const removedSections = DBSections.filter(element => !SETTING_SECTIONS.includes(element))
-        removedSections.forEach(async (key) => {
-            lgs.db.settings.delete(key, SETTINGS_STORE)
-        })
+        const removedSections = DBSections.filter(element => !lgs.settingSections.includes(element))
+        for (const key of removedSections) {
+            await lgs.db.settings.delete(key, SETTINGS_STORE)
+        }
 
         // Ping server
         const server = await __.app.pingBackend()
 
         if (server.alive) {
-
             try {
                 // Versions
                 try {
