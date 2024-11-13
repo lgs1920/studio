@@ -14,7 +14,6 @@ import { TokenLayerModal } from './TokenLayerModal'
 
 export const LayersAndTerrains = () => {
     const editor = lgs.editorSettingsProxy
-
     const snap = useSnapshot(editor)
 
     const layers = lgs.settings.layers
@@ -93,7 +92,7 @@ export const LayersAndTerrains = () => {
                 <SlTabGroup>
                     <SlTab slot="nav" panel="tab-bases">{'Bases'}</SlTab>
                     <SlTab slot="nav" panel="tab-overlays">{'Overlays'}</SlTab>
-                    <SlTab slot="nav" panel="tab-terrains">{'Terrains'}</SlTab>
+                    {/* <SlTab slot="nav" panel="tab-terrains">{'Terrains'}</SlTab> */}
                     <div slot="nav" id={'layers-and-terrains-filter'}>
                         <SlTooltip hoist content={snap.openFilter ? 'Hide Filters' : 'Show Filters'}>
                             <SlIconButton library="fa"
