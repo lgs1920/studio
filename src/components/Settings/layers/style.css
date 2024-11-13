@@ -6,6 +6,9 @@
     position: relative;
 }
 
+#layers-and-terrains-settings sl-tab-panel::part(base) {
+    padding-top: var(--lgs-gutter-s);
+}
 .layer-entities-wrapper {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -202,13 +205,12 @@
     justify-content: space-between;
     align-items: center;
     gap: var(--lgs-gutter-s);
-    margin-bottom: var(--lgs-gutter-s);
+    margin-top: var(--lgs-gutter-s);
 }
 
-#filter-entities sl-input {
+#filter-by-name {
     width: 8rem;
 }
-
 .layer-filter-active {
     color: var(--lgs-success-color)
 }
