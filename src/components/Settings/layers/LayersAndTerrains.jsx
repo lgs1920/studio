@@ -1,19 +1,20 @@
 import { ALL, BASE_LAYERS, FREE_ANONYMOUS_ACCESS, OVERLAY_LAYERS, TERRAIN_LAYERS, UNLOCKED } from '@Core/constants'
 import {
     faFilter, faFilterSlash,
-}                                                                                             from '@fortawesome/pro-regular-svg-icons'
+}                                                                                            from '@fortawesome/pro-regular-svg-icons'
 
 import { SlIconButton, SlTab, SlTabGroup, SlTabPanel, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import React                                                       from 'react'
-import { useSnapshot }                                             from 'valtio'
+import React                                                      from 'react'
+import { useSnapshot }                                            from 'valtio'
 import { FA2SL }                                                  from '../../../Utils/FA2SL'
 
-import { FilterEntities }   from './FilterEntities'
+import { FilterEntities }  from './FilterEntities'
 import { SelectEntity }    from './SelectEntity'
 import { TokenLayerModal } from './TokenLayerModal'
 
 export const LayersAndTerrains = () => {
     const editor = lgs.editorSettingsProxy
+
     const snap = useSnapshot(editor)
 
     const layers = lgs.settings.layers
@@ -31,7 +32,6 @@ export const LayersAndTerrains = () => {
      */
     const buildList = (type) => {
         const list = []
-
         __.layerManager.layers.forEach(layer => {
             const AND = '&', OR = '|'
             if (layer.type === type) {
@@ -89,35 +89,40 @@ export const LayersAndTerrains = () => {
     return (
         <>
             <div id="layers-and-terrains-settings">
+
                 <SlTabGroup>
                     <SlTab slot="nav" panel="tab-bases">{'Bases'}</SlTab>
                     <SlTab slot="nav" panel="tab-overlays">{'Overlays'}</SlTab>
                     <SlTab slot="nav" panel="tab-terrains">{'Terrains'}</SlTab>
-
+                    <FilterEntities/>
                     <SlTabPanel name="tab-bases">
-                        <FilterEntities/>
+
                         {snap.layer.refreshList &&
-                            <SelectEntity list={buildList(BASE_LAYERS).sort(sortByProvider)}/>
+                            <SelectEntity
+                                key={`${BASE_LAYERS}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}`}
+                                list={buildList(BASE_LAYERS).sort(sortByProvider)}/>
                         }
-                        {editor.layer.refreshList = false}
 
                     </SlTabPanel>
 
                     <SlTabPanel name="tab-overlays">
-                        <FilterEntities/>
                         {snap.layer.refreshList &&
-                            <SelectEntity list={buildList(OVERLAY_LAYERS).sort(sortByProvider)}/>
+                            <SelectEntity
+                                key={`${OVERLAY_LAYERS}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}`}
+                                list={buildList(OVERLAY_LAYERS).sort(sortByProvider)}/>
                         }
-                        {editor.layer.refreshList = false}
                     </SlTabPanel>
                     <SlTabPanel name="tab-terrains">
 
                         {snap.layer.refreshList &&
-                            <SelectEntity list={buildList(TERRAIN_LAYERS).sort(sortByProvider)}/>
+                            <SelectEntity
+                                key={`${TERRAIN_LAYERS}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}`}
+                                list={buildList(TERRAIN_LAYERS).sort(sortByProvider)}/>
                         }
-                        {editor.layer.refreshList = false}
+
                     </SlTabPanel>
                 </SlTabGroup>
+                {editor.layer.refreshList = false}
                 <div id={'layers-and-terrains-filter'}>
                     <SlTooltip content={snap.openFilter ? 'Hide Filters' : 'Show Filters'}>
                         <SlIconButton library="fa"
