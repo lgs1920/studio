@@ -60,6 +60,9 @@ export const ORIGIN_STORE = 'origin'
 export const CURRENT_JOURNEY = 'journey'
 export const CURRENT_TRACK = 'track'
 export const CURRENT_POI = 'poi'
+export const UPDATE_JOURNEY_THEN_DRAW = 1
+export const UPDATE_JOURNEY_SILENTLY = 2
+export const REMOVE_JOURNEY = 3
 
 export const DRAW_THEN_SAVE = 1
 export const DRAW_WITHOUT_SAVE = 2
