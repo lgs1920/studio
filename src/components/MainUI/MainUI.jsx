@@ -7,7 +7,7 @@ import { useEffect }                        from 'react'
 import { useCesium }                        from 'resium'
 
 import './style.css'
-import { subscribe }                        from 'valtio'
+import { subscribe, useSnapshot }           from 'valtio'
 import { CanvasEvents }                     from '../../core/events/CanvasEvents.js'
 import { CameraAndTargetPanel }             from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
 import { JourneyLoaderUI }                  from '../FileLoader/JourneyLoaderUI'
@@ -22,10 +22,12 @@ import { CameraTarget }    from './CameraTarget'
 import { CreditsBar }      from './credits/CreditsBar'
 import { SupportUI }       from './SupportUI'
 import { SupportUIButton } from './SupportUIButton'
+import { TargetButton }    from './TargetButton'
 
-export const MainUI = function VT3D_UI() {
+export const MainUI = () => {
 
     lgs.viewer = useCesium().viewer
+    const snap = useSnapshot(lgs.mainProxy)
 
     useEffect(() => {
 
@@ -48,6 +50,7 @@ export const MainUI = function VT3D_UI() {
                 <div id={'top-left-ui'}>
                     {/* <SettingsButton tooltip={'right'}/> */}
                     <LayersButton tooltip={'right'}/>
+                    {snap.theJourney && <TargetButton tooltip={'right'}/>}
 
                     <Toolbar editor={true}
                              profile={true}
