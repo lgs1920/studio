@@ -6,7 +6,7 @@ import { default as ReactMarkdown }               from 'react-markdown'
 import { useSnapshot }                            from 'valtio'
 import welcomeBack                                from '../../../src/assets/modals/welcome-back.md'
 import welcome                                    from '../../../src/assets/modals/welcome.md'
-import { SLOGAN }                                 from '../../core/constants'
+import { INFO_DRAWER, SLOGAN }                    from '../../core/constants'
 import { FA2SL }                                  from '../../Utils/FA2SL.js'
 import { StudioLogo }                             from './StudioLogo'
 
@@ -31,7 +31,7 @@ export const WelcomeModal = () => {
 
     function showNews() {
         hide()
-        infoPanel.visible = true
+        __.ui.drawerManager.toggle(INFO_DRAWER)
     }
 
     const enter = () => {
