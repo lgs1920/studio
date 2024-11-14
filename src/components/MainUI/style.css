@@ -182,3 +182,10 @@ html {
     font-family: var(--lgs-slogan-font-family);
     font-size: var(--lgs-slogan-font-size);
 }
+
+#waiting-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}

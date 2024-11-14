@@ -94,6 +94,7 @@ export const main = {
         },
     },
     theJourney: null,
+    readyForTheShow: false,
     fullSize: false,
     canViewJourneyData: false,
     canViewProfile: false,

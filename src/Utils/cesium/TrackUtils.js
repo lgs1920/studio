@@ -340,6 +340,7 @@ export class TrackUtils {
 
         // Bail early if there's nothing to read
         if (journeys.length === 0) {
+            lgs.mainProxy.readyForTheShow = true
             lgs.theJourney = null
             lgs.theTrack = null
             lgs.thePOI = null
@@ -359,6 +360,7 @@ export class TrackUtils {
 
         if (currentJourney) {
             lgs.theJourney = currentJourney
+            lgs.mainProxy.readyForTheShow = true
             await TrackUtils.setTheTrack()
         } else {
             // Something's wrong. exit
