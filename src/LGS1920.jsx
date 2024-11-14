@@ -89,9 +89,10 @@ export function LGS1920() {
                     // Read DB
                     await TrackUtils.readAllFromDB()
 
+                    console.log(lgs.settings)
                     //Ready
                     UIToast.success({
-                                        caption: `Welcome on ${lgs.settings.applicationName}!`,
+                                        caption: `Welcome on ${lgs.configuration.applicationName}!`,
                                         text:    'We\'re ready to assist you !',
                                     })
                     console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
