@@ -88,8 +88,6 @@ export function LGS1920() {
                 (async () => {
                     // Read DB
                     await TrackUtils.readAllFromDB()
-
-                    console.log(lgs.settings)
                     //Ready
                     UIToast.success({
                                         caption: `Welcome on ${lgs.configuration.applicationName}!`,
