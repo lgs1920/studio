@@ -22,7 +22,10 @@ export const SelectEntity = (props) => {
     const editor = lgs.editorSettingsProxy
     const snap = useSnapshot(editor)
 
-    const [ConfirmRemoveTokenDialog, confirmRemoveToken] = useConfirm(`Remove Token ?`, 'Are you sure you want to remove this access ?',
+    const Message = () => {
+        return (<>{`Are you sure you want to remove this access ?`}</>)
+    }
+    const [ConfirmRemoveTokenDialog, confirmRemoveToken] = useConfirm(`Remove Token ?`, Message,
                                                                       {icon: faTrashCan, text: 'Remove'})
     const ThumbnailMenu = (props) => {
         const theEntity = props.entity

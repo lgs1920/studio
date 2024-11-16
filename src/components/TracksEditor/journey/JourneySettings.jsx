@@ -29,6 +29,7 @@ import {
 import { FA2SL }                                 from '@Utils/FA2SL'
 import { UIToast }                               from '@Utils/UIToast'
 import parse                                     from 'html-react-parser'
+import React                                     from 'react'
 import { sprintf }                               from 'sprintf-js'
 import { useSnapshot }                           from 'valtio'
 import {
@@ -286,7 +287,10 @@ export const JourneySettings = function JourneySettings() {
     /**
      * Export journey confirmation
      */
-    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export <strong>${editorSnapshot.journey.title}</strong> ?`, 'Not Yet. Sorry.',
+    const Message = () => {
+        return (<>{`'Not Yet. Sorry.'`}</>)
+    }
+    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export <strong>${editorSnapshot.journey.title}</strong> ?`, Message,
                                                                           // {
                                                                           //     text:'Export',
                                                                           //     icon:faDownload
@@ -314,7 +318,10 @@ export const JourneySettings = function JourneySettings() {
     /**
      * Remove journey confirmation
      */
-    const [ConfirmRemoveJourneyDialog, confirmRemoveJourney] = useConfirm(`Remove <strong>${editorSnapshot.journey.title}</strong> ?`, 'Are you sure you want to remove this journey ?',
+    const Question = () => {
+        return (<>{'Are you sure you want to remove this journey ?'}</>)
+    }
+    const [ConfirmRemoveJourneyDialog, confirmRemoveJourney] = useConfirm(`Remove <strong>${editorSnapshot.journey.title}</strong> ?`, Question,
                                                                           {icon: faTrashCan, text: 'Remove'})
 
     /**

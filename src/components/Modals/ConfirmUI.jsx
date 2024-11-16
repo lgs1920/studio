@@ -1,9 +1,9 @@
 import { faXmark }                    from '@fortawesome/pro-regular-svg-icons'
-import { faCheck } from '@fortawesome/pro-solid-svg-icons'
+import { faCheck }                    from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
+import parse                          from 'html-react-parser'
 import { useState }                   from 'react'
 import { FA2SL }                      from '../../Utils/FA2SL'
-import parse  from 'html-react-parser';
 
 /**
  * Confirm Dialog
@@ -17,18 +17,20 @@ import parse  from 'html-react-parser';
  *
  * @return {[function(): *,function(): Promise<unknown>]}
  */
-export const useConfirm = (title, message, confirmLabel, cancelLabel) => {
+export const useConfirm = (title, Message, confirmLabel, cancelLabel) => {
     const [queue, setQueue] = useState([])
     const [open, setOpen] = useState(false)
 
-    const confirmIcon = confirmLabel?.icon??faCheck
-    const confirmText = confirmLabel?.text??'Yes'
-    const cancelIcon = cancelLabel?.icon??faXmark
-    const cancelText = cancelLabel?.text??'No'
+    const confirmIcon = confirmLabel?.icon ?? faCheck
+    const confirmText = confirmLabel?.text ?? 'Yes'
+    const cancelIcon = cancelLabel?.icon ?? faXmark
+    const cancelText = cancelLabel?.text ?? 'No'
 
     const confirm = () => new Promise((resolve, reject) => {
-        setQueue(prevQueue => [...prevQueue, { resolve }]);
-        if (!open) setOpen(true);
+        setQueue(prevQueue => [...prevQueue, {resolve}])
+        if (!open) {
+            setOpen(true)
+        }
     })
 
     // Prevent the dialog from closing when the user clicks on the overlay
@@ -39,19 +41,23 @@ export const useConfirm = (title, message, confirmLabel, cancelLabel) => {
     }
 
     const handleClose = () => {
-        setQueue(prevQueue => prevQueue.slice(1));
-        if (queue.length > 1) setOpen(true);
-        else setOpen(false);
+        setQueue(prevQueue => prevQueue.slice(1))
+        if (queue.length > 1) {
+            setOpen(true)
+        }
+        else {
+            setOpen(false)
+        }
     }
 
     const handleConfirm = () => {
-        queue[0]?.resolve(true);
-        handleClose();
+        queue[0]?.resolve(true)
+        handleClose()
     }
 
     const handleCancel = () => {
-        queue[0]?.resolve(false);
-        handleClose();
+        queue[0]?.resolve(false)
+        handleClose()
     }
     const ConfirmationDialog = () => (
         <SlDialog open={open} onSlRequestClose={handleRequestClose}
@@ -59,7 +65,7 @@ export const useConfirm = (title, message, confirmLabel, cancelLabel) => {
                   className={'lgs-theme'}
         >
             <div slot="label">{parse(title)}</div>
-            {message}
+            <Message/>
             <div slot="footer">
                 <div className="buttons-bar">
                     <SlButton onClick={handleCancel}>
