@@ -1,8 +1,8 @@
 /**
  * Dependencies
  */
-import { openDB }   from 'idb'
-import { DateTime } from 'luxon'
+import { openDB, unwrap } from 'idb'
+import { DateTime }       from 'luxon'
 
 let millis = 1000
 
@@ -188,18 +188,33 @@ export class LocalDB {
     }
 
     deleteDB = async () => {
-        const DBDeleteRequest = window.indexedDB.deleteDatabase(this.#name)
+        return new Promise(async (resolve, reject) => {
+            // Close transactions
+            const idb = unwrap(this.#db).result
+            const transactionNames = Array.from(idb.objectStoreNames)
+            for (const storeName of transactionNames) {
+                idb.transaction(storeName, 'readonly').abort()
+            }
+            idb.close()
 
-        DBDeleteRequest.onerror = (event) => {
-            console.error('Error deleting database.')
-        }
+            //Delete database
+            const request = window.indexedDB.deleteDatabase(this.#name)
+            request.onerror = () => {
+                console.error(`Error while deleting database ${this.#name}!`)
+                resolve(0)
+            }
+            request.onsuccess = () => {
+                console.log(`Database ${this.#name} deleted successfully.`)
+                resolve(1)
+            }
+            request.onblocked = () => {
+                console.error(`Error while deleting database ${this.#name}:blocked`)
+                resolve(2)
+            }
+        })
 
-        DBDeleteRequest.onsuccess = (event) => {
-            console.log('Database deleted successfully')
-
-            console.log(event.result) // should be undefined
-        }
     }
+
 
     /**
      * Get all keys
