@@ -79,19 +79,19 @@ export class LGS1920Context {
         this.db = {
             lgs1920: new LocalDB({
                                      name:             `${APP_KEY}${dbPrefix}`,
-                                     store: [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE],
+                                     stores: [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE],
                                      manageTransients: true,
                                      version:          '0.1',
                                  }),
             settings: new LocalDB({
                                       name: `settings-${APP_KEY}${dbPrefix}`,
-                                      store:            [SETTINGS_STORE],
+                                      stores: [SETTINGS_STORE],
                                       manageTransients: true,
                                       version:          '0.1',
                                   }),
             vault:    new LocalDB({
                                       name:             `vault-${APP_KEY}${dbPrefix}`,
-                                      store:            [VAULT_STORE],
+                                      stores: [VAULT_STORE],
                                       manageTransients: false,
                                       version:          '0.1',
                                   }),
