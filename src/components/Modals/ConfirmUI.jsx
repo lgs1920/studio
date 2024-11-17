@@ -12,19 +12,21 @@ import { FA2SL }                      from '../../Utils/FA2SL'
  *
  * @param title
  * @param message
- * @param confirmLabel
- * @param cancelLabel
+ * @param confirmButton
+ * @param cancelButton
  *
  * @return {[function(): *,function(): Promise<unknown>]}
  */
-export const useConfirm = (title, Message, confirmLabel, cancelLabel) => {
+export const useConfirm = (title, Message, confirmButton, cancelButton) => {
     const [queue, setQueue] = useState([])
     const [open, setOpen] = useState(false)
 
-    const confirmIcon = confirmLabel?.icon ?? faCheck
-    const confirmText = confirmLabel?.text ?? 'Yes'
-    const cancelIcon = cancelLabel?.icon ?? faXmark
-    const cancelText = cancelLabel?.text ?? 'No'
+    const confirmIcon = confirmButton?.icon ?? faCheck
+    const confirmText = confirmButton?.text ?? 'Yes'
+    const confirmVariant = confirmButton?.variant ?? 'primary'
+    const cancelIcon = cancelButton?.icon ?? faXmark
+    const cancelText = cancelButton?.text ?? 'No'
+    const cancelVariant = cancelButton?.variant ?? 'default'
 
     const confirm = () => new Promise((resolve, reject) => {
         setQueue(prevQueue => [...prevQueue, {resolve}])
@@ -68,11 +70,11 @@ export const useConfirm = (title, Message, confirmLabel, cancelLabel) => {
             <Message/>
             <div slot="footer">
                 <div className="buttons-bar">
-                    <SlButton onClick={handleCancel}>
+                    <SlButton onClick={handleCancel} variant={cancelVariant}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(cancelIcon)}></SlIcon>
                         {parse(cancelText)}
                     </SlButton>
-                    <SlButton variant="primary" onClick={handleConfirm}>
+                    <SlButton variant={confirmVariant} onClick={handleConfirm}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(confirmIcon)}></SlIcon>
                         {parse(confirmText)}
                     </SlButton>
