@@ -1,0 +1,27 @@
+
+.manage-account-ui {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s)
+}
+
+.manage-account-ui ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.manage-account-ui li {
+    display: inline-flex;
+    align-items: center;
+}
+
+.manage-account-ui sl-panel {
+    font-size: var(--lgs-font-size-s);
+}
+
+.manage-account-ui sl-button {
+    width: 12rem;
+}

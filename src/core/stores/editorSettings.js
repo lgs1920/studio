@@ -2,7 +2,7 @@ import { BASE_LAYERS } from '@Core/constants'
 
 
 export const editorSettings = {
-    layer: {
+    layer:   {
         selectedType: BASE_LAYERS,
         infoDialog:   false,
         tokenDialog:  false,
@@ -10,4 +10,13 @@ export const editorSettings = {
         refreshList:  true,
         canValidate:  false,
     },
+    account: {
+        reset: {
+            lgs1920:  false,
+            settings: false,
+            vault:    false,
+        },
+        test:  true,
+    },
+
 }

@@ -13,5 +13,9 @@
     "domain": "localhost",
     "protocol": "http",
     "proxy": ""
+  },
+  "site": {
+    "domain": "lgs1920.fr",
+    "protocol": "https"
   }
 }
