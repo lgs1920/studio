@@ -15,7 +15,7 @@
     "proxy": ""
   },
   "site": {
-    "domain": "lgs1920.fr",
-    "protocol": "https"
+    "domain": "dev.lgs1920.fr",
+    "protocol": "http"
   }
 }

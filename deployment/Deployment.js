@@ -310,6 +310,7 @@ export class Deployment {
                                                                                  platform:this.platform,
                                                                                  backend: this.configuration.backend[this.platform],
                                                                                  studio:  this.configuration.studio[this.platform],
+                                                                                  site: this.configuration.site[this.platform],
                                                                              }), 'utf8')
 
 
