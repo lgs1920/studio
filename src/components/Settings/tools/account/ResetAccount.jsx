@@ -21,6 +21,7 @@ export const ResetAccount = () => {
             if (snap.reset.vault) {
                 await lgs.db.vault.deleteDB()
             }
+            // Reload the app, the DB willbe recreated with defaults
             location.reload()
         }
     }

@@ -15,6 +15,7 @@ export const RemoveAccount = () => {
             await lgs.db.lgs1920.deleteDB()
             await lgs.db.settings.deleteDB()
             await lgs.db.vault.deleteDB()
+            // redirection to the website so the DB won't be recreated
             location.href = `${lgs.servers.site.protocol}://${lgs.servers.site.domain}`
         }
     }
