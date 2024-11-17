@@ -18,19 +18,19 @@ export class LocalDB {
 
     constructor({
                     name = this.#name,
-                    store = this.#stores,
+                    stores = this.#stores,
                     manageTransients = false,
                     version = this.#version,
                 }) {
 
-        if (!(store instanceof Array)) {
-            store = [store]
+        if (!(stores instanceof Array)) {
+            stores = [stores]
         }
         if (manageTransients) {
-            store.push(this.#transients)
+            stores.push(this.#transients)
         }
 
-        this.#stores = store
+        this.#stores = stores
         this.#name = name
 
         let tables = this.#stores // passe dto upgrad contest
@@ -165,12 +165,40 @@ export class LocalDB {
     }
 
     /**
+     * Remove a store
+     *
+     * @param store
+     */
+    deleteStore = async (store) => {
+        (await this.#db).deleteObjectStore(store)
+    }
+
+    deleteAllStores = async () => {
+        (await this.#stores).forEach(store => this.deleteStore(store))
+
+    }
+
+    /**
      * Clear a store
      *
      * @return {Promise<*>}
      */
     clear = async (store) => {
         return (await this.#db).clear(store)
+    }
+
+    deleteDB = async () => {
+        const DBDeleteRequest = window.indexedDB.deleteDatabase(this.#name)
+
+        DBDeleteRequest.onerror = (event) => {
+            console.error('Error deleting database.')
+        }
+
+        DBDeleteRequest.onsuccess = (event) => {
+            console.log('Database deleted successfully')
+
+            console.log(event.result) // should be undefined
+        }
     }
 
     /**
