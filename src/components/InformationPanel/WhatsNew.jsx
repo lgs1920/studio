@@ -58,16 +58,16 @@ export const WhatsNew = () => {
     const snap = useSnapshot(state)
 
     return (<Scrollbars style={{height: '100%'}}>
-            <h1>{'What\'s new?'}</h1>
             <div className={'whats-new-list'}>
                 {snap.data.map(file => (
                     <SlDetails small open={file.open}
                                key={file.name}
                                className={'lgs-theme'}
                     >
-                        <h3 slot="summary">[{file.version}] {file.date}</h3>
-                        <SlDivider></SlDivider>
-                        <ReactMarkdown children={file.content}/>
+                        <span slot="summary">[{file.version}] {file.date}</span>
+                        <SlDivider/>
+                        <div><ReactMarkdown children={file.content}/></div>
+
                     </SlDetails>
 
                 ))}
