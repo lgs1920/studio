@@ -21,14 +21,14 @@ export class UIUtils {
      * @param format        output format (rgb | rgba), default rgba
      * @return {string}       rgb() or rgba()
      */
-    static hexToRGBA=(hex, format = 'rgba')=> {
+    static hexToRGBA = (hex, format = 'rgba') => {
         hex = hex.replace(/^#/, '0x')
 
         // Transform #RGB to #RRGGBB orRRRRRGBFF
         if (hex.length === 5) {
-            hex = hex.split('').map(char => char + char).join('');
+            hex = hex.split('').map(char => char + char).join('')
             if (format === 'rgba') {
-                hex +='FF'
+                hex += 'FF'
             }
         }
 
@@ -36,7 +36,7 @@ export class UIUtils {
 
         // Extract colors
         const r = hex >> (alpha ? 24 : 16) & 0xff
-        const g = hex >> (alpha ? 16 : 8 )& 0xff
+        const g = hex >> (alpha ? 16 : 8) & 0xff
         const b = hex >> (alpha ? 8 : 0) & 0xff
 
         if (format === 'rgb') {
@@ -50,12 +50,23 @@ export class UIUtils {
     }
 
 
-    static RGB2RGBA=(rgbString, alpha = 1) => {
-        let rgbValues = rgbString.match(/\d+/g);
-        let r = rgbValues[0];
-        let g = rgbValues[1];
-        let b = rgbValues[2];
-        return `rgba(${r},${g},${b},${alpha})`;
+    static RGB2RGBA = (rgbString, alpha = 1) => {
+        let rgbValues = rgbString.match(/\d+/g)
+        let r = rgbValues[0]
+        let g = rgbValues[1]
+        let b = rgbValues[2]
+        return `rgba(${r},${g},${b},${alpha})`
+    }
+
+    static initDetailsGroup = (detailsGroupElement) => {
+
+        // Close all other details when one is shown
+        detailsGroupElement.addEventListener('sl-show', event => {
+            if (event.target.localName === 'sl-details') {
+                [...detailsGroupElement.querySelectorAll('sl-details')]
+                    .map(details => (details.open = event.target === details))
+            }
+        })
     }
 
 }
