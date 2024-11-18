@@ -6,7 +6,7 @@ import { useSnapshot }                          from 'valtio/index'
 import { useConfirm }                           from '../../../Modals/ConfirmUI'
 import './style.css'
 
-export const RemoveAccount = () => {
+export const RemoveProfile = () => {
     const editor = lgs.editorSettingsProxy.account
     const snap = useSnapshot(editor)
 
@@ -22,7 +22,7 @@ export const RemoveAccount = () => {
 
     const ConfirmationDialogMessage = (props) => {
         return (
-            <div className="manage-account-ui">
+            <div className="manage-profile-ui">
                 {'Are you sure you want to remove your account?'}
                 <SlAlert open variant="danger">
                     <SlIcon slot="icon" library="fa" name={FA2SL.set(faWarning)}></SlIcon>
@@ -33,18 +33,18 @@ export const RemoveAccount = () => {
         )
     }
 
-    const [ConfirmRemoveDialog, confirmRemove] = useConfirm(`Remove My Account`, ConfirmationDialogMessage,
+    const [ConfirmRemoveDialog, confirmRemove] = useConfirm(`Remove My Profile`, ConfirmationDialogMessage,
                                                             {icon:       faTrashAlt,
-                                                                text:    'Remove My Account',
+                                                                text: 'Remove My Profile',
                                                                 variant: 'danger',
                                                             })
 
     return (
         <SlDetails small className={'lgs-theme'}>
             <span slot="summary">
-                <SlIcon library="fa" name={FA2SL.set(faTrashAlt)}/> {'Remove My Account'}
+                <SlIcon library="fa" name={FA2SL.set(faTrashAlt)}/> {'Remove My Profile'}
             </span>
-            <div className="manage-account-ui">
+            <div className="manage-profile-ui">
                 <SlAlert open variant="warning">
                     <SlIcon slot="icon" library="fa" name={FA2SL.set(faWarning)}></SlIcon>
                     {'You will delete all the data and databases that your browser has stored on your device in order to manage LGS1920 Studio application.'}<br/>
@@ -53,7 +53,7 @@ export const RemoveAccount = () => {
 
                 <SlButton variant="warning" onClick={remove}>
                     <SlIcon slot="prefix" library="fa"
-                            name={FA2SL.set(faTrashAlt)}></SlIcon>{'Remove My Account'}
+                            name={FA2SL.set(faTrashAlt)}></SlIcon>{'Remove My Profile'}
                 </SlButton>
             </div>
             <ConfirmRemoveDialog/>

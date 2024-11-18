@@ -1,12 +1,15 @@
-import { faPaintbrushPencil, faScrewdriverWrench }         from '@fortawesome/pro-regular-svg-icons'
-import { SlDrawer, SlIcon, SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react'
-import React                                               from 'react'
-import { useSnapshot }                                     from 'valtio'
+import { faPaintbrushPencil, faScrewdriverWrench }                    from '@fortawesome/pro-regular-svg-icons'
+import { faCircleUser }                                               from '@fortawesome/pro-solid-svg-icons'
+import { SlDrawer, SlIcon, SlTab, SlTabGroup, SlTabPanel, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import React                                                          from 'react'
+import { useSnapshot }                                                from 'valtio'
 import './style.css'
-import { SETTINGS_EDITOR_DRAWER }                          from '../../core/constants'
-import { FA2SL }                                           from '../../Utils/FA2SL'
-import { DrawerFooter }                                    from '../DrawerFooter'
-import { Tools }                                           from './tools/Tools'
+import { SETTINGS_EDITOR_DRAWER }                                     from '../../core/constants'
+import { FA2SL }                                                      from '../../Utils/FA2SL'
+import { DrawerFooter }                                               from '../DrawerFooter'
+import { GeneralTools }                                               from './tools/general/GeneralTools'
+import { ProfileTools }                                               from './tools/profile/ProfileTools'
+import { Style }                                                      from './tools/style/Style'
 
 export const Panel = () => {
     const drawers = useSnapshot(lgs.mainProxy.drawers)
@@ -35,10 +38,15 @@ export const Panel = () => {
                         <SlIcon library="fa" name={FA2SL.set(faScrewdriverWrench)}/> {'Tools'}
                     </SlTab>
 
+                    <SlTab slot="nav" panel="tab-user" id={'manage-user-profile'}>
+                        <SlTooltip placement={'top'} hoist content={'Manage My Profile'}>
+                            <SlIcon library="fa" name={FA2SL.set(faCircleUser)}/>
+                        </SlTooltip>
+                    </SlTab>
 
-                    <SlTabPanel name="tab-tools"><Tools/></SlTabPanel>
-                    <SlTabPanel name="tab-ui">
-                    </SlTabPanel>
+                    <SlTabPanel name="tab-tools"><GeneralTools/></SlTabPanel>
+                    <SlTabPanel name="tab-ui"><Style/></SlTabPanel>
+                    <SlTabPanel name="tab-user" open><ProfileTools/></SlTabPanel>
                 </SlTabGroup>
                 <DrawerFooter/>
 

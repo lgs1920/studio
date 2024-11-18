@@ -1,3 +1,13 @@
 #open-the-setting-panel {
     margin-bottom: var(--lgs-gutter);
 }
+
+#manage-user-profile {
+    display: flex;
+    margin-left: auto;
+
+}
+
+#manage-user-profile sl-icon {
+    font-size: var(--lgs-font-size-m)
+}

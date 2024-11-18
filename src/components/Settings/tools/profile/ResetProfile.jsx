@@ -6,7 +6,7 @@ import { useSnapshot }                           from 'valtio/index'
 import { useConfirm }                            from '../../../Modals/ConfirmUI'
 import './style.css'
 
-export const ResetAccount = () => {
+export const ResetProfile = () => {
     const editor = lgs.editorSettingsProxy.account
     const snap = useSnapshot(editor)
 
@@ -35,20 +35,20 @@ export const ResetAccount = () => {
 
     const ConfirmationDialogMessage = (props) => {
         return (<>
-            <div className="manage-account-ui">
+            <div className="manage-profile-ui">
                 {'Are you sure you want to reset the data below?'}
                 <ul>
                     {snap.reset.lgs1920 &&
-                        <li key={'reset-account-lgs1920-confirm'}>
+                        <li key={'reset-profile-lgs1920-confirm'}>
                             <SlIcon library="fa" name={FA2SL.set(faSquareCheck)}/> Your journeys
                         </li>
                     }
                     {snap.reset.settings &&
-                        <li key={'reset-account-settings-confirm'}>
+                        <li key={'reset-profile-settings-confirm'}>
                             <SlIcon library="fa" name={FA2SL.set(faSquareCheck)}/> Your settings
                         </li>
                     }{snap.reset.vault &&
-                    <li key={'reset-account-vault-confirm'}>
+                    <li key={'reset-profile-vault-confirm'}>
                         <SlIcon library="fa" name={FA2SL.set(faSquareCheck)}/> Your Tokens
                     </li>
                 }
@@ -58,16 +58,16 @@ export const ResetAccount = () => {
     }
 
 
-    const [ConfirmResetDialog, confirmReset] = useConfirm(`Reset My Account`, ConfirmationDialogMessage,
+    const [ConfirmResetDialog, confirmReset] = useConfirm(`Reset My Profile`, ConfirmationDialogMessage,
                                                           {icon: faArrowsRotate, text: 'Reset'})
 
 
     return (
         <SlDetails small className={'lgs-theme'}>
             <span slot="summary">
-                <SlIcon library="fa" name={FA2SL.set(faArrowsRotate)}/> {'Reset My Account'}
+                <SlIcon library="fa" name={FA2SL.set(faArrowsRotate)}/> {'Reset My Profile'}
             </span>
-            <div className="manage-account-ui">
+            <div className="manage-profile-ui">
                 {'Please select the profile data you wish to reset:'}
 
                 <SlSwitch size="small" checked={snap.reset.lgs1920}
@@ -92,7 +92,7 @@ export const ResetAccount = () => {
                 <SlButton variant="primary" onClick={reset}
                           disabled={!(Object.values(snap.reset).some(value => value === true))}>
                     <SlIcon slot="prefix" library="fa"
-                            name={FA2SL.set(faArrowsRotate)}></SlIcon>{'Reset My Account'}
+                            name={FA2SL.set(faArrowsRotate)}></SlIcon>{'Reset My Profile'}
                 </SlButton>
             </div>
             <ConfirmResetDialog/>
