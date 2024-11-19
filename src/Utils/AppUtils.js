@@ -7,7 +7,7 @@ import axios                                                from 'axios'
 import * as Cesium                                          from 'cesium'
 import YAML                                                 from 'yaml'
 import { EventEmitter }                                     from '../assets/libs/EventEmitter/EventEmitter'
-import { SETTINGS, SETTINGS_STORE }                         from '../core/constants'
+import { SETTINGS, SETTINGS_STORE, VAULT_STORE }            from '../core/constants'
 import { FA2SL }                                            from './FA2SL'
 
 export class AppUtils {
@@ -181,6 +181,24 @@ export class AppUtils {
         const removedSections = DBSections.filter(element => !lgs.settingSections.includes(element))
         for (const key of removedSections) {
             await lgs.db.settings.delete(key, SETTINGS_STORE)
+        }
+
+        // Read and apply tokens
+        if (lgs.settings.layers.vault) {
+            for (const provider of lgs.settings.layers.providers) {
+                let index = 0
+                for (const layer of provider.layers) {
+                    if (lgs.settings.layers.vault.includes(layer.id)) {
+                        const token = await lgs.db.vault.get(layer.id, VAULT_STORE)
+                        // We get a token, let's use it now
+                        if (token) {
+                            provider.layers[index].usage.token = token
+                            provider.layers[index].usage.unlocked = true
+                        }
+                    }
+                    index++
+                }
+            }
         }
 
         // Ping server

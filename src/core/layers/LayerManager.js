@@ -78,13 +78,22 @@ export class LayerManager {
     }
 
     getProviderIdByLayerId = (layerId) => {
+        if (layerId === null) {
+            return null
+        }
         return layerId?.split('-')[0] ?? null
     }
     getProviderProxy = (providerId) => {
+        if (providerId === null) {
+            return null
+        }
         return lgs.settings.layers.providers.find(provider => provider.id === providerId)
 
     }
     getProviderProxyByLayerId = (layerId) => {
+        if (layerId === null) {
+            return null
+        }
         const providerId = this.getProviderIdByLayerId(layerId)
         return lgs.settings.layers.providers.find(provider => provider.id === providerId)
     }

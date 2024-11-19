@@ -100,6 +100,7 @@ export const SETTING_EXCLUSIONS = [
 /**
  * Layers and Terrains
  */
+export const LAYERS = 'layers'
 export const BASE_LAYERS = 'base'
 export const OVERLAY_LAYERS = 'overlay'
 export const TERRAIN_LAYERS = 'terrain'
