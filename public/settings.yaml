@@ -139,6 +139,9 @@ layers:
   overlay: null                         # ID of the current overlay
   terrain: null                         # ID of the current terrain
 
+  ## Some layers need tokens ? list layers keys
+  vault: [ ign-scan,thdfrst-cycle,thdfrst-ldscp,thdfrst-out ]
+
   ## Filter criteria
   filter:
     byUsage: all
@@ -156,8 +159,6 @@ layers:
       logo: https://design-system.ign.fr/img/styleguide/sg_logos/Logo_IGN_svg/IGN_logo-simplifie_Q.svg
       url: 'https://ign.fr'             # Provider Url
 
-      type: wmts                        # Tile type
-
       ## Layers
       layers:
         ## IGN Cadastral
@@ -174,20 +175,41 @@ layers:
             signin:                     # Signin URL (freemium/premium)
 
           ## Tile management
+          tile: wmts                    # tile type
           url: 'https://data.geopf.fr/wmts'
           layer: CADASTRALPARCELS.PARCELLAIRE_EXPRESS
           style: normal
           format: image/png
           tileMatrixSetID: PM
 
-        ## IGN Map
+          ## IGN Map
         - name: IGN Map
           id: ign-map
           image: ign-map.png
           usage:
             type: free
             doc: ''
+
+          tile: wmts
           url: 'https://data.geopf.fr/wmts'
+          layer: GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2
+          style: normal
+          format: image/png
+          tileMatrixSetID: PM
+          doc: 'https://data.geopf.fr'
+          type: base
+
+        ## IGN Scan
+        - name: IGN Scan
+          id: ign-scan
+          image: ign-scan.png
+          usage:
+            type: freemium
+            doc: ''
+            name: apikey
+
+          tile: wmts-legacy
+          url: 'https://data.geopf.fr/private/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities&apikey=ign_scan_ws'
           layer: GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2
           style: normal
           format: image/png
@@ -202,6 +224,8 @@ layers:
           usage:
             type: free
             doc: ''
+
+          tile: wmts
           url: 'https://data.geopf.fr/wmts'
           layer: ORTHOIMAGERY.ORTHOPHOTOS
           style: normal
@@ -216,7 +240,6 @@ layers:
       credits: 'Credits https://waymarkedtrails.org/'
       logo: ''
       url: 'https://waymarkedtrails.org/'
-      type: slippy
       layers:
         ## Hiking
         - name: Hiking
@@ -225,6 +248,8 @@ layers:
           usage:
             type: free
             doc: ''
+
+          tile: slippy
           url: 'https://tile.waymarkedtrails.org/hiking/'
           doc: ''
           type: overlay
@@ -236,7 +261,6 @@ layers:
       credits: Credits Openstreetmap.org & contributors
       logo: ''
       url: 'https://www.openstreetmap.org'
-      type: slippy
       layers:
         # OpenStreetMap standard
         - name: OpenStreetMap
@@ -245,6 +269,8 @@ layers:
           usage:
             type: free
             doc: ''
+
+          tile: slippy
           url: 'https://tile.openstreetmap.org/'
           doc: ''
           type: base
@@ -255,7 +281,6 @@ layers:
       credits: Credits OpenTopoMap.org
       logo: 'https://opentopomap.org/img/OpenTopoMap_rechts.png'
       url: 'https://opentopomap.org'
-      type: slippy
       layers:
         ## Open Topo Map standard
         - name: OpenTopoMap
@@ -264,6 +289,8 @@ layers:
           usage:
             type: free
             doc: ''
+
+          tile: slippy
           url: 'https://tile.opentopomap.org/'
           doc: ''
           type: base
@@ -274,7 +301,6 @@ layers:
       credits: Credits OpenSnowMap.org
       logo: ''
       url: 'https://OpenSnowMap.org'
-      type: slippy
       layers:
         # Tracks
         - name: OpenSnowMap
@@ -283,6 +309,8 @@ layers:
           usage:
             type: free
             doc: ''
+
+          tile: slippy
           url: 'https://tiles.opensnowmap.org/pistes/'
           doc: ''
           type: overlay
@@ -292,7 +320,6 @@ layers:
       name: Thunderforest
       credits: Credits Gravitystorm Limited
       logo: ''
-      type: thunderforest
       url: 'https://www.thunderforest.com/'
       layers:
         ## Open Cycle Map
@@ -303,9 +330,13 @@ layers:
             type: freemium
             doc: 'https://www.thunderforest.com/maps/opencyclemap/'
             signin: 'https://www.thunderforest.com/pricing/'
+            name: apikey
+
+          tile: thunderforest
           url: 'https://tile.thunderforest.com/cycle/'
           doc: 'https://www.thunderforest.com/'
           type: base
+
 
         ## Landscape
         - name: OpenStreetMap Landscape
@@ -315,6 +346,9 @@ layers:
             type: freemium
             doc: 'https://www.thunderforest.com/maps/landscape/'
             signin: 'https://www.thunderforest.com/pricing/'
+            name: apikey
+
+          tile: thunderforest
           url: 'https://tile.thunderforest.com/landscape/'
           doc: 'https://www.thunderforest.com/'
           type: base
@@ -327,9 +361,13 @@ layers:
             type: freemium
             doc: 'https://www.thunderforest.com/maps/outdoors/'
             signin: 'https://www.thunderforest.com/pricing/'
+            name: apikey
+
+          tile: thunderforest
           url: 'https://tile.thunderforest.com/outdoors/'
           doc: 'https://www.thunderforest.com/'
           type: base
+
 
 ########################################
 # Unit system
