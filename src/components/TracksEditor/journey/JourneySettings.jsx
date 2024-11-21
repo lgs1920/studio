@@ -1,48 +1,64 @@
-import { useConfirm }                            from '@Components/Modals/ConfirmUI'
+import { useConfirm } from '@Components/Modals/ConfirmUI'
 import {
     ToggleStateIcon,
-}                                                from '@Components/ToggleStateIcon'
-import { ORIGIN_STORE, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
+}                     from '@Components/ToggleStateIcon'
+import {
+    ORIGIN_STORE, UPDATE_JOURNEY_SILENTLY,
+}                     from '@Core/constants'
 import {
     TrackData,
-}                                                from '@Editor/track/TrackData'
+}                     from '@Editor/track/TrackData'
 import {
     TrackFlagsSettings,
-}                                                from '@Editor/track/TrackFlagsSettings'
+}                     from '@Editor/track/TrackFlagsSettings'
 import {
     TrackPoints,
-}                                                from '@Editor/track/TrackPoints'
+}                     from '@Editor/track/TrackPoints'
 import {
     TrackStyleSettings,
-}                                                from '@Editor/track/TrackStyleSettings'
-import { Utils }                                 from '@Editor/Utils'
+}                     from '@Editor/track/TrackStyleSettings'
+import {
+    Utils,
+}                     from '@Editor/Utils'
 import {
     faCircleDot, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList,
     faTelescope, faTrashCan,
-}                                                from '@fortawesome/pro-regular-svg-icons'
+}                     from '@fortawesome/pro-regular-svg-icons'
 import {
-    SlIcon, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                                                from '@shoelace-style/shoelace/dist/react'
+    SlIcon, SlIconButton, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
+}                     from '@shoelace-style/shoelace/dist/react'
 import {
     FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                                                from '@Utils/cesium/TrackUtils'
-import { FA2SL }                                 from '@Utils/FA2SL'
-import { UIToast }                               from '@Utils/UIToast'
-import parse                                     from 'html-react-parser'
-import React                                     from 'react'
-import { sprintf }                               from 'sprintf-js'
-import { useSnapshot }                           from 'valtio'
+}                     from '@Utils/cesium/TrackUtils'
+import {
+    FA2SL,
+}                     from '@Utils/FA2SL'
+import {
+    UIToast,
+}                     from '@Utils/UIToast'
+import parse          from 'html-react-parser'
+import React          from 'react'
+import {
+    sprintf,
+}                     from 'sprintf-js'
+import {
+    useSnapshot,
+}                     from 'valtio'
 import {
     ElevationServer,
-}                                                from '../../../core/Elevation/ElevationServer'
+}                     from '../../../core/Elevation/ElevationServer'
 import {
     Journey, SIMULATE_ALTITUDE,
-}                                                from '../../../core/Journey'
+}                     from '../../../core/Journey'
 import {
     SelectElevationSource,
-}                                                from '../../MainUI/SelectElevationSource'
-import { JourneyData }                           from './JourneyData'
-import { JourneyPOIs }                           from './JourneyPOIs'
+}                     from '../../MainUI/SelectElevationSource'
+import {
+    JourneyData,
+}                     from './JourneyData'
+import {
+    JourneyPOIs,
+}                     from './JourneyPOIs'
 
 export const JourneySettings = function JourneySettings() {
 
@@ -503,9 +519,8 @@ export const JourneySettings = function JourneySettings() {
                     <div id="journey-visibility" className={'editor-vertical-menu'}>
                         <span>
                         <SlTooltip hoist content={'Focus on journey'}>
-                            <a onClick={focusOnJourney}>
-                                <SlIcon library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
-                            </a>
+                                <SlIconButton onClick={focusOnJourney} library="fa"
+                                              name={FA2SL.set(faCrosshairsSimple)}/>
                         </SlTooltip>
                         <SlTooltip hoist content={textVisibilityJourney}>
                             <ToggleStateIcon change={setJourneyVisibility}
@@ -527,13 +542,12 @@ export const JourneySettings = function JourneySettings() {
 
                         <span>
                         <SlTooltip hoist content={'Export'}>
-                            <a onClick={exportJourney}>
-                                <SlIcon library="fa" name={FA2SL.set(faDownload)}/>
-                            </a>
+                                <SlIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>
                         </SlTooltip>
+
                         <SlTooltip hoist content={'Remove'}>
-                            <a onClick={removeJourney}>
-                                <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
+                            <a>
+                                <SlIconButton onClick={removeJourney} library="fa" name={FA2SL.set(faTrashCan)}/>
                             </a>
                         </SlTooltip>
                         </span>
