@@ -1,5 +1,5 @@
 import { faEye, faEyeSlash }          from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon }                     from '@shoelace-style/shoelace/dist/react'
+import { SlIconButton }               from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                      from '@Utils/FA2SL'
 import React, { useEffect, useState } from 'react'
 
@@ -24,14 +24,16 @@ export const ToggleStateIcon = (props) => {
 
     return (
         <>
-            <a className="state-button"
+            <a className="toggle-state-icon"
                {...(props.id && {id})}
                {...(props.style && {style})}
                onClick={toggleState}>
                 {state
-                 ? <SlIcon slot="suffix" library="fa" className={'toggle-state-icon-hidden'}
+                 ? <SlIconButton slot="suffix" library="fa" {...(props.style && {style})}
+                                 className={'toggle-state-icon-hidden'}
                            name={FA2SL.set(icons.hidden)}/>
-                 : <SlIcon slot="suffix" library="fa" className={'toggle-state-icon-shown'}
+                 : <SlIconButton slot="suffix" library="fa" {...(props.style && {style})}
+                                 className={'toggle-state-icon-shown'}
                            name={FA2SL.set(icons.shown)}/>
                 }
             </a>

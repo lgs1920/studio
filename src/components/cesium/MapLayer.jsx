@@ -1,16 +1,20 @@
 import { BASE_LAYERS, OVERLAY_LAYERS } from '@Core/constants'
 import {
-    ArcGisMapServerImageryProvider, NeverTileDiscardPolicy, OpenStreetMapImageryProvider, UrlTemplateImageryProvider,
-    WebMapTileServiceImageryProvider,
+    NeverTileDiscardPolicy, OpenStreetMapImageryProvider, UrlTemplateImageryProvider, WebMapTileServiceImageryProvider,
 }                                      from 'cesium'
 import { ImageryLayer }                from 'resium'
 import { subscribe, useSnapshot }      from 'valtio'
-import { LayersUtils }                 from '../../Utils/cesium/LayersUtils'
 
 export const SLIPPY = 'slippy'
 export const WMTS = 'wmts'
+export const WMTS_LEGACY = 'wmts-legacy'
 export const ARCGIS = 'arcgis'
 export const THUNDERFOREST = 'thunderforest'
+export const SWISSTOPO = 'swisstopo'
+export const WAYBACK = 'wayback'
+export const MAPTILER = 'maptiler'
+
+const IMAGERY_AUTHENT_KEY = '{%authent%}'
 
 export const MapLayer = (props) => {
 
@@ -56,56 +60,104 @@ export const MapLayer = (props) => {
     }
     const theProvider = manager.getProviderProxyByLayerId(theLayer.id)
 
+    // If we have authent in the url, we need to replace it
+    let theURL = theLayer.url
+    if (theURL.includes(IMAGERY_AUTHENT_KEY)) {
+        if (theLayer.usage?.unlocked && theLayer.usage?.name) {
+            theURL = theURL.replace(IMAGERY_AUTHENT_KEY, `${theLayer.usage.name}=${theLayer.usage.token}`)
+        }
+        else {
+            theURL = theURL.replace(IMAGERY_AUTHENT_KEY, '')
+        }
+    }
 
     return (<>
             {  //OpenStreet Map type  layers (ie slippy)
-                theProvider && theProvider.type === SLIPPY && theLayer.type === props.type &&
-                <ImageryLayer key={theLayer.url + '-' + theLayer.type} imageryProvider={
+                theProvider && theLayer.tile === SLIPPY && theLayer.type === props.type &&
+                <ImageryLayer key={theURL + '-' + theLayer.type} imageryProvider={
                     new OpenStreetMapImageryProvider(
                         {
-                            url:               theLayer.url,
+                            url: theURL,
                             credit:            props.type,
                             tileDiscardPolicy: NeverTileDiscardPolicy(),
-                            customShader:      LayersUtils.testShader,
+                        })}
+                />
+            }
+
+            {  //MapTiler
+                theProvider && theLayer.tile === MAPTILER && theLayer.type === props.type &&
+                <ImageryLayer key={theURL + '-' + theLayer.type} imageryProvider={
+                    new UrlTemplateImageryProvider(
+                        {
+                            url:               theURL,
+                            credit:            props.type,
+                            tileDiscardPolicy: NeverTileDiscardPolicy(),
                         })}
                 />
             }
 
             {  // Thunderforest Map Type Layers
-                theProvider && theProvider.type === THUNDERFOREST && theLayer.type === props.type &&
-                <ImageryLayer key={theLayer.url + '-' + theLayer.type} imageryProvider={
+                theProvider && theLayer.tile === THUNDERFOREST && theLayer.type === props.type &&
+                <ImageryLayer key={theURL + '-' + theLayer.type} imageryProvider={
                     new UrlTemplateImageryProvider({
-                                                       url:               theLayer.url + '{z}/{x}/{y}.png?apikey=' + theLayer.usage.token,
+                                                       url:               `${theURL}{z}/{x}/{y}.png?${theLayer.usage.name}=${theLayer.usage.token}`,
                                                        credit:            props.type,
                                                        tileDiscardPolicy: NeverTileDiscardPolicy(),
-                                                       customShader:      LayersUtils.testShader,
+                                                       style:             theLayer.style,
+
+                                                   })}
+                />
+            }
+
+            {  // SwissTopo Map Type Layers
+                theProvider && theLayer.tile === SWISSTOPO && theLayer.type === props.type &&
+                <ImageryLayer key={theURL + '-' + theLayer.type} imageryProvider={
+                    new UrlTemplateImageryProvider({
+                                                       url:   theURL,
+                                                       credit:            props.type,
+                                                       tileDiscardPolicy: NeverTileDiscardPolicy(),
+                                                       style: theLayer.style,
+
                                                    })}
                 />
             }
 
             {   // WMTS layers
-                theProvider && theProvider.type === WMTS && theLayer.type === props.type &&
-                <ImageryLayer key={theLayer.url + '-' + theLayer.type} imageryProvider={
+                theProvider && theLayer.tile === WMTS && theLayer.type === props.type &&
+                <ImageryLayer key={theURL + '-' + theLayer.type} imageryProvider={
                     new WebMapTileServiceImageryProvider({
-                                                             url:             theLayer.url,
+                                                             url: theURL,
                                                              layer:           theLayer.layer,
                                                              style:           theLayer.style,
                                                              format:          theLayer.format,
                                                              tileMatrixSetID: theLayer.tileMatrixSetID,
                                                              // We credit to get if it is base or overlay.
                                                              credit: props.type,
-                                                             apikey: 'ign_scan_ws',
                                                          })
                 }/>
             }
 
-            {   // ArcGIS layers
-                theProvider && theProvider.type === ARCGIS && theLayer.type === props.type &&
-                <ImageryLayer key={theLayer.url + '-' + theLayer.type}
-                              imageryProvider={ArcGisMapServerImageryProvider.fromUrl(theLayer.url, {
-                        // We credit to get if it is base or overlay.
-                        credit: props.type,
-                    })}/>
+            {   // WMTS Legacy
+                theProvider && theLayer.tile === WMTS_LEGACY && theLayer.type === props.type &&
+                <ImageryLayer key={theURL + '-' + theLayer.type} imageryProvider={
+                    new UrlTemplateImageryProvider({
+                                                       url:               `${theURL}?layer=${theLayer.layer}&style=${theLayer.style}&format=${theLayer.format}&tilematrixset=${theLayer.tileMatrixSetID}\
+&${theLayer.other}&${(theLayer?.apikey) ? `apikey=${theLayer.apikey}` : ''}&TileMatrix={z}&TileCol={x}&TileRow={y}`,
+                                                       credit:            props.type,
+                                                       tileDiscardPolicy: NeverTileDiscardPolicy(),
+                                                   })}
+                />
+            }
+
+            {   // Wayback layers
+                theProvider && theLayer.tile === WAYBACK && theLayer.type === props.type &&
+                <ImageryLayer key={theURL + '-' + theLayer.type}
+                              imageryProvider={new UrlTemplateImageryProvider({
+                                                                                  url:               `${theURL}/{z}/{y}/{x}`,
+                                                                                  credit:            props.type,
+                                                                                  tileDiscardPolicy: NeverTileDiscardPolicy(),
+
+                                                                              })}/>
             }
         </>
     )
