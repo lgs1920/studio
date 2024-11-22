@@ -2,7 +2,6 @@ import { detailedDiff }                       from 'deep-object-diff'
 import { proxy, subscribe }                   from 'valtio'
 import { SETTING_EXCLUSIONS, SETTINGS_STORE } from '../constants'
 
-
 export class SettingsSection {
 
     /** @type {string} */
@@ -97,7 +96,9 @@ export class SettingsSection {
         if (!all) {
             return all
         }
+
         const value = parameter ? all[parameter] ?? undefined : all
+
         if (parameter) {
             lgs.configuration[this.key][parameter] = (value.__value !== undefined) ? value.__value : value
         }
