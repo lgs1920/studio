@@ -127,6 +127,7 @@ sl-tab::part(base) {
     --width: 38%;
     --indent: 24%;
     width: var(--width);
+    gap: var(--lgs-gutter-s);
 }
 
 .element-item.title {

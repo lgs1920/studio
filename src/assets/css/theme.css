@@ -182,15 +182,6 @@ sl-tab-panel {
     overflow-y: hidden;
 }
 
-sl-tab-panel sl-icon {
-    margin-right: var(--lgs-gutter-xs);
-    width: 1.2rem;
-}
-
-sl-tab-panel sl-icon::part(svg) {
-    width: 1.2rem;
-}
-
 sl-drawer[placement="end"] sl-tab-group::part(base),
 sl-drawer[placement="end"] sl-tab-group::part(body),
 sl-drawer[placement="end"] sl-tab-panel::part(base),
@@ -331,6 +322,24 @@ sl-details::part(content) {
     display: flex;
     gap: var(--lgs-gutter-s);
     flex-direction: column;
+}
+
+/*******************************************************************************
+ * Dropdowns
+ ******************************************************************************/
+
+.dropdown-trigger-icon {
+    border: 1px solid;
+    background-color: var(--sl-color-neutral-0);
+    border-color: var(--sl-input-border-color);
+    color: var(--sl-color-neutral-700);
+    border-radius: var(--lgs-border-radius-s);
+}
+
+.dropdown-trigger-icon:hover {
+    background-color: var(--sl-color-primary-50);
+    border-color: var(--sl-color-primary-300);
+    color: var(--sl-color-primary-700);
 }
 
 /*******************************************************************************
