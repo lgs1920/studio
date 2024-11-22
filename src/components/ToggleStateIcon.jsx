@@ -24,19 +24,18 @@ export const ToggleStateIcon = (props) => {
 
     return (
         <>
-            <a className="toggle-state-icon"
-               {...(props.id && {id})}
-               {...(props.style && {style})}
-               onClick={toggleState}>
+            <div className="toggle-state-icon" {...(props.id && {id})}>
                 {state
                  ? <SlIconButton slot="suffix" library="fa" {...(props.style && {style})}
                                  className={'toggle-state-icon-hidden'}
-                           name={FA2SL.set(icons.hidden)}/>
+                                 onClick={toggleState}
+                                 name={FA2SL.set(icons.hidden)}/>
                  : <SlIconButton slot="suffix" library="fa" {...(props.style && {style})}
                                  className={'toggle-state-icon-shown'}
-                           name={FA2SL.set(icons.shown)}/>
+                                 onClick={toggleState}
+                                 name={FA2SL.set(icons.shown)}/>
                 }
-            </a>
+            </div>
         </>
     )
 }
