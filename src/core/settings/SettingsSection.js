@@ -160,7 +160,7 @@ export class SettingsSection {
      * @return {boolean}
      */
     hasChanged = () => {
-        return this.#data.added || this.#data.deleted || this.#data.deleted
+        return this.#data.added || this.#data.updated || this.#data.deleted
     }
 
     /**
@@ -199,16 +199,23 @@ export class SettingsSection {
     #syncRemovingValues(target, toRemove) {
         for (const key in toRemove) {
             if (Object.prototype.hasOwnProperty.call(toRemove, key)) {
-                if (typeof toRemove[key] === 'object' && toRemove[key] !== null) {
+                if (typeof toRemove[key] === 'object' && toRemove[key] !== null && toRemove[key] !== undefined) {
                     if (target[key] && typeof target[key] === 'object') {
                         this.#syncRemovingValues(target[key], toRemove[key])
                     }
                 }
                 else {
-                    delete target[key]
+                    if (Array.isArray(target)) {
+                        target.splice(key, 1)
+                    }
+                    else if (typeof target === 'object') {
+                        delete target[key]
+                    }
+
                 }
             }
         }
+        console.log(target)
         return target
     }
 
