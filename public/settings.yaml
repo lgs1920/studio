@@ -147,6 +147,9 @@ layers:
     byUsage: all
     byName: ''
     active: false
+    thumbnail: true
+    provider: true
+    alphabetic: true
 
   ## Providers List
   providers:

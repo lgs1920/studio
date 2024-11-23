@@ -1,15 +1,19 @@
-import { useConfirm }                                                from '@Components/Modals/ConfirmUI'
+import { useConfirm }                 from '@Components/Modals/ConfirmUI'
 import {
     ACCESS_ICONS, FREE_ACCOUNT_ACCESS, FREE_ANONYMOUS_ACCESS, FREEMIUM_ACCESS, LAYERS_THUMBS_DIR, LOCKED_ACCESS,
     OVERLAY_LAYERS, PREMIUM_ACCESS, UNLOCKED_ACCESS,
-}                                                                    from '@Core/constants'
-import { faFilter, faTrashCan }                                      from '@fortawesome/pro-regular-svg-icons'
+}                                     from '@Core/constants'
+import {
+    faFilter, faTrashCan,
+}                                     from '@fortawesome/pro-regular-svg-icons'
 import {
     faArrowDownUpLock, faArrowUpRightFromSquare, faCircleCheck, faEllipsisVertical, faLock, faTriangleExclamation,
-}                                                                    from '@fortawesome/pro-solid-svg-icons'
-import { SlAlert, SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                     from '@Utils/FA2SL'
-import React, { Fragment }                                           from 'react'
+}                                     from '@fortawesome/pro-solid-svg-icons'
+import {
+    SlAlert, SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem,
+}                                     from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                      from '@Utils/FA2SL'
+import React, { Fragment, useEffect } from 'react'
 
 import { useSnapshot } from 'valtio'
 
@@ -56,13 +60,11 @@ export const SelectEntity = (props) => {
 
         return (
             <div key={props.selected}
-                 className={['thumbnail-toolbar', 'lgs-ui-toolbar', props.mode, props.icons ? 'just-icons' : ''].join(' ')}>
-                <SlDropdown distance={20} hoist placement={'right-start'}>
-                    <div slot="trigger">
-                        <SlButton size={'small'} className={'thumbnail-toolbar-icon'}>
-                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faEllipsisVertical)}></SlIcon>
-                        </SlButton>
-                    </div>
+                 className={['thumbnail-toolbar', 'lgs-ui-toolbar', 'lgs-ui-dropdown-toolbar', props.mode, props.icons ? 'just-icons' : ''].join(' ')}>
+                <SlDropdown hoist placement={'left'}>
+                    <SlIconButton small className={'dropdown-trigger-icon selected-entity-menu'} slot="trigger"
+                                  library="fa" name={FA2SL.set(faEllipsisVertical)}/>
+
                     <SlMenu onSlSelect={handleSelect}>
                         {props.entity.id !== settings[props.entity.type] &&
                             <SlMenuItem value={'remove'} key={'remove-entity'}>
@@ -106,55 +108,62 @@ export const SelectEntity = (props) => {
             classes.push('entity-selected')
         }
 
+        const byProvider = settings.filter.provider ? '' : sprintf(' %s %s', 'by', props.entity.providerName)
+
         return (
 
             <sl-tooltip className={`entity-${type}`}>
                 <div slot="content">
-                    <strong>{props.entity.name}</strong><br/>
+                    <strong>{props.entity.name}</strong>{byProvider}<br/>
                     {ACCESS_ICONS[type].text}
                 </div>
-                <div className={classes.join(' ')}>
-                    <div className={'thumbnail-background'}
-                         style={{backgroundImage: thumbnailBackground(props.entity.image)}}></div>
-                    <a onClick={props.onClick} type={theEntity.type} name={theEntity.id}>
+                <div className={classes.join(' ')} onClick={props.onClick} type={theEntity.type} name={theEntity.id}>
+                    <div className={`thumbnail-background${settings.filter.thumbnail ? '' : ' lgs-card'}`}
+                         style={{backgroundImage: thumbnailBackground(props.entity.image)}}>
+                    </div>
 
-                        {/* green check box for the current entity */}
-                        {selected &&
-                            <div className={'entity-checkbox'}>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCircleCheck)}/>
-                            </div>
-                        }
 
-                        {/* show the entity access type */}
-                        {(theEntity.usage.type === PREMIUM_ACCESS
-                                || theEntity.usage.type === FREEMIUM_ACCESS
-                                || theEntity.usage.type === FREE_ACCOUNT_ACCESS)
-                            &&
-                            <div className={['entity-access', type, theEntity.usage.type].join(' ')}>
-                                <SlIcon slot="prefix" library="fa"
-                                        name={FA2SL.set(ACCESS_ICONS[theEntity.usage.type].icon)}/>
-                            </div>
-                        }
-
-                        {/* show the lock */}
-                        {theEntity.usage.type !== FREE_ANONYMOUS_ACCESS && !accountUnlocked &&
-                            <div className={['entity-lock-status', type].join(' ')}>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(ACCESS_ICONS[LOCKED_ACCESS].icon)}/>
-                            </div>
-                        }
-
-                        {/* Show the name */}
+                    {// Show the name
                         <div className={'entity-name'}>
                             {theEntity.name}
                         </div>
+                    }
 
-                    </a>
 
-                    {(theEntity.usage.type === PREMIUM_ACCESS
+                    { // green check box for the current entity
+                        selected &&
+                        <div className={'entity-checkbox'}>
+                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCircleCheck)}/>
+                        </div>
+                    }
+
+
+                    { // show the entity access type
+                        (theEntity.usage.type === PREMIUM_ACCESS
+                            || theEntity.usage.type === FREEMIUM_ACCESS
+                            || theEntity.usage.type === FREE_ACCOUNT_ACCESS)
+                        &&
+                        <div className={['entity-access', type, theEntity.usage.type].join(' ')}>
+                            <SlIcon slot="prefix" library="fa"
+                                    name={FA2SL.set(ACCESS_ICONS[theEntity.usage.type].icon)}/>
+                        </div>
+                    }
+
+                    { // show the lock
+                        theEntity.usage.type !== FREE_ANONYMOUS_ACCESS && !accountUnlocked &&
+                        <div className={['entity-lock-status', type].join(' ')}>
+                            <SlIcon slot="prefix" library="fa"
+                                    name={FA2SL.set(ACCESS_ICONS[LOCKED_ACCESS].icon)}/>
+                        </div>
+                    }
+
+                    { // Show the thumbnail
+                        (theEntity.usage.type === PREMIUM_ACCESS
                             || theEntity.usage.type === FREEMIUM_ACCESS
                             || theEntity.usage.type === FREE_ACCOUNT_ACCESS) && accountUnlocked &&
                         <ThumbnailMenu entity={theEntity}/>
                     }
+
                 </div>
             </sl-tooltip>
         )
@@ -196,17 +205,25 @@ export const SelectEntity = (props) => {
     }
     editor.layer.refreshList = true
     const fill = list.length > 0
+    let classes = ['layer-entities-wrapper', 'lgs-card']
+    classes.push(settings.filter.provider ? 'by-provider' : 'by-layer')
+    classes.push(settings.filter.thumbnail ? 'by-thumbnail' : 'by-list')
 
+    useEffect(() => {
+        //editor.layer.refreshList = false
+    }, [settings.filter.alphabetic])
     return (
         <>
             {
                 fill &&
-                <div className={'layer-entities-wrapper lgs-card'}>
+                <div className={classes.join(' ')}>
                     {list.map((entity, index) => {
                         let previousProviderName = index > 0 ? list[index - 1].providerName : null
                         return (
                             <Fragment key={index}>
-                                {// If there is a new provider, let's show it's name
+                                {   // If the user want to see providers and
+                                    settings.filter.provider &&
+                                    // if there is a new provider, let's show it's name
                                     entity.providerName && entity.providerName !== previousProviderName &&
                                     <div className="layers-provider-header">
                                         <span className={'provider-name'}>{entity.providerName}</span>
@@ -223,7 +240,7 @@ export const SelectEntity = (props) => {
                 <SlAlert variant="warning" open>
                     <SlIcon slot="icon" library="fa" name={FA2SL.set(faTriangleExclamation)}/>
                     <div id="filter-alert-content">
-                        {'Nothing to display!'}<br/>{'Check your filter criteria.'}
+                        {'It looks empty over here!'}<br/>{'Check your filter criteria.'}
                         {!snap.openFilter &&
                             <SlButton small onClick={() => editor.openFilter = true}>
                                 <SlIcon library="fa" slot="prefix" name={FA2SL.set(faFilter)}/>
@@ -233,7 +250,7 @@ export const SelectEntity = (props) => {
                     </div>
                 </SlAlert>
             }
-                <ConfirmRemoveTokenDialog/>
+            <ConfirmRemoveTokenDialog/>
         </>
 
     )

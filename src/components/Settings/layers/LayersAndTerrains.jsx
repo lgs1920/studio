@@ -1,16 +1,17 @@
-import { ALL, BASE_LAYERS, FREE_ANONYMOUS_ACCESS, OVERLAY_LAYERS, TERRAIN_LAYERS, UNLOCKED } from '@Core/constants'
+import { ALL, FREE_ANONYMOUS_ACCESS, UNLOCKED } from '@Core/constants'
 import {
-    faFilter, faFilterSlash,
-}                                                                                            from '@fortawesome/pro-regular-svg-icons'
+    faArrowDownAZ, faArrowDownBigSmall, faArrowDownWideShort, faArrowDownZA, faFilter, faFilterSlash, faGrid2, faList,
+}                                               from '@fortawesome/pro-regular-svg-icons'
 
 import { SlIconButton, SlTab, SlTabGroup, SlTabPanel, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import React                                                      from 'react'
 import { useSnapshot }                                            from 'valtio'
+import { BASE_LAYERS, OVERLAY_LAYERS, TERRAIN_LAYERS }            from '../../../core/constants'
 import { FA2SL }                                                  from '../../../Utils/FA2SL'
+import { ToggleStateIcon }                                        from '../../ToggleStateIcon'
+import { FilterEntities }                                         from './FilterEntities'
+import { SelectEntity }                                           from './SelectEntity'
+import { TokenLayerModal }                                        from './TokenLayerModal'
 
-import { FilterEntities }  from './FilterEntities'
-import { SelectEntity }    from './SelectEntity'
-import { TokenLayerModal } from './TokenLayerModal'
 
 export const LayersAndTerrains = () => {
     const editor = lgs.editorSettingsProxy
@@ -19,12 +20,11 @@ export const LayersAndTerrains = () => {
     const layers = lgs.settings.layers
     const layersSnap = useSnapshot(layers)
 
-    const handleFilter = () => {
-        editor.openFilter = !editor.openFilter
-    }
+    const handleFilter = () => editor.openFilter = !editor.openFilter
+
     /**
      * Build  entities list.
-     * If  filter isssctive, weapply it here.
+     * If  filter is active, weapply it here.
      *
      *  @param type entity type ie (base, overlay or terrain)
      *
@@ -80,10 +80,41 @@ export const LayersAndTerrains = () => {
         return list
     }
 
-    const sortByProvider = (a, b) => {
-        return a.provider.localeCompare(b.provider)
+    const sortByProvider = (left, right) => {
+        // If we display provider
+        const a = (layersSnap.filter.alphabetic) ? left : right
+        const b = (layersSnap.filter.alphabetic) ? right : left
+
+        if (layersSnap.filter.provider) {
+            if (a.providerName < b.providerName) {
+                return -1
+            }
+            if (a.providerName > b.providerName) {
+                return 1
+            }
+            if (a.name < b.name) {
+                return -1
+            }
+            if (a.name > b.name) {
+                return 1
+            }
+            return 0
+        }
+        if (a.name < b.name) {
+            return -1
+        }
+        if (a.name > b.name) {
+            return 1
+        }
+        return 0
     }
 
+    const handleProvider = (provider) => layers.filter.provider = provider
+    const handleThumbnail = (thumbnail) => layers.filter.thumbnail = thumbnail
+    const handleAlphabetic = (alphabetic) => {
+        layers.filter.alphabetic = alphabetic
+        editor.layer.refreshList = true
+    }
 
     return (
         <>
@@ -94,6 +125,27 @@ export const LayersAndTerrains = () => {
                     <SlTab slot="nav" panel="tab-overlays">{'Overlays'}</SlTab>
                     {/* <SlTab slot="nav" panel="tab-terrains">{'Terrains'}</SlTab> */}
                     <div slot="nav" id={'layers-and-terrains-filter'}>
+
+                        <SlTooltip hoist content={layersSnap.filter.thumbnail ? 'Display List' : 'Display Thumbnails'}>
+                            <ToggleStateIcon icons={{shown: faGrid2, hidden: faList}}
+                                             initial={layersSnap.filter.thumbnail}
+                                             change={handleThumbnail}
+                            />
+                        </SlTooltip>
+                        <SlTooltip hoist content={layersSnap.filter.provider ? 'By Layer' : 'By Provider'}>
+                            <ToggleStateIcon icons={{shown: faArrowDownWideShort, hidden: faArrowDownBigSmall}}
+                                             initial={layersSnap.filter.provider}
+                                             change={handleProvider}
+                            />
+                        </SlTooltip>
+
+                        <SlTooltip hoist content={layersSnap.filter.alphabetic ? 'Reverse Alphabetic' : 'Alphabetic'}>
+                            <ToggleStateIcon icons={{shown: faArrowDownAZ, hidden: faArrowDownZA}}
+                                             initial={layersSnap.filter.alphabetic}
+                                             change={handleAlphabetic}
+                            />
+                        </SlTooltip>
+
                         <SlTooltip hoist content={snap.openFilter ? 'Hide Filters' : 'Show Filters'}>
                             <SlIconButton library="fa"
                                           name={FA2SL.set(snap.openFilter ? faFilterSlash : faFilter)}
@@ -105,18 +157,17 @@ export const LayersAndTerrains = () => {
 
                     <SlTabPanel name="tab-bases">
 
-                        {snap.layer.refreshList &&
                             <SelectEntity
-                                key={`${BASE_LAYERS}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}`}
+                                key={`${BASE_LAYERS}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}-${layersSnap.filter.alphabetic}`}
                                 list={buildList(BASE_LAYERS).sort(sortByProvider)}/>
-                        }
+
 
                     </SlTabPanel>
 
                     <SlTabPanel name="tab-overlays">
                         {snap.layer.refreshList &&
                             <SelectEntity
-                                key={`${OVERLAY_LAYERS}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}`}
+                                key={`${OVERLAY_LAYERS}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}-${layersSnap.filter.alphabetic}`}
                                 list={buildList(OVERLAY_LAYERS).sort(sortByProvider)}/>
                         }
                     </SlTabPanel>
@@ -124,14 +175,11 @@ export const LayersAndTerrains = () => {
 
                         {snap.layer.refreshList &&
                             <SelectEntity
-                                key={`${TERRAIN_LAYERS}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}`}
+                                key={`${TERRAIN_LAYERS}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}-${layersSnap.filter.alphabetic}`}
                                 list={buildList(TERRAIN_LAYERS).sort(sortByProvider)}/>
                         }
-
                     </SlTabPanel>
                 </SlTabGroup>
-                {editor.layer.refreshList = false}
-
                 <TokenLayerModal/>
             </div>
         </>

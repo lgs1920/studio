@@ -68,6 +68,9 @@
     --lgs-hover-color: var(--sl-color-primary-500);
     --lgs-hover-bg-color: var(--sl-color-primary-50);
 
+    --lgs-disabled-color: var(--sl-color-gray-400);
+    --lgs-disabled-bg-color: var(--sl-color-gray-200);
+
     --lgs-theme-background: rgba(255, 255, 255, 0.15);
     --lgs-theme-gradient-1: linear-gradient(to right, rgba(192, 134, 24, 0.75), rgba(142, 120, 6, 0.65));
     --lgs-theme-gradient-1: linear-gradient(61deg, rgba(142, 212, 244, 0.64) 20%, rgba(13, 127, 204, 0.55) 90%);
