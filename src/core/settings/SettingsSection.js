@@ -215,7 +215,6 @@ export class SettingsSection {
                 }
             }
         }
-        console.log(target)
         return target
     }
 
