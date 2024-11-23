@@ -471,16 +471,16 @@ layers:
       url: 'https://OpenSnowMap.org'
       layers:
         # Tracks
-        - name: OpenSnowMap
-          id: osmorg-snow
-          image: osmorg-snow.png
-          usage:
-            type: free
-            doc: ''
-          tile: slippy
-          url: 'https://tiles.opensnowmap.org/base_snow_map/'
-          doc: ''
-          type: base
+        #        - name: OpenSnowMap
+        #          id: osmorg-snow
+        #          image: osmorg-snow.png
+        #          usage:
+        #            type: free
+        #            doc: ''
+        #          tile: slippy
+        #          url: 'https://tiles.opensnowmap.org/base_snow_map/'
+        #          doc: ''
+        #          type: base
 
         - name: OpenSnowMap
           id: osmorg-tracks
