@@ -63,6 +63,7 @@
     "react-custom-scrollbars": "^4.2.1",
     "react-dom": "^18.3.1",
     "react-drag-drop-files": "^2.4.0",
+    "react-error-boundary": "^4.1.2",
     "react-is": "^18.3.1",
     "react-markdown": "^9.0.1",
     "resium": "1.18.2",
