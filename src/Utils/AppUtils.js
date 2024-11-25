@@ -1,14 +1,14 @@
-import { BUILD, CONFIGURATION, MILLIS, platforms, SERVERS } from '@Core/constants'
-import { ElevationServer }                                  from '@Core/Elevation/ElevationServer'
-import { Settings }                                         from '@Core/settings/Settings'
-import { SettingsSection }                                  from '@Core/settings/SettingsSection'
-import { ChangelogManager }                                 from '@Core/ui/ChangelogManager'
-import axios                                                from 'axios'
-import * as Cesium                                          from 'cesium'
-import YAML                                                 from 'yaml'
-import { EventEmitter }                                     from '../assets/libs/EventEmitter/EventEmitter'
-import { SETTINGS, SETTINGS_STORE, VAULT_STORE }            from '../core/constants'
-import { FA2SL }                                            from './FA2SL'
+import { BUILD, CONFIGURATION, MILLIS, platforms, SERVERS }             from '@Core/constants'
+import { ElevationServer }                                              from '@Core/Elevation/ElevationServer'
+import { Settings }                                                     from '@Core/settings/Settings'
+import { SettingsSection }                                              from '@Core/settings/SettingsSection'
+import { ChangelogManager }                                             from '@Core/ui/ChangelogManager'
+import axios                                                            from 'axios'
+import * as Cesium                                                      from 'cesium'
+import YAML                                                             from 'yaml'
+import { EventEmitter }                                                 from '../assets/libs/EventEmitter/EventEmitter'
+import { FREE_ANONYMOUS_ACCESS, SETTINGS, SETTINGS_STORE, VAULT_STORE } from '../core/constants'
+import { FA2SL }                                                        from './FA2SL'
 
 export class AppUtils {
     /**
@@ -184,22 +184,23 @@ export class AppUtils {
         }
 
         // Read and apply tokens
-        if (lgs.settings.layers.vault) {
-            for (const provider of lgs.settings.layers.providers) {
-                let index = 0
-                for (const layer of provider.layers) {
-                    if (lgs.settings.layers.vault.includes(layer.id)) {
-                        const token = await lgs.db.vault.get(layer.id, VAULT_STORE)
-                        // We get a token, let's use it now
-                        if (token) {
-                            provider.layers[index].usage.token = token
-                            provider.layers[index].usage.unlocked = true
-                        }
+        for (const provider of lgs.settings.layers.providers) {
+            let index = 0
+            for (const layer of provider.layers) {
+                if (layer.usage.type !== FREE_ANONYMOUS_ACCESS) {
+
+                    const token = await lgs.db.vault.get(layer.id, VAULT_STORE)
+                    // We get a token, let's use it now
+                    if (token) {
+                        console.log(layer.name)
+                        provider.layers[index].usage.token = token
+                        provider.layers[index].usage.unlocked = true
                     }
-                    index++
                 }
+                index++
             }
         }
+
 
         // Ping server
         const server = await __.app.pingBackend()

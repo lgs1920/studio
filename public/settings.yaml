@@ -139,9 +139,6 @@ layers:
   overlay: null                         # ID of the current overlay
   terrain: null                         # ID of the current terrain
 
-  ## Some layers need tokens ? list layers keys
-  vault: [ ign-scan,thdfrst-cycle,thdfrst-ldscp,thdfrst-out,mpt-aqua,mpt-sat,mpt-winter ]
-
   ## Filter criteria
   filter:
     byUsage: all
