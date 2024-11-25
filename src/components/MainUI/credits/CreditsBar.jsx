@@ -26,10 +26,11 @@ export const CreditsBar = () => {
     const LAYERS_TYPE = [BASE_LAYERS, OVERLAY_LAYERS, TERRAIN_LAYERS]
 
     const Credit = (props) => {
+        console.log(props.provider)
         return (
 
             <a href={props.provider.url} target="_blank">
-                <SlTooltip hoist placement="top" content={props.provider.credit ?? `Credits ${props.provider.name}`}>
+                <SlTooltip hoist placement="top" content={props.provider.credits ?? `Credits ${props.provider.name}`}>
                     {props.provider.logo &&
                         <img src={props.provider.logo} alt={props.provider.name}/>
                     }
