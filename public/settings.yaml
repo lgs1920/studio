@@ -157,7 +157,7 @@ layers:
     ## IGN Provider
     - id: ign                           # Provider ID
       name: IGN (France)                # Provider name
-      credits: 'Credits IGN'            # Credits added to logo
+      credits: 'Credits IGN (France)'     # Credits added to logo
       # Logo
       logo: https://design-system.ign.fr/img/styleguide/sg_logos/Logo_IGN_svg/IGN_logo-simplifie_Q.svg
       url: 'https://ign.fr'             # Provider Url
