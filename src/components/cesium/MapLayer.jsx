@@ -71,13 +71,14 @@ export const MapLayer = (props) => {
         }
     }
 
-    return (<>
+    return (
+        <>
             {  //OpenStreet Map type  layers (ie slippy)
                 theProvider && theLayer.tile === SLIPPY && theLayer.type === props.type &&
                 <ImageryLayer key={theURL + '-' + theLayer.type} imageryProvider={
                     new OpenStreetMapImageryProvider(
                         {
-                            url: theURL,
+                            url:               theURL,
                             credit:            props.type,
                             tileDiscardPolicy: NeverTileDiscardPolicy(),
                         })}
@@ -113,10 +114,10 @@ export const MapLayer = (props) => {
                 theProvider && theLayer.tile === SWISSTOPO && theLayer.type === props.type &&
                 <ImageryLayer key={theURL + '-' + theLayer.type} imageryProvider={
                     new UrlTemplateImageryProvider({
-                                                       url:   theURL,
+                                                       url:               theURL,
                                                        credit:            props.type,
                                                        tileDiscardPolicy: NeverTileDiscardPolicy(),
-                                                       style: theLayer.style,
+                                                       style:             theLayer.style,
 
                                                    })}
                 />
@@ -126,7 +127,7 @@ export const MapLayer = (props) => {
                 theProvider && theLayer.tile === WMTS && theLayer.type === props.type &&
                 <ImageryLayer key={theURL + '-' + theLayer.type} imageryProvider={
                     new WebMapTileServiceImageryProvider({
-                                                             url: theURL,
+                                                             url:             theURL,
                                                              layer:           theLayer.layer,
                                                              style:           theLayer.style,
                                                              format:          theLayer.format,

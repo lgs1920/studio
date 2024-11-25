@@ -140,7 +140,7 @@ layers:
   terrain: null                         # ID of the current terrain
 
   ## Some layers need tokens ? list layers keys
-  vault: [ ign-scan,thdfrst-cycle,thdfrst-ldscp,thdfrst-out ]
+  vault: [ ign-scan,thdfrst-cycle,thdfrst-ldscp,thdfrst-out,mpt-aqua,mpt-sat,mpt-winter ]
 
   ## Filter criteria
   filter:
@@ -344,7 +344,7 @@ layers:
         # Tracks
         - name: Wayback Last 2024-11-18
           id: arcgis-wayback-last
-          image: arcgis-wayback.png
+          image: arcgis-wayback-last.png
           usage:
             type: free
             doc: ''
@@ -357,7 +357,7 @@ layers:
 
         - name: Wayback 2019-12-12
           id: arcgis-wayback-20191212
-          image: arcgis-wayback.png
+          image: arcgis-wayback-20191212.png
           usage:
             type: free
             doc: ''
@@ -422,8 +422,8 @@ layers:
           image: mpt-aqua.png
           usage:
             type: freemium
-            signin: https://cloud.maptiler.com/maps/
-            doc: https://cloud.maptiler.com/maps/aquarelle/
+            doc: 'https://cloud.maptiler.com/maps/aquarelle/'
+            signin: 'https://cloud.maptiler.com/maps/'
             name: key
 
           tile: maptiler
@@ -438,8 +438,8 @@ layers:
 
           usage:
             type: freemium
-            signin: https://cloud.maptiler.com/maps/
-            doc: https://cloud.maptiler.com/maps/satellite-v2/
+            doc: 'https://cloud.maptiler.com/maps/satellite-v2/'
+            signin: 'https://cloud.maptiler.com/maps/'
             name: key
 
           tile: maptiler
@@ -454,8 +454,8 @@ layers:
 
           usage:
             type: freemium
-            signin: https://cloud.maptiler.com/maps/
-            doc: https://cloud.maptiler.com/maps/winter-v2/
+            doc: 'https://cloud.maptiler.com/maps/winter-v2/'
+            signin: 'https://cloud.maptiler.com/maps/'
             name: key
 
           tile: maptiler
@@ -470,7 +470,7 @@ layers:
       logo: ''
       url: 'https://OpenSnowMap.org'
       layers:
-        # Tracks
+        #         ## Tracks
         #        - name: OpenSnowMap
         #          id: osmorg-snow
         #          image: osmorg-snow.png

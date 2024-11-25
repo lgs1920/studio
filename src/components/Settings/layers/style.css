@@ -45,6 +45,14 @@
     gap: var(--lgs-gutter-s);
 }
 
+.layer-entity > * {
+    pointer-events: none;
+}
+
+.layer-entity .selected-entity-menu {
+    pointer-events: auto
+}
+
 .layer-entity:not(.unlocked) {
     color: var(--lgs-disabled-color)
 }

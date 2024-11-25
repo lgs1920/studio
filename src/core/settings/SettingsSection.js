@@ -57,7 +57,6 @@ export class SettingsSection {
         else {
             // let's update settings if it is necessary
             const updated = this.update(data, configFromJSON)
-            //TODO add exclusion
 
             // Use them
             this.#content = proxy((updated instanceof Object) ? updated : {__value: updated})
@@ -139,16 +138,15 @@ export class SettingsSection {
 
         // Add new settings
         if (this.#data.added) {
-            newConfig = this.#syncAddingValues(origin, diffs.added)
+            newConfig = this.#syncAddedValues(newConfig, diffs.added)
         }
         // Remove Settings
         if (this.#data.deleted) {
-            newConfig = this.#syncRemovingValues(newConfig, diffs.deleted)
+            newConfig = this.#syncDeletedValues(newConfig, diffs.deleted)
         }
-
         // Update settings
         if (this.#data.updated && !SETTING_EXCLUSIONS.includes(this.key)) {
-            newConfig = this.#syncUpdatingValues(newConfig, diffs.updated, SETTING_EXCLUSIONS, this.key)
+            newConfig = this.#syncUpdatedValues(newConfig, diffs.updated, SETTING_EXCLUSIONS, this.key)
         }
         return newConfig
 
@@ -169,16 +167,25 @@ export class SettingsSection {
      * @param target {object} is the original object
      * @param toAdd {object} contains keys/values to remove
      *
+     * @param excludeKeys      {[string]} define the excluded attributs by specifying the key path.
+     *                                    'a.b.c' exclude {a:{b:c:d}
+     * @param parentKey        {string} used in recursion
+     *
      * @return {*}
      */
-    #syncAddingValues = (target, toAdd) => {
+
+    #syncAddedValues = (target, toAdd, excludeKeys = [], parentKey = '') => {
         for (const key in toAdd) {
             if (Object.hasOwnProperty.call(toAdd, key)) {
+                const fullKey = parentKey ? `${parentKey}.${key}` : key
+                if (excludeKeys.includes(fullKey)) {
+                    continue // Ignore les clés à exclure
+                }
                 if (typeof toAdd[key] === 'object' && toAdd[key] !== null) {
                     if (!target[key]) {
                         target[key] = Array.isArray(toAdd[key]) ? [] : {}
                     }
-                    this.#syncAddingValues(target[key], toAdd[key])
+                    this.#syncAddedValues(target[key], toAdd[key], excludeKeys, fullKey)
                 }
                 else {
                     target[key] = toAdd[key]
@@ -194,14 +201,23 @@ export class SettingsSection {
      *
      * @param target {object} is the original object
      * @param toRemove {object} contains keys/values to remove
+     *
+     * @param excludeKeys      {[string]} define the excluded attributs by specifying the key path.
+     *                                    'a.b.c' exclude {a:{b:c:d}
+     * @param parentKey        {string} used in recursion
+     *
      * @return {*}
      */
-    #syncRemovingValues(target, toRemove) {
+    #syncDeletedValues(target, toRemove, excludeKeys = [], parentKey = '') {
         for (const key in toRemove) {
             if (Object.prototype.hasOwnProperty.call(toRemove, key)) {
+                const fullKey = parentKey ? `${parentKey}.${key}` : key
+                if (excludeKeys.includes(fullKey)) {
+                    continue // Ignore les clés à exclure
+                }
                 if (typeof toRemove[key] === 'object' && toRemove[key] !== null && toRemove[key] !== undefined) {
                     if (target[key] && typeof target[key] === 'object') {
-                        this.#syncRemovingValues(target[key], toRemove[key])
+                        this.#syncDeletedValues(target[key], toRemove[key], excludeKeys, fullKey)
                     }
                 }
                 else {
@@ -224,12 +240,12 @@ export class SettingsSection {
      * @param target {object} is the original object
      * @param updated {object} contains keys/values to update
      *
-     * @param excludeKeys      {[string]} define the excluded attributs by specifying the ley path.
+     * @param excludeKeys      {[string]} define the excluded attributs by specifying the key path.
      *                                    'a.b.c' exclude {a:{b:c:d}
      * @param parentKey        {string} used in recursion
      * @return {*}
      */
-    #syncUpdatingValues = (target, toUpdate, excludeKeys = [], parentKey = '') => {
+    #syncUpdatedValues = (target, toUpdate, excludeKeys = [], parentKey = '') => {
         for (const key in toUpdate) {
             if (Object.prototype.hasOwnProperty.call(toUpdate, key)) {
                 const fullKey = parentKey ? `${parentKey}.${key}` : key
@@ -240,7 +256,7 @@ export class SettingsSection {
                     if (!target[key]) {
                         target[key] = Array.isArray(toUpdate[key]) ? [] : {}
                     }
-                    this.#syncUpdatingValues(target[key], toUpdate[key], excludeKeys, fullKey)
+                    this.#syncUpdatedValues(target[key], toUpdate[key], excludeKeys, fullKey)
                 }
                 else {
                     target[key] = toUpdate[key]
@@ -248,5 +264,22 @@ export class SettingsSection {
             }
         }
         return target
+    }
+
+    #matchesExclusionKey = (exclusionKeys, path) => {
+        exclusionKeys.forEach((exclusionKey) => {
+            const keySegments = exclusionKey.split('.')
+            const pathSegments = path.split('.')
+            let keyIndex = 0
+            for (let i = 0; i < pathSegments.length; i++) {
+                if (keySegments[keyIndex] === pathSegments[i] || keySegments[keyIndex] === '*') {
+                    keyIndex++
+                }
+                if (keyIndex === keySegments.length) {
+                    return true
+                }
+            }
+        })
+        return false
     }
 }
