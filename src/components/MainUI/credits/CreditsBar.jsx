@@ -25,12 +25,16 @@ export const CreditsBar = () => {
     const providersToCredit = useSnapshot(providers)
     const LAYERS_TYPE = [BASE_LAYERS, OVERLAY_LAYERS, TERRAIN_LAYERS]
 
+
     const Credit = (props) => {
-        console.log(props.provider)
+        const credits = () => {
+            const layer = __.layerManager.getLayerProxy(lgs.settings.layers[props.type])
+            return layer?.credits ?? props.provider.credits ?? `Credits ${props.provider.name}`
+        }
         return (
 
             <a href={props.provider.url} target="_blank">
-                <SlTooltip hoist placement="top" content={props.provider.credits ?? `Credits ${props.provider.name}`}>
+                <SlTooltip hoist placement="top" content={credits()}>
                     {props.provider.logo &&
                         <img src={props.provider.logo} alt={props.provider.name}/>
                     }
@@ -88,15 +92,17 @@ export const CreditsBar = () => {
                 <div className={'lgs-card on-map provider-credits'}>
                     {providersToCredit.terrain &&
                         <>
-                            <Credit id={'terrain-credits'} provider={providersToCredit.terrain}></Credit>|
+                            <Credit id={'terrain-credits'} type={TERRAIN_LAYERS}
+                                    provider={providersToCredit.terrain}></Credit>|
                         </>}
                     {providersToCredit.overlay &&
                         <>
-                            <Credit id={'overlay-credits'} provider={providersToCredit.overlay}></Credit>|
+                            <Credit id={'overlay-credits'} type={OVERLAY_LAYERS}
+                                    provider={providersToCredit.overlay}></Credit>|
                         </>}
                     {providersToCredit.base &&
                         <>
-                            <Credit id={'layer-credits'} provider={providersToCredit.base}></Credit>
+                            <Credit id={'layer-credits'} type={BASE_LAYERS} provider={providersToCredit.base}></Credit>
                         </>
                     }
                 </div>
