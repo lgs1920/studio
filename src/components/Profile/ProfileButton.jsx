@@ -19,7 +19,6 @@ export const ProfileButton = forwardRef(function ProfileButton(props, ref) {
 
     TrackUtils.setProfileVisibility(lgs.theJourney)
 
-    console.log(mainSnap.canViewProfile)
     return (<>
         {mainSnap.canViewProfile &&
             <SlTooltip hoist placement={props.tooltip} content="Open Profile">
