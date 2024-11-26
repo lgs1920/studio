@@ -10,12 +10,13 @@ import {
     faArrowDownUpLock, faArrowUpRightFromSquare, faCircleCheck, faEllipsisVertical, faLock, faTriangleExclamation,
 }                                     from '@fortawesome/pro-solid-svg-icons'
 import {
-    SlAlert, SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem,
+    SlAlert, SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem, SlTooltip,
 }                                     from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                      from '@Utils/FA2SL'
 import React, { Fragment, useEffect } from 'react'
 
 import { useSnapshot } from 'valtio'
+import { VAULT_STORE } from '../../../core/constants'
 
 
 export const SelectEntity = (props) => {
@@ -26,10 +27,11 @@ export const SelectEntity = (props) => {
     const editor = lgs.editorSettingsProxy
     const snap = useSnapshot(editor)
 
-    const Message = () => {
+    const title = sprintf(`Remove Token ?`)
+    const message = () => {
         return (<>{`Are you sure you want to remove this access ?`}</>)
     }
-    const [ConfirmRemoveTokenDialog, confirmRemoveToken] = useConfirm(`Remove Token ?`, Message,
+    const [ConfirmRemoveTokenDialog, confirmRemoveToken] = useConfirm(title, message,
                                                                       {icon: faTrashCan, text: 'Remove'})
     const ThumbnailMenu = (props) => {
         const theEntity = props.entity
@@ -40,8 +42,10 @@ export const SelectEntity = (props) => {
                 case 'remove':
                     const confirmation = await confirmRemoveToken()
                     if (confirmation) {
+                        // Update settings and vault DBs
                         theEntity.usage.token = ''
                         theEntity.usage.unlocked = false
+                        await lgs.db.vault.put(theEntity.id, theEntity.usage.token, VAULT_STORE)
                     }
                     break
                 case
@@ -63,6 +67,7 @@ export const SelectEntity = (props) => {
                  className={['thumbnail-toolbar', 'lgs-ui-toolbar', 'lgs-ui-dropdown-toolbar', props.mode, props.icons ? 'just-icons' : ''].join(' ')}>
                 <SlDropdown hoist placement={'left'}>
                     <SlIconButton small className={'dropdown-trigger-icon selected-entity-menu'} slot="trigger"
+                                  onShow={(event) => event.preventDefault()}
                                   library="fa" name={FA2SL.set(faEllipsisVertical)}/>
 
                     <SlMenu onSlSelect={handleSelect}>
@@ -112,7 +117,7 @@ export const SelectEntity = (props) => {
 
         return (
 
-            <sl-tooltip className={`entity-${type}`}>
+            <SlTooltip className={`entity-${type}`} placement={'left'} hoist>
                 <div slot="content">
                     <strong>{props.entity.name}</strong>{byProvider}<br/>
                     {ACCESS_ICONS[type].text}
@@ -165,7 +170,7 @@ export const SelectEntity = (props) => {
                     }
 
                 </div>
-            </sl-tooltip>
+            </SlTooltip>
         )
     }
 
@@ -179,6 +184,10 @@ export const SelectEntity = (props) => {
     const selectEntityHandler = (event) => {
         const type = event.target.getAttribute('type')
         const id = event.target.getAttribute('name')
+
+        if (type === null || id === null) {
+            return
+        }
         const theEntity = __.layerManager.getALayer(id)
         if (theEntity.usage.type === FREE_ANONYMOUS_ACCESS) {
             // We're on a free access, so we can select it.
