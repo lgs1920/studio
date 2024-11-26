@@ -85,6 +85,10 @@
 
     --lgs-card-on-map-bg-color: rgba(103, 104, 21, 0.35);
     --lgs-card-on-map-border-color: rgba(103, 104, 21, 0.3);
+
+    --lgs-tooltip-bg-color: rgba(255, 255, 153, 1);
+    --lgs-tooltip-color: var(--sl-color-gray-800);
+    --lgs-tooltip-border-color: rgba(255, 255, 255, 0.3);
 }
 
 .lgs-theme, .lgs-theme::part(panel) {
@@ -277,6 +281,25 @@ cesium-compass {
     --cesium-compass-fill-color: var(--lgs-dark-ui-bg-color);
     --cesium-compass-stroke-color: var(--lgs-dark-ui-fg-color);
 }
+
+/*******************************************************************************
+ * Tooltips
+ ******************************************************************************/
+sl-tooltip {
+    --sl-tooltip-border-radius: var(--lgs-border-radius-xs);
+    --sl-tooltip-background-color: var(--lgs-tooltip-bg-color);
+    --sl-tooltip-color: var(--lgs-tooltip-color);
+    --sl-tooltip-font-family: var(--sl-font-sans);
+    --sl-tooltip-font-weight: var(--sl-font-weight-normal);
+    --sl-tooltip-font-size: var(--lgs-font-size-s);
+    --sl-tooltip-line-height: var(--sl-line-height-dense);
+    --sl-tooltip-padding: var(--lgs-gutter-xs);
+    --sl-tooltip-arrow-size: 0;
+
+    box-shadow: var(--sl-shadow-large);
+    border-color: var(--lgs-tooltip-border-color);
+}
+
 
 /*******************************************************************************
  * Dialogs / Modals
