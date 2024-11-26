@@ -65,7 +65,7 @@ export const SelectEntity = (props) => {
         return (
             <div key={props.selected}
                  className={['thumbnail-toolbar', 'lgs-ui-toolbar', 'lgs-ui-dropdown-toolbar', props.mode, props.icons ? 'just-icons' : ''].join(' ')}>
-                <SlDropdown hoist placement={'left'}>
+                <SlDropdown hoist placement={'left-start'}>
                     <SlIconButton small className={'dropdown-trigger-icon selected-entity-menu'} slot="trigger"
                                   onShow={(event) => event.preventDefault()}
                                   library="fa" name={FA2SL.set(faEllipsisVertical)}/>
@@ -117,7 +117,7 @@ export const SelectEntity = (props) => {
 
         return (
 
-            <SlTooltip className={`entity-${type}`} placement={'left'} hoist>
+            <SlTooltip className={`entity-${type}`} placement={settings.filter.thumbnail ? 'top' : 'left'} hoist>
                 <div slot="content">
                     <strong>{props.entity.name}</strong>{byProvider}<br/>
                     {ACCESS_ICONS[type].text}
