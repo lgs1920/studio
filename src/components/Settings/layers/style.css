@@ -79,7 +79,6 @@
     z-index: -1;
     background-position: center;
     background-size: cover;
-    /*filter: grayscale(0.7) blur(1px);*/
     transition: background-size 0.5s ease;
 }
 
@@ -107,7 +106,7 @@
 }
 
 .layer-entity.entity-selected {
-    border: 2px solid var(--lgs-success-color);
+    border-color: var(--lgs-success-color);
 }
 
 .layer-entity > a {
