@@ -192,7 +192,6 @@ export class AppUtils {
                     const token = await lgs.db.vault.get(layer.id, VAULT_STORE)
                     // We get a token, let's use it now
                     if (token) {
-                        console.log(layer.name)
                         provider.layers[index].usage.token = token
                         provider.layers[index].usage.unlocked = true
                     }
