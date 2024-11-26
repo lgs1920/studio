@@ -259,11 +259,6 @@ sl-card[variant="primary"]::part(base) {
     backdrop-filter: blur(3px);
     border-color: var(--lgs-card-on-map-border-color);
 }
-
-.lgs-card:not(.on-map):hover {
-    background: rgba(255, 255, 255, 0.45);
-}
-
 .lgs-card-wrapper {
     display: flex;
     flex-direction: column;
