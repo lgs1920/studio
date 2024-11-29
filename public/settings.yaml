@@ -294,7 +294,7 @@ layers:
         ## IGN CASSINI
         - name: IGN EM (1820-1866)
           id: ign-em-1820
-          image: ign-1820.png
+          image: ign-em-1820.png
           usage:
             type: free
             doc: ''
