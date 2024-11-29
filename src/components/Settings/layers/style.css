@@ -126,7 +126,7 @@
     font-size: 1rem;
     line-height: 1;
     top: var(--lgs-gutter-xs);
-    right: calc(var(--lgs-gutter-xs) - 3px); /* Manual right adjust. */
+    right: calc(var(--lgs-gutter-xs) - 1.5px); /* Manual right adjust. */
 }
 
 .by-list .entity-checkbox {
@@ -142,7 +142,7 @@
     height: var(--entity-thumbnail-button-dimension);
     display: flex;
     justify-content: center;
-    padding-left: 3px;
+    padding-left: 1.5px;
     align-items: center;
     border-radius: var(--lgs-border-radius-xs);
     border: var(--lgs-border-s);
@@ -199,8 +199,13 @@
     display: none;
 }
 
-.entity-selected .entity-checkbox {
-    color: var(--lgs-success-color)
+.entity-selected .entity-checkbox svg g .fa-secondary {
+    color: var(--lgs-success-color);
+    opacity: 1;
+}
+
+.entity-selected .entity-checkbox svg g .fa-primary {
+    color: white;
 }
 
 .provider-name {

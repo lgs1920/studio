@@ -3,12 +3,16 @@ import {
     ACCESS_ICONS, FREE_ACCOUNT_ACCESS, FREE_ANONYMOUS_ACCESS, FREEMIUM_ACCESS, LAYERS_THUMBS_DIR, LOCKED_ACCESS,
     OVERLAY_LAYERS, PREMIUM_ACCESS, UNLOCKED_ACCESS,
 }                                     from '@Core/constants'
+// import {
+//     faFilter, faTrashCan,faArrowDownUpLock, faArrowUpRightFromSquare, faCircleCheck, faEllipsisVertical, faLock,
+// faTriangleExclamation, }                                     from '@fortawesome/pro-regular-svg-icons'
 import {
-    faFilter, faTrashCan,
-}                                     from '@fortawesome/pro-regular-svg-icons'
+    faArrowDownUpLock, faArrowUpRightFromSquare, faCircleCheck, faEllipsisVertical, faFilter, faLock, faTrashCan,
+    faTriangleExclamation,
+}                                     from '@fortawesome/pro-duotone-svg-icons'
 import {
-    faArrowDownUpLock, faArrowUpRightFromSquare, faCircleCheck, faEllipsisVertical, faLock, faTriangleExclamation,
-}                                     from '@fortawesome/pro-solid-svg-icons'
+    FontAwesomeIcon,
+}                                     from '@fortawesome/react-fontawesome'
 import {
     SlAlert, SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem, SlTooltip,
 }                                     from '@shoelace-style/shoelace/dist/react'
@@ -138,7 +142,7 @@ export const SelectEntity = (props) => {
                     { // green check box for the current entity
                         selected &&
                         <div className={'entity-checkbox'}>
-                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCircleCheck)}/>
+                            <FontAwesomeIcon icon={faCircleCheck}/>
                         </div>
                     }
 
