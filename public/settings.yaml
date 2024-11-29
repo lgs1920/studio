@@ -273,6 +273,42 @@ layers:
           doc: 'https://data.geopf.fr'
           type: base
 
+        ## IGN CASSINI
+        - name: IGN Cassini
+          id: ign-cassini
+          image: ign-cassini.png
+          usage:
+            type: free
+            doc: ''
+
+          tile: wmts
+          url: 'https://data.geopf.fr/wmts'
+          layer: BNF-IGNF_GEOGRAPHICALGRIDSYSTEMS.CASSINI
+          style: normal
+          format: image/png
+          tileMatrixSetID: PM
+          doc: 'https://data.geopf.fr'
+          type: base
+          credits: Crédits BNF - IGN
+
+        ## IGN CASSINI
+        - name: IGN EM (1820-1866)
+          id: ign-em-1820
+          image: ign-1820.png
+          usage:
+            type: free
+            doc: ''
+
+          tile: wmts
+          url: 'https://data.geopf.fr/wmts'
+          layer: GEOGRAPHICALGRIDSYSTEMS.ETATMAJOR40
+          style: normal
+          format: image/jpeg
+          tileMatrixSetID: PM
+          doc: 'https://data.geopf.fr'
+          type: base
+          #
+
     ## WayMarked Trail Provider
     - id: wmt
       name: WayMarked Trail
