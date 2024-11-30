@@ -274,7 +274,7 @@ layers:
           type: base
 
         ## IGN CASSINI
-        - name: IGN Cassini
+        - name: IGN Cassini\(1756-1815)
           id: ign-cassini
           image: ign-cassini.png
           usage:
@@ -292,7 +292,7 @@ layers:
           credits: Crédits BNF - IGN
 
         ## IGN CASSINI
-        - name: IGN EM (1820-1866)
+        - name: IGN Etat Major\(1820-1866)
           id: ign-em-1820
           image: ign-em-1820.png
           usage:
@@ -375,7 +375,7 @@ layers:
       url: 'https://arcgis.com/'
       layers:
         # Tracks
-        - name: Wayback Last 2024-11-18
+        - name: Wayback Last\(2024-11-18)
           id: arcgis-wayback-last
           image: arcgis-wayback-last.png
           usage:
@@ -388,7 +388,7 @@ layers:
           type: base
 
 
-        - name: Wayback 2019-12-12
+        - name: Wayback\(2019-12-12)
           id: arcgis-wayback-20191212
           image: arcgis-wayback-20191212.png
           usage:

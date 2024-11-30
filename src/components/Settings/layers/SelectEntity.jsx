@@ -17,6 +17,7 @@ import {
     SlAlert, SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem, SlTooltip,
 }                                     from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                      from '@Utils/FA2SL'
+import parse                          from 'html-react-parser'
 import React, { Fragment, useEffect } from 'react'
 
 import { useSnapshot } from 'valtio'
@@ -100,7 +101,6 @@ export const SelectEntity = (props) => {
 
     const Thumbnail = (props) => {
         const theEntity = __.layerManager.getLayerProxy(props.entity.id)
-        const theEntitySnap = useSnapshot(theEntity)
 
         const accountType = theEntity.usage.type
 
@@ -118,12 +118,14 @@ export const SelectEntity = (props) => {
         }
 
         const byProvider = settings.filter.provider ? '' : sprintf(' %s %s', 'by', props.entity.providerName)
+        //On thumbnail mode, we use \ as line separator
+        const theEntityName = settings.filter.thumbnail ? props.entity.name.replace('\\', '<br/>') : props.entity.name.replace('\\', ' ')
 
         return (
 
             <SlTooltip className={`entity-${type}`} placement={settings.filter.thumbnail ? 'top' : 'left'} hoist>
                 <div slot="content">
-                    <strong>{props.entity.name}</strong>{byProvider}<br/>
+                    <strong>{parse(theEntityName)}</strong>{byProvider}<br/>
                     {ACCESS_ICONS[type].text}
                 </div>
                 <div className={classes.join(' ')} onClick={props.onClick} type={theEntity.type} name={theEntity.id}>
@@ -134,7 +136,7 @@ export const SelectEntity = (props) => {
 
                     {// Show the name
                         <div className={'entity-name'}>
-                            {theEntity.name}
+                            {parse(theEntityName)}
                         </div>
                     }
 
