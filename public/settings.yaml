@@ -150,7 +150,7 @@ layers:
 
   ## Providers List
   providers:
-    ## WayMarked Trail Provider
+    ## Cesium
     - id: cesium
       name: Cesium
       credits: 'Credits CesiumJS'
@@ -169,7 +169,7 @@ layers:
           terrainType: 'cesium'
 
         ## Ellipsoid
-        - name: Ellipsoid (No Relief)
+        - name: Ellipsoid\(No Relief)
           id: cesium-ellipsoid
           image: cesium-ellipsoid.png
           usage:
