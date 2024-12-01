@@ -1,27 +1,24 @@
-import { useConfirm }                 from '@Components/Modals/ConfirmUI'
+import { useConfirm } from '@Components/Modals/ConfirmUI'
 import {
     ACCESS_ICONS, FREE_ACCOUNT_ACCESS, FREE_ANONYMOUS_ACCESS, FREEMIUM_ACCESS, LAYERS_THUMBS_DIR, LOCKED_ACCESS,
-    OVERLAY_LAYERS, PREMIUM_ACCESS, UNLOCKED_ACCESS,
-}                                     from '@Core/constants'
-// import {
-//     faFilter, faTrashCan,faArrowDownUpLock, faArrowUpRightFromSquare, faCircleCheck, faEllipsisVertical, faLock,
-// faTriangleExclamation, }                                     from '@fortawesome/pro-regular-svg-icons'
+    OVERLAY_ENTITY, PREMIUM_ACCESS, TERRAIN_ENTITY, UNLOCKED_ACCESS, VAULT_STORE,
+}                     from '@Core/constants'
+
 import {
     faArrowDownUpLock, faArrowUpRightFromSquare, faCircleCheck, faEllipsisVertical, faFilter, faLock, faTrashCan,
     faTriangleExclamation,
-}                                     from '@fortawesome/pro-duotone-svg-icons'
+}                          from '@fortawesome/pro-duotone-svg-icons'
 import {
     FontAwesomeIcon,
-}                                     from '@fortawesome/react-fontawesome'
+}                          from '@fortawesome/react-fontawesome'
 import {
     SlAlert, SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem, SlTooltip,
-}                                     from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                      from '@Utils/FA2SL'
-import parse                          from 'html-react-parser'
-import React, { Fragment, useEffect } from 'react'
+}                          from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }           from '@Utils/FA2SL'
+import parse               from 'html-react-parser'
+import React, { Fragment } from 'react'
 
 import { useSnapshot } from 'valtio'
-import { VAULT_STORE } from '../../../core/constants'
 
 
 export const SelectEntity = (props) => {
@@ -100,7 +97,7 @@ export const SelectEntity = (props) => {
     }
 
     const Thumbnail = (props) => {
-        const theEntity = __.layerManager.getLayerProxy(props.entity.id)
+        const theEntity = __.layersAndTerrainManager.getEntityProxy(props.entity.id)
 
         const accountType = theEntity.usage.type
 
@@ -183,7 +180,7 @@ export const SelectEntity = (props) => {
 
     const list = props.list
     list.map((entity, index) => {
-        entity.providerName = __.layerManager.providers.get(entity.provider).name
+        entity.providerName = __.layersAndTerrainManager.providers.get(entity.provider).name
         list[index] = entity
     })
 
@@ -194,27 +191,31 @@ export const SelectEntity = (props) => {
         if (type === null || id === null) {
             return
         }
-        const theEntity = __.layerManager.getALayer(id)
+        const theEntity = __.layersAndTerrainManager.getALayer(id)
         if (theEntity.usage.type === FREE_ANONYMOUS_ACCESS) {
             // We're on a free access, so we can select it.
             lgs.settings.layers[type] =
                 // Clicking on the same overlay will deselect it
-                (type === OVERLAY_LAYERS && lgs.settings.layers[type] === id) ? '' : id
+                (type === OVERLAY_ENTITY && lgs.settings.layers[type] === id) ? '' : id
         }
         else {
             // We need to know if  the account has been unlocked
-            const theProxy = __.layerManager.getLayerProxy(id)
+            const theProxy = __.layersAndTerrainManager.getEntityProxy(id)
             // If not unlocked, we launch the dialog else select it
             if (theProxy.usage.unlocked) {
                 lgs.settings.layers[type] =
                     // Clicking on the same overlay will deselect it
-                    (type === OVERLAY_LAYERS && lgs.settings.layers[type] === id) ? '' : id
+                    (type === OVERLAY_ENTITY && lgs.settings.layers[type] === id) ? '' : id
                 editor.layer.tokenDialog = false
             }
             else {
                 editor.layer.tmpEntity = theProxy
                 editor.layer.tokenDialog = true
             }
+        }
+        // If it is a free or unlocked terrain , replace the current one
+        if (theEntity.type === TERRAIN_ENTITY && (theEntity.usage.type === FREE_ANONYMOUS_ACCESS || theEntity.usage.unlocked)) {
+            __.layersAndTerrainManager.changeTerrain(theEntity)
         }
 
     }
@@ -224,9 +225,6 @@ export const SelectEntity = (props) => {
     classes.push(settings.filter.provider ? 'by-provider' : 'by-layer')
     classes.push(settings.filter.thumbnail ? 'by-thumbnail' : 'by-list')
 
-    useEffect(() => {
-        //editor.layer.refreshList = false
-    }, [settings.filter.alphabetic])
     return (
         <>
             {

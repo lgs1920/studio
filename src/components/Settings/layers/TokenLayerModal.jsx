@@ -1,10 +1,11 @@
-import { BASE_LAYERS, VAULT_STORE }                        from '@Core/constants'
+import { BASE_ENTITY, VAULT_STORE }                        from '@Core/constants'
 import { faCheck, faEye, faEyeSlash, faTrashCan, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import { SlBadge, SlButton, SlDialog, SlIcon, SlInput }    from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                           from '@Utils/FA2SL'
 import parse                                               from 'html-react-parser'
 import { useRef }                                          from 'react'
 import { useSnapshot }                                     from 'valtio'
+import { TERRAIN_ENTITY }                                  from '../../../core/constants'
 import { UIToast }                                         from '../../../Utils/UIToast'
 
 
@@ -28,7 +29,7 @@ export const TokenLayerModal = (props) => {
 
     const accountUrl = sprintf('<a href="%s" target="_blank">%s</a>', snap.layer.tmpEntity.usage?.signin, snap.layer.tmpEntity.usage?.signin)
     const docUrl = sprintf('<a href="%s" target="_blank">%s</a>', snap.layer.tmpEntity.usage?.doc, 'See documentation')
-    const provider = __.layerManager.getProviderProxy(__.layerManager.getProviderIdByLayerId(snap.layer.tmpEntity.id))
+    const provider = __.layersAndTerrainManager.getProviderProxy(__.layersAndTerrainManager.getProviderIdByLayerId(snap.layer.tmpEntity.id))
     const providerUrl = sprintf('<a href="%s" target="_blank">%s</a>', provider.url, 'Visit Provider')
 
     const handleChange = (event) => {
@@ -39,20 +40,24 @@ export const TokenLayerModal = (props) => {
     const validateToken = async () => {
         if (apikey.current.value) {
             await lgs.db.vault.put(snap.layer.tmpEntity.id, apikey.current.value, VAULT_STORE)
-            const tmp = __.layerManager.getLayerProxy(snap.layer.tmpEntity.id)
+            const tmp = __.layersAndTerrainManager.getEntityProxy(snap.layer.tmpEntity.id)
 
             tmp.usage.token = apikey.current.value
             tmp.usage.unlocked = true
 
-            if (tmp.type === BASE_LAYERS) {
+            if (tmp.type === BASE_ENTITY) {
                 lgs.mainProxy.theLayer = tmp
             }
             else {
                 lgs.mainProxy.theLayerOverlay = tmp
-            }
 
             // Set by default
             lgs.settings.layers[snap.layer.tmpEntity.type] = snap.layer.tmpEntity.id
+
+                // Terrain ? Replace the current one
+                if (snap.layer.tmpEntity.type === TERRAIN_ENTITY) {
+                    __.layersAndTerrainManager.changeTerrain(snap.layer.tmpEntity)
+                }
 
             // Close Dialog
             editor.layer.tokenDialog = false

@@ -101,9 +101,9 @@ export const SETTING_EXCLUSIONS = [
  * Layers and Terrains
  */
 export const LAYERS = 'layers'
-export const BASE_LAYERS = 'base'
-export const OVERLAY_LAYERS = 'overlay'
-export const TERRAIN_LAYERS = 'terrain'
+export const BASE_ENTITY = 'base'
+export const OVERLAY_ENTITY = 'overlay'
+export const TERRAIN_ENTITY = 'terrain'
 export const LAYERS_THUMBS_DIR = '/assets/images/layers/thumbnails'
 export const PREMIUM_ACCESS = 'premium'
 export const FREEMIUM_ACCESS = 'freemium'

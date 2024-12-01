@@ -1,15 +1,15 @@
 import { MainUI }                                                            from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { BASE_LAYERS, OVERLAY_LAYERS }                                       from '@Core/constants'
+import { BASE_ENTITY, OVERLAY_ENTITY }                                       from '@Core/constants'
 import { LGS1920Context }                                                    from '@Core/LGS1920Context'
 import { TrackUtils }                                                        from '@Utils/cesium/TrackUtils'
 import * as Cesium                                                           from 'cesium'
 import { useEffect }                                                         from 'react'
 import { Camera, CameraFlyTo, Globe, ImageryLayerCollection, Scene, Viewer } from 'resium'
-import { MapLayer }                                                          from './components/cesium/MapLayer'
+import { MapLayer }                                                         from './components/cesium/MapLayer'
 import { InitErrorMessage }                                                  from './components/InitErrorMessage'
 import { WelcomeModal }                                                      from './components/MainUI/WelcomeModal'
-import { LayerManager }                                                      from './core/layers/LayerManager'
+import { LayersAndTerrainManager }                                          from './core/layers/LayerAndTerrainManager'
 import { LayersUtils }                                                       from './Utils/cesium/LayersUtils'
 import { UIToast }                                                           from './Utils/UIToast'
 
@@ -32,7 +32,7 @@ if (initApp.status) {
     lgs.initManagers()
 
     // Init Layer
-    __.layerManager = new LayerManager()
+    __.layersAndTerrainManager = new LayersAndTerrainManager()
 
 }
 
@@ -135,7 +135,9 @@ export function LGS1920() {
                 infoBox={false}
                 sceneModePicker={false}
                 showRenderLoopErrors={false}
-                terrain={Cesium.Terrain.fromWorldTerrain({
+                terrain={
+
+                    Cesium.Terrain.fromWorldTerrain({
 
 
                                                              /* Y6VgRYi3iKQEttoa3G0v */
@@ -145,6 +147,12 @@ export function LGS1920() {
                                                              requestVertexNormals: false,
                                                              //    }))}
                                                          })}
+
+            //     Cesium.ArcGISTiledElevationTerrainProvider({
+            // url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',
+            // requestVertexNormals: false,
+            // })
+
                 id="studioMapViewer"
 
             /***********************/
@@ -155,8 +163,8 @@ export function LGS1920() {
         >
 
             <ImageryLayerCollection onLayerAdd={LayersUtils.layerOrder}>
-                <MapLayer type={BASE_LAYERS}/>
-                <MapLayer type={OVERLAY_LAYERS}/>
+                <MapLayer type={BASE_ENTITY}/>
+                <MapLayer type={OVERLAY_ENTITY}/>
             </ImageryLayerCollection>
 
             <Scene verticalExaggeration={1.3}></Scene>

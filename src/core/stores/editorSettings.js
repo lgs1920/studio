@@ -1,9 +1,9 @@
-import { BASE_LAYERS } from '@Core/constants'
+import { BASE_ENTITY } from '@Core/constants'
 
 
 export const editorSettings = {
     layer:   {
-        selectedType: BASE_LAYERS,
+        selectedType: BASE_ENTITY,
         infoDialog:   false,
         tokenDialog:  false,
         tmpEntity:    null,

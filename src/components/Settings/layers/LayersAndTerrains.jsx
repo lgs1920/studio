@@ -5,7 +5,7 @@ import {
 
 import { SlIconButton, SlTab, SlTabGroup, SlTabPanel, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { useSnapshot }                                            from 'valtio'
-import { BASE_LAYERS, OVERLAY_LAYERS, TERRAIN_LAYERS }            from '../../../core/constants'
+import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY }            from '../../../core/constants'
 import { FA2SL }                                                  from '../../../Utils/FA2SL'
 import { ToggleStateIcon }                                        from '../../ToggleStateIcon'
 import { FilterEntities }                                         from './FilterEntities'
@@ -31,7 +31,7 @@ export const LayersAndTerrains = () => {
      */
     const buildList = (type) => {
         const list = []
-        __.layerManager.layers.forEach(layer => {
+        __.layersAndTerrainManager.layers.forEach(layer => {
             const AND = '&', OR = '|'
             if (layer.type === type) {
                 let byName = true, byUsage = true
@@ -123,7 +123,7 @@ export const LayersAndTerrains = () => {
                 <SlTabGroup>
                     <SlTab slot="nav" panel="tab-bases">{'Bases'}</SlTab>
                     <SlTab slot="nav" panel="tab-overlays">{'Overlays'}</SlTab>
-                    {/* <SlTab slot="nav" panel="tab-terrains">{'Terrains'}</SlTab> */}
+                    <SlTab slot="nav" panel="tab-terrains">{'Terrains'}</SlTab>
                     <div slot="nav" id={'layers-and-terrains-filter'}>
 
                         <SlTooltip hoist content={layersSnap.filter.thumbnail ? 'Display List' : 'Display Thumbnails'}>
@@ -158,8 +158,8 @@ export const LayersAndTerrains = () => {
                     <SlTabPanel name="tab-bases">
 
                             <SelectEntity
-                                key={`${BASE_LAYERS}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}-${layersSnap.filter.alphabetic}`}
-                                list={buildList(BASE_LAYERS).sort(sortByProvider)}/>
+                                key={`${BASE_ENTITY}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}-${layersSnap.filter.alphabetic}`}
+                                list={buildList(BASE_ENTITY).sort(sortByProvider)}/>
 
 
                     </SlTabPanel>
@@ -167,16 +167,16 @@ export const LayersAndTerrains = () => {
                     <SlTabPanel name="tab-overlays">
                         {snap.layer.refreshList &&
                             <SelectEntity
-                                key={`${OVERLAY_LAYERS}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}-${layersSnap.filter.alphabetic}`}
-                                list={buildList(OVERLAY_LAYERS).sort(sortByProvider)}/>
+                                key={`${OVERLAY_ENTITY}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}-${layersSnap.filter.alphabetic}`}
+                                list={buildList(OVERLAY_ENTITY).sort(sortByProvider)}/>
                         }
                     </SlTabPanel>
                     <SlTabPanel name="tab-terrains">
 
                         {snap.layer.refreshList &&
                             <SelectEntity
-                                key={`${TERRAIN_LAYERS}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}-${layersSnap.filter.alphabetic}`}
-                                list={buildList(TERRAIN_LAYERS).sort(sortByProvider)}/>
+                                key={`${TERRAIN_ENTITY}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}-${layersSnap.filter.alphabetic}`}
+                                list={buildList(TERRAIN_ENTITY).sort(sortByProvider)}/>
                         }
                     </SlTabPanel>
                 </SlTabGroup>

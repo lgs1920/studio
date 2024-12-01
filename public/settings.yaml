@@ -150,6 +150,22 @@ layers:
 
   ## Providers List
   providers:
+    ## WayMarked Trail Provider
+    - id: cesium
+      name: Cesium
+      credits: 'Credits CesiumJS'
+      logo: ''
+      url: 'https://cesium.com/platform/cesiumjs/'
+      layers:
+        ## WorldTerrain
+        - name: World Terrain
+          id: cesium-world
+          image: cesium-world.png
+          usage:
+            type: free
+            doc: ''
+
+          type: terrain
 
     ## IGN Provider
     - id: ign                           # Provider ID
@@ -400,6 +416,17 @@ layers:
           doc: ''
           type: base
 
+        ## WorldTerrain
+        - name: ArcGIS Terrain
+          id: arcgis-terrain
+          image: arcgis-terrain.png
+          usage:
+            type: free
+            doc: ''
+
+          type: terrain
+
+
     ## Open Street Map
 
     - id: osm
@@ -449,6 +476,16 @@ layers:
       logo: '/assets/images/logo-maptiler.png'
       url: 'https://www.maptiler.com'
       layers:
+        ## Terrain
+        - name: MapTiler Terrain
+          id: mpt-terrain
+          image: mpt-terrain.png
+          usage:
+            type: freemium
+            signin: 'https://cloud.maptiler.com/maps/'
+            name: key
+          type: terrain
+
         ## Aquarelle
         - name: Aquarelle
           id: mpt-aqua

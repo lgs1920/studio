@@ -1,4 +1,4 @@
-import { BASE_LAYERS, OVERLAY_LAYERS } from '@Core/constants'
+import { BASE_ENTITY, OVERLAY_ENTITY } from '@Core/constants'
 import {
     NeverTileDiscardPolicy, OpenStreetMapImageryProvider, UrlTemplateImageryProvider, WebMapTileServiceImageryProvider,
 }                                      from 'cesium'
@@ -21,9 +21,9 @@ export const MapLayer = (props) => {
     const layers = useSnapshot(lgs.settings.layers)
     const main = useSnapshot(lgs.mainProxy)
 
-    const isBase = props.type === BASE_LAYERS
-    const manager = __.layerManager
-    if (![BASE_LAYERS, OVERLAY_LAYERS].includes(props.type)) {
+    const isBase = props.type === BASE_ENTITY
+    const manager = __.layersAndTerrainManager
+    if (![BASE_ENTITY, OVERLAY_ENTITY].includes(props.type)) {
         return (<></>)
     }
 
@@ -32,10 +32,10 @@ export const MapLayer = (props) => {
         let settings = lgs.settings.layers
         const snapLayer = isBase ? settings.base : settings.overlay
         if (isBase) {
-            lgs.mainProxy.theLayer = manager.getLayerProxy(snapLayer)
+            lgs.mainProxy.theLayer = manager.getEntityProxy(snapLayer)
         }
         else {
-            lgs.mainProxy.theLayerOverlay = snapLayer ? manager.getLayerProxy(snapLayer) : null
+            lgs.mainProxy.theLayerOverlay = snapLayer ? manager.getEntityProxy(snapLayer) : null
         }
     })
 
@@ -46,11 +46,11 @@ export const MapLayer = (props) => {
 
     let theLayer
     if (isBase) {
-        lgs.mainProxy.theLayer = manager.getLayerProxy(snapLayer)
+        lgs.mainProxy.theLayer = manager.getEntityProxy(snapLayer)
         theLayer = main.theLayer
     }
     else {
-        lgs.mainProxy.theLayerOverlay = manager.getLayerProxy(snapLayer)
+        lgs.mainProxy.theLayerOverlay = manager.getEntityProxy(snapLayer)
         theLayer = main.theLayerOverlay
     }
 
@@ -58,7 +58,7 @@ export const MapLayer = (props) => {
     if (!theLayer) {
         return (<></>)
     }
-    const theProvider = manager.getProviderProxyByLayerId(theLayer.id)
+    const theProvider = manager.getProviderProxyByEntity(theLayer.id)
 
     // If we have authent in the url, we need to replace it
     let theURL = theLayer.url
