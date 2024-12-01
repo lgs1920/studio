@@ -51,6 +51,7 @@ export class DrawerManager {
      * Mark drawer state as closed
      */
     close = () => {
+        document.activeElement?.blur() // Remove focus on children
         this.drawers.open = null
     }
 
