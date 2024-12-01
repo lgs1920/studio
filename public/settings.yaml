@@ -137,7 +137,7 @@ layers:
   ## Current IDs
   base: arcgis-wayback-20191212         # ID of the current base
   overlay: null                         # ID of the current overlay
-  terrain: null                         # ID of the current terrain
+  terrain: cesium-world                 # ID of the current terrain
 
   ## Filter criteria
   filter:
