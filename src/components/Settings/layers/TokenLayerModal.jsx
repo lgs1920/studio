@@ -1,12 +1,11 @@
-import { BASE_ENTITY, VAULT_STORE }                        from '@Core/constants'
+import { BASE_ENTITY, TERRAIN_ENTITY, VAULT_STORE }        from '@Core/constants'
 import { faCheck, faEye, faEyeSlash, faTrashCan, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import { SlBadge, SlButton, SlDialog, SlIcon, SlInput }    from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                           from '@Utils/FA2SL'
+import { UIToast }                                         from '@Utils/UIToast'
 import parse                                               from 'html-react-parser'
 import { useRef }                                          from 'react'
 import { useSnapshot }                                     from 'valtio'
-import { TERRAIN_ENTITY }                                  from '../../../core/constants'
-import { UIToast }                                         from '../../../Utils/UIToast'
 
 
 export const TokenLayerModal = (props) => {
@@ -15,7 +14,6 @@ export const TokenLayerModal = (props) => {
     const snap = useSnapshot(editor)
 
     const layers = lgs.settings.layers
-    const layersSnap = useSnapshot(layers)
 
     const openTokenModal = () => editor.layer.tokenDialog = true
     const closeTokenModal = () => editor.layer.tokenDialog = false
@@ -51,36 +49,36 @@ export const TokenLayerModal = (props) => {
             else {
                 lgs.mainProxy.theLayerOverlay = tmp
 
-            // Set by default
-            lgs.settings.layers[snap.layer.tmpEntity.type] = snap.layer.tmpEntity.id
+                // Set by default
+                lgs.settings.layers[snap.layer.tmpEntity.type] = snap.layer.tmpEntity.id
 
                 // Terrain ? Replace the current one
                 if (snap.layer.tmpEntity.type === TERRAIN_ENTITY) {
                     __.layersAndTerrainManager.changeTerrain(snap.layer.tmpEntity)
                 }
 
-            // Close Dialog
-            editor.layer.tokenDialog = false
-            editor.canValidate = false
+                // Close Dialog
+                editor.layer.tokenDialog = false
+                editor.canValidate = false
 
-            // Add a notification
-            UIToast.success({
-                                caption: sprintf('Access for %s is allowed!', snap.layer.tmpEntity?.name),
-                                text:    'Enjoy!',
-                            })
+                // Add a notification
+                UIToast.success({
+                                    caption: sprintf('Access for %s is allowed!', snap.layer.tmpEntity?.name),
+                                    text:    'Enjoy!',
+                                })
+            }
         }
+
+
+        //Read Token in vault DB if it exists and put it in the right place
+        if (snap.layer.tmpEntity && apikey.current.value === undefined) {
+            lgs.db.vault.get(snap.layer.tmpEntity.id, VAULT_STORE).then(value => {
+                editor.layer.tmpEntity.usage.token = value ?? ''
+                apikey.current.value = snap.layer.tmpEntity.usage.token
+            })
+        }
+        editor.canValidate = (apikey.current.value !== '')
     }
-
-
-    //Read Token in vault DB if it exists and put it in the right place
-    if (snap.layer.tmpEntity && apikey.current.value === undefined) {
-        lgs.db.vault.get(snap.layer.tmpEntity.id, VAULT_STORE).then(value => {
-            editor.layer.tmpEntity.usage.token = value ?? ''
-            apikey.current.value = snap.layer.tmpEntity.usage.token
-        })
-    }
-    editor.canValidate = (apikey.current.value !== '')
-
 
     return (
         <>
@@ -130,4 +128,3 @@ export const TokenLayerModal = (props) => {
         </>
     )
 }
-

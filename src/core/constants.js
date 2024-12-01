@@ -100,6 +100,7 @@ export const SETTING_EXCLUSIONS = [
 /**
  * Layers and Terrains
  */
+export const URL_AUTHENT_KEY = '{%authent%}'
 export const LAYERS = 'layers'
 export const BASE_ENTITY = 'base'
 export const OVERLAY_ENTITY = 'overlay'
@@ -111,6 +112,11 @@ export const FREE_ANONYMOUS_ACCESS = 'free'
 export const FREE_ACCOUNT_ACCESS = 'account'
 export const UNLOCKED_ACCESS = 'unlocked'
 export const LOCKED_ACCESS = 'locked'
+
+export const TERRAIN_FROM_CESIUM = 'cesium'
+export const TERRAIN_FROM_CESIUM_ELLIPSOID = 'ellipsoid'
+export const TERRAIN_FROM_URL = 'url'
+
 
 export const ACCESS_ICONS = {
     [FREEMIUM_ACCESS]:       {

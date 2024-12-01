@@ -4,6 +4,7 @@ import {
 }                                      from 'cesium'
 import { ImageryLayer }                from 'resium'
 import { subscribe, useSnapshot }      from 'valtio'
+import { URL_AUTHENT_KEY }             from '../../core/constants'
 
 export const SLIPPY = 'slippy'
 export const WMTS = 'wmts'
@@ -14,7 +15,6 @@ export const SWISSTOPO = 'swisstopo'
 export const WAYBACK = 'wayback'
 export const MAPTILER = 'maptiler'
 
-const IMAGERY_AUTHENT_KEY = '{%authent%}'
 
 export const MapLayer = (props) => {
 
@@ -62,12 +62,12 @@ export const MapLayer = (props) => {
 
     // If we have authent in the url, we need to replace it
     let theURL = theLayer.url
-    if (theURL.includes(IMAGERY_AUTHENT_KEY)) {
+    if (theURL.includes(URL_AUTHENT_KEY)) {
         if (theLayer.usage?.unlocked && theLayer.usage?.name) {
-            theURL = theURL.replace(IMAGERY_AUTHENT_KEY, `${theLayer.usage.name}=${theLayer.usage.token}`)
+            theURL = theURL.replace(URL_AUTHENT_KEY, `${theLayer.usage.name}=${theLayer.usage.token}`)
         }
         else {
-            theURL = theURL.replace(IMAGERY_AUTHENT_KEY, '')
+            theURL = theURL.replace(URL_AUTHENT_KEY, '')
         }
     }
 

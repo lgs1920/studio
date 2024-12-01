@@ -6,11 +6,12 @@ import { TrackUtils }                                                        fro
 import * as Cesium                                                           from 'cesium'
 import { useEffect }                                                         from 'react'
 import { Camera, CameraFlyTo, Globe, ImageryLayerCollection, Scene, Viewer } from 'resium'
-import { MapLayer }                                                         from './components/cesium/MapLayer'
+import { MapLayer }                                                          from './components/cesium/MapLayer'
 import { InitErrorMessage }                                                  from './components/InitErrorMessage'
 import { WelcomeModal }                                                      from './components/MainUI/WelcomeModal'
-import { LayersAndTerrainManager }                                          from './core/layers/LayerAndTerrainManager'
+import { LayersAndTerrainManager }                                           from './core/layers/LayerAndTerrainManager'
 import { LayersUtils }                                                       from './Utils/cesium/LayersUtils'
+import { TerrainUtils }                                                      from './Utils/cesium/TerrainUtils'
 import { UIToast }                                                           from './Utils/UIToast'
 
 /***************************************
@@ -77,10 +78,14 @@ export function LGS1920() {
         await __.ui.cameraManager.raiseUpdateEvent({})
     }
 
+
     useEffect(() => {
+
         try {
+            // If initialisation phase was OK, we have somme additional tasks to do.
             if (initApp.status) {
-                // Init was OK, we have somme additional tasks to do.
+                // Set the right terrain
+                TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
 
                 // Set body class to manage css versus platform
                 document.body.classList.add(lgs.platform);
@@ -125,69 +130,52 @@ export function LGS1920() {
         }
         {
             initApp.status &&
-        <Viewer full
-                timeline={false}
-                animation={false}
-                homeButton={false}
-                navigationHelpButton={false}
-                fullscreenButton={false}
-                geocoder={false}
-                infoBox={false}
-                sceneModePicker={false}
-                showRenderLoopErrors={false}
-                terrain={
+            <Viewer full
+                    timeline={false}
+                    animation={false}
+                    homeButton={false}
+                    navigationHelpButton={false}
+                    fullscreenButton={false}
+                    geocoder={false}
+                    infoBox={false}
+                    sceneModePicker={false}
+                    showRenderLoopErrors={false}
 
-                    Cesium.Terrain.fromWorldTerrain({
+                    id="studioMapViewer"
 
+                /***********************/
+                // Avoid consuming Cesium Ion Sessions
+                // DO NOT CHANGE the 2 following lines
+                    imageryProvider={false}
+                    baseLayerPicker={false}
+            >
 
-                                                             /* Y6VgRYi3iKQEttoa3G0v */
-                                                             //    terrain={new
-                                                             // Cesium.Terrain(Cesium.CesiumTerrainProvider.fromUrl(`https://api.maptiler.com/tiles/terrain-quantized-mesh-v2/?key=${'qiE5uSYF7NoDFKCbfpfc'}`,
-                                                             // {
-                                                             requestVertexNormals: false,
-                                                             //    }))}
-                                                         })}
+                <ImageryLayerCollection onLayerAdd={LayersUtils.layerOrder}>
+                    <MapLayer type={BASE_ENTITY}/>
+                    <MapLayer type={OVERLAY_ENTITY}/>
+                </ImageryLayerCollection>
 
-            //     Cesium.ArcGISTiledElevationTerrainProvider({
-            // url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',
-            // requestVertexNormals: false,
-            // })
-
-                id="studioMapViewer"
-
-            /***********************/
-            // Avoid consuming Cesium Ion Sessions
-            // DO NOT CHANGE the 2 following lines
-                imageryProvider={false}
-                baseLayerPicker={false}
-        >
-
-            <ImageryLayerCollection onLayerAdd={LayersUtils.layerOrder}>
-                <MapLayer type={BASE_ENTITY}/>
-                <MapLayer type={OVERLAY_ENTITY}/>
-            </ImageryLayerCollection>
-
-            <Scene verticalExaggeration={1.3}></Scene>
-            <Globe enableLighting={false}
-                   depthTestAgainstTerrain={true}
-                   baseColor={Cesium.Color.GAINSBORO}>
-            </Globe>
-            <Camera onChange={raiseCameraUpdateEvent}>
-                <CameraFlyTo
-                    orientation={cameraOrientation()}
-                    duration={3}
-                    destination={startCameraPoint()}
-                    maximumHeight={10000}
-                    once={true}
-                    onComplete={rotateCamera}
-                />
-            </Camera>
+                <Scene verticalExaggeration={1}></Scene>
+                <Globe enableLighting={false}
+                       depthTestAgainstTerrain={true}
+                       baseColor={Cesium.Color.GAINSBORO}>
+                </Globe>
+                <Camera onChange={raiseCameraUpdateEvent}>
+                    <CameraFlyTo
+                        orientation={cameraOrientation()}
+                        duration={3}
+                        destination={startCameraPoint()}
+                        maximumHeight={10000}
+                        once={true}
+                        onComplete={rotateCamera}
+                    />
+                </Camera>
 
 
-            <MainUI/>
-            <WelcomeModal/>
+                <MainUI/>
+                <WelcomeModal/>
 
-        </Viewer>
+            </Viewer>
         }
     </>)
 }

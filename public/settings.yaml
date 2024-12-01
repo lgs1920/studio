@@ -166,6 +166,18 @@ layers:
             doc: ''
 
           type: terrain
+          terrainType: 'cesium'
+
+        ## Ellipsoid
+        - name: Ellipsoid (No Relief)
+          id: cesium-ellipsoid
+          image: cesium-ellipsoid.png
+          usage:
+            type: free
+            doc: ''
+
+          type: terrain
+          terrainType: 'ellipsoid'
 
     ## IGN Provider
     - id: ign                           # Provider ID
@@ -416,17 +428,6 @@ layers:
           doc: ''
           type: base
 
-        ## WorldTerrain
-        - name: ArcGIS Terrain
-          id: arcgis-terrain
-          image: arcgis-terrain.png
-          usage:
-            type: free
-            doc: ''
-
-          type: terrain
-
-
     ## Open Street Map
 
     - id: osm
@@ -482,9 +483,13 @@ layers:
           image: mpt-terrain.png
           usage:
             type: freemium
-            signin: 'https://cloud.maptiler.com/maps/'
+            signin: https://cloud.maptiler.com/maps/
             name: key
+            doc: https://cloud.maptiler.com/tiles/terrain-quantized-mesh-v2/
+
           type: terrain
+          terrainType: url
+          url: 'https://api.maptiler.com/tiles/terrain-quantized-mesh-v2?{%authent%}'
 
         ## Aquarelle
         - name: Aquarelle
