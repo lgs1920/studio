@@ -11,22 +11,21 @@ export const SceneModeSelector = (props) => {
     const [waitingMode, setWaitingMode] = useState(false)
 
     const selectSceneMode = (event) => {
+        console.log(event)
         if (waitingMode) {
             lgs.settings.scene.mode.value = event.target.dataset.sceneMode * 1 // we need an integer
-            setWaitingMode(false)
+            handleOut(event)
         }
         else {
             handleHover(event)
         }
     }
     const handleOut = (event) => {
-        setWaitingMode(false) // TODO add a timer
+        setWaitingMode(false)
     }
     const handleHover = (event) => {
-        if (event.target.getAttribute('visible')) {
             setWaitingMode(true)
-        }
-
+        event.preventDefault()
     }
 
     return (
@@ -37,8 +36,7 @@ export const SceneModeSelector = (props) => {
                 settings.mode.available.map(mode => (
                     <SlTooltip key={`scene-mode-${SCENE_MODES.get(mode).value}`}
                                placement={placement} content={SCENE_MODES.get(mode).title}>
-                        <SlButton size={'small'} onMouseEnter={handleHover}
-                                  onClick={selectSceneMode}
+                        <SlButton size={'small'}
                                   visible={settings.mode.value === SCENE_MODES.get(mode).value}
                                   className={'square-icon'} onclick={selectSceneMode}
                                   data-scene-mode={SCENE_MODES.get(mode).value}>
