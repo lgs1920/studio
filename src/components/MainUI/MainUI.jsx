@@ -19,12 +19,13 @@ import { Panel as SettingsPanel }           from '../Settings/Panel'
 import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
 
 
-import { Utils }           from '../TracksEditor/Utils.js'
-import { CameraTarget }    from './CameraTarget'
-import { CreditsBar }      from './credits/CreditsBar'
-import { SupportUI }       from './SupportUI'
-import { SupportUIButton } from './SupportUIButton'
-import { TargetButton }    from './TargetButton'
+import { Utils }             from '../TracksEditor/Utils.js'
+import { CameraTarget }      from './CameraTarget'
+import { CreditsBar }        from './credits/CreditsBar'
+import { SceneModeSelector } from './SceneModeSelector'
+import { SupportUI }         from './SupportUI'
+import { SupportUIButton }   from './SupportUIButton'
+import { TargetButton }      from './TargetButton'
 
 export const MainUI = () => {
 
@@ -62,6 +63,7 @@ export const MainUI = () => {
                     <InformationButton/>
                     <SupportUIButton/>
                     <FullScreenButton/>
+
                 </div>
 
                     <div id={'bottom-left-ui'}>
@@ -79,6 +81,7 @@ export const MainUI = () => {
 
                 <div id={'top-right-ui'}>
                     <CompassUI scene={lgs.scene}/>
+                    <SceneModeSelector tooltip={'left'}/>
                 </div>
 
                 {/* <FloatingMenu/> */}

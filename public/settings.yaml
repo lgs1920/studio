@@ -7,7 +7,16 @@
 # using a user interface! Let's do it!
 ################################################################################
 
-#Cesium Ion Token  # Please do not use It
+########################################
+# File version
+########################################
+version: 1.0
+
+########################################
+# Cesium Ion Token
+# Please do not use It outside LGS1920 app
+########################################
+
 ionToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4ZmZkZjZkYS1iODgwLTQzYzUtOTM5ZS1iYTc2Nzk0OTM1ZjQiLCJpZCI6MTkwODA4LCJpYXQiOjE3MDU2ODQ3OTZ9.BV6yuYzhp8A_cgEs5MbqZWZaCtyOW-08aSORPflJ3dw
 
 ########################################
@@ -23,6 +32,17 @@ app:
 # Theme
 ########################################
 theme: 'dark'
+
+########################################
+# Scene
+########################################
+scene:
+  mode:
+    value: 3
+    available:
+      - 2     # 2D
+      - 3     # 3D
+      - 2.5   # Columbus
 
 ########################################
 # Initial Starter Point

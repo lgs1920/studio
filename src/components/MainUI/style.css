@@ -189,3 +189,28 @@ html {
     align-items: center;
     gap: var(--lgs-gutter-s);
 }
+
+/*******************************************************************************
+ * Scene Mode Selector
+ */
+.scene-mode-selector {
+    position: relative;
+    z-index: var(--lgs-ui-layer-zindex);
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.scene-mode-selector sl-button {
+    display: none;
+}
+
+.scene-mode-selector sl-button[visible="true"] {
+    display: flex;
+    order: 1;
+}
+
+.scene-mode-selector[waiting-mode="true"] sl-button {
+    display: flex;
+}

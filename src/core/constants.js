@@ -1,4 +1,4 @@
-import { faCrown, faLock, faUnlock, faUser } from '@fortawesome/pro-solid-svg-icons'
+import { faCrown, faGlobe, faLock, faRoad, faTableCells, faUnlock, faUser } from '@fortawesome/pro-regular-svg-icons'
 
 
 export const SLOGAN = 'Replay Your Adventures!'
@@ -75,7 +75,12 @@ export const COLOR_SWATCHES_RANDOM = 'random'
 // List of settings exclusions (ie we keep the user choice)
 // This array is then sorted alphabetically by object depth.
 export const SETTING_EXCLUSIONS = [
-    'layers.base', 'layers.terrain', 'layers.overlay', 'app', 'layers.filter',
+    'layers.base',
+    'layers.terrain',
+    'layers.overlay',
+    'app',
+    'layers.filter',
+    'scene',
 ].sort((a, b) => {
     const segmentsA = a.split('.')
     const segmentsB = b.split('.')
@@ -94,8 +99,8 @@ export const SETTING_EXCLUSIONS = [
             return 1
         }
     }
-    return 0;
-});
+    return 0
+})
 
 /**
  * Layers and Terrains
@@ -152,7 +157,23 @@ export const UNLOCKED = 'unlocked'
 /*******************************************************************************
  * UI Elements
  ******************************************************************************/
+/** Scene Mode **/
 
+export const SCENE_MODE_2D = {
+    value: 2, label: '2D', title: 'Map View', icon: faTableCells,
+}
+export const SCENE_MODE_3D = {
+    value: 3, label: '3D', title: 'Globe View', icon: faGlobe,
+}
+export const SCENE_MODE_COLUMBUS = {
+    value: 2.5, label: '2.5D', title: 'Columbus View', icon: faRoad,
+}
+
+export const SCENE_MODES = new Map([
+                                       [SCENE_MODE_2D.value, SCENE_MODE_2D],
+                                       [SCENE_MODE_3D.value, SCENE_MODE_3D],
+                                       [SCENE_MODE_COLUMBUS.value, SCENE_MODE_COLUMBUS],
+                                   ])
 /** Drawers **/
 
 export const INFO_DRAWER = 'info-drawer'
