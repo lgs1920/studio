@@ -11,6 +11,7 @@ import { InitErrorMessage }                                                  fro
 import { WelcomeModal }                                                      from './components/MainUI/WelcomeModal'
 import { LayersAndTerrainManager }                                           from './core/layers/LayerAndTerrainManager'
 import { LayersUtils }                                                       from './Utils/cesium/LayersUtils'
+import { SceneUtils }                                                        from './Utils/cesium/SceneUtils'
 import { TerrainUtils }                                                      from './Utils/cesium/TerrainUtils'
 import { UIToast }                                                           from './Utils/UIToast'
 
@@ -155,7 +156,7 @@ export function LGS1920() {
                     <MapLayer type={OVERLAY_ENTITY}/>
                 </ImageryLayerCollection>
 
-                <Scene verticalExaggeration={1}></Scene>
+                <Scene verticalExaggeration={1} mode={SceneUtils.modeFromLGSToGIS(lgs.settings.scene.mode)}></Scene>
                 <Globe enableLighting={false}
                        depthTestAgainstTerrain={true}
                        baseColor={Cesium.Color.GAINSBORO}>

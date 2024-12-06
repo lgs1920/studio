@@ -42,7 +42,6 @@ scene:
     available:
       - 2     # 2D
       - 3     # 3D
-      - 2.5   # Columbus
 
 ########################################
 # Initial Starter Point

@@ -68,12 +68,11 @@ export class POIUtils {
         const pinBuilder = new Cesium.PinBuilder()
 
         const billboard = {
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            heightReference: __.ui.sceneManager.noRelief() ? Cesium.HeightReference.NONE : Cesium.HeightReference.CLAMP_TO_GROUND,
             verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
             show: true,
             disableDepthTestDistance: 1.2742018E7 // Diameter of Earth
         }
-
         const backgroundColor = poi.backgroundColor?Cesium.Color.fromCssColorString(poi.backgroundColor):''
         const foregroundColor = poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : ''
 

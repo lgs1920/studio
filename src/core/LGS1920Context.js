@@ -19,6 +19,7 @@ import { CameraManager }     from './ui/CameraManager'
 import { DrawerManager }     from './ui/DrawerManager'
 import { JourneyEditor }     from './ui/JourneyEditor'
 import { Profiler }          from './ui/Profiler'
+import { SceneManager }      from './ui/SceneManager'
 import { Wanderer }          from './ui/Wanderer'
 
 export class LGS1920Context {
@@ -269,6 +270,7 @@ export class LGS1920Context {
         __.ui.wanderer = new Wanderer()
         __.ui.cameraManager = new CameraManager()
         __.ui.drawerManager = new DrawerManager()
+        __.ui.sceneManager = new SceneManager()
 
     }
 

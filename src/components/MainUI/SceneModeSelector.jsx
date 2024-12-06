@@ -11,9 +11,9 @@ export const SceneModeSelector = (props) => {
     const [waitingMode, setWaitingMode] = useState(false)
 
     const selectSceneMode = (event) => {
-        console.log(event)
         if (waitingMode) {
-            lgs.settings.scene.mode.value = event.target.dataset.sceneMode * 1 // we need an integer
+            console.log(typeof event.target.dataset.sceneMode)
+            __.ui.sceneManager.morph(parseInt(event.target.dataset.sceneMode), __.ui.sceneManager.afterMorphing)
             handleOut(event)
         }
         else {
@@ -24,7 +24,7 @@ export const SceneModeSelector = (props) => {
         setWaitingMode(false)
     }
     const handleHover = (event) => {
-            setWaitingMode(true)
+        setWaitingMode(true)
         event.preventDefault()
     }
 

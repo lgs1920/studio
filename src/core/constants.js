@@ -1,4 +1,4 @@
-import { faCrown, faGlobe, faLock, faRoad, faTableCells, faUnlock, faUser } from '@fortawesome/pro-regular-svg-icons'
+import { faCrown, faEarthEurope, faLock, faMap, faRoad, faUnlock, faUser } from '@fortawesome/pro-regular-svg-icons'
 
 
 export const SLOGAN = 'Replay Your Adventures!'
@@ -122,6 +122,7 @@ export const TERRAIN_FROM_CESIUM = 'cesium'
 export const TERRAIN_FROM_CESIUM_ELLIPSOID = 'ellipsoid'
 export const TERRAIN_FROM_URL = 'url'
 
+export const FLAT_TERRAINS = [TERRAIN_FROM_CESIUM_ELLIPSOID]
 
 export const ACCESS_ICONS = {
     [FREEMIUM_ACCESS]:       {
@@ -160,10 +161,10 @@ export const UNLOCKED = 'unlocked'
 /** Scene Mode **/
 
 export const SCENE_MODE_2D = {
-    value: 2, label: '2D', title: 'Map View', icon: faTableCells,
+    value: 2, label: '2D', title: 'Map View', icon: faMap,
 }
 export const SCENE_MODE_3D = {
-    value: 3, label: '3D', title: 'Globe View', icon: faGlobe,
+    value: 3, label: '3D', title: 'Globe View', icon: faEarthEurope,
 }
 export const SCENE_MODE_COLUMBUS = {
     value: 2.5, label: '2.5D', title: 'Columbus View', icon: faRoad,
@@ -174,6 +175,9 @@ export const SCENE_MODES = new Map([
                                        [SCENE_MODE_3D.value, SCENE_MODE_3D],
                                        [SCENE_MODE_COLUMBUS.value, SCENE_MODE_COLUMBUS],
                                    ])
+export const SCENE_MODE_MORPHING_TIME = 3
+
+
 /** Drawers **/
 
 export const INFO_DRAWER = 'info-drawer'
