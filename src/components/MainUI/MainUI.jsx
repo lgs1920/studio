@@ -8,6 +8,7 @@ import { useCesium }                        from 'resium'
 
 import './style.css'
 import { subscribe, useSnapshot }           from 'valtio'
+import { SCENE_MODE_2D }                    from '../../core/constants'
 import { CanvasEvents }                     from '../../core/events/CanvasEvents.js'
 import { CameraAndTargetPanel }             from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
 import { JourneyLoaderUI }                  from '../FileLoader/JourneyLoaderUI'
@@ -19,13 +20,12 @@ import { Panel as SettingsPanel }           from '../Settings/Panel'
 import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
 
 
-import { Utils }             from '../TracksEditor/Utils.js'
-import { CameraTarget }      from './CameraTarget'
-import { CreditsBar }        from './credits/CreditsBar'
-import { SceneModeSelector } from './SceneModeSelector'
-import { SupportUI }         from './SupportUI'
-import { SupportUIButton }   from './SupportUIButton'
-import { TargetButton }      from './TargetButton'
+import { Utils }           from '../TracksEditor/Utils.js'
+import { CameraTarget }    from './CameraTarget'
+import { CreditsBar }      from './credits/CreditsBar'
+import { SupportUI }       from './SupportUI'
+import { SupportUIButton } from './SupportUIButton'
+import { TargetButton }    from './TargetButton'
 
 export const MainUI = () => {
 
@@ -33,7 +33,9 @@ export const MainUI = () => {
     const snap = useSnapshot(lgs.mainProxy)
 
     useEffect(() => {
-
+        if (lgs.settings.scene.mode.value === SCENE_MODE_2D.value) {
+            lgs.scene.morphTo2D(0)
+        }
         // Manage canvas related events
         CanvasEvents.attach()
         // CanvasEvents.addListeners()
@@ -81,7 +83,7 @@ export const MainUI = () => {
 
                 <div id={'top-right-ui'}>
                     <CompassUI scene={lgs.scene}/>
-                    <SceneModeSelector tooltip={'left'}/>
+                    {/* <SceneModeSelector tooltip={'left'}/> */}
                 </div>
 
                 {/* <FloatingMenu/> */}

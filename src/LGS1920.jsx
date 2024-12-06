@@ -11,7 +11,6 @@ import { InitErrorMessage }                                                  fro
 import { WelcomeModal }                                                      from './components/MainUI/WelcomeModal'
 import { LayersAndTerrainManager }                                           from './core/layers/LayerAndTerrainManager'
 import { LayersUtils }                                                       from './Utils/cesium/LayersUtils'
-import { SceneUtils }                                                        from './Utils/cesium/SceneUtils'
 import { TerrainUtils }                                                      from './Utils/cesium/TerrainUtils'
 import { UIToast }                                                           from './Utils/UIToast'
 
@@ -19,7 +18,6 @@ import { UIToast }                                                           fro
  * Init Application context
  */
 window.lgs = new LGS1920Context()
-
 
 // Application initialisation
 const initApp = await __.app.init()
@@ -82,6 +80,7 @@ export function LGS1920() {
 
     useEffect(() => {
 
+
         try {
             // If initialisation phase was OK, we have somme additional tasks to do.
             if (initApp.status) {
@@ -122,7 +121,7 @@ export function LGS1920() {
             console.log('LGS1920 was stopped due to errors!')
             console.error(error)
         }
-    })
+    }, [])
 
     return (<>
 
@@ -156,7 +155,7 @@ export function LGS1920() {
                     <MapLayer type={OVERLAY_ENTITY}/>
                 </ImageryLayerCollection>
 
-                <Scene verticalExaggeration={1} mode={SceneUtils.modeFromLGSToGIS(lgs.settings.scene.mode)}></Scene>
+                <Scene /* mode={SceneUtils.modeFromLGSToGIS(lgs.settings.scene.mode)}*/></Scene>
                 <Globe enableLighting={false}
                        depthTestAgainstTerrain={true}
                        baseColor={Cesium.Color.GAINSBORO}>
