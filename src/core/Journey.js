@@ -559,8 +559,8 @@ export class Journey extends MapElement {
         //Ready
         const texts = new Map([
                                   [INITIAL_LOADING, 'loaded succesfully!'],
-                                  [SIMULATE_ALTITUDE, 'redrawn succesfully!'],
-                                  [RE_LOADING, 'redrawn succesfully!'],
+                                  [SIMULATE_ALTITUDE, 'updated succesfully!'],
+                                  [RE_LOADING, 'updated succesfully!'],
                               ])
         UIToast.success({
                             caption: `${this.title}`, text: texts.get(action),
