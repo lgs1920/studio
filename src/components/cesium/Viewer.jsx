@@ -76,7 +76,6 @@ export function Viewer() {
     layerCollection.layerAdded = LayersUtils.layerOrder
 
     // Manage Camera
-    console.log(lgs.camera)
     lgs.camera.changed.addEventListener(raiseCameraUpdateEvent)
     lgs.viewer.camera.flyTo({
                                 orientation:   cameraOrientation(),
