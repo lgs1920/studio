@@ -20,6 +20,7 @@ export const WelcomeModal = () => {
     const main = useSnapshot(lgs.mainProxy)
 
     const close = (event) => {
+        document.activeElement?.blur() // Remove focus on children
         if (event.detail.source === 'overlay') {
             lgs.mainUIStore.show = true
         }
@@ -27,6 +28,7 @@ export const WelcomeModal = () => {
     }
 
     const hide = () => {
+        document.activeElement?.blur() // Remove focus on children
         setOpen(false)
         lgs.mainUIStore.show = true
     }
@@ -92,7 +94,7 @@ export const WelcomeModal = () => {
                                 {main.readyForTheShow &&
                                     <>
                                         {main.theJourney &&
-                                            <SlButton autofocus variant="primary" onClick={enter}>
+                                            <SlButton variant="primary" onClick={enter}>
                                                 <SlIcon slot="prefix" library="fa"
                                                         name={FA2SL.set(faMountains)}>
                                                 </SlIcon>
@@ -100,7 +102,7 @@ export const WelcomeModal = () => {
                                             </SlButton>
                                         }
                                         {!main.theJourney &&
-                                            <SlButton autofocus variant="primary" onClick={loadJourney}>
+                                            <SlButton variant="primary" onClick={loadJourney}>
                                                 <SlIcon slot="prefix" library="fa"
                                                         name={FA2SL.set(faRegularRouteCirclePlus)}></SlIcon>{'Load your first Journey'}
                                             </SlButton>
