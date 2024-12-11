@@ -67,7 +67,8 @@ export const main = {
         },
 
         layers: {
-            key:     0,
+            base:    null,
+            overlay: null,
         },
 
         wanderer: {
@@ -99,4 +100,5 @@ export const main = {
     canViewJourneyData: false,
     canViewProfile: false,
     theLayer: null,
+    theLayerOverlay: null,
 }

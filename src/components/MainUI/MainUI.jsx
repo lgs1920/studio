@@ -4,7 +4,6 @@ import { Toolbar }                          from '@Components/MainUI/Toolbar'
 import { Profile }                          from '@Components/Profile/Profile'
 import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
 import { useEffect }                        from 'react'
-import { useCesium }                        from 'resium'
 
 import './style.css'
 import { subscribe, useSnapshot }           from 'valtio'
@@ -20,16 +19,16 @@ import { Panel as SettingsPanel }           from '../Settings/Panel'
 import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
 
 
-import { Utils }           from '../TracksEditor/Utils.js'
-import { CameraTarget }    from './CameraTarget'
-import { CreditsBar }      from './credits/CreditsBar'
-import { SupportUI }       from './SupportUI'
-import { SupportUIButton } from './SupportUIButton'
-import { TargetButton }    from './TargetButton'
+import { Utils }             from '../TracksEditor/Utils.js'
+import { CameraTarget }      from './CameraTarget'
+import { CreditsBar }        from './credits/CreditsBar'
+import { SceneModeSelector } from './SceneModeSelector'
+import { SupportUI }         from './SupportUI'
+import { SupportUIButton }   from './SupportUIButton'
+import { TargetButton }      from './TargetButton'
 
 export const MainUI = () => {
 
-    lgs.viewer = useCesium().viewer
     const snap = useSnapshot(lgs.mainProxy)
 
     useEffect(() => {
@@ -48,6 +47,10 @@ export const MainUI = () => {
         __.ui.css.setCSSVariable('--top-right-ui-right-margin', offset)
         __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( 100% - ${offset})`)
     })
+
+    const SupportUIDialog = () => {
+        return (<SupportUI/>)
+    }
 
     return (
         <>
@@ -83,7 +86,7 @@ export const MainUI = () => {
 
                 <div id={'top-right-ui'}>
                     <CompassUI scene={lgs.scene}/>
-                    {/* <SceneModeSelector tooltip={'left'}/> */}
+                    <SceneModeSelector tooltip={'left'}/>
                 </div>
 
                 {/* <FloatingMenu/> */}
@@ -94,11 +97,12 @@ export const MainUI = () => {
                 <LayersPanel/>
                 <TracksEditor/>
                 <CameraAndTargetPanel/>
-            </div>
 
-            <CameraTarget/>
-            <SupportUI/>
+                <CameraTarget/>
+            </div>
+            <SupportUIDialog/>
             <JourneyLoaderUI multiple/>
+
 
         </>
     )

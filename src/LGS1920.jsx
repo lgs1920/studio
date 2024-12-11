@@ -1,18 +1,17 @@
-import { MainUI }                                                            from '@Components/MainUI/MainUI.jsx'
+import { MainUI }                      from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { BASE_ENTITY, OVERLAY_ENTITY }                                       from '@Core/constants'
-import { LGS1920Context }                                                    from '@Core/LGS1920Context'
-import { TrackUtils }                                                        from '@Utils/cesium/TrackUtils'
-import * as Cesium                                                           from 'cesium'
-import { useEffect }                                                         from 'react'
-import { Camera, CameraFlyTo, Globe, ImageryLayerCollection, Scene, Viewer } from 'resium'
-import { MapLayer }                                                          from './components/cesium/MapLayer'
-import { InitErrorMessage }                                                  from './components/InitErrorMessage'
-import { WelcomeModal }                                                      from './components/MainUI/WelcomeModal'
-import { LayersAndTerrainManager }                                           from './core/layers/LayerAndTerrainManager'
-import { LayersUtils }                                                       from './Utils/cesium/LayersUtils'
-import { TerrainUtils }                                                      from './Utils/cesium/TerrainUtils'
-import { UIToast }                                                           from './Utils/UIToast'
+import { LGS1920Context }              from '@Core/LGS1920Context'
+import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
+import { useEffect }                   from 'react'
+import { MapLayer }                    from './components/cesium/MapLayer'
+import { Viewer }                      from './components/cesium/Viewer'
+//import { Camera, CameraFlyTo, Globe, ImageryLayerCollection, Scene, Viewer } from 'resium'
+import { InitErrorMessage }            from './components/InitErrorMessage'
+import { WelcomeModal }                from './components/MainUI/WelcomeModal'
+import { BASE_ENTITY, OVERLAY_ENTITY } from './core/constants'
+import { LayersAndTerrainManager }     from './core/layers/LayerAndTerrainManager'
+import { TerrainUtils }                from './Utils/cesium/TerrainUtils'
+import { UIToast }                     from './Utils/UIToast'
 
 /***************************************
  * Init Application context
@@ -37,53 +36,11 @@ if (initApp.status) {
 }
 
 export function LGS1920() {
-
-    const coordinates = {
-        position: {
-            longitude: lgs.settings.getStarter.camera.longitude,
-            latitude:  lgs.settings.getStarter.camera.latitude,
-            height:    lgs.settings.getStarter.camera.height,
-            heading:   lgs.settings.getStarter.camera.heading,
-            pitch:     lgs.settings.getStarter.camera.pitch,
-            roll:      lgs.settings.getStarter.camera.roll,
-        },
-    }
-
-    const startCameraPoint = () => {
-        return Cesium.Cartesian3.fromDegrees(
-            coordinates.position.longitude,
-            coordinates.position.latitude,
-            coordinates.position.height,
-        )
-    }
-
-    const cameraOrientation = () => {
-        return {
-            heading: Cesium.Math.toRadians(coordinates.position.heading),
-            pitch:   Cesium.Math.toRadians(coordinates.position.pitch),
-            roll:    Cesium.Math.toRadians(coordinates.position.roll),
-        }
-    }
-
-    const cameraStore = lgs.mainProxy.components.camera
-
-    const rotateCamera = async () => {
-        if (lgs.journeys.size === 0) {
-            await __.ui.cameraManager.runOrbital({})
-        }
-    }
-
-    const raiseCameraUpdateEvent = async () => {
-        await __.ui.cameraManager.raiseUpdateEvent({})
-    }
-
-
     useEffect(() => {
-
-
         try {
             // If initialisation phase was OK, we have somme additional tasks to do.
             if (initApp.status) {
+
                 // Set the right terrain
                 TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
 
@@ -122,61 +79,26 @@ export function LGS1920() {
             console.error(error)
         }
     }, [])
+    return (
+        <>
+            <WelcomeModal/>
 
-    return (<>
-
-        {
-            !initApp.status && <InitErrorMessage message={initApp.error.message}/>
-        }
-        {
-            initApp.status &&
-            <Viewer full
-                    timeline={false}
-                    animation={false}
-                    homeButton={false}
-                    navigationHelpButton={false}
-                    fullscreenButton={false}
-                    geocoder={false}
-                    infoBox={false}
-                    sceneModePicker={false}
-                    showRenderLoopErrors={false}
-
-                    id="studioMapViewer"
-
-                /***********************/
-                // Avoid consuming Cesium Ion Sessions
-                // DO NOT CHANGE the 2 following lines
-                    imageryProvider={false}
-                    baseLayerPicker={false}
-            >
-
-                <ImageryLayerCollection onLayerAdd={LayersUtils.layerOrder}>
+            {
+                !initApp.status && <InitErrorMessage message={initApp.error.message}/>
+            }
+            {
+                initApp.status &&
+                <>
                     <MapLayer type={BASE_ENTITY}/>
                     <MapLayer type={OVERLAY_ENTITY}/>
-                </ImageryLayerCollection>
 
-                <Scene /* mode={SceneUtils.modeFromLGSToGIS(lgs.settings.scene.mode)}*/></Scene>
-                <Globe enableLighting={false}
-                       depthTestAgainstTerrain={true}
-                       baseColor={Cesium.Color.GAINSBORO}>
-                </Globe>
-                <Camera onChange={raiseCameraUpdateEvent}>
-                    <CameraFlyTo
-                        orientation={cameraOrientation()}
-                        duration={3}
-                        destination={startCameraPoint()}
-                        maximumHeight={10000}
-                        once={true}
-                        onComplete={rotateCamera}
-                    />
-                </Camera>
+                    <Viewer/>
+                    <MainUI/>
+                    {/* */}
 
+                </>
 
-                <MainUI/>
-                <WelcomeModal/>
-
-            </Viewer>
-        }
-    </>)
+            }
+        </>
+    )
 }
-
