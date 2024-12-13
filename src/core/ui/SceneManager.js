@@ -1,6 +1,7 @@
 import { FLAT_TERRAINS, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODES } from '@Core/constants'
 import { SceneUtils }                                               from '@Utils/cesium/SceneUtils'
 import { UIToast }                                                  from '@Utils/UIToast'
+import { NO_FOCUS, RE_LOADING }                                     from '../Journey'
 
 export class SceneManager {
     constructor() {
@@ -71,7 +72,17 @@ export class SceneManager {
     }
 
 
-    afterMorphing = (mode = null) => {
+    afterMorphing = async (props) => {
+
+        // Now it's time for the show. Draw all journeys
+        const items = []
+        lgs.journeys.forEach(journey => {
+            items.push(journey.draw({
+                                        action: RE_LOADING,
+                                        mode:   NO_FOCUS,
+                                    }))
+        })
+        await Promise.all(items)
 
 
         this.notifyMorph()

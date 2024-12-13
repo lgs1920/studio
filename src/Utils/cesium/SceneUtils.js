@@ -9,28 +9,26 @@ export class SceneUtils {
      * @param sceneMode {integer} SCENE_MODE_2D.value or SCENE_MODE_3D.value
      * @param callback
      */
-    static morphCompeteEvent = null
 
-    static morph = (sceneMode, callback = null) => {
+    static morph = async (sceneMode, callback = null) => {
         // Trigger morphComplete only once,
         if (typeof callback === 'function' && !SceneUtils.morphCompeteEvent) {
-            SceneUtils.morphCompeteEvent = 'listen'
-            lgs.scene.morphComplete.addEventListener(function (event) {
-                callback(sceneMode)
+            lgs.scene.morphComplete.addEventListener(function (event, currentSceneMode) {
+                callback({current: currentSceneMode, new: sceneMode})
             })
         }
 
         switch (sceneMode) {
             case SCENE_MODE_2D.value:
-                lgs.scene.morphTo2D(SCENE_MODE_MORPHING_TIME)
+                await lgs.scene.morphTo2D(SCENE_MODE_MORPHING_TIME)
                 break
 
             case SCENE_MODE_COLUMBUS.value:
-                lgs.scene.morphToColumbusView(SCENE_MODE_MORPHING_TIME)
+                await lgs.scene.morphToColumbusView(SCENE_MODE_MORPHING_TIME)
                 break
 
             case SCENE_MODE_3D.value:
-                lgs.scene.morphTo3D(SCENE_MODE_MORPHING_TIME)
+                await lgs.scene.morphTo3D(SCENE_MODE_MORPHING_TIME)
                 break
         }
     }

@@ -175,7 +175,7 @@ export const SCENE_MODES = new Map([
                                        [SCENE_MODE_3D.value, SCENE_MODE_3D],
                                        [SCENE_MODE_COLUMBUS.value, SCENE_MODE_COLUMBUS],
                                    ])
-export const SCENE_MODE_MORPHING_TIME = 3
+export const SCENE_MODE_MORPHING_TIME = 0
 
 
 /** Drawers **/

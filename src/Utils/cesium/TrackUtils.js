@@ -4,10 +4,11 @@ import { default as extent }                                                   f
 import { default as centroid }                                                 from '@turf/centroid'
 import * as Cesium                                                             from 'cesium'
 import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 }           from 'cesium'
+import { SCENE_MODE_2D }                                                       from '../../core/constants'
 import { UIToast }                                                             from '../UIToast.js'
 import { FLAG_START, POI_FLAG, POI_STD, POIUtils }                             from './POIUtils'
 
-export const SUPPORTED_EXTENSIONS = ['geojson', 'json','kml', 'gpx' /* TODO 'kmz'*/]
+export const SUPPORTED_EXTENSIONS = ['geojson', 'json', 'kml', 'gpx' /* TODO 'kmz'*/]
 export const FEATURE                  = 'Feature',
              FEATURE_COLLECTION       = 'FeatureCollection',
              FEATURE_LINE_STRING      = 'LineString',
@@ -95,13 +96,13 @@ export class TrackUtils {
         // Load Geo Json for track then set visibility
         const source = lgs.viewer.dataSources.getByName(track.slug)[0]
         return source.load(track.content,
-            {
-                stroke: Color.fromCssColorString(track.color),
-                strokeWidth: track.thickness,
-                // Common options
-                clampToGround: true,
-                name: track.title,
-            },
+                           {
+                               stroke:      Color.fromCssColorString(track.color),
+                               strokeWidth: track.thickness,
+                               // Common options
+                               clampToGround: true,
+                               name:          track.title,
+                           },
         ).then(dataSource => {
             dataSource.show = forcedToHide ? false : track.visible
         })
@@ -118,11 +119,12 @@ export class TrackUtils {
      * @param {boolean} showBbox
      */
     static focus = async (
-        {action = 0,
+        {
+            action = 0,
             journey = null,
             track = null,
             showBbox = false,
-            resetCamera=false
+            resetCamera = false,
         }) => {
 
         // If track not provided, we'll get the first one of the journey
@@ -132,14 +134,15 @@ export class TrackUtils {
                 journey = lgs.theJourney
             }
             track = journey.tracks.values().next().value
-        } else {
+        }
+        else {
             // We have a track, let's force the journey (even if there is one provided)
             journey = lgs.journeys.get(track.parent)
         }
 
-        // We calculate the Bounding Box and enlarge it by 20%
+        // We calculate the Bounding Box and enlarge it by 25%
         // in order to be sure to have the full track inside the window
-        const bbox = TrackUtils.extendBbox(extent(track.content), 20)
+        const bbox = TrackUtils.extendBbox(extent(track.content), 25)
         let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
 
         // Get the right camera information
@@ -148,25 +151,45 @@ export class TrackUtils {
             // Let's center to the rectangle
             destination = lgs.camera.getRectangleCameraCoordinates(rectangle)
 
-            // Get the camera target that we defined to the centroid of the track
+            // Get the centroid of the track
             const centroiid = centroid(track.content)
+            console.log('centroid', centroiid)
+
+            // Get the right position according to Scene Mode
+            let position = {}
+            switch (lgs.settings.scene.mode.value) {
+                case SCENE_MODE_2D.value:
+                    // We use centroid
+                    position = {
+                        longitude: centroiid.geometry.coordinates[0],
+                        latitude:  centroiid.geometry.coordinates[1],
+                    }
+                    break
+                default:
+                    // We use destination
+                    position = {
+                        longitude: Cesium.Math.toDegrees(destination.x),
+                        latitude:  Cesium.Math.toDegrees(destination.y),
+                    }
+
+            }
+            position.pitch = -90
+            position.height = Cesium.Math.toDegrees(destination.z)
+
             __.ui.cameraManager.settings = {
-                position: {
-                    longitude: Cesium.Math.toDegrees(destination.x),
-                    latitude:  Cesium.Math.toDegrees(destination.y),
-                    height:    Cesium.Math.toDegrees(destination.z),
-                    pitch:     -90,
-                },
+                position: position,
+                // target is based on centroid
                 target:   {
-                    longitude: centroiid.geometry.coordinates[1],
-                    latitude:  centroiid.geometry.coordinates[0],
+                    longitude: centroiid.geometry.coordinates[0],
+                    latitude:  centroiid.geometry.coordinates[1],
                     height:    Cesium.Math.toDegrees(destination.z), // We take the same
                 },
             }
 
             journey.camera = __.ui.cameraManager.settings
 
-        } else {
+        }
+        else {
             __.ui.cameraManager.settings = (action === INITIAL_LOADING) ? journey.cameraOrigin : journey.camera
             destination = Cesium.Cartesian3.fromDegrees(
                 __.ui.cameraManager.settings.position.longitude,
@@ -175,29 +198,30 @@ export class TrackUtils {
             )
         }
         lgs.camera.flyTo({
-
-            destination: destination,                               // Camera
-             orientation: {                                         // Offset and Orientation
-                 heading: Math.toRadians(__.ui.cameraManager.settings.position.heading),
-                 pitch:   Math.toRadians(__.ui.cameraManager.settings.position.pitch),
-                 roll:    Math.toRadians(__.ui.cameraManager.settings.position.roll),
-             },
+                             destination: destination,                               // Camera
+                             orientation: {                                         // Offset and Orientation
+                                 heading: Math.toRadians(__.ui.cameraManager.settings.position.heading),
+                                 pitch:   Math.toRadians(__.ui.cameraManager.settings.position.pitch),
+                                 roll:    Math.toRadians(__.ui.cameraManager.settings.position.roll),
+                             },
                              maximumHeight:     lgs.camera.maximumHeight,
                              pitchAdjustHeight: lgs.camera.pitchAdjustHeight,
+                             convert:     false,  // used in 2D or Columbus
 
-                             duration:       4,
-            endTransform:Matrix4.IDENTITY,
+                             duration:     8,
+                             endTransform: Matrix4.IDENTITY,
                              easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT,
                          })
         //Show BBox if requested
+        showBbox = true
         if (showBbox) {
             lgs.viewer.entities.add({
-                name: `BBox#${track.slug}`,
-                rectangle: {
-                    coordinates: rectangle,
-                    material: Cesium.Color.WHITE.withAlpha(0.5),
-                },
-            })
+                                        name:      `BBox#${track.slug}`,
+                                        rectangle: {
+                                            coordinates: rectangle,
+                                            material:    Cesium.Color.WHITE.withAlpha(0.5),
+                                        },
+                                    })
         }
     }
 
@@ -229,7 +253,9 @@ export class TrackUtils {
             // validates all filter criteria
             return filterKeys.every(key => {
                 // ignores non-function predicates
-                if (typeof filters[key] !== 'function') return true
+                if (typeof filters[key] !== 'function') {
+                    return true
+                }
                 return filters[key](item[key])
             })
         })
@@ -362,7 +388,8 @@ export class TrackUtils {
             lgs.theJourney = currentJourney
             lgs.mainProxy.readyForTheShow = true
             await TrackUtils.setTheTrack()
-        } else {
+        }
+        else {
             // Something's wrong. exit
             return
         }
@@ -391,9 +418,9 @@ export class TrackUtils {
         const items = []
         lgs.journeys.forEach(journey => {
             items.push(journey.draw({
-                action: INITIAL_LOADING,
-                mode: journey.slug === currentJourney.slug ? FOCUS_ON_FEATURE : NO_FOCUS,
-            }))
+                                        action: INITIAL_LOADING,
+                                        mode:   journey.slug === currentJourney.slug ? FOCUS_ON_FEATURE : NO_FOCUS,
+                                    }))
         })
         await Promise.all(items)
 
@@ -417,7 +444,8 @@ export class TrackUtils {
         }
         if (lgs.theJourney.tracks.has(currentTrack)) {
             lgs.theTrack = lgs.theJourney.tracks.get(currentTrack)
-        } else {
+        }
+        else {
             lgs.theTrack = lgs.theJourney.tracks.entries().next().value[1]
         }
         // Add it to editor context
@@ -485,7 +513,7 @@ export class TrackUtils {
      * @param {Journey} journey       the journey on which POIs are to be hidden or displayed
      * @param {Boolean} visibility    the visibility value (true = hide)
      */
-    static  updatePOIsVisibility = (journey, visibility) => {
+    static updatePOIsVisibility = (journey, visibility) => {
         TrackUtils.getDataSourcesByName(journey.slug, true)[0]?.entities.values.forEach(entity => {
             if (entity.id.startsWith(POI_STD)) {
                 entity.show = POIUtils.setPOIVisibility(journey.pois.get(entity.id), visibility)
@@ -505,7 +533,7 @@ export class TrackUtils {
      * @param {Boolean} visibility      the visibility value (true = hide)
      *
      */
-    static  updateFlagsVisibility = (journey, track, type = 'start', visibility) => {
+    static updateFlagsVisibility = (journey, track, type = 'start', visibility) => {
         TrackUtils.getDataSourcesByName(journey.slug, true)[0].entities.values.forEach(entity => {
             // Filter flags on the right track
             const current = TrackUtils.getTrackFromEntityId(journey, entity.id)
@@ -541,7 +569,8 @@ export class TrackUtils {
                         )
                     }
                 })
-            } else {
+            }
+            else {
                 // We set the datasource with all entities.
                 dataSource.show = visibility ? journey.tracks.get(dataSource.name).visible : false
             }
@@ -639,7 +668,7 @@ export class TrackUtils {
                 // If not we manage and show it.
                 if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
 
-                   theJourney.globalSettings()
+                    theJourney.globalSettings()
 
                     // Need stats
                     theJourney.extractMetrics()
@@ -682,8 +711,8 @@ export class TrackUtils {
             console.error(error)
             UIToast.error({
                               caption: `We're having problems reading this file!`,
-                                text:    'Maybe the format is wrong!',
-                            })
+                              text: 'Maybe the format is wrong!',
+                          })
             return JOURNEY_KO
         }
     }

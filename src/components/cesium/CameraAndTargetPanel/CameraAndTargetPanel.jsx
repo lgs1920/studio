@@ -4,13 +4,12 @@ import { TextValueUI } from '@Components/TextValueUI/TextValueUI.jsx'
 import { faAngle, faArrowsToCircle, faMountains, faVideo } from '@fortawesome/pro-regular-svg-icons'
 import { SlAnimation }                                     from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                           from '@Utils/FA2SL'
-import { useCesium }                                       from 'resium'
 import { proxy, useSnapshot }                              from 'valtio'
 import { meter, mile }                                     from '../../../Utils/UnitUtils'
 
 
 export const CameraAndTargetPanel = () => {
-    lgs.viewer = useCesium().viewer
+    //  lgs.viewer = useCesium().viewer
 
     const camera = useSnapshot(lgs.mainProxy.components.camera)
     const ui = useSnapshot(proxy(lgs.configuration.ui))
