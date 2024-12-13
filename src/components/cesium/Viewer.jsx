@@ -1,8 +1,8 @@
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { SceneUtils }             from '@Utils/cesium/SceneUtils'
-import * as Cesium                from 'cesium'
-import { ImageryLayerCollection } from 'cesium'
-import { LayersUtils }            from '../../Utils/cesium/LayersUtils'
+import { SceneUtils }                                    from '@Utils/cesium/SceneUtils'
+import * as Cesium                                       from 'cesium'
+import { ImageryLayerCollection, WebMercatorProjection } from 'cesium'
+import { LayersUtils }                                   from '../../Utils/cesium/LayersUtils'
 
 export function Viewer() {
 
@@ -58,6 +58,7 @@ export function Viewer() {
         infoBox:              false,
         sceneModePicker:      false,
         showRenderLoopErrors: false,
+        mapProjection: new WebMercatorProjection(), // TODO is it a problem in 3D ?
         // Avoid consuming Cesium Ion Sessions
         // DO NOT CHANGE the 2 following lines
         imageryProvider: false,
@@ -77,13 +78,14 @@ export function Viewer() {
 
     // Manage Camera
     lgs.camera.changed.addEventListener(raiseCameraUpdateEvent)
-    lgs.viewer.camera.flyTo({
-                                orientation:   cameraOrientation(),
-                                duration:      3,
-                                destination:   startCameraPoint(),
-                                maximumHeight: 10000,
-                                complete:      rotateCamera,
-                            })
+    lgs.camera.flyTo({
+                         orientation:   cameraOrientation(),
+                         duration:      3,
+                         destination:   startCameraPoint(),
+                         maximumHeight: 10000,
+                         complete:      rotateCamera,
+                         convert:       false,
+                     })
 
 
     return (<></>)
