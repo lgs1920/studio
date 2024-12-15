@@ -112,7 +112,6 @@ export class SceneManager {
         })
         await Promise.all(items)
 
-
         this.notifyMorph()
     }
 

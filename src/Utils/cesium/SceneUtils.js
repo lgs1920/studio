@@ -1,4 +1,4 @@
-import { SceneMode }                                         from 'cesium'
+import { Cartesian3, EasingFunction, Matrix4, SceneMode }    from 'cesium'
 import { SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS } from '../../core/constants'
 
 export class SceneUtils {
@@ -14,12 +14,32 @@ export class SceneUtils {
     static morph = async (sceneMode, callback = null) => {
         // Trigger morphComplete only once,
         let remove = null
-        const useCallback = (event, currentSceneMode) => {
+        const useCallback = async (event, currentSceneMode) => {
+            // We launch callback function only once then we remove the listener
             if (callback) {
-                callback({current: currentSceneMode, new: sceneMode})
+                await callback({current: currentSceneMode, new: sceneMode})
                 if (remove) {
                     remove()
                 }
+                if (sceneMode === SCENE_MODE_2D.value) {
+
+                    __.ui.cameraManager.position.longitude = __.ui.cameraManager.target.longitude
+                    __.ui.cameraManager.position.latitude = __.ui.cameraManager.target.latitude
+
+                    lgs.camera.flyTo({
+                                         destination:    Cartesian3.fromDegrees(
+                                             __.ui.cameraManager.position.longitude,
+                                             __.ui.cameraManager.position.latitude,
+                                             __.ui.cameraManager.position.height,
+                                         ),
+                                         maximumHeight:  10000,
+                                         duration:       0, // always.
+                                         convert:        true,
+                                         endTransform:   Matrix4.IDENTITY,
+                                         easingFunction: EasingFunction.LINEAR_NONE,
+                                     })
+                }
+
             }
         }
         if (typeof callback === 'function' && !SceneUtils.morphCompeteEvent) {
@@ -27,21 +47,15 @@ export class SceneUtils {
         }
 
         switch (sceneMode) {
-            case
-            SCENE_MODE_2D.value
-            :
+            case SCENE_MODE_2D.value:
                 await lgs.scene.morphTo2D(lgs.settings.scene.morphDelay)
                 break
 
-            case
-            SCENE_MODE_COLUMBUS.value
-            :
+            case SCENE_MODE_COLUMBUS.value:
                 await lgs.scene.morphToColumbusView(lgs.settings.scene.morphDelay)
                 break
 
-            case
-            SCENE_MODE_3D.value
-            :
+            case SCENE_MODE_3D.value:
                 await lgs.scene.morphTo3D(lgs.settings.scene.morphDelay)
                 break
         }
