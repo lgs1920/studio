@@ -12,7 +12,6 @@ export const SceneModeSelector = (props) => {
 
     const selectSceneMode = (event) => {
         if (waitingMode) {
-            console.log(typeof event.target.dataset.sceneMode)
             __.ui.sceneManager.morph(parseInt(event.target.dataset.sceneMode), __.ui.sceneManager.afterMorphing)
             handleOut(event)
         }

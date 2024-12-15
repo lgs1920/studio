@@ -209,7 +209,7 @@ html {
     order: 2;
 }
 
-.scene-mode-selector sl-button[visible="true"] {
+.scene-mode-selector sl-button[visible] {
     display: flex;
     order: 1;
 }
