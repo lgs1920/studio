@@ -1,7 +1,8 @@
 import { FLAT_TERRAINS, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODES } from '@Core/constants'
 import { SceneUtils }                                               from '@Utils/cesium/SceneUtils'
 import { UIToast }                                                  from '@Utils/UIToast'
-import { NO_FOCUS, RE_LOADING }                                     from '../Journey'
+import { SCENE_MODE_COLUMBUS }                                      from '../constants'
+import { NO_FOCUS, REFRESH_DRAWING }                                from '../Journey'
 
 export class SceneManager {
     constructor() {
@@ -44,12 +45,39 @@ export class SceneManager {
     }
 
     /**
+     * IS it 2D ?
+     *
+     * return {boolean}
+     */
+    get is2D() {
+        return lgs.settings.scene.mode.value * 1 === SCENE_MODE_2D.value
+    }
+
+    /**
+     * Is it 3D ?
+     *
+     * return {boolean}
+     */
+    get is3D() {
+        return lgs.settings.scene.mode.value * 1 === SCENE_MODE_3D.value
+    }
+
+    /**
+     * Is it Columbus View ?
+     *
+     * return {boolean}
+     */
+    get isColumbus() {
+        return lgs.settings.scene.mode.value * 1 === SCENE_MODE_COLUMBUS.value
+    }
+
+    /**
      * switch between 2D and 3D
      *
      * @param callback {function}   called  at the end of morphing
      */
     toggleMode = (callback) => {
-        if (lgs.settings.scene.mode.value * 1 === SCENE_MODE_2D.value) {
+        if (this.is2D) {
             this.morphTo3D(callback)
         }
         else {
@@ -78,7 +106,7 @@ export class SceneManager {
         const items = []
         lgs.journeys.forEach(journey => {
             items.push(journey.draw({
-                                        action: RE_LOADING,
+                                        action: REFRESH_DRAWING,
                                         mode:   NO_FOCUS,
                                     }))
         })

@@ -538,7 +538,7 @@ export class Journey extends MapElement {
      * @param mode
      * @return {Promise<void>}
      */
-    draw = async ({action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE}) => {
+    draw = async ({action = DRAWING_FROM_UI, mode = FOCUS_ON_FEATURE}) => {
         const promises = []
 
         // Draw Tracks and flags
@@ -558,9 +558,10 @@ export class Journey extends MapElement {
 
         //Ready
         const texts = new Map([
-                                  [INITIAL_LOADING, 'loaded succesfully!'],
+                                  [DRAWING_FROM_UI, 'loaded succesfully!'],
+                                  [DRAWING_FROM_DB, 'loaded succesfully!'],
                                   [SIMULATE_ALTITUDE, 'updated succesfully!'],
-                                  [RE_LOADING, 'updated succesfully!'],
+                                  [REFRESH_DRAWING, 'updated succesfully!'],
                               ])
         UIToast.success({
                             caption: `${this.title}`, text: texts.get(action),
@@ -697,7 +698,9 @@ export const JSON_='json'
 export const TRACK_SLUG = 'track'
 
 export const SIMULATE_ALTITUDE = 99
-export const INITIAL_LOADING = 1
-export const RE_LOADING = 2
+export const DRAWING = 0
+export const DRAWING_FROM_UI = 1
+export const DRAWING_FROM_DB = 3
+export const REFRESH_DRAWING = 2
 export const FOCUS_ON_FEATURE = 1
 export const NO_FOCUS = 2

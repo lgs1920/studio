@@ -48,7 +48,7 @@ import {
     ElevationServer,
 }                     from '../../../core/Elevation/ElevationServer'
 import {
-    Journey, SIMULATE_ALTITUDE,
+    Journey, REFRESH_DRAWING, SIMULATE_ALTITUDE,
 }                     from '../../../core/Journey'
 import {
     SelectElevationSource,
@@ -328,7 +328,7 @@ export const JourneySettings = function JourneySettings() {
      */
     const focusOnJourney = async () => {
         await setJourneyVisibility(true)
-        lgs.theJourney.focus({resetCamera: true})
+        lgs.theJourney.focus({resetCamera: true, action: REFRESH_DRAWING})
     }
 
     /**

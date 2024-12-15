@@ -1,10 +1,13 @@
 import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '@Core/constants'
-import { FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS }                from '@Core/Journey'
-import { default as extent }                                                   from '@mapbox/geojson-extent'
+import { DRAWING_FROM_UI, FOCUS_ON_FEATURE, Journey, NO_FOCUS }                from '@Core/Journey'
+import extent                                                                  from '@mapbox/geojson-extent'
 import { default as centroid }                                                 from '@turf/centroid'
-import * as Cesium                                                             from 'cesium'
-import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 }           from 'cesium'
+import {
+    Cartesian3, Cartographic, Color, CustomDataSource, EasingFunction, GeoJsonDataSource, Math, Matrix4, Rectangle,
+    sampleTerrainMostDetailed,
+}                                                                              from 'cesium'
 import { SCENE_MODE_2D }                                                       from '../../core/constants'
+import { DRAWING, DRAWING_FROM_DB }                                            from '../../core/Journey'
 import { UIToast }                                                             from '../UIToast.js'
 import { FLAG_START, POI_FLAG, POI_STD, POIUtils }                             from './POIUtils'
 
@@ -92,7 +95,7 @@ export class TrackUtils {
      * @param mode
      * @param forcedToHide
      */
-    static draw = async (track, {action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
+    static draw = async (track, {action = DRAWING_FROM_UI, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
         // Load Geo Json for track then set visibility
         const source = lgs.viewer.dataSources.getByName(track.slug)[0]
         return source.load(track.content,
@@ -143,17 +146,16 @@ export class TrackUtils {
         // We calculate the Bounding Box and enlarge it by 25%
         // in order to be sure to have the full track inside the window
         const bbox = TrackUtils.extendBbox(extent(track.content), 25)
-        let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
+        let rectangle = Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
 
         // Get the right camera information
         let destination
         if (journey.camera === null || resetCamera) {
             // Let's center to the rectangle
             destination = lgs.camera.getRectangleCameraCoordinates(rectangle)
-
+            var cartographic = Cartographic.fromCartesian(destination)
             // Get the centroid of the track
-            const centroiid = centroid(track.content)
-            console.log('centroid', centroiid)
+            const center = centroid(track.content)
 
             // Get the right position according to Scene Mode
             let position = {}
@@ -161,28 +163,28 @@ export class TrackUtils {
                 case SCENE_MODE_2D.value:
                     // We use centroid
                     position = {
-                        longitude: centroiid.geometry.coordinates[0],
-                        latitude:  centroiid.geometry.coordinates[1],
+                        longitude: center.geometry.coordinates[0],
+                        latitude:  center.geometry.coordinates[1],
                     }
                     break
                 default:
                     // We use destination
                     position = {
-                        longitude: Cesium.Math.toDegrees(destination.x),
-                        latitude:  Cesium.Math.toDegrees(destination.y),
+                        longitude: Math.toDegrees(cartographic.longitude),
+                        latitude:  Math.toDegrees(cartographic.latitude),
                     }
 
             }
             position.pitch = -90
-            position.height = Cesium.Math.toDegrees(destination.z)
+            position.height = Math.toDegrees(cartographic.height)
 
             __.ui.cameraManager.settings = {
                 position: position,
                 // target is based on centroid
-                target:   {
-                    longitude: centroiid.geometry.coordinates[0],
-                    latitude:  centroiid.geometry.coordinates[1],
-                    height:    Cesium.Math.toDegrees(destination.z), // We take the same
+                target: {
+                    longitude: center.geometry.coordinates[0],
+                    latitude:  center.geometry.coordinates[1],
+                    height:    cartographic.height,
                 },
             }
 
@@ -190,36 +192,50 @@ export class TrackUtils {
 
         }
         else {
-            __.ui.cameraManager.settings = (action === INITIAL_LOADING) ? journey.cameraOrigin : journey.camera
-            destination = Cesium.Cartesian3.fromDegrees(
+            __.ui.cameraManager.settings = (action === DRAWING_FROM_UI || action === DRAWING_FROM_DB) ? journey.cameraOrigin : journey.camera
+            destination = Cartesian3.fromDegrees(
                 __.ui.cameraManager.settings.position.longitude,
                 __.ui.cameraManager.settings.position.latitude,
                 __.ui.cameraManager.settings.position.height,
             )
         }
+
+        // Depending on what we are doing, we need to convert the destination
+        // from world coordinates to scene coordinates
+        let convert = false
+        if (__.ui.sceneManager.is2D && (action === DRAWING || action === DRAWING_FROM_DB)) {
+            convert = true
+        }
+
+        // let's go to focus !
         lgs.camera.flyTo({
-                             destination: destination,                               // Camera
-                             orientation: {                                         // Offset and Orientation
+                             destination:    destination,                               // Camera
+                             orientation:    {                                         // Offset and Orientation
                                  heading: Math.toRadians(__.ui.cameraManager.settings.position.heading),
                                  pitch:   Math.toRadians(__.ui.cameraManager.settings.position.pitch),
                                  roll:    Math.toRadians(__.ui.cameraManager.settings.position.roll),
                              },
                              maximumHeight:     lgs.camera.maximumHeight,
                              pitchAdjustHeight: lgs.camera.pitchAdjustHeight,
-                             convert:     false,  // used in 2D or Columbus
-
-                             duration:     8,
-                             endTransform: Matrix4.IDENTITY,
-                             easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT,
+                             convert:        convert,
+                             duration:       lgs.settings.camera.flyingTime,
+                             endTransform:   Matrix4.IDENTITY,
+                             easingFunction: EasingFunction.LINEAR_NONE,
                          })
         //Show BBox if requested
-        showBbox = true
         if (showBbox) {
+            const id = `BBox#${track.slug}`
+            // We remove the BBox if it already exists
+            if (lgs.viewer.entities.getById(id)) {
+                lgs.viewer.entities.removeById(id)
+            }
+            // Add the BBox
             lgs.viewer.entities.add({
-                                        name:      `BBox#${track.slug}`,
+                                        id:        id,
+                                        name:      id,
                                         rectangle: {
                                             coordinates: rectangle,
-                                            material:    Cesium.Color.WHITE.withAlpha(0.5),
+                                            material: Color.WHITE.withAlpha(0.2),
                                         },
                                     })
         }
@@ -269,7 +285,7 @@ export class TrackUtils {
      *
      */
     static prepareDataForMetrics = async () => {
-        const dataExtract = [] = []
+        const dataExtract = []
         // Only for Feature Collections that are Line or multi line string typ
         const type = this.content.geometry.type
         if (this.content.type === FEATURE &&
@@ -307,12 +323,12 @@ export class TrackUtils {
     static getElevationFromTerrain = async (coordinates) => {
         const positions = []
         coordinates.forEach(coordinate => {
-            positions.push(Cesium.Cartographic.fromDegrees(coordinate[0], coordinate[1]))
+            positions.push(Cartographic.fromDegrees(coordinate[0], coordinate[1]))
         })
 
         //TODO apply only if altitude is missing for some coordinates
         const altitude = []
-        const temp = await Cesium.sampleTerrainMostDetailed(lgs.viewer.terrainProvider, positions)
+        const temp = await sampleTerrainMostDetailed(lgs.viewer.terrainProvider, positions)
         temp.forEach(coordinate => {
             altitude.push(coordinate.altitude)
         })
@@ -373,7 +389,7 @@ export class TrackUtils {
             return
         }
 
-        // We're ready for rendering so let's ave journeys
+        // We're ready for rendering so let's save journeys
         journeys.forEach(journey => {
             journey.cameraOrigin = journey.camera
         })
@@ -418,7 +434,7 @@ export class TrackUtils {
         const items = []
         lgs.journeys.forEach(journey => {
             items.push(journey.draw({
-                                        action: INITIAL_LOADING,
+                                        action: DRAWING_FROM_DB,
                                         mode:   journey.slug === currentJourney.slug ? FOCUS_ON_FEATURE : NO_FOCUS,
                                     }))
         })

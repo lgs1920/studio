@@ -37,6 +37,7 @@ theme: 'dark'
 # Scene
 ########################################
 scene:
+  morphDelay: 0 #seconds - does not work with other values in 2D->3D
   mode:
     value: 3
     available:
@@ -73,6 +74,7 @@ camera:
   percentageChanged: 0.02
   maximumHeight: 10000
   pitchAdjustHeight: 200
+  flyingTime: 3 #seconds
 
 ########################################
 # Color palette

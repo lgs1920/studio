@@ -1,4 +1,4 @@
-import { FOCUS_ON_FEATURE, INITIAL_LOADING } from '@Core/Journey'
+import { DRAWING_FROM_UI, FOCUS_ON_FEATURE } from '@Core/Journey'
 import { MapElement }                        from '@Core/MapElement'
 import { POI }                               from '@Core/POI'
 import { ProfileTrackMarker }                from '@Core/ProfileTrackMarker'
@@ -359,10 +359,10 @@ export class Track extends MapElement {
      *
      * @return {Promise<void>}
      */
-    draw = async ({action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
+    draw = async ({action = DRAWING_FROM_UI, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
         TrackUtils.draw(this, {action: action, mode: mode, forcedToHide: forcedToHide}).then(() => {
             // Let's draw flags for the first time.
-            if (action === INITIAL_LOADING) {
+            if (action === DRAWING_FROM_UI) {
                 if (this.flags.start) {
                     this.flags.start.draw(!forcedToHide)
                 }

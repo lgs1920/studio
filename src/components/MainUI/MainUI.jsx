@@ -22,10 +22,10 @@ import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
 import { Utils }             from '../TracksEditor/Utils.js'
 import { CameraTarget }      from './CameraTarget'
 import { CreditsBar }        from './credits/CreditsBar'
+import { FocusButton }       from './FocusButton'
 import { SceneModeSelector } from './SceneModeSelector'
 import { SupportUI }         from './SupportUI'
 import { SupportUIButton }   from './SupportUIButton'
-import { TargetButton }      from './TargetButton'
 
 export const MainUI = () => {
 
@@ -58,7 +58,7 @@ export const MainUI = () => {
                 <div id={'top-left-ui'}>
                     <SettingsButton tooltip={'right'}/>
                     <LayersButton tooltip={'right'}/>
-                    {snap.theJourney && <TargetButton tooltip={'right'}/>}
+                    {snap.theJourney && <FocusButton tooltip={'right'}/>}
 
                     <Toolbar editor={true}
                              profile={true}

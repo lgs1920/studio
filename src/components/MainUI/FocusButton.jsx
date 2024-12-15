@@ -4,9 +4,10 @@ import { faCrosshairsSimple }          from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                       from '@Utils/FA2SL.js'
 import { useSnapshot }                 from 'valtio'
+import { REFRESH_DRAWING }             from '../../core/Journey'
 
 
-export const TargetButton = (props) => {
+export const FocusButton = (props) => {
     const placement = props.tooltip ?? 'right'
     const editorStore = lgs.theJourneyEditorProxy
     const snap = useSnapshot(editorStore)
@@ -17,7 +18,7 @@ export const TargetButton = (props) => {
             lgs.theJourney.updateVisibility(visibility)
             await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         }
-        lgs.theJourney.focus({resetCamera: true})
+        lgs.theJourney.focus({resetCamera: true, action: REFRESH_DRAWING})
     }
     return (
         <>

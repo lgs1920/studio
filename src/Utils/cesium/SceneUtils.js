@@ -1,5 +1,5 @@
-import { SceneMode }                                                                   from 'cesium'
-import { SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODE_MORPHING_TIME } from '../../core/constants'
+import { SceneMode }                                         from 'cesium'
+import { SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS } from '../../core/constants'
 
 export class SceneUtils {
 
@@ -10,25 +10,39 @@ export class SceneUtils {
      * @param callback
      */
 
+
     static morph = async (sceneMode, callback = null) => {
         // Trigger morphComplete only once,
-        if (typeof callback === 'function' && !SceneUtils.morphCompeteEvent) {
-            lgs.scene.morphComplete.addEventListener(function (event, currentSceneMode) {
+        let remove = null
+        const useCallback = (event, currentSceneMode) => {
+            if (callback) {
                 callback({current: currentSceneMode, new: sceneMode})
-            })
+                if (remove) {
+                    remove()
+                }
+            }
+        }
+        if (typeof callback === 'function' && !SceneUtils.morphCompeteEvent) {
+            remove = lgs.scene.morphComplete.addEventListener(useCallback)
         }
 
         switch (sceneMode) {
-            case SCENE_MODE_2D.value:
-                await lgs.scene.morphTo2D(SCENE_MODE_MORPHING_TIME)
+            case
+            SCENE_MODE_2D.value
+            :
+                await lgs.scene.morphTo2D(lgs.settings.scene.morphDelay)
                 break
 
-            case SCENE_MODE_COLUMBUS.value:
-                await lgs.scene.morphToColumbusView(SCENE_MODE_MORPHING_TIME)
+            case
+            SCENE_MODE_COLUMBUS.value
+            :
+                await lgs.scene.morphToColumbusView(lgs.settings.scene.morphDelay)
                 break
 
-            case SCENE_MODE_3D.value:
-                await lgs.scene.morphTo3D(SCENE_MODE_MORPHING_TIME)
+            case
+            SCENE_MODE_3D.value
+            :
+                await lgs.scene.morphTo3D(lgs.settings.scene.morphDelay)
                 break
         }
     }
