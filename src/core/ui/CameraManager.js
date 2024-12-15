@@ -171,7 +171,7 @@ export class CameraManager {
             type:         CameraManager.ORBITAL,
             releaseEvent: lgs.viewer.clock.onTick.addEventListener(() => {
                 try {
-                    if (!this.orbitalInPause && !__.ui.sceneManager.is2D) {
+                    if (!this.orbitalInPause) {
                         lgs.camera.rotateLeft(step)
                     }
                 }

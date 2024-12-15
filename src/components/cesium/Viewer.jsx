@@ -8,8 +8,12 @@ export function Viewer() {
 
     const coordinates = {
         position: {
-            longitude: lgs.settings.getStarter.camera.longitude,
-            latitude:  lgs.settings.getStarter.camera.latitude,
+            longitude: __.ui.sceneManager.is2D
+                       ? lgs.settings.getStarter.longitude         // Camera target
+                       : lgs.settings.getStarter.camera.longitude, // Camera position
+            latitude:  __.ui.sceneManager.is2D                    // Camera target
+                       ? lgs.settings.getStarter.latitude          // Camera position
+                       : lgs.settings.getStarter.camera.latitude,
             height:    lgs.settings.getStarter.camera.height,
             heading:   lgs.settings.getStarter.camera.heading,
             pitch:     lgs.settings.getStarter.camera.pitch,
@@ -18,6 +22,7 @@ export function Viewer() {
     }
 
     const startCameraPoint = () => {
+
         return Cesium.Cartesian3.fromDegrees(
             coordinates.position.longitude,
             coordinates.position.latitude,
@@ -36,7 +41,7 @@ export function Viewer() {
     const cameraStore = lgs.mainProxy.components.camera
 
     const rotateCamera = async () => {
-        if (lgs.journeys.size === 0) {
+        if (lgs.journeys.size === 0 && !__.ui.sceneManager.is2D) {
             await __.ui.cameraManager.runOrbital({})
         }
     }
