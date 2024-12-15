@@ -71,7 +71,6 @@ export const WelcomeModal = () => {
         <>
             {lgs.settings.getApp.showIntro &&
                 <SlDialog open={open}
-                          modal
                           no-header
                           id={'welcome-modal'}
                           className={'lgs-theme'}

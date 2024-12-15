@@ -12,7 +12,6 @@ export const SupportUI = () => {
     return (
         <>
             <SlDialog open={getSupport.visible}
-                      modal
                       no-header
                       id={'support-modal'}
                       className={'lgs-theme'}
