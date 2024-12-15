@@ -41,7 +41,7 @@ export function Viewer() {
     const cameraStore = lgs.mainProxy.components.camera
 
     const rotateCamera = async () => {
-        if (lgs.journeys.size === 0 && !__.ui.sceneManager.is2D) {
+        if (lgs.settings.getStarter.camera.canRotate && lgs.journeys.size === 0) {
             await __.ui.cameraManager.runOrbital({})
         }
     }
@@ -85,9 +85,9 @@ export function Viewer() {
     lgs.camera.changed.addEventListener(raiseCameraUpdateEvent)
     lgs.camera.flyTo({
                          orientation:   cameraOrientation(),
-                         duration:      3,
+                         duration:      lgs.settings.camera.flyingTime,
                          destination:   startCameraPoint(),
-                         maximumHeight: 10000,
+                         maximumHeight: lgs.settings.camera.maximumHeight,
                          complete:      rotateCamera,
                          convert:       false,
                      })

@@ -61,6 +61,7 @@ starter:
     longitude: 5.6533
     latitude: 45.34623
     height: 4300
+    canRotate: true
 
 ########################################
 # Initial Camera Settings

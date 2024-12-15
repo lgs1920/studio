@@ -102,6 +102,8 @@ export class SceneManager {
 
     afterMorphing = async (props) => {
 
+        __.ui.cameraManager.move.releaseEvent()
+
         // Now it's time for the show. Draw all journeys
         const items = []
         lgs.journeys.forEach(journey => {
@@ -111,7 +113,6 @@ export class SceneManager {
                                     }))
         })
         await Promise.all(items)
-
         this.notifyMorph()
     }
 
