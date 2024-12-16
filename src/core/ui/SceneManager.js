@@ -100,8 +100,9 @@ export class SceneManager {
     }
 
 
-    afterMorphing = async (props) => {
+    afterMorphing = async () => {
 
+        // Remove starting animation (rotate,...)
         __.ui.cameraManager.move.releaseEvent()
 
         // Now it's time for the show. Draw all journeys

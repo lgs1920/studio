@@ -6,6 +6,7 @@ import { FEATURE_LINE_STRING, TrackUtils }   from '@Utils/cesium/TrackUtils'
 import { Mobility }                          from '@Utils/Mobility'
 import { DateTime }                          from 'luxon'
 import { FEATURE, FEATURE_MULTILINE_STRING } from '../Utils/cesium/TrackUtils'
+import { REFRESH_DRAWING }                   from './Journey'
 
 
 export class Track extends MapElement {
@@ -362,18 +363,25 @@ export class Track extends MapElement {
     draw = async ({action = DRAWING_FROM_UI, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
         TrackUtils.draw(this, {action: action, mode: mode, forcedToHide: forcedToHide}).then(() => {
             // Let's draw flags for the first time.
-            if (action === DRAWING_FROM_UI) {
                 if (this.flags.start) {
+                    if (action === REFRESH_DRAWING) {
+                        this.flags.start.drawn = false
+                    }
                     this.flags.start.draw(!forcedToHide)
                 }
                 if (this.flags.stop) {
+                    if (action === REFRESH_DRAWING) {
+                        this.flags.stop.drawn = false
+                    }
                     this.flags.stop.draw(!forcedToHide)
                 }
 
                 if (this.marker) {
+                    if (action === REFRESH_DRAWING) {
+                        this.marker.drawn = false
+                    }
                     this.marker.draw(forcedToHide)
                 }
-            }
         })
 
         // Focus on the parent Journey
