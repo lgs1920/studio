@@ -182,3 +182,22 @@ export const INFO_DRAWER = 'info-drawer'
 export const LAYERS_DRAWER = 'layers-drawer'
 export const JOURNEY_EDITOR_DRAWER = 'journey-editor-drawer'
 export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'
+
+/** Jaurney, Track, POI **/
+
+
+export const GPX = 'gpx'
+export const KML = 'kml'
+export const KMZ = 'kmz'
+export const GEOJSON = 'geojson'
+export const JSON_ = 'json'
+
+export const TRACK_SLUG = 'track'
+
+export const SIMULATE_ALTITUDE = 99
+export const DRAWING = 0
+export const DRAWING_FROM_UI = 1
+export const DRAWING_FROM_DB = 3
+export const REFRESH_DRAWING = 2
+export const FOCUS_ON_FEATURE = 1
+export const NO_FOCUS = 2

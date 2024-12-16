@@ -1,7 +1,9 @@
-import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
-import { Journey, NO_FOCUS, REFRESH_DRAWING }                                    from '@Core/Journey'
-import { Track }                                                                 from '@Core/Track'
-import { TrackUtils }                                                            from '@Utils/cesium/TrackUtils'
+import {
+    DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE, NO_FOCUS, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY,
+}                     from '@Core/constants'
+import { Journey }    from '@Core/Journey'
+import { Track }      from '@Core/Track'
+import { TrackUtils } from '@Utils/cesium/TrackUtils'
 
 export class Utils {
 

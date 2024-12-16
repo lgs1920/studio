@@ -1,15 +1,16 @@
-import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '@Core/constants'
-import { DRAWING_FROM_UI, FOCUS_ON_FEATURE, Journey, NO_FOCUS }                from '@Core/Journey'
-import extent                                                                  from '@mapbox/geojson-extent'
-import { default as centroid }                                                 from '@turf/centroid'
+import {
+    APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DRAWING, DRAWING_FROM_DB, DRAWING_FROM_UI,
+    FOCUS_ON_FEATURE, NO_FOCUS, SCENE_MODE_2D,
+}                                                  from '@Core/constants'
+import { Journey }                                 from '@Core/Journey'
+import extent                                      from '@mapbox/geojson-extent'
+import { default as centroid }                     from '@turf/centroid'
 import {
     Cartesian3, Cartographic, Color, CustomDataSource, EasingFunction, GeoJsonDataSource, Math, Matrix4, Rectangle,
     sampleTerrainMostDetailed,
-}                                                                              from 'cesium'
-import { SCENE_MODE_2D }                                                       from '../../core/constants'
-import { DRAWING, DRAWING_FROM_DB }                                            from '../../core/Journey'
-import { UIToast }                                                             from '../UIToast.js'
-import { FLAG_START, POI_FLAG, POI_STD, POIUtils }                             from './POIUtils'
+}                                                  from 'cesium'
+import { UIToast }                                 from '../UIToast.js'
+import { FLAG_START, POI_FLAG, POI_STD, POIUtils } from './POIUtils'
 
 export const SUPPORTED_EXTENSIONS = ['geojson', 'json', 'kml', 'gpx' /* TODO 'kmz'*/]
 export const FEATURE                  = 'Feature',

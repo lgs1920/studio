@@ -1,12 +1,10 @@
-import { DRAWING_FROM_UI, FOCUS_ON_FEATURE } from '@Core/Journey'
-import { MapElement }                        from '@Core/MapElement'
-import { POI }                               from '@Core/POI'
-import { ProfileTrackMarker }                from '@Core/ProfileTrackMarker'
-import { FEATURE_LINE_STRING, TrackUtils }   from '@Utils/cesium/TrackUtils'
-import { Mobility }                          from '@Utils/Mobility'
-import { DateTime }                          from 'luxon'
-import { FEATURE, FEATURE_MULTILINE_STRING } from '../Utils/cesium/TrackUtils'
-import { REFRESH_DRAWING }                   from './Journey'
+import { DRAWING_FROM_UI, FOCUS_ON_FEATURE, REFRESH_DRAWING }                 from '@Core/constants'
+import { MapElement }                                                         from '@Core/MapElement'
+import { POI }                                                                from '@Core/POI'
+import { ProfileTrackMarker }                                                 from '@Core/ProfileTrackMarker'
+import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
+import { Mobility }                                                           from '@Utils/Mobility'
+import { DateTime }                                                           from 'luxon'
 
 
 export class Track extends MapElement {

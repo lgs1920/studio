@@ -18,6 +18,10 @@ import {
     FLAG_START, FLAG_STOP, POI_FLAG, POI_MARKER, POI_STD,
 }                                       from '../Utils/cesium/POIUtils'
 import {
+    DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JSON_, KML, KMZ, NO_FOCUS, REFRESH_DRAWING,
+    SIMULATE_ALTITUDE, TRACK_SLUG,
+}                                       from './constants'
+import {
     ElevationServer,
 }                                       from './Elevation/ElevationServer'
 import {
@@ -688,19 +692,3 @@ export class Journey extends MapElement {
     }
 
 }
-
-export const GPX = 'gpx'
-export const KML = 'kml'
-export const KMZ = 'kmz'
-export const GEOJSON = 'geojson'
-export const JSON_='json'
-
-export const TRACK_SLUG = 'track'
-
-export const SIMULATE_ALTITUDE = 99
-export const DRAWING = 0
-export const DRAWING_FROM_UI = 1
-export const DRAWING_FROM_DB = 3
-export const REFRESH_DRAWING = 2
-export const FOCUS_ON_FEATURE = 1
-export const NO_FOCUS = 2

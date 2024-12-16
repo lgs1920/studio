@@ -1,10 +1,9 @@
-import { UPDATE_JOURNEY_SILENTLY }     from '@Core/constants'
-import { Utils }                       from '@Editor/Utils'
-import { faCrosshairsSimple }          from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                       from '@Utils/FA2SL.js'
-import { useSnapshot }                 from 'valtio'
-import { REFRESH_DRAWING }             from '../../core/Journey'
+import { REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
+import { Utils }                                    from '@Editor/Utils'
+import { faCrosshairsSimple }                       from '@fortawesome/pro-regular-svg-icons'
+import { SlButton, SlIcon, SlTooltip }              from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                    from '@Utils/FA2SL.js'
+import { useSnapshot }                              from 'valtio'
 
 
 export const FocusButton = (props) => {

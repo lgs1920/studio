@@ -1,8 +1,7 @@
 import { FLAT_TERRAINS, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODES } from '@Core/constants'
 import { SceneUtils }                                               from '@Utils/cesium/SceneUtils'
 import { UIToast }                                                  from '@Utils/UIToast'
-import { SCENE_MODE_COLUMBUS }                                      from '../constants'
-import { NO_FOCUS, REFRESH_DRAWING }                                from '../Journey'
+import { NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_COLUMBUS }           from '../constants'
 
 export class SceneManager {
     constructor() {

@@ -3,7 +3,7 @@ import {
     ToggleStateIcon,
 }                     from '@Components/ToggleStateIcon'
 import {
-    ORIGIN_STORE, UPDATE_JOURNEY_SILENTLY,
+    ORIGIN_STORE, REFRESH_DRAWING, SIMULATE_ALTITUDE, UPDATE_JOURNEY_SILENTLY,
 }                     from '@Core/constants'
 import {
     TrackData,
@@ -48,7 +48,7 @@ import {
     ElevationServer,
 }                     from '../../../core/Elevation/ElevationServer'
 import {
-    Journey, REFRESH_DRAWING, SIMULATE_ALTITUDE,
+    Journey,
 }                     from '../../../core/Journey'
 import {
     SelectElevationSource,
