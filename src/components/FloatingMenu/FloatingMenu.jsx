@@ -30,7 +30,7 @@ import {
 }                from 'valtio'
 import {
     km, meter, mile, mph,
-}                from '../../Utils/UnitUtils'
+} from '@Utils/UnitUtils'
 import {
     TextValueUI,
 }                from '../TextValueUI/TextValueUI'

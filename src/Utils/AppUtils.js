@@ -1,4 +1,6 @@
-import { BUILD, CONFIGURATION, MILLIS, platforms, SERVERS }             from '@Core/constants'
+import {
+    BUILD, CONFIGURATION, MILLIS, platforms, SERVERS, FREE_ANONYMOUS_ACCESS, SETTINGS, SETTINGS_STORE, VAULT_STORE,
+} from '@Core/constants'
 import { ElevationServer }                                              from '@Core/Elevation/ElevationServer'
 import { Settings }                                                     from '@Core/settings/Settings'
 import { SettingsSection }                                              from '@Core/settings/SettingsSection'
@@ -7,7 +9,6 @@ import axios                                                            from 'ax
 import * as Cesium                                                      from 'cesium'
 import YAML                                                             from 'yaml'
 import { EventEmitter }                                                 from '../assets/libs/EventEmitter/EventEmitter'
-import { FREE_ANONYMOUS_ACCESS, SETTINGS, SETTINGS_STORE, VAULT_STORE } from '../core/constants'
 import { FA2SL }                                                        from './FA2SL'
 
 export class AppUtils {

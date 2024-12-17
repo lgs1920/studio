@@ -3,7 +3,7 @@ import { faCheck }                    from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import parse                          from 'html-react-parser'
 import { useState }                   from 'react'
-import { FA2SL }                      from '../../Utils/FA2SL'
+import { FA2SL } from '@Utils/FA2SL'
 
 /**
  * Confirm Dialog

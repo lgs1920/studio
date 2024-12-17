@@ -3,7 +3,7 @@ import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import React                          from 'react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'
-import { FA2SL }                      from '../../../Utils/FA2SL'
+import { FA2SL } from '@Utils/FA2SL'
 import infoText                       from './info-layer.md'
 
 export const InfoLayerModal = () => {

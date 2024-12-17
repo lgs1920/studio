@@ -1,6 +1,6 @@
 import { detailedDiff }                       from 'deep-object-diff'
 import { proxy, subscribe }                   from 'valtio'
-import { SETTING_EXCLUSIONS, SETTINGS_STORE } from '../constants'
+import { SETTING_EXCLUSIONS, SETTINGS_STORE } from '@Core/constants'
 
 export class SettingsSection {
 

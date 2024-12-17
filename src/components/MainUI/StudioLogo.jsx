@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon'
-import { SLOGAN }   from '../../core/constants'
+import { SLOGAN } from '@Core/constants'
 
 export const StudioLogo = (props) => {
     let style = {}

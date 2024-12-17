@@ -5,8 +5,8 @@ import {
 
 import { SlIconButton, SlTab, SlTabGroup, SlTabPanel, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { useSnapshot }                                            from 'valtio'
-import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY }            from '../../../core/constants'
-import { FA2SL }                                                  from '../../../Utils/FA2SL'
+import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
+import { FA2SL }                                       from '@Utils/FA2SL'
 import { ToggleStateIcon }                                        from '../../ToggleStateIcon'
 import { FilterEntities }                                         from './FilterEntities'
 import { SelectEntity }                                           from './SelectEntity'

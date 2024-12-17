@@ -5,7 +5,7 @@ import { faAngle, faArrowsToCircle, faMountains, faVideo } from '@fortawesome/pr
 import { SlAnimation }                                     from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                           from '@Utils/FA2SL'
 import { proxy, useSnapshot }                              from 'valtio'
-import { meter, mile }                                     from '../../../Utils/UnitUtils'
+import { meter, mile } from '@Utils/UnitUtils'
 
 
 export const CameraAndTargetPanel = () => {

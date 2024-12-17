@@ -3,7 +3,7 @@ import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react
 import './style.css'
 import { FA2SL }                       from '@Utils/FA2SL'
 import { useSnapshot }                 from 'valtio'
-import { SETTINGS_EDITOR_DRAWER }      from '../../core/constants'
+import { SETTINGS_EDITOR_DRAWER } from '@Core/constants'
 //read version
 
 

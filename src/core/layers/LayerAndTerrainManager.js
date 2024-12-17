@@ -1,4 +1,4 @@
-import { TerrainUtils } from '../../Utils/cesium/TerrainUtils'
+import { TerrainUtils } from '@Utils/cesium/TerrainUtils'
 
 export class LayersAndTerrainManager {
 

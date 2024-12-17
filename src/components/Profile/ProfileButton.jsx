@@ -4,7 +4,7 @@ import './style.css'
 import { FA2SL }                       from '@Utils/FA2SL'
 import { forwardRef }                  from 'react'
 import { useSnapshot }                 from 'valtio'
-import { TrackUtils }                  from '../../Utils/cesium/TrackUtils'
+import { TrackUtils } from '@Utils/cesium/TrackUtils'
 //read version
 
 

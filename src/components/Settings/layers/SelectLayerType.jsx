@@ -2,7 +2,7 @@ import { faBringForward, faMountains, faSendBackward } from '@fortawesome/pro-re
 import { SlIcon, SlOption, SlSelect }                  from '@shoelace-style/shoelace/dist/react'
 import React                                           from 'react'
 import { useSnapshot }                                 from 'valtio'
-import { FA2SL }                                       from '../../../Utils/FA2SL'
+import { FA2SL } from '@Utils/FA2SL'
 
 export const SelectLayerType = () => {
 

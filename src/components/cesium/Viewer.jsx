@@ -2,7 +2,7 @@ import '@shoelace-style/shoelace/dist/themes/light.css'
 import { SceneUtils }                                    from '@Utils/cesium/SceneUtils'
 import * as Cesium                                       from 'cesium'
 import { ImageryLayerCollection, WebMercatorProjection } from 'cesium'
-import { LayersUtils }                                   from '../../Utils/cesium/LayersUtils'
+import { LayersUtils } from '@Utils/cesium/LayersUtils'
 
 export function Viewer() {
 

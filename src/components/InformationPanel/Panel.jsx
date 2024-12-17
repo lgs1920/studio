@@ -3,7 +3,7 @@ import { SlDrawer, SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelac
 import React, { useEffect, useRef }                from 'react'
 import { useSnapshot }                             from 'valtio'
 import './style.css'
-import { INFO_DRAWER }                             from '../../core/constants'
+import { INFO_DRAWER } from '@Core/constants'
 
 import { CreditsPanel } from './CreditsPanel'
 import { WhatsNew }     from './WhatsNew'

@@ -1,4 +1,8 @@
-import { JOURNEYS_STORE, ORIGIN_STORE } from '@Core/constants'
+import {
+    JOURNEYS_STORE, ORIGIN_STORE,
+    DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JSON_, KML, KMZ, NO_FOCUS, REFRESH_DRAWING,
+    SIMULATE_ALTITUDE, TRACK_SLUG,
+} from '@Core/constants'
 import {
     gpx, kml,
 }                                       from '@tmcw/togeojson'
@@ -7,20 +11,15 @@ import {
 }                                       from '@turf/invariant'
 import {
     JUST_ICON,
-}                                       from '@Utils/cesium/POIUtils'
+
+    FLAG_START, FLAG_STOP, POI_FLAG, POI_MARKER, POI_STD,
+} from '@Utils/cesium/POIUtils'
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
 }                                       from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
 }                                       from '@Utils/UIToast'
-import {
-    FLAG_START, FLAG_STOP, POI_FLAG, POI_MARKER, POI_STD,
-}                                       from '../Utils/cesium/POIUtils'
-import {
-    DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JSON_, KML, KMZ, NO_FOCUS, REFRESH_DRAWING,
-    SIMULATE_ALTITUDE, TRACK_SLUG,
-}                                       from './constants'
 import {
     ElevationServer,
 }                                       from './Elevation/ElevationServer'

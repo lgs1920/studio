@@ -1,8 +1,8 @@
 import { SlTooltip }                                   from '@shoelace-style/shoelace/dist/react'
 import { proxy, useSnapshot }                          from 'valtio'
 import { subscribeKey }                                from 'valtio/utils'
-import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '../../../core/constants'
-import { LayersAndTerrainManager }                     from '../../../core/layers/LayerAndTerrainManager'
+import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
+import { LayersAndTerrainManager }                     from '@Core/layers/LayerAndTerrainManager'
 import './style.css'
 /*
 

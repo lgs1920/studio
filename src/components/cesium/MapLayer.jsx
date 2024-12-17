@@ -4,7 +4,7 @@ import {
     WebMapTileServiceImageryProvider,
 }                                      from 'cesium'
 import { subscribe, useSnapshot }      from 'valtio'
-import { URL_AUTHENT_KEY }             from '../../core/constants'
+import { URL_AUTHENT_KEY } from '@Core/constants'
 
 export const SLIPPY = 'slippy'
 export const WMTS = 'wmts'

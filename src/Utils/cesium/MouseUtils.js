@@ -1,4 +1,4 @@
-import { Track }                                           from '../../core/Track'
+import { Track } from '@Core/Track'
 import { NOT_AN_ENTITY, OTHER_TYPE, POI_TYPE, TRACK_TYPE } from './EntitiesUtils'
 import { TrackUtils }                                      from './TrackUtils'
 

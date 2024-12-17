@@ -1,7 +1,7 @@
 import { faArrowsToCircle }  from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon }            from '@shoelace-style/shoelace/dist/react'
 import { useEffect, useRef } from 'react'
-import { FA2SL }             from '../../Utils/FA2SL'
+import { FA2SL } from '@Utils/FA2SL'
 
 export const CameraTarget = () => {
     const box = useRef(0)

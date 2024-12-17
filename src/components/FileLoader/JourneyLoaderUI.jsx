@@ -14,11 +14,11 @@ import { sprintf }                    from 'sprintf-js'
 import { useSnapshot }                from 'valtio'
 import {
     JOURNEY_DENIED, JOURNEY_OK, JOURNEY_WAITING, SUPPORTED_EXTENSIONS, TrackUtils,
-}                                     from '../../Utils/cesium/TrackUtils'
+} from '@Utils/cesium/TrackUtils'
 import {
     DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
     FileUtils,
-}                                     from '../../Utils/FileUtils'
+} from '@Utils/FileUtils'
 import { DragNDropFile }              from './DragNDropFile'
 
 /**

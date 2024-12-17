@@ -16,7 +16,7 @@ import {
 }                      from '@Utils/FA2SL'
 
 import { useSnapshot }                                              from 'valtio'
-import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS } from '../../../Utils/UnitUtils'
+import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS } from '@Utils/UnitUtils'
 import { DateInfo }                                                 from '../DateInfo'
 
 export const TrackData = function TrackData() {

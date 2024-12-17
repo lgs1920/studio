@@ -2,7 +2,7 @@ import * as turfDistance from '@turf/distance'
 
 import { DateTime }   from 'luxon'
 import * as turfPoint from 'turf-point'
-import { MILLIS }     from '../core/constants'
+import { MILLIS } from '@Core/constants'
 
 export class Mobility {
     /**

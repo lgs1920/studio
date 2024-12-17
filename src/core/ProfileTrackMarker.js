@@ -1,6 +1,6 @@
 import { POI }                       from '@Core/POI'
 import { faCircle }                  from '@fortawesome/pro-solid-svg-icons'
-import { JUST_ICON, POI_MARKER }     from '../Utils/cesium/POIUtils'
+import { JUST_ICON, POI_MARKER } from '@Utils/cesium/POIUtils'
 import { POI_VERTICAL_ALIGN_CENTER } from './POI'
 
 export class ProfileTrackMarker extends POI {

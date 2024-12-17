@@ -1,7 +1,7 @@
 import { CesiumTerrainProvider, EllipsoidTerrainProvider, IonResource, Terrain } from 'cesium'
 import {
     TERRAIN_FROM_CESIUM, TERRAIN_FROM_CESIUM_ELLIPSOID, TERRAIN_FROM_URL, URL_AUTHENT_KEY,
-}                                                                                from '../../core/constants'
+} from '@Core/constants'
 
 export class TerrainUtils {
 

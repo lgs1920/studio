@@ -1,5 +1,5 @@
 import { Cartesian3, EasingFunction, Matrix4, SceneMode }    from 'cesium'
-import { SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS } from '../../core/constants'
+import { SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS } from '@Core/constants'
 
 export class SceneUtils {
 

@@ -1,7 +1,7 @@
 import { forwardRef }                        from 'react'
 import './style.css'
 import { sprintf }                           from 'sprintf-js'
-import { INTERNATIONAL, units as unitsList } from '../../Utils/UnitUtils'
+import { INTERNATIONAL, units as unitsList } from '@Utils/UnitUtils'
 
 /**
  * TextValueUI Components to display data

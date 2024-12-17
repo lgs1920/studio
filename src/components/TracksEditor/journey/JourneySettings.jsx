@@ -46,10 +46,10 @@ import {
 }                     from 'valtio'
 import {
     ElevationServer,
-}                     from '../../../core/Elevation/ElevationServer'
+} from '@Core/Elevation/ElevationServer'
 import {
     Journey,
-}                     from '../../../core/Journey'
+} from '@Core/Journey'
 import {
     SelectElevationSource,
 }                     from '../../MainUI/SelectElevationSource'

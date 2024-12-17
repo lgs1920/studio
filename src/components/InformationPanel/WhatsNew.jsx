@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from 'react'
 import { Scrollbars }               from 'react-custom-scrollbars'
 import { default as ReactMarkdown } from 'react-markdown'
 import { proxy, useSnapshot }       from 'valtio'
-import { ChangelogManager }         from '../../core/ui/ChangelogManager'
+import { ChangelogManager } from '@Core/ui/ChangelogManager'
 
 // Créer un état proxy avec Valtio
 const state = proxy({
