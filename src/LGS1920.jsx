@@ -1,16 +1,16 @@
-import { MainUI }                      from '@Components/MainUI/MainUI.jsx'
-import '@shoelace-style/shoelace/dist/themes/light.css'
-import { LGS1920Context }              from '@Core/LGS1920Context'
-import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
-import { useEffect }                   from 'react'
 import { MapLayer }                    from '@Components/cesium/MapLayer'
 import { Viewer }                      from '@Components/cesium/Viewer'
 import { InitErrorMessage }            from '@Components/InitErrorMessage'
+import { MainUI }                      from '@Components/MainUI/MainUI.jsx'
+import '@shoelace-style/shoelace/dist/themes/light.css'
 import { WelcomeModal }                from '@Components/MainUI/WelcomeModal'
 import { BASE_ENTITY, OVERLAY_ENTITY } from '@Core/constants'
 import { LayersAndTerrainManager }     from '@Core/layers/LayerAndTerrainManager'
+import { LGS1920Context }              from '@Core/LGS1920Context'
 import { TerrainUtils }                from '@Utils/cesium/TerrainUtils'
+import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
 import { UIToast }                     from '@Utils/UIToast'
+import { useEffect }                   from 'react'
 
 /***************************************
  * Init Application context
@@ -80,7 +80,7 @@ export function LGS1920() {
     }, [])
     return (
         <>
-            <WelcomeModal/>
+
 
             {
                 !initApp.status && <InitErrorMessage message={initApp.error.message}/>
@@ -88,6 +88,7 @@ export function LGS1920() {
             {
                 initApp.status &&
                 <>
+                    <WelcomeModal/>
                     <MapLayer type={BASE_ENTITY}/>
                     <MapLayer type={OVERLAY_ENTITY}/>
 

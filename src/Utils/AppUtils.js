@@ -1,15 +1,15 @@
 import {
-    BUILD, CONFIGURATION, MILLIS, platforms, SERVERS, FREE_ANONYMOUS_ACCESS, SETTINGS, SETTINGS_STORE, VAULT_STORE,
-} from '@Core/constants'
-import { ElevationServer }                                              from '@Core/Elevation/ElevationServer'
-import { Settings }                                                     from '@Core/settings/Settings'
-import { SettingsSection }                                              from '@Core/settings/SettingsSection'
-import { ChangelogManager }                                             from '@Core/ui/ChangelogManager'
-import axios                                                            from 'axios'
-import * as Cesium                                                      from 'cesium'
-import YAML                                                             from 'yaml'
-import { EventEmitter }                                                 from '../assets/libs/EventEmitter/EventEmitter'
-import { FA2SL }                                                        from './FA2SL'
+    BUILD, CONFIGURATION, FREE_ANONYMOUS_ACCESS, MILLIS, platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE,
+}                           from '@Core/constants'
+import { ElevationServer }  from '@Core/Elevation/ElevationServer'
+import { Settings }         from '@Core/settings/Settings'
+import { SettingsSection }  from '@Core/settings/SettingsSection'
+import { ChangelogManager } from '@Core/ui/ChangelogManager'
+import axios                from 'axios'
+import * as Cesium          from 'cesium'
+import YAML                 from 'yaml'
+import { EventEmitter }     from '../assets/libs/EventEmitter/EventEmitter'
+import { FA2SL }            from './FA2SL'
 
 export class AppUtils {
     /**
@@ -319,6 +319,7 @@ export class AppUtils {
         }
         catch (error) {
             console.error(error)
+            return {alive: false}
         }
     }
     /**
