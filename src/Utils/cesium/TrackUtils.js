@@ -1,13 +1,18 @@
-import { APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK } from '@Core/constants'
-import { FOCUS_ON_FEATURE, INITIAL_LOADING, Journey, NO_FOCUS }                from '@Core/Journey'
-import { default as extent }                                                   from '@mapbox/geojson-extent'
-import { default as centroid }                                                 from '@turf/centroid'
-import * as Cesium                                                             from 'cesium'
-import { Color, CustomDataSource, GeoJsonDataSource, Math, Matrix4 }           from 'cesium'
-import { UIToast }                                                             from '../UIToast.js'
-import { FLAG_START, POI_FLAG, POI_STD, POIUtils }                             from './POIUtils'
+import {
+    APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DRAWING, DRAWING_FROM_DB, DRAWING_FROM_UI,
+    FOCUS_ON_FEATURE, NO_FOCUS, SCENE_MODE_2D,
+}                                                  from '@Core/constants'
+import { Journey }                                 from '@Core/Journey'
+import extent                                      from '@mapbox/geojson-extent'
+import { default as centroid }                     from '@turf/centroid'
+import {
+    Cartesian3, Cartographic, Color, CustomDataSource, EasingFunction, GeoJsonDataSource, Math, Matrix4, Rectangle,
+    sampleTerrainMostDetailed,
+}                                                  from 'cesium'
+import { UIToast }                                 from '../UIToast.js'
+import { FLAG_START, POI_FLAG, POI_STD, POIUtils } from './POIUtils'
 
-export const SUPPORTED_EXTENSIONS = ['geojson', 'json','kml', 'gpx' /* TODO 'kmz'*/]
+export const SUPPORTED_EXTENSIONS = ['geojson', 'json', 'kml', 'gpx' /* TODO 'kmz'*/]
 export const FEATURE                  = 'Feature',
              FEATURE_COLLECTION       = 'FeatureCollection',
              FEATURE_LINE_STRING      = 'LineString',
@@ -91,17 +96,17 @@ export class TrackUtils {
      * @param mode
      * @param forcedToHide
      */
-    static draw = async (track, {action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
+    static draw = async (track, {action = DRAWING_FROM_UI, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
         // Load Geo Json for track then set visibility
         const source = lgs.viewer.dataSources.getByName(track.slug)[0]
         return source.load(track.content,
-            {
-                stroke: Color.fromCssColorString(track.color),
-                strokeWidth: track.thickness,
-                // Common options
-                clampToGround: true,
-                name: track.title,
-            },
+                           {
+                               stroke:      Color.fromCssColorString(track.color),
+                               strokeWidth: track.thickness,
+                               // Common options
+                               clampToGround: true,
+                               name:          track.title,
+                           },
         ).then(dataSource => {
             dataSource.show = forcedToHide ? false : track.visible
         })
@@ -118,11 +123,12 @@ export class TrackUtils {
      * @param {boolean} showBbox
      */
     static focus = async (
-        {action = 0,
+        {
+            action = 0,
             journey = null,
             track = null,
             showBbox = false,
-            resetCamera=false
+            resetCamera = false,
         }) => {
 
         // If track not provided, we'll get the first one of the journey
@@ -132,72 +138,107 @@ export class TrackUtils {
                 journey = lgs.theJourney
             }
             track = journey.tracks.values().next().value
-        } else {
+        }
+        else {
             // We have a track, let's force the journey (even if there is one provided)
             journey = lgs.journeys.get(track.parent)
         }
 
-        // We calculate the Bounding Box and enlarge it by 20%
+        // We calculate the Bounding Box and enlarge it by 25%
         // in order to be sure to have the full track inside the window
-        const bbox = TrackUtils.extendBbox(extent(track.content), 20)
-        let rectangle = Cesium.Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
+        const bbox = TrackUtils.extendBbox(extent(track.content), 25)
+        let rectangle = Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
 
         // Get the right camera information
         let destination
         if (journey.camera === null || resetCamera) {
             // Let's center to the rectangle
             destination = lgs.camera.getRectangleCameraCoordinates(rectangle)
+            var cartographic = Cartographic.fromCartesian(destination)
+            // Get the centroid of the track
+            const center = centroid(track.content)
 
-            // Get the camera target that we defined to the centroid of the track
-            const centroiid = centroid(track.content)
+            // Get the right position according to Scene Mode
+            let position = {}
+            switch (lgs.settings.scene.mode.value) {
+                case SCENE_MODE_2D.value:
+                    // We use centroid
+                    position = {
+                        longitude: center.geometry.coordinates[0],
+                        latitude:  center.geometry.coordinates[1],
+                    }
+                    break
+                default:
+                    // We use destination
+                    position = {
+                        longitude: Math.toDegrees(cartographic.longitude),
+                        latitude:  Math.toDegrees(cartographic.latitude),
+                    }
+
+            }
+            position.pitch = -90
+            position.height = Math.toDegrees(cartographic.height)
+
             __.ui.cameraManager.settings = {
-                position: {
-                    longitude: Cesium.Math.toDegrees(destination.x),
-                    latitude:  Cesium.Math.toDegrees(destination.y),
-                    height:    Cesium.Math.toDegrees(destination.z),
-                    pitch:     -90,
-                },
-                target:   {
-                    longitude: centroiid.geometry.coordinates[1],
-                    latitude:  centroiid.geometry.coordinates[0],
-                    height:    Cesium.Math.toDegrees(destination.z), // We take the same
+                position: position,
+                // target is based on centroid
+                target: {
+                    longitude: center.geometry.coordinates[0],
+                    latitude:  center.geometry.coordinates[1],
+                    height:    cartographic.height,
                 },
             }
 
             journey.camera = __.ui.cameraManager.settings
 
-        } else {
-            __.ui.cameraManager.settings = (action === INITIAL_LOADING) ? journey.cameraOrigin : journey.camera
-            destination = Cesium.Cartesian3.fromDegrees(
+        }
+        else {
+            __.ui.cameraManager.settings = (action === DRAWING_FROM_UI || action === DRAWING_FROM_DB) ? journey.cameraOrigin : journey.camera
+            destination = Cartesian3.fromDegrees(
                 __.ui.cameraManager.settings.position.longitude,
                 __.ui.cameraManager.settings.position.latitude,
                 __.ui.cameraManager.settings.position.height,
             )
         }
-        lgs.camera.flyTo({
 
-            destination: destination,                               // Camera
-             orientation: {                                         // Offset and Orientation
-                 heading: Math.toRadians(__.ui.cameraManager.settings.position.heading),
-                 pitch:   Math.toRadians(__.ui.cameraManager.settings.position.pitch),
-                 roll:    Math.toRadians(__.ui.cameraManager.settings.position.roll),
-             },
+        // Depending on what we are doing, we need to convert the destination
+        // from world coordinates to scene coordinates
+        let convert = false
+        if (__.ui.sceneManager.is2D && (action === DRAWING || action === DRAWING_FROM_DB)) {
+            convert = true
+        }
+
+        // let's go to focus !
+        lgs.camera.flyTo({
+                             destination:    destination,                               // Camera
+                             orientation:    {                                         // Offset and Orientation
+                                 heading: Math.toRadians(__.ui.cameraManager.settings.position.heading),
+                                 pitch:   Math.toRadians(__.ui.cameraManager.settings.position.pitch),
+                                 roll:    Math.toRadians(__.ui.cameraManager.settings.position.roll),
+                             },
                              maximumHeight:     lgs.camera.maximumHeight,
                              pitchAdjustHeight: lgs.camera.pitchAdjustHeight,
-
-                             duration:       4,
-            endTransform:Matrix4.IDENTITY,
-                             easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT,
+                             convert:        convert,
+                             duration:       lgs.settings.camera.flyingTime,
+                             endTransform:   Matrix4.IDENTITY,
+                             easingFunction: EasingFunction.LINEAR_NONE,
                          })
         //Show BBox if requested
         if (showBbox) {
+            const id = `BBox#${track.slug}`
+            // We remove the BBox if it already exists
+            if (lgs.viewer.entities.getById(id)) {
+                lgs.viewer.entities.removeById(id)
+            }
+            // Add the BBox
             lgs.viewer.entities.add({
-                name: `BBox#${track.slug}`,
-                rectangle: {
-                    coordinates: rectangle,
-                    material: Cesium.Color.WHITE.withAlpha(0.5),
-                },
-            })
+                                        id:        id,
+                                        name:      id,
+                                        rectangle: {
+                                            coordinates: rectangle,
+                                            material: Color.WHITE.withAlpha(0.2),
+                                        },
+                                    })
         }
     }
 
@@ -229,7 +270,9 @@ export class TrackUtils {
             // validates all filter criteria
             return filterKeys.every(key => {
                 // ignores non-function predicates
-                if (typeof filters[key] !== 'function') return true
+                if (typeof filters[key] !== 'function') {
+                    return true
+                }
                 return filters[key](item[key])
             })
         })
@@ -243,7 +286,7 @@ export class TrackUtils {
      *
      */
     static prepareDataForMetrics = async () => {
-        const dataExtract = [] = []
+        const dataExtract = []
         // Only for Feature Collections that are Line or multi line string typ
         const type = this.content.geometry.type
         if (this.content.type === FEATURE &&
@@ -281,12 +324,12 @@ export class TrackUtils {
     static getElevationFromTerrain = async (coordinates) => {
         const positions = []
         coordinates.forEach(coordinate => {
-            positions.push(Cesium.Cartographic.fromDegrees(coordinate[0], coordinate[1]))
+            positions.push(Cartographic.fromDegrees(coordinate[0], coordinate[1]))
         })
 
         //TODO apply only if altitude is missing for some coordinates
         const altitude = []
-        const temp = await Cesium.sampleTerrainMostDetailed(lgs.viewer.terrainProvider, positions)
+        const temp = await sampleTerrainMostDetailed(lgs.viewer.terrainProvider, positions)
         temp.forEach(coordinate => {
             altitude.push(coordinate.altitude)
         })
@@ -340,13 +383,14 @@ export class TrackUtils {
 
         // Bail early if there's nothing to read
         if (journeys.length === 0) {
+            lgs.mainProxy.readyForTheShow = true
             lgs.theJourney = null
             lgs.theTrack = null
             lgs.thePOI = null
             return
         }
 
-        // We're ready for rendering so let's ave journeys
+        // We're ready for rendering so let's save journeys
         journeys.forEach(journey => {
             journey.cameraOrigin = journey.camera
         })
@@ -359,8 +403,10 @@ export class TrackUtils {
 
         if (currentJourney) {
             lgs.theJourney = currentJourney
+            lgs.mainProxy.readyForTheShow = true
             await TrackUtils.setTheTrack()
-        } else {
+        }
+        else {
             // Something's wrong. exit
             return
         }
@@ -389,9 +435,9 @@ export class TrackUtils {
         const items = []
         lgs.journeys.forEach(journey => {
             items.push(journey.draw({
-                action: INITIAL_LOADING,
-                mode: journey.slug === currentJourney.slug ? FOCUS_ON_FEATURE : NO_FOCUS,
-            }))
+                                        action: DRAWING_FROM_DB,
+                                        mode:   journey.slug === currentJourney.slug ? FOCUS_ON_FEATURE : NO_FOCUS,
+                                    }))
         })
         await Promise.all(items)
 
@@ -415,7 +461,8 @@ export class TrackUtils {
         }
         if (lgs.theJourney.tracks.has(currentTrack)) {
             lgs.theTrack = lgs.theJourney.tracks.get(currentTrack)
-        } else {
+        }
+        else {
             lgs.theTrack = lgs.theJourney.tracks.entries().next().value[1]
         }
         // Add it to editor context
@@ -483,7 +530,7 @@ export class TrackUtils {
      * @param {Journey} journey       the journey on which POIs are to be hidden or displayed
      * @param {Boolean} visibility    the visibility value (true = hide)
      */
-    static  updatePOIsVisibility = (journey, visibility) => {
+    static updatePOIsVisibility = (journey, visibility) => {
         TrackUtils.getDataSourcesByName(journey.slug, true)[0]?.entities.values.forEach(entity => {
             if (entity.id.startsWith(POI_STD)) {
                 entity.show = POIUtils.setPOIVisibility(journey.pois.get(entity.id), visibility)
@@ -503,7 +550,7 @@ export class TrackUtils {
      * @param {Boolean} visibility      the visibility value (true = hide)
      *
      */
-    static  updateFlagsVisibility = (journey, track, type = 'start', visibility) => {
+    static updateFlagsVisibility = (journey, track, type = 'start', visibility) => {
         TrackUtils.getDataSourcesByName(journey.slug, true)[0].entities.values.forEach(entity => {
             // Filter flags on the right track
             const current = TrackUtils.getTrackFromEntityId(journey, entity.id)
@@ -539,7 +586,8 @@ export class TrackUtils {
                         )
                     }
                 })
-            } else {
+            }
+            else {
                 // We set the datasource with all entities.
                 dataSource.show = visibility ? journey.tracks.get(dataSource.name).visible : false
             }
@@ -637,7 +685,7 @@ export class TrackUtils {
                 // If not we manage and show it.
                 if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
 
-                   theJourney.globalSettings()
+                    theJourney.globalSettings()
 
                     // Need stats
                     theJourney.extractMetrics()
@@ -680,8 +728,8 @@ export class TrackUtils {
             console.error(error)
             UIToast.error({
                               caption: `We're having problems reading this file!`,
-                                text:    'Maybe the format is wrong!',
-                            })
+                              text: 'Maybe the format is wrong!',
+                          })
             return JOURNEY_KO
         }
     }

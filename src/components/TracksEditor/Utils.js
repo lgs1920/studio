@@ -1,8 +1,9 @@
-import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE } from '@Core/constants'
-import { Journey, NO_FOCUS, RE_LOADING }                from '@Core/Journey'
-import { Track }                                        from '@Core/Track'
-import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
-import { UPDATE_JOURNEY_SILENTLY }                      from './journey/JourneySettings'
+import {
+    DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE, NO_FOCUS, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY,
+}                     from '@Core/constants'
+import { Journey }    from '@Core/Journey'
+import { Track }      from '@Core/Track'
+import { TrackUtils } from '@Utils/cesium/TrackUtils'
 
 export class Utils {
 
@@ -121,7 +122,7 @@ export class Utils {
         }
 
         if (action === DRAW_WITHOUT_SAVE || action === DRAW_THEN_SAVE) {
-            await track.draw({action: RE_LOADING, mode: NO_FOCUS})
+            await track.draw({action: REFRESH_DRAWING, mode: NO_FOCUS})
         }
 
     }

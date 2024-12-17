@@ -52,7 +52,6 @@ but I think of something like that:
 The app is based on :
 
 * cesiumjs - https://cesium.com/ - The Map engine
-* Rhesium - https://resium.reearth.io/ - React components for Cesium
 * Vite -  https://vitej.dev/ - frontend tooling
 * React - https://react.dev/ - UI
 * Valtio - https://valtio.pmnd.rs - state management

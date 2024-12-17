@@ -1,8 +1,8 @@
-import { ALL, LOCKED, UNLOCKED }                                          from '@Core/constants'
-import { faFilterCircleXmark }                                            from '@fortawesome/pro-regular-svg-icons'
+import { ALL, LOCKED, UNLOCKED }                                         from '@Core/constants'
+import { faFilterCircleXmark }                                           from '@fortawesome/pro-regular-svg-icons'
 import { SlIconButton, SlInput, SlRadioButton, SlRadioGroup, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                         from '@Utils/FA2SL'
-import { useSnapshot }                                                    from 'valtio/index'
+import { useSnapshot }                                                   from 'valtio/index'
 
 export const FilterEntities = (props) => {
 
@@ -21,7 +21,7 @@ export const FilterEntities = (props) => {
         else {
             layers.filter.active = true
         }
-        editor.layer.refreshList = true
+        // editor.layer.refreshList = true
     }
 
     const handleName = (event) => {
@@ -33,7 +33,7 @@ export const FilterEntities = (props) => {
         else {
             layers.filter.active = true
         }
-        editor.layer.refreshList = true
+        //  editor.layer.refreshList = true
     }
 
     const disableFilter = (closeFilter = true) => {
@@ -41,7 +41,7 @@ export const FilterEntities = (props) => {
         layers.filter.byName = ''
         layers.filter.active = false
         editor.openFilter = !closeFilter
-        editor.layer.refreshList = true
+        // editor.layer.refreshList = true
     }
 
     return (

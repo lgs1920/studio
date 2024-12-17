@@ -57,6 +57,20 @@ studio:
     protocol: https
     proxy: /proxy.php?csurl=
 
+site:
+  production:
+    domain: lgs1920.fr
+    protocol: https
+
+  staging:
+    domain: lgs1920.fr
+    protocol: https
+
+  test:
+    domain: lgs1920.fr
+    protocol: https
+
+
 local:
    dist: dist # where we put builds during deployment phase
 

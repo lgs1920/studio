@@ -1,4 +1,4 @@
-import { BASE_LAYERS }  from '@Core/constants'
+import { BASE_ENTITY }  from '@Core/constants'
 import { CustomShader } from 'cesium'
 
 export class LayersUtils {
@@ -6,7 +6,7 @@ export class LayersUtils {
         // During the layer change , the collection is reordered, so we need to manipulate it.
         // we read credit to see the layer type
         const type = layer.imageryProvider.credit.html
-        if (index === 1 && type === BASE_LAYERS) {
+        if (index === 1 && type === BASE_ENTITY) {
             lgs.viewer.imageryLayers.lowerToBottom(layer)
         }
     }

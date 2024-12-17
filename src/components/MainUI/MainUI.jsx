@@ -4,11 +4,11 @@ import { Toolbar }                          from '@Components/MainUI/Toolbar'
 import { Profile }                          from '@Components/Profile/Profile'
 import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
 import { useEffect }                        from 'react'
-import { useCesium }                        from 'resium'
 
 import './style.css'
-import { subscribe }                        from 'valtio'
-import { CanvasEvents }                     from '../../core/events/CanvasEvents.js'
+import { subscribe, useSnapshot }           from 'valtio'
+import { SCENE_MODE_2D } from '@Core/constants'
+import { CanvasEvents }  from '@Core/events/CanvasEvents.js'
 import { CameraAndTargetPanel }             from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
 import { JourneyLoaderUI }                  from '../FileLoader/JourneyLoaderUI'
 import { Panel as InformationPanel }        from '../InformationPanel/Panel'
@@ -16,19 +16,25 @@ import { PanelButton as InformationButton } from '../InformationPanel/PanelButto
 import { Panel as LayersPanel }             from '../Settings/layers/Panel'
 import { PanelButton as LayersButton }      from '../Settings/layers/PanelButton'
 import { Panel as SettingsPanel }           from '../Settings/Panel'
+import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
 
-import { Utils }           from '../TracksEditor/Utils.js'
-import { CameraTarget }    from './CameraTarget'
-import { CreditsBar }      from './credits/CreditsBar'
-import { SupportUI }       from './SupportUI'
-import { SupportUIButton } from './SupportUIButton'
 
-export const MainUI = function VT3D_UI() {
+import { Utils }             from '../TracksEditor/Utils.js'
+import { CameraTarget }      from './CameraTarget'
+import { CreditsBar }        from './credits/CreditsBar'
+import { FocusButton }       from './FocusButton'
+import { SceneModeSelector } from './SceneModeSelector'
+import { SupportUI }         from './SupportUI'
+import { SupportUIButton }   from './SupportUIButton'
 
-    lgs.viewer = useCesium().viewer
+export const MainUI = () => {
+
+    const snap = useSnapshot(lgs.mainProxy)
 
     useEffect(() => {
-
+        if (lgs.settings.scene.mode.value === SCENE_MODE_2D.value) {
+            lgs.scene.morphTo2D(0)
+        }
         // Manage canvas related events
         CanvasEvents.attach()
         // CanvasEvents.addListeners()
@@ -42,12 +48,17 @@ export const MainUI = function VT3D_UI() {
         __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( 100% - ${offset})`)
     })
 
+    const SupportUIDialog = () => {
+        return (<SupportUI/>)
+    }
+
     return (
         <>
             <div id="lgs-main-ui">
                 <div id={'top-left-ui'}>
-                    {/* <SettingsButton tooltip={'right'}/> */}
+                    <SettingsButton tooltip={'right'}/>
                     <LayersButton tooltip={'right'}/>
+                    {snap.theJourney && <FocusButton tooltip={'right'}/>}
 
                     <Toolbar editor={true}
                              profile={true}
@@ -57,6 +68,7 @@ export const MainUI = function VT3D_UI() {
                     <InformationButton/>
                     <SupportUIButton/>
                     <FullScreenButton/>
+
                 </div>
 
                     <div id={'bottom-left-ui'}>
@@ -74,6 +86,7 @@ export const MainUI = function VT3D_UI() {
 
                 <div id={'top-right-ui'}>
                     <CompassUI scene={lgs.scene}/>
+                    <SceneModeSelector tooltip={'left'}/>
                 </div>
 
                 {/* <FloatingMenu/> */}
@@ -84,11 +97,12 @@ export const MainUI = function VT3D_UI() {
                 <LayersPanel/>
                 <TracksEditor/>
                 <CameraAndTargetPanel/>
-            </div>
 
-            <CameraTarget/>
-            <SupportUI/>
+                <CameraTarget/>
+            </div>
+            <SupportUIDialog/>
             <JourneyLoaderUI multiple/>
+
 
         </>
     )

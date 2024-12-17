@@ -2,8 +2,8 @@ import { Cartesian3, Math as M } from 'cesium'
 import { snapshot }              from 'valtio'
 import { deepClone }             from 'valtio/utils'
 
-import { CameraUtils }    from '../../Utils/cesium/CameraUtils.js'
-import { JOURNEYS_STORE } from '../constants'
+import { CameraUtils }    from '@Utils/cesium/CameraUtils.js'
+import { JOURNEYS_STORE } from '@Core/constants'
 import { Journey }        from '../Journey'
 
 export class CameraManager {
@@ -171,7 +171,7 @@ export class CameraManager {
             type:         CameraManager.ORBITAL,
             releaseEvent: lgs.viewer.clock.onTick.addEventListener(() => {
                 try {
-                    if (!this.orbitalInPause) {
+                    if (!this.orbitalInPause && !__.ui.sceneManager.is2D) {
                         lgs.camera.rotateLeft(step)
                     }
                 }

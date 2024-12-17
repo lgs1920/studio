@@ -4,8 +4,8 @@ import * as echarts                                      from 'echarts/core'
 
 import { DateTime }                        from 'luxon'
 import { sprintf }                         from 'sprintf-js'
-import { FA2SL }                           from '../../Utils/FA2SL'
-import { DISTANCE_UNITS, ELEVATION_UNITS } from '../../Utils/UnitUtils'
+import { FA2SL }                           from '@Utils/FA2SL'
+import { DISTANCE_UNITS, ELEVATION_UNITS } from '@Utils/UnitUtils'
 import { ProfileTrackMarker }              from '../ProfileTrackMarker'
 import { Track }                           from '../Track'
 

@@ -10,10 +10,10 @@ import {
 }                                     from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                      from '@Utils/FA2SL'
 import { useSnapshot }                from 'valtio'
-import { Wanderer }                   from '../../core/ui/Wanderer.js'
+import { Wanderer } from '@Core/ui/Wanderer.js'
 import {
     WanderUtils,
-}                                     from '../../Utils/cesium/WanderUtils.js'
+}                   from '@Utils/cesium/WanderUtils.js'
 
 export const Wander = (props) => {
 

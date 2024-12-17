@@ -2,11 +2,10 @@
 
 Licence : As of today, there's not yet any licence.
 
-The application (studio, backend,APIs) is based on : 
-  
-### Map and 3d:
+The application, including studio, backend,APIs, is based on :
+
+### Map and 3dD:
 * [cesiumjs](https://cesium.com/)  - The Map engine
-* [Resium](https://resium.reearth.io/) - React components for Cesium
 
 ### Code and devs:
 * [Bun](https://bun.sh/) - javascript runtime

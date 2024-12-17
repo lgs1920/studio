@@ -1,11 +1,10 @@
-import { FOCUS_ON_FEATURE, INITIAL_LOADING } from '@Core/Journey'
-import { MapElement }                        from '@Core/MapElement'
-import { POI }                               from '@Core/POI'
-import { ProfileTrackMarker }                from '@Core/ProfileTrackMarker'
-import { FEATURE_LINE_STRING, TrackUtils }   from '@Utils/cesium/TrackUtils'
-import { Mobility }                          from '@Utils/Mobility'
-import { DateTime }                          from 'luxon'
-import { FEATURE, FEATURE_MULTILINE_STRING } from '../Utils/cesium/TrackUtils'
+import { DRAWING_FROM_UI, FOCUS_ON_FEATURE, REFRESH_DRAWING }                 from '@Core/constants'
+import { MapElement }                                                         from '@Core/MapElement'
+import { POI }                                                                from '@Core/POI'
+import { ProfileTrackMarker }                                                 from '@Core/ProfileTrackMarker'
+import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
+import { Mobility }                                                           from '@Utils/Mobility'
+import { DateTime }                                                           from 'luxon'
 
 
 export class Track extends MapElement {
@@ -359,21 +358,28 @@ export class Track extends MapElement {
      *
      * @return {Promise<void>}
      */
-    draw = async ({action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
+    draw = async ({action = DRAWING_FROM_UI, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
         TrackUtils.draw(this, {action: action, mode: mode, forcedToHide: forcedToHide}).then(() => {
             // Let's draw flags for the first time.
-            if (action === INITIAL_LOADING) {
                 if (this.flags.start) {
+                    if (action === REFRESH_DRAWING) {
+                        this.flags.start.drawn = false
+                    }
                     this.flags.start.draw(!forcedToHide)
                 }
                 if (this.flags.stop) {
+                    if (action === REFRESH_DRAWING) {
+                        this.flags.stop.drawn = false
+                    }
                     this.flags.stop.draw(!forcedToHide)
                 }
 
                 if (this.marker) {
+                    if (action === REFRESH_DRAWING) {
+                        this.marker.drawn = false
+                    }
                     this.marker.draw(forcedToHide)
                 }
-            }
         })
 
         // Focus on the parent Journey

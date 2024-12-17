@@ -1,8 +1,8 @@
 /**
  * Dependencies
  */
-import { openDB }   from 'idb'
-import { DateTime } from 'luxon'
+import { openDB, unwrap } from 'idb'
+import { DateTime }       from 'luxon'
 
 let millis = 1000
 
@@ -18,19 +18,19 @@ export class LocalDB {
 
     constructor({
                     name = this.#name,
-                    store = this.#stores,
+                    stores = this.#stores,
                     manageTransients = false,
                     version = this.#version,
                 }) {
 
-        if (!(store instanceof Array)) {
-            store = [store]
+        if (!(stores instanceof Array)) {
+            stores = [stores]
         }
         if (manageTransients) {
-            store.push(this.#transients)
+            stores.push(this.#transients)
         }
 
-        this.#stores = store
+        this.#stores = stores
         this.#name = name
 
         let tables = this.#stores // passe dto upgrad contest
@@ -165,6 +165,20 @@ export class LocalDB {
     }
 
     /**
+     * Remove a store
+     *
+     * @param store
+     */
+    deleteStore = async (store) => {
+        (await this.#db).deleteObjectStore(store)
+    }
+
+    deleteAllStores = async () => {
+        (await this.#stores).forEach(store => this.deleteStore(store))
+
+    }
+
+    /**
      * Clear a store
      *
      * @return {Promise<*>}
@@ -172,6 +186,35 @@ export class LocalDB {
     clear = async (store) => {
         return (await this.#db).clear(store)
     }
+
+    deleteDB = async () => {
+        return new Promise(async (resolve, reject) => {
+            // Close transactions
+            const idb = unwrap(this.#db).result
+            const transactionNames = Array.from(idb.objectStoreNames)
+            for (const storeName of transactionNames) {
+                idb.transaction(storeName, 'readonly').abort()
+            }
+            idb.close()
+
+            //Delete database
+            const request = window.indexedDB.deleteDatabase(this.#name)
+            request.onerror = () => {
+                console.error(`Error while deleting database ${this.#name}!`)
+                resolve(0)
+            }
+            request.onsuccess = () => {
+                console.log(`Database ${this.#name} deleted successfully.`)
+                resolve(1)
+            }
+            request.onblocked = () => {
+                console.error(`Error while deleting database ${this.#name}:blocked`)
+                resolve(2)
+            }
+        })
+
+    }
+
 
     /**
      * Get all keys

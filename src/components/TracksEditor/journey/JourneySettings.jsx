@@ -1,53 +1,64 @@
-import { useConfirm }  from '@Components/Modals/ConfirmUI'
+import { useConfirm } from '@Components/Modals/ConfirmUI'
 import {
     ToggleStateIcon,
-}                      from '@Components/ToggleStateIcon'
+}                     from '@Components/ToggleStateIcon'
+import {
+    ORIGIN_STORE, REFRESH_DRAWING, SIMULATE_ALTITUDE, UPDATE_JOURNEY_SILENTLY,
+}                     from '@Core/constants'
 import {
     TrackData,
-}                      from '@Editor/track/TrackData'
+}                     from '@Editor/track/TrackData'
 import {
     TrackFlagsSettings,
-}                      from '@Editor/track/TrackFlagsSettings'
+}                     from '@Editor/track/TrackFlagsSettings'
 import {
     TrackPoints,
-}                      from '@Editor/track/TrackPoints'
+}                     from '@Editor/track/TrackPoints'
 import {
     TrackStyleSettings,
-}                      from '@Editor/track/TrackStyleSettings'
-import { Utils }       from '@Editor/Utils'
+}                     from '@Editor/track/TrackStyleSettings'
+import {
+    Utils,
+}                     from '@Editor/Utils'
 import {
     faCircleDot, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList,
     faTelescope, faTrashCan,
-}                      from '@fortawesome/pro-regular-svg-icons'
+}                     from '@fortawesome/pro-regular-svg-icons'
 import {
-    SlIcon, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                      from '@shoelace-style/shoelace/dist/react'
+    SlIcon, SlIconButton, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
+}                     from '@shoelace-style/shoelace/dist/react'
 import {
     FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                      from '@Utils/cesium/TrackUtils'
-import { FA2SL }       from '@Utils/FA2SL'
-import { UIToast }     from '@Utils/UIToast'
-import parse           from 'html-react-parser'
-import { sprintf }     from 'sprintf-js'
-import { useSnapshot } from 'valtio'
+}                     from '@Utils/cesium/TrackUtils'
 import {
-    ORIGIN_STORE,
-}                      from '../../../core/constants'
+    FA2SL,
+}                     from '@Utils/FA2SL'
+import {
+    UIToast,
+}                     from '@Utils/UIToast'
+import parse          from 'html-react-parser'
+import React          from 'react'
+import {
+    sprintf,
+}                     from 'sprintf-js'
+import {
+    useSnapshot,
+}                     from 'valtio'
 import {
     ElevationServer,
-}                      from '../../../core/Elevation/ElevationServer'
+} from '@Core/Elevation/ElevationServer'
 import {
-    Journey, SIMULATE_ALTITUDE,
-}                      from '../../../core/Journey'
+    Journey,
+} from '@Core/Journey'
 import {
     SelectElevationSource,
-}                      from '../../MainUI/SelectElevationSource'
-import { JourneyData } from './JourneyData'
-import { JourneyPOIs } from './JourneyPOIs'
-
-export const UPDATE_JOURNEY_THEN_DRAW = 1
-export const UPDATE_JOURNEY_SILENTLY = 2
-export const REMOVE_JOURNEY = 3
+}                     from '../../MainUI/SelectElevationSource'
+import {
+    JourneyData,
+}                     from './JourneyData'
+import {
+    JourneyPOIs,
+}                     from './JourneyPOIs'
 
 export const JourneySettings = function JourneySettings() {
 
@@ -90,10 +101,10 @@ export const JourneySettings = function JourneySettings() {
         // title should not been already used for another journey.
         editorStore.journey.title = editorStore.journey.singleTitle(title)
         // If it is a mono track, we need to sync track title
-        if(lgs.theJourney.hasOneTrack()) {
-            const [slug,track] = lgs.theJourney.tracks.entries().next().value
+        if (lgs.theJourney.hasOneTrack()) {
+            const [slug, track] = lgs.theJourney.tracks.entries().next().value
             track.title = editorStore.journey.title
-            editorStore.journey.tracks.set(slug,track)
+            editorStore.journey.tracks.set(slug, track)
             track.addToEditor()
             __.ui.profiler.updateTitle()
 
@@ -172,33 +183,34 @@ export const JourneySettings = function JourneySettings() {
             .then(results => {
 
                 // Suppress in progress notification
-                    editorStore.longTask = false
+                editorStore.longTask = false
 
                 if (results.errors) {
-                        // Failure notification
+                    // Failure notification
                     results.errors.forEach(error => console.error(error))
 
-                        UIToast.error({
-                                          caption: `An error occurred when calculating elevations`,
-                                          text:    'Changes aborted! Check logs to see error details.',
-                                          error: results.errors,
-                                      })
+                    UIToast.error({
+                                      caption: `An error occurred when calculating elevations`,
+                                      text:    'Changes aborted! Check logs to see error details.',
+                                      error:   results.errors,
+                                  })
                     editorStore.journey.elevationServer = former
 
-                        return []
-                    } else {
-                        // Success notification
-                        UIToast.success({
-                                            caption: `Elevation data have been modified`,
-                                            text:    `Source:${ElevationServer.getServer(editorStore.journey.elevationServer).label}`,
-                                        })
-                        const coordinates = []
+                    return []
+                }
+                else {
+                    // Success notification
+                    UIToast.success({
+                                        caption: `Elevation data have been modified`,
+                                        text:    `Source:${ElevationServer.getServer(editorStore.journey.elevationServer).label}`,
+                                    })
+                    const coordinates = []
                     results.coordinates.forEach(coordinate => {
                         coordinates.push(coordinate)
-                        })
-                        return coordinates
-                    }
-                })
+                    })
+                    return coordinates
+                }
+            })
 
             // Now manage and save new data
             .then(async coordinates => {
@@ -227,7 +239,7 @@ export const JourneySettings = function JourneySettings() {
 
                         // Get the right part of coordinates
                         const chunk = coordinates.slice(counter, counter + length)
-                        counter+=length
+                        counter += length
 
                         switch (feature.geometry.type) {
                             case FEATURE_POINT:
@@ -239,12 +251,13 @@ export const JourneySettings = function JourneySettings() {
                                 const tmp = features[index].geometry.coordinates
                                 let subCounter = 0
                                 tmp.forEach((segment, subIndex) => {
-                                    features[index].geometry.coordinates[subIndex]=chunk.slice(subCounter,subCounter+tmp[subIndex].length)
-                                    subCounter+=tmp[subIndex].length
+                                    features[index].geometry.coordinates[subIndex] = chunk.slice(subCounter, subCounter + tmp[subIndex].length)
+                                    subCounter += tmp[subIndex].length
                                 })
                                 break
                             }
-                            default: features[index].geometry.coordinates=chunk
+                            default:
+                                features[index].geometry.coordinates = chunk
                         }
                     })
 
@@ -256,7 +269,7 @@ export const JourneySettings = function JourneySettings() {
                     theJourney.saveToDB()
 
                     // Then we redraw the journey
-                   await Utils.updateJourney(SIMULATE_ALTITUDE)
+                    await Utils.updateJourney(SIMULATE_ALTITUDE)
 
                     // And updatePositionInformation editor
                     Utils.updateJourneyEditor(theJourney.slug)
@@ -276,14 +289,13 @@ export const JourneySettings = function JourneySettings() {
                 editorStore.longTask = false
                 editorStore.journey.elevationServer = former
                 // Failure notification
-                console.error(error.errors??error)
+                console.error(error.errors ?? error)
                 UIToast.error({
                                   caption: `An error occurred when calculating elevations`,
                                   text:    'Changes aborted! Check logs to see error details.',
-                    errors:error.errors??error
+                                  errors: error.errors ?? error,
                               })
             })
-
 
 
     }
@@ -291,12 +303,15 @@ export const JourneySettings = function JourneySettings() {
     /**
      * Export journey confirmation
      */
-    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export <strong>${editorSnapshot.journey.title}</strong> ?`, 'Not Yet. Sorry.',
+    const Message = () => {
+        return (<>{`'Not Yet. Sorry.'`}</>)
+    }
+    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export <strong>${editorSnapshot.journey.title}</strong> ?`, Message,
                                                                           // {
                                                                           //     text:'Export',
                                                                           //     icon:faDownload
                                                                           // }
-     )
+    )
 
     /**
      * Export Journey
@@ -313,14 +328,17 @@ export const JourneySettings = function JourneySettings() {
      */
     const focusOnJourney = async () => {
         await setJourneyVisibility(true)
-        lgs.theJourney.focus({resetCamera:true})
+        lgs.theJourney.focus({resetCamera: true, action: REFRESH_DRAWING})
     }
 
     /**
      * Remove journey confirmation
      */
-    const [ConfirmRemoveJourneyDialog, confirmRemoveJourney] = useConfirm(`Remove <strong>${editorSnapshot.journey.title}</strong> ?`, 'Are you sure you want to remove this journey ?',
-    {icon:faTrashCan,text:'Remove'})
+    const Question = () => {
+        return (<>{'Are you sure you want to remove this journey ?'}</>)
+    }
+    const [ConfirmRemoveJourneyDialog, confirmRemoveJourney] = useConfirm(`Remove <strong>${editorSnapshot.journey.title}</strong> ?`, Question,
+                                                                          {icon: faTrashCan, text: 'Remove'})
 
     /**
      * Remove journey
@@ -371,7 +389,8 @@ export const JourneySettings = function JourneySettings() {
                 Utils.renderJourneysList()
                 // Sync Profile
                 __.ui.profiler.draw()
-            } else {
+            }
+            else {
                 lgs.theJourney = null
                 lgs.theTrack = null
                 lgs.cleanEditor()
@@ -384,9 +403,9 @@ export const JourneySettings = function JourneySettings() {
 
             // Let's inform the user
             UIToast.success({
-                caption: `${removed.title}</strong>`,
-                text: `removed successfully!<br>${text}`,
-            })
+                                caption: `${removed.title}</strong>`,
+                                text:    `removed successfully!<br>${text}`,
+                            })
 
         }
     }
@@ -408,7 +427,7 @@ export const JourneySettings = function JourneySettings() {
         serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.CLEAR))
         serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.FILE_CONTENT))
     }
-    serverList  = serverList.concat(Array.from(ElevationServer.SERVERS.values()))
+    serverList = serverList.concat(Array.from(ElevationServer.SERVERS.values()))
 
     return (<>
         {editorSnapshot.journey &&
@@ -435,7 +454,7 @@ export const JourneySettings = function JourneySettings() {
                          */}
                         <SlTabPanel name="data">
                             {/* Add DEM instance selection if we do not have height initially (ie in the journey file) */}
-                            <div className = {'select-elevation-source'}>
+                            <div className={'select-elevation-source'}>
                                 <SelectElevationSource
                                     default={editorSnapshot.journey?.elevationServer}
                                     label={'Elevation:'}
@@ -500,9 +519,8 @@ export const JourneySettings = function JourneySettings() {
                     <div id="journey-visibility" className={'editor-vertical-menu'}>
                         <span>
                         <SlTooltip hoist content={'Focus on journey'}>
-                            <a onClick={focusOnJourney}>
-                                <SlIcon library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
-                            </a>
+                                <SlIconButton onClick={focusOnJourney} library="fa"
+                                              name={FA2SL.set(faCrosshairsSimple)}/>
                         </SlTooltip>
                         <SlTooltip hoist content={textVisibilityJourney}>
                             <ToggleStateIcon change={setJourneyVisibility}
@@ -524,13 +542,12 @@ export const JourneySettings = function JourneySettings() {
 
                         <span>
                         <SlTooltip hoist content={'Export'}>
-                            <a onClick={exportJourney}>
-                                <SlIcon library="fa" name={FA2SL.set(faDownload)}/>
-                            </a>
+                                <SlIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>
                         </SlTooltip>
+
                         <SlTooltip hoist content={'Remove'}>
-                            <a onClick={removeJourney}>
-                                <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
+                            <a>
+                                <SlIconButton onClick={removeJourney} library="fa" name={FA2SL.set(faTrashCan)}/>
                             </a>
                         </SlTooltip>
                         </span>

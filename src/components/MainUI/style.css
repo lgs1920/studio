@@ -14,7 +14,6 @@ html {
 }
 
 #lgs-main-ui > div {
-    position: absolute;
     display: flex;
     gap: var(--lgs-gutter-s);
     --top: var(--lgs-gutter-s);
@@ -38,12 +37,15 @@ html {
 }
 
 #top-right-ui {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+    --width: var(--lgs-compass-size);
     pointer-events: auto;
     position: absolute;
     top: var(--top);
     right: var(--right);
-    height: var(--lgs-compass-size);
-    width: var(--lgs-compass-size);
+    width: var(--width);
     margin-right:var(--top-right-ui-right-margin)
 }
 
@@ -181,4 +183,37 @@ html {
     color: var(--lgs-slogan-color);
     font-family: var(--lgs-slogan-font-family);
     font-size: var(--lgs-slogan-font-size);
+}
+
+#waiting-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+
+/*******************************************************************************
+ * Scene Mode Selector
+ */
+.scene-mode-selector {
+    position: relative;
+    z-index: var(--lgs-ui-layer-zindex);
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.scene-mode-selector sl-button {
+    display: none;
+    order: 2;
+}
+
+.scene-mode-selector sl-button[visible] {
+    display: flex;
+    order: 1;
+}
+
+.scene-mode-selector[waiting-mode="true"] sl-button {
+    display: flex;
 }

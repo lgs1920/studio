@@ -2,8 +2,8 @@ import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 
-import { Canvg }   from 'canvg'
-import * as Cesium from 'cesium'
+import { Canvg }                                                          from 'canvg'
+import { Cartesian3, Color, HeightReference, PinBuilder, VerticalOrigin } from 'cesium'
 
 // Pin Marker Type
 export const PIN_ICON = 1
@@ -24,9 +24,9 @@ export const POI_PROFILER = 'profiler'
 export class POIUtils {
     static verticalOrigin = () => {
         const location = {
-            top: Cesium.VerticalOrigin.TOP, bottom: Cesium.VerticalOrigin.BOTTOM, center: Cesium.VerticalOrigin.CENTER,
+            top: VerticalOrigin.TOP, bottom: VerticalOrigin.BOTTOM, center: VerticalOrigin.CENTER,
         }
-        return location?.origin ??  Cesium.VerticalOrigin.CENTER
+        return location?.origin ?? VerticalOrigin.CENTER
     }
 
     static setIcon = (icon = '') => {
@@ -48,7 +48,7 @@ export class POIUtils {
      */
     static draw = async (poi, parentVisibility = true) => {
 
-        // Bail early if POI already exists
+        // Bail early if POI already drawn
         if (poi.drawn) {
             return
         }
@@ -56,26 +56,27 @@ export class POIUtils {
         // Else we'll draw it
         poi.drawn = true
 
+        const disableTestDistance = __.ui.sceneManager.is2D ? 0 : 1.2742018E7 // Diameter of Earth
+
         let poiOptions = {
             name: poi.name,
             id: poi.slug,
             description: poi.description,
-            position: Cesium.Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1],  poi.coordinates[2],),
+            position:                 Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1], poi.coordinates[2]),
             show: POIUtils.setPOIVisibility(poi, parentVisibility),
-            disableDepthTestDistance: 1.2742018E7 // Diameter of Earth
+            disableDepthTestDistance: disableTestDistance,
 
         }
-        const pinBuilder = new Cesium.PinBuilder()
+        const pinBuilder = new PinBuilder()
 
         const billboard = {
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            heightReference:          __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
             verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
             show: true,
-            disableDepthTestDistance: 1.2742018E7 // Diameter of Earth
+            disableDepthTestDistance: disableTestDistance,
         }
-
-        const backgroundColor = poi.backgroundColor?Cesium.Color.fromCssColorString(poi.backgroundColor):''
-        const foregroundColor = poi.foregroundColor ? Cesium.Color.fromCssColorString(poi.foregroundColor) : ''
+        const backgroundColor = poi.backgroundColor ? Color.fromCssColorString(poi.backgroundColor) : ''
+        const foregroundColor = poi.foregroundColor ? Color.fromCssColorString(poi.foregroundColor) : ''
 
         const dataSource=POIUtils.getDataSource(poi)
         if (!dataSource) {
@@ -85,16 +86,16 @@ export class POIUtils {
 
         switch (poi.type) {
             case PIN_CIRCLE:
-                return await dataSource.entities.add({
-                                                         ...poiOptions,
-                                                         point: {
-                                                             pixelSize:                poi.size,
-                                                             color:                    foregroundColor,
-                                                             outlineColor:             backgroundColor,
-                                                             outlineWidth:             poi.border,
-                                                             verticalOrigin:           POIUtils.verticalOrigin(poi.vertical),
-                                                         }
-                                                     })
+                return dataSource.entities.add({
+                                                   ...poiOptions,
+                                                   point: {
+                                                       pixelSize:      poi.size,
+                                                       color:          foregroundColor,
+                                                       outlineColor:   backgroundColor,
+                                                       outlineWidth:   poi.border,
+                                                       verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
+                                                   },
+                                               })
             case PIN_COLOR:
                 billboard.image = pinBuilder.fromColor(backgroundColor, poi.size).toDataURL()
                 poiOptions.billboard={...billboard}
@@ -111,11 +112,10 @@ export class POIUtils {
                 })
                 break;
             case JUST_ICON:
-                return POIUtils.useOnlyFontAwesome(poi).then(async canvas => {
-                    billboard.image = canvas
+                billboard.image = POIUtils.useOnlyFontAwesome(poi)
                     poiOptions.billboard={...billboard}
                     return await dataSource.entities.add(poiOptions)
-                })
+                break
         }
 
     }
@@ -126,16 +126,16 @@ export class POIUtils {
             const entity = dataSource.entities.getById(poi.slug)
             if (entity) {
                 // Update positions
-                entity.position = options?.coordinates ? Cesium.Cartesian3.fromDegrees(options.coordinates[0], options.coordinates[1], options.coordinates[2]) : entity.position
+                entity.position = options?.coordinates ? Cartesian3.fromDegrees(options.coordinates[0], options.coordinates[1], options.coordinates[2]) : entity.position
                 // Update visibility
                 if (options?.visibility !== undefined) {
                     entity.show = options.visibility
                 }
                 if (options?.foregroundColor !== undefined) {
-                    entity.color = Cesium.Color.fromCssColorString(options.foregroundColor)
+                    entity.color = Color.fromCssColorString(options.foregroundColor)
                 }
                 else {
-                    entity.color = Cesium.Color.fromCssColorString(lgs.theTrack.color)
+                    entity.color = Color.fromCssColorString(lgs.theTrack.color)
                 }
             }
         }
@@ -171,7 +171,7 @@ export class POIUtils {
         }
     }
 
-    static useOnlyFontAwesome = async (poi) => {
+    static useOnlyFontAwesome = (poi) => {
         const canvas = document.createElement('canvas')
         const context = canvas.getContext('2d')
         context.imageSmoothingEnabled = true

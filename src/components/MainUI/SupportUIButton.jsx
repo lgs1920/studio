@@ -1,6 +1,6 @@
 import { faMessageQuestion }           from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                       from '../../Utils/FA2SL.js'
+import { FA2SL } from '@Utils/FA2SL.js'
 
 
 export const SupportUIButton = () => {

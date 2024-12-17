@@ -1,23 +1,21 @@
-import { MainUI }                                                            from '@Components/MainUI/MainUI.jsx'
+import { MapLayer }                    from '@Components/cesium/MapLayer'
+import { Viewer }                      from '@Components/cesium/Viewer'
+import { InitErrorMessage }            from '@Components/InitErrorMessage'
+import { MainUI }                      from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { BASE_LAYERS, OVERLAY_LAYERS }                                       from '@Core/constants'
-import { LGS1920Context }                                                    from '@Core/LGS1920Context'
-import { TrackUtils }                                                        from '@Utils/cesium/TrackUtils'
-import * as Cesium                                                           from 'cesium'
-import { useEffect }                                                         from 'react'
-import { Camera, CameraFlyTo, Globe, ImageryLayerCollection, Scene, Viewer } from 'resium'
-import { MapLayer }                                                          from './components/cesium/MapLayer'
-import { InitErrorMessage }                                                  from './components/InitErrorMessage'
-import { WelcomeModal }                                                      from './components/MainUI/WelcomeModal'
-import { LayerManager }                                                      from './core/layers/LayerManager'
-import { LayersUtils }                                                       from './Utils/cesium/LayersUtils'
-import { UIToast }                                                           from './Utils/UIToast'
+import { WelcomeModal }                from '@Components/MainUI/WelcomeModal'
+import { BASE_ENTITY, OVERLAY_ENTITY } from '@Core/constants'
+import { LayersAndTerrainManager }     from '@Core/layers/LayerAndTerrainManager'
+import { LGS1920Context }              from '@Core/LGS1920Context'
+import { TerrainUtils }                from '@Utils/cesium/TerrainUtils'
+import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
+import { UIToast }                     from '@Utils/UIToast'
+import { useEffect }                   from 'react'
 
 /***************************************
  * Init Application context
  */
 window.lgs = new LGS1920Context()
-
 
 // Application initialisation
 const initApp = await __.app.init()
@@ -32,55 +30,18 @@ if (initApp.status) {
     lgs.initManagers()
 
     // Init Layer
-    __.layerManager = new LayerManager()
+    __.layersAndTerrainManager = new LayersAndTerrainManager()
 
 }
 
 export function LGS1920() {
-
-    const coordinates = {
-        position: {
-            longitude: lgs.settings.getStarter.camera.longitude,
-            latitude:  lgs.settings.getStarter.camera.latitude,
-            height:    lgs.settings.getStarter.camera.height,
-            heading:   lgs.settings.getStarter.camera.heading,
-            pitch:     lgs.settings.getStarter.camera.pitch,
-            roll:      lgs.settings.getStarter.camera.roll,
-        },
-    }
-
-    const startCameraPoint = () => {
-        return Cesium.Cartesian3.fromDegrees(
-            coordinates.position.longitude,
-            coordinates.position.latitude,
-            coordinates.position.height,
-        )
-    }
-
-    const cameraOrientation = () => {
-        return {
-            heading: Cesium.Math.toRadians(coordinates.position.heading),
-            pitch:   Cesium.Math.toRadians(coordinates.position.pitch),
-            roll:    Cesium.Math.toRadians(coordinates.position.roll),
-        }
-    }
-
-    const cameraStore = lgs.mainProxy.components.camera
-
-    const rotateCamera = async () => {
-        if (lgs.journeys.size === 0) {
-            await __.ui.cameraManager.runOrbital({})
-        }
-    }
-
-    const raiseCameraUpdateEvent = async () => {
-        await __.ui.cameraManager.raiseUpdateEvent({})
-    }
-
     useEffect(() => {
         try {
+            // If initialisation phase was OK, we have somme additional tasks to do.
             if (initApp.status) {
-                // Init was OK, we have somme additional tasks to do.
+
+                // Set the right terrain
+                TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
 
                 // Set body class to manage css versus platform
                 document.body.classList.add(lgs.platform);
@@ -88,8 +49,6 @@ export function LGS1920() {
                 (async () => {
                     // Read DB
                     await TrackUtils.readAllFromDB()
-
-                    console.log(lgs.settings)
                     //Ready
                     UIToast.success({
                                         caption: `Welcome on ${lgs.configuration.applicationName}!`,
@@ -118,71 +77,28 @@ export function LGS1920() {
             console.log('LGS1920 was stopped due to errors!')
             console.error(error)
         }
-    })
-
-    return (<>
-
-        {
-            !initApp.status && <InitErrorMessage message={initApp.error.message}/>
-        }
-        {
-            initApp.status &&
-        <Viewer full
-                timeline={false}
-                animation={false}
-                homeButton={false}
-                navigationHelpButton={false}
-                fullscreenButton={false}
-                geocoder={false}
-                infoBox={false}
-                sceneModePicker={false}
-                showRenderLoopErrors={false}
-                terrain={Cesium.Terrain.fromWorldTerrain({
+    }, [])
+    return (
+        <>
 
 
-                                                             /* Y6VgRYi3iKQEttoa3G0v */
-                                                             //    terrain={new
-                                                             // Cesium.Terrain(Cesium.CesiumTerrainProvider.fromUrl(`https://api.maptiler.com/tiles/terrain-quantized-mesh-v2/?key=${'qiE5uSYF7NoDFKCbfpfc'}`,
-                                                             // {
-                                                             requestVertexNormals: false,
-                                                             //    }))}
-                                                         })}
-                id="studioMapViewer"
+            {
+                !initApp.status && <InitErrorMessage message={initApp.error.message}/>
+            }
+            {
+                initApp.status &&
+                <>
+                    <WelcomeModal/>
+                    <MapLayer type={BASE_ENTITY}/>
+                    <MapLayer type={OVERLAY_ENTITY}/>
 
-            /***********************/
-            // Avoid consuming Cesium Ion Sessions
-            // DO NOT CHANGE the 2 following lines
-                imageryProvider={false}
-                baseLayerPicker={false}
-        >
+                    <Viewer/>
+                    <MainUI/>
+                    {/* */}
 
-            <ImageryLayerCollection onLayerAdd={LayersUtils.layerOrder}>
-                <MapLayer type={BASE_LAYERS}/>
-                <MapLayer type={OVERLAY_LAYERS}/>
-            </ImageryLayerCollection>
+                </>
 
-            <Scene verticalExaggeration={1.3}></Scene>
-            <Globe enableLighting={false}
-                   depthTestAgainstTerrain={true}
-                   baseColor={Cesium.Color.GAINSBORO}>
-            </Globe>
-            <Camera onChange={raiseCameraUpdateEvent}>
-                <CameraFlyTo
-                    orientation={cameraOrientation()}
-                    duration={3}
-                    destination={startCameraPoint()}
-                    maximumHeight={10000}
-                    once={true}
-                    onComplete={rotateCamera}
-                />
-            </Camera>
-
-
-            <MainUI/>
-            <WelcomeModal/>
-
-        </Viewer>
-        }
-    </>)
+            }
+        </>
+    )
 }
-

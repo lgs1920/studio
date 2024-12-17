@@ -27,13 +27,16 @@
     --lgs-font-size: 0.9rem;
     --lgs-font-size-s: 0.75rem;
     --lgs-font-size-xs: 0.5rem;
+    --lgs-font-size-m: 1.1rem;
+    --lgs-font-size-l: 1.5rem;
+    --lgs-font-size-xl: 2rem;
 
     --lgs-ui-layer-zindex: 200;
     --lgs-drop-zone-zindex: 10;
 
     --lgs-button-border-color: var(--lgs-dark-ui-secondary-color);
     --lgs-button-color: var(--lgs-dark-ui-primary-color);
-    --lgs-button-bg-color:  var(--lgs-dark-ui-secondary-color);
+    --lgs-button-bg-color: var(--lgs-dark-ui-secondary-color);
 
     --lgs-button-border-hover-color: var(--lgs-dark-ui-primary-color);
     --lgs-button-hover-color: var(--lgs-dark-ui-secondary-color);
@@ -53,19 +56,22 @@
     --lgs-border-width-s: 1px;
     --lgs-border-s: var(--lgs-border-width-s) solid var(--sl-color-gray-400);
 
-    --lgs-error-color:var(--sl-color-red-500);
-    --lgs-error-bg-color:var(--sl-color-red-50);
+    --lgs-error-color: var(--sl-color-red-500);
+    --lgs-error-bg-color: var(--sl-color-red-50);
 
-    --lgs-success-color:var(--sl-color-green-500);
-    --lgs-success-bg-color:var(--sl-color-green-50);
+    --lgs-success-color: var(--sl-color-green-500);
+    --lgs-success-bg-color: var(--sl-color-green-50);
 
-    --lgs-warning-color:var(--sl-color-orange-500);
-    --lgs-warning-bg-color:var(--sl-color-orange-50);
+    --lgs-warning-color: var(--sl-color-orange-500);
+    --lgs-warning-bg-color: var(--sl-color-orange-50);
 
-    --lgs-hover-color:var(--sl-color-primary-500);
-    --lgs-hover-bg-color:var(--sl-color-primary-50);
+    --lgs-hover-color: var(--sl-color-primary-500);
+    --lgs-hover-bg-color: var(--sl-color-primary-50);
 
-    --lgs-theme-background:rgba( 255, 255, 255, 0.15 );
+    --lgs-disabled-color: var(--sl-color-gray-400);
+    --lgs-disabled-bg-color: var(--sl-color-gray-200);
+
+    --lgs-theme-background: rgba(255, 255, 255, 0.15);
     --lgs-theme-gradient-1: linear-gradient(to right, rgba(192, 134, 24, 0.75), rgba(142, 120, 6, 0.65));
     --lgs-theme-gradient-1: linear-gradient(61deg, rgba(142, 212, 244, 0.64) 20%, rgba(13, 127, 204, 0.55) 90%);
     --lgs-theme-background-image: var(--lgs-theme-gradient-1);
@@ -79,19 +85,22 @@
 
     --lgs-card-on-map-bg-color: rgba(103, 104, 21, 0.35);
     --lgs-card-on-map-border-color: rgba(103, 104, 21, 0.3);
+
+    --lgs-tooltip-bg-color: rgba(255, 255, 153, 1);
+    --lgs-tooltip-color: var(--sl-color-gray-800);
+    --lgs-tooltip-border-color: rgba(255, 255, 255, 0.3);
 }
 
 .lgs-theme, .lgs-theme::part(panel) {
-        /*background: var(--lgs-theme-background);*/
-        /*background-image: var(--lgs-theme-background-image);*/
-        /*box-shadow: var(--sl-shadow-x-large);*/
-        /*backdrop-filter: blur( 4px );*/
-        /*-webkit-backdrop-filter: blur( 4px );*/
-        /*border-radius: 10px;*/
-        /*border: 1px solid rgba( 255, 255, 255, 0.18 );*/
-        /*color:#fff*/
+    /*background: var(--lgs-theme-background);*/
+    /*background-image: var(--lgs-theme-background-image);*/
+    /*box-shadow: var(--sl-shadow-x-large);*/
+    /*backdrop-filter: blur( 4px );*/
+    /*-webkit-backdrop-filter: blur( 4px );*/
+    /*border-radius: 10px;*/
+    /*border: 1px solid rgba( 255, 255, 255, 0.18 );*/
+    /*color:#fff*/
 }
-
 
 
 .sl-theme-light {
@@ -107,15 +116,15 @@
 
 /*******************************************************************************
  * Buttons
- */
+ ******************************************************************************/
 
 .sl-button::part(base) {
     background-color: var(--lgs-button-bg-color) !important;
     border-color: var(--lgs-button-border-color);
     color: var(--lgs-button-color);
     display: flex;
-    gap:var(--lgs-gutter-s);
-    align-items:center;
+    gap: var(--lgs-gutter-s);
+    align-items: center;
 }
 
 .sl-button::part(base):hover:not(.button--disabled) {
@@ -126,8 +135,8 @@
 
 sl-button::part(label) {
     display: flex;
-    gap:var(--lgs-gutter-s);
-    align-items:center;
+    gap: var(--lgs-gutter-s);
+    align-items: center;
     padding-left: 0;
 }
 
@@ -151,13 +160,13 @@ sl-button::part(label) {
     font-size: var(--lgs-dimension);
 }
 
-sl-button sl-icon, sl-icon-button  {
+sl-button sl-icon, sl-icon-button {
     font-size: var(--sl-font-size-large);
 }
 
 /*******************************************************************************
  * Drawers
- */
+ ******************************************************************************/
 :root {
     --lgs-vertical-panel-width: 400px;
     --lgs-horizontal-panel-width: 100%;
@@ -180,26 +189,18 @@ sl-tab-panel {
     overflow-y: hidden;
 }
 
-sl-tab-panel sl-icon {
-    margin-right: var(--lgs-gutter-xs);
-    width: 1.2rem;
-}
-
-sl-tab-panel sl-icon::part(svg) {
-    width: 1.2rem;
-}
-
 sl-drawer[placement="end"] sl-tab-group::part(base),
 sl-drawer[placement="end"] sl-tab-group::part(body),
 sl-drawer[placement="end"] sl-tab-panel::part(base),
 sl-drawer[placement="end"] sl-tab-panel::part(body),
-sl-drawer[placement="end"] sl-tab-panel,sl-tab-group {
+sl-drawer[placement="end"] sl-tab-panel, sl-tab-group {
     max-height: 100%;
     height: 100%;
 }
+
 sl-drawer[placement="end"] sl-tab-panel::part(base) {
     padding-bottom: 1px;
-    overflow-x:hidden;
+    overflow-x: hidden;
 }
 
 .drawer-pane-footer {
@@ -228,8 +229,7 @@ sl-drawer[placement="end"] sl-tab-panel::part(base) {
 
 /*******************************************************************************
  * Cards
- */
-
+ ******************************************************************************/
 
 sl-card[variant="primary"]::part(base) {
     /*--size: TODO define a default size if needed */
@@ -245,7 +245,7 @@ sl-card[variant="primary"]::part(base) {
     display: flex;
     background-color: rgba(255, 255, 255, 0.15);
 
-    border: 1px solid  var(--sl-color-gray-300);
+    border: 1px solid var(--sl-color-gray-300);
     padding: var(--lgs-gutter-s);
     border-radius: var(--lgs-border-radius-s);
 }
@@ -259,11 +259,6 @@ sl-card[variant="primary"]::part(base) {
     backdrop-filter: blur(3px);
     border-color: var(--lgs-card-on-map-border-color);
 }
-
-.lgs-card:not(.on-map):hover {
-    background: rgba(255, 255, 255, 0.45);
-}
-
 .lgs-card-wrapper {
     display: flex;
     flex-direction: column;
@@ -272,7 +267,7 @@ sl-card[variant="primary"]::part(base) {
 
 /*******************************************************************************
  * Compass
- */
+ ******************************************************************************/
 :root {
     --lgs-compass-size: 95px;
 }
@@ -283,11 +278,30 @@ cesium-compass {
 }
 
 /*******************************************************************************
+ * Tooltips
+ ******************************************************************************/
+sl-tooltip {
+    --sl-tooltip-border-radius: var(--lgs-border-radius-xs);
+    --sl-tooltip-background-color: var(--lgs-tooltip-bg-color);
+    --sl-tooltip-color: var(--lgs-tooltip-color);
+    --sl-tooltip-font-family: var(--sl-font-sans);
+    --sl-tooltip-font-weight: var(--sl-font-weight-normal);
+    --sl-tooltip-font-size: var(--lgs-font-size-s);
+    --sl-tooltip-line-height: var(--sl-line-height-dense);
+    --sl-tooltip-padding: var(--lgs-gutter-xs);
+    --sl-tooltip-arrow-size: 0;
+
+    box-shadow: var(--sl-shadow-large);
+    border-color: var(--lgs-tooltip-border-color);
+}
+
+
+/*******************************************************************************
  * Dialogs / Modals
- */
+ ******************************************************************************/
 
 sl-dialog {
-    --header-spacing:var(--body-spacing) var(--body-spacing) 0 var(--body-spacing)
+    --header-spacing: var(--body-spacing) var(--body-spacing) 0 var(--body-spacing)
 }
 
 sl-dialog [slot="label"] {
@@ -311,9 +325,70 @@ dialog__header-actions sl-icon-button, .dialog__header-actions ::slotted(sl-icon
 }
 
 /*******************************************************************************
+ * Sl Details
+ ******************************************************************************/
+
+sl-details::part(base) {
+    padding: 0;
+    --spacing: 0;
+}
+
+sl-details::part(header) {
+    padding: var(--lgs-gutter-s)
+}
+
+sl-details::part(content) {
+    margin-top: calc(-1 * var(--lgs-gutter-s));
+    padding: var(--lgs-gutter-s);
+    display: flex;
+    gap: var(--lgs-gutter-s);
+    flex-direction: column;
+}
+
+/*******************************************************************************
+ * Dropdowns
+ ******************************************************************************/
+
+.dropdown-trigger-icon {
+    border: 1px solid;
+    background-color: var(--sl-color-neutral-0);
+    border-color: var(--sl-input-border-color);
+    color: var(--sl-color-neutral-700);
+    border-radius: var(--lgs-border-radius-s);
+}
+
+.dropdown-trigger-icon:hover {
+    background-color: var(--sl-color-primary-50);
+    border-color: var(--sl-color-primary-300);
+    color: var(--sl-color-primary-700);
+}
+
+/*******************************************************************************
  * Misc.
  */
 :root {
     --lgs-freemium-color: dodgerblue;
     --lgs-premium-color: goldenrod;
 }
+
+h1, h2, h3, p, ul, li {
+    margin: var(--lgs-gutter-xs) 0;
+}
+
+h1 {
+    font-size: var(--lgs-font-size-l);
+}
+
+h2 {
+    font-size: var(--lgs-font-size-m);
+}
+
+ul {
+    list-style-type: square;
+}
+
+h3 {
+    font-size: var(--lgs-font-size);
+    font-weight: bold;
+}
+

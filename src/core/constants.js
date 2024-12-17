@@ -1,4 +1,4 @@
-import { faCrown, faLock, faUnlock, faUser } from '@fortawesome/pro-solid-svg-icons'
+import { faCrown, faEarthEurope, faLock, faMap, faRoad, faUnlock, faUser } from '@fortawesome/pro-regular-svg-icons'
 
 
 export const SLOGAN = 'Replay Your Adventures!'
@@ -60,6 +60,9 @@ export const ORIGIN_STORE = 'origin'
 export const CURRENT_JOURNEY = 'journey'
 export const CURRENT_TRACK = 'track'
 export const CURRENT_POI = 'poi'
+export const UPDATE_JOURNEY_THEN_DRAW = 1
+export const UPDATE_JOURNEY_SILENTLY = 2
+export const REMOVE_JOURNEY = 3
 
 export const DRAW_THEN_SAVE = 1
 export const DRAW_WITHOUT_SAVE = 2
@@ -72,7 +75,12 @@ export const COLOR_SWATCHES_RANDOM = 'random'
 // List of settings exclusions (ie we keep the user choice)
 // This array is then sorted alphabetically by object depth.
 export const SETTING_EXCLUSIONS = [
-    'layers.base', 'layers.terrain', 'layers.overlay', 'app', 'layers.filter',
+    'layers.base',
+    'layers.terrain',
+    'layers.overlay',
+    'app',
+    'layers.filter',
+    'scene',
 ].sort((a, b) => {
     const segmentsA = a.split('.')
     const segmentsB = b.split('.')
@@ -91,15 +99,17 @@ export const SETTING_EXCLUSIONS = [
             return 1
         }
     }
-    return 0;
-});
+    return 0
+})
 
 /**
  * Layers and Terrains
  */
-export const BASE_LAYERS = 'base'
-export const OVERLAY_LAYERS = 'overlay'
-export const TERRAIN_LAYERS = 'terrain'
+export const URL_AUTHENT_KEY = '{%authent%}'
+export const LAYERS = 'layers'
+export const BASE_ENTITY = 'base'
+export const OVERLAY_ENTITY = 'overlay'
+export const TERRAIN_ENTITY = 'terrain'
 export const LAYERS_THUMBS_DIR = '/assets/images/layers/thumbnails'
 export const PREMIUM_ACCESS = 'premium'
 export const FREEMIUM_ACCESS = 'freemium'
@@ -107,6 +117,12 @@ export const FREE_ANONYMOUS_ACCESS = 'free'
 export const FREE_ACCOUNT_ACCESS = 'account'
 export const UNLOCKED_ACCESS = 'unlocked'
 export const LOCKED_ACCESS = 'locked'
+
+export const TERRAIN_FROM_CESIUM = 'cesium'
+export const TERRAIN_FROM_CESIUM_ELLIPSOID = 'ellipsoid'
+export const TERRAIN_FROM_URL = 'url'
+
+export const FLAT_TERRAINS = [TERRAIN_FROM_CESIUM_ELLIPSOID]
 
 export const ACCESS_ICONS = {
     [FREEMIUM_ACCESS]:       {
@@ -142,6 +158,23 @@ export const UNLOCKED = 'unlocked'
 /*******************************************************************************
  * UI Elements
  ******************************************************************************/
+/** Scene Mode **/
+
+export const SCENE_MODE_2D = {
+    value: 2, label: '2D', title: 'Map View', icon: faMap,
+}
+export const SCENE_MODE_3D = {
+    value: 3, label: '3D', title: 'Globe View', icon: faEarthEurope,
+}
+export const SCENE_MODE_COLUMBUS = {
+    value: 2.5, label: '2.5D', title: 'Columbus View', icon: faRoad,
+}
+
+export const SCENE_MODES = new Map([
+                                       [SCENE_MODE_2D.value, SCENE_MODE_2D],
+                                       [SCENE_MODE_3D.value, SCENE_MODE_3D],
+                                       [SCENE_MODE_COLUMBUS.value, SCENE_MODE_COLUMBUS],
+                                   ])
 
 /** Drawers **/
 
@@ -149,3 +182,22 @@ export const INFO_DRAWER = 'info-drawer'
 export const LAYERS_DRAWER = 'layers-drawer'
 export const JOURNEY_EDITOR_DRAWER = 'journey-editor-drawer'
 export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'
+
+/** Jaurney, Track, POI **/
+
+
+export const GPX = 'gpx'
+export const KML = 'kml'
+export const KMZ = 'kmz'
+export const GEOJSON = 'geojson'
+export const JSON_ = 'json'
+
+export const TRACK_SLUG = 'track'
+
+export const SIMULATE_ALTITUDE = 99
+export const DRAWING = 0
+export const DRAWING_FROM_UI = 1
+export const DRAWING_FROM_DB = 3
+export const REFRESH_DRAWING = 2
+export const FOCUS_ON_FEATURE = 1
+export const NO_FOCUS = 2

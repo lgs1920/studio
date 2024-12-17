@@ -1,15 +1,15 @@
 import {
     APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, JOURNEYS_STORE, ORIGIN_STORE, platforms,
     SERVERS, SETTINGS_STORE,
-}                     from '@Core/constants'
+    VAULT_STORE,
+}                    from '@Core/constants'
 import { AppUtils }   from '@Utils/AppUtils'
 import { MouseUtils } from '@Utils/cesium/MouseUtils'
 import { CSSUtils }   from '@Utils/CSSUtils'
 import { UIUtils }    from '@Utils/UIUtils'
 
 import { proxy }             from 'valtio'
-import { UnitUtils }         from '../Utils/UnitUtils'
-import { VAULT_STORE }       from './constants'
+import { UnitUtils } from '@Utils/UnitUtils'
 import { LocalDB }           from './db/LocalDB'
 import { MouseEventHandler } from './MouseEventHandler'
 import { editorSettings }    from './stores/editorSettings'
@@ -19,6 +19,7 @@ import { CameraManager }     from './ui/CameraManager'
 import { DrawerManager }     from './ui/DrawerManager'
 import { JourneyEditor }     from './ui/JourneyEditor'
 import { Profiler }          from './ui/Profiler'
+import { SceneManager }      from './ui/SceneManager'
 import { Wanderer }          from './ui/Wanderer'
 
 export class LGS1920Context {
@@ -79,19 +80,19 @@ export class LGS1920Context {
         this.db = {
             lgs1920: new LocalDB({
                                      name:             `${APP_KEY}${dbPrefix}`,
-                                     store: [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE],
+                                     stores: [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE],
                                      manageTransients: true,
                                      version:          '0.1',
                                  }),
             settings: new LocalDB({
                                       name: `settings-${APP_KEY}${dbPrefix}`,
-                                      store:            [SETTINGS_STORE],
+                                      stores: [SETTINGS_STORE],
                                       manageTransients: true,
                                       version:          '0.1',
                                   }),
             vault:    new LocalDB({
                                       name:             `vault-${APP_KEY}${dbPrefix}`,
-                                      store:            [VAULT_STORE],
+                                      stores: [VAULT_STORE],
                                       manageTransients: false,
                                       version:          '0.1',
                                   }),
@@ -269,6 +270,7 @@ export class LGS1920Context {
         __.ui.wanderer = new Wanderer()
         __.ui.cameraManager = new CameraManager()
         __.ui.drawerManager = new DrawerManager()
+        __.ui.sceneManager = new SceneManager()
 
     }
 

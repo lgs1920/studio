@@ -3,7 +3,7 @@ import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react
 import { FA2SL }                       from '@Utils/FA2SL'
 import './style.css'
 import { useSnapshot }                 from 'valtio'
-import { JOURNEY_EDITOR_DRAWER }       from '../../core/constants'
+import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 
 export const TracksEditorButton =  (props) => {
 

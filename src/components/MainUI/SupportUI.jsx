@@ -3,7 +3,7 @@ import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'
 import support                        from '../../../src/assets/modals/support.md'
-import { FA2SL }                      from '../../Utils/FA2SL'
+import { FA2SL } from '@Utils/FA2SL'
 
 
 export const SupportUI = () => {
@@ -12,7 +12,6 @@ export const SupportUI = () => {
     return (
         <>
             <SlDialog open={getSupport.visible}
-                      modal
                       no-header
                       id={'support-modal'}
                       className={'lgs-theme'}

@@ -1,8 +1,8 @@
 import { SlTooltip }                                   from '@shoelace-style/shoelace/dist/react'
 import { proxy, useSnapshot }                          from 'valtio'
 import { subscribeKey }                                from 'valtio/utils'
-import { BASE_LAYERS, OVERLAY_LAYERS, TERRAIN_LAYERS } from '../../../core/constants'
-import { LayerManager }                                from '../../../core/layers/LayerManager'
+import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
+import { LayersAndTerrainManager }                     from '@Core/layers/LayerAndTerrainManager'
 import './style.css'
 /*
 
@@ -15,21 +15,26 @@ import './style.css'
  */
 
 const providers = proxy({
-                            [BASE_LAYERS]:    null,
-                            [OVERLAY_LAYERS]: null,
-                            [TERRAIN_LAYERS]: null,
+                            [BASE_ENTITY]:    null,
+                            [OVERLAY_ENTITY]: null,
+                            [TERRAIN_ENTITY]: null,
                         })
 
 export const CreditsBar = () => {
 
     const providersToCredit = useSnapshot(providers)
-    const LAYERS_TYPE = [BASE_LAYERS, OVERLAY_LAYERS, TERRAIN_LAYERS]
+    const LAYERS_TYPE = [BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY]
+
 
     const Credit = (props) => {
+        const credits = () => {
+            const layer = __.layersAndTerrainManager.getEntityProxy(lgs.settings.layers[props.type])
+            return layer?.credits ?? props.provider.credits ?? `Credits ${props.provider.name}`
+        }
         return (
 
             <a href={props.provider.url} target="_blank">
-                <SlTooltip hoist placement="top" content={props.provider.credit ?? `Credits ${props.provider.name}`}>
+                <SlTooltip hoist placement="top" content={credits()}>
                     {props.provider.logo &&
                         <img src={props.provider.logo} alt={props.provider.name}/>
                     }
@@ -43,15 +48,15 @@ export const CreditsBar = () => {
     }
 
     const getProviders = (type, layer = undefined) => {
-        const manager = new LayerManager()
+        const manager = new LayersAndTerrainManager()
         const tmp = {
-            [BASE_LAYERS]:    manager.getProviderProxyByLayerId(lgs.settings.layers.base),
-            [OVERLAY_LAYERS]: manager.getProviderProxyByLayerId(lgs.settings.layers.overlay),
-            [TERRAIN_LAYERS]: manager.getProviderProxyByLayerId(lgs.settings.layers.terrain),
+            [BASE_ENTITY]:    manager.getProviderProxyByEntity(lgs.settings.layers.base),
+            [OVERLAY_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.overlay),
+            [TERRAIN_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.terrain),
         }
         // If we have a specific lyer, let's use it
         if (layer) {
-            tmp[type] = manager.getProviderProxyByLayerId(layer)
+            tmp[type] = manager.getProviderProxyByEntity(layer)
         }
 
         // Check doublon and remove value
@@ -87,15 +92,17 @@ export const CreditsBar = () => {
                 <div className={'lgs-card on-map provider-credits'}>
                     {providersToCredit.terrain &&
                         <>
-                            <Credit id={'terrain-credits'} provider={providersToCredit.terrain}></Credit>|
+                            <Credit id={'terrain-credits'} type={TERRAIN_ENTITY}
+                                    provider={providersToCredit.terrain}></Credit>|
                         </>}
                     {providersToCredit.overlay &&
                         <>
-                            <Credit id={'overlay-credits'} provider={providersToCredit.overlay}></Credit>|
+                            <Credit id={'overlay-credits'} type={OVERLAY_ENTITY}
+                                    provider={providersToCredit.overlay}></Credit>|
                         </>}
                     {providersToCredit.base &&
                         <>
-                            <Credit id={'layer-credits'} provider={providersToCredit.base}></Credit>
+                            <Credit id={'layer-credits'} type={BASE_ENTITY} provider={providersToCredit.base}></Credit>
                         </>
                     }
                 </div>

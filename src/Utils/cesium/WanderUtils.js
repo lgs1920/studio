@@ -1,5 +1,5 @@
-import { Track }    from '../../core/Track'
-import { Wanderer } from '../../core/ui/Wanderer.js'
+import { Track }    from '@Core/Track'
+import { Wanderer } from '@Core/ui/Wanderer.js'
 
 export const WANDER_MODE_MARKER = 'wander-mode'
 

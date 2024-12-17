@@ -1,10 +1,10 @@
 import { SlDetails, SlDivider }     from '@shoelace-style/shoelace/dist/react'
 import { DateTime }                 from 'luxon'
-import React, { useEffect }         from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Scrollbars }               from 'react-custom-scrollbars'
 import { default as ReactMarkdown } from 'react-markdown'
 import { proxy, useSnapshot }       from 'valtio'
-import { ChangelogManager }         from '../../core/ui/ChangelogManager'
+import { ChangelogManager } from '@Core/ui/ChangelogManager'
 
 // Créer un état proxy avec Valtio
 const state = proxy({
@@ -48,26 +48,28 @@ const readNews =  async () => {
 
 
 export const WhatsNew = () => {
-
+    const newsList = useRef(null)
     useEffect(() => {
         ;(async () => {
             await readNews()
             state.loading = false
         })()
+
+        __.ui.ui.initDetailsGroup(newsList.current)
     }, []);
     const snap = useSnapshot(state)
 
     return (<Scrollbars style={{height: '100%'}}>
-            <h1>{'What\'s new?'}</h1>
-            <div className={'whats-new-list'}>
+            <div className={'whats-new-list'} ref={newsList}>
                 {snap.data.map(file => (
                     <SlDetails small open={file.open}
                                key={file.name}
                                className={'lgs-theme'}
                     >
-                        <h3 slot="summary">[{file.version}] {file.date}</h3>
-                        <SlDivider></SlDivider>
-                        <ReactMarkdown children={file.content}/>
+                        <span slot="summary">[{file.version}] {file.date}</span>
+                        <SlDivider/>
+                        <div><ReactMarkdown children={file.content}/></div>
+
                     </SlDetails>
 
                 ))}

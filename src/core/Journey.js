@@ -1,4 +1,8 @@
-import { JOURNEYS_STORE, ORIGIN_STORE } from '@Core/constants'
+import {
+    JOURNEYS_STORE, ORIGIN_STORE,
+    DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JSON_, KML, KMZ, NO_FOCUS, REFRESH_DRAWING,
+    SIMULATE_ALTITUDE, TRACK_SLUG,
+} from '@Core/constants'
 import {
     gpx, kml,
 }                                       from '@tmcw/togeojson'
@@ -7,16 +11,15 @@ import {
 }                                       from '@turf/invariant'
 import {
     JUST_ICON,
-}                                       from '@Utils/cesium/POIUtils'
+
+    FLAG_START, FLAG_STOP, POI_FLAG, POI_MARKER, POI_STD,
+} from '@Utils/cesium/POIUtils'
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
 }                                       from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
 }                                       from '@Utils/UIToast'
-import {
-    FLAG_START, FLAG_STOP, POI_FLAG, POI_MARKER, POI_STD,
-}                                       from '../Utils/cesium/POIUtils'
 import {
     ElevationServer,
 }                                       from './Elevation/ElevationServer'
@@ -538,7 +541,7 @@ export class Journey extends MapElement {
      * @param mode
      * @return {Promise<void>}
      */
-    draw = async ({action = INITIAL_LOADING, mode = FOCUS_ON_FEATURE}) => {
+    draw = async ({action = DRAWING_FROM_UI, mode = FOCUS_ON_FEATURE}) => {
         const promises = []
 
         // Draw Tracks and flags
@@ -558,9 +561,10 @@ export class Journey extends MapElement {
 
         //Ready
         const texts = new Map([
-                                  [INITIAL_LOADING, 'loaded succesfully!'],
-                                  [SIMULATE_ALTITUDE, 'redrawn succesfully!'],
-                                  [RE_LOADING, 'redrawn succesfully!'],
+                                  [DRAWING_FROM_UI, 'loaded succesfully!'],
+                                  [DRAWING_FROM_DB, 'loaded succesfully!'],
+                                  [SIMULATE_ALTITUDE, 'updated succesfully!'],
+                                  [REFRESH_DRAWING, 'updated succesfully!'],
                               ])
         UIToast.success({
                             caption: `${this.title}`, text: texts.get(action),
@@ -687,17 +691,3 @@ export class Journey extends MapElement {
     }
 
 }
-
-export const GPX = 'gpx'
-export const KML = 'kml'
-export const KMZ = 'kmz'
-export const GEOJSON = 'geojson'
-export const JSON_='json'
-
-export const TRACK_SLUG = 'track'
-
-export const SIMULATE_ALTITUDE = 99
-export const INITIAL_LOADING = 1
-export const RE_LOADING = 2
-export const FOCUS_ON_FEATURE = 1
-export const NO_FOCUS = 2

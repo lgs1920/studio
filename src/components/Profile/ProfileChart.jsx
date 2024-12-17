@@ -4,7 +4,7 @@ import ReactECharts                                         from 'echarts-for-re
 import * as echarts                                         from 'echarts/core'
 import { useEffect, useRef }                                from 'react'
 import { useSnapshot }                                      from 'valtio'
-import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION } from '../../core/ui/Profiler'
+import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION } from '@Core/ui/Profiler'
 
 /**
  *

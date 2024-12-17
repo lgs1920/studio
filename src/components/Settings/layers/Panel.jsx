@@ -5,7 +5,7 @@ import { FA2SL }                  from '@Utils/FA2SL'
 import React                      from 'react'
 import { useSnapshot }            from 'valtio'
 import './style.css'
-import { LAYERS_DRAWER }          from '../../../core/constants'
+import { LAYERS_DRAWER } from '@Core/constants'
 import { InfoLayerModal }         from './InfoLayerModal'
 import { LayersAndTerrains }      from './LayersAndTerrains'
 

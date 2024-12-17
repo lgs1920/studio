@@ -1,5 +1,5 @@
-import * as Cesium                                                                         from 'cesium'
-import { Cartesian2, Cartesian3, Cartographic, Ellipsoid, Math as M, Matrix4, Transforms } from 'cesium'
+import * as Cesium                                                                                    from 'cesium'
+import { Cartesian2, Cartesian3, Cartographic, Ellipsoid, Math as M, Matrix4, SceneMode, Transforms } from 'cesium'
 
 export class CameraUtils {
 
@@ -14,10 +14,10 @@ export class CameraUtils {
     }
 
     /**
-     * get Camera Heading and Pitch
+     * get Camera Heading and Pitch (only in 3D mode)
      */
     static getHeadingPitchRoll = (camera) => {
-        if (camera) {
+        if (camera && lgs.scene.mode === SceneMode.SCENE3D) {
             return {
                 heading: Math.max(0, Math.min(M.toDegrees(Math.round(camera.heading)), 360)),
                 pitch: M.toDegrees(camera.pitch),
@@ -54,7 +54,12 @@ export class CameraUtils {
 
         const target = CameraUtils.getCameraTargetPosition()
         const {longitude, latitude, height} = await camera.positionCartographic
-
+        //
+        // let scratchRectangle = new Rectangle();
+        // const  rect = lgs.camera.computeViewRectangle(lgs.scene.globe.ellipsoid,
+        //                                               scratchRectangle);
+        // console.log(Rectangle.center(rect))
+        //https://gis.stackexchange.com/questions/270888/cesium-camera-computeviewrectangle-to-get-current-view-bounds
         return {
             target: {
                 longitude: target?.longitude,

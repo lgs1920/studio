@@ -3,7 +3,7 @@ import { useSnapshot }       from 'valtio'
 import {
     DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
     DRAG_AND_DROP_STATUS_DELAY, FileUtils,
-}                            from '../../Utils/FileUtils'
+} from '@Utils/FileUtils'
 
 /**
  * From : https://www.codemzy.com/blog/react-drag-drop-file-upload

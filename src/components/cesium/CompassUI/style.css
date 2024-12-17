@@ -1,8 +1,7 @@
 
 cesium-compass {
-    height: var(--lgs-compass-size);
+    min-height: var(--lgs-compass-size);
     width: var(--lgs-compass-size);
-    position: fixed;
 }
 
 cesium-compass .compass {

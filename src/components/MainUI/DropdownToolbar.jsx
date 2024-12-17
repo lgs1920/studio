@@ -5,7 +5,7 @@ import {
 }                                                                      from '@Components/TracksEditor/TracksEditorButton'
 import { faEllipsisVertical }                                          from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                       from '../../Utils/FA2SL.js'
+import { FA2SL } from '@Utils/FA2SL.js'
 import { JourneyLoaderButton }                           from '../FileLoader/JourneyLoaderButton'
 import { SnapshotButton, SnapshotMenu, SnapshotTrigger } from './Snapshot'
 
