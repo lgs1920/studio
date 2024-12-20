@@ -150,7 +150,7 @@ main-logo.xlarge {
 
 #camera-target {
     position: absolute;
-    display: flex;
+    display: none !important;
     align-items: center;
     justify-content: center;
     transition: all 0.5s ease;
@@ -158,10 +158,9 @@ main-logo.xlarge {
     line-height: 1;
 }
 
-#camera-target sl-icon {
-
+#camera-target[show="true"] {
+    display: flex !important;
 }
-
 
 /** Drawers **/
 

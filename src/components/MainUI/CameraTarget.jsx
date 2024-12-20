@@ -1,10 +1,14 @@
-import { faArrowsToCircle }  from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon }            from '@shoelace-style/shoelace/dist/react'
-import { useEffect, useRef } from 'react'
-import { FA2SL } from '@Utils/FA2SL'
+import { faArrowsToCircle }   from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon }             from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }              from '@Utils/FA2SL'
+import { useEffect, useRef }  from 'react'
+import { proxy, useSnapshot } from 'valtio/index'
 
 export const CameraTarget = () => {
     const box = useRef(0)
+    const camera = useSnapshot(proxy(lgs.settings.ui.camera))
+
+
     const centerBox = () => {
         const width = Math.round(lgs.canvas.clientWidth / 2)
         const height = Math.round(lgs.canvas.clientHeight / 2)
@@ -21,11 +25,12 @@ export const CameraTarget = () => {
     }, [])
 
     return (
-        <div id="camera-target" ref={box} style={
+        <div show={camera.targetIcon.show ? 'true' : 'false'} id="camera-target" ref={box} style={
             {
-                width:  lgs.settings.getUi.cameraTargetIcon.size,
-                height: lgs.settings.getUi.cameraTargetIcon.size,
-                color:  lgs.settings.getUi.cameraTargetIcon.color,
+                width:      camera.targetIcon.size,
+                height:     camera.targetIcon.size,
+                color:      camera.targetIcon.color,
+                background: camera.targetIcon.background,
             }}>
             <SlIcon library="fa" name={FA2SL.set(faArrowsToCircle)}></SlIcon>
         </div>

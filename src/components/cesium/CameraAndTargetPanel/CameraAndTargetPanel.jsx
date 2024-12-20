@@ -4,21 +4,20 @@ import { TextValueUI } from '@Components/TextValueUI/TextValueUI.jsx'
 import { faAngle, faArrowsToCircle, faMountains, faVideo } from '@fortawesome/pro-regular-svg-icons'
 import { SlAnimation }                                     from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                           from '@Utils/FA2SL'
+import { meter, mile }                                     from '@Utils/UnitUtils'
 import { proxy, useSnapshot }                              from 'valtio'
-import { meter, mile } from '@Utils/UnitUtils'
 
 
 export const CameraAndTargetPanel = () => {
     //  lgs.viewer = useCesium().viewer
 
     const camera = useSnapshot(lgs.mainProxy.components.camera)
-    const ui = useSnapshot(proxy(lgs.configuration.ui))
-
+    const ui = useSnapshot(proxy(lgs.settings.ui))
     return (
         <div id={'camera-and-target-position-panel'}>
-            {ui.showCameraTargetPosition && !__.ui.cameraManager.lookingAtTheSky(camera.target) &&
+            {ui.camera.showTargetPosition && !__.ui.cameraManager.lookingAtTheSky(camera.target) &&
                 <SlAnimation size="small" easing="bounceInLeft" duration={1000} iterations={1}
-                             play={ui.showCameraTargetPosition}>
+                             play={ui.camera.showTargetPosition}>
                     <div className="camera-data-panel lgs-card on-map">
                         <sl-icon library="fa" name={FA2SL.set(faArrowsToCircle)}></sl-icon>
                         <div>
@@ -46,9 +45,9 @@ export const CameraAndTargetPanel = () => {
             }
             {!__.ui.sceneManager.is2D &&
                 <>
-                    {ui.showCameraPosition &&
+                    {ui.camera.showPosition &&
                         <SlAnimation size="small" easing="bounceInLeft" duration={1000} iterations={1}
-                                     play={ui.showCameraPosition}>
+                                     play={ui.camera.showPosition}>
                             <div className="camera-data-panel lgs-card on-map">
                                 <sl-icon library="fa" name={FA2SL.set(faVideo)}></sl-icon>
                                 <div>
@@ -66,9 +65,9 @@ export const CameraAndTargetPanel = () => {
                             </div>
                         </SlAnimation>
                     }
-                    {ui.showCameraHPR &&
+                    {ui.camera.showHPR &&
                         <SlAnimation size="small" easing="bounceInLeft" duration={1000} iterations={1}
-                                     play={ui.showCameraHPR}>
+                                     play={ui.showHPR}>
                             <>
                                 <div className="camera-data-panel lgs-card on-map">
                                     <sl-icon library="fa" name={FA2SL.set(faAngle)}></sl-icon>
