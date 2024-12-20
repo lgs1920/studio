@@ -1,5 +1,5 @@
 import React              from 'react'
-import { CameraSettings } from '../../camera/CameraSettings'
+import { CameraSettings } from './CameraSettings'
 
 export const Style = () => {
 
