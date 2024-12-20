@@ -11,3 +11,17 @@
 #manage-user-profile sl-icon {
     font-size: var(--lgs-font-size-m)
 }
+
+#ui-camera-settings {
+    flex-direction: column;
+}
+
+#ui-camera-settings sl-switch {
+    width: 100%;
+}
+
+#ui-camera-settings sl-switch span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}

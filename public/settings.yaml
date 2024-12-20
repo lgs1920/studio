@@ -656,11 +656,13 @@ unitSystem:
 # UI : general
 ########################################
 ui:
-  showCameraPosition: true          # Display Camera position
-  showCameraTargetPosition: true    # Display Camera View point
-  showCameraHPR: true               # Display Camera HPR
+  camera:
+    showPosition: true          # Display Camera position
+    showTargetPosition: true    # Display Camera View point
+    showHPR: false              # Display Camera HPR
 
-  cameraTargetIcon: # Camera Target Icon
-    show: true
-    color: white
-    size: 1.5rem
+    targetIcon: # Camera Target Icon
+      show: true
+      color: white
+      background: transparent
+      size: 3rem

@@ -241,13 +241,17 @@ sl-card[variant="primary"]::part(base) {
     --border-color: var(--lgs-card-ui-border-color);
 }
 
-.lgs-card {
+.lgs-card, .lgs-card::part(base) {
     display: flex;
     background-color: rgba(255, 255, 255, 0.15);
 
     border: 1px solid var(--sl-color-gray-300);
     padding: var(--lgs-gutter-s);
     border-radius: var(--lgs-border-radius-s);
+}
+
+.lgs-card ::part(base) {
+    width: 100%;
 }
 
 .lgs-card.on-map {
@@ -328,6 +332,9 @@ dialog__header-actions sl-icon-button, .dialog__header-actions ::slotted(sl-icon
  * Sl Details
  ******************************************************************************/
 
+sl-details {
+    --sl-spacing-medium: var(--lgs-gutter-xs);
+}
 sl-details::part(base) {
     padding: 0;
     --spacing: 0;
@@ -363,6 +370,24 @@ sl-details::part(content) {
     color: var(--sl-color-primary-700);
 }
 
+/*******************************************************************************
+ * Switches
+ */
+sl-switch[align-right]::part(base) {
+    display: flex;
+    gap: var(--sl-spacing-3x-small) var(--gap-width);
+    align-items: center;
+}
+
+sl-switch[align-right]::part(label) {
+    display: contents;
+    order: 2;
+}
+
+sl-switch[align-right]::part(control) {
+    order: 1;
+    margin-left: auto
+}
 /*******************************************************************************
  * Misc.
  */
