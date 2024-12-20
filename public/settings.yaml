@@ -25,7 +25,6 @@ ionToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4ZmZkZjZkYS1iODgwLTQzY
 app:
   lastVisit: null         # Last visit date
   firstVisit: true        # Is it the first visit ?
-  showIntro: true         # Se afin intro ?
   changelogToRead: true   # Used to check if there are news to read
 
 ########################################
@@ -656,6 +655,8 @@ unitSystem:
 # UI : general
 ########################################
 ui:
+
+  ## Camera
   camera:
     showPosition: false         # Display Camera position
     showTargetPosition: true    # Display Camera View point
@@ -666,3 +667,9 @@ ui:
       color: white
       background: transparent
       size: 3rem
+
+  ## Welcome Modal
+  welcome:
+    showIntro: true
+    autoClose: true
+    displayTime: 15   #seconds

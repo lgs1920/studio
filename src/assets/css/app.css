@@ -138,7 +138,7 @@ main-logo.xlarge {
     height: auto;
 }
 
-.main-logo .version-info {
+.main-logo .version-info, .main-logo .welcome-modal-timer {
     display: flex;
     align-items: center;
     position: absolute;
@@ -146,6 +146,13 @@ main-logo.xlarge {
     bottom: var(--lgs-gutter-xs);
     font-size: var(--lgs-font-size-xs);
     line-height: 1;
+}
+
+.main-logo .welcome-modal-timer {
+    align-items: self-end;
+    left: unset;
+    right: var(--lgs-gutter-xs);
+    font-size: var(--lgs-font-size-xs);
 }
 
 #camera-target {

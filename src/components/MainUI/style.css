@@ -179,12 +179,6 @@ html {
     box-shadow: var(--sl-shadow-medium);
 }
 
-#welcome-modal .the-slogan {
-    color: var(--lgs-slogan-color);
-    font-family: var(--lgs-slogan-font-family);
-    font-size: var(--lgs-slogan-font-size);
-}
-
 #waiting-loading {
     display: flex;
     justify-content: center;
