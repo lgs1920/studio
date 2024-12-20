@@ -32,7 +32,8 @@ export const StudioLogo = (props) => {
                 <div className={'version-info'}>{lgs.versions.studio} - {'build'}:{date}</div>
             }
             {props.slogan && <span className={'the-slogan'}>{SLOGAN}</span>}
-            {props.timer > 0 && <span className={'welcome-modal-timer'}>{props.timer} s</span>}
+            {props.timer > 0 && lgs.settings.ui.welcome.autoClose &&
+                <span className={'welcome-modal-timer'}>{props.timer} s</span>}
         </div>
     )
 }
