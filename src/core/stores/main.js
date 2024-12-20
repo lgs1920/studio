@@ -87,6 +87,7 @@ export const main = {
     },
     drawers:    {
         open: null,
+        over: false,
     },
     modals: {
         altitudeChoice: {

@@ -10,6 +10,7 @@ export class DrawerManager {
         }
 
         this.drawers = lgs.mainProxy.drawers
+
         DrawerManager.instance = this
     }
 
@@ -62,6 +63,22 @@ export class DrawerManager {
             return false
         }
         return true
+    }
+
+    mouseLeave = (event) => {
+        this.over = false
+    }
+
+    mouseEnter = (event) => {
+        this.over = true
+    }
+
+    attachEvents = () => {
+        // We detect if we're over a drawer or not
+        document.querySelectorAll('sl-drawer').forEach(drawer => {
+            drawer.addEventListener('mouseleave', this.mouseLeave)
+            drawer.addEventListener('mouseenter', this.mouseEnter)
+        })
     }
 
 }

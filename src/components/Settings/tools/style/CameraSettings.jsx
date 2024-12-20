@@ -3,7 +3,7 @@ import { SlDetails, SlDivider, SlIcon, SlSwitch } from '@shoelace-style/shoelace
 import { FA2SL }                                  from '@Utils/FA2SL'
 import React                                      from 'react'
 
-export const CameraSettings = () => {
+export const CameraSettings = (props) => {
 
     const switchValue = (event) => {
         if (window.isOK(event)) {
@@ -14,25 +14,28 @@ export const CameraSettings = () => {
     return (
         <SlDetails id={'ui-camera-settings'}
                    small open={false}
-                   key={'ui-camera-settings'}
                    className={'lgs-theme'}
+                   onSlHide={props.onClose}
         >
             <span slot="summary">{'Camera Information'}</span>
             <SlDivider/>
 
+            {__.ui.sceneManager.is3D &&
+                <>
+                    <SlSwitch size="small" align-right checked={lgs.settings.ui.camera.showPosition}
+                              onSlChange={(event) => lgs.settings.ui.camera.showPosition = switchValue(event)}>
+                        Show Camera Position
+                        <span slot="help-text">{'Longitude, Latitude, Altitude'}</span>
+                    </SlSwitch>
 
-            <SlSwitch size="small" align-right checked={lgs.settings.ui.camera.showPosition}
-                      onSlChange={(event) => lgs.settings.ui.camera.showPosition = switchValue(event)}>
-                Show Camera Position
-                <span slot="help-text">{'Longitude, Latitude, Altitude'}</span>
-            </SlSwitch>
-
-            <SlSwitch size="small" align-right checked={lgs.settings.ui.camera.showHPR}
-                      onSlChange={(event) => lgs.settings.ui.camera.showHPR = switchValue(event)}>
-                Show Camera HPR
-                <span slot="help-text">{'Different angles (head, pitch Range)'}</span>
-            </SlSwitch>
-            <SlDivider/>
+                    <SlSwitch size="small" align-right checked={lgs.settings.ui.camera.showHPR}
+                              onSlChange={(event) => lgs.settings.ui.camera.showHPR = switchValue(event)}>
+                        Show Camera HPR
+                        <span slot="help-text">{'Different angles (head, pitch Range)'}</span>
+                    </SlSwitch>
+                    <SlDivider/>
+                </>
+            }
             <SlSwitch size="small" align-right checked={lgs.settings.ui.camera.showTargetPosition}
                       onSlChange={(event) => lgs.settings.ui.camera.showTargetPosition = switchValue(event)}>
                 Show Camera Target Position

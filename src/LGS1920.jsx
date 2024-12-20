@@ -40,6 +40,9 @@ export function LGS1920() {
             // If initialisation phase was OK, we have somme additional tasks to do.
             if (initApp.status) {
 
+                // Detect drawer over
+                __.ui.drawerManager.attachEvents()
+
                 // Set the right terrain
                 TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
 
