@@ -657,7 +657,7 @@ unitSystem:
 ########################################
 ui:
   camera:
-    showPosition: true          # Display Camera position
+    showPosition: false         # Display Camera position
     showTargetPosition: true    # Display Camera View point
     showHPR: false              # Display Camera HPR
 
