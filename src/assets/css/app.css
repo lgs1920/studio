@@ -156,6 +156,7 @@ main-logo.xlarge {
     transition: all 0.5s ease;
     font-size: 1.2rem;
     line-height: 1;
+    filter: drop-shadow(0 0 5px black);
 }
 
 #camera-target[show="true"] {
