@@ -1,15 +1,15 @@
 import { faRegularRouteCirclePlus }               from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import { INFO_DRAWER, SLOGAN }                    from '@Core/constants'
+import { INFO_DRAWER, MILLIS, SECOND, SLOGAN }    from '@Core/constants'
 import { faArrowsRotate, faMountains }            from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon }                        from '@fortawesome/react-fontawesome'
 import { SlButton, SlCheckbox, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                  from '@Utils/FA2SL.js'
+import { UIToast }                                from '@Utils/UIToast'
 import { useEffect, useRef, useState }            from 'react'
 import { default as ReactMarkdown }               from 'react-markdown'
 import { useSnapshot }                            from 'valtio'
 import welcomeBack                                from '../../../src/assets/modals/welcome-back.md'
 import welcome                                    from '../../../src/assets/modals/welcome.md'
-import { MILLIS }                                 from '../../core/constants'
 import { StudioLogo }                             from './StudioLogo'
 
 
@@ -51,6 +51,10 @@ export const WelcomeModal = () => {
 
     const setShowModal = () => {
         lgs.settings.ui.welcome.showIntro = false
+        UIToast.notify({
+                           caption: `The introduction will be hidden next time!`,
+                           text:    `This can be changed later in the settings menu.`,
+                       }, 5 * SECOND)
     }
 
     const TheText = () => {

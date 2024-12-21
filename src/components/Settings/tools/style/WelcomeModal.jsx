@@ -9,6 +9,7 @@ export const WelcomeModal = (props) => {
             return event.target.checked
         }
     }
+    lgs.editorSettingsProxy.welcome.autoClose = lgs.settings.ui.welcome.autoClose
 
     return (
         <>
