@@ -12,6 +12,12 @@
     font-size: var(--lgs-font-size-m)
 }
 
+#style-settings {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
 #ui-camera-settings {
     flex-direction: column;
 }

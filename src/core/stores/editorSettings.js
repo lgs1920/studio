@@ -19,4 +19,8 @@ export const editorSettings = {
         test:  true,
     },
 
+    welcome: {
+        autoClose: null,
+    },
+
 }

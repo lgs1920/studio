@@ -49,8 +49,8 @@ export const WelcomeModal = () => {
         lgs.mainUIStore.journeyLoader.visible = true
     }
 
-    const setShowModal = (event) => {
-        lgs.settings.ui.welcome.showIntro = !lgs.settings.ui.welcome.showIntro
+    const setShowModal = () => {
+        lgs.settings.ui.welcome.showIntro = false
     }
 
     const TheText = () => {
@@ -62,35 +62,35 @@ export const WelcomeModal = () => {
     }
 
     useEffect(() => {
-        const checkbox = document.getElementById('do-not-show')
-        if (checkbox) {
-            checkbox.addEventListener('sl-change', setShowModal)
-        }
-    }, [])
-
-    useEffect(() => {
         // CountDown and Auto closure
-        if (lgs.settings.ui.welcome.autoClose) {
+        if (welcomeModal && lgs.settings.ui.welcome.showIntro && lgs.settings.ui.welcome.autoClose) {
             const timer = setInterval(() => {
                 setClosure(prevClosure => {
                     if (prevClosure > 0) {
                         return --prevClosure
                     }
                     else {
-                        welcomeModal.current.hide()
-                        clearInterval(timer)
+                        if (welcomeModal.current) {
+                            welcomeModal.current.hide()
+                        }
+                        if (timer) {
+                            clearInterval(timer)
+                        }
                         return 0
                     }
                 })
             }, MILLIS)
         }
-        return () => clearInterval(timer)
+        return () => {
+            clearInterval(timer)
+            closure = 0
+        }
     }, [])
 
 
     return (
         <>
-            {lgs.settings.ui.welcome.showIntro &&
+            {lgs.settings.ui.welcome.showIntro && closure > 0 &&
                 <SlDialog open={open}
                           no-header
                           id={'welcome-modal'}
@@ -107,7 +107,8 @@ export const WelcomeModal = () => {
                     <div slot="footer">
                         <div id={'footer'}>
 
-                            <SlCheckbox id={'faArrowsRotate'} size={'small'}>Don't show this intro anymore</SlCheckbox>
+                            <SlCheckbox id={'faArrowsRotate'} size={'small'}
+                                        onSlChange={setShowModal}>Don't show this intro anymore</SlCheckbox>
 
                             <div className="buttons-bar">
                                 {lgs.settings.getApp.changelogToRead &&

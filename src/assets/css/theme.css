@@ -371,8 +371,30 @@ sl-details::part(content) {
 }
 
 /*******************************************************************************
+ * Form elements
+ ******************************************************************************/
+sl-input[align-right]::part(form-control) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lgs-gutter-s);
+    align-items: center;
+}
+
+sl-input[align-right]::part(form-control-input) {
+    margin-left: auto;
+}
+
+sl-input[align-right]::part(form-control-help-text) {
+    flex-basis: 100%;
+    font-size: var(--sl-input-help-text-font-size-small);
+}
+
+sl-input[small]::part(input) {
+    width: 5rem;
+}
+/*******************************************************************************
  * Switches
- */
+ ******************************************************************************/
 sl-switch[align-right]::part(base) {
     display: flex;
     gap: var(--sl-spacing-3x-small) var(--gap-width);
