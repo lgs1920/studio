@@ -3,12 +3,12 @@ import { FullScreenButton }                 from '@Components/FullScreenButton/F
 import { Toolbar }                          from '@Components/MainUI/Toolbar'
 import { Profile }                          from '@Components/Profile/Profile'
 import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
+import { SCENE_MODE_2D }                    from '@Core/constants'
+import { CanvasEvents }                     from '@Core/events/CanvasEvents.js'
 import { useEffect }                        from 'react'
 
 import './style.css'
 import { subscribe, useSnapshot }           from 'valtio'
-import { SCENE_MODE_2D } from '@Core/constants'
-import { CanvasEvents }  from '@Core/events/CanvasEvents.js'
 import { CameraAndTargetPanel }             from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
 import { JourneyLoaderUI }                  from '../FileLoader/JourneyLoaderUI'
 import { Panel as InformationPanel }        from '../InformationPanel/Panel'
@@ -20,6 +20,7 @@ import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
 
 
 import { Utils }             from '../TracksEditor/Utils.js'
+import { CallForActions }    from './CallForActions'
 import { CameraTarget }      from './CameraTarget'
 import { CreditsBar }        from './credits/CreditsBar'
 import { FocusButton }       from './FocusButton'
@@ -28,7 +29,6 @@ import { SupportUI }         from './SupportUI'
 import { SupportUIButton }   from './SupportUIButton'
 
 export const MainUI = () => {
-
     const snap = useSnapshot(lgs.mainProxy)
 
     useEffect(() => {
@@ -40,6 +40,7 @@ export const MainUI = () => {
         // CanvasEvents.addListeners()
 
     }, [])
+
 
     // We need to interact with  Editor
     subscribe(lgs.mainProxy.drawers, () => {
@@ -55,39 +56,52 @@ export const MainUI = () => {
     return (
         <>
             <div id="lgs-main-ui">
-                <div id={'top-left-ui'}>
-                    <SettingsButton tooltip={'right'}/>
-                    <LayersButton tooltip={'right'}/>
-                    {snap.theJourney && <FocusButton tooltip={'right'}/>}
-
-                    <Toolbar editor={true}
-                             profile={true}
-                             fileLoader={true}
-                             position={'vertical'}
-                             tooltip={'right'}/>
-                    <InformationButton/>
-                    <SupportUIButton/>
-                    <FullScreenButton/>
-
-                </div>
-
-                    <div id={'bottom-left-ui'}>
-                        {
-                            lgs.platform !== 'production' &&
-                            <div id="used-platform"
-                                 className={'lgs-card on-map'}> [{lgs.platform}-{lgs.versions.studio}]
-                            </div>
+                {snap.components.welcome.hidden &&
+                    <>
+                        {snap.components.welcome.hidden &&
+                            <CallForActions/>
                         }
-                    </div>
 
-                    <div id={'bottom-right-ui'}>
-                        <CreditsBar/>
-                    </div>
+                        <div id={'top-left-ui'}>
+                            <SettingsButton tooltip={'right'}/>
+                            <LayersButton tooltip={'right'}/>
+                            {snap.theJourney && <FocusButton tooltip={'right'}/>}
 
-                <div id={'top-right-ui'}>
-                    <CompassUI scene={lgs.scene}/>
-                    <SceneModeSelector tooltip={'left'}/>
+                            <Toolbar editor={true}
+                                     profile={true}
+                                     fileLoader={true}
+                                     position={'vertical'}
+                                     tooltip={'right'}/>
+                            <InformationButton/>
+                            <SupportUIButton/>
+                            <FullScreenButton/>
+
+                        </div>
+                    </>
+                }
+
+                <div id={'bottom-left-ui'}>
+                    {
+                        lgs.platform !== 'production' &&
+                        <div id="used-platform"
+                             className={'lgs-card on-map'}> [{lgs.platform}-{lgs.versions.studio}]
+                        </div>
+                    }
                 </div>
+
+                <div id={'bottom-right-ui'}>
+                    <CreditsBar/>
+                </div>
+
+                {snap.components.welcome.hidden &&
+                    <>
+                        <div id={'top-right-ui'}>
+                            <CompassUI scene={lgs.scene}/>
+                            <SceneModeSelector tooltip={'left'}/>
+                        </div>
+                        <CameraTarget/>
+                    </>
+                }
 
                 {/* <FloatingMenu/> */}
 
@@ -97,8 +111,6 @@ export const MainUI = () => {
                 <LayersPanel/>
                 <TracksEditor/>
                 <CameraAndTargetPanel/>
-
-                <CameraTarget/>
             </div>
             <SupportUIDialog/>
             <JourneyLoaderUI multiple/>

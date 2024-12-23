@@ -1,16 +1,8 @@
-import { faRegularRouteCirclePlus }               from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import { INFO_DRAWER, MILLIS, SECOND, SLOGAN }    from '@Core/constants'
-import { faArrowsRotate, faMountains }            from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon }                        from '@fortawesome/react-fontawesome'
-import { SlButton, SlCheckbox, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                  from '@Utils/FA2SL.js'
-import { UIToast }                                from '@Utils/UIToast'
-import { useEffect, useRef, useState }            from 'react'
-import { default as ReactMarkdown }               from 'react-markdown'
-import { useSnapshot }                            from 'valtio'
-import welcomeBack                                from '../../../src/assets/modals/welcome-back.md'
-import welcome                                    from '../../../src/assets/modals/welcome.md'
-import { StudioLogo }                             from './StudioLogo'
+import { INFO_DRAWER, MILLIS, SECOND, SLOGAN } from '@Core/constants'
+import { SlButton, SlCheckbox, SlDialog }      from '@shoelace-style/shoelace/dist/react'
+import { UIToast }                             from '@Utils/UIToast'
+import { useEffect, useRef, useState }         from 'react'
+import { StudioLogo }                          from './StudioLogo'
 
 
 export const WelcomeModal = () => {
@@ -18,7 +10,8 @@ export const WelcomeModal = () => {
     const [show, setShow] = useState(false)
     const welcomeModal = useRef(null)
     const infoPanel = lgs.mainProxy.components.informationPanel
-    const main = useSnapshot(lgs.mainProxy)
+    const main = lgs.mainProxy
+
     const [closure, setClosure] = useState(lgs.settings.ui.welcome.displayTime)
 
     const close = (event) => {
@@ -27,12 +20,15 @@ export const WelcomeModal = () => {
             lgs.mainUIStore.show = true
         }
         lgs.settings.app.firstVisit = false
+        main.components.welcome.hidden = true
     }
 
     const hide = () => {
         document.activeElement?.blur() // Remove focus on children
         setOpen(false)
         lgs.mainUIStore.show = true
+        main.components.welcome.hidden = true
+        main.components.welcome.flag = true
     }
 
     function showNews() {
@@ -51,21 +47,16 @@ export const WelcomeModal = () => {
 
     const setShowModal = () => {
         lgs.settings.ui.welcome.showIntro = false
+        hide()
         UIToast.notify({
                            caption: `The introduction will be hidden next time!`,
                            text:    `This can be changed later in the settings menu.`,
                        }, 5 * SECOND)
     }
 
-    const TheText = () => {
-        if (lgs.settings.app.firstVisit) {
-            lgs.settings.app.firstVisit = false
-            return (<ReactMarkdown children={welcome}/>)
-        }
-        return (<ReactMarkdown children={welcomeBack}/>)
-    }
-
     useEffect(() => {
+        main.components.welcome.modal = false
+
         // CountDown and Auto closure
         if (welcomeModal && lgs.settings.ui.welcome.showIntro && lgs.settings.ui.welcome.autoClose) {
             const timer = setInterval(() => {
@@ -76,21 +67,43 @@ export const WelcomeModal = () => {
                     else {
                         if (welcomeModal.current) {
                             welcomeModal.current.hide()
+                            hide()
                         }
                         if (timer) {
                             clearInterval(timer)
+                            hide()
                         }
                         return 0
                     }
                 })
             }, MILLIS)
         }
+        else {
+            main.components.welcome.hidden = true
+        }
         return () => {
-            clearInterval(timer)
-            closure = 0
+            if (timer) {
+                hide()
+                clearInterval(timer)
+            }
+            setClosure(0)
         }
     }, [])
 
+    const Links = () => {
+        return (
+            <div id="welcome-links">
+                <div id="welcome-links-do-not-show">
+                    <SlCheckbox size={'small'} onSlChange={setShowModal}
+                    >{'Don\'t show this anymore'}</SlCheckbox>
+                </div>
+                {lgs.settings.getApp.changelogToRead &&
+                    <SlButton onClick={showNews} variant="text">{'What\'s new ?'}</SlButton>
+                }
+
+            </div>
+        )
+    }
 
     return (
         <>
@@ -101,50 +114,12 @@ export const WelcomeModal = () => {
                           className={'lgs-theme'}
                           onSlRequestClose={close}
                           onSlAfterHide={hide}
-                          ref={welcomeModal}>
+                          ref={welcomeModal}
+                          onClick={hide}>
 
                     <StudioLogo width={'100%'} version={true} timer={closure} slogan={SLOGAN}
-                                addClassName={'welcome-logo'}/>
+                                addClassName={'welcome-logo'} buttons={<Links/>}/>
 
-                    <TheText/>
-
-                    <div slot="footer">
-                        <div id={'footer'}>
-
-                            <SlCheckbox id={'faArrowsRotate'} size={'small'}
-                                        onSlChange={setShowModal}>Don't show this intro anymore</SlCheckbox>
-
-                            <div className="buttons-bar">
-                                {lgs.settings.getApp.changelogToRead &&
-                                    <SlButton onClick={showNews} variant="text">{'What\'s new ?'}</SlButton>
-                                }
-                                {main.readyForTheShow &&
-                                    <>
-                                        {main.theJourney &&
-                                            <SlButton variant="primary" onClick={enter}>
-                                                <SlIcon slot="prefix" library="fa"
-                                                        name={FA2SL.set(faMountains)}>
-                                                </SlIcon>
-                                                {'Enter'}
-                                            </SlButton>
-                                        }
-                                        {!main.theJourney &&
-                                            <SlButton variant="primary" onClick={loadJourney}>
-                                                <SlIcon slot="prefix" library="fa"
-                                                        name={FA2SL.set(faRegularRouteCirclePlus)}></SlIcon>{'Load your first Journey'}
-                                            </SlButton>
-                                        }
-                                    </>
-                                }
-                                {!main.readyForTheShow &&
-                                    <div id="waiting-loading">
-                                        <FontAwesomeIcon icon={faArrowsRotate} className={'fa-spin'}/>{'Loading...'}
-                                    </div>
-                                }
-
-                            </div>
-                        </div>
-                    </div>
                 </SlDialog>
             }
         </>

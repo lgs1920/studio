@@ -81,6 +81,11 @@ export const main = {
 
         informationPanel:{
             tab:null
+        },
+
+        welcome: {
+            modal: false,
+            flag:  false,
         }
 
 

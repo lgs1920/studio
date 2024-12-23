@@ -29,6 +29,32 @@ body {
     display: none;
 }
 
+/** POI on MAP **/
+.poi-on-map {
+    color: white;
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    font-size: var(--lgs-font-size);
+    font-weight: normal;
+    border-left: 1px solid white;
+    padding-left: var(--lgs-gutter);
+    padding-bottom: calc(5 * var(--lgs-gutter));
+    margin-bottom: var(--lgs-gutter-xs);
+    text-shadow: 0px 0px 8px rgba(0, 0, 0, 0.50);
+    opacity: 1;
+    transition: all 0.5s;
+}
+
+.poi-on-map h3 {
+    font-weight: bold;
+    font-size: calc(1.5 * var(--lgs-font-size));
+}
+
+.poi-on-map .poi-coordinates {
+    line-height: 1.2;
+}
+
 /**
  * Toast
  */
@@ -103,7 +129,7 @@ sl-progress-bar {
 
 .main-logo {
     position: relative;
-    --padding: calc(8 * var(--lgs-gutter));
+    --padding: calc(6 * var(--lgs-gutter));
     padding: var(--padding);
     background: var(--lgs-direction-panel-bg-color);
     border-color: var(--lgs-direction-panel-border-color);
@@ -138,21 +164,28 @@ main-logo.xlarge {
     height: auto;
 }
 
+.main-logo .the-slogan {
+    color: var(--lgs-slogan-color);
+    font-family: var(--lgs-slogan-font-family);
+    font-size: var(--lgs-slogan-font-size);
+    transform: rotate(-10deg) skew(-18deg);
+    margin-top: calc(2 * var(--lgs-gutter));
+}
 .main-logo .version-info, .main-logo .welcome-modal-timer {
     display: flex;
+    gap: var(--lgs-gutter-xs);
     align-items: center;
-    position: absolute;
-    left: var(--lgs-gutter-xs);
-    bottom: var(--lgs-gutter-xs);
-    font-size: var(--lgs-font-size-xs);
+    font-size: var(--lgs-font-size-s);
     line-height: 1;
 }
 
 .main-logo .welcome-modal-timer {
+    position: absolute;
     align-items: self-end;
     left: unset;
-    right: var(--lgs-gutter-xs);
-    font-size: var(--lgs-font-size-xs);
+    top: var(--lgs-gutter-s);
+    right: var(--lgs-gutter-s);
+    font-size: var(--lgs-font-size-s);
 }
 
 #camera-target {

@@ -61,6 +61,7 @@ starter:
     latitude: 45.34623
     height: 4300
     canRotate: true
+    duration: 90  # of a rotation in seconds
 
 ########################################
 # Initial Camera Settings
@@ -69,7 +70,7 @@ camera:
   heading: 0
   pitch: -45
   roll: 0
-  range: 3000
+  range: 5000
   orbitalPercentageChanged: 0.05
   percentageChanged: 0.02
   maximumHeight: 10000
@@ -199,6 +200,7 @@ layers:
 
           type: terrain
           terrainType: 'ellipsoid'
+          noRelief: true
 
     ## IGN Provider
     - id: ign                           # Provider ID
@@ -672,4 +674,4 @@ ui:
   welcome:
     showIntro: true
     autoClose: true
-    displayTime: 15   #seconds
+    displayTime: 8   #seconds

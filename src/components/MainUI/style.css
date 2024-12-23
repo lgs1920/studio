@@ -146,14 +146,16 @@ html {
  * https://hype4.academy/tools/glassmorphism-generator
  */
 #welcome-modal::part(panel) {
+    --body-spacing: 0;
     /*background: rgba( 255, 255, 255, 0.15 );*/
     /*background-image: linear-gradient(to right, rgba(255,188,0,0.30), rgba(255,114,15,0.30));*/
-    /*box-shadow: var(--sl-shadow-x-large);*/
+    box-shadow: var(--sl-shadow-x-large);
     /*backdrop-filter: blur( 4px );*/
     /*-webkit-backdrop-filter: blur( 4px );*/
     /*border-radius: 10px;*/
     /*border: 1px solid rgba( 255, 255, 255, 0.18 );*/
-   /* color:#fff*/
+    color: black;
+    cursor: pointer
 }
 
 #welcome-modal #footer{
@@ -165,25 +167,75 @@ html {
     width: 100%;
 }
 
-#welcome-modal .buttons-bar {
-    display: flex;
-    justify-content: space-between;
-}
-
 #welcome-modal .welcome-logo {
     display: flex;
     justify-content: center;
     flex-direction: column;
     gap: var(--lgs-gutter);
-
     box-shadow: var(--sl-shadow-medium);
 }
 
+#welcome-links {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter);
+    bottom: 0;
+    left: var(--lgs-gutter-s);
+    width: calc(100% - 2 * var(--lgs-gutter-s));
+}
+
+#welcome-links sl-button {
+    margin-left: auto;
+}
+
+#welcome-links sl-button::part(base) {
+    color: black;
+    font-weight: normal;
+}
+
+#welcome-links-do-not-show {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+
+#welcome-links-do-not-show sl-checkbox::part(base) {
+    color: black
+}
+
+#welcome-links-do-not-show sl-checkbox::part(control) {
+    color: black;
+    background: transparent;
+    border: 1px solid black;
+}
 #waiting-loading {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: var(--lgs-gutter-s);
+}
+
+/*******************************************************************************
+ * Main CFA
+ */
+
+.call-for-actions {
+    display: flex;
+    gap: var(--lgs-gutter);
+    pointer-events: auto;
+    position: absolute;
+    top: 75vh;
+    justify-content: center;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.call-for-actions [outline]::part(base), .call-for-actions [outline]::part(label) {
+    color: white;
+    border-color: white;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(3px);
 }
 
 /*******************************************************************************

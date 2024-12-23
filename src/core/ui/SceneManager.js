@@ -1,8 +1,9 @@
 import {
-    FLAT_TERRAINS, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
-}                     from '@Core/constants'
-import { SceneUtils } from '@Utils/cesium/SceneUtils'
-import { UIToast }    from '@Utils/UIToast'
+    NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
+}                                  from '@Core/constants'
+import { SceneUtils }              from '@Utils/cesium/SceneUtils'
+import { UIToast }                 from '@Utils/UIToast'
+import { LayersAndTerrainManager } from './LayerAndTerrainManager'
 
 export class SceneManager {
     constructor() {
@@ -88,8 +89,10 @@ export class SceneManager {
     test = (sceneMode) => console.log('morph', sceneMode)
 
     noRelief = () => {
+        const manager = new LayersAndTerrainManager()
+        const terrain = manager.getEntityProxy(lgs.settings.layers.terrain)
         return lgs.settings.scene.mode.value * 1 === SCENE_MODE_2D.value
-            || FLAT_TERRAINS.includes(lgs.settings.layers.terrain)
+            || (terrain?.noRelief ?? false)
     }
 
     notifyMorph = () => {

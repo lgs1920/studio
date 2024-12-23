@@ -1,10 +1,11 @@
-import { Cartesian3, Math as M } from 'cesium'
-import { snapshot }              from 'valtio'
-import { deepClone }             from 'valtio/utils'
-
-import { CameraUtils }    from '@Utils/cesium/CameraUtils.js'
 import { JOURNEYS_STORE } from '@Core/constants'
-import { Journey }        from '../Journey'
+
+import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
+import { Cartesian3 }  from 'cesium'
+import { snapshot }    from 'valtio'
+import { deepClone }   from 'valtio/utils'
+import { SECOND }      from '../constants'
+import { Journey }     from '../Journey'
 
 export class CameraManager {
     static CLOCKWISE = true
@@ -115,7 +116,7 @@ export class CameraManager {
         this.updatePositionInformation()
     }
 
-    runOrbital = async ({target = lgs.configuration.starter, divider = 360}) => {
+    runOrbital = async ({target = lgs.configuration.starter, divider = lgs.settings.starter.camera.steps}) => {
 
         // Bail early if there is a rotation already in action
         if (this.move.type === CameraManager.ORBITAL) {
@@ -156,7 +157,8 @@ export class CameraManager {
         }
 
         // TODO hpr as parameter
-        //const hpr = new HeadingPitchRange(M.toRadians(this.position.heading), M.toRadians(this.position.pitch), M.toRadians(this.position.range))
+        //const hpr = new HeadingPitchRange(M.toRadians(this.position.heading), M.toRadians(this.position.pitch),
+        // M.toRadians(this.position.range))
 
         // Set move event
         lgs.camera.percentageChanged = lgs.settings.getCamera.orbitalPercentageChanged
@@ -165,21 +167,22 @@ export class CameraManager {
         CameraUtils.lookAt(lgs.camera, Cartesian3.fromDegrees(target.longitude, target.latitude, target.height))
 
         // Run orbital moves
-        const step = (lgs.camera.clockwise) ? M.PI / divider : -M.PI / divider
-
+        const duration = lgs.settings.starter.camera.duration * SECOND
+        const startTime = Date.now()
         this.move = {
             type:         CameraManager.ORBITAL,
             releaseEvent: lgs.viewer.clock.onTick.addEventListener(() => {
-                try {
-                    if (!this.orbitalInPause && !__.ui.sceneManager.is2D) {
-                        lgs.camera.rotateLeft(step)
-                    }
-                }
-                catch (error) {
-                    console.error(error)
-                }
-
-            }),
+                                                                       try {
+                                                                           if (!this.orbitalInPause && !__.ui.sceneManager.is2D) {
+                                                                               lgs.camera.rotateLeft((2 * Math.PI) / (duration / 30))
+                                                                           }
+                                                                       }
+                                                                       catch
+                                                                           (error) {
+                                                                           console.error(error)
+                                                                       }
+                                                                   },
+            ),
         }
 
     }
@@ -283,7 +286,6 @@ export class CameraManager {
             },
         }
     }
-
 
 }
 

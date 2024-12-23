@@ -1,8 +1,8 @@
+import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
+import { LayersAndTerrainManager }                     from '@Core/ui/LayerAndTerrainManager'
 import { SlTooltip }                                   from '@shoelace-style/shoelace/dist/react'
 import { proxy, useSnapshot }                          from 'valtio'
 import { subscribeKey }                                from 'valtio/utils'
-import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
-import { LayersAndTerrainManager }                     from '@Core/layers/LayerAndTerrainManager'
 import './style.css'
 /*
 

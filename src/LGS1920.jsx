@@ -1,12 +1,14 @@
-import { MapLayer }                    from '@Components/cesium/MapLayer'
-import { Viewer }                      from '@Components/cesium/Viewer'
+import { MapLayer } from '@Components/cesium/MapLayer'
+import { Viewer }   from '@Components/cesium/Viewer'
+
 import { InitErrorMessage }            from '@Components/InitErrorMessage'
+import { FlagLGS }                     from '@Components/MainUI/FlagLGS'
 import { MainUI }                      from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
 import { WelcomeModal }                from '@Components/MainUI/WelcomeModal'
 import { BASE_ENTITY, OVERLAY_ENTITY } from '@Core/constants'
-import { LayersAndTerrainManager }     from '@Core/layers/LayerAndTerrainManager'
 import { LGS1920Context }              from '@Core/LGS1920Context'
+import { LayersAndTerrainManager }     from '@Core/ui/LayerAndTerrainManager'
 import { TerrainUtils }                from '@Utils/cesium/TerrainUtils'
 import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
 import { UIToast }                     from '@Utils/UIToast'
@@ -97,8 +99,7 @@ export function LGS1920() {
 
                     <Viewer/>
                     <MainUI/>
-                    {/* */}
-
+                    <FlagLGS/>
                 </>
 
             }

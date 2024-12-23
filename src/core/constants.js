@@ -119,8 +119,6 @@ export const TERRAIN_FROM_CESIUM = 'cesium'
 export const TERRAIN_FROM_CESIUM_ELLIPSOID = 'ellipsoid'
 export const TERRAIN_FROM_URL = 'url'
 
-export const FLAT_TERRAINS = [TERRAIN_FROM_CESIUM_ELLIPSOID]
-
 export const ACCESS_ICONS = {
     [FREEMIUM_ACCESS]:       {
         icon: faCrown,
