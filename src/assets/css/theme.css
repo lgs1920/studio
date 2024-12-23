@@ -416,6 +416,9 @@ sl-switch[align-right]::part(control) {
 :root {
     --lgs-freemium-color: dodgerblue;
     --lgs-premium-color: goldenrod;
+    --lgs-animation-duration: 1s;
+    --lgs-animation-delay: 0s;
+
 }
 
 h1, h2, h3, p, ul, li {

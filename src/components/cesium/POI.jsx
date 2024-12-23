@@ -31,7 +31,8 @@ export const POI = ({point}) => {
 
     return (
 
-        <div className={'poi-on-map'} style={{bottom: `${window.innerHeight - pixels.y}px`, left: `${pixels.x}px`}}>
+        <div className={'poi-on-map slide-in-from-top-bounced'}
+             style={{bottom: `${window.innerHeight - pixels.y}px`, left: `${pixels.x}px`}}>
             <h3>{point.title}</h3>
             <div className="poi-coordinates">
                 <TextValueUI text={'Elevation: '} value={point.elevation} format={'%d'} units={ELEVATION_UNITS}/>

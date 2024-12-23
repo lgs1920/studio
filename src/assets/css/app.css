@@ -43,7 +43,7 @@ body {
     margin-bottom: var(--lgs-gutter-xs);
     text-shadow: 0px 0px 8px rgba(0, 0, 0, 0.50);
     opacity: 1;
-    transition: all 0.5s;
+    --lgs-animation-duration: 2s;
 }
 
 .poi-on-map h3 {
@@ -107,25 +107,6 @@ sl-progress-bar {
     display: none !important;
 }
 
-/**
- * Animations
- */
-
-.snapshot-in-progress {
-    animation: flashBackground 1s infinite;
-}
-
-@keyframes flashBackground {
-    0% {
-        background-color: white;
-    }
-    50% {
-        background-color: var(--lgs-direction-panel-bg-color);
-    }
-    100% {
-        background-color: white;
-    }
-}
 
 .main-logo {
     position: relative;
@@ -171,6 +152,7 @@ main-logo.xlarge {
     transform: rotate(-10deg) skew(-18deg);
     margin-top: calc(2 * var(--lgs-gutter));
 }
+
 .main-logo .version-info, .main-logo .welcome-modal-timer {
     display: flex;
     gap: var(--lgs-gutter-xs);
@@ -218,4 +200,116 @@ main-logo.xlarge {
     left: var(--left);
 
     max-width: var(--lgs-horizontal-panel-width);
+}
+
+/*******************************************************************************
+ * Animation
+ */
+
+/** Slide In From Left **/
+@keyframes slideInFromLeft {
+    0% {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.slide-in-from-left {
+    animation: slideInFromLeft var(--lgs-animation-duration) ease-out var(--lgs-animation-delay);
+}
+
+/** Slide In From  Right **/
+
+@keyframes slideInFromRight {
+    0% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.slide-in-from-right {
+    animation: slideInFromRight var(--lgs-animation-duration) ease-out var(--lgs-animation-delay);
+}
+
+/** Slide In From Top **/
+
+@keyframes slideInFromTop {
+    0% {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.slide-in-from-top {
+    animation: slideInFromTop var(--lgs-animation-duration) ease-out var(--lgs-animation-delay);
+}
+
+/** Slide In From Top Bounced **/
+
+@keyframes slideInFromTopBounced {
+    0% {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    80% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    90% {
+        transform: translateY(-10%);
+    }
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.slide-in-from-top-bounced {
+    animation: slideInFromTopBounced var(--lgs-animation-duration) ease-out var(--lgs-animation-delay);
+}
+
+/** Slide In From Bottom **/
+
+@keyframes slideInFromBottom {
+    0% {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.slide-in-from-bottom {
+    animation: slideInFromBottom 1s ease-out;
+}
+
+/** Flash Background **/
+
+@keyframes flashBackground {
+    0% {
+        background-color: white;
+    }
+    50% {
+        background-color: var(--lgs-direction-panel-bg-color);
+    }
+    100% {
+        background-color: white;
+    }
+}
+
+.snapshot-in-progress {
+    animation: flashBackground 1s infinite;
 }

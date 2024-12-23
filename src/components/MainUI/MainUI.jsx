@@ -61,8 +61,7 @@ export const MainUI = () => {
                         {snap.components.welcome.hidden &&
                             <CallForActions/>
                         }
-
-                        <div id={'top-left-ui'}>
+                        <div id={'top-left-ui'} className="slide-in-from-left">
                             <SettingsButton tooltip={'right'}/>
                             <LayersButton tooltip={'right'}/>
                             {snap.theJourney && <FocusButton tooltip={'right'}/>}
@@ -75,7 +74,6 @@ export const MainUI = () => {
                             <InformationButton/>
                             <SupportUIButton/>
                             <FullScreenButton/>
-
                         </div>
                     </>
                 }
@@ -95,7 +93,7 @@ export const MainUI = () => {
 
                 {snap.components.welcome.hidden &&
                     <>
-                        <div id={'top-right-ui'}>
+                        <div id={'top-right-ui'} className="slide-in-from-right">
                             <CompassUI scene={lgs.scene}/>
                             <SceneModeSelector tooltip={'left'}/>
                         </div>

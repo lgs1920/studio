@@ -33,21 +33,24 @@ export const CallForActions = (props) => {
     return (
         <>
             {main.readyForTheShow && !main.theJourney &&
-                <div className="call-for-actions" ref={cfa}>
-                    <SlButton onClick={hide} href={__.app.buildUrl(lgs.configuration.website)} target="_blank" outline>
-                        <SlIcon slot="prefix" library="fa"
-                                name={FA2SL.set(faGlobePointer)}/>
-                        {'Visit Our Site'}
-                    </SlButton>
+                <div className="call-for-actions slide-in-from-bottom" ref={cfa}>
+                    <div className="buttons-bar">
+                        <SlButton onClick={hide} href={__.app.buildUrl(lgs.configuration.website)}
+                                  target="_blank"
+                                  outline>
+                            <SlIcon slot="prefix" library="fa"
+                                    name={FA2SL.set(faGlobePointer)}/>
+                            {'Visit Our Site'}
+                        </SlButton>
 
 
-                    <SlButton variant="primary" onClick={loadJourney}>
-                        <SlIcon slot="prefix" library="fa"
-                                name={FA2SL.set(faRegularRouteCirclePlus)}/>
-                        <span>Load your first Journey</span>
+                        <SlButton variant="primary" onClick={loadJourney}>
+                            <SlIcon slot="prefix" library="fa"
+                                    name={FA2SL.set(faRegularRouteCirclePlus)}/>
+                            <span>Load your first Journey</span>
 
-                    </SlButton>
-
+                        </SlButton>
+                    </div>
                 </div>
             }
         </>

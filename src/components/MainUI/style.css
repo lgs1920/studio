@@ -46,7 +46,7 @@ html {
     top: var(--top);
     right: var(--right);
     width: var(--width);
-    margin-right:var(--top-right-ui-right-margin)
+    margin-right: var(--top-right-ui-right-margin);
 }
 
 #bottom-ui {
@@ -221,14 +221,17 @@ html {
  */
 
 .call-for-actions {
-    display: flex;
-    gap: var(--lgs-gutter);
+    position: relative;
     pointer-events: auto;
-    position: absolute;
     top: 75vh;
-    justify-content: center;
-    left: 50%;
-    transform: translateX(-50%);
+    left: calc(50% - 10rem);
+    width: 20rem;
+
+}
+
+.call-for-actions .buttons-bar {
+    display: flex;
+    gap: var(--lgs-gutter) !important;
 }
 
 .call-for-actions [outline]::part(base), .call-for-actions [outline]::part(label) {
