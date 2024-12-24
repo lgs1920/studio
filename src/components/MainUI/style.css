@@ -11,6 +11,7 @@ html {
     left: 0;
     width: 100vw;
     pointer-events: none;
+    z-index: var(--lgs-ui-layer-zindex);
 }
 
 #lgs-main-ui > div {
@@ -20,7 +21,6 @@ html {
     --left: var(--lgs-gutter-s);
     --bottom: var(--lgs-gutter-s);
     --right: var(--lgs-gutter-s);
-    z-index: var(--lgs-ui-layer-zindex);
 }
 
 #top-left-ui {

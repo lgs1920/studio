@@ -102,13 +102,12 @@ export const MainUI = () => {
                 }
 
                 {/* <FloatingMenu/> */}
-
+                <CameraAndTargetPanel/>
                 <Profile/>
                 <InformationPanel/>
                 <SettingsPanel/>
                 <LayersPanel/>
                 <TracksEditor/>
-                <CameraAndTargetPanel/>
             </div>
             <SupportUIDialog/>
             <JourneyLoaderUI multiple/>
