@@ -27,9 +27,21 @@ export const Style = () => {
                        className={'lgs-theme'}
                        onSlHide={checkClose}
             >
-                <WelcomeModal onClose={checkClose}/>
+                <WelcomeModal/>
+
             </SlDetails>
-            <CameraSettings onClose={checkClose}/>
+
+            <SlDetails id={'ui-camera-settings'}
+                       small open={false}
+                       className={'lgs-theme'}
+                       onSlHide={checkClose}
+            >
+                <CameraSettings/>
+            </SlDetails>
+
+
+
+
         </div>
 
     )

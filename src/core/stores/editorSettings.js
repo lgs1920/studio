@@ -21,6 +21,11 @@ export const editorSettings = {
 
     welcome: {
         autoClose: null,
+        showIntro: null,
+    },
+
+    camera: {
+        showTargetPosition: null,
     },
 
 }
