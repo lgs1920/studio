@@ -4,6 +4,7 @@ import './assets/css/light.css'
 import { createRoot } from 'react-dom/client'
 import { LGS1920 }    from './LGS1920.jsx'
 import './assets/css/app.css'
+import './assets/css/animations.css'
 
 /**
  * Let's go
