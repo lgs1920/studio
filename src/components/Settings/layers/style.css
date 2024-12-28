@@ -305,3 +305,15 @@
     margin-left: auto;
     margin-top: var(--lgs-gutter-s);
 }
+
+/*******************************************************************************
+ * Imagery Settings
+ */
+
+#layer-settings {
+    display: flex;
+    flex-direction: column;
+    margin-top: var(--lgs-gutter-s);
+    --lgs-animation-duration-on: 0.6s;
+
+}

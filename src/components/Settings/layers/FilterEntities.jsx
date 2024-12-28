@@ -12,7 +12,6 @@ export const FilterEntities = (props) => {
     const layers = lgs.settings.layers
     const layersSnap = useSnapshot(layers)
 
-
     const handleUsage = (event) => {
         layers.filter.byUsage = event.target.value
         if (layers.filter.byUsage === ALL && layers.filter.byName === '') {
@@ -48,7 +47,7 @@ export const FilterEntities = (props) => {
         <>
             {
                 snap.openFilter &&
-                <div id={'filter-entities'} key={'filter-entities'}>
+                <div id={'filter-entities'} key={'filter-entities'} className="lgs-slide-down">
                     <SlTooltip content={'By Layer Usage'}>
                         <SlRadioGroup name="a"
                                       onSlChange={handleUsage}

@@ -1,14 +1,16 @@
-import { ALL, FREE_ANONYMOUS_ACCESS, UNLOCKED } from '@Core/constants'
+import { faRegularSlidersSlash }                                                             from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import { ALL, BASE_ENTITY, FREE_ANONYMOUS_ACCESS, OVERLAY_ENTITY, TERRAIN_ENTITY, UNLOCKED } from '@Core/constants'
 import {
     faArrowDownAZ, faArrowDownBigSmall, faArrowDownWideShort, faArrowDownZA, faFilter, faFilterSlash, faGrid2, faList,
-}                                               from '@fortawesome/pro-regular-svg-icons'
+    faSliders,
+}                                                                                            from '@fortawesome/pro-regular-svg-icons'
 
 import { SlIconButton, SlTab, SlTabGroup, SlTabPanel, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                  from '@Utils/FA2SL'
 import { useSnapshot }                                            from 'valtio'
-import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
-import { FA2SL }                                       from '@Utils/FA2SL'
 import { ToggleStateIcon }                                        from '../../ToggleStateIcon'
 import { FilterEntities }                                         from './FilterEntities'
+import { LayerSettings }                                          from './LayerSettings'
 import { SelectEntity }                                           from './SelectEntity'
 import { TokenLayerModal }                                        from './TokenLayerModal'
 
@@ -21,6 +23,11 @@ export const LayersAndTerrains = () => {
     const layersSnap = useSnapshot(layers)
 
     const handleFilter = () => editor.openFilter = !editor.openFilter
+    const handleSettings = () => {
+        editor.openSettings = !editor.openSettings
+        editor.settingsChanged = false
+    }
+
 
     /**
      * Build  entities list.
@@ -116,14 +123,25 @@ export const LayersAndTerrains = () => {
         editor.layer.refreshList = true
     }
 
+    const canViewSettings = () => {
+        let can = snap.layer.selectedType === BASE_ENTITY
+        if (snap.layer.selectedType === OVERLAY_ENTITY) {
+            can = layersSnap.overlay !== ''
+        }
+        return can
+    }
+
     return (
         <>
             <div id="layers-and-terrains-settings">
 
                 <SlTabGroup>
-                    <SlTab slot="nav" panel="tab-bases">{'Bases'}</SlTab>
-                    <SlTab slot="nav" panel="tab-overlays">{'Overlays'}</SlTab>
-                    <SlTab slot="nav" panel="tab-terrains">{'Terrains'}</SlTab>
+                    <SlTab slot="nav" panel="tab-bases"
+                           onClick={() => editor.layer.selectedType = BASE_ENTITY}>{'Bases'}</SlTab>
+                    <SlTab slot="nav" panel="tab-overlays"
+                           onClick={() => editor.layer.selectedType = OVERLAY_ENTITY}>{'Overlays'}</SlTab>
+                    <SlTab slot="nav" panel="tab-terrains"
+                           onClick={() => editor.layer.selectedType = TERRAIN_ENTITY}>{'Terrains'}</SlTab>
                     <div slot="nav" id={'layers-and-terrains-filter'}>
 
                         <SlTooltip hoist content={layersSnap.filter.thumbnail ? 'Display List' : 'Display Thumbnails'}>
@@ -146,6 +164,14 @@ export const LayersAndTerrains = () => {
                             />
                         </SlTooltip>
 
+                        <SlTooltip hoist content={snap.openSettings ? 'Hide Settings' : 'Show Settings'}>
+                            <SlIconButton library="fa"
+                                          disabled={!canViewSettings()}
+                                          name={FA2SL.set(canViewSettings() ? faRegularSlidersSlash : faSliders)}
+                                          onClick={handleSettings}
+                                          className={layersSnap.filter.active ? 'layer-settings-active' : 'layer-settings-inactive'}/>
+                        </SlTooltip>
+
                         <SlTooltip hoist content={snap.openFilter ? 'Hide Filters' : 'Show Filters'}>
                             <SlIconButton library="fa"
                                           name={FA2SL.set(snap.openFilter ? faFilterSlash : faFilter)}
@@ -154,7 +180,7 @@ export const LayersAndTerrains = () => {
                         </SlTooltip>
                     </div>
                     <FilterEntities/>
-
+                    <LayerSettings visible={canViewSettings}/>
                     <SlTabPanel name="tab-bases">
 
                             <SelectEntity

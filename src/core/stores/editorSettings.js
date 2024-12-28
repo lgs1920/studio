@@ -9,6 +9,7 @@ export const editorSettings = {
         tmpEntity:    null,
         refreshList:  true,
         canValidate:  false,
+        settingsChanged: false,
     },
     account: {
         reset: {

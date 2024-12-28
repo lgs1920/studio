@@ -89,6 +89,10 @@
     --lgs-tooltip-bg-color: rgba(255, 255, 153, 1);
     --lgs-tooltip-color: var(--sl-color-gray-800);
     --lgs-tooltip-border-color: rgba(255, 255, 255, 0.3);
+
+    --lgs-track-color-active: var(--lgs-dark-ui-secondary-color);
+    --lgs-track-color-inactive: var(--sl-color-gray-200);
+
 }
 
 .lgs-theme, .lgs-theme::part(panel) {
@@ -163,6 +167,11 @@ sl-button::part(label) {
 sl-button sl-icon, sl-icon-button {
     font-size: var(--sl-font-size-large);
 }
+
+sl-icon-button[size="small"], sl-icon[size="small"] {
+    font-size: var(--sl-font-size-small);
+}
+
 
 /*******************************************************************************
  * Drawers
@@ -373,24 +382,67 @@ sl-details::part(content) {
 /*******************************************************************************
  * Form elements
  ******************************************************************************/
-sl-input[align-right]::part(form-control) {
+[align-right]::part(form-control) {
     display: flex;
     flex-wrap: wrap;
     gap: var(--lgs-gutter-s);
     align-items: center;
 }
 
-sl-input[align-right]::part(form-control-input) {
+[align-right]::part(form-control-input) {
     margin-left: auto;
 }
 
-sl-input[align-right]::part(form-control-help-text) {
+[align-right]::part(form-control-help-text) {
     flex-basis: 100%;
     font-size: var(--sl-input-help-text-font-size-small);
 }
 
-sl-input[small]::part(input) {
+[small]::part(input) {
     width: 5rem;
+}
+
+sl-divider {
+    --spacing: var(--lgs-gutter-s);
+}
+
+/*******************************************************************************
+ * Ranges
+ ******************************************************************************/
+
+sl-range {
+    --track-color-active: var(--lgs-track-color-active);
+    --track-color-inactive: var(--lgs-track-color-inactive);
+    --thumb-size: var(--lgs-font-size-m);
+    width: 100%;
+}
+
+.lgs-range {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.lgs-range sl-range [slot='label'] {
+    width: 100%;
+}
+
+.lgs-range sl-range::part(form-control-label) {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    gap: var(--lgs-gutter-s);
+    justify-content: space-between;
+    flex: 1;
+}
+
+.lgs-range sl-input::part(form-control-input) {
+    width: 3.5rem;
+    margin-left: auto;
+}
+
+.lgs-range sl-input::part(input) {
+    padding: 0 var(--lgs-gutter-xs);
 }
 /*******************************************************************************
  * Switches
@@ -417,6 +469,8 @@ sl-switch[align-right]::part(control) {
     --lgs-freemium-color: dodgerblue;
     --lgs-premium-color: goldenrod;
     --lgs-animation-duration: 1s;
+    --lgs-animation-duration-on: var(--lgs-animation-duration);
+    --lgs-animation-duration-off: var(--lgs-animation-duration);
     --lgs-animation-delay: 0s;
 
 }
