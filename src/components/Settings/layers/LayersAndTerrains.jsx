@@ -167,7 +167,7 @@ export const LayersAndTerrains = () => {
                         <SlTooltip hoist content={snap.openSettings ? 'Hide Settings' : 'Show Settings'}>
                             <SlIconButton library="fa"
                                           disabled={!canViewSettings()}
-                                          name={FA2SL.set(canViewSettings() ? faRegularSlidersSlash : faSliders)}
+                                          name={FA2SL.set(snap.openSettings && canViewSettings() ? faRegularSlidersSlash : faSliders)}
                                           onClick={handleSettings}
                                           className={layersSnap.filter.active ? 'layer-settings-active' : 'layer-settings-inactive'}/>
                         </SlTooltip>
