@@ -34,17 +34,20 @@ export const POI = ({point}) => {
 
         <div className={'poi-on-map lgs-slide-in-from-top-bounced'}
              style={{bottom: `${window.innerHeight - pixels.y}px`, left: `${pixels.x}px`}}>
-            <h3>{point.title}</h3>
-            <div className="poi-full-coordinates">
-                {point.elevation &&
-                    <TextValueUI text={'Elevation: '} value={point.elevation} format={'%d'} units={ELEVATION_UNITS}/>
-                }
-                <div className="poi-coordinates">
-                    <span>{UIUtils.toDMS(point.latitude)}, {UIUtils.toDMS(point.longitude)}</span><br/>
-                    <span>[{point.latitude}, {point.longitude}]</span><br/>
+            <div className="poi-on-map-inner">
+                <h3>{point.title}</h3>
+                <div className="poi-full-coordinates">
+                    {point.elevation &&
+                        <TextValueUI text={'Elevation: '} value={point.elevation} format={'%d'}
+                                     units={ELEVATION_UNITS}/>
+                    }
+                    <div className="poi-coordinates">
+                        <span>{UIUtils.toDMS(point.latitude)}, {UIUtils.toDMS(point.longitude)}</span><br/>
+                        <span>[{point.latitude}, {point.longitude}]</span><br/>
+                    </div>
                 </div>
-
             </div>
+            <div className="poi-on-map-marker"></div>
         </div>
     )
 }
