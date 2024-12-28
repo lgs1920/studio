@@ -33,7 +33,7 @@ export const CallForActions = (props) => {
     return (
         <>
             {main.readyForTheShow && !main.theJourney &&
-                <div className="call-for-actions slide-in-from-bottom" ref={cfa}>
+                <div className="call-for-actions lgs-slide-in-from-bottom" ref={cfa}>
                     <div className="buttons-bar">
                         <SlButton onClick={hide} href={__.app.buildUrl(lgs.configuration.website)}
                                   target="_blank"

@@ -61,7 +61,7 @@ export const MainUI = () => {
                         {snap.components.welcome.hidden &&
                             <CallForActions/>
                         }
-                        <div id={'top-left-ui'} className="slide-in-from-left">
+                        <div id={'top-left-ui'} className="lgs-slide-in-from-left">
                             <SettingsButton tooltip={'right'}/>
                             <LayersButton tooltip={'right'}/>
                             {snap.theJourney && <FocusButton tooltip={'right'}/>}
@@ -93,7 +93,7 @@ export const MainUI = () => {
 
                 {snap.components.welcome.hidden &&
                     <>
-                        <div id={'top-right-ui'} className="slide-in-from-right">
+                        <div id={'top-right-ui'} className="lgs-slide-in-from-right">
                             <CompassUI scene={lgs.scene}/>
                             <SceneModeSelector tooltip={'left'}/>
                         </div>

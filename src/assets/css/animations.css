@@ -110,18 +110,39 @@
     animation: LGS_flashBackground 1s infinite;
 }
 
+/** Slide Down/Slide Up **/
+
 @keyframes LGS_slideDown {
     0% {
-        height: 0;
+        max-height: 0;
         opacity: 0;
     }
     100% {
-        height: 100%;
+        max-height: 100%;
         opacity: 1;
     }
 }
 
+@keyframes LGS_slideUp {
+    0% {
+        max-height: 100%;
+        opacity: 1;
+    }
+    100% {
+        max-height: 0;
+        opacity: 0;
+    }
+}
+
 .lgs-slide-down {
-    animation: LGS_slideDown var(--lgs-animation-duration) ease-out forwards;
+    --lgs-animation-duration-on: 0.3s;
+    animation: LGS_slideDown var(--lgs-animation-duration-on) ease-out;
     overflow: hidden;
 }
+
+.lgs-slide-up {
+    --lgs-animation-duration-off: 0.3s;
+    animation: LGS_slideUp var(--lgs-animation-duration-off) ease-out;
+    overflow: hidden;
+}
+
