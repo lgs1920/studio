@@ -9,15 +9,15 @@ export const Range = (props) => {
 
     const changeRange = (event) => {
         setValue(Number(event.target.value))
-        if (props.callback) {
-            props.callback(event, value)
+        if (props.onChange) {
+            props.onChange(event.target.name, event.target.value, value)
         }
     }
 
     const changeField = (event) => {
-        if (props.callback) {
+        if (props.onChange) {
             setValue(Number(event.target.value))
-            props.callback(event, value)
+            props.onChange(event.target.name, event.target.value, value)
         }
     }
 
@@ -33,6 +33,7 @@ export const Range = (props) => {
                      value={value} ref={range}
                      onSlInput={changeRange}
                      onSlChange={changeRange}
+                     name={props.name ?? ''}
             >
                 <div slot="label">
                     <SlInput type="number" align-right size="small"
