@@ -15,9 +15,9 @@ export const Range = (props) => {
     }
 
     const changeField = (event) => {
+        setValue(Number(event.target.valueAsNumber))
         if (props.onChange) {
-            setValue(Number(event.target.value))
-            props.onChange(event.target.name, event.target.value, value)
+            props.onChange(event.target.name.split('-')[0], event.target.value, value)
         }
     }
 
@@ -41,6 +41,7 @@ export const Range = (props) => {
                              value={value} ref={input}
                              onSlInput={changeField}
                              onSlChange={changeField}
+                             name={`${props.name}-i` ?? ''}
                     >
                         <div slot="label">{props.label}</div>
                     </SlInput>
