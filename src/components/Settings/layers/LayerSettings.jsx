@@ -28,7 +28,7 @@ export const LayerSettings = (props) => {
 
     const changeHandler = (name, current, old) => {
         editor.layer.settingsChanged = true
-        layers.colorSettings[layers[editor.layer.selectedType]][name] = current
+        layers.colorSettings[layers[editor.layer.selectedType]][name] = current * 1
         LayersUtils.applySettings(layers.colorSettings[layers[editor.layer.selectedType]], editor.layer.selectedType)
     }
 
