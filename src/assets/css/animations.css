@@ -5,7 +5,6 @@
 /** Slide In From Left **/
 @keyframes LGS_slideInFromLeft {
     0% {
-        transform: translateX(-100%);
         opacity: 0;
     }
     100% {
@@ -15,7 +14,7 @@
 }
 
 .lgs-slide-in-from-left {
-    animation: LGS_slideInFromLeft var(--lgs-animation-duration) ease-out var(--lgs-animation-delay);
+    animation: LGS_slideInFromLeft var(--lgs-animation-duration) ease-in var(--lgs-animation-delay);
 }
 
 /** Slide In From  Right **/
@@ -32,7 +31,7 @@
 }
 
 .lgs-slide-in-from-right {
-    animation: LGS_slideInFromRight var(--lgs-animation-duration) ease-out var(--lgs-animation-delay);
+    animation: LGS_slideInFromRight var(--lgs-animation-duration) ease-in var(--lgs-animation-delay);
 }
 
 /** Slide In From Top **/
@@ -49,7 +48,7 @@
 }
 
 .lgs-slide-in-from-top {
-    animation: LGS_slideInFromTop var(--lgs-animation-duration) ease-out var(--lgs-animation-delay);
+    animation: LGS_slideInFromTop var(--lgs-animation-duration) ease-in var(--lgs-animation-delay);
 }
 
 /** Slide In From Top Bounced **/
@@ -72,7 +71,7 @@
 }
 
 .lgs-slide-in-from-top-bounced {
-    animation: LGS_slideInFromTopBounced var(--lgs-animation-duration) ease-out var(--lgs-animation-delay);
+    animation: LGS_slideInFromTopBounced var(--lgs-animation-duration) ease-in var(--lgs-animation-delay);
 }
 
 /** Slide In From Bottom **/
@@ -89,7 +88,7 @@
 }
 
 .lgs-slide-in-from-bottom {
-    animation: LGS_slideInFromBottom 1s ease-out;
+    animation: LGS_slideInFromBottom 1s ease-in;
 }
 
 /** Flash Background **/
@@ -136,13 +135,13 @@
 
 .lgs-slide-down {
     --lgs-animation-duration-on: 0.3s;
-    animation: LGS_slideDown var(--lgs-animation-duration-on) ease-out;
+    animation: LGS_slideDown var(--lgs-animation-duration-on) ease-in;
     overflow: hidden;
 }
 
 .lgs-slide-up {
     --lgs-animation-duration-off: 0.3s;
-    animation: LGS_slideUp var(--lgs-animation-duration-off) ease-out;
+    animation: LGS_slideUp var(--lgs-animation-duration-off) ease-in;
     overflow: hidden;
 }
 
