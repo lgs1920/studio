@@ -199,7 +199,7 @@ export const SelectEntity = (props) => {
             // We're on a free access, so we can select it.
             lgs.settings.layers[type] =
                 // Clicking on the same overlay will deselect it
-                (type === OVERLAY_ENTITY && lgs.layersSnap.layers[type] === id) ? '' : id
+                (type === OVERLAY_ENTITY && lgs.settings.layers[type] === id) ? '' : id
         }
         else {
             // We need to know if  the account has been unlocked
@@ -208,7 +208,7 @@ export const SelectEntity = (props) => {
             if (theProxy.usage.unlocked) {
                 lgs.settings.layers[type] =
                     // Clicking on the same overlay will deselect it
-                    (type === OVERLAY_ENTITY && lgs.layersSnap.layers[type] === id) ? '' : id
+                    (type === OVERLAY_ENTITY && lgs.settings.layers[type] === id) ? '' : id
                 editor.layer.tokenDialog = false
             }
             else {
