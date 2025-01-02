@@ -1,10 +1,10 @@
-import { BASE_ENTITY, OVERLAY_ENTITY } from '@Core/constants'
+import { BASE_ENTITY, OVERLAY_ENTITY, URL_AUTHENT_KEY } from '@Core/constants'
 import {
     ImageryLayer, NeverTileDiscardPolicy, OpenStreetMapImageryProvider, UrlTemplateImageryProvider,
     WebMapTileServiceImageryProvider,
-}                                      from 'cesium'
-import { subscribe, useSnapshot }      from 'valtio'
-import { URL_AUTHENT_KEY } from '@Core/constants'
+}                                                       from 'cesium'
+import { subscribe, useSnapshot }                       from 'valtio'
+import { BASE_INDEX, OVERLAY_INDEX }                    from '../../core/constants'
 
 export const SLIPPY = 'slippy'
 export const WMTS = 'wmts'
@@ -15,8 +15,6 @@ export const SWISSTOPO = 'swisstopo'
 export const WAYBACK = 'wayback'
 export const MAPTILER = 'maptiler'
 
-const BASE = 0      // Layer index
-const OVERLAY = 1
 
 export const MapLayer = (props) => {
 
@@ -42,7 +40,7 @@ export const MapLayer = (props) => {
         else {
             lgs.mainProxy.theLayerOverlay = snapLayer ? manager.getEntityProxy(snapLayer) : null
             if (!lgs.mainProxy.theLayerOverlay) {
-                lgs.viewer.imageryLayers.remove(lgs.viewer.imageryLayers.get(OVERLAY), true)
+                lgs.viewer.imageryLayers.remove(lgs.viewer.imageryLayers.get(OVERLAY_INDEX), true)
             }
         }
     })
@@ -89,16 +87,15 @@ export const MapLayer = (props) => {
                 lgs.viewer.imageryLayers.remove(lgs.theLayer, true)
             }
             lgs.theLayer = new ImageryLayer(props.imageryProvider)
-            lgs.viewer.imageryLayers.add(lgs.theLayer, BASE)
+            lgs.viewer.imageryLayers.add(lgs.theLayer, BASE_INDEX)
         }
         else {
             if (lgs.theLayerOverlay) {
                 lgs.viewer.imageryLayers.remove(lgs.theLayerOverlay, true)
             }
             lgs.theLayerOverlay = new ImageryLayer(props.imageryProvider)
-            lgs.viewer.imageryLayers.add(lgs.theLayerOverlay, OVERLAY)
+            lgs.viewer.imageryLayers.add(lgs.theLayerOverlay, OVERLAY_INDEX)
         }
-
         return false
     }
 

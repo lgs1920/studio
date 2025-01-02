@@ -161,6 +161,8 @@ layers:
   overlay: null                         # ID of the current overlay
   terrain: cesium-world                 # ID of the current terrain
 
+  colorSettings:                        # Layers color Settings
+
   ## Filter criteria
   filter:
     byUsage: all

@@ -1,15 +1,14 @@
 import {
     APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, JOURNEYS_STORE, ORIGIN_STORE, platforms,
-    SERVERS, SETTINGS_STORE,
-    VAULT_STORE,
-}                    from '@Core/constants'
+    SERVERS, SETTINGS_STORE, VAULT_STORE,
+}                     from '@Core/constants'
 import { AppUtils }   from '@Utils/AppUtils'
 import { MouseUtils } from '@Utils/cesium/MouseUtils'
 import { CSSUtils }   from '@Utils/CSSUtils'
 import { UIUtils }    from '@Utils/UIUtils'
+import { UnitUtils }  from '@Utils/UnitUtils'
 
 import { proxy }             from 'valtio'
-import { UnitUtils } from '@Utils/UnitUtils'
 import { LocalDB }           from './db/LocalDB'
 import { MouseEventHandler } from './MouseEventHandler'
 import { editorSettings }    from './stores/editorSettings'
@@ -61,6 +60,7 @@ export class LGS1920Context {
             menu: undefined,
         }
 
+        this.colorSettings = {}
 
         // Utils are attached to window
         window.__ = {

@@ -317,3 +317,10 @@
     --lgs-animation-duration-on: 0.6s;
 
 }
+
+.alpha-to-color {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-right: 45%;
+}

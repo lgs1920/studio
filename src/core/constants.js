@@ -75,7 +75,8 @@ export const COLOR_SWATCHES_RANDOM = 'random'
 // List of settings exclusions (ie we keep the user choice)
 // This array is then sorted alphabetically by object depth.
 export const SETTING_EXCLUSIONS = [
-    'layers.base', 'layers.terrain', 'layers.overlay', 'layers.filter',
+    'layers.base', 'layers.terrain', 'layers.overlay',
+    'layers.filter', 'layers.colorSettings',
     'app', 'scene',
     'ui.camera', 'ui.welcome',
 ].sort((a, b) => {
@@ -107,6 +108,20 @@ export const LAYERS = 'layers'
 export const BASE_ENTITY = 'base'
 export const OVERLAY_ENTITY = 'overlay'
 export const TERRAIN_ENTITY = 'terrain'
+export const BASE_INDEX = 0      // Layer index
+export const OVERLAY_INDEX = 1
+
+export const DEFAULT_LAYERS_COLOR_SETTINGS = {
+    brightness:            1.0,
+    contrast:              1.0,
+    alpha:                 1.0,
+    hue:                   0.0,
+    saturation:            1.0,
+    gamma:                 1.0,
+    colorToAlphaThreshold: 0,
+    colorToAlpha:          '#ffffff',
+}
+
 export const LAYERS_THUMBS_DIR = '/assets/images/layers/thumbnails'
 export const PREMIUM_ACCESS = 'premium'
 export const FREEMIUM_ACCESS = 'freemium'

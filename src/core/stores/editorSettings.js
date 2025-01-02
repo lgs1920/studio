@@ -4,6 +4,7 @@ import { BASE_ENTITY } from '@Core/constants'
 export const editorSettings = {
     layer:   {
         selectedType: BASE_ENTITY,
+        selectedLayer: null,
         infoDialog:   false,
         tokenDialog:  false,
         tmpEntity:    null,
