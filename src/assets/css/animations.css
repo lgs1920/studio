@@ -6,6 +6,7 @@
 @keyframes LGS_slideInFromLeft {
     0% {
         opacity: 0;
+        transform: translateX(-100%);
     }
     100% {
         transform: translateX(0);
@@ -55,23 +56,30 @@
 
 @keyframes LGS_slideInFromTopBounced {
     0% {
-        transform: translateY(-100%);
-        opacity: 0;
+        transform: scale(1, 1) translateY(-100%);
     }
-    80% {
-        transform: translateY(0);
-        opacity: 1;
+    10% {
+        transform: scale(1, 1) translateY(0);
     }
-    90% {
-        transform: translateY(-10%);
+    30% {
+        transform: scale(1, 1) translateY(-7%);
+    }
+    50% {
+        transform: scale(1, 1) translateY(0);
+    }
+    57% {
+        transform: scale(1, 1) translateY(-2%);
+    }
+    64% {
+        transform: scale(1, 1) translateY(0);
     }
     100% {
-        transform: translateY(0);
+        transform: scale(1, 1) translateY(0);
     }
 }
 
 .lgs-slide-in-from-top-bounced {
-    animation: LGS_slideInFromTopBounced var(--lgs-animation-duration) ease-in var(--lgs-animation-delay);
+    animation: LGS_slideInFromTopBounced var(--lgs-animation-duration) ease var(--lgs-animation-delay);
 }
 
 /** Slide In From Bottom **/
