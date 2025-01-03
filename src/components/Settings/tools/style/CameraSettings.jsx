@@ -1,3 +1,4 @@
+import { SCENE_MODE_3D }               from '@Core/constants'
 import { faArrowsToCircle }            from '@fortawesome/pro-regular-svg-icons'
 import { SlDivider, SlIcon, SlSwitch } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                       from '@Utils/FA2SL'
@@ -11,6 +12,7 @@ export const CameraSettings = (props) => {
             return event.target.checked
         }
     }
+
     const camera = useSnapshot(lgs.editorSettingsProxy.camera)
     const targetPosition = useRef(null)
     lgs.editorSettingsProxy.camera.showTargetPosition = lgs.settings.ui.camera.showTargetPosition
@@ -20,7 +22,7 @@ export const CameraSettings = (props) => {
             <span slot="summary">{'Camera Information'}</span>
             <SlDivider/>
 
-            {__.ui.sceneManager.is3D &&
+            {useSnapshot(lgs.settings.scene.mode).value * 1 === SCENE_MODE_3D.value &&
                 <>
                     <SlSwitch size="small" align-right checked={lgs.settings.ui.camera.showPosition}
                               onSlChange={(event) => lgs.settings.ui.camera.showPosition = switchValue(event)}>
