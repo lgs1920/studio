@@ -110,13 +110,13 @@
     color: white;
 }
 
-#menu-disposition-chooser .menu-sample .left-right,
-#menu-disposition-chooser .menu-sample .right-left {
+#menu-disposition-chooser .menu-sample .start-end,
+#menu-disposition-chooser .menu-sample .end-start {
     justify-content: space-between;
 }
 
-#menu-disposition-chooser .menu-sample .right-left,
-#menu-disposition-chooser .menu-sample .right-right {
+#menu-disposition-chooser .menu-sample .end-start,
+#menu-disposition-chooser .menu-sample .end-end {
     flex-direction: row-reverse;
 }
 

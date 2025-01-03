@@ -681,7 +681,7 @@ ui:
   ## Menus
   menu:
     toolBar:
-      onLeft: true
+      fromStart: true
     drawers:
-      onLeft: false
-      onMiddle: true
+      fromStart: false
+      fromMiddle: true

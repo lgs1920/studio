@@ -1,8 +1,8 @@
-import { MenuSample }                                                               from '@Components/Settings/tools/style/MenuSample'
-import { LEFT, MENU_LEFT_LEFT, MENU_LEFT_RIGHT, MENU_RIGHT_LEFT, MENU_RIGHT_RIGHT } from '@Core/constants'
+import { MenuSample }                                                            from '@Components/Settings/tools/style/MenuSample'
+import { MENU_END_END, MENU_END_START, MENU_START_END, MENU_START_START, START } from '@Core/constants'
 import {
     SlDivider,
-}                                                                                   from '@shoelace-style/shoelace/dist/react'
+}                                                                                from '@shoelace-style/shoelace/dist/react'
 
 export const MenuSettings = (props) => {
 
@@ -14,8 +14,9 @@ export const MenuSettings = (props) => {
 
     const selectDisposition = (event, name) => {
         const positions = name.split('-')
-        lgs.settings.ui.menu.drawers.onLeft = (positions[0] === LEFT)
-        lgs.settings.ui.menu.toolBar.onLeft = (positions[1] === LEFT)
+        console.log(positions)
+        lgs.settings.ui.menu.drawers.fromStart = (positions[0] === START)
+        lgs.settings.ui.menu.toolBar.fromStart = (positions[1] === START)
     }
 
     return (
@@ -23,16 +24,16 @@ export const MenuSettings = (props) => {
             <span slot="summary">{'Menu Settings'}</span>
             <SlDivider/>
             <div id="menu-disposition-chooser">
-                <MenuSample align={MENU_LEFT_RIGHT}
+                <MenuSample align={MENU_START_END}
                             onSelect={selectDisposition}
                             tooltip={'Panels on left, buttons on right'}/>
-                <MenuSample align={MENU_LEFT_LEFT}
+                <MenuSample align={MENU_START_START}
                             onSelect={selectDisposition}
                             tooltip={'Both panels and buttons on left'}/>
-                <MenuSample align={MENU_RIGHT_LEFT}
+                <MenuSample align={MENU_END_START}
                             onSelect={selectDisposition}
                             tooltip={'Panels on right, buttons on left'}/>
-                <MenuSample align={MENU_RIGHT_RIGHT}
+                <MenuSample align={MENU_END_END}
                             onSelect={selectDisposition}
                             tooltip={'Both panels and buttons on right'}/>
             </div>

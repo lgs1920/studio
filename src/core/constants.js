@@ -213,9 +213,9 @@ export const FOCUS_ON_FEATURE = 1
 export const NO_FOCUS = 2
 
 /** Menu Disposition **/
-export const LEFT = 'left'
-export const RIGHT = 'right'
-export const MENU_RIGHT_RIGHT = 'right-right'
-export const MENU_RIGHT_LEFT = 'right-left'
-export const MENU_LEFT_RIGHT = 'left-right'
-export const MENU_LEFT_LEFT = 'left-left'
+export const START = 'start'
+export const END = 'end'
+export const MENU_END_END = 'end-end'
+export const MENU_END_START = 'end-start'
+export const MENU_START_END = 'start-end'
+export const MENU_START_START = 'start-start'

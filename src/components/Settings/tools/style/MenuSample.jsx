@@ -1,4 +1,4 @@
-import { LEFT }                       from '@Core/constants'
+import { START }                      from '@Core/constants'
 import { faCircleCheck }              from '@fortawesome/pro-duotone-svg-icons'
 import { FontAwesomeIcon }            from '@fortawesome/react-fontawesome'
 import { SlTooltip }                  from '@shoelace-style/shoelace/dist/react'
@@ -18,8 +18,8 @@ export const MenuSample = (props) => {
      */
     const checkSelection = () => {
         const positions = props.align.split('-')
-        return lgs.settings.ui.menu.drawers.onLeft === (positions[0] === LEFT)
-            && lgs.settings.ui.menu.toolBar.onLeft === (positions[1] === LEFT)
+        return lgs.settings.ui.menu.drawers.fromStart === (positions[0] === START)
+            && lgs.settings.ui.menu.toolBar.fromStart === (positions[1] === START)
     }
     const [check, setCheck] = useState(checkSelection())
 
