@@ -79,7 +79,7 @@ export const SETTING_EXCLUSIONS = [
     'layers.filter', 'layers.colorSettings',
     'app', 'scene',
     'ui.camera', 'ui.welcome',
-    'menu',
+    'ui.menu',
 ].sort((a, b) => {
     const segmentsA = a.split('.')
     const segmentsB = b.split('.')

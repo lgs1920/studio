@@ -8,17 +8,23 @@ import { useSnapshot }                from 'valtio'
 export const MenuSample = (props) => {
 
     const menu = useSnapshot(lgs.settings.ui.menu)
-    const [check, setCheck] = useState(false)
     const classes = ['lgs-card', props.align ?? '']
 
+    /**
+     * Check if it is the elected position.
+     * We compare the position with the settings
+     *
+     * @return {boolean}
+     */
     const checkSelection = () => {
         const positions = props.align.split('-')
-        setCheck(lgs.settings.ui.menu.drawers.onLeft === (positions[0] === LEFT)
-                     && lgs.settings.ui.menu.toolBar.onLeft === (positions[1] === LEFT))
+        return lgs.settings.ui.menu.drawers.onLeft === (positions[0] === LEFT)
+            && lgs.settings.ui.menu.toolBar.onLeft === (positions[1] === LEFT)
     }
+    const [check, setCheck] = useState(checkSelection())
 
     useEffect(() => {
-        checkSelection()
+        setCheck(checkSelection())
     }, [menu])
 
     return (
