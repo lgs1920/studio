@@ -15,6 +15,8 @@
     --lgs-dimension-s: calc(var(--lgs-dimension) * 0.625);
 
     color-scheme: light dark;
+
+
     --lgs-dark-ui-primary-color: var(--sl-color-sky-800);
     --lgs-dark-ui-secondary-color: var(--sl-color-sky-600);
     --lgs-dark-ui-3rd-color: var(--sl-color-sky-400);
@@ -71,7 +73,6 @@
     --lgs-disabled-color: var(--sl-color-gray-400);
     --lgs-disabled-bg-color: var(--sl-color-gray-200);
 
-    --lgs-theme-background: rgba(255, 255, 255, 0.15);
     --lgs-theme-gradient-1: linear-gradient(to right, rgba(192, 134, 24, 0.75), rgba(142, 120, 6, 0.65));
     --lgs-theme-gradient-1: linear-gradient(61deg, rgba(142, 212, 244, 0.64) 20%, rgba(13, 127, 204, 0.55) 90%);
     --lgs-theme-background-image: var(--lgs-theme-gradient-1);
@@ -93,10 +94,11 @@
     --lgs-track-color-active: var(--lgs-dark-ui-secondary-color);
     --lgs-track-color-inactive: var(--sl-color-gray-200);
 
+    --lgs-theme-background-color: var(--sl-color-neutral-0);
 }
 
 .lgs-theme, .lgs-theme::part(panel) {
-    /*background: var(--lgs-theme-background);*/
+    background: var(--lgs-theme-background-color);
     /*background-image: var(--lgs-theme-background-image);*/
     /*box-shadow: var(--sl-shadow-x-large);*/
     /*backdrop-filter: blur( 4px );*/

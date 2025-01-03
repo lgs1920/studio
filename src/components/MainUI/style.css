@@ -23,7 +23,7 @@ html {
     --right: var(--lgs-gutter-s);
 }
 
-#top-left-ui {
+#primary-buttons-bar {
     pointer-events: auto;
     display: flex;
     flex-direction: column;
@@ -34,10 +34,10 @@ html {
     --lgs-animation-duration: 1s;
 }
 :root{
-    --top-right-ui-right-margin:0
+    --secondary-buttons-bar-right-margin: 0
 }
 
-#top-right-ui {
+#secondary-buttons-bar {
     flex-direction: column;
     align-items: center;
     gap: var(--lgs-gutter-s);
@@ -47,7 +47,7 @@ html {
     top: var(--top);
     right: var(--right);
     width: var(--width);
-    margin-right: var(--top-right-ui-right-margin);
+    margin-right: var(--secondary-buttons-bar-right-margin);
 }
 
 #bottom-ui {

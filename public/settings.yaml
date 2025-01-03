@@ -677,3 +677,11 @@ ui:
     showIntro: true
     autoClose: true
     displayTime: 8   #seconds
+
+  ## Menus
+  menu:
+    toolBar:
+      onLeft: true
+    drawers:
+      onLeft: false
+      onMiddle: true

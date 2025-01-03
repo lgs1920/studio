@@ -79,6 +79,7 @@ export const SETTING_EXCLUSIONS = [
     'layers.filter', 'layers.colorSettings',
     'app', 'scene',
     'ui.camera', 'ui.welcome',
+    'menu',
 ].sort((a, b) => {
     const segmentsA = a.split('.')
     const segmentsB = b.split('.')
@@ -195,7 +196,6 @@ export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'
 
 /** Jaurney, Track, POI **/
 
-
 export const GPX = 'gpx'
 export const KML = 'kml'
 export const KMZ = 'kmz'
@@ -211,3 +211,11 @@ export const DRAWING_FROM_DB = 3
 export const REFRESH_DRAWING = 2
 export const FOCUS_ON_FEATURE = 1
 export const NO_FOCUS = 2
+
+/** Menu Disposition **/
+export const LEFT = 'left'
+export const RIGHT = 'right'
+export const MENU_RIGHT_RIGHT = 'right-right'
+export const MENU_RIGHT_LEFT = 'right-left'
+export const MENU_LEFT_RIGHT = 'left-right'
+export const MENU_LEFT_LEFT = 'left-left'

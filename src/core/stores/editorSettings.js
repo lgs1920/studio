@@ -30,4 +30,8 @@ export const editorSettings = {
         showTargetPosition: null,
     },
 
+    menu: {
+        selected: false,
+    },
+
 }

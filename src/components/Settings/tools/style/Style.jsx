@@ -1,3 +1,4 @@
+import { MenuSettings }             from '@Components/Settings/tools/style/MenuSettings'
 import { SlDetails }                from '@shoelace-style/shoelace/dist/react'
 import React, { useEffect, useRef } from 'react'
 import { CameraSettings }           from './CameraSettings'
@@ -39,6 +40,13 @@ export const Style = () => {
                 <CameraSettings/>
             </SlDetails>
 
+            <SlDetails id={'ui-menu-settings'}
+                       small open={false}
+                       className={'lgs-theme'}
+                       onSlHide={checkClose}
+            >
+                <MenuSettings/>
+            </SlDetails>
 
 
 

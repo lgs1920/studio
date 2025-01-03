@@ -45,7 +45,7 @@ export const MainUI = () => {
     // We need to interact with  Editor
     subscribe(lgs.mainProxy.drawers, () => {
         const offset = (lgs.mainProxy.drawers.open === null) ? 0 : Utils.panelOffset()
-        __.ui.css.setCSSVariable('--top-right-ui-right-margin', offset)
+        __.ui.css.setCSSVariable('--secondary-buttons-bar-right-margin', offset)
         __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( 100% - ${offset})`)
     })
 
@@ -61,7 +61,7 @@ export const MainUI = () => {
                         {snap.components.welcome.hidden &&
                             <CallForActions/>
                         }
-                        <div id={'top-left-ui'} className="lgs-slide-in-from-left">
+                        <div id={'primary-buttons-bar'} className="lgs-slide-in-from-left">
                             <SettingsButton tooltip={'right'}/>
                             <LayersButton tooltip={'right'}/>
                             {snap.theJourney && <FocusButton tooltip={'right'}/>}
@@ -93,7 +93,7 @@ export const MainUI = () => {
 
                 {snap.components.welcome.hidden &&
                     <>
-                        <div id={'top-right-ui'} className="lgs-slide-in-from-right">
+                        <div id={'secondary-buttons-bar'} className="lgs-slide-in-from-right">
                             <CompassUI scene={lgs.scene}/>
                             <SceneModeSelector tooltip={'left'}/>
                         </div>
