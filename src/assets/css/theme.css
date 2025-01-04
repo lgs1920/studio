@@ -200,16 +200,16 @@ sl-tab-panel {
     overflow-y: hidden;
 }
 
-sl-drawer[placement="end"] sl-tab-group::part(base),
-sl-drawer[placement="end"] sl-tab-group::part(body),
-sl-drawer[placement="end"] sl-tab-panel::part(base),
-sl-drawer[placement="end"] sl-tab-panel::part(body),
-sl-drawer[placement="end"] sl-tab-panel, sl-tab-group {
+sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-group::part(base),
+sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-group::part(body),
+sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-panel::part(base),
+sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-panel::part(body),
+sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-panel, sl-tab-group {
     max-height: 100%;
     height: 100%;
 }
 
-sl-drawer[placement="end"] sl-tab-panel::part(base) {
+sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-panel::part(base) {
     padding-bottom: 1px;
     overflow-x: hidden;
 }

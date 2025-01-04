@@ -14,9 +14,10 @@ export const MenuSettings = (props) => {
 
     const selectDisposition = (event, name) => {
         const positions = name.split('-')
-        console.log(positions)
         lgs.settings.ui.menu.drawers.fromStart = (positions[0] === START)
+        lgs.editorSettingsProxy.menu.drawer = positions[0]
         lgs.settings.ui.menu.toolBar.fromStart = (positions[1] === START)
+        lgs.editorSettingsProxy.menu.toolbar = positions[1]
     }
 
     return (

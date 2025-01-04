@@ -1,14 +1,13 @@
 import { faChartLine }                 from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
+import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
 import { FA2SL }                       from '@Utils/FA2SL'
-import { forwardRef }                  from 'react'
 import { useSnapshot }                 from 'valtio'
-import { TrackUtils } from '@Utils/cesium/TrackUtils'
 //read version
 
 
-export const ProfileButton = forwardRef(function ProfileButton(props, ref) {
+export const ProfileButton = (props) => {
 
     const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
@@ -30,4 +29,4 @@ export const ProfileButton = forwardRef(function ProfileButton(props, ref) {
             </SlTooltip>
         }
     </>)
-})
+}

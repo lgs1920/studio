@@ -1,11 +1,11 @@
+import { SETTINGS_EDITOR_DRAWER }                                     from '@Core/constants'
 import { faPaintbrushPencil, faScrewdriverWrench }                    from '@fortawesome/pro-regular-svg-icons'
 import { faCircleUser }                                               from '@fortawesome/pro-solid-svg-icons'
 import { SlDrawer, SlIcon, SlTab, SlTabGroup, SlTabPanel, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                      from '@Utils/FA2SL'
 import React                                                          from 'react'
 import { useSnapshot }                                                from 'valtio'
 import './style.css'
-import { SETTINGS_EDITOR_DRAWER } from '@Core/constants'
-import { FA2SL }                  from '@Utils/FA2SL'
 import { DrawerFooter }                                               from '../DrawerFooter'
 import { GeneralTools }                                               from './tools/general/GeneralTools'
 import { ProfileTools }                                               from './tools/profile/ProfileTools'
@@ -26,6 +26,7 @@ export const Panel = () => {
 
     return (<div className={'drawer-wrapper'}>
             <SlDrawer id="settings-pane"
+                      placement={useSnapshot(lgs.editorSettingsProxy.menu).drawer}
                       open={drawers.open === SETTINGS_EDITOR_DRAWER}
                       onSlRequestClose={closePanel}
                       contained

@@ -1,8 +1,8 @@
 import './style.css'
-import {forwardRef, useEffect} from 'react'
+import { useEffect } from 'react'
 import '@geoblocks/cesium-compass'
 
-export const CompassUI = forwardRef(function CompassUI(props, ref) {
+export const CompassUI = () => {
 
     useEffect(() => {
         const compass = document.querySelector('cesium-compass')
@@ -12,5 +12,5 @@ export const CompassUI = forwardRef(function CompassUI(props, ref) {
     }, [])
 
     return (<cesium-compass></cesium-compass>)
-})
+}
 

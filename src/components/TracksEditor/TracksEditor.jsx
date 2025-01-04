@@ -1,8 +1,7 @@
+import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 import { SlDrawer }              from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { forwardRef }            from 'react'
 import { useSnapshot }           from 'valtio'
-import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 import { Toolbar }               from '../MainUI/Toolbar'
 import { JourneySelector }       from './journey/JourneySelector'
 import { JourneySettings }       from './journey/JourneySettings'
@@ -10,16 +9,15 @@ import { TrackSelector }         from './track/TrackSelector'
 import { TrackSettings }         from './track/TrackSettings'
 import { Utils }                 from './Utils'
 
-//read version
-
-
-export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
+export const TracksEditor = (props, ref) => {
 
     const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
     const editorStore = lgs.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
+
+    const menu = useSnapshot(lgs.editorSettingsProxy.menu)
 
     /**
      * Avoid click outside drawer
@@ -46,8 +44,8 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
         }
     }
 
-    return (<>
-        <div key={mainSnap.components.journeyEditor.key} className={'drawer-wrapper'}>
+    return (
+        <div className={'drawer-wrapper'}>
             {mainSnap.canViewJourneyData &&
                 <SlDrawer id={JOURNEY_EDITOR_DRAWER}
                           open={mainSnap.drawers.open === JOURNEY_EDITOR_DRAWER}
@@ -55,6 +53,7 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                           contained
                           onSlAfterHide={closeTracksEditor}
                           className={'lgs-theme'}
+                          placement={menu.drawer}
                 >
                     <div slot="header-actions">
                         <Toolbar editor={false}
@@ -80,5 +79,5 @@ export const TracksEditor = forwardRef(function TracksEditor(props, ref) {
                     <div id="journey-editor-footer" slot={'footer'}></div>
                 </SlDrawer>}
         </div>
-    </>)
-})
+    )
+}

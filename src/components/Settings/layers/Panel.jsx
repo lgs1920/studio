@@ -1,11 +1,11 @@
 import { DrawerFooter }           from '@Components/DrawerFooter'
+import { LAYERS_DRAWER }          from '@Core/constants'
 import { faCircleInfo }           from '@fortawesome/pro-regular-svg-icons'
 import { SlDrawer, SlIconButton } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                  from '@Utils/FA2SL'
 import React                      from 'react'
 import { useSnapshot }            from 'valtio'
 import './style.css'
-import { LAYERS_DRAWER } from '@Core/constants'
 import { InfoLayerModal }         from './InfoLayerModal'
 import { LayersAndTerrains }      from './LayersAndTerrains'
 
@@ -21,12 +21,14 @@ export const Panel = () => {
             }
         }
     }
+
     return (
         <>
             <div className={'drawer-wrapper'}>
                 <SlDrawer id={LAYERS_DRAWER}
                           open={drawers.open === LAYERS_DRAWER}
                           onSlRequestClose={closePanel}
+                          placement={useSnapshot(lgs.editorSettingsProxy.menu).drawer}
                           contained
                           className={'lgs-theme'}>
                     <div slot={'label'}>{'Layers and Terrains'}</div>

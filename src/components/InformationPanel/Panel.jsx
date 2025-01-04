@@ -1,9 +1,9 @@
 import { DrawerFooter }                            from '@Components/DrawerFooter'
+import { INFO_DRAWER }                             from '@Core/constants'
 import { SlDrawer, SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react'
 import React, { useEffect, useRef }                from 'react'
 import { useSnapshot }                             from 'valtio'
 import './style.css'
-import { INFO_DRAWER } from '@Core/constants'
 
 import { CreditsPanel } from './CreditsPanel'
 import { WhatsNew }     from './WhatsNew'
@@ -41,6 +41,7 @@ export const Panel = () => {
                       ref={drawerRef}
                       contained
                       className={'lgs-theme'}
+                  placement={useSnapshot(lgs.editorSettingsProxy.menu).drawer}
             >
                 <SlTabGroup>
                     <SlTab slot="nav" panel="tab-whats-new">

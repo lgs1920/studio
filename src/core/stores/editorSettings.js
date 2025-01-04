@@ -33,6 +33,7 @@ export const editorSettings = {
     menu: {
         selected: false,
         drawer: '',
+        toolBar: '',
     },
 
 }
