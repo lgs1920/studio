@@ -3,10 +3,12 @@
     --lgs-gutter-s: 0.5rem;
     --lgs-gutter-xs: 0.3rem;
 
-    --top: var(--lgs-gutter-s);
-    --left: var(--lgs-gutter-s);
-    --bottom: var(--lgs-gutter-s);
-    --right: var(--lgs-gutter-s);
+    --top: var(--lgs-gutter-xs);
+    --left: var(--lgs-gutter-xs);
+    --bottom: var(--lgs-gutter-xs);
+    --right: var(--lgs-gutter-xs);
+    --lgs-inner-width: calc(100vw - var(--left) - var(--right));
+    --lgs-inner-height: calc(100vh - var(--top) - var(--bottom));
 
     --lgs-border-radius: 0.5rem;
     --lgs-border-radius-s: 0.25rem;
@@ -186,8 +188,15 @@ sl-icon-button[size="small"], sl-icon[size="small"] {
 :root {
     --lgs-vertical-panel-width: 400px;
     --lgs-horizontal-panel-width: 100%;
-    --lgs-vertical-panel-add: calc(3 * var(--lgs-gutter-s)); /** padding left+right + gutter **/
-    --lgs-vertical-panel-offset: calc(var(--lgs-vertical-panel-width) + var(--lgs-vertical-panel-add));
+    --lgs-horizontal-panel-left: 0;
+
+    /* Used in left and margin-left so we need to divide by 2 */
+    --lgs-vertical-panel-offset-left: calc(var(--lgs-vertical-panel-width) / 2 + var(--lgs-gutter-xs));
+    --lgs-horizontal-panel-offset-left: calc(var(--lgs-vertical-panel-width) + var(--lgs-gutter-xs));
+    --lgs-vertical-panel-offset-right: calc(var(--lgs-vertical-panel-width) + var(--lgs-gutter-xs));
+    --lgs-horizontal-panel-offset-right: var(--lgs-vertical-panel-offset-right);
+)
+
 }
 
 sl-drawer {

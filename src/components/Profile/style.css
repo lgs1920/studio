@@ -9,7 +9,14 @@
     --header-spacing: 0;
     --footer-spacing: 0;
     --body-spacing: 0;
+    --body-spacing: var(--lgs-gutter-s);
     --size: var(--lgs-profile-pane-height);
+    width: var(--lgs-horizontal-panel-width);
+}
+
+#profile-pane::part(base) {
+    margin-left: var(--lgs-horizontal-panel-left);
+
 }
 
 #profile-pane::part(panel) {
@@ -30,10 +37,6 @@
     flex-direction: column;
     justify-content: space-around;
     align-content: center;
-}
-
-#profile-pane {
-    --body-spacing: var(--lgs-gutter-s);
 }
 
 #profile-pane::part(header-actions) {
@@ -61,8 +64,9 @@
 .lgs-ui-toolbar.lgs-ui-dropdown-toolbar {
     display: none
 }
-.lgs-ui-toolbar sl-divider +sl-divider {
-    display:none
+
+.lgs-ui-toolbar sl-divider + sl-divider {
+    display: none
 }
 
 #elevation-distance-tooltip {
@@ -75,21 +79,24 @@
     gap: var(--lgs-gutter-xs);
 }
 
-#elevation-distance-tooltip .tooltip-icon{
+#elevation-distance-tooltip .tooltip-icon {
     display: flex;
     align-items: center;
 }
-#elevation-distance-tooltip .tooltip-data{
+
+#elevation-distance-tooltip .tooltip-data {
     display: flex;
     align-items: center;
-    background:white;
+    background: white;
     padding: var(--lgs-gutter-xs);
     z-index: 1;
 }
-#elevation-distance-tooltip .tooltip-data.altitude{
+
+#elevation-distance-tooltip .tooltip-data.altitude {
     margin-left: auto;
-    margin-right: auto;text-align: center;
-    }
+    margin-right: auto;
+    text-align: center;
+}
 
 #elevation-distance-tooltip .point-distance {
     display: flex;
@@ -99,15 +106,17 @@
     align-content: center;
     gap: var(--lgs-gutter-s);
     position: relative;
-    --line-color:black
+    --line-color: black
 }
 
-#elevation-distance-tooltip .point-distance.line span:first-child .tooltip-icon{
-    text-align:left
+#elevation-distance-tooltip .point-distance.line span:first-child .tooltip-icon {
+    text-align: left
 }
-#elevation-distance-tooltip .point-distance.line span:last-child  .tooltip-icon {
-    text-align:right
+
+#elevation-distance-tooltip .point-distance.line span:last-child .tooltip-icon {
+    text-align: right
 }
+
 #elevation-distance-tooltip .point-distance .tooltip-icon sl-icon:host {
     width: 20p;
 }
@@ -116,9 +125,9 @@
     display: flex;
     gap: var(--lgs-gutter-s);
     justify-content: space-between;
-    flex: 1 ;
+    flex: 1;
 
-    container-type:size;
+    container-type: size;
     container-name: profile-toolbar;
     align-items: center;
 
@@ -127,6 +136,7 @@
 .profile-toolbar .journey-selector {
     flex-basis: 50%;
 }
+
 .profile-toolbar .journey-selector::part(combobox) {
     max-width: 30rem;
 }
@@ -137,8 +147,9 @@
     justify-content: space-between;
     align-items: center;
     gap: var(--lgs-gutter-s);
-    margin-left :auto
+    margin-left: auto
 }
+
 .profile-toolbar .lgs-ui-toolbar {
     justify-self: flex-end;
 }
