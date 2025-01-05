@@ -1,32 +1,69 @@
-import { CompassUI }                        from '@Components/cesium/CompassUI/CompassUI'
-import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
-import { Toolbar }                          from '@Components/MainUI/Toolbar'
-import { Profile }                          from '@Components/Profile/Profile'
-import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
-import { SCENE_MODE_2D }                    from '@Core/constants'
-import { CanvasEvents }                     from '@Core/events/CanvasEvents.js'
-import { useEffect }                        from 'react'
+import { CompassUI }              from '@Components/cesium/CompassUI/CompassUI'
+import {
+    FullScreenButton,
+}                                 from '@Components/FullScreenButton/FullScreenButton'
+import {
+    Toolbar,
+}                                 from '@Components/MainUI/Toolbar'
+import {
+    Profile,
+}                                 from '@Components/Profile/Profile'
+import {
+    TracksEditor,
+}                                 from '@Components/TracksEditor/TracksEditor'
+import {
+    END, MENU_END_END, MENU_END_START, MENU_START_END, MENU_START_START, SCENE_MODE_2D, START,
+}                                 from '@Core/constants'
+import {
+    CanvasEvents,
+}                                 from '@Core/events/CanvasEvents.js'
+import { useEffect }              from 'react'
 
 import './style.css'
-import { subscribe, useSnapshot }           from 'valtio'
-import { CameraAndTargetPanel }             from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
-import { JourneyLoaderUI }                  from '../FileLoader/JourneyLoaderUI'
-import { Panel as InformationPanel }        from '../InformationPanel/Panel'
-import { PanelButton as InformationButton } from '../InformationPanel/PanelButton'
-import { Panel as LayersPanel }             from '../Settings/layers/Panel'
-import { PanelButton as LayersButton }      from '../Settings/layers/PanelButton'
-import { Panel as SettingsPanel }           from '../Settings/Panel'
-import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
-
-
-import { Utils }             from '../TracksEditor/Utils.js'
-import { CallForActions }    from './CallForActions'
-import { CameraTarget }      from './CameraTarget'
-import { CreditsBar }        from './credits/CreditsBar'
-import { FocusButton }       from './FocusButton'
-import { SceneModeSelector } from './SceneModeSelector'
-import { SupportUI }         from './SupportUI'
-import { SupportUIButton }   from './SupportUIButton'
+import { subscribe, useSnapshot } from 'valtio'
+import {
+    CameraAndTargetPanel,
+}                                 from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
+import {
+    JourneyLoaderUI,
+}                                 from '../FileLoader/JourneyLoaderUI'
+import {
+    Panel as InformationPanel,
+}                                 from '../InformationPanel/Panel'
+import {
+    PanelButton as InformationButton,
+}                                 from '../InformationPanel/PanelButton'
+import {
+    Panel as LayersPanel,
+}                                 from '../Settings/layers/Panel'
+import {
+    PanelButton as LayersButton,
+}                                 from '../Settings/layers/PanelButton'
+import {
+    Panel as SettingsPanel,
+}                                 from '../Settings/Panel'
+import {
+    PanelButton as SettingsButton,
+}                                 from '../Settings/PanelButton'
+import {
+    CallForActions,
+}                                 from './CallForActions'
+import {
+    CameraTarget,
+}                                 from './CameraTarget'
+import {
+    CreditsBar,
+}                                 from './credits/CreditsBar'
+import {
+    FocusButton,
+}                                 from './FocusButton'
+import {
+    SceneModeSelector,
+}                                 from './SceneModeSelector'
+import { SupportUI }              from './SupportUI'
+import {
+    SupportUIButton,
+}                                 from './SupportUIButton'
 
 export const MainUI = () => {
     const snap = useSnapshot(lgs.mainProxy)
@@ -42,12 +79,57 @@ export const MainUI = () => {
     }, [])
 
 
-    // We need to interact with  Editor
-    subscribe(lgs.mainProxy.drawers, () => {
-        const offset = (lgs.mainProxy.drawers.open === null) ? 0 : Utils.panelOffset()
-        __.ui.css.setCSSVariable('--secondary-buttons-bar-right-margin', offset)
+    // We need to interact with  Drawers
+    let primaryEntrance = 'lgs-slide-in-from-left'
+    let secondaryEntrance = 'lgs-slide-in-from-right'
+    const arrangeDrawers = () => {
+
+        const placement = sprintf('%s-%s',
+                                  lgs.settings.ui.menu.drawers.fromStart ? START : END,
+                                  lgs.settings.ui.menu.toolBar.fromStart ? START : END)
+
+        const offset = (lgs.mainProxy.drawers.open === null) ? 0 : __.ui.css.getCSSVariable('--lgs-vertical-panel-offset')
+        const width = (lgs.mainProxy.drawers.open === null) ? 0 : __.ui.css.getCSSVariable('--lgs-vertical-panel-width')
+
+        switch (placement) {
+            case MENU_START_START:
+                __.ui.css.setCSSVariable('--primary-buttons-bar-left',
+                                         width === 0 ? 'var(--left)' : `calc(var(--left) + ${width})`)
+                __.ui.css.setCSSVariable('--primary-buttons-bar-right', 'auto')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'auto')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 'var(--lgs-secondary-buttons-bar-right-delta)')
+                break
+            case MENU_START_END:
+                primaryEntrance = 'lgs-slide-in-from-right'
+                secondaryEntrance = 'lgs-slide-in-from-left'
+                __.ui.css.setCSSVariable('--primary-buttons-bar-left', 'auto')
+                __.ui.css.setCSSVariable('--primary-buttons-bar-right', 0)
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'var(--lgs-secondary-buttons-bar-left-delta)')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 'auto')
+                break
+            case MENU_END_START:
+                __.ui.css.setCSSVariable('--primary-buttons-bar-left', 0)
+                __.ui.css.setCSSVariable('--primary-buttons-bar-right', 'auto')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'auto')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 'var(--lgs-secondary-buttons-bar-right-delta)')
+                break
+            case MENU_END_END:
+                primaryEntrance = 'lgs-slide-in-from-right'
+                secondaryEntrance = 'lgs-slide-in-from-left'
+                __.ui.css.setCSSVariable('--primary-buttons-bar-left', 'auto')
+                __.ui.css.setCSSVariable('--primary-buttons-bar-right',
+                                         width === 0 ? 0 : `calc(var(--right) + ${width})`)
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'var(--lgs-secondary-buttons-bar-left-delta)')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 'auto')
+                break
+        }
+
         __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( 100% - ${offset})`)
-    })
+
+    }
+    subscribe(lgs.mainProxy.drawers, arrangeDrawers)
+    subscribe(lgs.settings.ui.menu, arrangeDrawers)
+    arrangeDrawers()
 
     const SupportUIDialog = () => {
         return (<SupportUI/>)
@@ -58,10 +140,7 @@ export const MainUI = () => {
             <div id="lgs-main-ui">
                 {snap.components.welcome.hidden &&
                     <>
-                        {snap.components.welcome.hidden &&
-                            <CallForActions/>
-                        }
-                        <div id={'primary-buttons-bar'} className="lgs-slide-in-from-left">
+                        <div id={'primary-buttons-bar'} className={primaryEntrance}>
                             <SettingsButton tooltip={'right'}/>
                             <LayersButton tooltip={'right'}/>
                             {snap.theJourney && <FocusButton tooltip={'right'}/>}
@@ -75,9 +154,18 @@ export const MainUI = () => {
                             <SupportUIButton/>
                             <FullScreenButton/>
                         </div>
+                        <div id={'secondary-buttons-bar'} className={secondaryEntrance}>
+                            <CompassUI scene={lgs.scene}/>
+                            <div id="secondary-buttons-bar-content">
+                                <SceneModeSelector tooltip={'left'}/>
+                            </div>
+                        </div>
+
                     </>
                 }
+                {snap.components.welcome.hidden && <CallForActions/>}
 
+                <CameraTarget/>
                 <div id={'bottom-left-ui'}>
                     {
                         lgs.platform !== 'production' &&
@@ -91,15 +179,6 @@ export const MainUI = () => {
                     <CreditsBar/>
                 </div>
 
-                {snap.components.welcome.hidden &&
-                    <>
-                        <div id={'secondary-buttons-bar'} className="lgs-slide-in-from-right">
-                            <CompassUI scene={lgs.scene}/>
-                            <SceneModeSelector tooltip={'left'}/>
-                        </div>
-                        <CameraTarget/>
-                    </>
-                }
 
                 {/* <FloatingMenu/> */}
                 <CameraAndTargetPanel/>

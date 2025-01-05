@@ -3,6 +3,11 @@
     --lgs-gutter-s: 0.5rem;
     --lgs-gutter-xs: 0.3rem;
 
+    --top: var(--lgs-gutter-s);
+    --left: var(--lgs-gutter-s);
+    --bottom: var(--lgs-gutter-s);
+    --right: var(--lgs-gutter-s);
+
     --lgs-border-radius: 0.5rem;
     --lgs-border-radius-s: 0.25rem;
     --lgs-border-radius-xs: 0.15rem;
@@ -288,6 +293,7 @@ sl-card[variant="primary"]::part(base) {
 }
 
 cesium-compass {
+    position: relative;
     --cesium-compass-fill-color: var(--lgs-dark-ui-bg-color);
     --cesium-compass-stroke-color: var(--lgs-dark-ui-fg-color);
 }

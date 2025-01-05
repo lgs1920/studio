@@ -25,10 +25,6 @@ export class Utils {
         lgs.mainProxy.components.journeyEditor.keys.track.settings++
     }
 
-    static panelOffset = () => {
-        return __.ui.css.getCSSVariable('--lgs-vertical-panel-offset')
-    }
-
     static initJourneyEdition = async (event = undefined) => {
         if (window.isOK(event)) {
             Utils.updateJourneyEditor(event.target.value)

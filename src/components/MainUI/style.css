@@ -17,10 +17,13 @@ html {
 #lgs-main-ui > div {
     display: flex;
     gap: var(--lgs-gutter-s);
-    --top: var(--lgs-gutter-s);
-    --left: var(--lgs-gutter-s);
-    --bottom: var(--lgs-gutter-s);
-    --right: var(--lgs-gutter-s);
+}
+
+:root {
+    --secondary-buttons-bar-right: 0;
+    --secondary-buttons-bar-left: 0;
+    --primary-buttons-bar-right: 0;
+    --primary-buttons-bar-left: 0;
 }
 
 #primary-buttons-bar {
@@ -29,12 +32,11 @@ html {
     flex-direction: column;
     position: absolute;
     top: 5rem;
-    left: var(--left);
+    margin: 0 var(--right) 0 var(--left);
     max-width: calc(100% - var(--left) - var(--right));
+    left: var(--primary-buttons-bar-left);
+    right: var(--primary-buttons-bar-right);
     --lgs-animation-duration: 1s;
-}
-:root{
-    --secondary-buttons-bar-right-margin: 0
 }
 
 #secondary-buttons-bar {
@@ -43,11 +45,28 @@ html {
     gap: var(--lgs-gutter-s);
     --width: var(--lgs-compass-size);
     pointer-events: auto;
-    position: absolute;
+    position: relative;
+    width: var(--lgs-compass-size);
     top: var(--top);
-    right: var(--right);
-    width: var(--width);
-    margin-right: var(--secondary-buttons-bar-right-margin);
+    margin: 0 var(--right) 0 var(--left);
+    right: var(--secondary-buttons-bar-right);
+    left: var(--secondary-buttons-bar-left);
+    margin-left: var(--secondary-buttons-bar-left)
+}
+
+:root {
+    --lgs-secondary-buttons-bar-left-delta: 20px;
+    --lgs-secondary-buttons-bar-right-delta: -60px
+}
+
+#secondary-buttons-bar-content {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+    top: var(--lgs-compass-size);
+    right: 15px;
+    left: -15px;
 }
 
 #bottom-ui {
