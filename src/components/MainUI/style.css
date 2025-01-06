@@ -241,12 +241,11 @@ html {
  */
 
 .call-for-actions {
-    position: relative;
+    position: absolute;
     pointer-events: auto;
     top: 75vh;
-    left: calc(50% - 10rem);
-    width: 20rem;
-
+    width: 100%;
+    justify-content: center;
 }
 
 .call-for-actions .buttons-bar {
