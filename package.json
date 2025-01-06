@@ -45,7 +45,7 @@
     "easy-file-picker": "^1.1.0",
     "echarts": "^5.6.0",
     "echarts-for-react": "^3.0.2",
-    "elysia": "^1.2.9",
+    "elysia": "^1.2.10",
     "eslint-import-resolver-alias": "^1.1.2",
     "eslint-plugin-import": "^2.31.0",
     "fs": "^0.0.1-security",
