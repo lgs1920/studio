@@ -1,4 +1,4 @@
-import { START }                      from '@Core/constants'
+import { BOTTOM, START }              from '@Core/constants'
 import { faCircleCheck }              from '@fortawesome/pro-duotone-svg-icons'
 import { FontAwesomeIcon }            from '@fortawesome/react-fontawesome'
 import { SlTooltip }                  from '@shoelace-style/shoelace/dist/react'
@@ -9,6 +9,7 @@ export const MenuSample = (props) => {
 
     const menu = useSnapshot(lgs.settings.ui.menu)
     const classes = ['lgs-card', props.align ?? '']
+    const isMobile = props.device === 'mobile'
 
     /**
      * Check if it is the elected position.
@@ -18,6 +19,10 @@ export const MenuSample = (props) => {
      */
     const checkSelection = () => {
         const positions = props.align.split('-')
+        if (isMobile) {
+            return lgs.settings.ui.menu.drawers.fromBottom === (positions[0] === BOTTOM)
+                && lgs.settings.ui.menu.toolBar.fromStart === (positions[1] === START)
+        }
         return lgs.settings.ui.menu.drawers.fromStart === (positions[0] === START)
             && lgs.settings.ui.menu.toolBar.fromStart === (positions[1] === START)
     }
@@ -29,7 +34,8 @@ export const MenuSample = (props) => {
 
     return (
         <SlTooltip placement="top" content={props.tooltip}>
-            <div className="menu-sample" onClick={(event) => props.onSelect(event, props.align)}
+            <div className="menu-sample"
+                 onClick={(event) => props.onSelect(event, props.align)}
             >
                 <div className={classes.join(' ') + ' ' + (check ? 'selected' : '')}>
                     <div className={'sample-drawer lgs-card'}/>

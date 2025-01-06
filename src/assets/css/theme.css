@@ -187,6 +187,8 @@ sl-icon-button[size="small"], sl-icon[size="small"] {
  ******************************************************************************/
 :root {
     --lgs-vertical-panel-width: 400px;
+    --lgs-vertical-panel-height: 70%;
+
     --lgs-horizontal-panel-width: 100%;
     --lgs-horizontal-panel-left: 0;
 
@@ -204,6 +206,10 @@ sl-drawer {
     --header-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
     --body-spacing: var(--lgs-gutter);
     --footer-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
+}
+
+.mobile.portrait sl-drawer {
+    --size: var(--lgs-vertical-panel-height)
 }
 
 sl-drawer::part(panel) {

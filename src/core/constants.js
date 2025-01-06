@@ -215,7 +215,12 @@ export const NO_FOCUS = 2
 /** Menu Disposition **/
 export const START = 'start'
 export const END = 'end'
+export const TOP = 'top'
+export const BOTTOM = 'bottom'
+
 export const MENU_END_END = 'end-end'
 export const MENU_END_START = 'end-start'
 export const MENU_START_END = 'start-end'
 export const MENU_START_START = 'start-start'
+export const MENU_BOTTOM_START = 'bottom-start'
+export const MENU_BOTTOM_END = 'bottom-end'

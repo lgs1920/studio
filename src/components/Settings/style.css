@@ -36,28 +36,36 @@
  * Menu disposition
  */
 
+
 #menu-disposition-chooser {
+    --lgs-max-menu-sample: 100px;
     gap: var(--lgs-gutter-s);
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, var(--lgs-max-menu-sample)));
 }
 
-#menu-disposition-chooser .menu-sample {
-
+#menu-disposition-chooser[device="mobile"] {
+    --lgs-max-menu-sample: 80px;
 }
 
-#menu-disposition-chooser .menu-sample {
-    aspect-ratio: 4/3;
+#menu-disposition-chooser[device="mobile"] .menu-sample {
+    aspect-ratio: 9/16;
 }
 
 #menu-disposition-chooser .menu-sample > .lgs-card {
-    aspect-ratio: 4/3;
-    gap: 3px;
-    padding: 3px;
+    gap: var(--lgs-gutter-xs);
+    padding: var(--lgs-gutter-xs);
     display: flex;
     position: relative;
     z-index: 1;
+    max-width: var(--lgs-max-menu-sample);
+    height: 100%;
+}
+
+#menu-disposition-chooser[mobile="true"] .menu-sample > .lgs-card {
+    aspect-ratio: 9/16;
+    --lgs-max-menu-sample: 80px
 }
 
 #menu-disposition-chooser .menu-sample > .lgs-card::before {
@@ -92,7 +100,6 @@
     opacity: 0.7
 }
 
-
 #menu-disposition-chooser .sample-checkbox {
     position: absolute;
     font-size: 1rem;
@@ -115,26 +122,45 @@
     justify-content: space-between;
 }
 
+#menu-disposition-chooser .menu-sample .bottom-start {
+    flex-direction: row-reverse;
+}
+
+#menu-disposition-chooser .menu-sample .bottom-end {
+    flex-direction: row;
+}
+
 #menu-disposition-chooser .menu-sample .end-start,
 #menu-disposition-chooser .menu-sample .end-end {
     flex-direction: row-reverse;
 }
 
+#menu-disposition-chooser .sample-drawer,
 #menu-disposition-chooser .sample-drawer {
-    width: 30%;
+    width: 40%;
     background-color: var(--lgs-theme-background-color);
+    margin-top: 0;
 }
+
+#menu-disposition-chooser[device="mobile"] .sample-drawer {
+    width: 100%;
+    margin-top: 40%;
+}
+
 
 #menu-disposition-chooser .sample-toolbar {
     display: flex;
     flex-direction: column;
-    justify-content: space-around;
-    height: 100%;
+    gap: var(--lgs-gutter-xs);
+}
+
+#menu-disposition-chooser[device="mobile"] .sample-toolbar {
+    margin-top: calc(2 * var(--lgs-gutter));
 }
 
 #menu-disposition-chooser .sample-toolbar div {
     border-radius: 2px;
     aspect-ratio: 1;
-    width: 7px;
+    width: 5px;
     background-color: var(--lgs-theme-background-color);
 }

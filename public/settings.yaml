@@ -684,4 +684,4 @@ ui:
       fromStart: true
     drawers:
       fromStart: false
-      fromMiddle: true
+      fromBottom: true

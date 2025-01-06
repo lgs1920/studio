@@ -1,18 +1,19 @@
 import { MapLayer } from '@Components/cesium/MapLayer'
 import { Viewer }   from '@Components/cesium/Viewer'
 
-import { InitErrorMessage }            from '@Components/InitErrorMessage'
-import { FlagLGS }                     from '@Components/MainUI/FlagLGS'
-import { MainUI }                      from '@Components/MainUI/MainUI.jsx'
+import { InitErrorMessage }                    from '@Components/InitErrorMessage'
+import { FlagLGS }                             from '@Components/MainUI/FlagLGS'
+import { MainUI }                              from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { WelcomeModal }                from '@Components/MainUI/WelcomeModal'
-import { BASE_ENTITY, OVERLAY_ENTITY } from '@Core/constants'
-import { LGS1920Context }              from '@Core/LGS1920Context'
-import { LayersAndTerrainManager }     from '@Core/ui/LayerAndTerrainManager'
-import { TerrainUtils }                from '@Utils/cesium/TerrainUtils'
-import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
-import { UIToast }                     from '@Utils/UIToast'
-import { useEffect }                   from 'react'
+import { WelcomeModal }                        from '@Components/MainUI/WelcomeModal'
+import { BASE_ENTITY, BOTTOM, OVERLAY_ENTITY } from '@Core/constants'
+import { LGS1920Context }                      from '@Core/LGS1920Context'
+import { LayersAndTerrainManager }             from '@Core/ui/LayerAndTerrainManager'
+import { TerrainUtils }                        from '@Utils/cesium/TerrainUtils'
+import { TrackUtils }                          from '@Utils/cesium/TrackUtils'
+import { UIToast }                             from '@Utils/UIToast'
+import { useEffect }                           from 'react'
+import { useMediaQuery }                       from 'react-responsive'
 
 /***************************************
  * Init Application context
@@ -37,6 +38,23 @@ if (initApp.status) {
 }
 
 export function LGS1920() {
+
+    const isMobile = useMediaQuery({maxWidth: 767})
+    if (isMobile) {
+        document.body.classList.add('mobile')
+        lgs.editorSettingsProxy.menu.drawer = BOTTOM
+    }
+    else {
+        document.body.classList.remove('mobile')
+    }
+
+    const isPortrait = useMediaQuery({orientation: 'portrait'})
+    if (isPortrait) {
+        document.body.classList.add('portrait')
+    }
+    else {
+        document.body.classList.remove('portrait')
+    }
     useEffect(() => {
         try {
             // If initialisation phase was OK, we have somme additional tasks to do.

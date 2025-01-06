@@ -2,9 +2,6 @@ import { END, START } from '@Core/constants'
 
 export class MenuManager {
 
-    /** @param instance {MenuManager} */
-    instance
-
     constructor() {
         // Singleton
         if (MenuManager.instance) {

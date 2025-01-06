@@ -1,13 +1,14 @@
 import {
     APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, JOURNEYS_STORE, ORIGIN_STORE, platforms,
     SERVERS, SETTINGS_STORE, VAULT_STORE,
-}                      from '@Core/constants'
-import { MenuManager } from '@Core/ui/MenuManager'
-import { AppUtils }    from '@Utils/AppUtils'
-import { MouseUtils }  from '@Utils/cesium/MouseUtils'
-import { CSSUtils }    from '@Utils/CSSUtils'
-import { UIUtils }     from '@Utils/UIUtils'
-import { UnitUtils }   from '@Utils/UnitUtils'
+}                        from '@Core/constants'
+import { DeviceManager } from '@Core/ui/DeviceManager'
+import { MenuManager }   from '@Core/ui/MenuManager'
+import { AppUtils }      from '@Utils/AppUtils'
+import { MouseUtils }    from '@Utils/cesium/MouseUtils'
+import { CSSUtils }      from '@Utils/CSSUtils'
+import { UIUtils }       from '@Utils/UIUtils'
+import { UnitUtils }     from '@Utils/UnitUtils'
 
 import { proxy }             from 'valtio'
 import { LocalDB }           from './db/LocalDB'
@@ -268,11 +269,14 @@ export class LGS1920Context {
         __.ui.editor = {
             journey:new JourneyEditor()
         }
+
         __.ui.wanderer = new Wanderer()
         __.ui.cameraManager = new CameraManager()
         __.ui.drawerManager = new DrawerManager()
         __.ui.sceneManager = new SceneManager()
         __.ui.menuManager = new MenuManager()
+
+        __.device = new DeviceManager()
 
     }
 

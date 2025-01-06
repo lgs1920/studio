@@ -1,83 +1,48 @@
-import { CompassUI }              from '@Components/cesium/CompassUI/CompassUI'
+import { CompassUI }                        from '@Components/cesium/CompassUI/CompassUI'
+import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
+import { Toolbar }                          from '@Components/MainUI/Toolbar'
+import { Profile }                          from '@Components/Profile/Profile'
+import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
 import {
-    FullScreenButton,
-}                                 from '@Components/FullScreenButton/FullScreenButton'
-import {
-    Toolbar,
-}                                 from '@Components/MainUI/Toolbar'
-import {
-    Profile,
-}                                 from '@Components/Profile/Profile'
-import {
-    TracksEditor,
-}                                 from '@Components/TracksEditor/TracksEditor'
-import {
-    END, MENU_END_END, MENU_END_START, MENU_START_END, MENU_START_START, SCENE_MODE_2D, START,
-}                                 from '@Core/constants'
-import {
-    CanvasEvents,
-}                                 from '@Core/events/CanvasEvents.js'
-import { useEffect }              from 'react'
+    BOTTOM, END, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END, MENU_START_START,
+    SCENE_MODE_2D, START, TOP,
+}                                           from '@Core/constants'
+import { CanvasEvents }                     from '@Core/events/CanvasEvents.js'
+import { useEffect }                        from 'react'
 
 import './style.css'
-import { subscribe, useSnapshot } from 'valtio'
-import {
-    CameraAndTargetPanel,
-}                                 from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
-import {
-    JourneyLoaderUI,
-}                                 from '../FileLoader/JourneyLoaderUI'
-import {
-    Panel as InformationPanel,
-}                                 from '../InformationPanel/Panel'
-import {
-    PanelButton as InformationButton,
-}                                 from '../InformationPanel/PanelButton'
-import {
-    Panel as LayersPanel,
-}                                 from '../Settings/layers/Panel'
-import {
-    PanelButton as LayersButton,
-}                                 from '../Settings/layers/PanelButton'
-import {
-    Panel as SettingsPanel,
-}                                 from '../Settings/Panel'
-import {
-    PanelButton as SettingsButton,
-}                                 from '../Settings/PanelButton'
-import {
-    CallForActions,
-}                                 from './CallForActions'
-import {
-    CameraTarget,
-}                                 from './CameraTarget'
-import {
-    CreditsBar,
-}                                 from './credits/CreditsBar'
-import {
-    FocusButton,
-}                                 from './FocusButton'
-import {
-    SceneModeSelector,
-}                                 from './SceneModeSelector'
-import { SupportUI }              from './SupportUI'
-import {
-    SupportUIButton,
-}                                 from './SupportUIButton'
+import { useMediaQuery }                    from 'react-responsive'
+import { subscribe, useSnapshot }           from 'valtio'
+import { CameraAndTargetPanel }             from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
+import { JourneyLoaderUI }                  from '../FileLoader/JourneyLoaderUI'
+import { Panel as InformationPanel }        from '../InformationPanel/Panel'
+import { PanelButton as InformationButton } from '../InformationPanel/PanelButton'
+import { Panel as LayersPanel }             from '../Settings/layers/Panel'
+import { PanelButton as LayersButton }      from '../Settings/layers/PanelButton'
+import { Panel as SettingsPanel }           from '../Settings/Panel'
+import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
+import { CallForActions }                   from './CallForActions'
+import { CameraTarget }                     from './CameraTarget'
+import { CreditsBar }                       from './credits/CreditsBar'
+import { FocusButton }                      from './FocusButton'
+import { SceneModeSelector }                from './SceneModeSelector'
+import { SupportUI }                        from './SupportUI'
+import { SupportUIButton }                  from './SupportUIButton'
 
 export const MainUI = () => {
     const snap = useSnapshot(lgs.mainProxy)
+    const isMobile = useMediaQuery({maxWidth: 767})
 
     useEffect(() => {
         if (lgs.settings.scene.mode.value === SCENE_MODE_2D.value) {
             lgs.scene.morphTo2D(0)
         }
+
         // Manage canvas related events
         CanvasEvents.attach()
         // CanvasEvents.addListeners()
 
     }, [])
-
 
     // We need to interact with  Drawers
     let primaryEntrance = 'lgs-slide-in-from-left'
@@ -85,8 +50,10 @@ export const MainUI = () => {
     const arrangeDrawers = () => {
 
         const placement = sprintf('%s-%s',
-                                  lgs.settings.ui.menu.drawers.fromStart ? START : END,
+                                  isMobile ? lgs.settings.ui.menu.drawers.fromBottom ? BOTTOM : TOP
+                                           : lgs.settings.ui.menu.drawers.fromStart ? START : END,
                                   lgs.settings.ui.menu.toolBar.fromStart ? START : END)
+
 
         const verticalOffsetLeft = (lgs.mainProxy.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-left')
         const verticalOffsetRight = (lgs.mainProxy.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-right')
@@ -116,6 +83,7 @@ export const MainUI = () => {
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) + ${width}))`)
                 break
             case MENU_END_START:
+            case MENU_BOTTOM_START:
                 __.ui.css.setCSSVariable('--primary-buttons-bar-left', 0)
                 __.ui.css.setCSSVariable('--primary-buttons-bar-right', 'auto')
                 __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'auto')
@@ -125,6 +93,7 @@ export const MainUI = () => {
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) + ${width}))`)
                 break
             case MENU_END_END:
+            case MENU_BOTTOM_END:
                 primaryEntrance = 'lgs-slide-in-from-right'
                 secondaryEntrance = 'lgs-slide-in-from-left'
                 __.ui.css.setCSSVariable('--primary-buttons-bar-left', 'auto')
