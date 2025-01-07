@@ -66,19 +66,19 @@
     --lgs-border-s: var(--lgs-border-width-s) solid var(--sl-color-gray-400);
 
     --lgs-error-color: var(--sl-color-red-500);
-    --lgs-error-bg-color: hsla(0 84.2% 60.2%/0.3);
+    --lgs-error-bg-color: hsla(0 84.2% 60.2%/0.6);
     --lgs-error-border-color: hsla(0 84.2% 60.2%/0.2);
 
     --lgs-success-color: var(--sl-color-green-500);
-    --lgs-success-bg-color: hsla(83.7 80.5% 44.3% / 0.3);
+    --lgs-success-bg-color: hsla(83.7 80.5% 44.3% / 0.6);
     --lgs-success-border-color: hsla(83.7 80.5% 44.3% / 0.2);
 
     --lgs-warning-color: var(--sl-color-orange-500);
-    --lgs-warning-bg-color: hsla(24.6 95% 53.1% / 0.3);
+    --lgs-warning-bg-color: hsla(24.6 95% 53.1% / 0.6);
     --lgs-warning-border-color: hsla(24.6 95% 53.1% / 0.2);
 
     --lgs-information-color: var(--sl-color-blue-500);
-    --lgs-information-bg-color: hsla(217.2 91.2% 59.8%/0.3);
+    --lgs-information-bg-color: hsla(217.2 91.2% 59.8%/0.6);
     --lgs-information-border-color: hsla(217.2 91.2% 59.8%/0.2);
 
 
@@ -516,9 +516,9 @@ sl-switch[align-right]::part(control) {
     padding: 0;
     margin: 0 0 var(--lgs-gutter-xs);
     border: 1px solid;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(6px);
     background-color: rgba(255, 255, 255, 0.5);
-    color: white;
+    color: black;
 }
 
 .sl-toast-stack sl-alert:last-child::part(base) {
