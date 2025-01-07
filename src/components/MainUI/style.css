@@ -98,7 +98,7 @@ html {
 
 #used-platform {
     line-height: 1;
-    color: var(--sl-color-gray-600);
+    color: white;
 }
 
 /***************************************
@@ -257,7 +257,6 @@ html {
     color: white;
     border-color: white;
     backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(3px);
 }
 
 /*******************************************************************************
