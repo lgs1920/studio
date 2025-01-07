@@ -1,15 +1,15 @@
-import { SECOND }                                                      from '@Core/constants'
+import { SECOND }                                                     from '@Core/constants'
 import { faBomb, faCircleCheck, faCircleInfo, faTriangleExclamation } from '@fortawesome/pro-solid-svg-icons'
 import {
     slideInUp,
-}                                                                      from '@shoelace-style/animations/dist/sliding_entrances/slideInUp'
+}                                                                     from '@shoelace-style/animations/dist/sliding_entrances/slideInUp'
 import {
     slideOutLeft,
-}                                                                      from '@shoelace-style/animations/dist/sliding_exits/slideOutLeft'
+}                                                                     from '@shoelace-style/animations/dist/sliding_exits/slideOutLeft'
 import {
     setAnimation,
-}                                                                      from '@shoelace-style/shoelace/dist/utilities/animation-registry'
-import { FA2SL }                                                       from '@Utils/FA2SL'
+}                                                                     from '@shoelace-style/shoelace/dist/utilities/animation-registry'
+import { FA2SL }                                                      from '@Utils/FA2SL'
 
 export const LGS_INFORMATION_TOAST = 'information'
 export const LGS_SUCCESS_TOAST = 'success'
@@ -18,7 +18,7 @@ export const LGS_ERROR_TOAST = 'danger'
 
 export class UIToast {
 
-    static DURATION = 4000 * SECOND
+    static DURATION = 4 * SECOND
 
     static LGS_TOAST_ICONS = {
         [LGS_INFORMATION_TOAST]: faCircleInfo,
