@@ -717,7 +717,7 @@ export class TrackUtils {
                 else {
                     // It exists, we notify it
                     UIToast.warning({
-                                        caption: `This file has already been loaded!`,
+                                        caption: `This journey has already been loaded!`,
                                         text:    'Please select another one!',
                                     })
                     return JOURNEY_EXISTS
@@ -727,7 +727,7 @@ export class TrackUtils {
         catch (error) {
             console.error(error)
             UIToast.error({
-                              caption: `We're having problems reading this file!`,
+                              caption: `We're having problems reading this journey file!`,
                               text: 'Maybe the format is wrong!',
                           })
             return JOURNEY_KO
