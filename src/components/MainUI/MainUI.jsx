@@ -4,8 +4,8 @@ import { Toolbar }                          from '@Components/MainUI/Toolbar'
 import { Profile }                          from '@Components/Profile/Profile'
 import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
 import {
-    BOTTOM, END, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END, MENU_START_START,
-    SCENE_MODE_2D, START, TOP,
+    BOTTOM, DESKTOP_MIN, END, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
+    MENU_START_START, MOBILE_MAX, SCENE_MODE_2D, SECOND, START, TOP,
 }                                           from '@Core/constants'
 import { CanvasEvents }                     from '@Core/events/CanvasEvents.js'
 import { useEffect }                        from 'react'
@@ -30,8 +30,24 @@ import { SupportUI }                        from './SupportUI'
 import { SupportUIButton }                  from './SupportUIButton'
 
 export const MainUI = () => {
+
     const snap = useSnapshot(lgs.mainProxy)
-    const isMobile = useMediaQuery({maxWidth: 767})
+    const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
+
+    let resizeTimer
+    const windowResized = () => {
+        clearTimeout(resizeTimer)
+        resizeTimer = setTimeout(() => {
+            if (!isMobile && window.innerWidth <= MOBILE_MAX) {
+                __.ui.menuManager.reset()
+                arrangeDrawers()
+            }
+            if (isMobile && window.innerWidth >= DESKTOP_MIN) {
+                __.ui.menuManager.reset()
+                arrangeDrawers()
+            }
+        }, 0.3 * SECOND)
+    }
 
     useEffect(() => {
         if (lgs.settings.scene.mode.value === SCENE_MODE_2D.value) {
@@ -48,9 +64,8 @@ export const MainUI = () => {
     let primaryEntrance = 'lgs-slide-in-from-left'
     let secondaryEntrance = 'lgs-slide-in-from-right'
     const arrangeDrawers = () => {
-
         const placement = sprintf('%s-%s',
-                                  isMobile ? lgs.settings.ui.menu.drawers.fromBottom ? BOTTOM : TOP
+                                  isMobile ? (lgs.settings.ui.menu.drawers.fromBottom ? BOTTOM : TOP)
                                            : lgs.settings.ui.menu.drawers.fromStart ? START : END,
                                   lgs.settings.ui.menu.toolBar.fromStart ? START : END)
 
@@ -83,7 +98,6 @@ export const MainUI = () => {
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) + ${width}))`)
                 break
             case MENU_END_START:
-            case MENU_BOTTOM_START:
                 __.ui.css.setCSSVariable('--primary-buttons-bar-left', 0)
                 __.ui.css.setCSSVariable('--primary-buttons-bar-right', 'auto')
                 __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'auto')
@@ -93,7 +107,6 @@ export const MainUI = () => {
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) + ${width}))`)
                 break
             case MENU_END_END:
-            case MENU_BOTTOM_END:
                 primaryEntrance = 'lgs-slide-in-from-right'
                 secondaryEntrance = 'lgs-slide-in-from-left'
                 __.ui.css.setCSSVariable('--primary-buttons-bar-left', 'auto')
@@ -104,12 +117,33 @@ export const MainUI = () => {
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', 0)
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) + ${width}))`)
                 break
+
+            case MENU_BOTTOM_START:
+                __.ui.css.setCSSVariable('--primary-buttons-bar-left', 0)
+                __.ui.css.setCSSVariable('--primary-buttons-bar-right', 'auto')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'auto')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 'var(--lgs-secondary-buttons-bar-right-delta)')
+                __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', 0)
+                __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) ))`)
+                break
+            case MENU_BOTTOM_END:
+                primaryEntrance = 'lgs-slide-in-from-right'
+                secondaryEntrance = 'lgs-slide-in-from-left'
+                __.ui.css.setCSSVariable('--primary-buttons-bar-left', 'auto')
+                __.ui.css.setCSSVariable('--primary-buttons-bar-right', 0)
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'var(--lgs-secondary-buttons-bar-left-delta)')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 'auto')
+                __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', 0)
+                __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) ))`)
+                break
         }
 
 
     }
     subscribe(lgs.mainProxy.drawers, arrangeDrawers)
     subscribe(lgs.settings.ui.menu, arrangeDrawers)
+    window.addEventListener('resize', windowResized)
+
     arrangeDrawers()
 
     const SupportUIDialog = () => {

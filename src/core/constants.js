@@ -18,6 +18,9 @@ export { MILLIS, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR }
 /** other */
 export const WRONG = -99999999999
 
+export const MOBILE_MAX = 767
+export const DESKTOP_MIN = 768
+
 /**
  * Main Configuration file
  *

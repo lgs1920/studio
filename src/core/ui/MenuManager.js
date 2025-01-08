@@ -1,4 +1,4 @@
-import { END, START } from '@Core/constants'
+import { BOTTOM, END, MOBILE_MAX, START } from '@Core/constants'
 
 export class MenuManager {
 
@@ -8,10 +8,17 @@ export class MenuManager {
             return MenuManager.instance
         }
 
-        lgs.editorSettingsProxy.menu.drawer = lgs.settings.ui.menu.drawers.fromStart ? START : END
-        lgs.editorSettingsProxy.menu.toolbar = lgs.settings.ui.menu.toolBar.fromStart ? START : END
-
+        this.reset()
         MenuManager.instance = this
 
+    }
+
+    reset = () => {
+        if (window.innerWidth <= MOBILE_MAX) {
+            lgs.editorSettingsProxy.menu.drawer = lgs.settings.ui.menu.drawers.fromBottom ? BOTTOM : TOP
+        }
+        else {
+            lgs.editorSettingsProxy.menu.drawer = lgs.settings.ui.menu.drawers.fromStart ? START : END
+        }
     }
 }
