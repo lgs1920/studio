@@ -10,7 +10,7 @@ html {
     height: 100vh;
     left: 0;
     width: 100vw;
-    pointer-events: none;
+    pointer-events: auto;
     z-index: var(--lgs-ui-layer-zindex);
 }
 
@@ -90,10 +90,7 @@ html {
     position: absolute;
     bottom: var(--bottom);
     left: var(--right);
-    display: flex;
-    flex-direction: column;
-    gap: var(--lgs-gutter-s);
-    align-self: flex-end;
+    flex-direction: row;
 }
 
 #used-platform {

@@ -167,13 +167,15 @@ export const MainUI = () => {
                                      tooltip={'right'}/>
                             <InformationButton/>
                             <SupportUIButton/>
-                            <FullScreenButton/>
+
                         </div>
                         <div id={'secondary-buttons-bar'} className={secondaryEntrance}>
                             <CompassUI scene={lgs.scene}/>
                             <div id="secondary-buttons-bar-content">
                                 <SceneModeSelector tooltip={'left'}/>
+                                <FullScreenButton/>
                             </div>
+
                         </div>
 
                     </>
