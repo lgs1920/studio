@@ -1,8 +1,8 @@
 import '@shoelace-style/shoelace/dist/themes/light.css'
+import { LayersUtils }                                   from '@Utils/cesium/LayersUtils'
 import { SceneUtils }                                    from '@Utils/cesium/SceneUtils'
 import * as Cesium                                       from 'cesium'
 import { ImageryLayerCollection, WebMercatorProjection } from 'cesium'
-import { LayersUtils } from '@Utils/cesium/LayersUtils'
 
 export function Viewer() {
 
@@ -51,25 +51,25 @@ export function Viewer() {
     }
     // If initialisation phase was OK, we have somme additional tasks to do.
 
-
-    // Initialize the Cesium Viewer
-    lgs.viewer = new Cesium.Viewer('cesium-viewer', {
-        homeButton:           false,
-        timeline:             false,
-        animation:            false,
-        navigationHelpButton: false,
-        fullscreenButton:     false,
-        geocoder:             false,
-        infoBox:              false,
-        sceneModePicker:      false,
-        showRenderLoopErrors: false,
-        mapProjection: new WebMercatorProjection(), // TODO is it a problem in 3D ?
-        // Avoid consuming Cesium Ion Sessions
-        // DO NOT CHANGE the 2 following lines
-        imageryProvider: false,
-        baseLayerPicker: false,
-    })
-
+    // Initialize the Cesium Viewer only once
+    if (!lgs.viewer) {
+        lgs.viewer = new Cesium.Viewer('cesium-viewer', {
+            homeButton:           false,
+            timeline:             false,
+            animation:            false,
+            navigationHelpButton: false,
+            fullscreenButton:     false,
+            geocoder:             false,
+            infoBox:              false,
+            sceneModePicker:      false,
+            showRenderLoopErrors: false,
+            mapProjection:        new WebMercatorProjection(), // TODO is it a problem in 3D ?
+            // Avoid consuming Cesium Ion Sessions
+            // DO NOT CHANGE the 2 following lines
+            imageryProvider: false,
+            baseLayerPicker: false,
+        })
+    }
     // Change scene mode
     lgs.viewer.scene.sceneMode = SceneUtils.modeFromLGSToGIS(lgs.settings.scene.mode)
 
