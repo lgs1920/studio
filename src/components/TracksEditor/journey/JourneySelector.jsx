@@ -78,7 +78,7 @@ export const JourneySelector = (props) => {
             </SlOption>)}
         </SlSelect>}
         {mainSnapshot.list.length === 1 && props.single && <>
-            <span className={'journey-title'}>
+            <span className={'journey-title' + props.card ? ' lgs-text-card' : ''}>
             <SlIcon className={'journey-title-icon'}
                     library="fa" name={FA2SL.set(faRoute)}
                     slot={'expand-icon'}

@@ -10,7 +10,7 @@ html {
     height: 100vh;
     left: 0;
     width: 100vw;
-    pointer-events: auto;
+    pointer-events: none;
     z-index: var(--lgs-ui-layer-zindex);
 }
 
@@ -31,7 +31,7 @@ html {
     display: flex;
     flex-direction: column;
     position: absolute;
-    top: 5rem;
+    top: var(--top);
     margin: 0 var(--right) 0 var(--left);
     max-width: calc(100% - var(--left) - var(--right));
     left: var(--primary-buttons-bar-left);
@@ -98,6 +98,7 @@ html {
     color: white;
 }
 
+
 /***************************************
  * Toolbar
  */
@@ -126,6 +127,31 @@ html {
 .lgs-ui-toolbar.embed sl-button {
     --sl-input-border-width: 0;
 }
+
+.journey-toolbar {
+    display: flex;
+    gap: var(--lgs-gutter-s);
+    flex-direction: row;
+}
+
+.journey-toolbar-content {
+    display: flex;
+    flex-wrap: wrap;
+    margin-left: auto;
+    flex-direction: row-reverse;
+    gap: var(--lgs-gutter-s);
+}
+
+.mobile .journey-toolbar-content {
+    width: 14rem;
+}
+
+.mobile .journey-selector {
+    flex-basis: 100%;
+    flex-grow: 1;
+    order: 10;
+}
+
 /***************************************
  * Dropdown Toolbar
  */
@@ -140,6 +166,14 @@ html {
 }
 .lgs-ui-dropdown-toolbar.just-icons sl-menu-item::part(base) {
     padding: 0 var(--sl-spacing-2x-small);
+}
+
+/***************************************
+ * Toolbar buttons
+ */
+
+#open-info-panel {
+    margin-top: var(--lgs-gutter);
 }
 /***************************************
  * Profile

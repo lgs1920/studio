@@ -6,6 +6,15 @@ import {
     ORIGIN_STORE, REFRESH_DRAWING, SIMULATE_ALTITUDE, UPDATE_JOURNEY_SILENTLY,
 }                     from '@Core/constants'
 import {
+    ElevationServer,
+}                     from '@Core/Elevation/ElevationServer'
+import {
+    Journey,
+}                     from '@Core/Journey'
+import {
+    RemoveJourney,
+}                     from '@Editor/journey/RemoveJourney'
+import {
     TrackData,
 }                     from '@Editor/track/TrackData'
 import {
@@ -44,12 +53,6 @@ import {
 import {
     useSnapshot,
 }                     from 'valtio'
-import {
-    ElevationServer,
-} from '@Core/Elevation/ElevationServer'
-import {
-    Journey,
-} from '@Core/Journey'
 import {
     SelectElevationSource,
 }                     from '../../MainUI/SelectElevationSource'
@@ -340,76 +343,6 @@ export const JourneySettings = function JourneySettings() {
     const [ConfirmRemoveJourneyDialog, confirmRemoveJourney] = useConfirm(`Remove <strong>${editorSnapshot.journey.title}</strong> ?`, Question,
                                                                           {icon: faTrashCan, text: 'Remove'})
 
-    /**
-     * Remove journey
-     */
-    const removeJourney = async () => {
-
-        const confirmation = await confirmRemoveJourney()
-
-        if (confirmation) {
-            const mainStore = lgs.mainProxy
-            const journey = editorStore.journey.slug
-            const removed = lgs.getJourneyBySlug(journey)
-            // get Journey index
-            const index = mainStore.components.journeyEditor.list.findIndex((list) => list === journey)
-
-            /**
-             * Do some cleaning
-             */
-            if (index >= 0) {
-                // In store
-                mainStore.components.journeyEditor.list.splice(index, 1)
-                // In context
-                lgs.journeys.delete(editorStore.journey.slug)
-
-                const dataSources = TrackUtils.getDataSourcesByName(editorStore.journey.slug)
-                dataSources.forEach(dataSource => {
-                    lgs.viewer.dataSources.remove(dataSource)
-                })
-            }
-
-            // Stop wanderer
-            __.ui.wanderer.stop()
-
-            // Remove journey in DB
-            await editorStore.journey.removeFromDB()
-
-            /**
-             * If we have some other journeys, we'll take the first and render the editor.
-             * Otherwise we close the editing.
-             */
-            let text = ''
-            if (mainStore.components.journeyEditor.list.length >= 1) {
-                // New current is the first.
-                lgs.theJourney = lgs.getJourneyBySlug(mainStore.components.journeyEditor.list[0])
-                lgs.theJourney.focus()
-                lgs.theTrack = lgs.theJourney.tracks.values().next().value
-                lgs.theTrack.addToEditor()
-                Utils.renderJourneysList()
-                // Sync Profile
-                __.ui.profiler.draw()
-            }
-            else {
-                lgs.theJourney = null
-                lgs.theTrack = null
-                lgs.cleanEditor()
-                text = 'There are no other journeys available!'
-                mainStore.canViewJourneyData = false
-                __.ui.drawerManager.close()
-                mainStore.components.profile.show = false
-                mainStore.canViewProfile = false
-            }
-
-            // Let's inform the user
-            UIToast.success({
-                                caption: `${removed.title}</strong>`,
-                                text:    `removed successfully!<br>${text}`,
-                            })
-
-        }
-    }
-
     const textVisibilityJourney = sprintf('%s Journey', editorSnapshot.journey.visible ? 'Hide' : 'Show')
     const textVisibilityPOIs = sprintf('%s POIs', editorSnapshot.journey.allPOIs ? 'Hide' : 'Show')
 
@@ -544,17 +477,11 @@ export const JourneySettings = function JourneySettings() {
                         <SlTooltip hoist content={'Export'}>
                                 <SlIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>
                         </SlTooltip>
+                        <RemoveJourney/>
 
-                        <SlTooltip hoist content={'Remove'}>
-                            <a>
-                                <SlIconButton onClick={removeJourney} library="fa" name={FA2SL.set(faTrashCan)}/>
-                            </a>
-                        </SlTooltip>
                         </span>
                     </div>
                 </div>
-
-                <ConfirmRemoveJourneyDialog/>
                 <ConfirmExportJourneyDialog/>
 
             </div>}

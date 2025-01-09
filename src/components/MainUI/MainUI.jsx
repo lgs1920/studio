@@ -1,6 +1,6 @@
 import { CompassUI }                        from '@Components/cesium/CompassUI/CompassUI'
 import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
-import { Toolbar }                          from '@Components/MainUI/Toolbar'
+import { JourneyToolbar }                   from '@Components/MainUI/JourneyToolbar'
 import { Profile }                          from '@Components/Profile/Profile'
 import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
 import {
@@ -24,7 +24,6 @@ import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
 import { CallForActions }                   from './CallForActions'
 import { CameraTarget }                     from './CameraTarget'
 import { CreditsBar }                       from './credits/CreditsBar'
-import { FocusButton }                      from './FocusButton'
 import { SceneModeSelector }                from './SceneModeSelector'
 import { SupportUI }                        from './SupportUI'
 import { SupportUIButton }                  from './SupportUIButton'
@@ -158,13 +157,7 @@ export const MainUI = () => {
                         <div id={'primary-buttons-bar'} className={primaryEntrance}>
                             <SettingsButton tooltip={'right'}/>
                             <LayersButton tooltip={'right'}/>
-                            {snap.theJourney && <FocusButton tooltip={'right'}/>}
-
-                            <Toolbar editor={true}
-                                     profile={true}
-                                     fileLoader={true}
-                                     position={'vertical'}
-                                     tooltip={'right'}/>
+                            <JourneyToolbar></JourneyToolbar>
                             <InformationButton/>
                             <SupportUIButton/>
 

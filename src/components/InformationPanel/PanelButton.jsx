@@ -10,7 +10,7 @@ export const PanelButton = () => {
 
     return (<>
         <SlTooltip hoist placement="right" content="Show Information">
-            <SlButton className={'square-icon'} size="small" id={'open-info-drawer'}
+            <SlButton className={'square-icon'} size="small" id={'open-info-panel'}
                       onClick={() => __.ui.drawerManager.toggle(INFO_DRAWER)}>
                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCircleInfo)}></SlIcon>
             </SlButton>

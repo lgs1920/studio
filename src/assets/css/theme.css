@@ -54,6 +54,8 @@
     --lgs-compass-stroke-color: var(--lgs-dark-ui-secondary-color);
     --lgs-compass-fill-color: var(--lgs-dark-ui-secondary-color);
 
+    --lgs-card-border-color: var(--sl-color-gray-300);
+
     --lgs-card-ui-bg-color: var(--lgs-dark-ui-secondary-color);
     --lgs-card-ui-color: var(--lgs-dark-ui-5th-color);
     --lgs-card-ui-opacity: 0.8;
@@ -65,6 +67,7 @@
     --lgs-border-width-s: 1px;
     --lgs-border-s: var(--lgs-border-width-s) solid var(--sl-color-gray-400);
 
+    --text-on-color: #fbfbeb;
     --lgs-error-color: var(--sl-color-red-500);
     --lgs-error-bg-color: hsla(0 84.2% 60.2%/0.5);
     --lgs-error-border-color: hsla(0 96.3% 89.4%/0.3);
@@ -110,6 +113,9 @@
     --lgs-track-color-inactive: var(--sl-color-gray-200);
 
     --lgs-theme-background-color: var(--sl-color-neutral-0);
+
+    --lgs-width-unit: 28rem;
+    --lgs-max-mobile-width: min(var(--lgs-width-unit), calc(100% - var(--left) - var(--top)))
 }
 
 .lgs-theme, .lgs-theme::part(panel) {
@@ -122,7 +128,6 @@
     /*border: 1px solid rgba( 255, 255, 255, 0.18 );*/
     /*color:#fff*/
 }
-
 
 .sl-theme-light {
     --sl-input-border-width-small: 4px;
@@ -194,7 +199,7 @@ sl-icon-button[size="small"], sl-icon[size="small"] {
  * Drawers
  ******************************************************************************/
 :root {
-    --lgs-vertical-panel-width: 400px;
+    --lgs-vertical-panel-width: var(--lgs-width-unit);
     --lgs-vertical-panel-height: 70%;
 
     --lgs-horizontal-panel-width: 100%;
@@ -280,13 +285,19 @@ sl-card[variant="primary"]::part(base) {
     --border-color: var(--lgs-card-ui-border-color);
 }
 
-.lgs-card, .lgs-card::part(base) {
+.lgs-card, .lgs-card::part(base), .lgs-text-card, .lgs-card::part(base) {
     display: flex;
     background-color: rgba(255, 255, 255, 0.15);
-
-    border: 1px solid var(--sl-color-gray-300);
+    border: 1px solid var(--lgs-card-border-color);
     padding: var(--lgs-gutter-s);
     border-radius: var(--lgs-border-radius-s);
+}
+
+.lgs-text-card, .lgs-card::part(base) {
+    align-items: center;
+    flex-direction: row;
+    background-color: var(--sl-color-neutral-0);
+    padding: var(--lgs-gutter-xs);
 }
 
 .lgs-card ::part(base) {
@@ -295,12 +306,14 @@ sl-card[variant="primary"]::part(base) {
 
 .lgs-card.on-map {
     gap: var(--lgs-gutter-s);
+    align-items: center;
     background: var(--lgs-card-on-map-bg-color);
     border-radius: var(--lgs-border-radius-xs);
     box-shadow: var(--sl-shadow-medium);
     color: white;
     backdrop-filter: blur(3px);
     border-color: var(--lgs-card-on-map-border-color);
+    height: 100%;
 }
 .lgs-card-wrapper {
     display: flex;
@@ -499,7 +512,7 @@ sl-switch[align-right]::part(control) {
  ******************************************************************************/
 
 .sl-toast-stack {
-    width: min(28rem, calc(100% - var(--left) - var(--top))) !important;
+    width: var(--lgs-max-mobile-width) !important;
     overflow: hidden !important;
     left: var(--lgs-gutter-xs) !important;
     right: auto !important;
@@ -518,7 +531,7 @@ sl-switch[align-right]::part(control) {
     border: 1px solid;
     backdrop-filter: blur(3px);
     background-color: rgba(255, 255, 255, 0.5);
-    color: #fbfbeb;
+    color: var(--text-on-color);
 }
 
 .sl-toast-stack sl-alert:last-child::part(base) {

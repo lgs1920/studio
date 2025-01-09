@@ -218,7 +218,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     background-color: var(--lgs-card-ui-bg-color);
-    color: var(--lgs-card-ui-color);
+    color: var(--text-on-color);
     position: absolute;
     bottom: 0;
     right: 0;
@@ -234,12 +234,12 @@
 
 .by-thumbnail .entity-selected .entity-name {
     background-color: var(--lgs-success-color);
-    color: var(--lgs-success-bg-color);
+    color: var(--text-on-color);
 }
 
 .layer-entity:hover :not(.entity-selected) .entity-name {
     background-color: var(--lgs-card-ui-color);
-    color: var(--lgs-card-ui-bg-color);
+    color: var(--text-on-color);
 }
 
 .authent-tasks-list {

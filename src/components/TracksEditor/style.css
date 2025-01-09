@@ -69,11 +69,11 @@ sl-tab sl-icon {
     width: 100%;
     font-weight: 700;
     align-items: center;
-    margin-right: var(--lgs-gutter-s);
 }
 
 .journey-title-icon {
     width: 1.2rem;
+    margin-right: var(--lgs-gutter-s);;
 }
 
 .settings-panel {
