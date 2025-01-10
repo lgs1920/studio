@@ -137,18 +137,32 @@ html {
 .journey-toolbar-content {
     display: flex;
     flex-wrap: wrap;
-    margin-left: auto;
-    flex-direction: row-reverse;
     gap: var(--lgs-gutter-s);
+    margin-left: auto;
+    width: 30rem;
 }
 
 .mobile .journey-toolbar-content {
-    width: 14rem;
+    /**
+     TODO width: calc(var(--lgs-max-mobile-width) - 3 * var(--lgs-square-icon-dimension))
+     */
+    width: 15rem;
+    max-width: 15rem;
 }
 
-.mobile .journey-selector {
-    flex-basis: 100%;
-    flex-grow: 1;
+[placement^="left"] .journey-toolbar-content {
+    margin-right: auto;
+    flex-direction: row-reverse;
+}
+
+[placement^="right"] .journey-toolbar-content {
+    margin-left: auto;
+    flex-direction: row;
+}
+
+
+.mobile .journey-toolbar-content .journey-selector,
+.mobile .journey-toolbar-content .journey-title {
     order: 10;
 }
 

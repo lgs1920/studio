@@ -17,7 +17,7 @@ export const JourneyToolbar = (props) => {
     const journeyTrigger = useRef(null)
     const [active, setActive] = useState(false)
     const snap = useSnapshot(lgs.mainProxy)
-
+    const settings = useSnapshot(lgs.settings.ui.menu)
     const fileLoader = props?.fileloader ?? true
     const editor = props?.editor ?? true
     const profile = props?.profile ?? true
@@ -65,7 +65,9 @@ export const JourneyToolbar = (props) => {
             </div>
             {snap.theJourney &&
                 <SlPopup anchor={journeyTrigger.current}
-                         active={active} placement={'left-start'} distance={distance}
+                         active={active}
+                         placement={settings.toolBar.fromStart ? 'right-start' : 'left-start'}
+                         distance={distance}
                          hover-bridge="true">
                     <div className="journey-toolbar-content">
                         <FocusButton tooltip={tooltip}/>
