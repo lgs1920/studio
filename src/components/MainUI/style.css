@@ -7,7 +7,7 @@ html {
     gap: var(--lgs-gutter-s);
     position: fixed;
     top: 0;
-    height: 100vh;
+    height: 100dvh;
     left: 0;
     width: 100vw;
     pointer-events: none;

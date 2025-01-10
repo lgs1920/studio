@@ -3,22 +3,25 @@
 @import-normalize; /* bring in normalize.css styles */
 
 html {
-    height: 100vh;
+    height: 100%;
 }
 
 body {
     font-size: var(--lgs-font-size);
     font-family: var(--lgs-font-family);
     color: var(--lgs-dark-ui-fg-color);
+    height: 100dvh;
 }
 
 * {
     box-sizing: border-box;
 }
 
-#cesium-viewer {
+#cesium-viewer, #lgs1920-container {
     width: 100vw;
-    height: 100vh;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    height: 100dvh;
     position: absolute;
     top: 0;
     left: 0;
@@ -191,7 +194,7 @@ main-logo.xlarge {
     right: var(--right);
     top: var(--top);
     width: calc(100vw - var(--right) - var(--left));
-    height: calc(100vh - var(--top) - var(--bottom));
+    height: calc(100dvh - var(--top) - var(--bottom));
     pointer-events: none;;
     z-index: var(--sl-z-index-drawer);
 }

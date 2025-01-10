@@ -2,13 +2,19 @@
     --lgs-gutter: 0.8rem;
     --lgs-gutter-s: 0.5rem;
     --lgs-gutter-xs: 0.3rem;
-
-    --top: var(--lgs-gutter-xs);
-    --left: var(--lgs-gutter-xs);
-    --bottom: var(--lgs-gutter-xs);
-    --right: var(--lgs-gutter-xs);
+    --top: max(env(safe-area-inset-top), var(--lgs-gutter-xs));
+    --left: max(env(safe-area-inset-left), var(--lgs-gutter-xs));
+    --bottom: max(env(safe-area-inset-bottom), var(--lgs-gutter-xs));
+    --right: max(env(safe-area-inset-right), var(--lgs-gutter-xs));
     --lgs-inner-width: calc(100vw - var(--left) - var(--right));
-    --lgs-inner-height: calc(100vh - var(--top) - var(--bottom));
+    --lgs-inner-height: calc(100dvh - var(--top) - var(--bottom));
+}
+
+body.mobile {
+    /*** TODO --bottom: max(env(safe-area-inset-bottom), 50px);*/
+}
+
+:root {
 
     --lgs-border-radius: 0.5rem;
     --lgs-border-radius-s: 0.25rem;
