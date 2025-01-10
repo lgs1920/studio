@@ -75,8 +75,8 @@
     --lgs-error-border-color: hsla(0 96.3% 89.4%/0.3);
 
     --lgs-success-color: var(--sl-color-green-500);
-    --lgs-success-bg-color: hsla(83.7 80.5% 44.3% / 0.5);
-    --lgs-success-border-color: hsla(141 78.9% 85.1%/ 0.3);
+    --lgs-success-bg-color: hsla(142.1 70.6% 45.3% / 0.5);
+    --lgs-success-border-color: hsla(142.1 70.6% 45.3% / 0.3);
 
     --lgs-warning-color: var(--sl-color-orange-500);
     --lgs-warning-bg-color: hsla(24, 100%, 50%, 0.5);

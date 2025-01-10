@@ -139,7 +139,7 @@ html {
     flex-wrap: wrap;
     gap: var(--lgs-gutter-s);
     margin-left: auto;
-    width: 30rem;
+    width: 40rem;
 }
 
 .mobile .journey-toolbar-content {
