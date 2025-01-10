@@ -21,6 +21,8 @@
     --lgs-dimension: calc(3 * var(--lgs-gutter));
     --lgs-dimension-s: calc(var(--lgs-dimension) * 0.625);
 
+    --lgs-square-icon-dimension: var(--lgs-dimension);
+
     color-scheme: light dark;
 
 
@@ -183,7 +185,7 @@ sl-button::part(label) {
     align-items: center;
     justify-content: center;
     line-height: 1;
-    font-size: var(--lgs-dimension);
+    font-size: var(--lgs-square-icon-dimension);
 }
 
 sl-button sl-icon, sl-icon-button {
