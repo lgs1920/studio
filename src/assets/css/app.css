@@ -10,14 +10,13 @@ body {
     font-size: var(--lgs-font-size);
     font-family: var(--lgs-font-family);
     color: var(--lgs-dark-ui-fg-color);
-    height: 100dvh;
 }
 
 * {
     box-sizing: border-box;
 }
 
-#cesium-viewer, #lgs1920-container {
+#cesium-viewer {
     width: 100vw;
     min-height: 100dvh;
     max-height: 100dvh;
@@ -25,7 +24,6 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    overflow: hidden;
 }
 
 /** Hide the main toolbar */
