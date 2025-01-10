@@ -22,6 +22,7 @@ body {
     position: absolute;
     top: 0;
     left: 0;
+    overflow: hidden;
 }
 
 /** Hide the main toolbar */
@@ -197,6 +198,5 @@ main-logo.xlarge {
 
 .drawer-wrapper.horizontal {
     left: var(--left);
-
     max-width: var(--lgs-horizontal-panel-width);
 }
