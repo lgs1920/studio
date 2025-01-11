@@ -70,7 +70,7 @@ sl-tab sl-icon {
     max-width: min(25rem, 100%);
     font-weight: 700;
     align-items: center;
-    max-height: var(--lgs-square-icon-dimension);
+    max-height: var(--lgs-line-dimension);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

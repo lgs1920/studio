@@ -144,7 +144,7 @@ html {
 
 .mobile .journey-toolbar-content {
     /**
-     TODO width: calc(var(--lgs-max-mobile-width) - 3 * var(--lgs-square-icon-dimension))
+     TODO width: calc(var(--lgs-max-mobile-width) - 3 * var(--lgs-line-dimension))
      */
     width: 15rem;
     max-width: 15rem;
@@ -215,8 +215,7 @@ html {
     /*background: rgba( 255, 255, 255, 0.15 );*/
     /*background-image: linear-gradient(to right, rgba(255,188,0,0.30), rgba(255,114,15,0.30));*/
     box-shadow: var(--sl-shadow-x-large);
-    /*backdrop-filter: blur( 4px );*/
-    /*-webkit-backdrop-filter: blur( 4px );*/
+    /*backdrop-filter: blur( var(--lgs-blur) );*/
     /*border-radius: 10px;*/
     /*border: 1px solid rgba( 255, 255, 255, 0.18 );*/
     color: black;
@@ -298,10 +297,14 @@ html {
     gap: var(--lgs-gutter) !important;
 }
 
-.call-for-actions [outline]::part(base), .call-for-actions [outline]::part(label) {
-    color: white;
-    border-color: white;
-    backdrop-filter: blur(4px);
+.call-for-actions [outline] {
+    border-color: var(--lgs-border-color) !important;
+    backdrop-filter: blur(var(--lgs-blur));
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.call-for-actions [outline]::part(base) {
+    color: var(--lgs-text-on-color);
 }
 
 /*******************************************************************************

@@ -29,7 +29,7 @@ export const CreditsBar = () => {
     const Credit = (props) => {
         const credits = () => {
             const layer = __.layersAndTerrainManager.getEntityProxy(lgs.settings.layers[props.type])
-            return layer?.credits ?? props.provider.credits ?? `Credits ${props.provider.name}`
+            return `${props.type} : ${layer?.credits ?? props.provider.credits ?? `credits ${props.provider.name}`}`
         }
         return (
 
@@ -89,7 +89,7 @@ export const CreditsBar = () => {
                 <div className={'main-logo'}>
                     <img src={'/assets/images/logo-lgs1920.png'}/>
                 </div>
-                <div className={'lgs-card on-map provider-credits'}>
+                <div className={'provider-credits lgs-credits lgs-one-line-card on-map'}>
                     {providersToCredit.terrain &&
                         <>
                             <Credit id={'terrain-credits'} type={TERRAIN_ENTITY}
@@ -106,7 +106,7 @@ export const CreditsBar = () => {
                         </>
                     }
                 </div>
-                <div id={'cesium-logo'} className={'lgs-card on-map'}>
+                <div className={'cesium-credits lgs-credits lgs-one-line-card on-map'}>
                     <a href="https://www.cesium.com/" target="_blank">
                         <SlTooltip hoist placement="top"
                                    content={'Built with CesiumJS, an Open Source JavaScript library for creating 3D globes'}>
