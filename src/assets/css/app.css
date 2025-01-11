@@ -151,6 +151,8 @@ main-logo.xlarge {
     font-size: var(--lgs-slogan-font-size);
     transform: rotate(-10deg) skew(-18deg);
     margin-top: calc(2 * var(--lgs-gutter));
+    width: 100%;
+    text-align: center;
 }
 
 .main-logo .version-info, .main-logo .welcome-modal-timer {

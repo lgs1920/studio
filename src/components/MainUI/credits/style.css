@@ -36,6 +36,7 @@
     aspect-ratio: auto;
     padding: var(--lgs-gutter-s);
     border-radius: var(--lgs-border-radius-xs);
+    width: 100%;
 }
 
 .credits-bar .main-logo img {
