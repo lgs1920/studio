@@ -1,11 +1,11 @@
 import { SECOND }                                                     from '@Core/constants'
 import { faBomb, faCircleCheck, faCircleInfo, faTriangleExclamation } from '@fortawesome/pro-solid-svg-icons'
 import {
+    backOutLeft,
+}                                                                     from '@shoelace-style/animations/dist/back_exits/backOutLeft'
+import {
     slideInUp,
 }                                                                     from '@shoelace-style/animations/dist/sliding_entrances/slideInUp'
-import {
-    slideOutLeft,
-}                                                                     from '@shoelace-style/animations/dist/sliding_exits/slideOutLeft'
 import {
     setAnimation,
 }                                                                     from '@shoelace-style/shoelace/dist/utilities/animation-registry'
@@ -45,7 +45,7 @@ export class UIToast {
 
         // Add animations
         setAnimation(alert, 'alert.hide', {
-            keyframes: slideOutLeft,
+            keyframes: backOutLeft,
             options: {
                 duration: 200,
             },

@@ -69,7 +69,7 @@ export const JourneyToolbar = (props) => {
                          placement={settings.toolBar.fromStart ? 'right-start' : 'left-start'}
                          distance={distance}
                          hover-bridge="true">
-                    <div className="journey-toolbar-content">
+                    <div className="journey-toolbar-content lgs-slide-in-from-left">
                         <FocusButton tooltip={tooltip}/>
                         {editor && <TracksEditorButton tooltip={tooltip}/>}
                         {fileLoader && <JourneyLoaderButton tooltip={tooltip}/>}
@@ -77,6 +77,7 @@ export const JourneyToolbar = (props) => {
                         {profile && <ProfileButton tooltip={tooltip}/>}
                         <RemoveJourney style={'button'}/>
                     </div>
+
                 </SlPopup>
             }
 

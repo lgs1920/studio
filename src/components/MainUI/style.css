@@ -140,6 +140,8 @@ html {
     gap: var(--lgs-gutter-s);
     margin-left: auto;
     width: 40rem;
+    --lgs-animation-duration: 0.2s
+
 }
 
 .mobile .journey-toolbar-content {
@@ -150,12 +152,12 @@ html {
     max-width: 15rem;
 }
 
-[placement^="left"] .journey-toolbar-content {
+[placement^="left-"] .journey-toolbar-content {
     margin-right: auto;
     flex-direction: row-reverse;
 }
 
-[placement^="right"] .journey-toolbar-content {
+[placement^="right-"] .journey-toolbar-content {
     margin-left: auto;
     flex-direction: row;
 }
