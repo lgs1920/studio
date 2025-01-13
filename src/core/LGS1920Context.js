@@ -5,6 +5,7 @@ import {
 import { AppToolsManager } from '@Core/ui/AppToolsManager'
 import { DeviceManager }   from '@Core/ui/DeviceManager'
 import { MenuManager }     from '@Core/ui/MenuManager'
+import { POIManager }      from '@Core/ui/POIManager'
 import { AppUtils }        from '@Utils/AppUtils'
 import { MouseUtils }      from '@Utils/cesium/MouseUtils'
 import { CSSUtils }        from '@Utils/CSSUtils'
@@ -276,6 +277,7 @@ export class LGS1920Context {
         __.ui.drawerManager = new DrawerManager()
         __.ui.sceneManager = new SceneManager()
         __.ui.menuManager = new MenuManager()
+        __.ui.poiManager = new POIManager()
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()

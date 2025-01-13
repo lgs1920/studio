@@ -86,6 +86,10 @@ export const main = {
         welcome: {
             modal: false,
             flag:  false,
+        },
+
+        poi: {
+            entries: new proxyMap(),
         }
 
 

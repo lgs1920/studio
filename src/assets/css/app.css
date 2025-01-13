@@ -10,11 +10,19 @@ body {
     font-size: var(--lgs-font-size);
     font-family: var(--lgs-font-family);
     color: var(--lgs-dark-ui-fg-color);
+    overflow: hidden;
 }
 
 * {
     box-sizing: border-box;
 }
+
+#lgs1920-container {
+    /*position: absolute;*/
+    width: 100vw;
+    height: 100dvh;
+}
+
 
 #cesium-viewer {
     width: 100vw;
@@ -32,13 +40,18 @@ body {
 }
 
 /** POI on MAP **/
+
+.poi-on-map-wrapper {
+    position: absolute;
+    display: flex;
+    min-width: 10rem;
+    min-height: 8rem;
+}
 .poi-on-map {
-    position: relative;
     --color: 255, 255, 255;
     color: rgba(var(--color), 1);
     display: flex;
     flex-direction: column;
-    position: absolute;
     font-size: var(--lgs-font-size);
     font-weight: normal;
     border-left: 1px solid white;
@@ -46,6 +59,7 @@ body {
     text-shadow: 0px 0px 8px rgba(0, 0, 0, 0.50);
     opacity: 1;
     --lgs-animation-duration: 2s;
+    white-space: nowrap;
 }
 
 .poi-on-map-inner {
