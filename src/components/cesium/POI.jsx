@@ -1,5 +1,5 @@
+import { SceneUtils }                               from '@Utils/cesium/SceneUtils'
 import { ELEVATION_UNITS }                          from '@Utils/UnitUtils'
-import { Cartesian3 }                               from 'cesium'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                              from 'valtio'
 import { UIUtils }                                  from '../../Utils/UIUtils'
@@ -12,11 +12,7 @@ export const POI = ({point}) => {
     const [pixels, setPixels] = useState({x: 0, y: 0})
 
     const getPixelsCoordinates = useCallback(() => {
-        const coordinates = lgs.scene.cartesianToCanvasCoordinates(
-            __.ui.sceneManager.noRelief()
-            ? Cartesian3.fromDegrees(point.longitude, point.latitude, 0)
-            : Cartesian3.fromDegrees(point.longitude, point.latitude, point.elevation),
-        )
+        const coordinates = SceneUtils.getPixelsCoordinates(point)
         if (coordinates) {
             setPixels(coordinates)
         }
