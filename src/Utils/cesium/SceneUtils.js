@@ -95,10 +95,8 @@ export class SceneUtils {
 
     static getPixelsCoordinates = point => {
         return lgs.scene.cartesianToCanvasCoordinates(
-            __.ui.sceneManager.noRelief()
-            ? Cartesian3.fromDegrees(point.longitude, point.latitude, 0)
-            : Cartesian3.fromDegrees(point.longitude, point.latitude, point.elevation),
-        )
+            Cartesian3.fromDegrees(point.longitude, point.latitude,
+                                   __.ui.sceneManager.noRelief() ? 0 : point.elevation))
     }
 
 

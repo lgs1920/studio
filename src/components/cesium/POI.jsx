@@ -1,3 +1,4 @@
+import { POIUtils }                                 from '@Utils/cesium/POIUtils'
 import { SceneUtils }                               from '@Utils/cesium/SceneUtils'
 import { ELEVATION_UNITS }                          from '@Utils/UnitUtils'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -7,15 +8,21 @@ import { TextValueUI }                              from '../TextValueUI/TextVal
 
 export const POI = ({point}) => {
     const poi = useRef(null)
-    const isVisible = useSnapshot(lgs.mainProxy.components.poi.entries)
+    const statut = useSnapshot(lgs.mainProxy.components.poi.items).get(poi.current)
 
     const [pixels, setPixels] = useState({x: 0, y: 0})
 
     const getPixelsCoordinates = useCallback(() => {
-        const coordinates = SceneUtils.getPixelsCoordinates(point)
-        if (coordinates) {
-            setPixels(coordinates)
+        const _statut = lgs.mainProxy.components.poi.items.get(poi.current) ?? __.ui.poiManager.default
+        _statut.behind = !POIUtils.isPointVisible(point)
+        if (!_statut.behind) {
+            const coordinates = SceneUtils.getPixelsCoordinates(point)
+            if (coordinates) {
+                setPixels(coordinates)
+            }
         }
+        lgs.mainProxy.components.poi.items.set(poi.current, _statut)
+
     }, [point])
 
     useEffect(() => {
@@ -42,7 +49,6 @@ export const POI = ({point}) => {
         }
     }, [])
 
-
     return (
         <>
             {pixels &&
@@ -54,7 +60,7 @@ export const POI = ({point}) => {
                         left:   pixels.x,
                     }}
                 >
-                    {isVisible.get(poi.current) &&
+                    {statut?.inside && !statut?.behind &&
                         <div className="poi-on-map">
                             <div className="poi-on-map-inner">
                                 <h3>{point.title}</h3>

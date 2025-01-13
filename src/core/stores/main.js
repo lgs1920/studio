@@ -89,7 +89,7 @@ export const main = {
         },
 
         poi: {
-            entries: new proxyMap(),
+            items: new proxyMap(),
         }
 
 

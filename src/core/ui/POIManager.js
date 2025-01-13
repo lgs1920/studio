@@ -1,5 +1,6 @@
 export class POIManager {
 
+    default = {inside: false, behind: true}
 
     constructor() {
         // Singleton
@@ -9,12 +10,9 @@ export class POIManager {
 
         this.observer = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
-                if (entry.isIntersecting !== undefined) {
-                    lgs.mainProxy.components.poi.entries.set(entry.target, entry.isIntersecting)
-                }
-                else {
-                    lgs.mainProxy.components.poi.entries.set(entry.target, true)
-                }
+                const data = lgs.mainProxy.components.poi.items.get(entry.target) ?? this.default
+                data.inside = entry !== undefined ? entry.isIntersecting : true
+                lgs.mainProxy.components.poi.items.set(entry.target, data)
             })
         }, {ratio: 1, rootMargin: '-64px'})
 
