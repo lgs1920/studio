@@ -685,3 +685,8 @@ ui:
     drawers:
       fromStart: false
       fromBottom: true
+
+  ## POI
+  poi:
+    minScale: 0.3               # minimum POI Flag size before masking (30% of max)
+    distanceThreshold: 8000

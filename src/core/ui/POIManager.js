@@ -1,6 +1,11 @@
 export class POIManager {
 
-    default = {inside: false, behind: true}
+    default = {
+        inside:   false,
+        behind:   true,
+        scale:    1,
+        showFlag: true,
+    }
 
     constructor() {
         // Singleton

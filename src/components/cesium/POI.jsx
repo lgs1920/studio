@@ -20,7 +20,16 @@ export const POI = ({point}) => {
             if (coordinates) {
                 setPixels(coordinates)
             }
+
+
+            const {
+                      scale,
+                      visible,
+                  } = POIUtils.adaptScaleToDistance(point, lgs.settings.ui.poi.distanceThreshold, lgs.settings.ui.poi.minScale)
+            _statut.scale = scale
+            _statut.showFlag = visible
         }
+
         lgs.mainProxy.components.poi.items.set(poi.current, _statut)
 
     }, [point])
@@ -49,6 +58,7 @@ export const POI = ({point}) => {
         }
     }, [])
 
+
     return (
         <>
             {pixels &&
@@ -58,9 +68,11 @@ export const POI = ({point}) => {
                     style={{
                         bottom: window.innerHeight - pixels.y,
                         left:   pixels.x,
+                        transform: `scale(${statut?.scale ?? 1})`,
+                        transformOrigin: 'left bottom',
                     }}
                 >
-                    {statut?.inside && !statut?.behind &&
+                    {statut?.inside && !statut?.behind && statut.showFlag &&
                         <div className="poi-on-map">
                             <div className="poi-on-map-inner">
                                 <h3>{point.title}</h3>
