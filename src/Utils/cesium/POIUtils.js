@@ -245,14 +245,23 @@ export class POIUtils {
         return Math.abs((pickedCartographic.height - (point?.elevation ?? 0))) < 30.00
     }
 
-    static adaptScaleToDistance = (point, distanceThreshold, minScale) => {
+    static adaptScaleToDistance = (point, scaler = {
+        distanceThreshold: lgs.settings.ui.poi.distanceThreshold,
+        minScaleFlag:      lgs.settings.ui.poi.minScaleFlag,
+        minScale:          lgs.settings.ui.poi.minScale,
+    }) => {
         const cartesian = Cartesian3.fromDegrees(point.longitude, point.latitude,
                                                  __.ui.sceneManager.noRelief() ? 0 : point.elevation)
-        const cameraPosition = lgs.scene.camera.position
-        const scale = Math.max(minScale, Math.min(1 / (Cartesian3.distance(cartesian, cameraPosition) / distanceThreshold), 1))
-        const visible = scale > minScale
-        console.log(Cartesian3.distance(cartesian, cameraPosition), distanceThreshold)
-        return {scale, visible}
+        const cameraPosition = Cartesian3.fromDegrees(
+            lgs.mainProxy.components.camera.position.longitude,
+            lgs.mainProxy.components.camera.position.latitude,
+            lgs.mainProxy.components.camera.position.elevation,
+        )
+        const scale = Math.max(scaler.minScale, Math.min(1 / (Cartesian3.distance(cartesian, cameraPosition) / scaler.distanceThreshold), 1))
+        const visible = scale > scaler.minScale
+        const flagVisible = visible && scale <= scaler.minScaleFlag
+
+        return {scale, flagVisible, visible}
     }
 
     //

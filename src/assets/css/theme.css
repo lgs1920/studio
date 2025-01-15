@@ -192,6 +192,10 @@ sl-button sl-icon, sl-icon-button {
     font-size: var(--sl-font-size-large);
 }
 
+sl-button:not(.square-icon) sl-icon:first-child {
+    margin-right: var(--lgs-gutter-s);
+}
+
 sl-icon-button[size="small"], sl-icon[size="small"] {
     font-size: var(--sl-font-size-small);
 }
@@ -607,6 +611,88 @@ sl-switch[align-right]::part(control) {
     border-radius: var(--lgs-border-radius-s);
 }
 
+/*******************************************************************************
+ * POI on MAP
+ ******************************************************************************/
+
+.poi-on-map-wrapper {
+    position: absolute;
+    display: flex;
+    min-width: 10rem;
+    min-height: 8rem;
+    pointer-events: none;
+    color: var(--lgs-poi-color);
+}
+
+.poi-on-map-wrapper.show-flag {
+    min-width: 2rem;
+    min-height: 2rem;
+}
+
+.poi-on-map {
+    --color: 255, 255, 255;
+    color: var(--lgs-poi-color);
+    display: flex;
+    flex-direction: column;
+    font-size: var(--lgs-font-size);
+    font-weight: normal;
+    border-left: 1px solid var(--lgs-poi-color);
+    padding: var(--lgs-gutter-xs) 0 calc(5 * var(--lgs-gutter)) var(--lgs-gutter-xs);
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.50);
+    opacity: 1;
+    --lgs-animation-duration: 2s;
+    white-space: nowrap;
+}
+
+.poi-on-map-inner {
+    padding: var(--lgs-gutter-xs) var(--lgs-gutter-s) var(--lgs-gutter-s) var(--lgs-gutter-xs);
+    border-top-left-radius: 3px;
+    border-top: 1px solid;
+    border-left: 1px solid;
+    border-color: var(--lgs-poi-color);
+    background-image: linear-gradient(130deg, rgba(255, 255, 255, 0.8) 0%, rgba(0, 255, 255, 0.1) 30%, rgba(0, 255, 255, 0) 40%);
+    border-image: linear-gradient(var(--lgs-poi-color), rgba(0, 255, 255, 0)) 20%;
+}
+
+.poi-on-map-marker {
+    --width: var(--lgs-gutter);
+    position: absolute;
+    width: var(--width);
+    height: var(--width);
+    background: var(--lgs-poi-color);
+    border-radius: 50%;
+    left: calc(-0.5 * var(--width));
+    bottom: calc(-0.5 * var(--width));
+}
+
+.poi-on-map-inner h3 {
+    margin: 0;
+    font-weight: bold;
+    font-size: calc(1.5 * var(--lgs-font-size));
+    line-height: 1
+}
+
+.poi-on-map-inner .poi-full-coordinates {
+    line-height: 1.2;
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.poi-on-map .flag-as-triangle {
+    width: 0;
+    height: 0;
+    border-top: 15px solid transparent;
+    border-bottom: 15px solid transparent;
+    border-left: 40px solid var(--lgs-poi-color);
+}
+
+/*******************************************************************************
+ * Progress Bars
+ ******************************************************************************/
+sl-progress-bar {
+    --height: var(--lgs-gutter-xs)
+}
 
 /*******************************************************************************
  * Misc.

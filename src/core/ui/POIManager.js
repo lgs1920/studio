@@ -4,7 +4,8 @@ export class POIManager {
         inside:   false,
         behind:   true,
         scale:    1,
-        showFlag: true,
+        showFlag: false,
+        showPOI:  true,
     }
 
     constructor() {

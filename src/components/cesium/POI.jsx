@@ -1,6 +1,7 @@
 import { POIUtils }                                 from '@Utils/cesium/POIUtils'
 import { SceneUtils }                               from '@Utils/cesium/SceneUtils'
 import { ELEVATION_UNITS }                          from '@Utils/UnitUtils'
+import classNames                                   from 'classnames'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                              from 'valtio'
 import { UIUtils }                                  from '../../Utils/UIUtils'
@@ -21,14 +22,12 @@ export const POI = ({point}) => {
                 setPixels(coordinates)
             }
 
-
-            const {
-                      scale,
-                      visible,
-                  } = POIUtils.adaptScaleToDistance(point, lgs.settings.ui.poi.distanceThreshold, lgs.settings.ui.poi.minScale)
+            const {scale, flagVisible, visible} = POIUtils.adaptScaleToDistance(point)
             _statut.scale = scale
-            _statut.showFlag = visible
+            _statut.showFlag = flagVisible
+            _statut.showPOI = visible
         }
+
 
         lgs.mainProxy.components.poi.items.set(poi.current, _statut)
 
@@ -63,36 +62,46 @@ export const POI = ({point}) => {
         <>
             {pixels &&
                 <div
-                    className="poi-on-map-wrapper lgs-slide-in-from-top-bounced"
+                    className={classNames(
+                        'poi-on-map-wrapper',
+                        'lgs-slide-in-from-top-bounced',
+                        statut?.showFlag ? 'show-flag' : '')
+                    }
                     ref={poi}
                     style={{
-                        bottom: window.innerHeight - pixels.y,
-                        left:   pixels.x,
-                        transform: `scale(${statut?.scale ?? 1})`,
+                        bottom:            window.innerHeight - pixels.y,
+                        left:              pixels.x,
+                        transform:         `scale(${statut?.scale ?? 1})`,
                         transformOrigin: 'left bottom',
+                        '--lgs-poi-color': point.color ?? lgs.settings.ui.poi.defaultColor,
                     }}
                 >
-                    {statut?.inside && !statut?.behind && statut.showFlag &&
+                    {statut?.inside && !statut?.behind && statut?.showPOI &&
                         <div className="poi-on-map">
-                            <div className="poi-on-map-inner">
-                                <h3>{point.title}</h3>
-                                <div className="poi-full-coordinates">
-                                    {point.elevation && (
-                                        <TextValueUI
-                                            text={'Elevation: '}
-                                            value={point.elevation}
-                                            format={'%d'}
-                                            units={ELEVATION_UNITS}
-                                        />
-                                    )}
-                                    <div className="poi-coordinates">
-                                        <span>{UIUtils.toDMS(point.latitude)}, {UIUtils.toDMS(point.longitude)}</span>
-                                        <br/>
-                                        <span>[{point.latitude}, {point.longitude}]</span>
-                                        <br/>
+                            {!statut.showFlag &&
+                                <div className="poi-on-map-inner">
+                                    <h3>{point.title}</h3>
+                                    <div className="poi-full-coordinates">
+                                        {point.elevation && (
+                                            <TextValueUI
+                                                text={'Elevation: '}
+                                                value={point.elevation}
+                                                format={'%d'}
+                                                units={ELEVATION_UNITS}
+                                            />
+                                        )}
+                                        <div className="poi-coordinates">
+                                            <span>{UIUtils.toDMS(point.latitude)}, {UIUtils.toDMS(point.longitude)}</span>
+                                            <br/>
+                                            <span>[{point.latitude}, {point.longitude}]</span>
+                                            <br/>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            }
+                            {statut.showFlag &&
+                                <div className="flag-as-triangle"></div>
+                            }
                             <div className="poi-on-map-marker"></div>
                         </div>
                     }

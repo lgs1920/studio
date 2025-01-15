@@ -688,5 +688,9 @@ ui:
 
   ## POI
   poi:
-    minScale: 0.3               # minimum POI Flag size before masking (30% of max)
-    distanceThreshold: 8000
+    minScaleFlag: 0.4                   # minimum POI size before replacing by flag (30% of max)
+    minScale: 0.1                       # minScale before masking (15% of max)
+    distanceThreshold: 8000             # min distance to see POI with 100% size
+
+    defaultColor: white
+    lgsColor: chartreuse

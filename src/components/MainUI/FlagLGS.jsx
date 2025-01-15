@@ -13,8 +13,12 @@ export const FlagLGS = (props) => {
                          latitude:  lgs.settings.starter.latitude,
                          elevation: lgs.settings.starter.height,
                          title:     'La Grande Sure',
-                     }}/>
+                         color: lgs.settings.ui.poi.lgsColor,
+                     }}
+                />
+
             }
+
         </>
     )
 
