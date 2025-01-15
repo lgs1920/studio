@@ -14,8 +14,6 @@
     align-items: center;
     gap: var(--lgs-gutter-xs);
     --padding: var(--lgs-gutter-xs);
-    margin-bottom: var(--padding);
-    padding: var(--lgs-gutter-xs);
     pointer-events: auto;
     font-size: var(--lgs-font-size-s);
 }
