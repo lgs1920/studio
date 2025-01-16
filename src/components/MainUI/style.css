@@ -71,7 +71,7 @@ html {
 
 #bottom-ui {
     display: flex;
-    height: 50vh;
+    height: 50dvh;
     width: 100vw;
     flex-direction: row;
     padding: var(--lgs-gutter-s);
@@ -289,7 +289,7 @@ html {
 .call-for-actions {
     position: absolute;
     pointer-events: auto;
-    top: 75vh;
+    top: 75dvh;
     width: 100%;
     justify-content: center;
 }
