@@ -9,6 +9,7 @@ import { Utils }                                from '@Editor/Utils'
 import { faRoute }                              from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlIcon, SlPopup, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                from '@Utils/FA2SL'
+import classNames                               from 'classnames'
 import { useRef, useState }                     from 'react'
 import { useSnapshot }                          from 'valtio/index'
 
@@ -54,8 +55,7 @@ export const JourneyToolbar = (props) => {
     }
 
     return (
-        <div className="journey-toolbar" placement={props?.placement ?? 'left'} ref={journeyTrigger}
-             onMouseEnter={showToolbar} onMouseLeave={hideToolbar}>
+        <div className="journey-toolbar" placement={props?.placement ?? 'left'} ref={journeyTrigger}>
             <div className="journey-toolbar-trigger">
                 <SlTooltip hoist placement={tooltip} content="Add a journey" disabled={snap.theJourney}>
                     <SlButton size={'small'} className={'square-icon'} onClick={addAJourney}>
@@ -69,7 +69,9 @@ export const JourneyToolbar = (props) => {
                          placement={settings.toolBar.fromStart ? 'right-start' : 'left-start'}
                          distance={distance}
                          hover-bridge="true">
-                    <div className="journey-toolbar-content lgs-slide-in-from-left">
+                    <div className={classNames('journey-toolbar-content',
+                                               settings.toolBar.fromStart ? 'lgs-slide-in-from-left' : 'lgs-slide-in-from-right',
+                    )}>
                         <FocusButton tooltip={tooltip}/>
                         {editor && <TracksEditorButton tooltip={tooltip}/>}
                         {fileLoader && <JourneyLoaderButton tooltip={tooltip}/>}
