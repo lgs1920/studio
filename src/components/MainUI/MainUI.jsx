@@ -74,15 +74,16 @@ export const MainUI = () => {
         const verticalOffsetRight = (lgs.mainProxy.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-right')
         const horizontalOffsetLeft = (lgs.mainProxy.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-horizontal-panel-offset-left')
 
-        const width = (lgs.mainProxy.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-vertical-panel-width')
+        const width = (lgs.mainProxy.drawers.open === null)
+                      ? '0.1px'
+                      : `calc( ${__.ui.css.getCSSVariable('--lgs-vertical-panel-width')} + ${__.ui.css.getCSSVariable('--right')}`
         switch (placement) {
             case MENU_START_START:
-                __.ui.css.setCSSVariable('--primary-buttons-bar-left',
-                                         width === 0 ? 'var(--left)' : `calc(var(--left) + ${width})`)
+                __.ui.css.setCSSVariable('--primary-buttons-bar-left', width)
                 __.ui.css.setCSSVariable('--primary-buttons-bar-right', 'auto')
                 __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'auto')
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-right',
-                                         'var(--lgs-secondary-buttons-bar-right-delta)')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-margin-left', 'auto')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 0)
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', 'var(--lgs-horizontal-panel-offset-left)')
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - ${horizontalOffsetLeft})`)
                 break
@@ -91,8 +92,8 @@ export const MainUI = () => {
                 secondaryEntrance = 'lgs-slide-in-from-left'
                 __.ui.css.setCSSVariable('--primary-buttons-bar-left', 'auto')
                 __.ui.css.setCSSVariable('--primary-buttons-bar-right', 0)
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-left',
-                                         `calc(var(--lgs-secondary-buttons-bar-left-delta) + ${verticalOffsetLeft})`)
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', width)
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-margin-left', 0)
                 __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 'auto')
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', horizontalOffsetLeft)
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) + ${width}))`)
@@ -101,8 +102,8 @@ export const MainUI = () => {
                 __.ui.css.setCSSVariable('--primary-buttons-bar-left', 0)
                 __.ui.css.setCSSVariable('--primary-buttons-bar-right', 'auto')
                 __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'auto')
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-right',
-                                         `calc(var(--lgs-secondary-buttons-bar-right-delta) + ${verticalOffsetRight})`)
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-margin-left', 'auto')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', width)
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', 0)
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) + ${width}))`)
                 break
@@ -110,9 +111,10 @@ export const MainUI = () => {
                 primaryEntrance = 'lgs-slide-in-from-right'
                 secondaryEntrance = 'lgs-slide-in-from-left'
                 __.ui.css.setCSSVariable('--primary-buttons-bar-left', 'auto')
-                __.ui.css.setCSSVariable('--primary-buttons-bar-right',
-                                         width === 0 ? 0 : `calc(var(--right) + ${width})`)
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'var(--lgs-secondary-buttons-bar-left-delta)')
+                __.ui.css.setCSSVariable('--primary-buttons-bar-right', width)
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 0)
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-margin-left', 0)
+
                 __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 'auto')
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', 0)
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) + ${width}))`)

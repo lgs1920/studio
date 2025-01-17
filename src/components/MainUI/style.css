@@ -22,6 +22,8 @@ html {
 :root {
     --secondary-buttons-bar-right: 0;
     --secondary-buttons-bar-left: 0;
+    --secondary-buttons-bar-margin-left: 0;
+
     --primary-buttons-bar-right: 0;
     --primary-buttons-bar-left: 0;
 }
@@ -47,16 +49,15 @@ html {
     pointer-events: auto;
     position: relative;
     width: var(--lgs-compass-size);
-    top: var(--top);
     margin: 0 var(--right) 0 var(--left);
     right: var(--secondary-buttons-bar-right);
     left: var(--secondary-buttons-bar-left);
-    margin-left: var(--secondary-buttons-bar-left)
+    margin-left: var(--secondary-buttons-bar-margin-left)
 }
 
 :root {
     --lgs-secondary-buttons-bar-left-delta: 20px;
-    --lgs-secondary-buttons-bar-right-delta: -60px
+    --lgs-secondary-buttons-bar-right-delta: 1px
 }
 
 #secondary-buttons-bar-content {
@@ -65,9 +66,6 @@ html {
     flex-direction: column;
     gap: var(--lgs-gutter-xs);
     top: var(--lgs-compass-size);
-    width: var();
-    right: 15px;
-    left: -15px;
 }
 
 #bottom-ui {

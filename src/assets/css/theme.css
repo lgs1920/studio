@@ -342,6 +342,9 @@ sl-card[variant="primary"]::part(base) {
 }
 
 cesium-compass {
+    width: var(--lgs-compass-size);
+    height: var(--lgs-compass-size);
+
     position: relative;
     --cesium-compass-fill-color: var(--lgs-dark-ui-bg-color);
     --cesium-compass-stroke-color: var(--lgs-dark-ui-fg-color);
