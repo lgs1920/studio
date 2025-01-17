@@ -174,6 +174,10 @@ sl-button::part(label) {
     gap: var(--lgs-gutter-s);
 }
 
+.square-icon {
+    width: var(--lgs-dimension) !important;
+}
+
 .square-icon::part(base) {
     height: var(--lgs-dimension);
     width: var(--lgs-dimension);
@@ -323,6 +327,7 @@ sl-card[variant="primary"]::part(base) {
     border-color: var(--lgs-card-on-map-border-color);
     height: 100%;
 }
+
 .lgs-card-wrapper {
     display: flex;
     flex-direction: column;
@@ -358,9 +363,12 @@ sl-tooltip {
 
     box-shadow: var(--sl-shadow-large);
     border-color: var(--lgs-tooltip-border-color);
-    text-transform: capitalize;
+    --hide-delay: 1;
 }
 
+sl-tooltip::part(body)::first-letter {
+    text-transform: capitalize;
+}
 
 
 /*******************************************************************************
@@ -385,11 +393,19 @@ sl-dialog::part(title) {
     width: 100%;
 }
 
-dialog__header-actions sl-icon-button, .dialog__header-actions ::slotted(sl-icon-button) {
+.dialog__header-actions sl-icon-button, .dialog__header-actions ::slotted(sl-icon-button) {
     flex: 0 0 auto;
     display: flex;
     align-items: flex-start;
 }
+
+
+.lgs-mini-remove-dialog {
+    display: flex;
+    gap: var(--lgs-gutter-xs);
+    opacity: 1 !important;
+}
+
 
 /*******************************************************************************
  * Sl Details
@@ -398,6 +414,7 @@ dialog__header-actions sl-icon-button, .dialog__header-actions ::slotted(sl-icon
 sl-details {
     --sl-spacing-medium: var(--lgs-gutter-xs);
 }
+
 sl-details::part(base) {
     padding: 0;
     --spacing: 0;
@@ -498,6 +515,7 @@ sl-range {
 .lgs-range sl-input::part(input) {
     padding: 0 var(--lgs-gutter-xs);
 }
+
 /*******************************************************************************
  * Switches
  ******************************************************************************/
@@ -630,7 +648,6 @@ sl-switch[align-right]::part(control) {
 }
 
 .poi-on-map {
-    --color: 255, 255, 255;
     color: var(--lgs-poi-color);
     display: flex;
     flex-direction: column;

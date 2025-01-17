@@ -32,6 +32,7 @@ export const MainUI = () => {
 
     const snap = useSnapshot(lgs.mainProxy)
     const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
+    const settings = useSnapshot(lgs.settings.ui.menu)
 
     let resizeTimer
     const windowResized = () => {
@@ -155,17 +156,17 @@ export const MainUI = () => {
                 {snap.components.welcome.hidden &&
                     <>
                         <div id={'primary-buttons-bar'} className={primaryEntrance}>
-                            <SettingsButton tooltip={'right'}/>
-                            <LayersButton tooltip={'right'}/>
-                            <JourneyToolbar></JourneyToolbar>
-                            <InformationButton/>
-                            <SupportUIButton/>
+                            <SettingsButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
+                            <LayersButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
+                            <JourneyToolbar tooltip={'top'}></JourneyToolbar>
+                            <InformationButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
+                            <SupportUIButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
 
                         </div>
                         <div id={'secondary-buttons-bar'} className={secondaryEntrance}>
                             <CompassUI scene={lgs.scene}/>
                             <div id="secondary-buttons-bar-content">
-                                <SceneModeSelector tooltip={'left'}/>
+                                <SceneModeSelector tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
                                 <FullScreenButton/>
                             </div>
 

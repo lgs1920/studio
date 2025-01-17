@@ -6,10 +6,10 @@ export const main = {
         mainUI:{
             show:false,
             journeyLoader: {visible:  false},
+            support: {visible: false},
 
-
-
-            support: {visible:false}
+            journeyMenu:         {timeout: 0, active: false},
+            removeJourneyDialog: {active: false},
         },
 
         fileLoader:{

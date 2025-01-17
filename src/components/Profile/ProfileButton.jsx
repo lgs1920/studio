@@ -20,7 +20,7 @@ export const ProfileButton = (props) => {
 
     return (<>
         {mainSnap.canViewProfile &&
-            <SlTooltip hoist placement={props.tooltip} content="Open Profile">
+            <SlTooltip hoist placement={props.tooltip} content="Open the current journey profile">
                 {<SlButton size={'small'} className={'square-icon'} id={'open-the-profile-panel'}
                            onClick={toggleProfileButton}
                            key={mainSnap.components.profile.key}>

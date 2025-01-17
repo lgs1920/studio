@@ -57,7 +57,6 @@ export const POI = ({point}) => {
         }
     }, [])
 
-
     return (
         <>
             {pixels &&

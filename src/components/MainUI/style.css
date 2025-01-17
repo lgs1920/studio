@@ -65,6 +65,7 @@ html {
     flex-direction: column;
     gap: var(--lgs-gutter-xs);
     top: var(--lgs-compass-size);
+    width: var();
     right: 15px;
     left: -15px;
 }
@@ -334,3 +335,7 @@ html {
 .scene-mode-selector[waiting-mode="true"] sl-button {
     display: flex;
 }
+
+/*******************************************************************************
+ *
+ */

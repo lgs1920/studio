@@ -10,13 +10,13 @@ import { faRoute }                              from '@fortawesome/pro-solid-svg
 import { SlButton, SlIcon, SlPopup, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                from '@Utils/FA2SL'
 import classNames                               from 'classnames'
-import { useRef, useState }                     from 'react'
+import { useEffect, useRef }                    from 'react'
 import { useSnapshot }                          from 'valtio/index'
 
 export const JourneyToolbar = (props) => {
 
     const journeyTrigger = useRef(null)
-    const [active, setActive] = useState(false)
+    const mainUI = lgs.mainProxy.components.mainUI
     const snap = useSnapshot(lgs.mainProxy)
     const settings = useSnapshot(lgs.settings.ui.menu)
     const fileLoader = props?.fileloader ?? true
@@ -28,36 +28,46 @@ export const JourneyToolbar = (props) => {
     let timer
 
     const hideToolbar = () => {
-        setActive(false)
+        mainUI.journeyMenu.active = false
+        mainUI.removeJourneyDialog.active = false
         clearTimeout(timer)
     }
     const showToolbar = () => {
-        setActive(true)
+        mainUI.journeyMenu.active = true
         clearTimeout(timer)
+    }
+    const delayHideToolbar = () => {
+        timer = setTimeout(hideToolbar, 1 * SECOND)
     }
 
     const newJourneySelection = async (event) => {
-        timer = setTimeout(hideToolbar, 10 * SECOND)
+        clearTimeout(timer)
         await Utils.updateJourneyEditor(event.target.value)
     }
+
+    useEffect(() => {
+        mainUI.removeJourneyDialog.active = false
+        return () => {
+            mainUI.removeJourneyDialog.active = false
+        }
+    }, [])
 
     // Add the journey Dialog, only if there is none
     const addAJourney = () => {
         lgs.mainProxy.components.mainUI.journeyLoader.visible = !lgs.mainProxy.theJourney
-        if (active) {
+        if (mainUI.journeyMenu.active) {
             hideToolbar()
         }
         else {
-            (
-                showToolbar()
-            )
+            showToolbar()
         }
     }
 
     return (
-        <div className="journey-toolbar" placement={props?.placement ?? 'left'} ref={journeyTrigger}>
-            <div className="journey-toolbar-trigger">
-                <SlTooltip hoist placement={tooltip} content="Add a journey" disabled={snap.theJourney}>
+        <div className="journey-toolbar" placement={props?.placement ?? 'left'}>
+            <div className="journey-toolbar-trigger" ref={journeyTrigger}>
+                <SlTooltip hoist placement={settings.toolBar.fromStart ? 'right' : 'left'}
+                           content={snap.theJourney ? 'Journey actions' : 'Add a journey'}>
                     <SlButton size={'small'} className={'square-icon'} onClick={addAJourney}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRoute)}/>
                     </SlButton>
@@ -65,17 +75,18 @@ export const JourneyToolbar = (props) => {
             </div>
             {snap.theJourney &&
                 <SlPopup anchor={journeyTrigger.current}
-                         active={active}
+                         active={snap.components.mainUI.journeyMenu.active}
                          placement={settings.toolBar.fromStart ? 'right-start' : 'left-start'}
                          distance={distance}
+                         onMouseLeave={delayHideToolbar} onMouseEnter={showToolbar}
                          hover-bridge="true">
-                    <div className={classNames('journey-toolbar-content',
-                                               settings.toolBar.fromStart ? 'lgs-slide-in-from-left' : 'lgs-slide-in-from-right',
-                    )}>
-                        <FocusButton tooltip={tooltip}/>
-                        {editor && <TracksEditorButton tooltip={tooltip}/>}
+                    <div className={
+                        classNames('journey-toolbar-content',
+                                   settings.toolBar.fromStart ? 'lgs-slide-in-from-left' : 'lgs-slide-in-from-right')}>
                         {fileLoader && <JourneyLoaderButton tooltip={tooltip}/>}
                         <JourneySelector onChange={newJourneySelection} single="true" style="card"/>
+                        <FocusButton tooltip={tooltip}/>
+                        {editor && <TracksEditorButton tooltip={tooltip}/>}
                         {profile && <ProfileButton tooltip={tooltip}/>}
                         <RemoveJourney style={'button'}/>
                     </div>

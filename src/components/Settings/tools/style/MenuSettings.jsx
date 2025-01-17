@@ -1,6 +1,7 @@
 import { MenuSample }    from '@Components/Settings/tools/style/MenuSample'
 import {
-    BOTTOM, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END, MENU_START_START, START,
+    BOTTOM, DESKTOP_MIN, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
+    MENU_START_START, MOBILE_MAX, START,
 }                        from '@Core/constants'
 import { SlDivider }     from '@shoelace-style/shoelace/dist/react'
 import { useMediaQuery } from 'react-responsive'
@@ -12,8 +13,8 @@ export const MenuSettings = (props) => {
             return event.target.checked
         }
     }
-    const isNotMobile = useMediaQuery({minWidth: 768})
-    const isMobile = useMediaQuery({maxWidth: 767})
+    const isNotMobile = useMediaQuery({minWidth: DESKTOP_MIN})
+    const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
 
     const selectDisposition = (event, name) => {
         const positions = name.split('-')
