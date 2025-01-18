@@ -406,7 +406,8 @@ sl-dialog::part(title) {
 .lgs-mini-remove-dialog {
     display: flex;
     gap: var(--lgs-gutter-xs);
-    opacity: 1 !important;
+    margin-bottom: var(--lgs-gutter-s);
+
 }
 
 
