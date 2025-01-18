@@ -3,7 +3,7 @@ import {
     ToggleStateIcon,
 }                     from '@Components/ToggleStateIcon'
 import {
-    ORIGIN_STORE, REFRESH_DRAWING, SIMULATE_ALTITUDE, UPDATE_JOURNEY_SILENTLY,
+    ORIGIN_STORE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE, UPDATE_JOURNEY_SILENTLY,
 }                     from '@Core/constants'
 import {
     ElevationServer,
@@ -31,7 +31,7 @@ import {
 }                     from '@Editor/Utils'
 import {
     faCircleDot, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList,
-    faTelescope, faTrashCan,
+    faTelescope,
 }                     from '@fortawesome/pro-regular-svg-icons'
 import {
     SlIcon, SlIconButton, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
@@ -46,7 +46,9 @@ import {
     UIToast,
 }                     from '@Utils/UIToast'
 import parse          from 'html-react-parser'
-import React          from 'react'
+import React, {
+    useEffect,
+}                     from 'react'
 import {
     sprintf,
 }                     from 'sprintf-js'
@@ -334,15 +336,6 @@ export const JourneySettings = function JourneySettings() {
         lgs.theJourney.focus({resetCamera: true, action: REFRESH_DRAWING})
     }
 
-    /**
-     * Remove journey confirmation
-     */
-    const Question = () => {
-        return (<>{'Are you sure you want to remove this journey ?'}</>)
-    }
-    const [ConfirmRemoveJourneyDialog, confirmRemoveJourney] = useConfirm(`Remove <strong>${editorSnapshot.journey.title}</strong> ?`, Question,
-                                                                          {icon: faTrashCan, text: 'Remove'})
-
     const textVisibilityJourney = sprintf('%s Journey', editorSnapshot.journey.visible ? 'Hide' : 'Show')
     const textVisibilityPOIs = sprintf('%s POIs', editorSnapshot.journey.allPOIs ? 'Hide' : 'Show')
 
@@ -361,6 +354,13 @@ export const JourneySettings = function JourneySettings() {
         serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.FILE_CONTENT))
     }
     serverList = serverList.concat(Array.from(ElevationServer.SERVERS.values()))
+    lgs.mainProxy.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+
+    useEffect(() => {
+        return (() => {
+            lgs.mainProxy.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+        })
+    }, [lgs.mainProxy.components.mainUI.removeJourneyDialog.active])
 
     return (<>
         {editorSnapshot.journey &&
@@ -477,7 +477,7 @@ export const JourneySettings = function JourneySettings() {
                         <SlTooltip hoist content={'Export'}>
                                 <SlIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>
                         </SlTooltip>
-                        <RemoveJourney/>
+                        <RemoveJourney placement={'left'} name={REMOVE_JOURNEY_IN_EDIT}/>
 
                         </span>
                     </div>

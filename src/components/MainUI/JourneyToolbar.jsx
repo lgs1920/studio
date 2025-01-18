@@ -1,7 +1,7 @@
 import { JourneyLoaderButton }                  from '@Components/FileLoader/JourneyLoaderButton'
 import { FocusButton }                          from '@Components/MainUI/FocusButton'
 import { ProfileButton }                        from '@Components/Profile/ProfileButton'
-import { SECOND }                               from '@Core/constants'
+import { REMOVE_JOURNEY_IN_TOOLBAR, SECOND }    from '@Core/constants'
 import { JourneySelector }                      from '@Editor/journey/JourneySelector'
 import { RemoveJourney }                        from '@Editor/journey/RemoveJourney'
 import { TracksEditorButton }                   from '@Editor/TracksEditorButton'
@@ -29,7 +29,7 @@ export const JourneyToolbar = (props) => {
 
     const hideToolbar = () => {
         mainUI.journeyMenu.active = false
-        mainUI.removeJourneyDialog.active = false
+        mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_TOOLBAR, false)
         clearTimeout(timer)
     }
     const showToolbar = () => {
@@ -46,9 +46,10 @@ export const JourneyToolbar = (props) => {
     }
 
     useEffect(() => {
-        mainUI.removeJourneyDialog.active = false
+        mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_TOOLBAR)
+
         return () => {
-            mainUI.removeJourneyDialog.active = false
+            mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_TOOLBAR)
         }
     }, [])
 
@@ -88,7 +89,7 @@ export const JourneyToolbar = (props) => {
                         <FocusButton tooltip={tooltip}/>
                         {editor && <TracksEditorButton tooltip={tooltip}/>}
                         {profile && <ProfileButton tooltip={tooltip}/>}
-                        <RemoveJourney style={'button'}/>
+                        <RemoveJourney style={'button'} name={REMOVE_JOURNEY_IN_TOOLBAR}/>
                     </div>
 
                 </SlPopup>

@@ -227,3 +227,6 @@ export const MENU_START_END = 'start-end'
 export const MENU_START_START = 'start-start'
 export const MENU_BOTTOM_START = 'bottom-start'
 export const MENU_BOTTOM_END = 'bottom-end'
+
+export const REMOVE_JOURNEY_IN_EDIT = 'in-journey-edit'
+export const REMOVE_JOURNEY_IN_TOOLBAR = 'in-journey-toolbar'

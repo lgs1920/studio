@@ -9,7 +9,7 @@ export const main = {
             support: {visible: false},
 
             journeyMenu:         {timeout: 0, active: false},
-            removeJourneyDialog: {active: false},
+            removeJourneyDialog: {active: proxyMap()},
         },
 
         fileLoader:{
