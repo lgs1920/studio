@@ -1,32 +1,29 @@
 import {
-    JOURNEYS_STORE, ORIGIN_STORE,
-    DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JSON_, KML, KMZ, NO_FOCUS, REFRESH_DRAWING,
-    SIMULATE_ALTITUDE, TRACK_SLUG,
-} from '@Core/constants'
+    DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JOURNEYS_STORE, JSON_, KML, KMZ, NO_FOCUS,
+    ORIGIN_STORE, REFRESH_DRAWING, SIMULATE_ALTITUDE, TRACK_SLUG,
+}                                      from '@Core/constants'
 import {
     gpx, kml,
-}                                       from '@tmcw/togeojson'
+}                                      from '@tmcw/togeojson'
 import {
     getGeom,
-}                                       from '@turf/invariant'
+}                                      from '@turf/invariant'
 import {
-    JUST_ICON,
-
-    FLAG_START, FLAG_STOP, POI_FLAG, POI_MARKER, POI_STD,
-} from '@Utils/cesium/POIUtils'
+    FLAG_START, FLAG_STOP, JUST_ICON, POI_FLAG, POI_MARKER, POI_STD,
+}                                      from '@Utils/cesium/POIUtils'
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                                       from '@Utils/cesium/TrackUtils'
+}                                      from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
-}                                       from '@Utils/UIToast'
+}                                      from '@Utils/UIToast'
 import {
     ElevationServer,
-}                                       from './Elevation/ElevationServer'
+}                                      from './Elevation/ElevationServer'
 import {
     MapElement,
-}                                       from './MapElement'
-import { POI, POI_VERTICAL_ALIGN_TOP }  from './POI'
+}                                      from './MapElement'
+import { POI, POI_VERTICAL_ALIGN_TOP } from './POI'
 
 import { ProfileTrackMarker } from './ProfileTrackMarker'
 import { Track }              from './Track'
@@ -561,10 +558,10 @@ export class Journey extends MapElement {
 
         //Ready
         const texts = new Map([
-                                  [DRAWING_FROM_UI, 'loaded succesfully!'],
-                                  [DRAWING_FROM_DB, 'loaded succesfully!'],
-                                  [SIMULATE_ALTITUDE, 'updated succesfully!'],
-                                  [REFRESH_DRAWING, 'updated succesfully!'],
+                                  [DRAWING_FROM_UI, 'Loaded succesfully!'],
+                                  [DRAWING_FROM_DB, 'Loaded succesfully!'],
+                                  [SIMULATE_ALTITUDE, 'Updated succesfully!'],
+                                  [REFRESH_DRAWING, 'Updated succesfully!'],
                               ])
         UIToast.success({
                             caption: `${this.title}`, text: texts.get(action),

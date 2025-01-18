@@ -25,7 +25,6 @@ ionToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4ZmZkZjZkYS1iODgwLTQzY
 app:
   lastVisit: null         # Last visit date
   firstVisit: true        # Is it the first visit ?
-  showIntro: true         # Se afin intro ?
   changelogToRead: true   # Used to check if there are news to read
 
 ########################################
@@ -62,6 +61,7 @@ starter:
     latitude: 45.34623
     height: 4300
     canRotate: true
+    duration: 90  # of a rotation in seconds
 
 ########################################
 # Initial Camera Settings
@@ -70,7 +70,7 @@ camera:
   heading: 0
   pitch: -45
   roll: 0
-  range: 3000
+  range: 5000
   orbitalPercentageChanged: 0.05
   percentageChanged: 0.02
   maximumHeight: 10000
@@ -161,6 +161,8 @@ layers:
   overlay: null                         # ID of the current overlay
   terrain: cesium-world                 # ID of the current terrain
 
+  colorSettings:                        # Layers color Settings
+
   ## Filter criteria
   filter:
     byUsage: all
@@ -200,6 +202,7 @@ layers:
 
           type: terrain
           terrainType: 'ellipsoid'
+          noRelief: true
 
     ## IGN Provider
     - id: ign                           # Provider ID
@@ -656,11 +659,38 @@ unitSystem:
 # UI : general
 ########################################
 ui:
-  showCameraPosition: true          # Display Camera position
-  showCameraTargetPosition: true    # Display Camera View point
-  showCameraHPR: true               # Display Camera HPR
 
-  cameraTargetIcon: # Camera Target Icon
-    show: true
-    color: white
-    size: 1.5rem
+  ## Camera
+  camera:
+    showPosition: false         # Display Camera position
+    showTargetPosition: true    # Display Camera View point
+    showHPR: false              # Display Camera HPR
+
+    targetIcon: # Camera Target Icon
+      show: true
+      color: white
+      background: transparent
+      size: 3rem
+
+  ## Welcome Modal
+  welcome:
+    showIntro: true
+    autoClose: true
+    displayTime: 8   #seconds
+
+  ## Menus
+  menu:
+    toolBar:
+      fromStart: true
+    drawers:
+      fromStart: false
+      fromBottom: true
+
+  ## POI
+  poi:
+    minScaleFlag: 0.4                   # minimum POI size before replacing by flag (30% of max)
+    minScale: 0.1                       # minScale before masking (15% of max)
+    distanceThreshold: 8000             # min distance to see POI with 100% size
+
+    defaultColor: white
+    lgsColor: chartreuse

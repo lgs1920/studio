@@ -1,10 +1,10 @@
-import { BASE_ENTITY, OVERLAY_ENTITY } from '@Core/constants'
+import { BASE_ENTITY, OVERLAY_ENTITY, URL_AUTHENT_KEY }             from '@Core/constants'
 import {
     ImageryLayer, NeverTileDiscardPolicy, OpenStreetMapImageryProvider, UrlTemplateImageryProvider,
     WebMapTileServiceImageryProvider,
-}                                      from 'cesium'
-import { subscribe, useSnapshot }      from 'valtio'
-import { URL_AUTHENT_KEY } from '@Core/constants'
+}                                                                   from 'cesium'
+import { subscribe, useSnapshot }                                   from 'valtio'
+import { BASE_INDEX, DEFAULT_LAYERS_COLOR_SETTINGS, OVERLAY_INDEX } from '../../core/constants'
 
 export const SLIPPY = 'slippy'
 export const WMTS = 'wmts'
@@ -15,8 +15,6 @@ export const SWISSTOPO = 'swisstopo'
 export const WAYBACK = 'wayback'
 export const MAPTILER = 'maptiler'
 
-const BASE = 0      // Layer index
-const OVERLAY = 1
 
 export const MapLayer = (props) => {
 
@@ -42,7 +40,7 @@ export const MapLayer = (props) => {
         else {
             lgs.mainProxy.theLayerOverlay = snapLayer ? manager.getEntityProxy(snapLayer) : null
             if (!lgs.mainProxy.theLayerOverlay) {
-                lgs.viewer.imageryLayers.remove(lgs.viewer.imageryLayers.get(OVERLAY), true)
+                lgs.viewer.imageryLayers.remove(lgs.viewer.imageryLayers.get(OVERLAY_INDEX), true)
             }
         }
     })
@@ -84,21 +82,36 @@ export const MapLayer = (props) => {
     }
 
     const Imagery = (props) => {
+
+        const applySettings = layer => {
+            const settings = lgs.settings.layers.colorSettings[theLayer.id] ?? DEFAULT_LAYERS_COLOR_SETTINGS
+            layer.brightness = settings?.brightness ?? DEFAULT_LAYERS_COLOR_SETTINGS.brightness
+            layer.contrast = settings?.contrast ?? DEFAULT_LAYERS_COLOR_SETTINGS.contrast
+            layer.hue = settings?.hue ?? DEFAULT_LAYERS_COLOR_SETTINGS.hue
+            layer.saturation = settings?.saturation ?? DEFAULT_LAYERS_COLOR_SETTINGS.saturation
+            layer.gamma = settings?.gamma ?? DEFAULT_LAYERS_COLOR_SETTINGS.gamma
+            layer.alpha = settings?.alpha ?? DEFAULT_LAYERS_COLOR_SETTINGS.alpha
+            //  target.colorToAlpha = new Color.fromCssColorString(settings.colorToAlpha?? defaults.colorToAlpha)
+            //  target.colorToAlphaThreshold = settings.colorToAlphaThreshold ?? defaults.colorToAlphaThreshold
+        }
+
         if (isBase) {
             if (lgs.theLayer) {
                 lgs.viewer.imageryLayers.remove(lgs.theLayer, true)
             }
             lgs.theLayer = new ImageryLayer(props.imageryProvider)
-            lgs.viewer.imageryLayers.add(lgs.theLayer, BASE)
+            applySettings(lgs.theLayer)
+
+            lgs.viewer.imageryLayers.add(lgs.theLayer, BASE_INDEX)
         }
         else {
             if (lgs.theLayerOverlay) {
                 lgs.viewer.imageryLayers.remove(lgs.theLayerOverlay, true)
             }
             lgs.theLayerOverlay = new ImageryLayer(props.imageryProvider)
-            lgs.viewer.imageryLayers.add(lgs.theLayerOverlay, OVERLAY)
+            applySettings(lgs.theLayerOverlay)
+            lgs.viewer.imageryLayers.add(lgs.theLayerOverlay, OVERLAY_INDEX)
         }
-
         return false
     }
 
@@ -184,12 +197,12 @@ export const MapLayer = (props) => {
             {   // Wayback layers
                 theProvider && theLayer.tile === WAYBACK && theLayer.type === props.type &&
                 <Imagery key={theURL + '-' + theLayer.type}
-                              imageryProvider={new UrlTemplateImageryProvider({
-                                                                                  url:               `${theURL}/{z}/{y}/{x}`,
-                                                                                  credit:            props.type,
-                                                                                  tileDiscardPolicy: NeverTileDiscardPolicy(),
+                         imageryProvider={new UrlTemplateImageryProvider({
+                                                                             url:               `${theURL}/{z}/{y}/{x}`,
+                                                                             credit:            props.type,
+                                                                             tileDiscardPolicy: NeverTileDiscardPolicy(),
 
-                                                                              })}/>
+                                                                         })}/>
             }
         </>
     )

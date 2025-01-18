@@ -18,14 +18,17 @@ import { FA2SL }           from '@Utils/FA2SL'
 import parse               from 'html-react-parser'
 import React, { Fragment } from 'react'
 
-import { useSnapshot } from 'valtio'
+import { useSnapshot }                   from 'valtio'
+import { DEFAULT_LAYERS_COLOR_SETTINGS } from '../../../core/constants'
+import { LayersUtils }                   from '../../../Utils/cesium/LayersUtils'
 
 
 export const SelectEntity = (props) => {
 
     const thumbnailBackground = image => `url("${LAYERS_THUMBS_DIR}/${image}")`
 
-    let settings = useSnapshot(lgs.settings.layers)
+    const layers = lgs.settings.layers
+    const layersSnap = useSnapshot(layers)
     const editor = lgs.editorSettingsProxy
     const snap = useSnapshot(editor)
 
@@ -44,7 +47,7 @@ export const SelectEntity = (props) => {
                 case 'remove':
                     const confirmation = await confirmRemoveToken()
                     if (confirmation) {
-                        // Update settings and vault DBs
+                        // Update layersSnap and vault DBs
                         theEntity.usage.token = ''
                         theEntity.usage.unlocked = false
                         await lgs.db.vault.put(theEntity.id, theEntity.usage.token, VAULT_STORE)
@@ -52,8 +55,8 @@ export const SelectEntity = (props) => {
                     break
                 case
                 'update':
-                    lgs.editorSettingsProxy.layer.tmpEntity = theEntity
-                    lgs.editorSettingsProxy.layer.tokenDialog = true
+                    lgs.editorlayersSnapProxy.layer.tmpEntity = theEntity
+                    lgs.editorlayersSnapProxy.layer.tokenDialog = true
                     break
                 case
                 'read':
@@ -73,7 +76,7 @@ export const SelectEntity = (props) => {
                                   library="fa" name={FA2SL.set(faEllipsisVertical)}/>
 
                     <SlMenu onSlSelect={handleSelect}>
-                        {props.entity.id !== settings[props.entity.type] &&
+                        {props.entity.id !== layersSnap[props.entity.type] &&
                             <SlMenuItem value={'remove'} key={'remove-entity'}>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLock)}></SlIcon>
                                 Remove Token
@@ -106,7 +109,7 @@ export const SelectEntity = (props) => {
 
         let selected = false
         if (accountUnlocked) {
-            selected = theEntity.id === settings[theEntity.type]
+            selected = theEntity.id === layersSnap[theEntity.type]
         }
 
         const classes = ['layer-entity', 'lgs-card', type]
@@ -114,19 +117,19 @@ export const SelectEntity = (props) => {
             classes.push('entity-selected')
         }
 
-        const byProvider = settings.filter.provider ? '' : sprintf(' %s %s', 'by', props.entity.providerName)
+        const byProvider = layers.filter.provider ? '' : sprintf(' %s %s', 'by', props.entity.providerName)
         //On thumbnail mode, we use \ as line separator
-        const theEntityName = settings.filter.thumbnail ? props.entity.name.replace('\\', '<br/>') : props.entity.name.replace('\\', ' ')
+        const theEntityName = layers.filter.thumbnail ? props.entity.name.replace('\\', '<br/>') : props.entity.name.replace('\\', ' ')
 
         return (
 
-            <SlTooltip className={`entity-${type}`} placement={settings.filter.thumbnail ? 'top' : 'left'} hoist>
+            <SlTooltip className={`entity-${type}`} placement={layersSnap.filter.thumbnail ? 'top' : 'left'} hoist>
                 <div slot="content">
                     <strong>{parse(theEntityName)}</strong>{byProvider}<br/>
                     {ACCESS_ICONS[type].text}
                 </div>
                 <div className={classes.join(' ')} onClick={props.onClick} type={theEntity.type} name={theEntity.id}>
-                    <div className={`thumbnail-background${settings.filter.thumbnail ? '' : ' lgs-card'}`}
+                    <div className={`thumbnail-background${layersSnap.filter.thumbnail ? '' : ' lgs-card'}`}
                          style={{backgroundImage: thumbnailBackground(props.entity.image)}}>
                     </div>
 
@@ -213,6 +216,15 @@ export const SelectEntity = (props) => {
                 editor.layer.tokenDialog = true
             }
         }
+
+        // We need to apply color layersSnap
+        editor.layer.layersSnapChanged = false
+        if (layers.colorSettings[theEntity.id] === undefined) {
+            layers.colorSettings[theEntity.id] = {...DEFAULT_LAYERS_COLOR_SETTINGS}
+        }
+
+        LayersUtils.applySettings(layers.colorSettings[theEntity.id] ?? DEFAULT_LAYERS_COLOR_SETTINGS, type, true)
+
         // If it is a free or unlocked terrain , replace the current one
         if (theEntity.type === TERRAIN_ENTITY && (theEntity.usage.type === FREE_ANONYMOUS_ACCESS || theEntity.usage.unlocked)) {
             __.layersAndTerrainManager.changeTerrain(theEntity)
@@ -222,8 +234,8 @@ export const SelectEntity = (props) => {
     editor.layer.refreshList = true
     const fill = list.length > 0
     let classes = ['layer-entities-wrapper', 'lgs-card']
-    classes.push(settings.filter.provider ? 'by-provider' : 'by-layer')
-    classes.push(settings.filter.thumbnail ? 'by-thumbnail' : 'by-list')
+    classes.push(layersSnap.filter.provider ? 'by-provider' : 'by-layer')
+    classes.push(layersSnap.filter.thumbnail ? 'by-thumbnail' : 'by-list')
 
     return (
         <>
@@ -235,7 +247,7 @@ export const SelectEntity = (props) => {
                         return (
                             <Fragment key={index}>
                                 {   // If the user want to see providers and
-                                    settings.filter.provider &&
+                                    layersSnap.filter.provider &&
                                     // if there is a new provider, let's show it's name
                                     entity.providerName && entity.providerName !== previousProviderName &&
                                     <div className="layers-provider-header">

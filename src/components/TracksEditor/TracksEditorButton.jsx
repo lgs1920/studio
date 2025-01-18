@@ -1,9 +1,9 @@
+import { JOURNEY_EDITOR_DRAWER }       from '@Core/constants'
 import { faPencil }                    from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                       from '@Utils/FA2SL'
 import './style.css'
 import { useSnapshot }                 from 'valtio'
-import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 
 export const TracksEditorButton =  (props) => {
 
@@ -11,7 +11,7 @@ export const TracksEditorButton =  (props) => {
     const mainSnap = useSnapshot(mainStore)
 
     return (<>
-        <SlTooltip hoist placement={props.tooltip} content="Edit Tracks">
+        <SlTooltip hoist placement={props.tooltip} content="Edit the current Journey">
             {mainSnap.canViewJourneyData &&
                 <SlButton size={'small'} className={'square-icon'} id={'open-theJourney-editor'}
                           onClick={() => __.ui.drawerManager.toggle(JOURNEY_EDITOR_DRAWER)}>

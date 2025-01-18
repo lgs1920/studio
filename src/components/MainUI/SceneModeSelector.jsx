@@ -34,7 +34,7 @@ export const SceneModeSelector = (props) => {
             {
                 settings.mode.available.map(mode => (
                     <SlTooltip key={`scene-mode-${SCENE_MODES.get(mode).value}`}
-                               placement={placement} content={SCENE_MODES.get(mode).title}>
+                               placement={placement} hoist content={SCENE_MODES.get(mode).title}>
                         <SlButton size={'small'}
                                   visible={settings.mode.value === SCENE_MODES.get(mode).value}
                                   className={'square-icon'} onclick={selectSceneMode}

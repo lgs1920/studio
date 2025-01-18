@@ -1,16 +1,19 @@
-import { MapLayer }                    from '@Components/cesium/MapLayer'
-import { Viewer }                      from '@Components/cesium/Viewer'
-import { InitErrorMessage }            from '@Components/InitErrorMessage'
-import { MainUI }                      from '@Components/MainUI/MainUI.jsx'
+import { MapLayer } from '@Components/cesium/MapLayer'
+import { Viewer }   from '@Components/cesium/Viewer'
+
+import { InitErrorMessage }                                from '@Components/InitErrorMessage'
+import { FlagLGS }                                         from '@Components/MainUI/FlagLGS'
+import { MainUI }                                          from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { WelcomeModal }                from '@Components/MainUI/WelcomeModal'
-import { BASE_ENTITY, OVERLAY_ENTITY } from '@Core/constants'
-import { LayersAndTerrainManager }     from '@Core/layers/LayerAndTerrainManager'
-import { LGS1920Context }              from '@Core/LGS1920Context'
-import { TerrainUtils }                from '@Utils/cesium/TerrainUtils'
-import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
-import { UIToast }                     from '@Utils/UIToast'
-import { useEffect }                   from 'react'
+import { WelcomeModal }                                    from '@Components/MainUI/WelcomeModal'
+import { BASE_ENTITY, BOTTOM, MOBILE_MAX, OVERLAY_ENTITY } from '@Core/constants'
+import { LGS1920Context }                                  from '@Core/LGS1920Context'
+import { LayersAndTerrainManager }                         from '@Core/ui/LayerAndTerrainManager'
+import { TerrainUtils }                                    from '@Utils/cesium/TerrainUtils'
+import { TrackUtils }                                      from '@Utils/cesium/TrackUtils'
+import { UIToast }                                         from '@Utils/UIToast'
+import { useEffect }                                       from 'react'
+import { useMediaQuery }                                   from 'react-responsive'
 
 /***************************************
  * Init Application context
@@ -35,10 +38,30 @@ if (initApp.status) {
 }
 
 export function LGS1920() {
+
+    const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
+    if (isMobile) {
+        document.body.classList.add('mobile')
+        lgs.editorSettingsProxy.menu.drawer = BOTTOM
+    }
+    else {
+        document.body.classList.remove('mobile')
+    }
+
+    const isPortrait = useMediaQuery({orientation: 'portrait'})
+    if (isPortrait) {
+        document.body.classList.add('portrait')
+    }
+    else {
+        document.body.classList.remove('portrait')
+    }
     useEffect(() => {
         try {
             // If initialisation phase was OK, we have somme additional tasks to do.
             if (initApp.status) {
+
+                // Detect drawer over
+                __.ui.drawerManager.attachEvents()
 
                 // Set the right terrain
                 TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
@@ -49,11 +72,6 @@ export function LGS1920() {
                 (async () => {
                     // Read DB
                     await TrackUtils.readAllFromDB()
-                    //Ready
-                    UIToast.success({
-                                        caption: `Welcome on ${lgs.configuration.applicationName}!`,
-                                        text:    'We\'re ready to assist you !',
-                                    })
                     console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
                     console.log(`Connected to backend ${lgs.versions.backend}.`)
                 })()
@@ -94,8 +112,7 @@ export function LGS1920() {
 
                     <Viewer/>
                     <MainUI/>
-                    {/* */}
-
+                    <FlagLGS/>
                 </>
 
             }

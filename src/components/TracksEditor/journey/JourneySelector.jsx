@@ -54,40 +54,40 @@ export const JourneySelector = (props) => {
                       onSlChange={props.onChange}
                       key={mainSnapshot.keys.journey.list}
                       className="journey-selector"
-        >
-            <SlIcon library="fa"
-                    name={FA2SL.set(faRoute)}
-                    slot={'prefix'}
-                    style={{
-                        color: (theJourney.tracks.size === 1) ? editorSnapshot.track.color : 'black',
-                    }}
-            />
-            <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
-
-            {journeys.map(journey => <SlOption key={journey.title} value={journey.slug}>
-                <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
+            >
                 <SlIcon library="fa"
-                        name={FA2SL.set(faSquare)}
+                        name={FA2SL.set(faRoute)}
                         slot={'prefix'}
-                        style={prefixColor(journey)}
+                        style={{
+                            color: (theJourney.tracks.size === 1) ? editorSnapshot.track.color : 'black',
+                        }}
                 />
+                <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
-                <SlIcon slot="suffix" library="fa" name={FA2SL.set(journey.visible ? faEye : faEyeSlash)}/>
+                {journeys.map(journey => <SlOption key={journey.title} value={journey.slug}>
+                    <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
+                    <SlIcon library="fa"
+                            name={FA2SL.set(faSquare)}
+                            slot={'prefix'}
+                            style={prefixColor(journey)}
+                    />
 
-                {journey.title}
-            </SlOption>)}
-        </SlSelect>}
+                    <SlIcon slot="suffix" library="fa" name={FA2SL.set(journey.visible ? faEye : faEyeSlash)}/>
+
+                    {journey.title}
+                </SlOption>)}
+            </SlSelect>}
         {mainSnapshot.list.length === 1 && props.single && <>
-            <span className={'journey-title'}>
-            <SlIcon className={'journey-title-icon'}
-                    library="fa" name={FA2SL.set(faRoute)}
-                    slot={'expand-icon'}
-                    style={{
-                        color: (theJourney.tracks.size === 1) ? editorSnapshot?.track?.color : 'black',
-                    }}
-            />
+            <div className={`journey-title ${props?.style ? 'lgs-one-line-card' : ''}`}>
+                <SlIcon className={'journey-title-icon'}
+                        library="fa" name={FA2SL.set(faRoute)}
+                        slot={'expand-icon'}
+                        style={{
+                            color: (theJourney.tracks.size === 1) ? editorSnapshot?.track?.color : 'black',
+                        }}
+                />
                 {editorSnapshot.journey.title}
-                </span>
+            </div>
         </>}
 
     </>)

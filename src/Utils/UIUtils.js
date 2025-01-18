@@ -69,6 +69,14 @@ export class UIUtils {
         })
     }
 
+    static toDMS(coordinate) {
+        const degrees = Math.floor(coordinate)
+        const minutesFloat = (coordinate - degrees) * 60
+        const minutes = Math.floor(minutesFloat)
+        const seconds = Math.round((minutesFloat - minutes) * 60)
+        return `${degrees}° ${minutes}' ${seconds}"`
+    }
+
 }
 
 

@@ -7,51 +7,70 @@ html {
     gap: var(--lgs-gutter-s);
     position: fixed;
     top: 0;
-    height: 100vh;
+    height: 100dvh;
     left: 0;
     width: 100vw;
     pointer-events: none;
+    z-index: var(--lgs-ui-layer-zindex);
 }
 
 #lgs-main-ui > div {
     display: flex;
     gap: var(--lgs-gutter-s);
-    --top: var(--lgs-gutter-s);
-    --left: var(--lgs-gutter-s);
-    --bottom: var(--lgs-gutter-s);
-    --right: var(--lgs-gutter-s);
-    z-index: var(--lgs-ui-layer-zindex);
 }
 
-#top-left-ui {
+:root {
+    --secondary-buttons-bar-right: 0;
+    --secondary-buttons-bar-left: 0;
+    --secondary-buttons-bar-margin-left: 0;
+
+    --primary-buttons-bar-right: 0;
+    --primary-buttons-bar-left: 0;
+}
+
+#primary-buttons-bar {
     pointer-events: auto;
     display: flex;
     flex-direction: column;
     position: absolute;
-    top: 5rem;
-    left: var(--left);
+    top: var(--top);
+    margin: 0 var(--right) 0 var(--left);
     max-width: calc(100% - var(--left) - var(--right));
-}
-:root{
-    --top-right-ui-right-margin:0
+    left: var(--primary-buttons-bar-left);
+    right: var(--primary-buttons-bar-right);
+    --lgs-animation-duration: 1s;
 }
 
-#top-right-ui {
+#secondary-buttons-bar {
     flex-direction: column;
     align-items: center;
     gap: var(--lgs-gutter-s);
     --width: var(--lgs-compass-size);
     pointer-events: auto;
+    position: relative;
+    width: var(--lgs-compass-size);
+    margin: 0 var(--right) 0 var(--left);
+    right: var(--secondary-buttons-bar-right);
+    left: var(--secondary-buttons-bar-left);
+    margin-left: var(--secondary-buttons-bar-margin-left)
+}
+
+:root {
+    --lgs-secondary-buttons-bar-left-delta: 20px;
+    --lgs-secondary-buttons-bar-right-delta: 1px
+}
+
+#secondary-buttons-bar-content {
     position: absolute;
-    top: var(--top);
-    right: var(--right);
-    width: var(--width);
-    margin-right:var(--top-right-ui-right-margin)
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+    top: var(--lgs-compass-size);
 }
 
 #bottom-ui {
     display: flex;
-    height: 50vh;
+    height: 50dvh;
     width: 100vw;
     flex-direction: row;
     padding: var(--lgs-gutter-s);
@@ -70,16 +89,14 @@ html {
     position: absolute;
     bottom: var(--bottom);
     left: var(--right);
-    display: flex;
-    flex-direction: column;
-    gap: var(--lgs-gutter-s);
-    align-self: flex-end;
+    flex-direction: row;
 }
 
 #used-platform {
     line-height: 1;
-    color: var(--sl-color-gray-600);
+    color: white;
 }
+
 
 /***************************************
  * Toolbar
@@ -109,6 +126,47 @@ html {
 .lgs-ui-toolbar.embed sl-button {
     --sl-input-border-width: 0;
 }
+
+.journey-toolbar {
+    display: flex;
+    gap: var(--lgs-gutter-s);
+    flex-direction: row;
+}
+
+.journey-toolbar-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lgs-gutter-s);
+    margin-left: auto;
+    width: 40rem;
+    --lgs-animation-duration: 0.2s
+
+}
+
+.mobile .journey-toolbar-content {
+    /**
+     TODO width: calc(var(--lgs-max-mobile-width) - 3 * var(--lgs-line-dimension))
+     */
+    width: 15rem;
+    max-width: 15rem;
+}
+
+[placement^="left-"] .journey-toolbar-content {
+    margin-right: auto;
+    flex-direction: row-reverse;
+}
+
+[placement^="right-"] .journey-toolbar-content {
+    margin-left: auto;
+    flex-direction: row;
+}
+
+
+.mobile .journey-toolbar-content .journey-selector,
+.mobile .journey-toolbar-content .journey-title {
+    order: 10;
+}
+
 /***************************************
  * Dropdown Toolbar
  */
@@ -123,6 +181,14 @@ html {
 }
 .lgs-ui-dropdown-toolbar.just-icons sl-menu-item::part(base) {
     padding: 0 var(--sl-spacing-2x-small);
+}
+
+/***************************************
+ * Toolbar buttons
+ */
+
+#open-info-panel {
+    margin-top: var(--lgs-gutter);
 }
 /***************************************
  * Profile
@@ -146,14 +212,15 @@ html {
  * https://hype4.academy/tools/glassmorphism-generator
  */
 #welcome-modal::part(panel) {
+    --body-spacing: 0;
     /*background: rgba( 255, 255, 255, 0.15 );*/
     /*background-image: linear-gradient(to right, rgba(255,188,0,0.30), rgba(255,114,15,0.30));*/
-    /*box-shadow: var(--sl-shadow-x-large);*/
-    /*backdrop-filter: blur( 4px );*/
-    /*-webkit-backdrop-filter: blur( 4px );*/
+    box-shadow: var(--sl-shadow-x-large);
+    /*backdrop-filter: blur( var(--lgs-blur) );*/
     /*border-radius: 10px;*/
     /*border: 1px solid rgba( 255, 255, 255, 0.18 );*/
-   /* color:#fff*/
+    color: black;
+    cursor: pointer
 }
 
 #welcome-modal #footer{
@@ -165,31 +232,80 @@ html {
     width: 100%;
 }
 
-#welcome-modal .buttons-bar {
-    display: flex;
-    justify-content: space-between;
-}
-
 #welcome-modal .welcome-logo {
     display: flex;
     justify-content: center;
     flex-direction: column;
     gap: var(--lgs-gutter);
-
     box-shadow: var(--sl-shadow-medium);
 }
 
-#welcome-modal .the-slogan {
-    color: var(--lgs-slogan-color);
-    font-family: var(--lgs-slogan-font-family);
-    font-size: var(--lgs-slogan-font-size);
+#welcome-links {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter);
+    bottom: 0;
+    left: var(--lgs-gutter-s);
+    width: calc(100% - 2 * var(--lgs-gutter-s));
 }
 
+#welcome-links sl-button {
+    margin-left: auto;
+}
+
+#welcome-links sl-button::part(base) {
+    color: black;
+    font-weight: normal;
+}
+
+#welcome-links-do-not-show {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+
+#welcome-links-do-not-show sl-checkbox::part(base) {
+    color: black
+}
+
+#welcome-links-do-not-show sl-checkbox::part(control) {
+    color: black;
+    background: transparent;
+    border: 1px solid black;
+}
 #waiting-loading {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: var(--lgs-gutter-s);
+}
+
+/*******************************************************************************
+ * Main CFA
+ */
+
+.call-for-actions {
+    position: absolute;
+    pointer-events: auto;
+    top: 75dvh;
+    width: 100%;
+    justify-content: center;
+}
+
+.call-for-actions .buttons-bar {
+    display: flex;
+    gap: var(--lgs-gutter) !important;
+}
+
+.call-for-actions [outline] {
+    border-color: var(--lgs-border-color) !important;
+    backdrop-filter: blur(var(--lgs-blur));
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.call-for-actions [outline]::part(base) {
+    color: var(--lgs-text-on-color);
 }
 
 /*******************************************************************************
@@ -217,3 +333,7 @@ html {
 .scene-mode-selector[waiting-mode="true"] sl-button {
     display: flex;
 }
+
+/*******************************************************************************
+ *
+ */

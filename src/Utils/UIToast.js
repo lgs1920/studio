@@ -1,17 +1,15 @@
-import { SECOND } from '@Core/constants'
+import { SECOND }                                                     from '@Core/constants'
+import { faBomb, faCircleCheck, faCircleInfo, faTriangleExclamation } from '@fortawesome/pro-solid-svg-icons'
 import {
-    faCircleCheck, faCircleInfo, faHexagonExclamation, faTriangleExclamation,
-}                 from '@fortawesome/pro-regular-svg-icons'
+    backOutLeft,
+}                                                                     from '@shoelace-style/animations/dist/back_exits/backOutLeft'
 import {
     slideInUp,
-}                 from '@shoelace-style/animations/dist/sliding_entrances/slideInUp'
-import {
-    slideOutLeft,
-}                 from '@shoelace-style/animations/dist/sliding_exits/slideOutLeft'
+}                                                                     from '@shoelace-style/animations/dist/sliding_entrances/slideInUp'
 import {
     setAnimation,
-}                 from '@shoelace-style/shoelace/dist/utilities/animation-registry'
-import { FA2SL }  from '@Utils/FA2SL'
+}                                                                     from '@shoelace-style/shoelace/dist/utilities/animation-registry'
+import { FA2SL }                                                      from '@Utils/FA2SL'
 
 export const LGS_INFORMATION_TOAST = 'information'
 export const LGS_SUCCESS_TOAST = 'success'
@@ -20,13 +18,13 @@ export const LGS_ERROR_TOAST = 'danger'
 
 export class UIToast {
 
-    static DURATION = 3 * SECOND
+    static DURATION = 4 * SECOND
 
     static LGS_TOAST_ICONS = {
         [LGS_INFORMATION_TOAST]: faCircleInfo,
         [LGS_SUCCESS_TOAST]: faCircleCheck,
         [LGS_WARNING_TOAST]: faTriangleExclamation,
-        [LGS_ERROR_TOAST]: faHexagonExclamation,
+        [LGS_ERROR_TOAST]: faBomb,
     }
 
     static #notify = (message, type = LGS_INFORMATION_TOAST, duration = this.DURATION) => {
@@ -47,7 +45,7 @@ export class UIToast {
 
         // Add animations
         setAnimation(alert, 'alert.hide', {
-            keyframes: slideOutLeft,
+            keyframes: backOutLeft,
             options: {
                 duration: 200,
             },

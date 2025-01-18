@@ -1,15 +1,18 @@
 import {
     APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, JOURNEYS_STORE, ORIGIN_STORE, platforms,
-    SERVERS, SETTINGS_STORE,
-    VAULT_STORE,
-}                    from '@Core/constants'
-import { AppUtils }   from '@Utils/AppUtils'
-import { MouseUtils } from '@Utils/cesium/MouseUtils'
-import { CSSUtils }   from '@Utils/CSSUtils'
-import { UIUtils }    from '@Utils/UIUtils'
+    SERVERS, SETTINGS_STORE, VAULT_STORE,
+}                          from '@Core/constants'
+import { AppToolsManager } from '@Core/ui/AppToolsManager'
+import { DeviceManager }   from '@Core/ui/DeviceManager'
+import { MenuManager }     from '@Core/ui/MenuManager'
+import { POIManager }      from '@Core/ui/POIManager'
+import { AppUtils }        from '@Utils/AppUtils'
+import { MouseUtils }      from '@Utils/cesium/MouseUtils'
+import { CSSUtils }        from '@Utils/CSSUtils'
+import { UIUtils }         from '@Utils/UIUtils'
+import { UnitUtils }       from '@Utils/UnitUtils'
 
 import { proxy }             from 'valtio'
-import { UnitUtils } from '@Utils/UnitUtils'
 import { LocalDB }           from './db/LocalDB'
 import { MouseEventHandler } from './MouseEventHandler'
 import { editorSettings }    from './stores/editorSettings'
@@ -61,6 +64,7 @@ export class LGS1920Context {
             menu: undefined,
         }
 
+        this.colorSettings = {}
 
         // Utils are attached to window
         window.__ = {
@@ -267,10 +271,16 @@ export class LGS1920Context {
         __.ui.editor = {
             journey:new JourneyEditor()
         }
+
         __.ui.wanderer = new Wanderer()
         __.ui.cameraManager = new CameraManager()
         __.ui.drawerManager = new DrawerManager()
         __.ui.sceneManager = new SceneManager()
+        __.ui.menuManager = new MenuManager()
+        __.ui.poiManager = new POIManager()
+
+        __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
+        __.device = new DeviceManager()
 
     }
 

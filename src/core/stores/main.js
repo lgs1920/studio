@@ -6,10 +6,10 @@ export const main = {
         mainUI:{
             show:false,
             journeyLoader: {visible:  false},
+            support: {visible: false},
 
-
-
-            support: {visible:false}
+            journeyMenu:         {timeout: 0, active: false},
+            removeJourneyDialog: {active: proxyMap()},
         },
 
         fileLoader:{
@@ -81,12 +81,22 @@ export const main = {
 
         informationPanel:{
             tab:null
+        },
+
+        welcome: {
+            modal: false,
+            flag:  false,
+        },
+
+        poi: {
+            items: new proxyMap(),
         }
 
 
     },
     drawers:    {
         open: null,
+        over: false,
     },
     modals: {
         altitudeChoice: {

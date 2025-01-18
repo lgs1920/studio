@@ -1,10 +1,9 @@
+import { ChangelogManager }         from '@Core/ui/ChangelogManager'
 import { SlDetails, SlDivider }     from '@shoelace-style/shoelace/dist/react'
 import { DateTime }                 from 'luxon'
 import React, { useEffect, useRef } from 'react'
-import { Scrollbars }               from 'react-custom-scrollbars'
 import { default as ReactMarkdown } from 'react-markdown'
 import { proxy, useSnapshot }       from 'valtio'
-import { ChangelogManager } from '@Core/ui/ChangelogManager'
 
 // Créer un état proxy avec Valtio
 const state = proxy({
@@ -59,7 +58,7 @@ export const WhatsNew = () => {
     }, []);
     const snap = useSnapshot(state)
 
-    return (<Scrollbars style={{height: '100%'}}>
+    return (
             <div className={'whats-new-list'} ref={newsList}>
                 {snap.data.map(file => (
                     <SlDetails small open={file.open}
@@ -74,6 +73,6 @@ export const WhatsNew = () => {
 
                 ))}
             </div>
-        </Scrollbars>
+
     )
 }

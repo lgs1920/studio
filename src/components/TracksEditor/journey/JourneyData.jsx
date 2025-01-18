@@ -1,3 +1,3 @@
 export const JourneyData = function JourneyData() {
-    return ('')
+    return false
 }

@@ -57,7 +57,6 @@ export const TrackStyleSettings = function TrackSettings() {
             <SlTooltip hoist content="Thickness">
                 <SlRange min={1} max={10} step={1}
                          value={editorSnapshot.track.thickness}
-                         style={{'--thumb-size': '1rem'}}
                          onSlInput={setThickness}
                          onSlChange={setThickness}
                          disabled={!editorSnapshot.track.visible}

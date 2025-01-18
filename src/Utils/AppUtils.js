@@ -434,7 +434,7 @@ export class AppUtils {
      * @param obj
      * @return {boolean} true if empty
      */
-    static isEmpty = (obj) => {
+    static isEmpty = (obj = {}) => {
         return Object.keys(obj).length === 0
     }
 

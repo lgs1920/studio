@@ -1,7 +1,6 @@
-import { forwardRef }                        from 'react'
 import './style.css'
-import { sprintf }                           from 'sprintf-js'
 import { INTERNATIONAL, units as unitsList } from '@Utils/UnitUtils'
+import { sprintf }                           from 'sprintf-js'
 
 /**
  * TextValueUI Components to display data
@@ -21,7 +20,7 @@ import { INTERNATIONAL, units as unitsList } from '@Utils/UnitUtils'
  * @property {Function} callback                Used to format the value instead of sprintf
  *
  */
-export const TextValueUI = forwardRef(function TextValueUI(props, ref) {
+export const TextValueUI = function TextValueUI(props, ref) {
     let toShow = (typeof props.value === 'string') ? props.value : Number(props.value) ?? null
     let units = props.units ?? ['', '']
     if (units instanceof Array) {
@@ -54,4 +53,4 @@ export const TextValueUI = forwardRef(function TextValueUI(props, ref) {
         </span>
         </div>
     )
-})
+}

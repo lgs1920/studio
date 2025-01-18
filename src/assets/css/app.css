@@ -3,22 +3,32 @@
 @import-normalize; /* bring in normalize.css styles */
 
 html {
-    height: 100vh;
+    height: 100%;
 }
 
 body {
     font-size: var(--lgs-font-size);
     font-family: var(--lgs-font-family);
     color: var(--lgs-dark-ui-fg-color);
+    overflow: hidden;
 }
 
 * {
     box-sizing: border-box;
 }
 
+#lgs1920-container {
+    /*position: absolute;*/
+    width: 100vw;
+    height: 100dvh;
+}
+
+
 #cesium-viewer {
     width: 100vw;
-    height: 100vh;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    height: 100dvh;
     position: absolute;
     top: 0;
     left: 0;
@@ -30,50 +40,6 @@ body {
 }
 
 /**
- * Toast
- */
-
-/* Toast stack on bottomleft */
-.sl-toast-stack {
-    left: 0;
-    right: auto;
-    bottom: 0;
-    top: auto;
-    overflow: hidden;
-}
-
-.toast-caption {
-    font-weight: 800;
-}
-
-.toast-text {
-
-}
-
-.toast-error {
-    font-size: var(--lgs-font-size-small);
-    background-color: var(--lgs-error-bg-color);
-    color: var(--lgs-error-color);
-    border: 1px solid var(--lgs-error-color);
-    padding: var(--lgs-gutter-s);
-    border-radius: var(--lgs-border-radius-s);
-}
-
-/***************************************
- * Icons and buttons
- */
-sl-button:not(.square-icon) sl-icon:first-child {
-    margin-right: var(--lgs-gutter-s);
-}
-
-/**
- * Progress Bars
- */
-sl-progress-bar {
-    --height: var(--lgs-gutter-xs)
-}
-
-/**
  * Cesium Crédits
  */
 
@@ -81,29 +47,10 @@ sl-progress-bar {
     display: none !important;
 }
 
-/**
- * Animations
- */
-
-.snapshot-in-progress {
-    animation: flashBackground 1s infinite;
-}
-
-@keyframes flashBackground {
-    0% {
-        background-color: white;
-    }
-    50% {
-        background-color: var(--lgs-direction-panel-bg-color);
-    }
-    100% {
-        background-color: white;
-    }
-}
 
 .main-logo {
     position: relative;
-    --padding: calc(8 * var(--lgs-gutter));
+    --padding: calc(6 * var(--lgs-gutter));
     padding: var(--padding);
     background: var(--lgs-direction-panel-bg-color);
     border-color: var(--lgs-direction-panel-border-color);
@@ -138,30 +85,47 @@ main-logo.xlarge {
     height: auto;
 }
 
-.main-logo .version-info {
+.main-logo .the-slogan {
+    color: var(--lgs-slogan-color);
+    font-family: var(--lgs-slogan-font-family);
+    font-size: var(--lgs-slogan-font-size);
+    transform: rotate(-10deg) skew(-18deg);
+    margin-top: calc(2 * var(--lgs-gutter));
+    width: 100%;
+    text-align: center;
+}
+
+.main-logo .version-info, .main-logo .welcome-modal-timer {
     display: flex;
+    gap: var(--lgs-gutter-xs);
     align-items: center;
-    position: absolute;
-    left: var(--lgs-gutter-xs);
-    bottom: var(--lgs-gutter-xs);
-    font-size: var(--lgs-font-size-xs);
+    font-size: var(--lgs-font-size-s);
     line-height: 1;
+}
+
+.main-logo .welcome-modal-timer {
+    position: absolute;
+    align-items: self-end;
+    left: unset;
+    top: var(--lgs-gutter-s);
+    right: var(--lgs-gutter-s);
+    font-size: var(--lgs-font-size-s);
 }
 
 #camera-target {
     position: absolute;
-    display: flex;
+    display: none !important;
     align-items: center;
     justify-content: center;
     transition: all 0.5s ease;
     font-size: 1.2rem;
     line-height: 1;
+    filter: drop-shadow(0 0 5px black);
 }
 
-#camera-target sl-icon {
-
+#camera-target[show="true"] {
+    display: flex !important;
 }
-
 
 /** Drawers **/
 
@@ -170,12 +134,12 @@ main-logo.xlarge {
     right: var(--right);
     top: var(--top);
     width: calc(100vw - var(--right) - var(--left));
-    height: calc(100vh - var(--top) - var(--bottom));
+    height: calc(100dvh - var(--top) - var(--bottom));
     pointer-events: none;;
+    z-index: var(--sl-z-index-drawer);
 }
 
 .drawer-wrapper.horizontal {
     left: var(--left);
-
     max-width: var(--lgs-horizontal-panel-width);
 }

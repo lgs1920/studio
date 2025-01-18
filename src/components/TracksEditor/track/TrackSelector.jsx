@@ -3,10 +3,9 @@ import { faRoute, faSquare }                from '@fortawesome/pro-solid-svg-ico
 
 import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                      from '@Utils/FA2SL'
-import { forwardRef }                 from 'react'
 import { useSnapshot }                from 'valtio'
 
-export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
+export const TrackSelector = (props) => {
 
     const handleRequestClose = event => {
         event.preventDefault()
@@ -55,4 +54,4 @@ export const TrackSelector = forwardRef(function TrackSelector(props, ref) {
         </>
 
     )
-})
+}

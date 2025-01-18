@@ -18,6 +18,9 @@ export { MILLIS, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR }
 /** other */
 export const WRONG = -99999999999
 
+export const MOBILE_MAX = 767
+export const DESKTOP_MIN = 768
+
 /**
  * Main Configuration file
  *
@@ -75,12 +78,11 @@ export const COLOR_SWATCHES_RANDOM = 'random'
 // List of settings exclusions (ie we keep the user choice)
 // This array is then sorted alphabetically by object depth.
 export const SETTING_EXCLUSIONS = [
-    'layers.base',
-    'layers.terrain',
-    'layers.overlay',
-    'app',
-    'layers.filter',
-    'scene',
+    'layers.base', 'layers.terrain', 'layers.overlay',
+    'layers.filter', 'layers.colorSettings',
+    'app', 'scene',
+    'ui.camera', 'ui.welcome',
+    'ui.menu',
 ].sort((a, b) => {
     const segmentsA = a.split('.')
     const segmentsB = b.split('.')
@@ -110,6 +112,20 @@ export const LAYERS = 'layers'
 export const BASE_ENTITY = 'base'
 export const OVERLAY_ENTITY = 'overlay'
 export const TERRAIN_ENTITY = 'terrain'
+export const BASE_INDEX = 0      // Layer index
+export const OVERLAY_INDEX = 1
+
+export const DEFAULT_LAYERS_COLOR_SETTINGS = {
+    brightness:            1.0,
+    contrast:              1.0,
+    alpha:                 1.0,
+    hue:                   0.0,
+    saturation:            1.0,
+    gamma:                 1.0,
+    colorToAlphaThreshold: 0,
+    colorToAlpha:          '#ffffff',
+}
+
 export const LAYERS_THUMBS_DIR = '/assets/images/layers/thumbnails'
 export const PREMIUM_ACCESS = 'premium'
 export const FREEMIUM_ACCESS = 'freemium'
@@ -121,8 +137,6 @@ export const LOCKED_ACCESS = 'locked'
 export const TERRAIN_FROM_CESIUM = 'cesium'
 export const TERRAIN_FROM_CESIUM_ELLIPSOID = 'ellipsoid'
 export const TERRAIN_FROM_URL = 'url'
-
-export const FLAT_TERRAINS = [TERRAIN_FROM_CESIUM_ELLIPSOID]
 
 export const ACCESS_ICONS = {
     [FREEMIUM_ACCESS]:       {
@@ -185,7 +199,6 @@ export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'
 
 /** Jaurney, Track, POI **/
 
-
 export const GPX = 'gpx'
 export const KML = 'kml'
 export const KMZ = 'kmz'
@@ -201,3 +214,19 @@ export const DRAWING_FROM_DB = 3
 export const REFRESH_DRAWING = 2
 export const FOCUS_ON_FEATURE = 1
 export const NO_FOCUS = 2
+
+/** Menu Disposition **/
+export const START = 'start'
+export const END = 'end'
+export const TOP = 'top'
+export const BOTTOM = 'bottom'
+
+export const MENU_END_END = 'end-end'
+export const MENU_END_START = 'end-start'
+export const MENU_START_END = 'start-end'
+export const MENU_START_START = 'start-start'
+export const MENU_BOTTOM_START = 'bottom-start'
+export const MENU_BOTTOM_END = 'bottom-end'
+
+export const REMOVE_JOURNEY_IN_EDIT = 'in-journey-edit'
+export const REMOVE_JOURNEY_IN_TOOLBAR = 'in-journey-toolbar'

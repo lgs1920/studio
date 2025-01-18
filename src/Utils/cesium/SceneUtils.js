@@ -1,5 +1,5 @@
-import { Cartesian3, EasingFunction, Matrix4, SceneMode }    from 'cesium'
 import { SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS } from '@Core/constants'
+import { Cartesian3, EasingFunction, Matrix4, SceneMode }    from 'cesium'
 
 export class SceneUtils {
 
@@ -91,6 +91,12 @@ export class SceneUtils {
             default:
                 return SceneMode.SCENE3D
         }
+    }
+
+    static getPixelsCoordinates = point => {
+        return lgs.scene.cartesianToCanvasCoordinates(
+            Cartesian3.fromDegrees(point.longitude, point.latitude,
+                                   __.ui.sceneManager.noRelief() ? 0 : point.elevation))
     }
 
 

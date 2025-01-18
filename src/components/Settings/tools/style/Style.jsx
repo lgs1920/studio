@@ -1,14 +1,56 @@
-import { faTrianglePersonDigging } from '@fortawesome/pro-solid-svg-icons'
-import { SlAlert, SlIcon }         from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                   from '@Utils/FA2SL'
-import React                       from 'react'
+import { MenuSettings }             from '@Components/Settings/tools/style/MenuSettings'
+import { SlDetails }                from '@shoelace-style/shoelace/dist/react'
+import React, { useEffect, useRef } from 'react'
+import { CameraSettings }           from './CameraSettings'
+import { WelcomeModal }             from './WelcomeModal'
 
 export const Style = () => {
+    const styleSettings = useRef(null)
 
-    return (<SlAlert open variant="warning">
-            <SlIcon slot="icon" library="fa" name={FA2SL.set(faTrianglePersonDigging)}></SlIcon>
-            {'Working in Progress.'}<br/>
-        </SlAlert>
+    useEffect(() => {
+        __.ui.ui.initDetailsGroup(styleSettings.current)
+    }, [])
+
+    const checkClose = (event) => {
+        // If we're over the drawer, ok else, stop event
+        if (window.isOK(event) && __.ui.drawerManager.over) {
+            return
+        }
+        event.preventDefault()
+    }
+
+
+    return (
+
+        <div ref={styleSettings} id={'style-settings'}>
+            <SlDetails id={'ui-welcome-modal-settings'}
+                       small open={false}
+                       className={'lgs-theme'}
+                       onSlHide={checkClose}
+            >
+                <WelcomeModal/>
+
+            </SlDetails>
+
+            <SlDetails id={'ui-camera-settings'}
+                       small open={false}
+                       className={'lgs-theme'}
+                       onSlHide={checkClose}
+            >
+                <CameraSettings/>
+            </SlDetails>
+
+            <SlDetails id={'ui-menu-settings'}
+                       small open={false}
+                       className={'lgs-theme'}
+                       onSlHide={checkClose}
+            >
+                <MenuSettings/>
+            </SlDetails>
+
+
+
+        </div>
 
     )
 }

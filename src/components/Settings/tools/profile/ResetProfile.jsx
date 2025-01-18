@@ -21,7 +21,7 @@ export const ResetProfile = () => {
             if (snap.reset.vault) {
                 await lgs.db.vault.deleteDB()
             }
-            // Reload the app, the DB willbe recreated with defaults
+            // Reload the app, the DB will be recreated with defaults
             location.reload()
         }
     }
@@ -70,20 +70,20 @@ export const ResetProfile = () => {
             <div className="manage-profile-ui">
                 {'Please select the profile data you wish to reset:'}
 
-                <SlSwitch size="small" checked={snap.reset.lgs1920}
+                <SlSwitch align-right size="small" checked={snap.reset.lgs1920}
                           onSlChange={(event) => change(event, 'lgs1920')}>
                     Your journeys
                     <span slot="help-text">{'Remove your journeys, POIs...'}</span>
                 </SlSwitch>
 
 
-                <SlSwitch size="small" checked={snap.reset.settings}
+                <SlSwitch align-right size="small" checked={snap.reset.settings}
                           onSlChange={(event) => change(event, 'settings')}>
                     Your settings
                     <span slot="help-text">{'Reset all your settings and default data.'}</span>
                 </SlSwitch>
 
-                <SlSwitch size="small" checked={snap.reset.vault}
+                <SlSwitch align-right size="small" checked={snap.reset.vault}
                           onSlChange={(event) => change(event, 'vault')}>
                     Your Tokens
                     <span slot="help-text">{'Clear all your tokens for freemium/premium access.'}</span>

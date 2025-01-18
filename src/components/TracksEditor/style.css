@@ -66,14 +66,19 @@ sl-tab sl-icon {
 
 .journey-title {
     display: inline-flex;
-    width: 100%;
+    min-width: 8rem;
+    max-width: min(25rem, 100%);
     font-weight: 700;
     align-items: center;
-    margin-right: var(--lgs-gutter-s);
+    max-height: var(--lgs-line-dimension);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .journey-title-icon {
     width: 1.2rem;
+    margin-right: var(--lgs-gutter-s);;
 }
 
 .settings-panel {
@@ -152,5 +157,5 @@ sl-tab::part(base) {
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-s);
-    margin-bottom:var(--lgs-gutter) ;
+    margin-bottom: var(--lgs-gutter);
 }

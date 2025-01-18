@@ -1,0 +1,19 @@
+<svg id="%%id%%" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+    <style>
+        .svg-poi-all-texts { %%svg-poi-all-texts%% }
+        .svg-poi-title { %%svg-poi-title%% }
+        .svg-poi-coordinates{ %%svg-poi-coordinates%% }
+        .svg-poi-title { %%svg-poi-dms%% }
+        .svg-poi-title { %%svg-poi-lat-lon%% }
+        .svg-poi-stick { %%svg-poi-stick%% }
+    </style>
+    <g class="svg-poi-all-texts">
+        <text class="svg-poi-elevation" x="20" y="20">%%text-elevation%%</text>
+        <text class="svg-poi-title" x="20" y="50">%%text-title%%</text>
+        <text class="svg-poi-coordinates">
+            <tspan class="svg-poi-dms" x="20" y="80">%%text-coordinates-dms%%</tspan>
+            <tspan class="svg-poi-lat-lon" x="20" y="100">%%text-coordinates-lat-lon%%</tspan>
+        </text>
+    </g>
+    <line class="svg-poi-stick" x1="0" y1="5" x2="0" y2="180" stroke="#fff"/>
+</svg>
