@@ -90,6 +90,12 @@ export const main = {
 
         poi: {
             items: new proxyMap(),
+        },
+
+        geocoder: {
+            dialog: {
+                visible: false,
+            },
         }
 
 

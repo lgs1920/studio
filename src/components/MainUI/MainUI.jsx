@@ -1,5 +1,7 @@
 import { CompassUI }                        from '@Components/cesium/CompassUI/CompassUI'
 import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
+import { GeocodingButton }                  from '@Components/MainUI/geocoding/GeocodingButton'
+import { GeocodingUI }                      from '@Components/MainUI/geocoding/GeocodingUI'
 import { JourneyToolbar }                   from '@Components/MainUI/JourneyToolbar'
 import { Profile }                          from '@Components/Profile/Profile'
 import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
@@ -167,12 +169,13 @@ export const MainUI = () => {
                             <JourneyToolbar tooltip={'top'}></JourneyToolbar>
                             <InformationButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                             <SupportUIButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
-
                         </div>
                         <div id={'secondary-buttons-bar'} className={secondaryEntrance}>
                             <CompassUI scene={lgs.scene}/>
                             <div id="secondary-buttons-bar-content">
                                 <SceneModeSelector tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
+                                <GeocodingButton tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
+                                <GeocodingUI/>
                                 <FullScreenButton/>
                             </div>
 
