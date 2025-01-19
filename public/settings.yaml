@@ -694,3 +694,11 @@ ui:
 
     defaultColor: white
     lgsColor: chartreuse
+
+  ## Geocoder
+  geocoder:
+    url: https://nominatim.openstreetmap.org
+    search: search
+    reverse: reverse
+    limit: 10
+    email: contact@lgs1920.fr

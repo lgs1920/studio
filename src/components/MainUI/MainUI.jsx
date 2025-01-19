@@ -124,7 +124,9 @@ export const MainUI = () => {
                 __.ui.css.setCSSVariable('--primary-buttons-bar-left', 0)
                 __.ui.css.setCSSVariable('--primary-buttons-bar-right', 'auto')
                 __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'auto')
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 'var(--lgs-secondary-buttons-bar-right-delta)')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-margin-left', 'auto')
+
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 0)
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', 0)
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) ))`)
                 break
@@ -133,7 +135,9 @@ export const MainUI = () => {
                 secondaryEntrance = 'lgs-slide-in-from-left'
                 __.ui.css.setCSSVariable('--primary-buttons-bar-left', 'auto')
                 __.ui.css.setCSSVariable('--primary-buttons-bar-right', 0)
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'var(--lgs-secondary-buttons-bar-left-delta)')
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 0)
+                __.ui.css.setCSSVariable('--secondary-buttons-bar-margin-left', 0)
+
                 __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 'auto')
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', 0)
                 __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) ))`)
