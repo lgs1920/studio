@@ -280,29 +280,10 @@ html {
  * Main CFA
  */
 
-.call-for-actions {
+.main-actions.call-for-actions {
     position: absolute;
-    pointer-events: auto;
     top: 75dvh;
-    width: 100%;
-    justify-content: center;
 }
-
-.call-for-actions .buttons-bar {
-    display: flex;
-    gap: var(--lgs-gutter) !important;
-}
-
-.call-for-actions [outline] {
-    border-color: var(--lgs-border-color) !important;
-    backdrop-filter: blur(var(--lgs-blur));
-    background: rgba(255, 255, 255, 0.3);
-}
-
-.call-for-actions [outline]::part(base) {
-    color: var(--lgs-text-on-color);
-}
-
 /*******************************************************************************
  * Scene Mode Selector
  */

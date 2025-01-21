@@ -700,5 +700,6 @@ ui:
     url: https://nominatim.openstreetmap.org
     search: search
     reverse: reverse
-    limit: 10
+    limit: 5 # results per query
     email: contact@lgs1920.fr
+    minQuery: 3 # characters

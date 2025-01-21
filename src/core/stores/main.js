@@ -93,8 +93,14 @@ export const main = {
         },
 
         geocoder: {
+            list:   proxyMap(),
             dialog: {
                 visible: false,
+                loading:       false,
+                noResults:     false,
+                moreResults:   false,
+                notEnoughText: true,
+                showMore:      false,
             },
         }
 

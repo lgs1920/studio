@@ -66,7 +66,7 @@
     --lgs-border-s: var(--lgs-border-width-s) solid var(--sl-color-gray-400);
 
     --lgs-text-on-color: hsl(0 0% 98%);
-    --lgs-border-color: hsla(0 0% 98% / 0.25);
+    --lgs-border-on-color: hsla(0 0% 98% / 0.25);
     --lgs-blur: 5px;
 
     --lgs-error-color: var(--sl-color-red-500);
@@ -119,6 +119,9 @@
 
     --lgs-width-unit: 28rem;
     --lgs-max-mobile-width: min(var(--lgs-width-unit), calc(100% - var(--left) - var(--top)))
+
+    --lgs-scroolbar-track-color: transparent;
+    --lgs-scroolbar-thumb-color: var(--sl-color-gray-700);
 }
 
 .lgs-theme, .lgs-theme::part(panel) {
@@ -168,6 +171,10 @@ sl-button::part(label) {
     padding-left: 0;
 }
 
+sl-button::part(spinner) {
+    font-size: var(--lgs-font-size-l);
+}
+
 .buttons-bar {
     display: flex;
     justify-content: flex-end;
@@ -176,6 +183,7 @@ sl-button::part(label) {
 
 .square-icon {
     width: var(--lgs-dimension) !important;
+    aspect-ratio: 1;
 }
 
 .square-icon::part(base) {
@@ -204,6 +212,45 @@ sl-icon-button[size="small"], sl-icon[size="small"] {
     font-size: var(--sl-font-size-small);
 }
 
+.lgs-card.on-map sl-button[variant="default"]::part(base), .lgs-one-line-card.on-map[variant="default"]::part(base),
+.lgs-card.on-map sl-button[variant="default"]::part(prefix), .lgs-one-line-card.on-map[variant="default"]::part(prefix),
+.lgs-card.on-map sl-button[variant="default"]::part(suffix), .lgs-one-line-card.on-map[variant="default"]::part(suffix) {
+    color: var(--lgs-text-on-color)
+    border-color: var(--lgs-text-on-color)
+}
+
+/*******************************************************************************
+ * Main CFA
+ ******************************************************************************/
+
+.call-for-actions {
+    pointer-events: auto;
+    width: 100%;
+    justify-content: center;
+}
+
+.call-for-actions .buttons-bar {
+    display: flex;
+    gap: var(--lgs-gutter) !important;
+}
+
+.call-for-actions.buttons-bar {
+    top: unset;
+    position: relative;
+    display: flex;
+    gap: var(--lgs-gutter) !important;
+    /*justify-content: flex-end;*/
+}
+
+.call-for-actions [outline] {
+    border-color: var(--lgs-border-on-color) !important;
+    backdrop-filter: blur(var(--lgs-blur));
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.call-for-actions [outline]::part(base) {
+    color: var(--lgs-text-on-color);
+}
 
 /*******************************************************************************
  * Drawers
@@ -322,7 +369,7 @@ sl-card[variant="primary"]::part(base) {
     background: var(--lgs-card-on-map-bg-color);
     border-radius: var(--lgs-border-radius-xs);
     box-shadow: var(--sl-shadow-medium);
-    color: white;
+    color: var(--lgs-text-on-color);
     backdrop-filter: blur(var(--lgs-blur));
     border-color: var(--lgs-card-on-map-border-color);
     height: 100%;
@@ -349,6 +396,42 @@ cesium-compass {
     --cesium-compass-fill-color: var(--lgs-dark-ui-bg-color);
     --cesium-compass-stroke-color: var(--lgs-dark-ui-fg-color);
 }
+
+/*******************************************************************************
+ * Scrollbars
+ ******************************************************************************/
+
+.lgs-scrollbars .track-horizontal {
+    --thumb-color: var(--lgs-scroolbar-thumb-color);
+    --track-color: var(--lgs-scroolbar-track-color);
+    right: 2px;
+    bottom: 2px;
+    left: 2px;
+    border-radius: 3px;
+    background-color: var(--track-color);
+}
+
+.lgs-scrollbars .track-vertical {
+    --thumb-color: var(--lgs-scroolbar-thumb-color);
+    --track-color: var(--lgs-scroolbar-track-color);
+    right: 2px;
+    bottom: 2px;
+    top: 2px;
+    border-radius: 3px;
+    background-color: var(--track-color);
+}
+
+.lgs-scrollbars .thumb-horizontal, .lgs-scrollbars .thumb-vertical {
+    cursor: pointer;
+    border-radius: inherit;
+    background-color: var(--thumb-color);
+    opacity: 0.3;
+}
+
+.on-map .lgs-scrollbars .track-horizontal, .on-map .lgs-scrollbars .track-vertical {
+    --thumb-color: var(--lgs-text-on-color)
+}
+
 
 /*******************************************************************************
  * Tooltips
@@ -537,6 +620,19 @@ sl-switch[align-right]::part(label) {
 sl-switch[align-right]::part(control) {
     order: 1;
     margin-left: auto
+}
+
+/*******************************************************************************
+ * Alerts
+ ******************************************************************************/
+
+sl-alert::part(icon) {
+    padding-inline-start: var(--lgs-gutter-s)
+}
+
+sl-alert::part(message) {
+    padding: var(--lgs-gutter-s);
+    line-height: 1.3;
 }
 
 /*******************************************************************************

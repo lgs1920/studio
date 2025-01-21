@@ -4,6 +4,7 @@ import {
 }                          from '@Core/constants'
 import { AppToolsManager } from '@Core/ui/AppToolsManager'
 import { DeviceManager }   from '@Core/ui/DeviceManager'
+import { Geocoder }        from '@Core/ui/Geocoder'
 import { MenuManager }     from '@Core/ui/MenuManager'
 import { POIManager }      from '@Core/ui/POIManager'
 import { AppUtils }        from '@Utils/AppUtils'
@@ -278,6 +279,7 @@ export class LGS1920Context {
         __.ui.sceneManager = new SceneManager()
         __.ui.menuManager = new MenuManager()
         __.ui.poiManager = new POIManager()
+        __.ui.geocoder = new Geocoder()
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()
