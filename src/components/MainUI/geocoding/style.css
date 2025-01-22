@@ -53,6 +53,7 @@
     padding: var(--lgs-gutter-xs);
     padding-right: var(--lgs-gutter);
     align-items: center;
+    line-height: 1.3;
 }
 
 select-location-wrapper .select-location-item:last-child {
