@@ -17,7 +17,7 @@ export const GeocodingUI = () => {
         event.preventDefault()
         store.dialog.loading = true
         store.dialog.noResults = false
-        if (!store.dialog.notEnoughText) {
+        if (!store.dialog.submitDisabled) {
             __.ui.geocoder.search(address.current.value).then((results) => {
                 store.dialog.loading = false
                 if (results.size > 0) {
@@ -46,12 +46,13 @@ export const GeocodingUI = () => {
         address.current.value = ''
         store.dialog.visible = false
         store.dialog.noResults = false
+        store.dialog.submitDisabled = true
     }
 
     const handleChange = () => {
         store.dialog.noResults = false
         address.current.value = address.current.value.trimStart()
-        store.dialog.notEnoughText = address.current.value.length < lgs.settings.ui.geocoder.minQuery
+        store.dialog.submitDisabled = address.current.value.length < lgs.settings.ui.geocoder.minQuery
         __.ui.geocoder.init()
         store.list.clear()
         store.dialog.noResults = false
@@ -61,6 +62,7 @@ export const GeocodingUI = () => {
 
         handleChange()
         store.dialog.noResults = false
+        store.dialog.submitDisabled = true
 
         return (() => {
             __.ui.geocoder.init()
@@ -92,7 +94,7 @@ export const GeocodingUI = () => {
                             <SlButton size={'small'} className={'square-icon'} type="submit"
                                       id="geocoder-search-location-submit"
                                       loading={snap.dialog.loading}
-                                      disabled={snap.dialog.notEnoughText}>
+                                      disabled={snap.dialog.submitDisabled}>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faSearch)}></SlIcon>
                             </SlButton>
                         </div>

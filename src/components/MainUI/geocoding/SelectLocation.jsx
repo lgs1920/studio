@@ -18,6 +18,11 @@ export const SelectLocation = ({select, address, submit}) => {
         }
     }
 
+    const handleClose = () => {
+        store.dialog.visible = false
+        address.current.value = ''
+    }
+
     useLayoutEffect(() => {
         if (scrollbars.current) {
             scrollbars.current.scrollToBottom()
@@ -27,8 +32,7 @@ export const SelectLocation = ({select, address, submit}) => {
         <>
             {snap.list.size > 0 &&
                 <div className="select-location-wrapper lgs-card on-map">
-                    <LGSScrollbars autoHide autoHeight ref={scrollbars}
-                    >
+                    <LGSScrollbars autoHide autoHeight ref={scrollbars}>
                         <div className="select-location-wrapper">
                             {Array.from(snap.list.entries()).map(([key, value]) => (
                                 <div className="select-location-item lgs-card" key={key} id={key}
@@ -43,7 +47,7 @@ export const SelectLocation = ({select, address, submit}) => {
                     <div className="call-for-actions">
                         <SlDivider/>
                         <div className="buttons-bar">
-                            <SlButton close size="small" outline onClick={() => store.dialog.visible = false}>
+                            <SlButton close size="small" outline onClick={handleClose}>
                                 <SlIcon slot="prefix" library="fa"
                                         name={FA2SL.set(faXmark)}></SlIcon>{'Close'}
                             </SlButton>

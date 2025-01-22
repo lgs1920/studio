@@ -99,7 +99,7 @@ export const main = {
                 loading:       false,
                 noResults:     false,
                 moreResults:   false,
-                notEnoughText: true,
+                submitDisabled: true,
                 showMore:      false,
             },
         }

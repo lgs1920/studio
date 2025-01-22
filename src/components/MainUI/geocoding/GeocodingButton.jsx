@@ -10,8 +10,15 @@ export const GeocodingButton = (props) => {
 
     const handleClick = () => {
         store.dialog.visible = !store.dialog.visible
+
         __.ui.geocoder.init()
         store.list.clear()
+
+        if (!store.dialog.visible) {
+            document.getElementById('geocoder-search-location').value = ''
+        }
+        store.dialog.submitDisabled = true
+
     }
     return (
         <>
