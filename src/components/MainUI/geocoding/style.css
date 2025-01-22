@@ -76,3 +76,9 @@ select-location-wrapper .select-location-item:last-child {
 .select-location-wrapper sl-button[close] {
     margin-right: auto;
 }
+
+.nominatim-license {
+    font-size: var(--lgs-font-size-s);
+    line-height: 0.9;
+    text-align: end
+}

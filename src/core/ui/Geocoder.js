@@ -11,6 +11,7 @@ export class Geocoder {
     #reverse
     format
     email
+    license
 
 
     constructor() {
@@ -66,6 +67,7 @@ export class Geocoder {
                     this.excludePlaces.push(feature.properties.place_id)
                 }
             })
+            this.license = features.licence
         }
         catch (error) {
             console.error(error)
