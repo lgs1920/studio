@@ -1,11 +1,9 @@
 import { JOURNEYS_STORE, MILLIS, MINUTE } from '@Core/constants'
 
-import { CameraUtils }                  from '@Utils/cesium/CameraUtils.js'
-import { HeadingPitchRange, Math as M } from 'cesium'
-import { snapshot }                     from 'valtio'
-import { deepClone }                    from 'valtio/utils'
-import { SECOND }                       from '../constants'
-import { Journey }                      from '../Journey'
+import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
+import { snapshot }    from 'valtio'
+import { deepClone }   from 'valtio/utils'
+import { Journey }     from '../Journey'
 
 export class CameraManager {
     static CLOCKWISE = true
@@ -27,7 +25,7 @@ export class CameraManager {
 
         this.clockwise = CameraManager.CLOCKWISE
         this.store = lgs.mainProxy.components.camera
-        this.move = {type: null, releaseEvent: null}
+        this.move = {type: null, releaseEvent: null, animation: null}
 
 
         // we track window resizing to get
@@ -74,7 +72,7 @@ export class CameraManager {
         if (this.move.type === CameraManager.ORBITAL) {
             lgs.viewer.clock.canAnimate = false
             lgs.viewer.clock.shouldAnimate = false
-            this.move.releaseEvent()
+            this.releaseEvent()
             this.proxy.unlock(lgs.camera)
             this.move.type = undefined
         }
@@ -117,79 +115,12 @@ export class CameraManager {
         this.updatePositionInformation()
     }
 
-
-    runOrbital = async ({target = lgs.configuration.starter, divider = lgs.settings.starter.camera.steps}) => {
-
-        // Bail early if there is a rotation already in action
-        if (this.move.type === CameraManager.ORBITAL) {
-            return
-        }
-
-        // Stop any camera position tracking
-        if (this.move.type !== null) {
+    releaseEvent = () => {
+        if (this.move.releaseEvent) {
             this.move.releaseEvent()
-            this.unlock(lgs.camera)
         }
-
-        if (target) {
-            this.settings = {
-                target:   {
-                    longitude: target.longitude,
-                    latitude:  target.latitude,
-                    height:    target.height,
-                },
-                position: {
-                    heading: target.camera.heading,
-                    pitch:   target.camera.pitch,
-                    roll:    target.camera.roll,
-                    range:   target.camera.range,
-                },
-            }
-        }
-        else {
-            if (!this.target) {
-                return // Bail early if no target at all
-            }
-            this.settings = {
-                target: {
-                    longitude: this.target.longitude,
-                    latitude:  this.target.latitude,
-                    height:    this.target.height,
-                },
-            }
-        }
-
-        const hpr = new HeadingPitchRange(
-            M.toRadians(this.settings.position.heading),
-            M.toRadians(this.settings.position.pitch),
-            M.toRadians(this.settings.position.range),
-        )
-
-        // Set move event
-        lgs.camera.percentageChanged = lgs.settings.getCamera.orbitalPercentageChanged
-
-        // Look at target
-        return
-        // Run orbital moves
-        const duration = lgs.settings.starter.camera.duration * SECOND
-        const startTime = Date.now()
-        this.move = {
-            type:         CameraManager.ORBITAL,
-            releaseEvent: lgs.viewer.clock.onTick.addEventListener(() => {
-                                                                       try {
-                                                                           if (!this.orbitalInPause && !__.ui.sceneManager.is2D) {
-                                                                               lgs.camera.rotateLeft((2 * Math.PI) / (duration / 30))
-                                                                           }
-                                                                       }
-                                                                       catch
-                                                                           (error) {
-                                                                           console.error(error)
-                                                                       }
-                                                                   },
-            ),
-        }
-
     }
+
 
     runNormal = () => {
         // Bail early if such tracking is already in action
@@ -199,7 +130,7 @@ export class CameraManager {
 
         // Stop any camera position tracking
         if (this.move.type !== null) {
-            this.move.releaseEvent()
+            this.releaseEvent()
         }
 
         // In case we miss something, unlock the target
@@ -305,7 +236,6 @@ export class CameraManager {
     }
 
     rotateAround = (point, options) => {
-        console.error(this.move.type)
 
         // Let's stop any rotation
         if (this.move.type === CameraManager.ORBITAL) {
@@ -315,7 +245,7 @@ export class CameraManager {
 
         // Or any camera position tracking
         if (this.move.type === CameraManager.NORMAL) {
-            this.move.releaseEvent()
+            this.releaseEvent()
         }
 
         // Update Camera position
@@ -372,7 +302,6 @@ export class CameraManager {
     }
 
     stopRotate = () => {
-        console.log('stopRotate')
         this.proxy.unlock(lgs.camera)
         this.move.type = CameraManager.NORMAL
         cancelAnimationFrame(this.move.animation)

@@ -11,6 +11,8 @@ export class SceneManager {
         if (SceneManager.instance) {
             return SceneManager.instance
         }
+
+        this.proxy = SceneUtils
         SceneManager.instance = this
 
     }
@@ -118,6 +120,10 @@ export class SceneManager {
         })
         await Promise.all(items)
         this.notifyMorph()
+    }
+
+    focus = (point, options) => {
+        this.proxy.focus(point, options)
     }
 
 }

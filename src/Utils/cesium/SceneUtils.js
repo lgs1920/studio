@@ -33,7 +33,8 @@ export class SceneUtils {
                                              __.ui.cameraManager.position.latitude,
                                              __.ui.cameraManager.position.height,
                                          ),
-                                         maximumHeight:  10000,
+                                         maximumHeight:     lgs.settings.camera.maximumHeight,
+                                         pitchAdjustHeight: lgs.settings.camera.pitchAdjustHeight,
                                          duration:       0, // always.
                                          convert:        true,
                                          endTransform:   Matrix4.IDENTITY,
@@ -101,17 +102,22 @@ export class SceneUtils {
     }
 
 
-    static focusThenRotate = async (point, options) => {
+    static focus = async (point, options) => {
         // May be we need some elevation so let's try Terrain elevation
         // to have something not so far from reality
+
         if (!point.height || point.height === 0) {
             point.height = await TrackUtils.getElevationFromTerrain(point) ?? 0
         }
+        const range = options.range ?? lgs.settings.camera.range
+        const cameraHeight = point.height + range
+        const pitch = M.toRadians(options.pitch ?? lgs.settings.camera.pitch)
+        const heading = M.toRadians(options.heading ?? lgs.settings.camera.heading)
+        const roll = M.toRadians(options.roll ?? lgs.settings.camera.roll)
 
-        const cameraHeight = point.height + lgs.settings.camera.range
-        const pitch = M.toRadians(lgs.settings.camera.pitch)
-        const heading = M.toRadians(lgs.settings.camera.heading)
-        const roll = M.toRadians(lgs.settings.camera.roll)
+        const maximumHeight = options.maximumHeight ?? lgs.settings.camera.maximumHeight
+        const pitchAdjustHeight = options.pitchAdjustHeight ?? lgs.settings.camera.pitchAdjustHeight
+        const duration = options.duration ?? lgs.settings.camera.flyingTime
 
         lgs.camera.flyTo({
                              destination:       Cartesian3.fromDegrees(
@@ -122,29 +128,36 @@ export class SceneUtils {
                                  pitch:   pitch,
                                  roll:    roll,
                              },
-                             maximumHeight:     lgs.settings.camera.maximumHeight,
-                             pitchAdjustHeight: lgs.settings.camera.pitchAdjustHeight,
-                             duration:          lgs.settings.camera.flyingTime,
+                             maximumHeight:     maximumHeight,
+                             pitchAdjustHeight: pitchAdjustHeight,
+                             duration:          duration,
                              convert:           !__.ui.sceneManager.is2D,
                              easingFunction:    EasingFunction.LINEAR_NONE, //TODO
 
                              complete: async () => {
-
-                                 const target = {
-                                     longitude: point.longitude,
-                                     latitude:  point.latitude,
-                                     height:    point.height,
-                                     camera:    {
-                                         heading: heading,
-                                         pitch:   pitch,
-                                         roll:    roll,
-                                         range:   lgs.settings.camera.range,
-                                     },
+                                 if (options.rotate ?? false) {
+                                     const target = {
+                                         longitude: point.longitude,
+                                         latitude:  point.latitude,
+                                         height:    point.height,
+                                         camera:    {
+                                             heading: heading,
+                                             pitch:   pitch,
+                                             roll:    roll,
+                                             range:   range,
+                                         },
+                                     }
+                                     __.ui.cameraManager.rotateAround(target, {
+                                         rpm:       options.rpm ?? lgs.settings.camera.rpm,
+                                         fps:       lgs.settings.camera.fps,
+                                         infinite:  options.infinite ?? true,
+                                         rotations: options.rotations ?? lgs.settings.camera.rotations,
+                                         lookAt:    true,
+                                     })
                                  }
-                                 __.ui.cameraManager.rotateAround(target, {
-                                     lookAt:   true,
-                                     infinite: false,
-                                 })
+                                 else {
+                                     __.ui.cameraManager.lookAt(target)
+                                 }
 
                              },
                          })

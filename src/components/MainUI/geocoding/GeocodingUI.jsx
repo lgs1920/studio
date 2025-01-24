@@ -1,7 +1,6 @@
 import { SelectLocation }                     from '@Components/MainUI/geocoding/SelectLocation'
 import { faSearch }                           from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlIcon, SlInput, SlPopup } from '@shoelace-style/shoelace/dist/react'
-import { SceneUtils }                         from '@Utils/cesium/SceneUtils'
 import { FA2SL }                              from '@Utils/FA2SL'
 import { useEffect, useRef }                  from 'react'
 import { useSnapshot }                        from 'valtio'
@@ -47,7 +46,11 @@ export const GeocodingUI = () => {
             latitude:  item.geometry.coordinates[1],
         }
 
-        SceneUtils.focusThenRotate(point)
+        __.ui.sceneManager.focus(point, {
+            lookAt:   true,
+            infinite: false,
+            rotate:   true,
+        })
 
         // Clear current values and states
         __.ui.geocoder.init()
@@ -97,7 +100,7 @@ export const GeocodingUI = () => {
                         <div className="geocoding-form">
                             <SlInput name="location" ref={address} id="geocoder-search-location"
                                      placeholder={'Address or coordinates (lat,lon)'}
-                                     pattern="^(?!\\s)([a-zA-Z\\s]+|[-+]?\\d{1,2}\\.\\d+[, ]\\s*[-+]?\\d{1,3}\\.\\d+)$"
+                                     pattern="^(?!\s)([a-zA-Z\s]+|[-+]?\d{1,2}\.\d+[\s,]*[-+]?\d{1,3}\.\d+)$"
                                      onChange={handleChange} onInput={handleChange}>
                             </SlInput>
                             <SlButton size={'small'} className={'square-icon'} type="submit"

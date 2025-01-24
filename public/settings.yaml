@@ -53,15 +53,15 @@ starter:
   height: 1920
   ## Camera position
   camera:
-    heading: 115
-    pitch: -34
-    roll: 4
-    range: 3000
-    longitude: 5.6533
-    latitude: 45.34623
-    height: 4300
+    heading: 0
+    pitch: -25
+    roll: 0
+    range: 5000
+    #    longitude: 5.6533
+    #    latitude: 45.34623
+    #    height: 4300
     canRotate: true
-    duration: 90  # of a rotation in seconds
+    rpm: 0.66  # rotation per minute
 
 ########################################
 # Initial Camera Settings
