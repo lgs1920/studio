@@ -141,48 +141,12 @@ export class SceneUtils {
                                          range:   lgs.settings.camera.range,
                                      },
                                  }
-
                                  __.ui.cameraManager.rotateAround(target, {
                                      lookAt:   true,
                                      infinite: false,
                                  })
 
-
-                                 //__.ui.cameraManager.runOrbital({target: target})
-                                 // lgs.scene.screenSpaceCameraController.enableZoom = true;
-                                 //
-                                 //  var fps = 30; // Vous pouvez ajuster cette valeur pour changer le fps
-                                 //  var duration = 30*SECOND; // Durée d'un tour en millisecondes (1 minute)
-                                 //  var totalAngle = 2 * Math.PI; // Un tour complet en radians
-                                 //  var numberOfTurns = 2; // Nombre de tours que la caméra doit effectuer
-                                 //  var infiniteRotation = false; // Définir à true pour une rotation infinie
-                                 //  var cameraHeight=3000;
-                                 //  var totalDuration = duration *numberOfTurns
-                                 //  var center = new Cartesian3.fromDegrees(point.longitude, point.latitude,
-                                 // point.height); // Remplacez longitude, latitude et height par les valeurs
-                                 // appropriées // var rotateCamera = async function (timestamp) { //     if
-                                 // (!startTime) startTime = timestamp; //     var elapsed = timestamp - startTime; //
-                                 // //     // Calculer l'angle en fonction du temps écoulé et du nombre de tours //
-                                 // const angle = (elapsed / (duration * numberOfTurns)) * totalAngle * numberOfTurns;
-                                 // //     var cameraHeight = lgs.camera.positionCartographic.height //
-                                 // lgs.camera.lookAt(center, new HeadingPitchRange(angle, pitch, cameraHeight)); //
-                                 //  if (infiniteRotation || elapsed < duration * numberOfTurns) { //
-                                 // requestAnimationFrame(rotateCamera); //     } else { //
-                                 // lgs.camera.lookAtTransform(Matrix4.IDENTITY); // Réinitialiser la vue de la caméra
-                                 // //     } // }; // // requestAnimationFrame(rotateCamera); var startTime =
-                                 // JulianDate.now(); const rotateCamera=function(clock) { var currentTime =
-                                 // JulianDate.now(); var elapsed = JulianDate.secondsDifference(currentTime,
-                                 // startTime); var angle = (elapsed / totalDuration) * 2 * Math.PI * numberOfTurns;
-                                 // if (elapsed < totalDuration) { var axis = Cartesian3.UNIT_Z;
-                                 // lgs.camera.positionCartographic.height = cameraHeight + height;
-                                 // lgs.camera.rotateLeft(angle / fps); } else {
-                                 // lgs.camera.lookAtTransform(Matrix4.IDENTITY); // Réinitialiser la vue de la caméra
-                                 // lgs.viewer.clock.onTick.removeEventListener(rotateCamera); } }
-                                 // lgs.viewer.clock.onTick.addEventListener(rotateCamera) // } //  __.ui.cameraManager.runOrbital(settings.target)
-
                              },
-
-
                          })
     }
 

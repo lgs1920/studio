@@ -305,11 +305,13 @@ export class CameraManager {
     }
 
     rotateAround = (point, options) => {
+        console.error(this.move.type)
 
         // Let's stop any rotation
         if (this.move.type === CameraManager.ORBITAL) {
             this.stopRotate()
         }
+
 
         // Or any camera position tracking
         if (this.move.type === CameraManager.NORMAL) {
@@ -350,12 +352,12 @@ export class CameraManager {
         this.move.type = CameraManager.ORBITAL
         lgs.camera.percentageChanged = lgs.settings.getCamera.orbitalPercentageChanged
 
-        const rotateCamera = () => {
+        const rotateCamera = (startTime, currentTime) => {
             if (self.move.type === CameraManager.ORBITAL) {
                 if (infinite || totalRotation < totalTurns) {
                     lgs.camera.rotateLeft(angleRotation)
                     totalRotation += angleRotation
-                    requestAnimationFrame(rotateCamera)
+                    this.move.animation = requestAnimationFrame((time) => rotateCamera(time))
                 }
                 else {
                     self.stopRotate()
@@ -363,13 +365,17 @@ export class CameraManager {
                 }
             }
         }
-        requestAnimationFrame(rotateCamera)
+        requestAnimationFrame(
+            (time) => rotateCamera(time),
+        )
 
     }
 
     stopRotate = () => {
+        console.log('stopRotate')
         this.proxy.unlock(lgs.camera)
         this.move.type = CameraManager.NORMAL
+        cancelAnimationFrame(this.move.animation)
     }
 
 }
