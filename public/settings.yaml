@@ -67,15 +67,18 @@ starter:
 # Initial Camera Settings
 ########################################
 camera:
-  heading: 0
-  pitch: -45
-  roll: 0
-  range: 5000
+  heading: 0.0
+  pitch: -30
+  roll: 0.0
+  range: 2000
+  fps: 30
   orbitalPercentageChanged: 0.05
-  percentageChanged: 0.02
-  maximumHeight: 10000
-  pitchAdjustHeight: 200
-  flyingTime: 3 #seconds
+  percentageChanged: 0.05
+  maximumHeight: 20000
+  pitchAdjustHeight: 10000
+  flyingTime: 3   # seconds
+  rpm: 2          # rotation per minute
+  rotations: 1    # total rotation
 
 ########################################
 # Color palette

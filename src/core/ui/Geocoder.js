@@ -47,10 +47,13 @@ export class Geocoder {
 
         url.searchParams.append('limit', this.limit)
         url.searchParams.append('format', this.format)
-        //  url.searchParams.append('email', this.email)
-        url.searchParams.append('dedupe', true) // Returns doublon
-        url.searchParams.append(`polygon_${this.format}`, true)
-        url.searchParams.append('timestamp', new Date().getTime())
+        url.searchParams.append('email', this.email)
+        url.searchParams.append('dedupe', 1)
+        //  url.searchParams.append('extratags', true)
+        //  url.searchParams.append('namedetails', false)
+
+        //  url.searchParams.append(`polygon_${this.format}`, false)
+        //url.searchParams.append('timestamp', new Date().getTime())
         // Add exclude place
         if (this.excludePlaces.length > 0) {
             url.searchParams.append('exclude_place_ids', this.excludePlaces.join(','))

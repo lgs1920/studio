@@ -1,5 +1,6 @@
-import { SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS } from '@Core/constants'
-import { Cartesian3, EasingFunction, Matrix4, SceneMode }    from 'cesium'
+import { SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS }         from '@Core/constants'
+import { TrackUtils }                                                from '@Utils/cesium/TrackUtils'
+import { Cartesian3, EasingFunction, Math as M, Matrix4, SceneMode } from 'cesium'
 
 export class SceneUtils {
 
@@ -99,5 +100,90 @@ export class SceneUtils {
                                    __.ui.sceneManager.noRelief() ? 0 : point.elevation))
     }
 
+
+    static focusThenRotate = async (point, options) => {
+        // May be we need some elevation so let's try Terrain elevation
+        // to have something not so far from reality
+        if (!point.height || point.height === 0) {
+            point.height = await TrackUtils.getElevationFromTerrain(point) ?? 0
+        }
+
+        const cameraHeight = point.height + lgs.settings.camera.range
+        const pitch = M.toRadians(lgs.settings.camera.pitch)
+        const heading = M.toRadians(lgs.settings.camera.heading)
+        const roll = M.toRadians(lgs.settings.camera.roll)
+
+        lgs.camera.flyTo({
+                             destination:       Cartesian3.fromDegrees(
+                                 point.longitude, point.latitude, cameraHeight,
+                             ),
+                             orientation:       {
+                                 heading: heading,
+                                 pitch:   pitch,
+                                 roll:    roll,
+                             },
+                             maximumHeight:     lgs.settings.camera.maximumHeight,
+                             pitchAdjustHeight: lgs.settings.camera.pitchAdjustHeight,
+                             duration:          lgs.settings.camera.flyingTime,
+                             convert:           !__.ui.sceneManager.is2D,
+                             easingFunction:    EasingFunction.LINEAR_NONE, //TODO
+
+                             complete: async () => {
+
+                                 const target = {
+                                     longitude: point.longitude,
+                                     latitude:  point.latitude,
+                                     height:    point.height,
+                                     camera:    {
+                                         heading: heading,
+                                         pitch:   pitch,
+                                         roll:    roll,
+                                         range:   lgs.settings.camera.range,
+                                     },
+                                 }
+
+                                 __.ui.cameraManager.rotateAround(target, {
+                                     lookAt:   true,
+                                     infinite: false,
+                                 })
+
+
+                                 //__.ui.cameraManager.runOrbital({target: target})
+                                 // lgs.scene.screenSpaceCameraController.enableZoom = true;
+                                 //
+                                 //  var fps = 30; // Vous pouvez ajuster cette valeur pour changer le fps
+                                 //  var duration = 30*SECOND; // Durée d'un tour en millisecondes (1 minute)
+                                 //  var totalAngle = 2 * Math.PI; // Un tour complet en radians
+                                 //  var numberOfTurns = 2; // Nombre de tours que la caméra doit effectuer
+                                 //  var infiniteRotation = false; // Définir à true pour une rotation infinie
+                                 //  var cameraHeight=3000;
+                                 //  var totalDuration = duration *numberOfTurns
+                                 //  var center = new Cartesian3.fromDegrees(point.longitude, point.latitude,
+                                 // point.height); // Remplacez longitude, latitude et height par les valeurs
+                                 // appropriées // var rotateCamera = async function (timestamp) { //     if
+                                 // (!startTime) startTime = timestamp; //     var elapsed = timestamp - startTime; //
+                                 // //     // Calculer l'angle en fonction du temps écoulé et du nombre de tours //
+                                 // const angle = (elapsed / (duration * numberOfTurns)) * totalAngle * numberOfTurns;
+                                 // //     var cameraHeight = lgs.camera.positionCartographic.height //
+                                 // lgs.camera.lookAt(center, new HeadingPitchRange(angle, pitch, cameraHeight)); //
+                                 //  if (infiniteRotation || elapsed < duration * numberOfTurns) { //
+                                 // requestAnimationFrame(rotateCamera); //     } else { //
+                                 // lgs.camera.lookAtTransform(Matrix4.IDENTITY); // Réinitialiser la vue de la caméra
+                                 // //     } // }; // // requestAnimationFrame(rotateCamera); var startTime =
+                                 // JulianDate.now(); const rotateCamera=function(clock) { var currentTime =
+                                 // JulianDate.now(); var elapsed = JulianDate.secondsDifference(currentTime,
+                                 // startTime); var angle = (elapsed / totalDuration) * 2 * Math.PI * numberOfTurns;
+                                 // if (elapsed < totalDuration) { var axis = Cartesian3.UNIT_Z;
+                                 // lgs.camera.positionCartographic.height = cameraHeight + height;
+                                 // lgs.camera.rotateLeft(angle / fps); } else {
+                                 // lgs.camera.lookAtTransform(Matrix4.IDENTITY); // Réinitialiser la vue de la caméra
+                                 // lgs.viewer.clock.onTick.removeEventListener(rotateCamera); } }
+                                 // lgs.viewer.clock.onTick.addEventListener(rotateCamera) // } //  __.ui.cameraManager.runOrbital(settings.target)
+
+                             },
+
+
+                         })
+    }
 
 }

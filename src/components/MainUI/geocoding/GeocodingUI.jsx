@@ -1,6 +1,7 @@
 import { SelectLocation }                     from '@Components/MainUI/geocoding/SelectLocation'
 import { faSearch }                           from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlIcon, SlInput, SlPopup } from '@shoelace-style/shoelace/dist/react'
+import { SceneUtils }                         from '@Utils/cesium/SceneUtils'
 import { FA2SL }                              from '@Utils/FA2SL'
 import { useEffect, useRef }                  from 'react'
 import { useSnapshot }                        from 'valtio'
@@ -29,7 +30,6 @@ export const GeocodingUI = () => {
                 else {
                     store.dialog.noResults = true
                 }
-
             })
         }
     }
@@ -39,8 +39,17 @@ export const GeocodingUI = () => {
         handleSubmit(event)
     }
 
-    const handleSelect = (event) => {
-        const placeId = event.currentTarget.id
+    const handleSelect = async (event) => {
+
+        const item = store.list.get(event.target.parentElement.id * 1)
+        const point = {
+            longitude: item.geometry.coordinates[0],
+            latitude:  item.geometry.coordinates[1],
+        }
+
+        SceneUtils.focusThenRotate(point)
+
+        // Clear current values and states
         __.ui.geocoder.init()
         store.list.clear()
         address.current.value = ''
@@ -66,7 +75,7 @@ export const GeocodingUI = () => {
 
         return (() => {
             __.ui.geocoder.init()
-            store.list.clear()
+            // store.list.clear()
             address.current.value = ''
             store.dialog.visible = false
             store.dialog.noResults = true

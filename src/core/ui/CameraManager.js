@@ -1,11 +1,11 @@
-import { JOURNEYS_STORE } from '@Core/constants'
+import { JOURNEYS_STORE, MILLIS, MINUTE } from '@Core/constants'
 
-import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
-import { Cartesian3 }  from 'cesium'
-import { snapshot }    from 'valtio'
-import { deepClone }   from 'valtio/utils'
-import { SECOND }      from '../constants'
-import { Journey }     from '../Journey'
+import { CameraUtils }                  from '@Utils/cesium/CameraUtils.js'
+import { HeadingPitchRange, Math as M } from 'cesium'
+import { snapshot }                     from 'valtio'
+import { deepClone }                    from 'valtio/utils'
+import { SECOND }                       from '../constants'
+import { Journey }                      from '../Journey'
 
 export class CameraManager {
     static CLOCKWISE = true
@@ -22,12 +22,13 @@ export class CameraManager {
         if (CameraManager.instance) {
             return CameraManager.instance
         }
-
+        this.proxy = CameraUtils
         this.settings = settings
 
         this.clockwise = CameraManager.CLOCKWISE
         this.store = lgs.mainProxy.components.camera
         this.move = {type: null, releaseEvent: null}
+
 
         // we track window resizing to get
         // target coordinates in pixels
@@ -74,7 +75,7 @@ export class CameraManager {
             lgs.viewer.clock.canAnimate = false
             lgs.viewer.clock.shouldAnimate = false
             this.move.releaseEvent()
-            CameraUtils.unlock(lgs.camera)
+            this.proxy.unlock(lgs.camera)
             this.move.type = undefined
         }
     }
@@ -96,7 +97,7 @@ export class CameraManager {
     }
 
     targetInPixels = () => {
-        const pixels = CameraUtils.getTargetPositionInPixels(this.target)
+        const pixels = this.proxy.getTargetPositionInPixels(this.target)
         this.target.x = pixels?.x
         this.target.y = pixels?.y
     }
@@ -116,6 +117,7 @@ export class CameraManager {
         this.updatePositionInformation()
     }
 
+
     runOrbital = async ({target = lgs.configuration.starter, divider = lgs.settings.starter.camera.steps}) => {
 
         // Bail early if there is a rotation already in action
@@ -126,6 +128,7 @@ export class CameraManager {
         // Stop any camera position tracking
         if (this.move.type !== null) {
             this.move.releaseEvent()
+            this.unlock(lgs.camera)
         }
 
         if (target) {
@@ -156,16 +159,17 @@ export class CameraManager {
             }
         }
 
-        // TODO hpr as parameter
-        //const hpr = new HeadingPitchRange(M.toRadians(this.position.heading), M.toRadians(this.position.pitch),
-        // M.toRadians(this.position.range))
+        const hpr = new HeadingPitchRange(
+            M.toRadians(this.settings.position.heading),
+            M.toRadians(this.settings.position.pitch),
+            M.toRadians(this.settings.position.range),
+        )
 
         // Set move event
         lgs.camera.percentageChanged = lgs.settings.getCamera.orbitalPercentageChanged
 
         // Look at target
-        CameraUtils.lookAt(lgs.camera, Cartesian3.fromDegrees(target.longitude, target.latitude, target.height))
-
+        return
         // Run orbital moves
         const duration = lgs.settings.starter.camera.duration * SECOND
         const startTime = Date.now()
@@ -199,7 +203,7 @@ export class CameraManager {
         }
 
         // In case we miss something, unlock the target
-        CameraUtils.unlock(lgs.camera)
+        this.proxy.unlock(lgs.camera)
 
         // Set move event
         lgs.camera.percentageChanged = lgs.settings.getCamera.percentageChanged
@@ -236,7 +240,7 @@ export class CameraManager {
     }
 
     updatePositionInformation = async () => {
-        const data = await CameraUtils.updatePositionInformation()
+        const data = await this.proxy.updatePositionInformation()
         // Update Camera Manager information
         if (data) {
             this.settings = data
@@ -245,7 +249,7 @@ export class CameraManager {
             this.reset()
         }
         // Update camera proxy
-        this.proxy()
+        this.clone()
 
         // Update Journey Camera if needed
         if (lgs.theJourney) {
@@ -254,7 +258,7 @@ export class CameraManager {
         return this
     }
 
-    proxy = () => {
+    clone = () => {
         lgs.mainProxy.components.camera.position = deepClone(this.position)
         lgs.mainProxy.components.camera.target = deepClone(this.target)
     }
@@ -285,6 +289,87 @@ export class CameraManager {
                 range:   lgs.settings.getCamera.range,
             },
         }
+    }
+
+    /**
+     *
+     * @param point target : data in degrees, meters
+     *
+     * point is in the form: {
+     *      latitude,longitude,height,
+     *      camera:{heading,pitch,roll,range}
+     *      }
+     */
+    lookAt = (point) => {
+        this.proxy.lookAt(lgs.camera, point, point.camera)
+    }
+
+    rotateAround = (point, options) => {
+
+        // Let's stop any rotation
+        if (this.move.type === CameraManager.ORBITAL) {
+            this.stopRotate()
+        }
+
+        // Or any camera position tracking
+        if (this.move.type === CameraManager.NORMAL) {
+            this.move.releaseEvent()
+        }
+
+        // Update Camera position
+        this.settings = {
+            target:   {
+                longitude: point.longitude,
+                latitude:  point.latitude,
+                height:    point.height,
+            },
+            position: {
+                heading: point.camera.heading,
+                pitch:   point.camera.pitch,
+                roll:    point.camera.roll,
+                range:   point.camera.range,
+            },
+        }
+
+        // Set some configuration parameters
+        const rpm = (options.rpm ?? lgs.settings.camera.rpm)
+        const fps = lgs.settings.camera.fps
+        const infinite = options.infinite ?? true
+        const rotations = options.rotations ?? lgs.settings.camera.rotations
+        const lookAt = options.lookAt ?? false
+
+        // Do we need a camera pre-positioning ?
+        if (lookAt) {
+            this.lookAt(point)
+        }
+
+        const angleRotation = (2 * Math.PI * rpm) / (MINUTE / MILLIS * fps)
+        let totalRotation = 0
+        const totalTurns = rotations * 2 * Math.PI
+        const self = this
+        this.move.type = CameraManager.ORBITAL
+        lgs.camera.percentageChanged = lgs.settings.getCamera.orbitalPercentageChanged
+
+        const rotateCamera = () => {
+            if (self.move.type === CameraManager.ORBITAL) {
+                if (totalRotation < totalTurns) {
+                    lgs.camera.rotateLeft(angleRotation)
+                    totalRotation += angleRotation
+                    requestAnimationFrame(rotateCamera)
+                }
+                else {
+                    self.stopRotate()
+                    totalRotation = totalTurns
+                }
+            }
+        }
+        requestAnimationFrame(rotateCamera)
+
+    }
+
+    stopRotate = () => {
+        this.proxy.unlock(lgs.camera)
+        this.move.type = CameraManager.NORMAL
     }
 
 }

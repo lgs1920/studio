@@ -323,18 +323,24 @@ export class TrackUtils {
      */
     static getElevationFromTerrain = async (coordinates) => {
         const positions = []
-        coordinates.forEach(coordinate => {
-            positions.push(Cartographic.fromDegrees(coordinate[0], coordinate[1]))
+        let multi = true
+        if (!Array.isArray(coordinates)) {
+            multi = false
+            coordinates = [coordinates]
+        }
+
+        coordinates.forEach(point => {
+            positions.push(Cartographic.fromDegrees(point.longitude, point.latitude))
         })
 
         //TODO apply only if altitude is missing for some coordinates
         const altitude = []
         const temp = await sampleTerrainMostDetailed(lgs.viewer.terrainProvider, positions)
         temp.forEach(coordinate => {
-            altitude.push(coordinate.altitude)
+            altitude.push(coordinate.height)
         })
 
-        return altitude
+        return multi ? altitude : altitude[0]
 
     }
 
