@@ -352,7 +352,7 @@ export class CameraManager {
 
         const rotateCamera = () => {
             if (self.move.type === CameraManager.ORBITAL) {
-                if (totalRotation < totalTurns) {
+                if (infinite || totalRotation < totalTurns) {
                     lgs.camera.rotateLeft(angleRotation)
                     totalRotation += angleRotation
                     requestAnimationFrame(rotateCamera)
