@@ -75,7 +75,7 @@ camera:
   orbitalPercentageChanged: 0.05
   percentageChanged: 0.05
   maximumHeight: 20000
-  pitchAdjustHeight: 10000
+  pitchAdjustHeight: 20000
   flyingTime: 3   # seconds
   rpm: 2          # rotation per minute
   rotations: 1    # total rotation
