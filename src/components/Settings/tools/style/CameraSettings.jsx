@@ -51,7 +51,7 @@ export const CameraSettings = (props) => {
 
                           }
                       }}>
-                {'Show Camera Target Icon'}
+                {'Show Camera Target Marker'}
                 <span slot="help-text">Marked with<SlIcon library="fa" name={FA2SL.set(faArrowsToCircle)}/></span>
             </SlSwitch>
 
