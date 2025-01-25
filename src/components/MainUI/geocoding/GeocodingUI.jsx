@@ -10,6 +10,7 @@ import './style.css'
 export const GeocodingUI = () => {
     const store = lgs.mainProxy.components.geocoder
     const snap = useSnapshot(store)
+    const settings = useSnapshot(lgs.settings.ui.menu)
 
     const address = useRef(null)
 
@@ -92,6 +93,7 @@ export const GeocodingUI = () => {
                      className={'lgs-theme'}
                      anchor="launch-the-geocoder"
                      placement={'right-start'}
+                     placement={settings.toolBar.fromStart ? 'left-start' : 'right-start'}
                      distance={__.tools.rem2px(__.ui.css.getCSSVariable('lgs-gutter-xs'))}
             >
 
