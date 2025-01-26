@@ -89,7 +89,7 @@ export const main = {
         },
 
         poi: {
-            items: new proxyMap(),
+            list: new proxyMap(),
         },
 
         geocoder: {

@@ -51,6 +51,7 @@ starter:
   longitude: 5.70291
   latitude: 45.33524
   height: 1920
+  name: La Grande Sure
   ## Camera position
   camera:
     heading: 0

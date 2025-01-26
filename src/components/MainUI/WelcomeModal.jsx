@@ -56,10 +56,11 @@ export const WelcomeModal = () => {
 
     useEffect(() => {
         main.components.welcome.modal = false
+        let timer
 
         // CountDown and Auto closure
         if (welcomeModal && lgs.settings.ui.welcome.showIntro && lgs.settings.ui.welcome.autoClose) {
-            const timer = setInterval(() => {
+            timer = setInterval(() => {
                 setClosure(prevClosure => {
                     if (prevClosure > 0) {
                         return --prevClosure

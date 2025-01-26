@@ -2,7 +2,7 @@ import { SelectLocation }                     from '@Components/MainUI/geocoding
 import { faSearch }                           from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlIcon, SlInput, SlPopup } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                              from '@Utils/FA2SL'
-import { useEffect, useRef }                  from 'react'
+import { useEffect, useRef, useState }        from 'react'
 import { useSnapshot }                        from 'valtio'
 
 import './style.css'
@@ -13,6 +13,7 @@ export const GeocodingUI = () => {
     const settings = useSnapshot(lgs.settings.ui.menu)
 
     const address = useRef(null)
+    const [poi, setPoi] = useState(null)
 
     const handleSubmit = (event) => {
         event.preventDefault()
@@ -45,12 +46,24 @@ export const GeocodingUI = () => {
         const point = {
             longitude: item.geometry.coordinates[0],
             latitude:  item.geometry.coordinates[1],
+            title: item.properties.name,
         }
+
+        console.log(item)
 
         __.ui.sceneManager.focus(point, {
             lookAt:   true,
             infinite: false,
             rotate:   true,
+            callback: (poi) => {
+                const newPoi = __.ui.poiManager.add(poi)
+                if (newPoi) {
+                    setPoi(newPoi)
+                    return true
+                }
+                // TODO error if closer than existing point and createPOIOnSearch
+                return false
+            },
         })
 
         // Clear current values and states
@@ -92,7 +105,6 @@ export const GeocodingUI = () => {
             <SlPopup active={snap.dialog.visible}
                      className={'lgs-theme'}
                      anchor="launch-the-geocoder"
-                     placement={'right-start'}
                      placement={settings.toolBar.fromStart ? 'left-start' : 'right-start'}
                      distance={__.tools.rem2px(__.ui.css.getCSSVariable('lgs-gutter-xs'))}
             >
@@ -117,7 +129,6 @@ export const GeocodingUI = () => {
                     <SelectLocation select={handleSelect} address={address} submit={handleSubmit}/>
 
                 </div>
-
             </SlPopup>
         </>
     )

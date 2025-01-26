@@ -135,6 +135,17 @@ export class SceneUtils {
                              easingFunction:    EasingFunction.LINEAR_NONE, //TODO
 
                              complete: async () => {
+                                 if (options.callback ?? false) {
+                                     const target = {
+                                         longitude: point.longitude,
+                                         latitude:  point.latitude,
+                                         height:    point.height,
+                                         title:     point.title,
+                                         color:     '#f00',
+                                     }
+                                     options.callback(target)
+                                 }
+
                                  if (options.rotate ?? false) {
                                      const target = {
                                          longitude: point.longitude,
@@ -158,6 +169,7 @@ export class SceneUtils {
                                  else {
                                      __.ui.cameraManager.lookAt(target)
                                  }
+
 
                              },
                          })

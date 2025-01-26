@@ -2,7 +2,7 @@ import { faCrown, faEarthEurope, faLock, faMap, faRoad, faUnlock, faUser } from 
 
 
 export const SLOGAN = 'Replay Your Adventures!'
-/**
+/*******************************************************************************
  * Time and duration constants in seconds
  */
 const MILLIS = 1000
@@ -15,9 +15,11 @@ const MONTH = 30 * DAY
 const YEAR = 365 * DAY
 export { MILLIS, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR }
 
-/** other */
 export const WRONG = -99999999999
 
+/*******************************************************************************
+ * Responsivity
+ ******************************************************************************/
 export const MOBILE_MAX = 767
 export const DESKTOP_MIN = 768
 
@@ -62,7 +64,11 @@ export const JOURNEYS_STORE = 'journeys'
 export const ORIGIN_STORE = 'origin'
 export const CURRENT_JOURNEY = 'journey'
 export const CURRENT_TRACK = 'track'
+
 export const CURRENT_POI = 'poi'
+export const STARTER_POI = `starter-${APP_KEY}`
+export const POI_THRESHOLD_DISTANCE = 200 // meters
+
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2
 export const REMOVE_JOURNEY = 3

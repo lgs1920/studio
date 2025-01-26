@@ -2,9 +2,10 @@ import { MapLayer } from '@Components/cesium/MapLayer'
 import { Viewer }   from '@Components/cesium/Viewer'
 
 import { InitErrorMessage }                                from '@Components/InitErrorMessage'
-import { FlagLGS }                                         from '@Components/MainUI/FlagLGS'
+import { AllPOIs }                                         from '@Components/MainUI/AllPOIs'
 import { MainUI }                                          from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
+import { StarterPOI }                                      from '@Components/MainUI/StarterPOI'
 import { WelcomeModal }                                    from '@Components/MainUI/WelcomeModal'
 import { BASE_ENTITY, BOTTOM, MOBILE_MAX, OVERLAY_ENTITY } from '@Core/constants'
 import { LGS1920Context }                                  from '@Core/LGS1920Context'
@@ -112,7 +113,10 @@ export function LGS1920() {
 
                     <Viewer/>
                     <MainUI/>
-                    <FlagLGS/>
+
+                    <StarterPOI/>
+                    <AllPOIs/>
+
                 </>
 
             }
