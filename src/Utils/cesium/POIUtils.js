@@ -222,13 +222,13 @@ export class POIUtils {
 
     /**
      *
-     * @param point  {longitude,latitude,elevation}
+     * @param point  {longitude,latitude,height}
      * @return {boolean}
      */
     static isPointVisible = (point) => {
         const globe = lgs.scene.globe
         const cartesian = Cartesian3.fromDegrees(point.longitude, point.latitude,
-                                                 __.ui.sceneManager.noRelief() ? 0 : point.elevation)
+                                                 __.ui.sceneManager.noRelief() ? 0 : (point.height ?? point.simulatedHeight))
 
         const screenPosition = lgs.scene.cartesianToCanvasCoordinates(cartesian)
         if (!screenPosition) {
@@ -242,7 +242,7 @@ export class POIUtils {
         }
 
         const pickedCartographic = Cartographic.fromCartesian(pickedPosition)
-        return Math.abs((pickedCartographic.height - (point?.elevation ?? 0))) < 30.00
+        return Math.abs((pickedCartographic.height - (point.height ?? point.simulatedHeight))) < 10.00
     }
 
     static adaptScaleToDistance = (point, scaler = {
@@ -250,8 +250,9 @@ export class POIUtils {
         minScaleFlag:      lgs.settings.ui.poi.minScaleFlag,
         minScale:          lgs.settings.ui.poi.minScale,
     }) => {
+
         const cartesian = Cartesian3.fromDegrees(point.longitude, point.latitude,
-                                                 __.ui.sceneManager.noRelief() ? 0 : point.elevation)
+                                                 __.ui.sceneManager.noRelief() ? 0 : (point.height ?? point.simulatedHeight))
         const cameraPosition = Cartesian3.fromDegrees(
             lgs.mainProxy.components.camera.position.longitude,
             lgs.mainProxy.components.camera.position.latitude,
