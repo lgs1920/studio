@@ -46,10 +46,13 @@ export const GeocodingUI = () => {
         const point = {
             longitude: item.geometry.coordinates[0],
             latitude:  item.geometry.coordinates[1],
-            title: item.properties.name,
-        }
+            title:     item.properties.name,
 
-        console.log(item)
+        }
+        point.simulatedHeight = await __.ui.poiManager.getElevationFromTerrain({
+                                                                                   longitude: item.geometry.coordinates[0],
+                                                                                   latitude:  item.geometry.coordinates[1],
+                                                                               })
 
         __.ui.sceneManager.focus(point, {
             lookAt:   true,

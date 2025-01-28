@@ -52,6 +52,7 @@ starter:
   latitude: 45.33524
   height: 1920
   name: La Grande Sure
+  color: chartreuse
   ## Camera position
   camera:
     heading: 0
@@ -696,8 +697,7 @@ ui:
     minScale: 0.1                       # minScale before masking (15% of max)
     distanceThreshold: 8000             # min distance to see POI with 100% size
 
-    defaultColor: white
-    lgsColor: chartreuse
+    defaultColor: "#FAFAFAFF"
 
   ## Geocoder
   geocoder:

@@ -1,14 +1,15 @@
 import { POI_THRESHOLD_DISTANCE, STARTER_POI } from '@Core/constants'
+import { TrackUtils }                          from '@Utils/cesium/TrackUtils'
 import { KM }                                  from '@Utils/UnitUtils'
 import { v4 as uuid }                          from 'uuid'
 
 export class POIManager {
 
     poiDefaultStatus = {
-        withinScreenLimits: false,
+        withinScreenLimits: null,
         frontOfTerrain:     true,
         scale:              1,
-        showFlag:           false,
+        showFlag:           null,
         showPOI:            true,
     }
 
@@ -114,7 +115,8 @@ export class POIManager {
     }
 
     /**
-     * We want to know if there is an existing point that is closer than a given point.
+     * We want to know if there is an existing point that is closer than a given point
+     * in the list.
      *
      * @param newPoi
      * @param threshold
@@ -126,12 +128,15 @@ export class POIManager {
             return false
         }
         for (let poi of this.list.values()) {
-            console.log(newPoi.title, poi.title, this.haversineDistance(newPoi, poi, threshold), this.closerThan(newPoi, poi, threshold))
             if (this.closerThan(newPoi, poi, threshold)) {
                 return true
             }
         }
         return false
+    }
+
+    getElevationFromTerrain = async (point) => {
+        return TrackUtils.getElevationFromTerrain(point)
     }
 
 

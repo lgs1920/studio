@@ -6,7 +6,6 @@ import classNames                                   from 'classnames'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { TextValueUI }                              from '../TextValueUI/TextValueUI'
 
-
 export const POI = ({point}) => {
 
     if (point === undefined) {
@@ -15,55 +14,54 @@ export const POI = ({point}) => {
 
     const poi = useRef(null)
     const [_point, updatePoint] = useState(point)
-
     const [pixels, setPixels] = useState({x: 0, y: 0})
+    const animationFrameId = useRef(null)
+
+
+    // lgs.viewer.zoomTo(lgs.viewer.entities)
 
     const getPixelsCoordinates = useCallback(() => {
         const tmp = {}
-        tmp.frontOfTerrain = POIUtils.isPointVisible(point)
+
+        tmp.frontOfTerrain = POIUtils.isPointVisible(_point)
 
         if (tmp.frontOfTerrain) {
-            const coordinates = SceneUtils.getPixelsCoordinates(point)
+            const coordinates = SceneUtils.getPixelsCoordinates(_point)
             if (coordinates) {
                 setPixels(coordinates)
             }
 
-            const {scale, flagVisible, visible} = POIUtils.adaptScaleToDistance(point)
+            const {scale, flagVisible, visible} = POIUtils.adaptScaleToDistance(_point)
             tmp.scale = scale
             tmp.showFlag = flagVisible
             tmp.showPOI = visible
-
-            if (Object.keys(tmp).some(attribute => point[attribute] !== tmp[attribute])) {
-                updatePoint(__.ui.poiManager.update(poi.current.id, tmp))
-                point = _point
-            }
         }
+        if (Object.keys(tmp).some(attribute => _point[attribute] !== tmp[attribute])) {
+            updatePoint(__.ui.poiManager.update(poi.current.id, tmp))
+        }
+        point = _point
 
+
+    }, [_point])
+
+    useEffect(() => {
+        lgs.scene.preRender.addEventListener(getPixelsCoordinates)
+
+        return () => {
+            lgs.scene.preRender.removeEventListener(getPixelsCoordinates)
+        }
     }, [])
 
     useEffect(() => {
-        window.addEventListener('resize', getPixelsCoordinates)
-        lgs.camera.changed.addEventListener(getPixelsCoordinates)
-        getPixelsCoordinates() // Initial call to set coordinates
-
-        return () => {
-            window.removeEventListener('resize', getPixelsCoordinates)
-            lgs.camera.changed.removeEventListener(getPixelsCoordinates)
-        }
-    }, [getPixelsCoordinates])
-
-    useEffect(() => {
-
         if (poi.current) {
             __.ui.poiManager.observer.observe(poi.current)
         }
-
         return () => {
             if (poi.current) {
                 __.ui.poiManager.observer.unobserve(poi.current)
             }
         }
-    }, [])
+    }, [poi])
 
     return (
         <>
@@ -90,18 +88,21 @@ export const POI = ({point}) => {
                                 <div className="poi-on-map-inner">
                                     <h3>{_point.title}</h3>
                                     <div className="poi-full-coordinates">
-                                        {_point.elevation && (
+                                        {_point.height && (
                                             <TextValueUI
                                                 text={'Elevation: '}
-                                                value={_point.elevation}
+                                                value={_point.height}
                                                 format={'%d'}
                                                 units={ELEVATION_UNITS}
                                             />
                                         )}
+                                        {!_point.height && (
+                                            <span>&nbsp;</span>
+                                        )}
                                         <div className="poi-coordinates">
                                             <span>{UIUtils.toDMS(_point.latitude)}, {UIUtils.toDMS(_point.longitude)}</span>
                                             <br/>
-                                            <span>[{_point.latitude}, {_point.longitude}]</span>
+                                            <span>[{sprintf('%.5f', _point.latitude)}, {sprintf('%.4f', _point.longitude)}]</span>
                                             <br/>
                                         </div>
                                     </div>

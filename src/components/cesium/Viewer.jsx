@@ -54,9 +54,14 @@ export function Viewer() {
             infoBox:              false,
             sceneModePicker:      false,
             showRenderLoopErrors: false,
+            shouldAnimate:           true,
+            requestRenderMode:       true,
+            maximumRenderTimeChange: Infinity,
             mapProjection:        new WebMercatorProjection(), // TODO is it a problem in 3D ?
+            //*************************************
             // Avoid consuming Cesium Ion Sessions
             // DO NOT CHANGE the 2 following lines
+            //*************************************
             imageryProvider: false,
             baseLayerPicker: false,
         })

@@ -234,6 +234,7 @@ export class POIUtils {
         if (!screenPosition) {
             return false
         }
+
         const pickRay = lgs.camera.getPickRay(screenPosition)
         const pickedPosition = globe.pick(pickRay, lgs.scene)
 
@@ -242,7 +243,8 @@ export class POIUtils {
         }
 
         const pickedCartographic = Cartographic.fromCartesian(pickedPosition)
-        return Math.abs((pickedCartographic.height - (point.height ?? point.simulatedHeight))) < 10.00
+        return Math.abs(pickedCartographic.height - (point.height ?? point.simulatedHeight)) < 20.0
+
     }
 
     static adaptScaleToDistance = (point, scaler = {

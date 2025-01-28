@@ -1,5 +1,4 @@
 import { SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS }         from '@Core/constants'
-import { TrackUtils }                                                from '@Utils/cesium/TrackUtils'
 import { Cartesian3, EasingFunction, Math as M, Matrix4, SceneMode } from 'cesium'
 
 export class SceneUtils {
@@ -98,19 +97,17 @@ export class SceneUtils {
     static getPixelsCoordinates = point => {
         return lgs.scene.cartesianToCanvasCoordinates(
             Cartesian3.fromDegrees(point.longitude, point.latitude,
-                                   __.ui.sceneManager.noRelief() ? 0 : point.elevation))
+                                   __.ui.sceneManager.noRelief() ? 0 : (point.height ?? point.simulatedHeight)))
     }
 
 
     static focus = async (point, options) => {
-        // May be we need some elevation so let's try Terrain elevation
-        // to have something not so far from reality
 
-        if (!point.height || point.height === 0) {
-            point.height = await TrackUtils.getElevationFromTerrain(point) ?? 0
-        }
+        // If we need some elevation, let's try Terrain elevation
+        // to have something not so far from reality
+        const height = point.height ?? point.simulatedHeight
         const range = options.range ?? lgs.settings.camera.range
-        const cameraHeight = point.height + range
+        const cameraHeight = height + range
         const pitch = M.toRadians(options.pitch ?? lgs.settings.camera.pitch)
         const heading = M.toRadians(options.heading ?? lgs.settings.camera.heading)
         const roll = M.toRadians(options.roll ?? lgs.settings.camera.roll)
@@ -139,9 +136,10 @@ export class SceneUtils {
                                      const target = {
                                          longitude: point.longitude,
                                          latitude:  point.latitude,
-                                         height:    point.height,
+                                         height:          point?.height,  // the real height
+                                         simulatedHeight: point?.simulatedHeight,
                                          title:     point.title,
-                                         color:     '#f00',
+                                         color:           lgs.settings.ui.poi.defaultColor,
                                      }
                                      options.callback(target)
                                  }
@@ -150,7 +148,7 @@ export class SceneUtils {
                                      const target = {
                                          longitude: point.longitude,
                                          latitude:  point.latitude,
-                                         height:    point.height,
+                                         height: point.height ?? point.simulatedHeight,
                                          camera:    {
                                              heading: heading,
                                              pitch:   pitch,

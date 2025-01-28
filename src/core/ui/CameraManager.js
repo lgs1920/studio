@@ -205,19 +205,19 @@ export class CameraManager {
     reset = () => {
         this.settings = {
             target: {
-                longitude: lgs.settings.getStarter.longitude,
-                latitude:  lgs.settings.getStarter.latitude,
-                height:    lgs.settings.getStarter.height,
+                longitude: lgs.settings.starter.longitude,
+                latitude:  lgs.settings.starter.latitude,
+                height:    lgs.settings.starter.height,
             },
 
             position: {
                 longitude: undefined,
                 latitude:  undefined,
                 height:    undefined,
-                heading: lgs.settings.getCamera.heading,
-                pitch:   lgs.settings.getCamera.pitch,
-                roll:    lgs.settings.getCamera.roll,
-                range:   lgs.settings.getCamera.range,
+                heading: lgs.settings.camera.heading,
+                pitch:   lgs.settings.camera.pitch,
+                roll:    lgs.settings.camera.roll,
+                range:   lgs.settings.camera.range,
             },
         }
     }
@@ -253,7 +253,7 @@ export class CameraManager {
             target:   {
                 longitude: point.longitude,
                 latitude:  point.latitude,
-                height:    point.height,
+                height: point.height ?? point.simulatedHeight,
             },
             position: {
                 heading: point.camera.heading,
@@ -280,7 +280,8 @@ export class CameraManager {
         const totalTurns = rotations * 2 * Math.PI
         const self = this
         this.move.type = CameraManager.ORBITAL
-        lgs.camera.percentageChanged = lgs.settings.getCamera.orbitalPercentageChanged
+        lgs.camera.percentageChanged = lgs.settings.getCamera.percentageChanged
+        lgs.camera.orbitalPercentageChanged = lgs.settings.getCamera.orbitalPercentageChanged
 
         const rotateCamera = (startTime, currentTime) => {
             if (self.move.type === CameraManager.ORBITAL) {

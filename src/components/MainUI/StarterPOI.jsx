@@ -8,9 +8,9 @@ export const StarterPOI = (props) => {
     const point = __.ui.poiManager.add({
                                            longitude: lgs.settings.starter.longitude,
                                            latitude:  lgs.settings.starter.latitude,
-                                           elevation: lgs.settings.starter.height,
+                                           height: lgs.settings.starter.height,
                                            title:     lgs.settings.starter.name,
-                                           color:     lgs.settings.starter.color ?? lgs.settings.ui.poi.lgsColor,
+                                           color:  lgs.settings.starter.color,
                                            id:        STARTER_POI,
                                        })
 
