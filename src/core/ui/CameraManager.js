@@ -64,26 +64,12 @@ export class CameraManager {
     }
 
     /**
-     * We stop tracking the camera's orbital movements
-     *
-     * @return {Promise<void>}
-     */
-    stopOrbital = async () => {
-        if (this.move.type === CameraManager.ORBITAL) {
-            lgs.viewer.clock.canAnimate = false
-            lgs.viewer.clock.shouldAnimate = false
-            this.releaseEvent()
-            this.proxy.unlock(lgs.camera)
-            this.move.type = undefined
-        }
-    }
-
-    /**
      * Pause orbital movements
      *
      */
     pauseOrbital = () => {
         this.orbitalInPause = true
+        __.ui.sceneManager.stopRotate
     }
 
     /**
@@ -92,6 +78,7 @@ export class CameraManager {
      */
     relaunchOrbital = () => {
         this.orbitalInPause = false
+        __.ui.sceneManager.startRotate
     }
 
     targetInPixels = () => {
@@ -248,6 +235,8 @@ export class CameraManager {
             this.releaseEvent()
         }
 
+        __.ui.sceneManager.startRotate
+
         // Update Camera position
         this.settings = {
             target:   {
@@ -303,9 +292,18 @@ export class CameraManager {
     }
 
     stopRotate = () => {
-        this.proxy.unlock(lgs.camera)
-        this.move.type = CameraManager.NORMAL
-        cancelAnimationFrame(this.move.animation)
+        if (this.move.type === CameraManager.ORBITAL) {
+            this.proxy.unlock(lgs.camera)
+            __.ui.sceneManager.stopRotate
+            this.move.type = undefined
+            this.move.type = CameraManager.NORMAL
+            cancelAnimationFrame(this.move.animation)
+
+            lgs.viewer.clock.canAnimate = false
+            lgs.viewer.clock.shouldAnimate = false
+            this.releaseEvent()
+
+        }
     }
 
 }

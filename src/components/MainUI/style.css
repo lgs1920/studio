@@ -311,5 +311,14 @@ html {
 }
 
 /*******************************************************************************
- *
+ * Map Rotation
  */
+:root {
+    --button-rotation-speed: 60s
+}
+
+#launch-rotation::part(spinner) {
+    --indicator-color: var(--lgs-warning-color);
+    --track-width: 4px;
+    --speed: var(--button-rotation-speed)
+}

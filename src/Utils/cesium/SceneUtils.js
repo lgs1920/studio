@@ -156,6 +156,7 @@ export class SceneUtils {
                                              range:   range,
                                          },
                                      }
+                                     __.ui.sceneManager.startRotate
                                      __.ui.cameraManager.rotateAround(target, {
                                          rpm:       options.rpm ?? lgs.settings.camera.rpm,
                                          fps:       lgs.settings.camera.fps,
@@ -165,6 +166,7 @@ export class SceneUtils {
                                      })
                                  }
                                  else {
+                                     __.ui.sceneManager.stopRotate
                                      __.ui.cameraManager.lookAt(target)
                                  }
 

@@ -10,6 +10,11 @@ export const main = {
 
             journeyMenu:         {timeout: 0, active: false},
             removeJourneyDialog: {active: proxyMap()},
+            rotate: {
+                clockwise: false,
+                running:   false,
+                rpm:       1,
+            },
         },
 
         fileLoader:{

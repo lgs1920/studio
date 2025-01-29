@@ -126,4 +126,13 @@ export class SceneManager {
         this.proxy.focus(point, options)
     }
 
+    get startRotate() {
+        lgs.mainProxy.components.mainUI.rotate.running = true
+        return lgs.mainProxy.components.mainUI.rotate.running
+    }
+
+    get stopRotate() {
+        lgs.mainProxy.components.mainUI.rotate.running = false
+        return lgs.mainProxy.components.mainUI.rotate.running
+    }
 }

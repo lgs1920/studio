@@ -451,7 +451,7 @@ export class TrackUtils {
 
         __.ui.cameraManager.settings = lgs.theJourney.cameraOrigin
 
-        await __.ui.cameraManager.stopOrbital()
+        await __.ui.cameraManager.stopRotate()
         await __.ui.cameraManager.runNormal()
 
     }
@@ -711,7 +711,7 @@ export class TrackUtils {
                     mainStore.canViewJourneyData = true
                     await theJourney.draw({})
 
-                    await __.ui.cameraManager.stopOrbital()
+                    await __.ui.cameraManager.stopRotate()
                     await __.ui.cameraManager.runNormal()
 
                     __.ui.profiler.draw()
