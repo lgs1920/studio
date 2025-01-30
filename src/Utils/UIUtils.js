@@ -21,7 +21,7 @@ export class UIUtils {
      * @param format        output format (rgb | rgba), default rgba
      * @return {string}       rgb() or rgba()
      */
-    static hexToRGBA = (hex, format = 'rgba') => {
+    static hexToRGBA = (hex, format = 'rgba', intensity = 1) => {
         hex = hex.replace(/^#/, '0x')
 
         // Transform #RGB to #RRGGBB orRRRRRGBFF
@@ -42,11 +42,18 @@ export class UIUtils {
         if (format === 'rgb') {
             return `rgb(${r},${g},${b})`
         }
+
+        if (intensity && intensity !== 1) {
+            return `rgba(${r},${g},${b},${intensity})`
+        }
+
         // and alpha,if it exists
         if (alpha) {
             const a = (hex & 0xff) / 0xff
             return `rgba(${r},${g},${b},${a})`
         }
+
+
     }
 
 
