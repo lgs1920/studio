@@ -16,7 +16,7 @@ export const POI = ({point}) => {
     const [_point, updatePoint] = useState(point)
     const [pixels, setPixels] = useState({x: 0, y: 0})
     const animationFrameId = useRef(null)
-
+    const [color] = useState(_point.color ?? lgs.settings.ui.poi.defaultColor)
 
     // lgs.viewer.zoomTo(lgs.viewer.entities)
 
@@ -44,6 +44,7 @@ export const POI = ({point}) => {
 
     }, [_point])
 
+
     useEffect(() => {
         lgs.scene.preRender.addEventListener(getPixelsCoordinates)
 
@@ -61,7 +62,8 @@ export const POI = ({point}) => {
                 __.ui.poiManager.observer.unobserve(poi.current)
             }
         }
-    }, [poi])
+    }, [])
+
 
     return (
         <>
@@ -79,7 +81,8 @@ export const POI = ({point}) => {
                         left:              pixels.x,
                         transform:         `scale(${_point?.scale ?? 1})`,
                         transformOrigin:   'left bottom',
-                        '--lgs-poi-color': _point.color ?? lgs.settings.ui.poi.defaultColor,
+                        '--lgs-poi-color':          color,
+                        '--lgs-poi-gradient-color': __.ui.ui.hexToRGBA(color, 'rgba', 0.3),
                     }}
                 >
                     {_point?.withinScreenLimits && _point?.frontOfTerrain && _point?.showPOI &&
@@ -89,7 +92,7 @@ export const POI = ({point}) => {
                                     <h3>{_point.title}</h3>
                                     <div className="poi-full-coordinates">
                                         {_point.height && (
-                                            <TextValueUI
+                                            <TextValueUI className="poi-elevation"
                                                 text={'Elevation: '}
                                                 value={_point.height}
                                                 format={'%d'}
