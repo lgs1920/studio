@@ -7,8 +7,6 @@ import { Journey }     from '../Journey'
 
 export class CameraManager {
     static CLOCKWISE = true
-    static ORBITAL = 'orbital'
-    static NORMAL = 'normal'
 
     target = {}
     position = {}
@@ -98,8 +96,8 @@ export class CameraManager {
             && (target.height === undefined)
     }
 
-    raiseUpdateEvent = () => {
-        this.updatePositionInformation()
+    raiseUpdateEvent = async () => {
+        await this.updatePositionInformation()
     }
 
     releaseEvent = () => {
@@ -111,14 +109,13 @@ export class CameraManager {
 
     runNormal = () => {
         // Bail early if such tracking is already in action
-        if (this.move.type === CameraManager.NORMAL) {
+        if (!isRotating()) {
             return
         }
 
         // Stop any camera position tracking
-        if (this.move.type !== null) {
-            this.releaseEvent()
-        }
+        this.releaseEvent()
+
 
         // In case we miss something, unlock the target
         this.proxy.unlock(lgs.camera)
@@ -164,6 +161,7 @@ export class CameraManager {
             this.settings = data
         }
         else {
+            console.log('reset')
             this.reset()
         }
         // Update camera proxy
@@ -173,7 +171,6 @@ export class CameraManager {
         if (lgs.theJourney) {
             lgs.theJourney.camera = snapshot(lgs.mainProxy.components.camera)
         }
-        return this
     }
 
     clone = () => {
@@ -222,22 +219,23 @@ export class CameraManager {
         this.proxy.lookAt(lgs.camera, point, point.camera)
     }
 
-    rotateAround = (point, options) => {
+    rotateAround = async (point = null, options) => {
 
         // Let's stop any rotation
-        if (this.move.type === CameraManager.ORBITAL) {
-            this.stopRotate()
-        }
-
-
-        // Or any camera position tracking
-        if (this.move.type === CameraManager.NORMAL) {
-            this.releaseEvent()
-        }
+        this.stopRotate()
 
         __.ui.sceneManager.startRotate
 
-        // Update Camera position
+        if (point === null) {
+            //take current settings from proxy
+            const settings = snapshot(this.store)
+            point = {
+                ...settings.target,
+                camera: settings.position,
+            }
+        }
+
+        // Update target and camera position
         this.settings = {
             target:   {
                 longitude: point.longitude,
@@ -253,57 +251,61 @@ export class CameraManager {
         }
 
         // Set some configuration parameters
-        const rpm = (options.rpm ?? lgs.settings.camera.rpm)
+        const rpm = (options?.rpm ?? lgs.settings.camera.rpm)
+
         const fps = lgs.settings.camera.fps
-        const infinite = options.infinite ?? true
-        const rotations = options.rotations ?? lgs.settings.camera.rotations
-        const lookAt = options.lookAt ?? false
+        const infinite = options?.infinite ?? true
+        const rotations = options?.rotations ?? lgs.settings.camera.rotations
+        const lookAt = options?.lookAt ?? true
 
         // Do we need a camera pre-positioning ?
         if (lookAt) {
             this.lookAt(point)
         }
+        // Setting spinner speed
+        __.ui.css.setCSSVariable('--map-rotation-speed', `${60 / rpm}s`)
 
-        const angleRotation = (2 * Math.PI * rpm) / (MINUTE / MILLIS * fps)
+
+        const angleRotation = 2 * Math.PI / (MINUTE / MILLIS * fps) * rpm
         let totalRotation = 0
         const totalTurns = rotations * 2 * Math.PI
-        const self = this
-        this.move.type = CameraManager.ORBITAL
-        lgs.camera.percentageChanged = lgs.settings.getCamera.percentageChanged
-        lgs.camera.orbitalPercentageChanged = lgs.settings.getCamera.orbitalPercentageChanged
+        lgs.camera.percentageChanged = lgs.settings.camera.percentageChanged
+        lgs.camera.orbitalPercentageChanged = lgs.settings.camera.orbitalPercentageChanged
+
 
         const rotateCamera = (startTime, currentTime) => {
-            if (self.move.type === CameraManager.ORBITAL) {
+            if (this.isRotating()) {
                 if (infinite || totalRotation < totalTurns) {
-                    lgs.camera.rotateLeft(angleRotation)
-                    totalRotation += angleRotation
+                    lgs.camera.rotateRight(angleRotation)
+                    totalRotation += Math.abs(angleRotation)
                     this.move.animation = requestAnimationFrame((time) => rotateCamera(time))
                 }
                 else {
-                    self.stopRotate()
+                    this.stopRotate()
                     totalRotation = totalTurns
                 }
             }
         }
-        requestAnimationFrame(
-            (time) => rotateCamera(time),
-        )
-
+        this.move.animation = requestAnimationFrame((time) => rotateCamera(time))
     }
 
-    stopRotate = () => {
-        if (this.move.type === CameraManager.ORBITAL) {
+    stopRotate = async () => {
+        if (this.isRotating()) {
             this.proxy.unlock(lgs.camera)
             __.ui.sceneManager.stopRotate
-            this.move.type = undefined
-            this.move.type = CameraManager.NORMAL
             cancelAnimationFrame(this.move.animation)
+
+            await this.updatePositionInformation()
 
             lgs.viewer.clock.canAnimate = false
             lgs.viewer.clock.shouldAnimate = false
             this.releaseEvent()
 
         }
+    }
+
+    isRotating = () => {
+        return lgs.mainProxy.components.mainUI.rotate.running
     }
 
 }

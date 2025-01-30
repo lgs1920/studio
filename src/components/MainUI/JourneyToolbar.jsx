@@ -69,7 +69,8 @@ export const JourneyToolbar = (props) => {
             <div className="journey-toolbar-trigger" ref={journeyTrigger}>
                 <SlTooltip hoist placement={settings.toolBar.fromStart ? 'right' : 'left'}
                            content={snap.theJourney ? 'Journey actions' : 'Add a journey'}>
-                    <SlButton size={'small'} className={'square-icon'} onClick={addAJourney}>
+                    <SlButton size={'small'} className={'square-icon'} onClick={addAJourney}
+                              disabled={lgs.theJourney && mainUI.rotate.running}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRoute)}/>
                     </SlButton>
                 </SlTooltip>

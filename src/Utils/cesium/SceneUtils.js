@@ -114,7 +114,7 @@ export class SceneUtils {
 
         const maximumHeight = options.maximumHeight ?? lgs.settings.camera.maximumHeight
         const pitchAdjustHeight = options.pitchAdjustHeight ?? lgs.settings.camera.pitchAdjustHeight
-        const duration = options.duration ?? lgs.settings.camera.flyingTime
+        const flyingTime = options.flyingTime ?? lgs.settings.camera.flyingTime
 
         lgs.camera.flyTo({
                              destination:       Cartesian3.fromDegrees(
@@ -127,7 +127,7 @@ export class SceneUtils {
                              },
                              maximumHeight:     maximumHeight,
                              pitchAdjustHeight: pitchAdjustHeight,
-                             duration:          duration,
+                             duration: flyingTime,
                              convert:           !__.ui.sceneManager.is2D,
                              easingFunction:    EasingFunction.LINEAR_NONE, //TODO
 
@@ -156,11 +156,11 @@ export class SceneUtils {
                                              range:   range,
                                          },
                                      }
-                                     __.ui.sceneManager.startRotate
+
                                      __.ui.cameraManager.rotateAround(target, {
                                          rpm:       options.rpm ?? lgs.settings.camera.rpm,
+                                         infinite: options.infinite ?? true,
                                          fps:       lgs.settings.camera.fps,
-                                         infinite:  options.infinite ?? true,
                                          rotations: options.rotations ?? lgs.settings.camera.rotations,
                                          lookAt:    true,
                                      })

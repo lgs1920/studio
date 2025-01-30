@@ -70,10 +70,11 @@ export class CameraUtils {
                 longitude: M.toDegrees(longitude),
                 latitude: M.toDegrees(latitude),
                 height: height,
-                range: target?.range ?? lgs.settings.getCamera.range,
+                range: (height ?? lgs.settings.getCamera.range),
             },
         }
     }
+
 
     /**
      *

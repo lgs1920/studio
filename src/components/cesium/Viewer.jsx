@@ -88,7 +88,7 @@ export function Viewer() {
         roll:     lgs.settings.starter.camera.roll,
         range:    lgs.settings.starter.camera.range,
         infinite: true,
-        rotate:   lgs.settings.starter.camera.canRotate && lgs.journeys.size === 0,
+        rotate: true,
         lookAt:   true,
         rpm:      lgs.settings.starter.camera.rpm,
     })

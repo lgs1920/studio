@@ -2,6 +2,7 @@ import { SelectLocation }                     from '@Components/MainUI/geocoding
 import { faSearch }                           from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlIcon, SlInput, SlPopup } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                              from '@Utils/FA2SL'
+import { UIToast }                            from '@Utils/UIToast'
 import { useEffect, useRef, useState }        from 'react'
 import { useSnapshot }                        from 'valtio'
 
@@ -64,7 +65,10 @@ export const GeocodingUI = () => {
                     setPoi(newPoi)
                     return true
                 }
-                // TODO error if closer than existing point and createPOIOnSearch
+                UIToast.warning({
+                                    caption: `POI not created !`,
+                                    text:    `This location is too close to an existing POI!`,
+                                })
                 return false
             },
         })

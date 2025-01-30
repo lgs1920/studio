@@ -52,7 +52,7 @@ starter:
   latitude: 45.33524
   height: 1920
   name: La Grande Sure
-  color: chartreuse
+  color: "#7FFF00"  # chartreuse (127,255,0)
   ## Camera position
   camera:
     heading: 0
@@ -76,8 +76,8 @@ camera:
   fps: 30
   orbitalPercentageChanged: 0.05
   percentageChanged: 0.05
-  maximumHeight: 20000
-  pitchAdjustHeight: 20000
+  maximumHeight: 12000
+  pitchAdjustHeight: 12000
   flyingTime: 3   # seconds
   rpm: 2          # rotation per minute
   rotations: 1    # total rotation
@@ -697,7 +697,7 @@ ui:
     minScale: 0.1                       # minScale before masking (15% of max)
     distanceThreshold: 8000             # min distance to see POI with 100% size
 
-    defaultColor: "#FAFAFAFF"
+    defaultColor: "#FAFAFA"             # Hexa
 
   ## Geocoder
   geocoder:
