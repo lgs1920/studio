@@ -241,7 +241,7 @@ export class Journey extends MapElement {
      *
      * Populate this.tracks
      *
-     * @param keepContext {boolean} when true, we updatePositionInformation only some data related to position
+     * @param keepContext {boolean} when true, we update only some data related to position
      *                              and elevation.
      *
      */

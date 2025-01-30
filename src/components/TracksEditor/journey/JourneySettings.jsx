@@ -276,7 +276,7 @@ export const JourneySettings = function JourneySettings() {
                     // Then we redraw the journey
                     await Utils.updateJourney(SIMULATE_ALTITUDE)
 
-                    // And updatePositionInformation editor
+                    // And update editor
                     Utils.updateJourneyEditor(theJourney.slug)
 
                     // If the Profile UI is open, we re-sync it
