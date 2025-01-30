@@ -41,7 +41,7 @@ export const TextValueUI = function TextValueUI(props, ref) {
         toShow = (typeof toShow === 'number') ? sprintf(props.format ?? '%\' .2f', toShow) : toShow
     }
 
-    const classes = (props.class) ? props.class + ' ' : '' + 'lgs-text-value'
+    const classes = (props.className) ? props.className + ' ' : '' + 'lgs-text-value'
 
     return (
         <div id={props.id} className={classes}>
