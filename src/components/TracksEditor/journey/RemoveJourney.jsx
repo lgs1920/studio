@@ -68,6 +68,12 @@ export const RemoveJourney = (props) => {
 
         // Remove journey in DB
         await editorStore.journey.removeFromDB()
+        // Let's inform the user
+        UIToast.success({
+                            caption: removed.title,
+                            text:    `Removed successfully!`,
+                        })
+
 
         /**
          * If we have some other journeys, we'll take the first and render the editor.
@@ -88,19 +94,18 @@ export const RemoveJourney = (props) => {
             lgs.theJourney = null
             lgs.theTrack = null
             lgs.cleanEditor()
-            text = 'There are no other journeys available!'
+            text = ''
             mainStore.canViewJourneyData = false
             __.ui.drawerManager.close()
             mainStore.components.profile.show = false
             mainStore.canViewProfile = false
+
+            // Let's inform the user
+            UIToast.warning({
+                                caption: `No other journeys available`,
+                                text:    `It's time to load a new one!`,
+                            })
         }
-
-        // Let's inform the user
-        UIToast.success({
-                            caption: `${removed.title}</strong>`,
-                            text:    `Removed successfully!<br>${text}`,
-                        })
-
     }
 
 
