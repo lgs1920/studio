@@ -450,7 +450,7 @@ sl-tooltip {
 
     box-shadow: var(--sl-shadow-large);
     border-color: var(--lgs-tooltip-border-color);
-    --hide-delay: 1;
+    --hide-delay: 0.2s;
 }
 
 sl-tooltip::part(body)::first-letter {
@@ -488,9 +488,11 @@ sl-dialog::part(title) {
 
 
 .lgs-mini-remove-dialog {
+    position: relative;
+    z-index: 10;
     display: flex;
     gap: var(--lgs-gutter-xs);
-    margin-bottom: var(--lgs-gutter-s);
+    margin: 0 0 var(--lgs-gutter-xs) 0;
 
 }
 
