@@ -259,6 +259,16 @@ export class LGS1920Context {
         }
     }
 
+    cleanContext = () => {
+        lgs.theJourney = null
+        lgs.theTrack = null
+        lgs.cleanEditor()
+        lgs.mainProxy.canViewJourneyData = false
+        lgs.mainProxy.components.profile.show = false
+        lgs.mainProxy.canViewProfile = false
+        lgs.mainProxy.theJourney = null
+    }
+
     addToEditor = (journey) => {
         this.theJourneyEditorProxy.journey = journey
     }

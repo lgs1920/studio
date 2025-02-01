@@ -15,10 +15,10 @@ export const RemoveJourney = (props) => {
 
     const removeButton = useRef(null)
     const tooltipElement = useRef(null)
-    const distance = __.tools.rem2px(__.ui.css.getCSSVariable('lgs-gutter-s'))
+    const distance = 0
     const tooltip = props?.tooltip ?? 'top'
     const settings = useSnapshot(lgs.settings.ui.menu)
-    const placement = props.placement ?? (settings.toolBar.fromStart ? 'top-end' : 'top-start')
+    const placement = props.placement ?? (settings.toolBar.fromStart ? 'top-start' : 'top-end')
 
 
     const hideRemoveDialog = () => {
@@ -91,9 +91,7 @@ export const RemoveJourney = (props) => {
             __.ui.profiler.draw()
         }
         else {
-            lgs.theJourney = null
-            lgs.theTrack = null
-            lgs.cleanEditor()
+            lgs.cleanContext()
             text = ''
             mainStore.canViewJourneyData = false
             __.ui.drawerManager.close()
@@ -132,7 +130,7 @@ export const RemoveJourney = (props) => {
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}/>
                     </SlButton>
                 }
-
+            </SlTooltip>
                 <SlPopup anchor={removeButton.current}
                          active={snap.removeJourneyDialog.active.get(props.name)}
                          hover-bridge="true" shift="true"
@@ -148,7 +146,6 @@ export const RemoveJourney = (props) => {
                 </SlPopup>
 
 
-            </SlTooltip>
         </>
     )
 }
