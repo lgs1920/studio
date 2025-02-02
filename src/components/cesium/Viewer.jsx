@@ -71,7 +71,7 @@ export function Viewer() {
 
     // Add some globe parameters
     lgs.scene.globe.enableLighting = false
-    lgs.scene.globe.depthTestAgainstTerrain = true
+    lgs.scene.globe.depthTestAgainstTerrain = false
 
     //Layers
     const layerCollection = new ImageryLayerCollection()

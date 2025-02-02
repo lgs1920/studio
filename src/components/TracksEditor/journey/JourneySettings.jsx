@@ -333,7 +333,7 @@ export const JourneySettings = function JourneySettings() {
      */
     const focusOnJourney = async () => {
         await setJourneyVisibility(true)
-        lgs.theJourney.focus({resetCamera: true, action: REFRESH_DRAWING})
+        lgs.theJourney.focus({resetCamera: true, action: REFRESH_DRAWING, rotate: true})
     }
 
     const textVisibilityJourney = sprintf('%s Journey', editorSnapshot.journey.visible ? 'Hide' : 'Show')

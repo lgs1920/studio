@@ -109,7 +109,7 @@ export class CameraManager {
 
     runNormal = () => {
         // Bail early if such tracking is already in action
-        if (!isRotating()) {
+        if (!this.isRotating()) {
             return
         }
 
@@ -273,12 +273,13 @@ export class CameraManager {
         lgs.camera.orbitalPercentageChanged = lgs.settings.camera.orbitalPercentageChanged
 
 
-        const rotateCamera = (startTime, currentTime) => {
+        const rotateCamera = async (startTime, currentTime) => {
             if (this.isRotating()) {
                 if (infinite || totalRotation < totalTurns) {
                     lgs.camera.rotateRight(angleRotation)
                     totalRotation += Math.abs(angleRotation)
                     this.move.animation = requestAnimationFrame((time) => rotateCamera(time))
+                    await this.updatePositionInformation()
                 }
                 else {
                     this.stopRotate()
@@ -294,7 +295,6 @@ export class CameraManager {
             this.proxy.unlock(lgs.camera)
             __.ui.sceneManager.stopRotate
             cancelAnimationFrame(this.move.animation)
-
             await this.updatePositionInformation()
 
             lgs.viewer.clock.canAnimate = false

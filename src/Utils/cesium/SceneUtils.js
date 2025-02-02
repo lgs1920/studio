@@ -1,5 +1,7 @@
-import { SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS }         from '@Core/constants'
-import { Cartesian3, EasingFunction, Math as M, Matrix4, SceneMode } from 'cesium'
+import { SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS }                           from '@Core/constants'
+import bbox                                                                            from '@turf/bbox'
+import centroid                                                                        from '@turf/centroid'
+import { Cartesian3, Color, EasingFunction, Math as M, Matrix4, Rectangle, SceneMode } from 'cesium'
 
 export class SceneUtils {
 
@@ -100,14 +102,28 @@ export class SceneUtils {
                                    __.ui.sceneManager.noRelief() ? 0 : (point.height ?? point.simulatedHeight)))
     }
 
+    static drawBbox = (bbox, id) => {
+        id = `BBox#${id}`
+        // We remove the BBox if it already exists
+        if (lgs.viewer.entities.getById(id)) {
+            lgs.viewer.entities.removeById(id)
+        }
+        // Add the BBox
+        lgs.viewer.entities.add({
+                                    id:        id,
+                                    name:      id,
+                                    rectangle: {
+                                        coordinates: Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3]),
+                                        material:    Color.CHARTREUSE.withAlpha(0.1),
+                                    },
+                                })
+    }
+
 
     static focus = async (point, options) => {
 
-        // If we need some elevation, let's try Terrain elevation
-        // to have something not so far from reality
         const height = point.height ?? point.simulatedHeight
         const range = options.range ?? lgs.settings.camera.range
-        const cameraHeight = height + range
         const pitch = M.toRadians(options.pitch ?? lgs.settings.camera.pitch)
         const heading = M.toRadians(options.heading ?? lgs.settings.camera.heading)
         const roll = M.toRadians(options.roll ?? lgs.settings.camera.roll)
@@ -118,45 +134,43 @@ export class SceneUtils {
 
         lgs.camera.flyTo({
                              destination:       Cartesian3.fromDegrees(
-                                 point.longitude, point.latitude, cameraHeight,
+                                 point.longitude, point.latitude, 10000,
                              ),
                              orientation:       {
                                  heading: heading,
-                                 pitch:   pitch,
-                                 roll:    roll,
+                                 // We force pitch to -90 during the flight
+                                 pitch: M.toRadians(-90),
+                                 roll:  roll,
                              },
                              maximumHeight:     maximumHeight,
                              pitchAdjustHeight: pitchAdjustHeight,
-                             duration: flyingTime,
+                             duration:          flyingTime,
                              convert:           !__.ui.sceneManager.is2D,
-                             easingFunction:    EasingFunction.LINEAR_NONE, //TODO
+                             complete:          async () => {
+                                 const target = {
+                                     longitude:       point.longitude,
+                                     latitude:        point.latitude,
+                                     height:          point?.height,  // the real height
+                                     simulatedHeight: point?.simulatedHeight,
+                                     title:           point.title,
+                                     color:           lgs.settings.ui.poi.defaultColor,
+                                     camera:          {
+                                         heading: heading,
+                                         pitch:   pitch,
+                                         roll:    roll,
+                                         range:   range,
+                                     },
+                                 }
 
-                             complete: async () => {
+                                 if (options?.bbox && options.bbox.show) {
+                                     SceneUtils.drawBbox(options.bbox.data, options.bbox.id)
+                                 }
+
                                  if (options.callback ?? false) {
-                                     const target = {
-                                         longitude: point.longitude,
-                                         latitude:  point.latitude,
-                                         height:          point?.height,  // the real height
-                                         simulatedHeight: point?.simulatedHeight,
-                                         title:     point.title,
-                                         color:           lgs.settings.ui.poi.defaultColor,
-                                     }
                                      options.callback(target)
                                  }
 
                                  if (options.rotate ?? false) {
-                                     const target = {
-                                         longitude: point.longitude,
-                                         latitude:  point.latitude,
-                                         height: point.height ?? point.simulatedHeight,
-                                         camera:    {
-                                             heading: heading,
-                                             pitch:   pitch,
-                                             roll:    roll,
-                                             range:   range,
-                                         },
-                                     }
-
                                      __.ui.cameraManager.rotateAround(target, {
                                          rpm:       options.rpm ?? lgs.settings.camera.rpm,
                                          infinite: options.infinite ?? true,
@@ -169,10 +183,91 @@ export class SceneUtils {
                                      __.ui.sceneManager.stopRotate
                                      __.ui.cameraManager.lookAt(target)
                                  }
-
-
                              },
                          })
     }
+
+    static focusOnJourney = async ({
+                                       action = 0,
+                                       journey = null,
+                                       track = null,
+                                       showBbox = false,
+                                       resetCamera = false,
+                                       ...options
+                                   }) => {
+
+
+        // If track not provided, we'll get the first one of the journey
+        if (track === null) {
+            // But we need to set the journey to the current one if there is no information
+            if (journey === null) {
+                journey = lgs.theJourney
+            }
+            track = journey.tracks.values().next().value
+        }
+        else {
+            // We have a track, let's force the journey (even if there is one provided)
+            journey = lgs.journeys.get(track.parent)
+        }
+
+        const theBbox = SceneUtils.extendBbox(bbox(track.content), 2)
+        const [longitude, latitude] = centroid(track.content).geometry.coordinates
+        console.log(longitude, latitude)
+        const center = {
+            longitude: longitude,
+            latitude:  latitude,
+            height:    await __.ui.poiManager.getElevationFromTerrain({
+                                                                          longitude: longitude,
+                                                                          latitude:  latitude,
+                                                                      }),
+        }
+
+        SceneUtils.focus(center, {
+            pitch:    -45,
+            heading:  0,
+            roll:     0,
+            range:    10000,
+            rotate:   true,
+            lookAt:   true,
+            rpm:      1,
+            rotation: 1,
+            infinite: false,
+            bbox:     {data: theBbox, id: track.slug, show: true},
+        })
+
+        //Show BBox if requested
+        if (options?.bbox ?? false) {
+            const id = `BBox#${track.slug}`
+            // We remove the BBox if it already exists
+            if (lgs.viewer.entities.getById(id)) {
+                lgs.viewer.entities.removeById(id)
+            }
+            // Add the BBox
+            lgs.viewer.entities.add({
+                                        id:        id,
+                                        name:      id,
+                                        rectangle: {
+                                            coordinates: Rectangle.fromDegrees(myBbox[0], myBbox[1], myBbox[2], myBbox[3]),
+                                            material:    Color.CHARTREUSE.withAlpha(0.2),
+                                        },
+                                    })
+        }
+
+
+    }
+
+    static extendBbox = (bbox, x, y = undefined) => {
+        if (!y) {
+            y = x
+        }
+        x /= 100
+        y /= 100
+
+        const w = bbox[2] - bbox[0]
+        const h = bbox[3] - bbox[1]
+
+        return [bbox[0] - x * w, bbox[1] - y * h, bbox[2] + x * w, bbox[3] + y * h]
+    }
+
 
 }

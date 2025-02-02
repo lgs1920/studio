@@ -12,6 +12,9 @@ import {
     FLAG_START, FLAG_STOP, JUST_ICON, POI_FLAG, POI_MARKER, POI_STD,
 }                                      from '@Utils/cesium/POIUtils'
 import {
+    SceneUtils,
+}                                      from '@Utils/cesium/SceneUtils'
+import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
 }                                      from '@Utils/cesium/TrackUtils'
 import {
@@ -576,7 +579,7 @@ export class Journey extends MapElement {
 
     focus = (props={}) => {
         props.journey=this
-        TrackUtils.focus(props)
+        SceneUtils.focusOnJourney(props)
     }
 
     showAfterHeightSimulation = async () => {
