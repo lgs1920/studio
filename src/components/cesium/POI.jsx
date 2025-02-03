@@ -12,6 +12,10 @@ export const POI = ({point}) => {
         return null
     }
 
+    if (point.simulatedHeight) {
+        point.height = undefined
+    }
+
     const poi = useRef(null)
     const [_point, updatePoint] = useState(point)
     const [pixels, setPixels] = useState({x: 0, y: 0})
