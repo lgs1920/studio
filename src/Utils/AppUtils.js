@@ -142,8 +142,6 @@ export class AppUtils {
             .then(text => YAML.parse(text),
             )
 
-        console.log(settings)
-
         // Get the setting sections ID
         lgs.settingSections = Object.keys(settings)
 
