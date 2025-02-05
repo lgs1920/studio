@@ -1,5 +1,6 @@
 import {
-    BUILD, CONFIGURATION, FREE_ANONYMOUS_ACCESS, MILLIS, platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE,
+    BUILD, CONFIGURATION, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, MILLIS, platforms, SERVERS, SETTINGS,
+    SETTINGS_STORE, VAULT_STORE,
 }                           from '@Core/constants'
 import { ElevationServer }  from '@Core/Elevation/ElevationServer'
 import { Settings }         from '@Core/settings/Settings'
@@ -130,10 +131,18 @@ export class AppUtils {
             .then(text => YAML.parse(text),
             )
         // Read Settings
-        const settings = await fetch(SETTINGS, {cache: 'no-store'})
+        let settings
+        settings = await fetch(SETTINGS, {cache: 'no-store'})
             .then(res => res.text())
             .then(text => YAML.parse(text),
             )
+        // Read Layers
+        settings.layers = await fetch(LAYERS_TERRAINS_SETTINGS, {cache: 'no-store'})
+            .then(res => res.text())
+            .then(text => YAML.parse(text),
+            )
+
+        console.log(settings)
 
         // Get the setting sections ID
         lgs.settingSections = Object.keys(settings)

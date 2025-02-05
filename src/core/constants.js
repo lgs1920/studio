@@ -30,6 +30,7 @@ export const DESKTOP_MIN = 768
  */
 export const CONFIGURATION = 'config.yaml'
 export const SETTINGS = 'settings.yaml'
+export const LAYERS_TERRAINS_SETTINGS = 'layers-terrains.yaml'
 
 /**
  * Servers identification
