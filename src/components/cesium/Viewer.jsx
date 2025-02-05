@@ -1,9 +1,7 @@
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { LayersUtils }                                                                                  from '@Utils/cesium/LayersUtils'
-import {
-    SceneUtils,
-}                                                                                                       from '@Utils/cesium/SceneUtils'
-import { Cartesian3, ImageryLayerCollection, Math as M, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
+import { LayersUtils }                                                           from '@Utils/cesium/LayersUtils'
+import { SceneUtils }                                                           from '@Utils/cesium/SceneUtils'
+import { ImageryLayerCollection, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
 
 export function Viewer() {
 
@@ -18,25 +16,11 @@ export function Viewer() {
         },
     }
 
-    const startCameraPoint = () => {
-        return Cartesian3.fromDegrees(
-            coordinates.position.longitude,
-            coordinates.position.latitude,
-            coordinates.position.height,
-        )
-    }
-
-    const cameraOrientation = () => {
-        return {
-            heading: M.toRadians(coordinates.position.heading),
-            pitch:   M.toRadians(coordinates.position.pitch),
-            roll:    M.toRadians(coordinates.position.roll),
-        }
-    }
-
-    const cameraStore = lgs.mainProxy.components.camera
-
-
+    /**
+     * We manage our own camera update event
+     *
+     * @return {Promise<void>}
+     */
     const raiseCameraUpdateEvent = async () => {
         await __.ui.cameraManager.raiseUpdateEvent({})
     }
@@ -71,7 +55,7 @@ export function Viewer() {
 
     // Add some globe parameters
     lgs.scene.globe.enableLighting = false
-    lgs.scene.globe.depthTestAgainstTerrain = false
+    lgs.scene.globe.depthTestAgainstTerrain = true
 
     //Layers
     const layerCollection = new ImageryLayerCollection()
@@ -80,18 +64,6 @@ export function Viewer() {
     // Manage Camera
     lgs.camera.changed.addEventListener(raiseCameraUpdateEvent)
 
-    __.ui.sceneManager.focus(coordinates.position, {
-        heading:  lgs.settings.starter.camera.heading,
-        pitch:    (lgs.settings.starter.camera.canRotate || __.ui.sceneManager.noRelief())
-                  ? lgs.settings.starter.camera.pitch
-                  : -90,
-        roll:     lgs.settings.starter.camera.roll,
-        range:    lgs.settings.starter.camera.range,
-        infinite: true,
-        rotate: true,
-        lookAt:   true,
-        rpm:      lgs.settings.starter.camera.rpm,
-    })
 
     return (<></>)
 }

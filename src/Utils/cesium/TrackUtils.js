@@ -3,11 +3,10 @@ import {
     FOCUS_ON_FEATURE, NO_FOCUS, SCENE_MODE_2D,
 }                                                  from '@Core/constants'
 import { Journey }                                 from '@Core/Journey'
-import extent                                      from '@mapbox/geojson-extent'
 import { default as centroid }                     from '@turf/centroid'
+import { SceneUtils }                              from '@Utils/cesium/SceneUtils'
 import {
-    Cartesian3, Cartographic, Color, CustomDataSource, EasingFunction, GeoJsonDataSource, Math, Matrix4, Rectangle,
-    sampleTerrainMostDetailed,
+    Cartesian3, Cartographic, Color, CustomDataSource, GeoJsonDataSource, Math, Rectangle, sampleTerrainMostDetailed,
 }                                                  from 'cesium'
 import { UIToast }                                 from '../UIToast.js'
 import { FLAG_START, POI_FLAG, POI_STD, POIUtils } from './POIUtils'
@@ -146,7 +145,7 @@ export class TrackUtils {
 
         // We calculate the Bounding Box and enlarge it by 25%
         // in order to be sure to have the full track inside the window
-        const bbox = TrackUtils.extendBbox(extent(track.content), 25)
+        const bbox = TrackUtils.extendBbox(extent(track.content), 0)
         let rectangle = Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3])
 
         // Get the right camera information
@@ -156,7 +155,7 @@ export class TrackUtils {
             destination = lgs.camera.getRectangleCameraCoordinates(rectangle)
             var cartographic = Cartographic.fromCartesian(destination)
             // Get the centroid of the track
-            const center = centroid(track.content)
+            const center = centroid(track.content.geometry.coordinates)
 
             // Get the right position according to Scene Mode
             let position = {}
@@ -208,23 +207,25 @@ export class TrackUtils {
             convert = true
         }
 
+        SceneUtils.focusOnJourney(bbox)
+
         // let's go to focus !
-        lgs.camera.flyTo({
-                             destination:    destination,                               // Camera
-                             orientation:    {                                         // Offset and Orientation
-                                 heading: Math.toRadians(__.ui.cameraManager.settings.position.heading),
-                                 pitch:   Math.toRadians(__.ui.cameraManager.settings.position.pitch),
-                                 roll:    Math.toRadians(__.ui.cameraManager.settings.position.roll),
-                             },
-                             maximumHeight:     lgs.camera.maximumHeight,
-                             pitchAdjustHeight: lgs.camera.pitchAdjustHeight,
-                             convert:        convert,
-                             duration:       lgs.settings.camera.flyingTime,
-                             endTransform:   Matrix4.IDENTITY,
-                             easingFunction: EasingFunction.LINEAR_NONE,
-                         })
+        // lgs.camera.flyTo({
+        //                      destination:    destination,                               // Camera
+        //                      orientation:    {                                         // Offset and Orientation
+        //                          heading: Math.toRadians(__.ui.cameraManager.settings.position.heading),
+        //                          pitch:   Math.toRadians(__.ui.cameraManager.settings.position.pitch),
+        //                          roll:    Math.toRadians(__.ui.cameraManager.settings.position.roll),
+        //                      },
+        //                      maximumHeight:     lgs.camera.maximumHeight,
+        //                      pitchAdjustHeight: lgs.camera.pitchAdjustHeight,
+        //                      convert:        convert,
+        //                      duration:       lgs.settings.camera.flyingTime,
+        //                      endTransform:   Matrix4.IDENTITY,
+        //                      easingFunction: EasingFunction.LINEAR_NONE,
+        //                  })
         //Show BBox if requested
-        if (showBbox) {
+        if (true) {
             const id = `BBox#${track.slug}`
             // We remove the BBox if it already exists
             if (lgs.viewer.entities.getById(id)) {
@@ -242,18 +243,7 @@ export class TrackUtils {
         }
     }
 
-    static extendBbox = (bbox, x, y = undefined) => {
-        if (!y) {
-            y = x
-        }
-        x /= 100
-        y /= 100
 
-        const w = bbox[2] - bbox[0]
-        const h = bbox[3] - bbox[1]
-
-        return [bbox[0] - x * w, bbox[1] - y * h, bbox[2] + x * w, bbox[3] + y * h]
-    }
 
     /**
      * Filters an array of objects using custom predicates.
@@ -452,7 +442,6 @@ export class TrackUtils {
         __.ui.cameraManager.settings = lgs.theJourney.cameraOrigin
 
         await __.ui.cameraManager.stopRotate()
-        await __.ui.cameraManager.runNormal()
 
     }
 
@@ -712,7 +701,6 @@ export class TrackUtils {
                     await theJourney.draw({})
 
                     await __.ui.cameraManager.stopRotate()
-                    await __.ui.cameraManager.runNormal()
 
                     __.ui.profiler.draw()
                     await TrackUtils.createCommonMapObjectsStore()

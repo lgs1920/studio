@@ -1,4 +1,4 @@
-import { SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS }                           from '@Core/constants'
+import { DRAWING, DRAWING_FROM_DB, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS } from '@Core/constants'
 import bbox                                                                            from '@turf/bbox'
 import centroid                                                                        from '@turf/centroid'
 import { Cartesian3, Color, EasingFunction, Math as M, Matrix4, Rectangle, SceneMode } from 'cesium'
@@ -132,25 +132,29 @@ export class SceneUtils {
         const pitchAdjustHeight = options.pitchAdjustHeight ?? lgs.settings.camera.pitchAdjustHeight
         const flyingTime = options.flyingTime ?? lgs.settings.camera.flyingTime
 
+        if (options.initializer) {
+            options.initializer(point, options)
+        }
+
         lgs.camera.flyTo({
                              destination:       Cartesian3.fromDegrees(
-                                 point.longitude, point.latitude, 10000,
+                                 point.longitude, point.latitude, height,
                              ),
                              orientation:       {
                                  heading: heading,
-                                 // We force pitch to -90 during the flight
-                                 pitch: M.toRadians(-90),
+                                 pitch: M.toRadians(pitch),
                                  roll:  roll,
                              },
                              maximumHeight:     maximumHeight,
                              pitchAdjustHeight: pitchAdjustHeight,
                              duration:          flyingTime,
-                             convert:           !__.ui.sceneManager.is2D,
+                             convert:           options?.convert ?? true,
+                             easingFunction:    EasingFunction.QUADRATIC_IN_OUT,
                              complete:          async () => {
                                  const target = {
                                      longitude:       point.longitude,
                                      latitude:        point.latitude,
-                                     height:          point?.height,  // the real height
+                                     height: height,
                                      simulatedHeight: point?.simulatedHeight,
                                      title:           point.title,
                                      color:           lgs.settings.ui.poi.defaultColor,
@@ -167,7 +171,7 @@ export class SceneUtils {
                                  }
 
                                  if (options.callback ?? false) {
-                                     options.callback(target)
+                                     options.callback(target, options)
                                  }
 
                                  if (options.rotate ?? false) {
@@ -188,14 +192,10 @@ export class SceneUtils {
     }
 
     static focusOnJourney = async ({
-                                       action = 0,
                                        journey = null,
                                        track = null,
-                                       showBbox = false,
-                                       resetCamera = false,
                                        ...options
                                    }) => {
-
 
         // If track not provided, we'll get the first one of the journey
         if (track === null) {
@@ -205,23 +205,26 @@ export class SceneUtils {
             }
             track = journey.tracks.values().next().value
         }
-        else {
-            // We have a track, let's force the journey (even if there is one provided)
-            journey = lgs.journeys.get(track.parent)
-        }
+        // else {
+        //     // We have a track, let's force the journey (even if there is one provided)
+        //     journey = lgs.journeys.get(track.parent)
+        // }
 
         const theBbox = SceneUtils.extendBbox(bbox(track.content), 2)
         const [longitude, latitude] = centroid(track.content).geometry.coordinates
-        console.log(longitude, latitude)
         const center = {
             longitude: longitude,
             latitude:  latitude,
             height:    await __.ui.poiManager.getElevationFromTerrain({
-                                                                          longitude: longitude,
-                                                                          latitude:  latitude,
+                                                                          longitude: longitude, latitude: latitude,
                                                                       }),
         }
-
+        // Depending on what we are doing, we need to convert the destination
+        // from world coordinates to scene coordinates
+        let convert = false
+        if (__.ui.sceneManager.is2D && (options.action === DRAWING || options.action === DRAWING_FROM_DB)) {
+            convert = true
+        }
         SceneUtils.focus(center, {
             pitch:    -45,
             heading:  0,
@@ -232,7 +235,14 @@ export class SceneUtils {
             rpm:      1,
             rotation: 1,
             infinite: false,
-            bbox:     {data: theBbox, id: track.slug, show: true},
+            bbox:    {data: theBbox, id: track.slug, show: false},
+            convert: convert,
+
+            action:      options.action,
+            resetCamera: options.resetCamera,
+            callback:    options.callback,
+            initializer: options.initializer,
+
         })
 
         //Show BBox if requested

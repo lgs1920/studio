@@ -2,7 +2,6 @@ import { DRAWING_FROM_UI, FOCUS_ON_FEATURE, REFRESH_DRAWING }                 fr
 import { MapElement }                                                         from '@Core/MapElement'
 import { POI }                                                                from '@Core/POI'
 import { ProfileTrackMarker }                                                 from '@Core/ProfileTrackMarker'
-import { SceneUtils }                                                         from '@Utils/cesium/SceneUtils'
 import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
 import { Mobility }                                                           from '@Utils/Mobility'
 import { DateTime }                                                           from 'luxon'
@@ -385,7 +384,7 @@ export class Track extends MapElement {
 
         // Focus on the parent Journey
         if (mode === FOCUS_ON_FEATURE) {
-            SceneUtils.focusOnJourney({track: this})
+            __.ui.sceneManager.focusOnJourney({track: this})
         }
     }
 

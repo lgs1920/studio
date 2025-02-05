@@ -1,4 +1,4 @@
-import { JOURNEYS_STORE, MILLIS, MINUTE } from '@Core/constants'
+import { CURRENT_CAMERA, CURRENT_STORE, JOURNEYS_STORE, MILLIS, MINUTE } from '@Core/constants'
 
 import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
 import { snapshot }    from 'valtio'
@@ -7,10 +7,13 @@ import { Journey }     from '../Journey'
 
 export class CameraManager {
     static CLOCKWISE = true
+    static NORMAL = 'normal'
+    static ROTATE = 'rotate'
 
     target = {}
     position = {}
     orbitalInPause = false
+    saveTimer = null
 
     constructor(settings) {
 
@@ -19,11 +22,12 @@ export class CameraManager {
             return CameraManager.instance
         }
         this.proxy = CameraUtils
+        ;(async () => await this.readCameraInformation())()
         this.settings = settings
 
         this.clockwise = CameraManager.CLOCKWISE
         this.store = lgs.mainProxy.components.camera
-        this.move = {type: null, releaseEvent: null, animation: null}
+        this.move = {type: null, stopWatching: null, animation: null}
 
 
         // we track window resizing to get
@@ -32,6 +36,9 @@ export class CameraManager {
             this.targetInPixels()
             this.raiseUpdateEvent()
         })
+
+        // Let's save the information before new window content
+        window.addEventListener('beforeunload', () => this.saveInformation(Date.now()))
 
         CameraManager.instance = this
 
@@ -96,64 +103,103 @@ export class CameraManager {
             && (target.height === undefined)
     }
 
+    /**
+     * Let's update ad save information
+     *
+     * @return {Promise<void>}
+     */
     raiseUpdateEvent = async () => {
         await this.updatePositionInformation()
     }
 
-    releaseEvent = () => {
-        if (this.move.releaseEvent) {
-            this.move.releaseEvent()
+    stopWatching = () => {
+        if (this.move.stopWatching) {
+            this.move.stopWatching()
+            clearInterval(this.saveTimer)
+            this.saveTimer = null
         }
     }
 
+    /**
+     * Save camera information
+     *
+     * @param last is the reference time (ie the last known)
+     *
+     */
+    saveInformation = (last) => {
+        if (Date.now() - last >= lgs.configuration.db.IDBDelay * MILLIS) {
+            clearInterval(this.saveTimer)
+            this.saveTimer = null
+        }
+        if (lgs.theJourney) {
+            lgs.theJourney.camera = snapshot(this.store)
+            lgs.db.lgs1920.put(lgs.theJourney.slug, Journey.unproxify(snapshot(lgs.theJourney)), JOURNEYS_STORE)
+        }
+        lgs.db.lgs1920.put(CURRENT_CAMERA, snapshot(this.store), CURRENT_STORE)
+    }
 
-    runNormal = () => {
+    /**
+     * Start watching camera information in order to save it.
+     *
+     * @return {Promise<void>}
+     */
+    startWatching = async () => {
+        if (this.saveTimer) {
+            return
+        }
+        const date = Date.now()
+        this.saveInformation(date)
+        this.saveTimer = setInterval(
+            this.saveInformation.bind(this), lgs.configuration.db.IDBDelay * MILLIS, date,
+        )
+    }
+
+
+    /**
+     * Read Camera information in local database
+     *
+     * @return {Promise<*|null>}
+     */
+    readCameraInformation = async () => {
+        let data = await lgs.db.lgs1920.get(CURRENT_CAMERA, CURRENT_STORE)
+        if (!data || __.app.isEmpty(data.target)) {
+            return this.resetToTarget()
+        }
+        return data
+    }
+
+
+    /**
+     * This is the normal mode, ie the user can drag the map as he wants to.
+     *
+     */
+    enableMapDragging = () => {
         // Bail early if such tracking is already in action
         if (!this.isRotating()) {
             return
         }
 
         // Stop any camera position tracking
-        this.releaseEvent()
-
-
-        // In case we miss something, unlock the target
-        this.proxy.unlock(lgs.camera)
+        this.stopWatching()
 
         // Set move event
         lgs.camera.percentageChanged = lgs.settings.getCamera.percentageChanged
 
-        // Run it
-        let lastMouseMoveTime = 0
-        let saveInterval
-        const saveDelay = lgs.configuration.db.IDBDelay
-
-        // If the camera is in movement, we save the journey in DB every <saveDelay> ms
-        // We save the last movement <saveDelay> ms after the last camera change
-
-        const saveData = async () => {
-            const currentTime = Date.now()
-            if (currentTime - lastMouseMoveTime >= saveDelay) {
-                clearInterval(saveInterval)
-                saveInterval = null
-            }
-            lgs.theJourney.camera = snapshot(this.store)
-            await lgs.db.lgs1920.put(lgs.theJourney.slug, Journey.unproxify(snapshot(lgs.theJourney)), JOURNEYS_STORE)
-        }
-
         this.move = {
             type:         CameraManager.NORMAL,
-            releaseEvent: lgs.camera.changed.addEventListener(async () => {
-                if (lgs.theJourney) {
-                    lastMouseMoveTime = Date.now()
-                    if (!saveInterval) {
-                        saveInterval = setInterval(saveData, saveDelay)
-                    }
+            stopWatching: lgs.camera.changed.addEventListener(async () => {
+                if (!this.saveTimer) {
+                    await this.startWatching()
                 }
             }),
         }
     }
 
+    /**
+     * Update and maintain camera position
+     *
+     * @return {Promise<void>}
+     */
     updatePositionInformation = async () => {
         const data = await this.proxy.updatePositionInformation()
         // Update Camera Manager information
@@ -161,7 +207,6 @@ export class CameraManager {
             this.settings = data
         }
         else {
-            console.log('reset')
             this.reset()
         }
         // Update camera proxy
@@ -173,6 +218,9 @@ export class CameraManager {
         }
     }
 
+    /**
+     * Clone the position
+     */
     clone = () => {
         lgs.mainProxy.components.camera.position = deepClone(this.position)
         lgs.mainProxy.components.camera.target = deepClone(this.target)
@@ -186,8 +234,22 @@ export class CameraManager {
         return this
     }
 
+    /**
+     * Reset the camera settings management.
+     *
+     *
+     */
     reset = () => {
-        this.settings = {
+        this.settings = this.resetToTarget()
+    }
+
+    /**
+     * Reset the camera information to target
+     *
+     * @return the camera position nd settings
+     */
+    resetToTarget = () => {
+        return {
             target: {
                 longitude: lgs.settings.starter.longitude,
                 latitude:  lgs.settings.starter.latitude,
@@ -198,15 +260,16 @@ export class CameraManager {
                 longitude: undefined,
                 latitude:  undefined,
                 height:    undefined,
-                heading: lgs.settings.camera.heading,
-                pitch:   lgs.settings.camera.pitch,
-                roll:    lgs.settings.camera.roll,
-                range:   lgs.settings.camera.range,
+                heading:   lgs.settings.camera.heading,
+                pitch:     lgs.settings.camera.pitch,
+                roll:      lgs.settings.camera.roll,
+                range:     lgs.settings.camera.range,
             },
         }
     }
 
     /**
+     * Look at a specific point
      *
      * @param point target : data in degrees, meters
      *
@@ -219,10 +282,21 @@ export class CameraManager {
         this.proxy.lookAt(lgs.camera, point, point.camera)
     }
 
+    /**
+     * Rotate around a specific point
+     *
+     *
+     * @param point
+     * @param options
+     * @return {Promise<void>}
+     */
     rotateAround = async (point = null, options) => {
 
         // Let's stop any rotation
         this.stopRotate()
+
+        // And any related event
+        this.stopWatching()
 
         __.ui.sceneManager.startRotate
 
@@ -279,7 +353,6 @@ export class CameraManager {
                     lgs.camera.rotateRight(angleRotation)
                     totalRotation += Math.abs(angleRotation)
                     this.move.animation = requestAnimationFrame((time) => rotateCamera(time))
-                    await this.updatePositionInformation()
                 }
                 else {
                     this.stopRotate()
@@ -287,23 +360,40 @@ export class CameraManager {
                 }
             }
         }
-        this.move.animation = requestAnimationFrame((time) => rotateCamera(time))
+        this.move = {
+            type:         CameraManager.ROTATE,
+            animation:    requestAnimationFrame((time) => rotateCamera(time)),
+            stopWatching: lgs.camera.changed.addEventListener(async () => {
+                if (!this.saveTimer) {
+                    await this.startWatching()
+                }
+            }),
+        }
     }
 
+    /**
+     * Stop rotate mode
+     *
+     * @return {Promise<void>}
+     */
     stopRotate = async () => {
         if (this.isRotating()) {
             this.proxy.unlock(lgs.camera)
             __.ui.sceneManager.stopRotate
             cancelAnimationFrame(this.move.animation)
-            await this.updatePositionInformation()
 
             lgs.viewer.clock.canAnimate = false
             lgs.viewer.clock.shouldAnimate = false
-            this.releaseEvent()
+            this.enableMapDragging()
 
         }
     }
 
+    /**
+     * Check if rotate mode is on
+     *
+     * @return {boolean}
+     */
     isRotating = () => {
         return lgs.mainProxy.components.mainUI.rotate.running
     }

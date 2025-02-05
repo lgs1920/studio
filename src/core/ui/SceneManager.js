@@ -108,7 +108,7 @@ export class SceneManager {
     afterMorphing = async () => {
 
         // Remove starting animation (rotate,...)
-        __.ui.cameraManager.move.releaseEvent()
+        __.ui.cameraManager.stopWatching()
 
         // Now it's time for the show. Draw all journeys
         const items = []
@@ -125,6 +125,24 @@ export class SceneManager {
     focus = (point, options) => {
         this.proxy.focus(point, options)
     }
+
+    focusPreProcessing = (point, options) => {
+        console.log('focusPreProcessing', point, options)
+        // TODO calculerici le parametres à pendre en fonctio nde l'action en cour
+    }
+
+    focusPostProcessing = (point, options) => {
+        console.log(point, options)
+    }
+
+    focusOnJourney = (options) => {
+        this.proxy.focusOnJourney({
+                                      ...options,
+                                      initializer: this.focusPreProcessing,
+                                      callback:    this.focusPostProcessing,
+                                  })
+    }
+
 
     get startRotate() {
         lgs.mainProxy.components.mainUI.rotate.running = true

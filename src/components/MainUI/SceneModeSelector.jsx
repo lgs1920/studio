@@ -6,6 +6,7 @@ import { useSnapshot }                 from 'valtio/index'
 
 export const SceneModeSelector = (props) => {
     const settings = useSnapshot(lgs.settings.scene)
+    const mainUI = useSnapshot(lgs.mainProxy.components.mainUI)
     const buttonGroup = useRef(null)
     const placement = props.tooltip ?? 'right'
     const [waitingMode, setWaitingMode] = useState(false)
@@ -38,7 +39,8 @@ export const SceneModeSelector = (props) => {
                         <SlButton size={'small'}
                                   visible={settings.mode.value === SCENE_MODES.get(mode).value}
                                   className={'square-icon'} onclick={selectSceneMode}
-                                  data-scene-mode={SCENE_MODES.get(mode).value}>
+                                  data-scene-mode={SCENE_MODES.get(mode).value}
+                                  disabled={mainUI.rotate.running}>
                             <SlIcon slot="prefix" library="fa" name={FA2SL.set(SCENE_MODES.get(mode).icon)}/>
                         </SlButton>
                     </SlTooltip>

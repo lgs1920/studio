@@ -17,6 +17,7 @@ export const JourneyToolbar = (props) => {
 
     const journeyTrigger = useRef(null)
     const mainUI = lgs.mainProxy.components.mainUI
+    const snapUI = useSnapshot(mainUI)
     const snap = useSnapshot(lgs.mainProxy)
     const settings = useSnapshot(lgs.settings.ui.menu)
     const fileLoader = props?.fileloader ?? true
@@ -70,7 +71,7 @@ export const JourneyToolbar = (props) => {
                 <SlTooltip hoist placement={settings.toolBar.fromStart ? 'right' : 'left'}
                            content={snap.theJourney ? 'Journey actions' : 'Add a journey'}>
                     <SlButton size={'small'} className={'square-icon'} onClick={addAJourney}
-                              disabled={snap.theJourney && mainUI.rotate.running}>
+                              disabled={snap.theJourney !== null && snapUI.rotate.running}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRoute)}/>
                     </SlButton>
                 </SlTooltip>

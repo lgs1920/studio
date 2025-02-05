@@ -33,6 +33,8 @@ export class LGS1920Context {
     #theJourneyEditorProxy
     /** @type {Proxy} */
     #editorSettingsProxy
+    /** @type {Proxy} */
+    #cameraProxy
 
     eventHandler = new MouseEventHandler()
     #viewer
@@ -87,7 +89,7 @@ export class LGS1920Context {
                                      name:             `${APP_KEY}${dbPrefix}`,
                                      stores: [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE],
                                      manageTransients: true,
-                                     version:          '0.1',
+                                     version: '0.2',
                                  }),
             settings: new LocalDB({
                                       name: `settings-${APP_KEY}${dbPrefix}`,

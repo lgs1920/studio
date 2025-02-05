@@ -36,6 +36,8 @@ if (initApp.status) {
     // Init Layer
     __.layersAndTerrainManager = new LayersAndTerrainManager()
 
+    // Read last camera position
+    lgs.cameraStore = await __.ui.cameraManager.readCameraInformation()
 }
 
 export function LGS1920() {
@@ -57,46 +59,69 @@ export function LGS1920() {
         document.body.classList.remove('portrait')
     }
     useEffect(() => {
-        try {
-            // If initialisation phase was OK, we have somme additional tasks to do.
-            if (initApp.status) {
+                  try {
+                      // If initialisation phase was OK, we have somme additional tasks to do.
+                      if (initApp.status) {
 
-                // Detect drawer over
-                __.ui.drawerManager.attachEvents()
 
-                // Set the right terrain
-                TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
+                          // Detect drawer over
+                          __.ui.drawerManager.attachEvents()
 
-                // Set body class to manage css versus platform
-                document.body.classList.add(lgs.platform);
+                          // Set the right terrain
+                          TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
 
-                (async () => {
-                    // Read DB
-                    await TrackUtils.readAllFromDB()
-                    console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
-                    console.log(`Connected to backend ${lgs.versions.backend}.`)
-                })()
+                          // Set body class to manage css versus platform
+                          document.body.classList.add(lgs.platform);
 
-            }
-            else {
-                // Init was wrong, let'stop here
-                UIToast.error({
-                                  caption: `LGS1920 was stopped due to init errors!`,
-                                  text:    `We're sorry`,
-                              })
-                console.log('LGS1920 was stopped due to init errors!')
-                console.error(initApp.error)
-            }
-        }
-        catch (error) {
-            UIToast.error({
-                              caption: `LGS1920 was stopped due to errors!`,
-                              text:    `We're sorry`,
+                          (async () => {
+                              // Read DB
+                              await TrackUtils.readAllFromDB()
+                              // Read last camera position
+                              lgs.cameraStore = await __.ui.cameraManager.readCameraInformation()
+
+                              console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
+                              console.log(`Connected to backend ${lgs.versions.backend}.`)
+                          })()
+
+                          const camera = lgs.cameraStore
+
+                          __.ui.sceneManager.focus(camera.target, {
+                              heading:  camera.position.heading,
+                              pitch:    (lgs.settings.starter.camera.canRotate || __.ui.sceneManager.noRelief())
+                                        ? camera.position.pitch
+                                        : -90,
+                              roll:     camera.position.roll,
+                              range:    camera.position.range,
+                              infinite: true,
+                              rotate:   true,
+                              lookAt:   true,
+                              rpm:      lgs.settings.starter.camera.rpm,
                           })
-            console.log('LGS1920 was stopped due to errors!')
-            console.error(error)
-        }
-    }, [])
+                      }
+                      else {
+                          // Init was wrong, let'stop here
+                          UIToast.error({
+                                            caption: `LGS1920 was stopped due to init errors!`,
+                                            text:    `We're sorry`,
+                                        })
+                          console.log('LGS1920 was stopped due to init errors!')
+                          console.error(initApp)
+                      }
+                  }
+                  catch
+                      (error) {
+                      UIToast.error({
+                                        caption: `LGS1920 was stopped due to errors!`,
+                                        text:    `We're sorry`,
+                                    })
+                      console.log('LGS1920 was stopped due to errors!')
+                      console.error(error)
+                  }
+              }
+
+        ,
+              [],
+    )
     return (
         <>
 

@@ -64,6 +64,7 @@ export const JOURNEYS_STORE = 'journeys'
 export const ORIGIN_STORE = 'origin'
 export const CURRENT_JOURNEY = 'journey'
 export const CURRENT_TRACK = 'track'
+export const CURRENT_CAMERA = 'camera'
 
 export const CURRENT_POI = 'poi'
 export const STARTER_POI = `starter-${APP_KEY}`

@@ -16,6 +16,6 @@ api:
   name: API
 
 db:
-  IDBDelay: 2000
-  extDelay: 5000
+  IDBDelay: 5    # Seconds
+  extDelay: 30   # Seconds
 
