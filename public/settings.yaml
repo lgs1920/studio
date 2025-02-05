@@ -83,17 +83,6 @@ camera:
   rotations: 1    # total rotation
 
 ########################################
-# Initial Camera Positioning
-########################################
-startCamera:
-  app: starter           # starter : focus on starter POI
-  # last : focus on last camera position
-
-  journey: center        # center: focus on journey centroid
-    # last : focus olast camera position
-  #        for the journey
-
-########################################
 # Color palette
 ########################################
 swatches:
@@ -193,6 +182,13 @@ ui:
       color: white
       background: transparent
       size: 3rem
+    start:
+      app: starter          # starter : focus on starter POI
+      # last : focus on last camera position
+
+      journey: center       # center: focus on journey centroid
+        # last : focus on last camera position
+      #        for the journey
 
   ## Welcome Modal
   welcome:

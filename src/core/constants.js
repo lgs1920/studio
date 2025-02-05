@@ -238,3 +238,8 @@ export const MENU_BOTTOM_END = 'bottom-end'
 
 export const REMOVE_JOURNEY_IN_EDIT = 'in-journey-edit'
 export const REMOVE_JOURNEY_IN_TOOLBAR = 'in-journey-toolbar'
+
+/** Focus */
+export const FOCUS_STARTER = 'starter'
+export const FOCUS_LAST = 'last'
+export const FOCUS_CENTROID = 'center'
