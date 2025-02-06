@@ -1,20 +1,20 @@
 import { MapLayer } from '@Components/cesium/MapLayer'
 import { Viewer }   from '@Components/cesium/Viewer'
 
-import { InitErrorMessage }                                from '@Components/InitErrorMessage'
-import { AllPOIs }                                         from '@Components/MainUI/AllPOIs'
-import { MainUI }                                          from '@Components/MainUI/MainUI.jsx'
+import { InitErrorMessage }                                               from '@Components/InitErrorMessage'
+import { AllPOIs }                                                        from '@Components/MainUI/AllPOIs'
+import { MainUI }                                                         from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { StarterPOI }                                      from '@Components/MainUI/StarterPOI'
-import { WelcomeModal }                                    from '@Components/MainUI/WelcomeModal'
-import { BASE_ENTITY, BOTTOM, MOBILE_MAX, OVERLAY_ENTITY } from '@Core/constants'
-import { LGS1920Context }                                  from '@Core/LGS1920Context'
-import { LayersAndTerrainManager }                         from '@Core/ui/LayerAndTerrainManager'
-import { TerrainUtils }                                    from '@Utils/cesium/TerrainUtils'
-import { TrackUtils }                                      from '@Utils/cesium/TrackUtils'
-import { UIToast }                                         from '@Utils/UIToast'
-import { useEffect }                                       from 'react'
-import { useMediaQuery }                                   from 'react-responsive'
+import { StarterPOI }                                                     from '@Components/MainUI/StarterPOI'
+import { WelcomeModal }                                                   from '@Components/MainUI/WelcomeModal'
+import { BASE_ENTITY, BOTTOM, FOCUS_STARTER, MOBILE_MAX, OVERLAY_ENTITY } from '@Core/constants'
+import { LGS1920Context }                                                 from '@Core/LGS1920Context'
+import { LayersAndTerrainManager }                                        from '@Core/ui/LayerAndTerrainManager'
+import { TerrainUtils }                                                   from '@Utils/cesium/TerrainUtils'
+import { TrackUtils }                                                     from '@Utils/cesium/TrackUtils'
+import { UIToast }                                                        from '@Utils/UIToast'
+import { useEffect }                                                      from 'react'
+import { useMediaQuery }                                                  from 'react-responsive'
 
 /***************************************
  * Init Application context
@@ -37,7 +37,7 @@ if (initApp.status) {
     __.layersAndTerrainManager = new LayersAndTerrainManager()
 
     // Read last camera position
-    lgs.cameraStore = await __.ui.cameraManager.readCameraInformation()
+    //  lgs.cameraStore = await __.ui.cameraManager.readCameraInformation()
 }
 
 export function LGS1920() {
@@ -76,27 +76,37 @@ export function LGS1920() {
                           (async () => {
                               // Read DB
                               await TrackUtils.readAllFromDB()
-                              // Read last camera position
-                              lgs.cameraStore = await __.ui.cameraManager.readCameraInformation()
+                              if (__.ui.cameraManager.isAppFocusOn(FOCUS_STARTER)) {
+                                  lgs.cameraStore = __.ui.cameraManager.focusToStarterPOI()
+                              }
+                              else {
+                                  //last
+                                  lgs.cameraStore = await __.ui.cameraManager.readCameraInformation()
+                              }
+
+
+                              const camera = lgs.cameraStore
+                              console.log(camera)
+
+                              __.ui.sceneManager.focus(camera.target, {
+                                  heading:  camera.position.heading,
+                                  pitch:    (lgs.settings.starter.camera.canRotate || __.ui.sceneManager.noRelief())
+                                            ? camera.position.pitch
+                                            : -90,
+                                  roll:     camera.position.roll,
+                                  range:    camera.position.range,
+                                  infinite: true,
+                                  rotate:   true,
+                                  lookAt:   true,
+                                  rpm:      lgs.settings.starter.camera.rpm,
+                              })
 
                               console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
                               console.log(`Connected to backend ${lgs.versions.backend}.`)
+
                           })()
 
-                          const camera = lgs.cameraStore
 
-                          __.ui.sceneManager.focus(camera.target, {
-                              heading:  camera.position.heading,
-                              pitch:    (lgs.settings.starter.camera.canRotate || __.ui.sceneManager.noRelief())
-                                        ? camera.position.pitch
-                                        : -90,
-                              roll:     camera.position.roll,
-                              range:    camera.position.range,
-                              infinite: true,
-                              rotate:   true,
-                              lookAt:   true,
-                              rpm:      lgs.settings.starter.camera.rpm,
-                          })
                       }
                       else {
                           // Init was wrong, let'stop here

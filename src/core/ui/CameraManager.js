@@ -163,7 +163,7 @@ export class CameraManager {
     readCameraInformation = async () => {
         let data = await lgs.db.lgs1920.get(CURRENT_CAMERA, CURRENT_STORE)
         if (!data || __.app.isEmpty(data.target)) {
-            return this.resetToTarget()
+            return this.focusToStarterPOI()
         }
         return data
     }
@@ -240,7 +240,7 @@ export class CameraManager {
      *
      */
     reset = () => {
-        this.settings = this.resetToTarget()
+        this.settings = this.focusToStarterPOI()
     }
 
     /**
@@ -248,7 +248,7 @@ export class CameraManager {
      *
      * @return the camera position nd settings
      */
-    resetToTarget = () => {
+    focusToStarterPOI = () => {
         return {
             target: {
                 longitude: lgs.settings.starter.longitude,
@@ -398,5 +398,14 @@ export class CameraManager {
         return lgs.mainProxy.components.mainUI.rotate.running
     }
 
+    /**
+     * Check app focus
+     */
+    isAppFocusOn = (type) => lgs.settings.ui.camera.start.app === type
+
+    /**
+     * Check journey focus
+     */
+    isJourneyFocusOn = (type) => lgs.settings.ui.camera.start.journey === type
 }
 
