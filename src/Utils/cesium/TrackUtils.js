@@ -438,10 +438,7 @@ export class TrackUtils {
         await Promise.all(items)
 
         await TrackUtils.createCommonMapObjectsStore()
-
         __.ui.cameraManager.settings = lgs.theJourney.cameraOrigin
-
-        await __.ui.cameraManager.stopRotate()
 
     }
 
