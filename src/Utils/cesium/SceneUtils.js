@@ -1,5 +1,5 @@
 import {
-    DRAWING, DRAWING_FROM_DB, FOCUS_LAST, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS,
+    DRAWING, DRAWING_FROM_DB, FOCUS_LAST, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS,
 }                                                                                      from '@Core/constants'
 import bbox                                                                            from '@turf/bbox'
 import centroid                                                                        from '@turf/centroid'
@@ -227,7 +227,7 @@ export class SceneUtils {
         const theBbox = SceneUtils.extendBbox(bbox(track.content), 2)
 
         let point
-        if (__.ui.cameraManager.isJourneyFocusOn(FOCUS_LAST)) {
+        if (__.ui.cameraManager.isJourneyFocusOn(FOCUS_LAST) && options.action !== REFRESH_DRAWING) {
             point = journey.camera.target
         }
         else {

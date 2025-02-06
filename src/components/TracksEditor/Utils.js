@@ -1,5 +1,5 @@
 import {
-    DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, JUST_SAVE, NO_FOCUS, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY,
+    DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, DRAWING_FROM_UI, JUST_SAVE, NO_FOCUS, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY,
 }                     from '@Core/constants'
 import { Journey }    from '@Core/Journey'
 import { Track }      from '@Core/Track'
@@ -30,7 +30,7 @@ export class Utils {
             Utils.updateJourneyEditor(event.target.value)
         }
     }
-    static updateJourneyEditor = async (journeySlug) => {
+    static updateJourneyEditor = async (journeySlug, action = DRAWING_FROM_UI) => {
         const editorStore = lgs.theJourneyEditorProxy
         editorStore.journey = lgs.getJourneyBySlug(journeySlug)
         lgs.saveJourneyInContext(editorStore.journey)
@@ -66,7 +66,7 @@ export class Utils {
         // Save information
         TrackUtils.saveCurrentJourneyToDB(event.target.value).then(async () => {
             if (editorStore.journey.visible) {
-                lgs.theJourney.focus()
+                lgs.theJourney.focus({action: action})
             }
 
             await TrackUtils.saveCurrentTrackToDB(null)
