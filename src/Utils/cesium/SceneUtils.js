@@ -1,4 +1,6 @@
-import { DRAWING, DRAWING_FROM_DB, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS } from '@Core/constants'
+import {
+    DRAWING, DRAWING_FROM_DB, FOCUS_LAST, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS,
+}                                                                                      from '@Core/constants'
 import bbox                                                                            from '@turf/bbox'
 import centroid                                                                        from '@turf/centroid'
 import { Cartesian3, Color, EasingFunction, Math as M, Matrix4, Rectangle, SceneMode } from 'cesium'
@@ -122,7 +124,7 @@ export class SceneUtils {
 
     static focus = async (point, options) => {
 
-        const height = point.height ?? point.simulatedHeight
+        const height = point?.height ?? point.simulatedHeight
         const range = options.range ?? lgs.settings.camera.range
         const pitch = M.toRadians(options.pitch ?? lgs.settings.camera.pitch)
         const heading = M.toRadians(options.heading ?? lgs.settings.camera.heading)
@@ -191,6 +193,18 @@ export class SceneUtils {
                          })
     }
 
+    static getJourneyCentroid = async (journey) => {
+        // Let's use the first track
+        const track = journey.tracks.values().next().value
+        const [longitude, latitude] = centroid(track.content).geometry.coordinates
+        const height = await __.ui.poiManager.getElevationFromTerrain({longitude: longitude, latitude: latitude})
+        return {
+            longitude: longitude,
+            latitude:  latitude,
+            height:    height,
+        }
+    }
+
     static focusOnJourney = async ({
                                        journey = null,
                                        track = null,
@@ -211,21 +225,23 @@ export class SceneUtils {
         // }
 
         const theBbox = SceneUtils.extendBbox(bbox(track.content), 2)
-        const [longitude, latitude] = centroid(track.content).geometry.coordinates
-        const center = {
-            longitude: longitude,
-            latitude:  latitude,
-            height:    await __.ui.poiManager.getElevationFromTerrain({
-                                                                          longitude: longitude, latitude: latitude,
-                                                                      }),
+
+        let point
+        if (__.ui.cameraManager.isJourneyFocusOn(FOCUS_LAST)) {
+            point = journey.camera.target
         }
+        else {
+            // Centroid
+            point = await SceneUtils.getJourneyCentroid(journey)
+        }
+
         // Depending on what we are doing, we need to convert the destination
         // from world coordinates to scene coordinates
         let convert = false
         if (__.ui.sceneManager.is2D && (options.action === DRAWING || options.action === DRAWING_FROM_DB)) {
             convert = true
         }
-        SceneUtils.focus(center, {
+        SceneUtils.focus(point, {
             pitch:    -45,
             heading:  0,
             roll:     0,

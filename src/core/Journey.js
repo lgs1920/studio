@@ -567,7 +567,7 @@ export class Journey extends MapElement {
                             caption: `${this.title}`, text: texts.get(action),
         })
 
-        if (mode === FOCUS_ON_FEATURE) {
+        if (mode === FOCUS_ON_FEATURE && action !== DRAWING_FROM_DB) {
             this.focus({action: action})
         }
 

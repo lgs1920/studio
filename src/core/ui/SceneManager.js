@@ -127,12 +127,11 @@ export class SceneManager {
     }
 
     focusPreProcessing = (point, options) => {
-        console.log('focusPreProcessing', point, options)
-        // TODO calculerici le parametres à pendre en fonctio nde l'action en cour
+        // TODO calculer ici les parametres à pendre en fonctio nde l'action en cour
     }
 
     focusPostProcessing = (point, options) => {
-        console.log(point, options)
+        // console.log(point, options)
     }
 
     focusOnJourney = (options) => {
@@ -142,6 +141,8 @@ export class SceneManager {
                                       callback:    this.focusPostProcessing,
                                   })
     }
+
+    getJourneyCentroid = async journey => await this.proxy.getJourneyCentroid(journey)
 
 
     get startRotate() {

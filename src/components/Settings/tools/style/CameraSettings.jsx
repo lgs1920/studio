@@ -77,14 +77,16 @@ export const CameraSettings = (props) => {
                 >
                     <label slot="label">{'Start focus is on:'}</label>
                     <SlRadio value={FOCUS_STARTER}>{'Starter POI'}</SlRadio>
-                    <SlRadio value={FOCUS_LAST}>{'Last Camera location'}</SlRadio>
+                    <SlRadio value={FOCUS_LAST}>{'Last Camera Location'}</SlRadio>
+                    <SlRadio value={FOCUS_CENTROID}>{'Last Journey'}</SlRadio>
+
                 </SlRadioGroup>
                 <SlRadioGroup value={lgs.settings.ui.camera.start.journey}
                               size={'small'}
                               onSlChange={handleJourneyFocus}>
                     <label slot="label">{'Journey focus is on:'}</label>
                     <SlRadio value={FOCUS_CENTROID}>{'Center'}</SlRadio>
-                    <SlRadio value={FOCUS_LAST}>{'Last Camera location'}</SlRadio>
+                    <SlRadio value={FOCUS_LAST}>{'Last Camera Location'}</SlRadio>
                 </SlRadioGroup>
             </div>
         )

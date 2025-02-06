@@ -1,20 +1,28 @@
 import { MapLayer } from '@Components/cesium/MapLayer'
 import { Viewer }   from '@Components/cesium/Viewer'
 
-import { InitErrorMessage }                                               from '@Components/InitErrorMessage'
-import { AllPOIs }                                                        from '@Components/MainUI/AllPOIs'
-import { MainUI }                                                         from '@Components/MainUI/MainUI.jsx'
+import { InitErrorMessage }                                                           from '@Components/InitErrorMessage'
+import { AllPOIs }                                                                    from '@Components/MainUI/AllPOIs'
+import {
+    MainUI,
+}                                                                                     from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import { StarterPOI }                                                     from '@Components/MainUI/StarterPOI'
-import { WelcomeModal }                                                   from '@Components/MainUI/WelcomeModal'
-import { BASE_ENTITY, BOTTOM, FOCUS_STARTER, MOBILE_MAX, OVERLAY_ENTITY } from '@Core/constants'
-import { LGS1920Context }                                                 from '@Core/LGS1920Context'
-import { LayersAndTerrainManager }                                        from '@Core/ui/LayerAndTerrainManager'
-import { TerrainUtils }                                                   from '@Utils/cesium/TerrainUtils'
-import { TrackUtils }                                                     from '@Utils/cesium/TrackUtils'
-import { UIToast }                                                        from '@Utils/UIToast'
-import { useEffect }                                                      from 'react'
-import { useMediaQuery }                                                  from 'react-responsive'
+import {
+    StarterPOI,
+}                                                                                     from '@Components/MainUI/StarterPOI'
+import {
+    WelcomeModal,
+}                                                                                     from '@Components/MainUI/WelcomeModal'
+import { BASE_ENTITY, BOTTOM, FOCUS_LAST, FOCUS_STARTER, MOBILE_MAX, OVERLAY_ENTITY } from '@Core/constants'
+import { LGS1920Context }                                                             from '@Core/LGS1920Context'
+import {
+    LayersAndTerrainManager,
+}                                                                                     from '@Core/ui/LayerAndTerrainManager'
+import { TerrainUtils }                                                               from '@Utils/cesium/TerrainUtils'
+import { TrackUtils }                                                                 from '@Utils/cesium/TrackUtils'
+import { UIToast }                                                                    from '@Utils/UIToast'
+import { useEffect }                                                                  from 'react'
+import { useMediaQuery }                                                              from 'react-responsive'
 
 /***************************************
  * Init Application context
@@ -63,43 +71,59 @@ export function LGS1920() {
                       // If initialisation phase was OK, we have somme additional tasks to do.
                       if (initApp.status) {
 
-
                           // Detect drawer over
                           __.ui.drawerManager.attachEvents()
-
-                          // Set the right terrain
-                          TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
 
                           // Set body class to manage css versus platform
                           document.body.classList.add(lgs.platform);
 
                           (async () => {
+
+                              // Set the right terrain
+                              await TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
+
                               // Read DB
                               await TrackUtils.readAllFromDB()
+
+
+                              // According to the settings and saved information, we set the camera data
+
+                              // Use app settings
                               if (__.ui.cameraManager.isAppFocusOn(FOCUS_STARTER)) {
+                                  // Starter
                                   lgs.cameraStore = __.ui.cameraManager.focusToStarterPOI()
                               }
-                              else {
-                                  //last
+                              else if (__.ui.cameraManager.isAppFocusOn(FOCUS_LAST)) {
+                                  // Last Camera Position
                                   lgs.cameraStore = await __.ui.cameraManager.readCameraInformation()
                               }
+                              else {
+                                  // App settings is last journey so what kind of focus ?
+                                  if (__.ui.cameraManager.isJourneyFocusOn(FOCUS_LAST)) {
+                                      //  Last Camera Position. On start, it is the same, whatever the journey
+                                      lgs.cameraStore = await __.ui.cameraManager.readCameraInformation()
+                                  }
+                                  else {
+                                      // Centroid
+                                      lgs.cameraStore = lgs.theJourney.camera
+                                      lgs.cameraStore.target = await __.ui.sceneManager.getJourneyCentroid(lgs.theJourney)
+                                  }
+                              }
 
-
-                              const camera = lgs.cameraStore
-                              console.log(camera)
-
-                              __.ui.sceneManager.focus(camera.target, {
-                                  heading:  camera.position.heading,
+                              // Do Focus
+                              __.ui.sceneManager.focus(lgs.cameraStore.target, {
+                                  heading:  lgs.cameraStore.position.heading,
                                   pitch:    (lgs.settings.starter.camera.canRotate || __.ui.sceneManager.noRelief())
-                                            ? camera.position.pitch
+                                            ? lgs.cameraStore.position.pitch
                                             : -90,
-                                  roll:     camera.position.roll,
-                                  range:    camera.position.range,
+                                  roll:     lgs.cameraStore.position.roll,
+                                  range:    lgs.cameraStore.position.range,
                                   infinite: true,
                                   rotate:   true,
                                   lookAt:   true,
                                   rpm:      lgs.settings.starter.camera.rpm,
                               })
+
 
                               console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
                               console.log(`Connected to backend ${lgs.versions.backend}.`)
