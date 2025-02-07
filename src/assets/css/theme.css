@@ -193,6 +193,10 @@ sl-button::part(spinner) {
     padding: 0;
 }
 
+.square-icon[disabled]::part(base) {
+    color: var(--lgs-disabled-color)
+}
+
 .square-icon::part(label) {
     display: flex;
     align-items: center;
