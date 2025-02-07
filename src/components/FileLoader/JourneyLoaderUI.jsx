@@ -6,19 +6,19 @@ import {
 }                                                        from '@fortawesome/pro-solid-svg-icons'
 
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
+import {
+    JOURNEY_DENIED, JOURNEY_OK, JOURNEY_WAITING, SUPPORTED_EXTENSIONS, TrackUtils,
+}                                     from '@Utils/cesium/TrackUtils'
 import { FA2SL }                      from '@Utils/FA2SL'
+import {
+    DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
+    FileUtils,
+}                                     from '@Utils/FileUtils'
 import parse                          from 'html-react-parser'
 import { useEffect, useRef }          from 'react'
 import { Scrollbars }                 from 'react-custom-scrollbars'
 import { sprintf }                    from 'sprintf-js'
 import { useSnapshot }                from 'valtio'
-import {
-    JOURNEY_DENIED, JOURNEY_OK, JOURNEY_WAITING, SUPPORTED_EXTENSIONS, TrackUtils,
-} from '@Utils/cesium/TrackUtils'
-import {
-    DRAG_AND_DROP_FILE_ACCEPTED, DRAG_AND_DROP_FILE_PARTIALLY, DRAG_AND_DROP_FILE_REJECTED, DRAG_AND_DROP_FILE_WAITING,
-    FileUtils,
-} from '@Utils/FileUtils'
 import { DragNDropFile }              from './DragNDropFile'
 
 /**
@@ -326,13 +326,7 @@ export const JourneyLoaderUI = (props) => {
 
     useEffect(() => {
         const dialogPanel = fileLoaderRef.current.shadowRoot.querySelector('[part="panel"]')
-
-        dialogPanel.addEventListener('mouseover', __.ui.cameraManager.pauseOrbital)
-        dialogPanel.addEventListener('mouseout', __.ui.cameraManager.relaunchOrbital)
-
         return () => {
-            dialogPanel.removeEventListener('mouseover', __.ui.cameraManager.pauseOrbital)
-            dialogPanel.removeEventListener('mouseout', __.ui.cameraManager.relaunchOrbital)
         }
     }, [])
 

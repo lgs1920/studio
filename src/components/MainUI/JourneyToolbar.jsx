@@ -43,7 +43,7 @@ export const JourneyToolbar = (props) => {
 
     const newJourneySelection = async (event) => {
         clearTimeout(timer)
-        await Utils.updateJourneyEditor(event.target.value)
+        await Utils.updateJourneyEditor(event.target.value, {})
     }
 
     useEffect(() => {

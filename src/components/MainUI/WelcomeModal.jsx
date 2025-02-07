@@ -28,7 +28,6 @@ export const WelcomeModal = () => {
         setOpen(false)
         lgs.mainUIStore.show = true
         main.components.welcome.hidden = true
-        main.components.welcome.flag = true
     }
 
     function showNews() {

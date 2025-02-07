@@ -568,7 +568,7 @@ export class Journey extends MapElement {
         })
 
         if (mode === FOCUS_ON_FEATURE && action !== DRAWING_FROM_DB) {
-            this.focus({action: action})
+            this.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})
         }
 
 

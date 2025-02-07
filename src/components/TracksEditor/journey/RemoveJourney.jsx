@@ -83,7 +83,7 @@ export const RemoveJourney = (props) => {
         if (mainStore.components.journeyEditor.list.length >= 1) {
             // New current is the first.
             lgs.theJourney = lgs.getJourneyBySlug(mainStore.components.journeyEditor.list[0])
-            lgs.theJourney.focus()
+            lgs.theJourney.focus({rotate: lgs.settings.ui.camera.start.rotate.journey})
             lgs.theTrack = lgs.theJourney.tracks.values().next().value
             lgs.theTrack.addToEditor()
             Utils.renderJourneysList()

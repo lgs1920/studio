@@ -277,7 +277,7 @@ export const JourneySettings = function JourneySettings() {
                     await Utils.updateJourney(SIMULATE_ALTITUDE)
 
                     // And update editor
-                    Utils.updateJourneyEditor(theJourney.slug)
+                    Utils.updateJourneyEditor(theJourney.slug, {})
 
                     // If the Profile UI is open, we re-sync it
                     __.ui.profiler.draw()
@@ -333,7 +333,11 @@ export const JourneySettings = function JourneySettings() {
      */
     const focusOnJourney = async () => {
         await setJourneyVisibility(true)
-        lgs.theJourney.focus({resetCamera: true, action: REFRESH_DRAWING, rotate: true})
+        lgs.theJourney.focus({
+                                 resetCamera: true,
+                                 action:      REFRESH_DRAWING,
+                                 rotate:      lgs.settings.ui.camera.start.rotate.journey,
+                             })
     }
 
     const textVisibilityJourney = sprintf('%s Journey', editorSnapshot.journey.visible ? 'Hide' : 'Show')

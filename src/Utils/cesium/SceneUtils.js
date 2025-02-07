@@ -1,5 +1,6 @@
 import {
-    DRAWING, DRAWING_FROM_DB, FOCUS_LAST, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS,
+    ADD_JOURNEY, DRAWING, DRAWING_FROM_DB, FOCUS_LAST, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D,
+    SCENE_MODE_COLUMBUS,
 }                                                                                      from '@Core/constants'
 import bbox                                                                            from '@turf/bbox'
 import centroid                                                                        from '@turf/centroid'
@@ -188,6 +189,7 @@ export class SceneUtils {
                                  else {
                                      __.ui.sceneManager.stopRotate
                                      __.ui.cameraManager.lookAt(target)
+                                     __.ui.cameraManager.unlock()
                                  }
                              },
                          })
@@ -227,8 +229,11 @@ export class SceneUtils {
         const theBbox = SceneUtils.extendBbox(bbox(track.content), 2)
 
         let point
-        if (__.ui.cameraManager.isJourneyFocusOn(FOCUS_LAST) && options.action !== REFRESH_DRAWING) {
-            point = journey.camera.target
+        if (__.ui.cameraManager.isJourneyFocusOn(FOCUS_LAST)
+            && options.action !== REFRESH_DRAWING && options.action !== ADD_JOURNEY) {
+            if (journey?.camera) {
+                point = journey.camera.target
+            }
         }
         else {
             // Centroid
@@ -246,14 +251,13 @@ export class SceneUtils {
             heading:  0,
             roll:     0,
             range:    10000,
-            rotate:   true,
             lookAt:   true,
             rpm:      1,
             rotation: 1,
             infinite: false,
             bbox:    {data: theBbox, id: track.slug, show: false},
             convert: convert,
-
+            rotate: options.rotate,
             action:      options.action,
             resetCamera: options.resetCamera,
             callback:    options.callback,

@@ -17,7 +17,11 @@ export const FocusButton = (props) => {
             lgs.theJourney.updateVisibility(visibility)
             await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         }
-        lgs.theJourney.focus({resetCamera: true, action: REFRESH_DRAWING, rotate: true})
+        lgs.theJourney.focus({
+                                 resetCamera: true,
+                                 action:      REFRESH_DRAWING,
+                                 rotate:      lgs.settings.ui.camera.start.rotate.journey,
+                             })
     }
     return (
         <>

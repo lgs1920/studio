@@ -1,6 +1,6 @@
 import {
-    APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DRAWING, DRAWING_FROM_DB, DRAWING_FROM_UI,
-    FOCUS_ON_FEATURE, NO_FOCUS, SCENE_MODE_2D,
+    ADD_JOURNEY, APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DRAWING, DRAWING_FROM_DB,
+    DRAWING_FROM_UI, FOCUS_ON_FEATURE, NO_FOCUS, SCENE_MODE_2D,
 }                                                  from '@Core/constants'
 import { Journey }                                 from '@Core/Journey'
 import { default as centroid }                     from '@turf/centroid'
@@ -695,7 +695,7 @@ export class TrackUtils {
                     await theJourney.saveOriginDataToDB()
 
                     mainStore.canViewJourneyData = true
-                    await theJourney.draw({})
+                    await theJourney.draw({action: ADD_JOURNEY})
 
                     await __.ui.cameraManager.stopRotate()
 

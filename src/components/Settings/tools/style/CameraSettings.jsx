@@ -14,6 +14,7 @@ export const CameraSettings = (props) => {
     }
 
     const camera = useSnapshot(lgs.editorSettingsProxy.camera)
+    const settings = useSnapshot(lgs.settings.ui.camera)
     const targetPosition = useRef(null)
     lgs.editorSettingsProxy.camera.showTargetPosition = lgs.settings.ui.camera.showTargetPosition
 
@@ -23,13 +24,13 @@ export const CameraSettings = (props) => {
                 {useSnapshot(lgs.settings.scene.mode).value * 1 === SCENE_MODE_3D.value &&
                     <>
                         <div className="horizontal-alignment">
-                            <SlSwitch size="small" align-right checked={lgs.settings.ui.camera.showPosition}
+                            <SlSwitch size="small" align-right checked={settings.showPosition}
                                       onSlChange={(event) => lgs.settings.ui.camera.showPosition = switchValue(event)}>
                                 {'Show Position'}
                                 <span slot="help-text">{'Longitude, Latitude, Altitude'}</span>
                             </SlSwitch>
 
-                            <SlSwitch size="small" align-right checked={lgs.settings.ui.camera.showHPR}
+                            <SlSwitch size="small" align-right checked={settings.showHPR}
                                       onSlChange={(event) => lgs.settings.ui.camera.showHPR = switchValue(event)}>
                                 {'Show HPR'}
                                 <span slot="help-text">{'Head, Pitch, Roll'}</span>
@@ -41,7 +42,7 @@ export const CameraSettings = (props) => {
                 }
 
                 <div className="horizontal-alignment">
-                    <SlSwitch size="small" align-right checked={lgs.settings.ui.camera.targetIcon.show}
+                    <SlSwitch size="small" align-right checked={settings.targetIcon.show}
                               onSlChange={(event) => {
                                   lgs.settings.ui.camera.targetIcon.show = switchValue(event)
                                   if (!lgs.settings.ui.camera.targetIcon.show) {
@@ -71,24 +72,38 @@ export const CameraSettings = (props) => {
 
     const TabPosition = () => {
         return (
-            <div className="horizontal-alignment two-columns">
-                <SlRadioGroup value={lgs.settings.ui.camera.start.app}
-                              size={'small'} onSlChange={handleStartFocus}
-                >
-                    <label slot="label">{'Start focus is on:'}</label>
-                    <SlRadio value={FOCUS_STARTER}>{'Starter POI'}</SlRadio>
-                    <SlRadio value={FOCUS_LAST}>{'Last Camera Location'}</SlRadio>
-                    <SlRadio value={FOCUS_CENTROID}>{'Last Journey'}</SlRadio>
+            <>
+                <div className="horizontal-alignment two-columns">
+                    <SlRadioGroup value={settings.start.app}
+                                  size={'small'} onSlChange={handleStartFocus}
+                    >
+                        <label slot="label">{'Start focus:'}</label>
+                        <SlRadio value={FOCUS_STARTER}>{'Starter POI'}</SlRadio>
+                        <SlRadio value={FOCUS_LAST}>{'Last Camera Location'}</SlRadio>
+                        <SlRadio value={FOCUS_CENTROID}>{'Last Journey'}</SlRadio>
+                    </SlRadioGroup>
 
-                </SlRadioGroup>
-                <SlRadioGroup value={lgs.settings.ui.camera.start.journey}
-                              size={'small'}
-                              onSlChange={handleJourneyFocus}>
-                    <label slot="label">{'Journey focus is on:'}</label>
-                    <SlRadio value={FOCUS_CENTROID}>{'Center'}</SlRadio>
-                    <SlRadio value={FOCUS_LAST}>{'Last Camera Location'}</SlRadio>
-                </SlRadioGroup>
-            </div>
+                    <SlRadioGroup value={settings.start.journey}
+                                  size={'small'}
+                                  onSlChange={handleJourneyFocus}>
+                        <label slot="label">{'Journey focus:'}</label>
+                        <SlRadio value={FOCUS_CENTROID}>{'Center'}</SlRadio>
+                        <SlRadio value={FOCUS_LAST}>{'Last Camera Location'}</SlRadio>
+                    </SlRadioGroup>
+                </div>
+                <div className="horizontal-alignment two-columns">
+                    <SlSwitch size="small" align-right checked={settings.start.rotate.app}
+                              onSlChange={(event) => lgs.settings.ui.camera.start.rotate.app = switchValue(event)}>
+                        {'Rotation after focus'}
+                    </SlSwitch>
+
+                    <SlSwitch size="small" align-right checked={settings.start.rotate.journey}
+                              onSlChange={(event) => lgs.settings.ui.camera.start.rotate.journey = switchValue(event)}>
+                        {'Rotation after focus'}
+                    </SlSwitch>
+                </div>
+            </>
+
         )
     }
 

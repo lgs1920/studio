@@ -68,24 +68,6 @@ export class CameraManager {
         }
     }
 
-    /**
-     * Pause orbital movements
-     *
-     */
-    pauseOrbital = () => {
-        this.orbitalInPause = true
-        __.ui.sceneManager.stopRotate
-    }
-
-    /**
-     * relaunch Orbital movements after a pause
-     *
-     */
-    relaunchOrbital = () => {
-        this.orbitalInPause = false
-        __.ui.sceneManager.startRotate
-    }
-
     targetInPixels = () => {
         const pixels = this.proxy.getTargetPositionInPixels(this.target)
         this.target.x = pixels?.x
@@ -378,7 +360,7 @@ export class CameraManager {
      */
     stopRotate = async () => {
         if (this.isRotating()) {
-            this.proxy.unlock(lgs.camera)
+            this.unlock()
             __.ui.sceneManager.stopRotate
             cancelAnimationFrame(this.move.animation)
 
@@ -407,5 +389,13 @@ export class CameraManager {
      * Check journey focus
      */
     isJourneyFocusOn = (type) => lgs.settings.ui.camera.start.journey === type
+
+    /**
+     * Unlock the camera
+     */
+    unlock = () => {
+        this.proxy.unlock(lgs.camera)
+    }
+
 }
 

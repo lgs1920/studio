@@ -113,13 +113,11 @@ export function LGS1920() {
                               // Do Focus
                               __.ui.sceneManager.focus(lgs.cameraStore.target, {
                                   heading:  lgs.cameraStore.position.heading,
-                                  pitch:    (lgs.settings.starter.camera.canRotate || __.ui.sceneManager.noRelief())
-                                            ? lgs.cameraStore.position.pitch
-                                            : -90,
+                                  pitch:  __.ui.sceneManager.noRelief() ? -90 : lgs.cameraStore.position.pitch,
                                   roll:     lgs.cameraStore.position.roll,
                                   range:    lgs.cameraStore.position.range,
                                   infinite: true,
-                                  rotate:   true,
+                                  rotate: lgs.settings.ui.camera.start.rotate.app,
                                   lookAt:   true,
                                   rpm:      lgs.settings.starter.camera.rpm,
                               })

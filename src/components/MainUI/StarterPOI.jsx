@@ -19,7 +19,7 @@ export const StarterPOI = (props) => {
     return (
 
         <>
-            {__.ui.sceneManager.is3D && !welcome.modal && welcome.flag && !lgs.theJourney &&
+            {__.ui.sceneManager.is3D && !welcome.modal &&
                 <POI point={point}/>
             }
         </>

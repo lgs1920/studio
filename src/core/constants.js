@@ -220,6 +220,7 @@ export const DRAWING = 0
 export const DRAWING_FROM_UI = 1
 export const DRAWING_FROM_DB = 3
 export const REFRESH_DRAWING = 2
+export const ADD_JOURNEY = 9
 export const FOCUS_ON_FEATURE = 1
 export const NO_FOCUS = 2
 

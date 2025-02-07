@@ -27,12 +27,16 @@ export class Utils {
 
     static initJourneyEdition = async (event = undefined) => {
         if (window.isOK(event)) {
-            Utils.updateJourneyEditor(event.target.value)
+            Utils.updateJourneyEditor(event.target.value, {})
         }
     }
-    static updateJourneyEditor = async (journeySlug, action = DRAWING_FROM_UI) => {
+    static updateJourneyEditor = async (journeySlug, {
+        rotate = lgs.settings.ui.camera.start.rotate.journey,
+        action = DRAWING_FROM_UI,
+    }) => {
         const editorStore = lgs.theJourneyEditorProxy
         editorStore.journey = lgs.getJourneyBySlug(journeySlug)
+        console.log(editorStore.journey.camera.target.height)
         lgs.saveJourneyInContext(editorStore.journey)
 
 
@@ -66,7 +70,7 @@ export class Utils {
         // Save information
         TrackUtils.saveCurrentJourneyToDB(event.target.value).then(async () => {
             if (editorStore.journey.visible) {
-                lgs.theJourney.focus({action: action})
+                lgs.theJourney.focus({action: action, rotate: rotate})
             }
 
             await TrackUtils.saveCurrentTrackToDB(null)
@@ -92,7 +96,7 @@ export class Utils {
             // Save information
             TrackUtils.saveCurrentTrackToDB(event.target.value).then(async () => {
                 if (editorStore.journey.visible) {
-                    editorStore.journey.focus()
+                    editorStore.journey.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})
                 }
                 await TrackUtils.saveCurrentPOIToDB(null)
 
@@ -143,7 +147,7 @@ export class Utils {
         if (action !== UPDATE_JOURNEY_SILENTLY) {
             await journey.draw({action: action})
         } else {
-            journey.focus()
+            journey.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})
         }
         return journey
     }
