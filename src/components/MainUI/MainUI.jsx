@@ -5,6 +5,7 @@ import { GeocodingUI }                      from '@Components/MainUI/geocoding/G
 import { JourneyToolbar }                   from '@Components/MainUI/JourneyToolbar'
 import { RotateButton }                     from '@Components/MainUI/RotateButton'
 import { Profile }                          from '@Components/Profile/Profile'
+import { ProfileButton }                    from '@Components/Profile/ProfileButton'
 import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
 import {
     BOTTOM, DESKTOP_MIN, END, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
@@ -168,6 +169,8 @@ export const MainUI = () => {
                             <SettingsButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                             <LayersButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                             <JourneyToolbar tooltip={'top'}></JourneyToolbar>
+                            <ProfileButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
+
                             <InformationButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                             <SupportUIButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                         </div>
@@ -177,9 +180,7 @@ export const MainUI = () => {
                                 <SceneModeSelector tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingButton tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
                                 <RotateButton tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
-
                                 <FullScreenButton/>
-
                                 <GeocodingUI/>
 
                             </div>

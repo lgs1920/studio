@@ -1,6 +1,5 @@
 import { JourneyLoaderButton }                  from '@Components/FileLoader/JourneyLoaderButton'
 import { FocusButton }                          from '@Components/MainUI/FocusButton'
-import { ProfileButton }                        from '@Components/Profile/ProfileButton'
 import { REMOVE_JOURNEY_IN_TOOLBAR, SECOND }    from '@Core/constants'
 import { JourneySelector }                      from '@Editor/journey/JourneySelector'
 import { RemoveJourney }                        from '@Editor/journey/RemoveJourney'
@@ -22,7 +21,6 @@ export const JourneyToolbar = (props) => {
     const settings = useSnapshot(lgs.settings.ui.menu)
     const fileLoader = props?.fileloader ?? true
     const editor = props?.editor ?? true
-    const profile = props?.profile ?? true
     const distance = __.tools.rem2px(__.ui.css.getCSSVariable('lgs-gutter-s'))
     const tooltip = props?.tooltip ?? 'top-left'
 
@@ -90,7 +88,6 @@ export const JourneyToolbar = (props) => {
                         <JourneySelector onChange={newJourneySelection} single="true" style="card"/>
                         <FocusButton tooltip={tooltip}/>
                         {editor && <TracksEditorButton tooltip={tooltip}/>}
-                        {profile && <ProfileButton tooltip={tooltip}/>}
                         <RemoveJourney style={'button'} name={REMOVE_JOURNEY_IN_TOOLBAR}/>
                     </div>
 
