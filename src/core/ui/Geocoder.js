@@ -74,7 +74,7 @@ export class Geocoder {
         }
         catch (error) {
             console.error(error)
-            return false
+            return {error: error.message}
         }
         return this.results
 

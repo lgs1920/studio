@@ -20,9 +20,16 @@ export const GeocodingUI = () => {
         event.preventDefault()
         store.dialog.loading = true
         store.dialog.noResults = false
+        store.dialog.error = false
         if (!store.dialog.submitDisabled) {
             __.ui.geocoder.search(address.current.value).then((results) => {
                 store.dialog.loading = false
+
+                if (results.error) {
+                    store.dialog.error = {message: results.error}
+                    return
+                }
+
                 if (results.size > 0) {
                     results.forEach((value, key) => {
                         store.list.set(key, value)

@@ -1,5 +1,5 @@
 import { faChevronRight, faTriangleExclamation, faXmark } from '@fortawesome/pro-regular-svg-icons'
-import { faSearch }                                       from '@fortawesome/pro-solid-svg-icons'
+import { faBomb, faSearch }                               from '@fortawesome/pro-solid-svg-icons'
 import { SlAlert, SlButton, SlDivider, SlIcon }           from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                          from '@Utils/FA2SL'
 import { useLayoutEffect, useRef }                        from 'react'
@@ -67,6 +67,12 @@ export const SelectLocation = ({select, address, submit}) => {
                 <SlAlert variant="warning" open>
                     <SlIcon slot="icon" library="fa" name={FA2SL.set(faTriangleExclamation)}/>
                     {'There are no results matching your search!'}
+                </SlAlert>
+            }
+            {snap.dialog.visible && snap.dialog.error &&
+                <SlAlert variant="danger" open>
+                    <SlIcon slot="icon" library="fa" name={FA2SL.set(faBomb)}/>
+                    {snap.dialog.error.message}
                 </SlAlert>
             }
 
