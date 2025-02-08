@@ -36,7 +36,6 @@ export class Utils {
     }) => {
         const editorStore = lgs.theJourneyEditorProxy
         editorStore.journey = lgs.getJourneyBySlug(journeySlug)
-        console.log(editorStore.journey.camera.target.height)
         lgs.saveJourneyInContext(editorStore.journey)
 
 
