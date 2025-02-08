@@ -89,9 +89,8 @@ export const JourneyToolbar = (props) => {
                                    settings.toolBar.fromStart ? 'lgs-slide-in-from-left' : 'lgs-slide-in-from-right')}>
                         {fileLoader && <JourneyLoaderButton tooltip={tooltip}/>}
                         <JourneySelector onChange={newJourneySelection} single="true" style="card"/>
-                        {editorStore.journey.visible && <FocusButton tooltip={tooltip}/>}
                         <JourneyVisibilityButton/>
-
+                        {editorStore.journey.visible && <FocusButton tooltip={tooltip}/>}
                         {editor && <TracksEditorButton tooltip={tooltip}/>}
                         <RemoveJourney style={'button'} name={REMOVE_JOURNEY_IN_TOOLBAR}/>
                     </div>

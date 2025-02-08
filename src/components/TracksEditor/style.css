@@ -65,21 +65,20 @@ sl-tab sl-icon {
 }
 
 .journey-title {
-    display: inline-flex;
-    min-width: 8rem;
-    max-width: min(25rem, 100%);
+    min-width: 10rem;
+    max-width: min(30rem, 100%);
     font-weight: 700;
-    align-items: center;
     max-height: var(--lgs-line-dimension);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.journey-title-icon {
+.journey-title-prefix {
     width: 1.2rem;
     margin-right: var(--lgs-gutter-s);;
 }
+
 
 .settings-panel {
     display: flex;
