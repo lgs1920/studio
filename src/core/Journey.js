@@ -1,6 +1,6 @@
 import {
     DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JOURNEYS_STORE, JSON_, KML, KMZ, NO_FOCUS,
-    ORIGIN_STORE, REFRESH_DRAWING, SIMULATE_ALTITUDE, TRACK_SLUG,
+    ORIGIN_STORE, REFRESH_DRAWING, SIMULATE_ALTITUDE, TRACK_SLUG, UPDATE_JOURNEY_SILENTLY,
 }                                      from '@Core/constants'
 import {
     gpx, kml,
@@ -567,7 +567,7 @@ export class Journey extends MapElement {
                             caption: `${this.title}`, text: texts.get(action),
         })
 
-        if (mode === FOCUS_ON_FEATURE && action !== DRAWING_FROM_DB) {
+        if (mode === FOCUS_ON_FEATURE && action !== DRAWING_FROM_DB && action !== UPDATE_JOURNEY_SILENTLY) {
             this.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})
         }
 

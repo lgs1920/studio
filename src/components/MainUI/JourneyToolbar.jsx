@@ -1,5 +1,6 @@
 import { JourneyLoaderButton }                  from '@Components/FileLoader/JourneyLoaderButton'
 import { FocusButton }                          from '@Components/MainUI/FocusButton'
+import { JourneyVisibilityButton }              from '@Components/MainUI/JourneyVisibilityButton'
 import { REMOVE_JOURNEY_IN_TOOLBAR, SECOND }    from '@Core/constants'
 import { JourneySelector }                      from '@Editor/journey/JourneySelector'
 import { RemoveJourney }                        from '@Editor/journey/RemoveJourney'
@@ -10,7 +11,7 @@ import { SlButton, SlIcon, SlPopup, SlTooltip } from '@shoelace-style/shoelace/d
 import { FA2SL }                                from '@Utils/FA2SL'
 import classNames                               from 'classnames'
 import { useEffect, useRef }                    from 'react'
-import { useSnapshot }                          from 'valtio/index'
+import { useSnapshot }                          from 'valtio'
 
 export const JourneyToolbar = (props) => {
 
@@ -23,6 +24,8 @@ export const JourneyToolbar = (props) => {
     const editor = props?.editor ?? true
     const distance = __.tools.rem2px(__.ui.css.getCSSVariable('lgs-gutter-s'))
     const tooltip = props?.tooltip ?? 'top-left'
+    const editorStore = useSnapshot(lgs.theJourneyEditorProxy)
+
 
     let timer
 
@@ -86,7 +89,9 @@ export const JourneyToolbar = (props) => {
                                    settings.toolBar.fromStart ? 'lgs-slide-in-from-left' : 'lgs-slide-in-from-right')}>
                         {fileLoader && <JourneyLoaderButton tooltip={tooltip}/>}
                         <JourneySelector onChange={newJourneySelection} single="true" style="card"/>
-                        <FocusButton tooltip={tooltip}/>
+                        {editorStore.journey.visible && <FocusButton tooltip={tooltip}/>}
+                        <JourneyVisibilityButton/>
+
                         {editor && <TracksEditorButton tooltip={tooltip}/>}
                         <RemoveJourney style={'button'} name={REMOVE_JOURNEY_IN_TOOLBAR}/>
                     </div>
