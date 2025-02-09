@@ -8,13 +8,13 @@ export const AllPOIs = (props) => {
 
     return (
 
-        <>
+        <div id="POIs-list">
             {__.ui.sceneManager.is3D && Array.from(list.keys()).map((key) => (
                 key !== STARTER_POI && (
                     <POI key={key} point={__.ui.poiManager.list.get(key)}/>
                 )
             ))}
-        </>
+        </div>
     )
 
 }
