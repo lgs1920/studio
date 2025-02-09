@@ -83,3 +83,15 @@ select-location-wrapper .select-location-item:last-child {
     line-height: 0.9;
     text-align: end
 }
+
+.exact-geocoding {
+    display: flex;
+    width: min(15rem, 100%);
+    margin-left: auto;
+    margin-right: calc(var(--lgs-dimension) + var(--lgs-gutter-xs));
+}
+
+.exact-geocoding sl-switch {
+    width: 100%;
+}
+
