@@ -199,7 +199,13 @@ export class SceneUtils {
         // Let's use the first track
         const track = journey.tracks.values().next().value
         const [longitude, latitude] = centroid(track.content).geometry.coordinates
-        const height = await __.ui.poiManager.getElevationFromTerrain({longitude: longitude, latitude: latitude})
+        let height = 0
+        try {
+            height = await __.ui.poiManager.getElevationFromTerrain({longitude: longitude, latitude: latitude})
+        }
+        catch (error) {
+            console.error(error)
+        }
         return {
             longitude: longitude,
             latitude:  latitude,
