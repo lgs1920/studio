@@ -189,7 +189,7 @@ providers:
         type: base
         credits: Crédits BNF - IGN
 
-      ## IGN CASSINI
+      ## IGN ETAT MAJOR
       - name: IGN Etat Major\(1820-1866)
         id: ign-em-1820
         image: ign-em-1820.png
@@ -206,7 +206,22 @@ providers:
         doc: 'https://data.geopf.fr'
         type: base
         #
+        ## IGN RANDO HIVERNALE
+      - name: IGN Winter Trek
+        id: ign-winter-trek
+        image: ign-winter-trek.png
+        usage:
+          type: free
+          doc: ''
 
+        tile: wmts
+        url: 'https://data.geopf.fr/wmts'
+        layer: TRACES.RANDO.HIVERNALE
+        style: normal
+        format: image/png
+        tileMatrixSetID: PM
+        doc: 'https://data.geopf.fr'
+        type: overlay
   ## WayMarked Trail Provider
   - id: wmt
     name: WayMarked Trail
