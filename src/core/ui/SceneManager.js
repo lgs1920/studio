@@ -154,4 +154,11 @@ export class SceneManager {
         lgs.mainProxy.components.mainUI.rotate.running = false
         return lgs.mainProxy.components.mainUI.rotate.running
     }
+
+    /**
+     * Clone any event and propagate it to the canvas
+     *
+     * @param event
+     */
+    propagateEventToCanvas = (event) => this.proxy.propagateEventToCanvas(event)
 }
