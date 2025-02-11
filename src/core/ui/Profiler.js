@@ -1,13 +1,13 @@
 import { faMountains }                                   from '@fortawesome/pro-regular-svg-icons'
 import { faArrowLeftLongToLine, faArrowRightLongToLine } from '@fortawesome/pro-solid-svg-icons'
+import { FA2SL }                                         from '@Utils/FA2SL'
+import { DISTANCE_UNITS, ELEVATION_UNITS }               from '@Utils/UnitUtils'
 import * as echarts                                      from 'echarts/core'
 
-import { DateTime }                        from 'luxon'
-import { sprintf }                         from 'sprintf-js'
-import { FA2SL }                           from '@Utils/FA2SL'
-import { DISTANCE_UNITS, ELEVATION_UNITS } from '@Utils/UnitUtils'
-import { ProfileTrackMarker }              from '../ProfileTrackMarker'
-import { Track }                           from '../Track'
+import { DateTime }           from 'luxon'
+import { sprintf }            from 'sprintf-js'
+import { ProfileTrackMarker } from '../ProfileTrackMarker'
+import { Track }              from '../Track'
 
 export class Profiler {
 
@@ -301,8 +301,10 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.getUnitSyst
            lgs.theTrack.marker = new ProfileTrackMarker(
                {
                    track:lgs.theTrack,
+                   visible: false,
                    color:color??lgs.theTrack.color,
-                   border:{color:borderColor??'transparent'}}
+                   border:  {color: borderColor ?? 'transparent'},
+               },
            )
             __.ui.wanderer.marker  =lgs.theTrack.marker
         }
