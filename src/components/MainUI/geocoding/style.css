@@ -54,6 +54,7 @@
     padding-right: var(--lgs-gutter);
     align-items: center;
     line-height: 1.3;
+    background: transparent;
 }
 
 select-location-wrapper .select-location-item:last-child {
@@ -63,7 +64,7 @@ select-location-wrapper .select-location-item:last-child {
 .select-location-wrapper .select-location-item:hover {
     width: 100%;
     cursor: pointer;
-    background: transparent;
+    background: var(--lgs-hover-context-menu-bg-color);
 }
 
 .select-location-wrapper .select-location-item span {

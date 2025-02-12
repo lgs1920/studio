@@ -111,6 +111,7 @@
 
     --lgs-card-on-map-bg-color: hsla(87.6 61.2% 20.2%/0.7);
     --lgs-card-on-map-border-color: hsla(79.6 89.1% 89.2% / 0.18);
+    --lgs-card-on-map-hover-bg-color: #ffffff22;
 
 
     --lgs-track-color-active: var(--lgs-dark-ui-secondary-color);
@@ -544,6 +545,39 @@ sl-details::part(content) {
     color: var(--sl-color-primary-700);
 }
 
+/*******************************************************************************
+ * Context menu
+ ******************************************************************************/
+.lgs-context-menu {
+    padding: 0;
+    margin: 0;
+}
+
+:root {
+    --lgs-hover-context-menu-bg-color: var(--lgs-card-on-map-hover-bg-color)
+}
+
+.lgs-context-menu ul {
+    margin: 0;
+    padding: 0 var(--lgs-gutter-xs);
+    list-style: none;
+}
+
+.lgs-context-menu li {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--lgs-gutter-xs);
+    border-radius: var(--lgs-border-radius-xs);
+    cursor: pointer;
+}
+
+.lgs-context-menu li:hover {
+    background: var(--lgs-hover-context-menu-bg-color);
+}
+
+.lgs-context-menu sl-icon {
+    margin-right: var(--lgs-gutter-s);
+}
 /*******************************************************************************
  * Form elements
  ******************************************************************************/

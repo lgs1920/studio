@@ -1,7 +1,12 @@
-import { SlMenu, SlMenuItem, SlPopup } from '@shoelace-style/shoelace/dist/react'
-import { useRef, useState }            from 'react'
-import Timeout                         from 'smart-timeout'
-import { useSnapshot }                 from 'valtio'
+import {
+    faArrowsFromLine, faArrowsToLine, faCopy, faLocationDot, faLocationDotSlash,
+}                                  from '@fortawesome/pro-regular-svg-icons'
+import { faMask, faPen }           from '@fortawesome/pro-solid-svg-icons'
+import { SlIcon, SlPopup }         from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                   from '@Utils/FA2SL'
+import React, { useRef, useState } from 'react'
+import Timeout                     from 'smart-timeout'
+import { useSnapshot }             from 'valtio'
 
 export const POIContextualMenu = ({point}) => {
 
@@ -25,17 +30,40 @@ export const POIContextualMenu = ({point}) => {
                          anchor={snap.current.id}
                          active={snap.context.visible}
                 >
-                    <div className="poi-on-map-menu lgs-card on-map"
+                    <div className="lgs-context-menu poi-on-map-menu lgs-card on-map"
                          onPointerLeave={() => Timeout.restart(lgs.mainProxy.components.pois.context.timer)}
                          onPointerEnter={() => Timeout.pause(lgs.mainProxy.components.pois.context.timer)}
                     >
-                        <SlMenu>
-                            <SlMenuItem value="undo">Undo</SlMenuItem>
-                            <SlMenuItem value="redo">Redo</SlMenuItem>
-                            <SlMenuItem value="cut">Cut</SlMenuItem>
-                            <SlMenuItem value="copy">Copy</SlMenuItem>
-                            <SlMenuItem value="paste">Paste</SlMenuItem>
-                        </SlMenu>
+                        <ul>
+                            <li>
+                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationDot)}></SlIcon>
+                                <span>Save as POI</span>
+                            </li>
+                            <li>
+                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationDotSlash)}></SlIcon>
+                                <span>Remove</span>
+                            </li>
+                            <li>
+                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPen)}></SlIcon>
+                                <span>Edit</span>
+                            </li>
+                            <li>
+                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsToLine)}></SlIcon>
+                                <span>Shrink</span>
+                            </li>
+                            <li>
+                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsFromLine)}></SlIcon>
+                                <span>Expand</span>
+                            </li>
+                            <li>
+                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMask)}></SlIcon>
+                                <span>Hide</span>
+                            </li>
+                            <li>
+                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCopy)}></SlIcon>
+                                <span>Copy Coords</span>
+                            </li>
+                        </ul>
                     </div>
                 </SlPopup>
             }

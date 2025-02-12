@@ -77,9 +77,11 @@ export const POI = ({point}) => {
 
     const handleContextMenu = (event) => {
         event.preventDefault()
-        lgs.mainProxy.components.pois.context.visible = true
-        lgs.mainProxy.components.pois.current = point
-        __.ui.sceneManager.propagateEventToCanvas(event)
+        if (!__.ui.cameraManager.isRotating()) {
+            lgs.mainProxy.components.pois.context.visible = true
+            lgs.mainProxy.components.pois.current = point
+            __.ui.sceneManager.propagateEventToCanvas(event)
+        }
     }
     const POIContent = ({point}) => {
         return (
