@@ -2,7 +2,6 @@ import { MapLayer } from '@Components/cesium/MapLayer'
 import { Viewer }   from '@Components/cesium/Viewer'
 
 import { InitErrorMessage }                                                           from '@Components/InitErrorMessage'
-import { AllPOIs }                                                                    from '@Components/MainUI/AllPOIs'
 import {
     MainUI,
 }                                                                                     from '@Components/MainUI/MainUI.jsx'
@@ -172,7 +171,6 @@ export function LGS1920() {
                     <MainUI/>
 
                     <StarterPOI/>
-                    <AllPOIs/>
 
                 </>
 

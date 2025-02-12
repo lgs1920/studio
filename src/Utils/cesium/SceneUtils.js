@@ -305,5 +305,20 @@ export class SceneUtils {
         return [bbox[0] - x * w, bbox[1] - y * h, bbox[2] + x * w, bbox[3] + y * h]
     }
 
+    /**
+     * Clone any event and propagate it to the canvas
+     *
+     * @param event
+     */
+    static propagateEventToCanvas = (event) => {
+        // We create a clone Event from React or JS
+        const NativeEvent = event?.nativeEvent?.constructor ?? event.constructor
+        let clone = new NativeEvent(event.type, event)
+        clone.preventDefault()
+        event.stopPropagation()
+        // Then propagate it to the Cesium Canvas
+        lgs.viewer.canvas.dispatchEvent(clone)
+    }
+
 
 }

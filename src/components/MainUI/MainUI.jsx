@@ -1,8 +1,10 @@
 import { CompassUI }                        from '@Components/cesium/CompassUI/CompassUI'
 import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
+import { AllPOIs }                          from '@Components/MainUI/AllPOIs'
 import { GeocodingButton }                  from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }                      from '@Components/MainUI/geocoding/GeocodingUI'
 import { JourneyToolbar }                   from '@Components/MainUI/JourneyToolbar'
+import { POIContextualMenu }                from '@Components/MainUI/POIContextualMenu'
 import { RotateButton }                     from '@Components/MainUI/RotateButton'
 import { Profile }                          from '@Components/Profile/Profile'
 import { ProfileButton }                    from '@Components/Profile/ProfileButton'
@@ -11,7 +13,6 @@ import {
     BOTTOM, DESKTOP_MIN, END, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
     MENU_START_START, MOBILE_MAX, SCENE_MODE_2D, SECOND, START, TOP,
 }                                           from '@Core/constants'
-import { CanvasEvents }                     from '@Core/events/CanvasEvents.js'
 import { useEffect }                        from 'react'
 
 import './style.css'
@@ -59,8 +60,8 @@ export const MainUI = () => {
         }
 
         // Manage canvas related events
-        CanvasEvents.attach()
-        // CanvasEvents.addListeners()
+        //CanvasEvents.attach()
+        //CanvasEvents.addListeners()
 
     }, [])
 
@@ -213,9 +214,13 @@ export const MainUI = () => {
                 <SettingsPanel/>
                 <LayersPanel/>
                 <TracksEditor/>
+
             </div>
+            <AllPOIs/>
+
             <SupportUIDialog/>
             <JourneyLoaderUI multiple/>
+            <POIContextualMenu/>
 
 
         </>

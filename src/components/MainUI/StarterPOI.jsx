@@ -14,8 +14,6 @@ export const StarterPOI = (props) => {
                                            id:        STARTER_POI,
                                        })
 
-    __.ui.poiManager.add(point)
-
     return (
 
         <>

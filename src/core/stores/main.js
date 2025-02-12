@@ -48,15 +48,12 @@ export const main = {
                 },
             },
         },
-        floatingMenu: {
-            coordinates: {x: 0, y: -9999},
-            delay: 3,
-            type: undefined,
-            target: undefined,
-            show: true,
-            latitude: 0,
-            longitude: 0,
-            altitude: 0,
+        pois: {
+            current: false,
+            context: {
+                visible: false,
+                timer:   'context-timer',
+            },
         },
         profile: {
             visible: false,
