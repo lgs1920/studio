@@ -1,10 +1,10 @@
 import { CompassUI }                        from '@Components/cesium/CompassUI/CompassUI'
 import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
-import { AllPOIs }                          from '@Components/MainUI/AllPOIs'
 import { GeocodingButton }                  from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }                      from '@Components/MainUI/geocoding/GeocodingUI'
 import { JourneyToolbar }                   from '@Components/MainUI/JourneyToolbar'
-import { POIContextualMenu }                from '@Components/MainUI/POIContextualMenu'
+import { MapPOICluster }                    from '@Components/MainUI/MapPOICluster'
+import { MapPOIContextMenu }                from '@Components/MainUI/MapPOIContextMenu'
 import { RotateButton }                     from '@Components/MainUI/RotateButton'
 import { Profile }                          from '@Components/Profile/Profile'
 import { ProfileButton }                    from '@Components/Profile/ProfileButton'
@@ -206,8 +206,6 @@ export const MainUI = () => {
                     <CreditsBar/>
                 </div>
 
-
-                {/* <FloatingMenu/> */}
                 <CameraAndTargetPanel/>
                 <Profile/>
                 <InformationPanel/>
@@ -216,11 +214,11 @@ export const MainUI = () => {
                 <TracksEditor/>
 
             </div>
-            <AllPOIs/>
+            <MapPOICluster/>
 
             <SupportUIDialog/>
             <JourneyLoaderUI multiple/>
-            <POIContextualMenu/>
+            <MapPOIContextMenu/>
 
 
         </>

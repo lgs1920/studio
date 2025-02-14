@@ -1,27 +1,38 @@
 import { MapLayer } from '@Components/cesium/MapLayer'
 import { Viewer }   from '@Components/cesium/Viewer'
 
-import { InitErrorMessage }                                                           from '@Components/InitErrorMessage'
+import { InitErrorMessage } from '@Components/InitErrorMessage'
 import {
     MainUI,
-}                                                                                     from '@Components/MainUI/MainUI.jsx'
+}                           from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
 import {
-    StarterPOI,
-}                                                                                     from '@Components/MainUI/StarterPOI'
-import {
     WelcomeModal,
-}                                                                                     from '@Components/MainUI/WelcomeModal'
-import { BASE_ENTITY, BOTTOM, FOCUS_LAST, FOCUS_STARTER, MOBILE_MAX, OVERLAY_ENTITY } from '@Core/constants'
-import { LGS1920Context }                                                             from '@Core/LGS1920Context'
+}                           from '@Components/MainUI/WelcomeModal'
+import {
+    BASE_ENTITY, BOTTOM, FOCUS_LAST, FOCUS_STARTER, MOBILE_MAX, OVERLAY_ENTITY, STARTER_POI, STARTER_TYPE,
+}                           from '@Core/constants'
+import {
+    LGS1920Context,
+}                           from '@Core/LGS1920Context'
 import {
     LayersAndTerrainManager,
-}                                                                                     from '@Core/ui/LayerAndTerrainManager'
-import { TerrainUtils }                                                               from '@Utils/cesium/TerrainUtils'
-import { TrackUtils }                                                                 from '@Utils/cesium/TrackUtils'
-import { UIToast }                                                                    from '@Utils/UIToast'
-import { useEffect }                                                                  from 'react'
-import { useMediaQuery }                                                              from 'react-responsive'
+}                           from '@Core/ui/LayerAndTerrainManager'
+import {
+    TerrainUtils,
+}                           from '@Utils/cesium/TerrainUtils'
+import {
+    TrackUtils,
+}                           from '@Utils/cesium/TrackUtils'
+import {
+    UIToast,
+}                           from '@Utils/UIToast'
+import {
+    useEffect,
+}                           from 'react'
+import {
+    useMediaQuery,
+}                           from 'react-responsive'
 
 /***************************************
  * Init Application context
@@ -84,6 +95,16 @@ export function LGS1920() {
                               // Read DB
                               await TrackUtils.readAllFromDB()
 
+                              // Add starter
+                              __.ui.poiManager.add({
+                                                       longitude: lgs.settings.starter.longitude,
+                                                       latitude:  lgs.settings.starter.latitude,
+                                                       height:    lgs.settings.starter.height,
+                                                       title:     lgs.settings.starter.name,
+                                                       color:     lgs.settings.starter.color,
+                                                       id:        STARTER_POI,
+                                                       type:      STARTER_TYPE,
+                                                   })
 
                               // According to the settings and saved information, we set the camera data
 
@@ -169,8 +190,6 @@ export function LGS1920() {
 
                     <Viewer/>
                     <MainUI/>
-
-                    <StarterPOI/>
 
                 </>
 

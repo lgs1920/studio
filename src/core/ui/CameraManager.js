@@ -1,6 +1,7 @@
 import { CURRENT_CAMERA, CURRENT_STORE, JOURNEYS_STORE, MILLIS, MINUTE } from '@Core/constants'
 
 import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
+import { UIToast }     from '@Utils/UIToast'
 import { snapshot }    from 'valtio'
 import { deepClone }   from 'valtio/utils'
 import { Journey }     from '../Journey'
@@ -296,7 +297,8 @@ export class CameraManager {
             target:   {
                 longitude: point.longitude,
                 latitude:  point.latitude,
-                height: point.height ?? point.simulatedHeight,
+                height:          point.height,
+                simulatedHeight: point.simulatedHeight,
             },
             position: {
                 heading: point.camera.heading,
@@ -395,6 +397,16 @@ export class CameraManager {
      */
     unlock = () => {
         this.proxy.unlock(lgs.camera)
+    }
+
+    panoramic = () => {
+        UIToast.warning({
+                            caption: `Panoramic is not yet available`,
+                            text:    'Please use another feature!',
+                        })
+    }
+    stopPanoramic = () => {
+
     }
 
 }

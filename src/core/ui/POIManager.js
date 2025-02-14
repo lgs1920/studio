@@ -1,7 +1,9 @@
-import { POI_THRESHOLD_DISTANCE, STARTER_POI } from '@Core/constants'
-import { TrackUtils }                          from '@Utils/cesium/TrackUtils'
-import { KM }                                  from '@Utils/UnitUtils'
-import { v4 as uuid }                          from 'uuid'
+import { POI_STANDARD_TYPE, POI_THRESHOLD_DISTANCE, STARTER_POI, STARTER_TYPE } from '@Core/constants'
+import { MapPOI }                                                               from '@Core/MapPOI'
+import { Export }                                                               from '@Core/ui/Export'
+import { TrackUtils }                                                           from '@Utils/cesium/TrackUtils'
+import { KM }                                                                   from '@Utils/UnitUtils'
+import { v4 as uuid }                                                           from 'uuid'
 
 export class POIManager {
 
@@ -33,26 +35,25 @@ export class POIManager {
     }
 
     get list() {
-        return lgs.mainProxy.components.poi.list
+        return lgs.mainProxy.components.pois.list
     }
 
 
     /**
      * Adds a new POI to the map
      *
-     * @param {Object} newPoi - The new POI object
+     * @param {Object} poi - The new POI object
      *
-     * @return {object|false} - The new POI or false if it is closer than others
+     * @return {MapPOI|false} - The new POI or false if it is closer than others
      */
-    add = (newPoi) => {
-        const id = newPoi.id ?? uuid()
-        newPoi.id = id
-        if (this.isTooCloseThanExistingPoints(newPoi, this.threshold)) {
+    add = (poi) => {
+        poi.id = poi.id ?? uuid()
+        if (this.isTooCloseThanExistingPoints(poi, this.threshold)) {
             return false
         }
 
-        this.list.set(id, {...newPoi, ...this.poiDefaultStatus})
-        return this.list.get(id)
+        this.list.set(poi.id, new MapPOI({...poi, ...this.poiDefaultStatus}))
+        return this.list.get(poi.id)
     }
 
     /**
@@ -60,7 +61,7 @@ export class POIManager {
      *
      * @param {string} id - The ID of the POI to remove
      */
-    remove = (pois, id) => {
+    remove = (id) => {
         this.list.delete(id)
     }
 
@@ -73,7 +74,7 @@ export class POIManager {
     update = (id, updates) => {
         const poi = this.list.get(id)
         if (poi) {
-            this.list.set(id, {...poi, ...updates})
+            this.list.set(id, poi.update(updates))
             return this.list.get(id)
         }
         return false
@@ -139,5 +140,40 @@ export class POIManager {
         return TrackUtils.getElevationFromTerrain(point)
     }
 
+    copyCoordinatesToClipboard = async (point) => {
+        return Export.toClipboard(`${point.latitude}, ${point.longitude}`)
+    }
 
+    getPOIByKeyValue = (key, value) => {
+        const result = []
+        this.list.forEach(poi => {
+            if (poi[key] === value) {
+                result.push(poi)
+            }
+        })
+        return result
+    }
+
+    setStarter = (current) => {
+        const starter = this.getPOIByKeyValue('type', STARTER_TYPE)[0]
+        if (starter) {
+            // We force the former type of the starter and apply the right color
+            this.list.set(starter.id, starter.update({
+                                                         type:  starter.formerType ?? POI_STANDARD_TYPE,
+                                                         color: lgs.settings.ui.poi.defaultColor,
+                                                     }))
+
+            console.log(starter)
+
+            // Then mark the current as Starter with the right color
+            this.list.set(current.id, current.update({
+                                                         formerType: current.type ?? POI_STANDARD_TYPE,
+                                                         type:       STARTER_TYPE,
+                                                         color:      lgs.settings.starter.color,
+                                                     }))
+
+            return current
+        }
+        return false
+    }
 }

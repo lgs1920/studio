@@ -575,9 +575,15 @@ sl-details::part(content) {
     background: var(--lgs-hover-context-menu-bg-color);
 }
 
+.lgs-context-menu sl-divider {
+    --color: var(--lgs-card-on-map-border-color);
+);
+}
+
 .lgs-context-menu sl-icon {
     margin-right: var(--lgs-gutter-s);
 }
+
 /*******************************************************************************
  * Form elements
  ******************************************************************************/

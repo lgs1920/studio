@@ -191,6 +191,20 @@ export class SceneUtils {
                                      __.ui.cameraManager.lookAt(target)
                                      __.ui.cameraManager.unlock()
                                  }
+                                 //
+                                 // if (options.panoramic ?? false) {
+                                 //     __.ui.cameraManager.panoramic(target, {
+                                 //         rpm:       options.rpm ?? lgs.settings.camera.rpm,
+                                 //         infinite: options.infinite ?? true,
+                                 //         fps:       lgs.settings.camera.fps,
+                                 //         rotations: options.rotations ?? lgs.settings.camera.rotations,
+                                 //         lookAt:    true,
+                                 //     })
+                                 // } else {
+                                 //     __.ui.sceneManager.stopPanoramic
+                                 //     __.ui.cameraManager.lookAt(target)
+                                 //     __.ui.cameraManager.unlock()
+                                 // }
                              },
                          })
     }

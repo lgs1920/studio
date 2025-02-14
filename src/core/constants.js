@@ -70,6 +70,13 @@ export const CURRENT_CAMERA = 'camera'
 export const CURRENT_POI = 'poi'
 export const STARTER_POI = `starter-${APP_KEY}`
 export const POI_THRESHOLD_DISTANCE = 200 // meters
+export const STARTER_TYPE = 'starter'
+export const FLAG_START_TYPE = 'start'
+export const FLAG_STOP_TYPE = 'stop'
+export const POI_TRACK_TYPE = 'track'
+export const POI_STANDARD_TYPE = 'poi'
+export const POI_TMP_TYPE = undefined
+
 
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2

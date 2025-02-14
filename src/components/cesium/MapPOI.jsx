@@ -1,52 +1,55 @@
-import { SECOND }                                   from '@Core/constants'
-import { POIUtils }                                 from '@Utils/cesium/POIUtils'
-import { SceneUtils }                               from '@Utils/cesium/SceneUtils'
-import { UIUtils }                                  from '@Utils/UIUtils'
-import { ELEVATION_UNITS }                          from '@Utils/UnitUtils'
-import classNames                                   from 'classnames'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import Timeout                                      from 'smart-timeout'
-import { TextValueUI }                              from '../TextValueUI/TextValueUI'
+import { SECOND }                                         from '@Core/constants'
+import { POIUtils }                                       from '@Utils/cesium/POIUtils'
+import { SceneUtils }                                     from '@Utils/cesium/SceneUtils'
+import { UIUtils }                                        from '@Utils/UIUtils'
+import { ELEVATION_UNITS }                                from '@Utils/UnitUtils'
+import classNames                                         from 'classnames'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import Timeout                                            from 'smart-timeout'
+import { TextValueUI }                                    from '../TextValueUI/TextValueUI'
 
-export const POI = ({point}) => {
+export const MapPOI = memo((props) => {
+    console.log('ok')
+    const pois = lgs.mainProxy.components.pois
+    let point = pois.list.get(props.point)
 
-    if (point === undefined) {
+    if (!point || !point.latitude || !point.longitude) {
         return null
     }
 
-    if (point.simulatedHeight) {
-        point.height = undefined
-    }
-
     const poi = useRef(null)
+    // On garde le state pour le moment
     const [_point, updatePoint] = useState(point)
     const [pixels, setPixels] = useState({x: 0, y: 0})
     const [color] = useState(_point.color ?? lgs.settings.ui.poi.defaultColor)
     const inner = useRef(null)
 
+
     const getPixelsCoordinates = useCallback(() => {
         const tmp = {}
-
-        tmp.frontOfTerrain = POIUtils.isPointVisible(_point)
+        tmp.frontOfTerrain = POIUtils.isPointVisible(point.coordinates)
 
         if (tmp.frontOfTerrain) {
-            const coordinates = SceneUtils.getPixelsCoordinates(_point)
+            const coordinates = SceneUtils.getPixelsCoordinates(point.coordinates)
             if (coordinates) {
-                setPixels(coordinates)
+                setPixels(prev =>
+                              (prev.x !== coordinates.x || prev.y !== coordinates.y)
+                              ? coordinates
+                              : prev,
+                )
             }
 
-            const {scale, flagVisible, visible} = POIUtils.adaptScaleToDistance(_point)
+            const {scale, flagVisible, visible} = POIUtils.adaptScaleToDistance(point.coordinates)
             tmp.scale = scale
             tmp.showFlag = flagVisible
-            tmp.showPOI = visible
+            tmp.visible = visible
         }
-        if (Object.keys(tmp).some(attribute => _point[attribute] !== tmp[attribute])) {
-            updatePoint(__.ui.poiManager.update(poi.current.id, tmp))
+
+        if (Object.keys(tmp).some(attribute => point[attribute] !== tmp[attribute])) {
+            __.ui.poiManager.update(poi.current.id, tmp)
         }
-        point = _point
+    }, [point])
 
-
-    }, [_point])
 
     useEffect(() => {
 
@@ -66,6 +69,7 @@ export const POI = ({point}) => {
             }
         }
     })
+
 
     const hideMenu = (event) => {
         lgs.mainProxy.components.pois.context.visible = false
@@ -99,17 +103,17 @@ export const POI = ({point}) => {
                             <><h3>{point.title ?? 'Point Of Interest'}</h3>
                                 {point.scale > 0.6 &&
                                     <div className="poi-full-coordinates">
-                                        {point.height > 0 && (
+                                        {!point.simulatedHeight &&
                                             <TextValueUI className="poi-elevation"
                                                          text={'Elevation: '}
                                                          value={point.height}
                                                          format={'%d'}
                                                          units={ELEVATION_UNITS}
                                             />
-                                        )}
-                                        {!point.height > 0 && (
+                                        }
+                                        {point.simulatedHeight &&
                                             <span>&nbsp;</span>
-                                        )}
+                                        }
                                         <div className="poi-coordinates">
                                             <span>{UIUtils.toDMS(point.latitude)}, {UIUtils.toDMS(point.longitude)}</span>
                                             <br/>
@@ -154,7 +158,7 @@ export const POI = ({point}) => {
                         onPointerDown={hideMenu}
                         onPointerUp={hideMenu}
                         onWheel={hideMenu}>
-                        {_point?.withinScreenLimits && _point?.frontOfTerrain && _point?.showPOI &&
+                        {_point?.withinScreenLimits && _point?.frontOfTerrain && _point?.visible &&
                             <POIContent point={_point}/>
                         }
                     </div>
@@ -163,4 +167,5 @@ export const POI = ({point}) => {
             }
         </>
     )
-}
+
+})

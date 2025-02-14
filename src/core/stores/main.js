@@ -49,6 +49,7 @@ export const main = {
             },
         },
         pois: {
+            list: new proxyMap(),
             current: false,
             context: {
                 visible: false,
@@ -88,10 +89,6 @@ export const main = {
         welcome: {
             modal: false,
             flag:  false,
-        },
-
-        poi: {
-            list: new proxyMap(),
         },
 
         geocoder: {

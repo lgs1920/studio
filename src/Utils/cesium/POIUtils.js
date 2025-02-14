@@ -222,7 +222,7 @@ export class POIUtils {
 
     /**
      *
-     * @param point  {longitude,latitude,height}
+     * @param point  {longitude,latitude,height,simulatedHeight}
      * @return {boolean}
      */
     static isPointVisible = (point) => {
