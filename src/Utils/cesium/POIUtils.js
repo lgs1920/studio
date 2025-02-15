@@ -264,7 +264,7 @@ export class POIUtils {
         const visible = scale > scaler.minScale
         const flagVisible = visible && scale <= scaler.minScaleFlag
 
-        return {scale, flagVisible, visible}
+        return {scale: scale, flagVisible: flagVisible, visible: visible}
     }
 
     //

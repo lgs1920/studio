@@ -7,14 +7,6 @@ import { v4 as uuid }                                                           
 
 export class POIManager {
 
-    poiDefaultStatus = {
-        withinScreenLimits: null,
-        frontOfTerrain:     true,
-        scale:              1,
-        showFlag:           null,
-        showPOI:            true,
-    }
-
     threshold = POI_THRESHOLD_DISTANCE
 
     constructor() {
@@ -25,9 +17,7 @@ export class POIManager {
 
         this.observer = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
-                const data = this.list.get(entry.target.id) ?? this.poiDefaultStatus
-                data.withinScreenLimits = entry !== undefined ? entry.isIntersecting : true
-                this.update(entry.target.id, data)
+                Object.assign(this.list.get(entry.target.id), {withinScreenLimits: entry.isIntersecting})
             })
         }, {ratio: 1, rootMargin: '-64px'})
 
@@ -162,8 +152,6 @@ export class POIManager {
                                                          type:  starter.formerType ?? POI_STANDARD_TYPE,
                                                          color: lgs.settings.ui.poi.defaultColor,
                                                      }))
-
-            console.log(starter)
 
             // Then mark the current as Starter with the right color
             this.list.set(current.id, current.update({

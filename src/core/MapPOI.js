@@ -10,12 +10,18 @@ export class MapPOI {
      * @type {string}
      */
     color
-    /** @typ {boolean} */
+    /**
+     * @type {boolean}
+     */
     expanded = true
     /**
      * @type {boolean}
      */
-    frontOfTerrain
+    flagVisible = undefined
+    /**
+     * @type {boolean}
+     */
+    frontOfTerrain = true
     /**
      * @type {number}
      */
@@ -39,11 +45,11 @@ export class MapPOI {
     /**
      * @type {number}
      */
-    scale
+    scale = 1
     /**
      * @type {boolean}
      */
-    visible
+    visible = true
     /**
      * @type {number}
      */
@@ -60,7 +66,7 @@ export class MapPOI {
     /**
      * @type {boolean}
      */
-    withinScreenLimits
+    withinScreenLimits = null
 
     /**
      * Initializes a new instance of the MapPOI class.
