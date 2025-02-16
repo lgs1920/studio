@@ -49,12 +49,17 @@ export class MapPOI {
     /**
      * @type {number}
      */
+    over = false
+
+    /**
+     * @type {number}
+     */
     scale = 1
 
     /**
      * @type {boolean}
      */
-    showFlag = undefined
+    showFlag = false
 
     /**
      * @type {string}

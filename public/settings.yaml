@@ -212,8 +212,8 @@ ui:
 
   ## POI
   poi:
-    minScaleFlag: 0.4                   # minimum POI size before replacing by flag (30% of max)
-    minScale: 0.1                       # minScale before masking (15% of max)
+    minScaleFlag: 0.7                   # minimum POI size before replacing by flag (70% of max)
+    minScale: 0.3                       # minScale before masking (30% of max)
     distanceThreshold: 8000             # min distance to see POI with 100% size
 
     defaultColor: "#FAFAFA"             # Hexa

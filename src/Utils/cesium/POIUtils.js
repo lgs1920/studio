@@ -263,7 +263,6 @@ export class POIUtils {
         const scale = Math.max(scaler.minScale, Math.min(1 / (Cartesian3.distance(cartesian, cameraPosition) / scaler.distanceThreshold), 1))
         const tooFar = scale <= scaler.minScale
         const flagVisible = !tooFar && scale <= scaler.minScaleFlag
-
         return {scale: scale, showFlag: flagVisible, tooFar: tooFar}
     }
 

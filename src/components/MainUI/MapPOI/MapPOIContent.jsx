@@ -69,9 +69,9 @@ export const MapPOIContent = ({point, hide}) => {
                             )}
                         </>
                     }
-                    {point.showFlag || !point.expanded && !point.over &&
+                    {(point.showFlag || (!point.expanded && !point.over)) && (
                         <FontAwesomeIcon icon={point.icon} className="poi-as-flag"/>
-                    }
+                    )}
                 </div>
                 <div className="poi-on-map-marker"></div>
             </div>
