@@ -96,7 +96,7 @@
 }
 
 .poi-on-map-inner .poi-elevation {
-    line-height: 1
+    line-height: 1;
     margin-top: var(--lgs-gutter-s);
 }
 
@@ -109,7 +109,7 @@
     gap: var(--lgs-gutter-s);
 }
 
-.poi-on-map .poi-shrinked, {
+.poi-on-map .poi-shrinked {
     width: 0;
     height: 0;
     border-top: 15px solid transparent;

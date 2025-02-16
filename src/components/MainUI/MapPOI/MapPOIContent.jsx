@@ -1,6 +1,6 @@
 import { TextValueUI }       from '@Components/TextValueUI/TextValueUI'
 import { SECOND }            from '@Core/constants'
-import { faFlagSwallowtail } from '@fortawesome/duotone-regular-svg-icons'
+import { faFlagSwallowtail } from '@fortawesome/duotone-light-svg-icons'
 import { FontAwesomeIcon }   from '@fortawesome/react-fontawesome'
 import { UIUtils }           from '@Utils/UIUtils'
 import { ELEVATION_UNITS }   from '@Utils/UnitUtils'
@@ -43,7 +43,7 @@ export const MapPOIContent = ({point, hide}) => {
                                 {!point.simulatedHeight && (
                                     <TextValueUI
                                         className="poi-elevation"
-                                        text={'Elevation: '}
+                                        text={'Altitude: '}
                                         value={point.height}
                                         format={'%d'}
                                         units={ELEVATION_UNITS}
@@ -67,7 +67,7 @@ export const MapPOIContent = ({point, hide}) => {
                     </>
                 )}
                 {point.showFlag || !point.expanded &&
-                    <FontAwesomeIcon icon={faFlagSwallowtail} className="fa poi-as-flag" swap-opacity/>
+                    <FontAwesomeIcon icon={faFlagSwallowtail} className="poi-as-flag"/>
                 }
             </div>
             <div className="poi-on-map-marker"></div>
