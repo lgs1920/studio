@@ -1,14 +1,15 @@
 import { POI_STANDARD_TYPE, STARTER_TYPE } from '@Core/constants'
 import {
-    faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCopy, faFlag, faLocationDot, faLocationDotSlash, faPanorama,
+    faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationDotSlash, faPanorama, faPen,
 }                                          from '@fortawesome/pro-regular-svg-icons'
-import { faMask, faPen }                   from '@fortawesome/pro-solid-svg-icons'
+import { faFlagSwallowtail, faMask }       from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlPopup }                 from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                           from '@Utils/FA2SL'
 import { UIToast }                         from '@Utils/UIToast'
-import React, { useRef, useState }         from 'react'
+import React, { useRef }                   from 'react'
 import Timeout                             from 'smart-timeout'
 import { snapshot, useSnapshot }           from 'valtio'
+import './style.css'
 
 /**
  * Represents the context menu for interacting with Points of Interest (POI) on the map.
@@ -24,8 +25,6 @@ export const MapPOIContextMenu = () => {
 
     const anchor = useRef(null)
     const snap = useSnapshot(lgs.mainProxy.components.pois)
-    const [timeoutId, setTimeoutId] = useState(null)
-
 
     /**
      * Hides the menu in the application by resuming the context timer and updating visibility settings.
@@ -191,8 +190,8 @@ export const MapPOIContextMenu = () => {
                             </li>
                             {snap.current.expanded &&
                                 <li onClick={shrink}>
-                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsToLine)}></SlIcon>
-                                    <span>Shrink</span>
+                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFlagSwallowtail)}></SlIcon>
+                                    <span>Reduce</span>
                                 </li>
                             }
 

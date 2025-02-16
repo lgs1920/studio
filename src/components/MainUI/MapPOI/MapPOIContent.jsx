@@ -1,11 +1,14 @@
-import { TextValueUI }     from '@Components/TextValueUI/TextValueUI'
-import { SECOND }          from '@Core/constants'
-import { UIUtils }         from '@Utils/UIUtils'
-import { ELEVATION_UNITS } from '@Utils/UnitUtils'
-import { useRef }          from 'react'
-import Timeout             from 'smart-timeout'
+import { TextValueUI }       from '@Components/TextValueUI/TextValueUI'
+import { SECOND }            from '@Core/constants'
+import { faFlagSwallowtail } from '@fortawesome/duotone-regular-svg-icons'
+import { FontAwesomeIcon }   from '@fortawesome/react-fontawesome'
+import { UIUtils }           from '@Utils/UIUtils'
+import { ELEVATION_UNITS }   from '@Utils/UnitUtils'
+import { useRef }            from 'react'
+import Timeout               from 'smart-timeout'
+import './style.css'
 
-export const MapPOIContent = ({point}) => {
+export const MapPOIContent = ({point, hide}) => {
     const inner = useRef(null)
 
     const handleContextMenu = (event) => {
@@ -23,10 +26,11 @@ export const MapPOIContent = ({point}) => {
                 className="poi-on-map-inner"
                 ref={inner}
                 onContextMenu={handleContextMenu}
+                onClick={handleContextMenu}
                 onPointerLeave={() => {
                     Timeout.set(
                         lgs.mainProxy.components.pois.context.timer,
-                        hideMenu,
+                        hide,
                         1.5 * SECOND,
                     )
                 }}
@@ -62,7 +66,9 @@ export const MapPOIContent = ({point}) => {
                         )}
                     </>
                 )}
-                {point.showFlag || !point.expanded && <div className="flag-as-triangle">&nbsp;</div>}
+                {point.showFlag || !point.expanded &&
+                    <FontAwesomeIcon icon={faFlagSwallowtail} className="fa poi-as-flag" swap-opacity/>
+                }
             </div>
             <div className="poi-on-map-marker"></div>
         </div>

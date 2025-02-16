@@ -1,5 +1,6 @@
 import { useSnapshot } from 'valtio'
-import { MapPOI }      from '../cesium/MapPOI'
+import { MapPOI }      from '../../cesium/MapPOI'
+import './style.css'
 
 /**
  * Functional React component that handles displaying a cluster of Points of Interest (POI) on the scene.

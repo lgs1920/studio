@@ -1,4 +1,4 @@
-import { MapPOIContent }                                  from '@Components/MainUI/MapPOIContent'
+import { MapPOIContent }                                  from '@Components/MainUI/MapPOI/MapPOIContent'
 import { POIUtils }                                       from '@Utils/cesium/POIUtils'
 import { SceneUtils }                                     from '@Utils/cesium/SceneUtils'
 import classNames                                         from 'classnames'
@@ -94,7 +94,7 @@ export const MapPOI = memo(({point: pointId}) => {
                     onWheel={hideMenu}
                 >
                     {point.withinScreen && point.frontOfTerrain && point.visible && !point.tooFar &&
-                        <MapPOIContent point={point}/>
+                        <MapPOIContent point={point} hide={hideMenu}/>
                     }
                 </div>
             )}
