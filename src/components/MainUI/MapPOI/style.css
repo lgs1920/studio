@@ -123,3 +123,12 @@
     --fa-secondary-opacity: 0.8;
 }
 
+.poi-on-map-wrapper .poi-icons {
+    font-size: var(--lgs-font-size-m);
+    position: absolute;
+    left: -2rem;
+    display: flex;
+    flex-direction: column;
+    padding-right: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}

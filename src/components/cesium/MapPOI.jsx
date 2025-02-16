@@ -89,7 +89,7 @@ export const MapPOI = memo(({point: pointId}) => {
                         (point?.showFlag || !point?.expanded) && !point?.over ? 'poi-shrinked' : '',
                     )}
                     ref={poi}
-                    id={point.id}
+                    id={`${point.id}`}
                     style={{
                         bottom:                     window.innerHeight - pixels.y,
                         left:                       pixels.x,
