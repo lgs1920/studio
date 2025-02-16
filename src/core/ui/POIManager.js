@@ -17,7 +17,7 @@ export class POIManager {
 
         this.observer = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
-                Object.assign(this.list.get(entry.target.id), {withinScreenLimits: entry.isIntersecting})
+                Object.assign(this.list.get(entry.target.id), {withinScreen: entry.isIntersecting})
             })
         }, {ratio: 1, rootMargin: '-64px'})
 
@@ -148,17 +148,17 @@ export class POIManager {
         const starter = this.getPOIByKeyValue('type', STARTER_TYPE)[0]
         if (starter) {
             // We force the former type of the starter and apply the right color
-            this.list.set(starter.id, starter.update({
-                                                         type:  starter.formerType ?? POI_STANDARD_TYPE,
-                                                         color: lgs.settings.ui.poi.defaultColor,
-                                                     }))
+            Object.assign(this.list.get(starter.id), {
+                type:  starter.formerType ?? POI_STANDARD_TYPE,
+                color: lgs.settings.ui.poi.defaultColor,
+            })
 
             // Then mark the current as Starter with the right color
-            this.list.set(current.id, current.update({
-                                                         formerType: current.type ?? POI_STANDARD_TYPE,
-                                                         type:       STARTER_TYPE,
-                                                         color:      lgs.settings.starter.color,
-                                                     }))
+            Object.assign(this.list.get(current.id), {
+                formerType: current.type ?? POI_STANDARD_TYPE,
+                type:       STARTER_TYPE,
+                color:      lgs.settings.starter.color,
+            })
 
             return current
         }

@@ -1,14 +1,14 @@
-import { STARTER_TYPE }            from '@Core/constants'
+import { POI_STANDARD_TYPE, STARTER_TYPE } from '@Core/constants'
 import {
     faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCopy, faFlag, faLocationDot, faLocationDotSlash, faPanorama,
-}                                  from '@fortawesome/pro-regular-svg-icons'
-import { faMask, faPen }           from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlPopup }         from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                   from '@Utils/FA2SL'
-import { UIToast }                 from '@Utils/UIToast'
-import React, { useRef, useState } from 'react'
-import Timeout                     from 'smart-timeout'
-import { snapshot, useSnapshot }   from 'valtio'
+}                                          from '@fortawesome/pro-regular-svg-icons'
+import { faMask, faPen }                   from '@fortawesome/pro-solid-svg-icons'
+import { SlIcon, SlPopup }                 from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                           from '@Utils/FA2SL'
+import { UIToast }                         from '@Utils/UIToast'
+import React, { useRef, useState }         from 'react'
+import Timeout                             from 'smart-timeout'
+import { snapshot, useSnapshot }           from 'valtio'
 
 /**
  * Represents the context menu for interacting with Points of Interest (POI) on the map.
@@ -36,10 +36,26 @@ export const MapPOIContextMenu = () => {
         lgs.mainProxy.components.pois.current = false
     }
 
-    const mask = () => {
-
+    const saveAsPOI = () => {
+        Object.assign(__.ui.poiManager.list.get(snap.current.id), {
+            type: POI_STANDARD_TYPE,
+        })
+        hideMenu()
     }
 
+    const mask = () => {
+        __.ui.poiManager.list.get(snap.current.id).visible = false
+    }
+
+    const shrink = () => {
+        __.ui.poiManager.list.get(snap.current.id).expanded = false
+        hideMenu()
+    }
+
+    const expand = () => {
+        __.ui.poiManager.list.get(snap.current.id).expanded = true
+        hideMenu()
+    }
 
     /**
      * Handles the rotation behavior of the camera based on the current state.
@@ -74,7 +90,6 @@ export const MapPOIContextMenu = () => {
     const setAsStarter = () => {
         const poi = __.ui.poiManager.setStarter(snap.current)
         if (poi) {
-            lgs.mainProxy.components.pois.current = poi
             UIToast.success({
                                 caption: `${snap.current.title}`,
                                 text:    'Set as new starter POI.',
@@ -151,14 +166,16 @@ export const MapPOIContextMenu = () => {
                          onPointerEnter={() => Timeout.pause(lgs.mainProxy.components.pois.context.timer)}
                     >
                         <ul>
-                            <li>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationDot)}></SlIcon>
-                                <span>Save as POI</span>
-                            </li>
+                            {snap.current.type === undefined &&
+                                <li onClick={saveAsPOI}>
+                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationDot)}></SlIcon>
+                                    <span>Save as POI</span>
+                                </li>
+                            }
                             {snap.current.type !== STARTER_TYPE &&
                                 <li onClick={setAsStarter}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFlag)}></SlIcon>
-                                    <span>Mark as Starter</span>
+                                    <span>Set as Starter</span>
                                 </li>
                             }
                             {snap.current.type !== STARTER_TYPE &&
@@ -167,18 +184,25 @@ export const MapPOIContextMenu = () => {
                                     <span>Remove</span>
                                 </li>
                             }
+
                             <li>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPen)}></SlIcon>
                                 <span>Edit</span>
                             </li>
-                            <li>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsToLine)}></SlIcon>
-                                <span>Shrink</span>
-                            </li>
-                            <li>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsFromLine)}></SlIcon>
-                                <span>Expand</span>
-                            </li>
+                            {snap.current.expanded &&
+                                <li onClick={shrink}>
+                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsToLine)}></SlIcon>
+                                    <span>Shrink</span>
+                                </li>
+                            }
+
+                            {!snap.current.expanded &&
+                                <li onClick={expand}>
+                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsFromLine)}></SlIcon>
+                                    <span>Expand</span>
+                                </li>
+                            }
+
                             {snap.current.type !== STARTER_TYPE &&
                                 <li onClick={mask}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMask)}></SlIcon>

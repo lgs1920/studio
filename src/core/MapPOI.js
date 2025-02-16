@@ -6,67 +6,91 @@ export class MapPOI {
      * @type {Camera}
      */
     camera
+
     /**
      * @type {string}
      */
     color
+
     /**
      * @type {boolean}
      */
     expanded = true
-    /**
-     * @type {boolean}
-     */
-    flagVisible = undefined
+
     /**
      * @type {boolean}
      */
     frontOfTerrain = true
+
     /**
      * @type {number}
      */
     height
+
     /**
      * @type {string}
      */
     id
-    /**
-     * @type {string}
-     */
-    track
+
     /**
      * @type {number}
      */
     latitude
+
     /**
      * @type {number}
      */
     longitude
+
     /**
      * @type {number}
      */
     scale = 1
+
+    /**
+     * @type {boolean}
+     */
+    showFlag = undefined
+
+    /**
+     * @type {string}
+     */
+    track
+
     /**
      * @type {boolean}
      */
     visible = true
+
     /**
      * @type {number}
      */
     simulatedHeight
+
     /**
      * @type {string}
      */
     title
+
+    /**
+     * @type {string}
+     */
+    tooFar = false
+
     /**
      * @type {string}
      */
     type = POI_TMP_TYPE
+
+    /**
+     * @type {string}
+     */
     formerType
+
     /**
      * @type {boolean}
      */
-    withinScreenLimits = null
+    withinScreen = null
 
     /**
      * Initializes a new instance of the MapPOI class.
@@ -128,6 +152,20 @@ export class MapPOI {
             }
         }
         return this
+    }
+
+    /**
+     *  Hide the POI
+     */
+    hide = () => {
+        this.visible = false
+    }
+
+    /**
+     * show the POI
+     */
+    show = () => {
+        this.visible = true
     }
 
 }

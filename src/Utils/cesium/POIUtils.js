@@ -261,10 +261,10 @@ export class POIUtils {
             lgs.mainProxy.components.camera.position.elevation,
         )
         const scale = Math.max(scaler.minScale, Math.min(1 / (Cartesian3.distance(cartesian, cameraPosition) / scaler.distanceThreshold), 1))
-        const visible = scale > scaler.minScale
-        const flagVisible = visible && scale <= scaler.minScaleFlag
+        const tooFar = scale <= scaler.minScale
+        const flagVisible = !tooFar && scale <= scaler.minScaleFlag
 
-        return {scale: scale, flagVisible: flagVisible, visible: visible}
+        return {scale: scale, showFlag: flagVisible, tooFar: tooFar}
     }
 
     //
