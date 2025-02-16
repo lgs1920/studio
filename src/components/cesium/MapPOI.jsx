@@ -65,6 +65,20 @@ export const MapPOI = memo(({point: pointId}) => {
         }
     }
 
+    const expand = () => {
+        Object.assign(
+            lgs.mainProxy.components.pois.list.get(point.id),
+            {over: true},
+        )
+    }
+
+    const reduce = () => {
+        Object.assign(
+            lgs.mainProxy.components.pois.list.get(point.id),
+            {over: false},
+        )
+    }
+
     return (
         <>
             {pixels && (
@@ -72,7 +86,7 @@ export const MapPOI = memo(({point: pointId}) => {
                     className={classNames(
                         'poi-on-map-wrapper',
                         'lgs-slide-in-from-top-bounced',
-                        point?.showFlag || !point?.expanded ? 'poi-shrinked' : '',
+                        (point?.showFlag || !point?.expanded) && !point?.over ? 'poi-shrinked' : '',
                     )}
                     ref={poi}
                     id={point.id}
@@ -89,8 +103,9 @@ export const MapPOI = memo(({point: pointId}) => {
                         ),
                     }}
                     onPointerMove={__.ui.sceneManager.propagateEventToCanvas}
-                    onPointerDown={hideMenu}
-                    onPointerUp={hideMenu}
+                    onClick={expand}
+                    onPointerLeave={reduce}
+
                     onWheel={hideMenu}
                 >
                     {point.withinScreen && point.frontOfTerrain && point.visible && !point.tooFar &&

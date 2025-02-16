@@ -26,7 +26,6 @@ export const MapPOIContent = ({point, hide}) => {
                 className="poi-on-map-inner"
                 ref={inner}
                 onContextMenu={handleContextMenu}
-                onClick={handleContextMenu}
                 onPointerLeave={() => {
                     Timeout.set(
                         lgs.mainProxy.components.pois.context.timer,
@@ -35,7 +34,8 @@ export const MapPOIContent = ({point, hide}) => {
                     )
                 }}
             >
-                {!point.showFlag && point.expanded && (
+                {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
+
                     <>
                         <h3>{point.title ?? 'Point Of Interest'}</h3>
                         {point.scale > 0.6 && (
@@ -65,8 +65,8 @@ export const MapPOIContent = ({point, hide}) => {
                             </div>
                         )}
                     </>
-                )}
-                {point.showFlag || !point.expanded &&
+                }
+                {point.showFlag || !point.expanded && !point.over &&
                     <FontAwesomeIcon icon={faFlagSwallowtail} className="poi-as-flag"/>
                 }
             </div>
