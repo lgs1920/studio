@@ -2,7 +2,7 @@ import { POI_STANDARD_TYPE, STARTER_TYPE } from '@Core/constants'
 import {
     faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationDotSlash, faPanorama, faPen,
 }                                          from '@fortawesome/pro-regular-svg-icons'
-import { faFlagSwallowtail, faMask }       from '@fortawesome/pro-solid-svg-icons'
+import { faMask }                          from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlPopup }                 from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                           from '@Utils/FA2SL'
 import { UIToast }                         from '@Utils/UIToast'
@@ -190,7 +190,7 @@ export const MapPOIContextMenu = () => {
                             </li>
                             {snap.current.expanded &&
                                 <li onClick={shrink}>
-                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFlagSwallowtail)}></SlIcon>
+                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(snap.current.icon)}></SlIcon>
                                     <span>Reduce</span>
                                 </li>
                             }

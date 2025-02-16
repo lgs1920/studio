@@ -1,5 +1,6 @@
-import { POI_TMP_TYPE } from '@Core/constants'
-import { v4 as uuid }   from 'uuid'
+import { POI_TMP_TYPE }      from '@Core/constants'
+import { faFlagSwallowtail } from '@fortawesome/duotone-light-svg-icons'
+import { v4 as uuid }        from 'uuid'
 
 export class MapPOI {
     /**
@@ -26,6 +27,9 @@ export class MapPOI {
      * @type {number}
      */
     height
+
+    /** @type {object} **/
+    icon = faFlagSwallowtail
 
     /**
      * @type {string}

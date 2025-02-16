@@ -1,11 +1,10 @@
-import { TextValueUI }       from '@Components/TextValueUI/TextValueUI'
-import { SECOND }            from '@Core/constants'
-import { faFlagSwallowtail } from '@fortawesome/duotone-light-svg-icons'
-import { FontAwesomeIcon }   from '@fortawesome/react-fontawesome'
-import { UIUtils }           from '@Utils/UIUtils'
-import { ELEVATION_UNITS }   from '@Utils/UnitUtils'
-import { useRef }            from 'react'
-import Timeout               from 'smart-timeout'
+import { TextValueUI }     from '@Components/TextValueUI/TextValueUI'
+import { SECOND }          from '@Core/constants'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { UIUtils }         from '@Utils/UIUtils'
+import { ELEVATION_UNITS } from '@Utils/UnitUtils'
+import { useRef }          from 'react'
+import Timeout             from 'smart-timeout'
 import './style.css'
 
 export const MapPOIContent = ({point, hide}) => {
@@ -37,7 +36,8 @@ export const MapPOIContent = ({point, hide}) => {
                 {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
 
                     <>
-                        <h3>{point.title ?? 'Point Of Interest'}</h3>
+                        <h3><FontAwesomeIcon icon={point.icon}
+                                             className="poi-as-flag"/> {point.title ?? 'Point Of Interest'}</h3>
                         {point.scale > 0.6 && (
                             <div className="poi-full-coordinates">
                                 {!point.simulatedHeight && (
@@ -61,13 +61,14 @@ export const MapPOIContent = ({point, hide}) => {
                                         {sprintf('%.5f', point.longitude)}]
                                         </span>
                                     <br/>
+
                                 </div>
                             </div>
                         )}
                     </>
                 }
                 {point.showFlag || !point.expanded && !point.over &&
-                    <FontAwesomeIcon icon={faFlagSwallowtail} className="poi-as-flag"/>
+                    <FontAwesomeIcon icon={point.icon} className="poi-as-flag"/>
                 }
             </div>
             <div className="poi-on-map-marker"></div>
