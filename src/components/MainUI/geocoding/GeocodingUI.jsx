@@ -97,7 +97,7 @@ export const GeocodingUI = () => {
                 }
                 UIToast.warning({
                                     caption: `POI not created !`,
-                                    text:    `This location is too close to an existing POI!`,
+                                    text: `This location is too closed to an existing POI!`,
                                 })
                 return false
             },
