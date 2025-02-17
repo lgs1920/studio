@@ -1,10 +1,10 @@
 import {
     ADD_JOURNEY, DRAWING, DRAWING_FROM_DB, FOCUS_LAST, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D,
     SCENE_MODE_COLUMBUS,
-}                                                                                      from '@Core/constants'
-import bbox                                                                            from '@turf/bbox'
-import centroid                                                                        from '@turf/centroid'
-import { Cartesian3, Color, EasingFunction, Math as M, Matrix4, Rectangle, SceneMode } from 'cesium'
+}                                                                                                  from '@Core/constants'
+import bbox                                                                                        from '@turf/bbox'
+import centroid                                                                                    from '@turf/centroid'
+import { Cartesian2, Cartesian3, Color, EasingFunction, Math as M, Matrix4, Rectangle, SceneMode } from 'cesium'
 
 export class SceneUtils {
 
@@ -100,9 +100,12 @@ export class SceneUtils {
     }
 
     static getPixelsCoordinates = point => {
-        return lgs.scene.cartesianToCanvasCoordinates(
+        const result = new Cartesian2()
+        lgs.scene.cartesianToCanvasCoordinates(
             Cartesian3.fromDegrees(point.longitude, point.latitude,
-                                   __.ui.sceneManager.noRelief() ? 0 : (point.height ?? point.simulatedHeight)))
+                                   __.ui.sceneManager.noRelief() ? 0 : (point.height ?? point.simulatedHeight)), result)
+
+        return new Cartesian2(Math.round(result.x), Math.round(result.y))
     }
 
     static drawBbox = (bbox, id) => {
