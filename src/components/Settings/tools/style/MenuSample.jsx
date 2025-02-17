@@ -1,5 +1,5 @@
 import { BOTTOM, START }              from '@Core/constants'
-import { faCircleCheck }              from '@fortawesome/pro-duotone-svg-icons'
+import { faCircleCheck }              from '@fortawesome/duotone-light-svg-icons'
 import { FontAwesomeIcon }            from '@fortawesome/react-fontawesome'
 import { SlTooltip }                  from '@shoelace-style/shoelace/dist/react'
 import React, { useEffect, useState } from 'react'

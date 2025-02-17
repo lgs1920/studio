@@ -7,7 +7,7 @@ import {
 import {
     faArrowDownUpLock, faArrowUpRightFromSquare, faCircleCheck, faEllipsisVertical, faFilter, faLock, faTrashCan,
     faTriangleExclamation,
-}                          from '@fortawesome/pro-duotone-svg-icons'
+}                          from '@fortawesome/duotone-light-svg-icons'
 import {
     FontAwesomeIcon,
 }                          from '@fortawesome/react-fontawesome'
