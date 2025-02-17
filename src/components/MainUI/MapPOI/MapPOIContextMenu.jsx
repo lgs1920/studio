@@ -188,7 +188,8 @@ export const MapPOIContextMenu = () => {
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPen)}></SlIcon>
                                 <span>Edit</span>
                             </li>
-                            {snap.current.expanded &&
+
+                            {snap.current.expanded && !snap.current.showFlag &&
                                 <li onClick={shrink}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(snap.current.icon)}></SlIcon>
                                     <span>Reduce</span>

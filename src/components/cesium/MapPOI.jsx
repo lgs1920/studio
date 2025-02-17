@@ -27,7 +27,7 @@ export const MapPOI = memo(({point: pointId}) => {
             const coordinates = SceneUtils.getPixelsCoordinates(point.coordinates)
             if (coordinates) {
                 setPixels((prev) =>
-                              prev.x !== coordinates.x || prev.y !== coordinates.y ? coordinates : prev,
+                              prev.x !== coordinates.x || prev.y !== coordinates.y ? coordinates : prev
                 )
             }
             // Set visibility, scale, flag mode
@@ -66,10 +66,12 @@ export const MapPOI = memo(({point: pointId}) => {
     }
 
     const expand = () => {
-        Object.assign(
-            lgs.mainProxy.components.pois.list.get(point.id),
-            {over: true},
-        )
+        if (!point.expanded && !point.showFlag) {
+            Object.assign(
+                lgs.mainProxy.components.pois.list.get(point.id),
+                {over: true},
+            )
+        }
     }
 
     const reduce = () => {
