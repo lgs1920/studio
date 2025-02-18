@@ -32,13 +32,17 @@ export class LocalDB {
 
         this.#stores = stores
         this.#name = name
+        this.#version = version
 
         let tables = this.#stores // passe dto upgrad contest
-        this.#db = openDB(this.#name, this.#version, {
-            upgrade(db, old_version, new_version) {
+        this.#db = openDB(this.#name, version, {
+            upgrade(db, undefined, version) {
                 tables.forEach(table => {
-                    db.createObjectStore(table)
+                    if (!db.objectStoreNames.contains(table)) {
+                        db.createObjectStore(table)
+                    }
                 })
+                console.log(`Browser DB ${name} upgraded to version ${version}.`)
             },
         })
     }

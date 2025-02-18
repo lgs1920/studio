@@ -63,13 +63,15 @@ export const VAULT_STORE = 'vault'
 export const CURRENT_STORE = 'current'
 export const JOURNEYS_STORE = 'journeys'
 export const ORIGIN_STORE = 'origin'
+export const POIS_STORE = 'pois'
 export const CURRENT_JOURNEY = 'journey'
 export const CURRENT_TRACK = 'track'
 export const CURRENT_CAMERA = 'camera'
 
 export const CURRENT_POI = 'poi'
 export const STARTER_POI = `starter-${APP_KEY}`
-export const POI_THRESHOLD_DISTANCE = 100 // meters
+export const POI_THRESHOLD_DISTANCE = 50 // meters
+
 export const STARTER_TYPE = 'starter'
 export const FLAG_START_TYPE = 'start'
 export const FLAG_STOP_TYPE = 'stop'
