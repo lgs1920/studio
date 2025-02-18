@@ -105,7 +105,7 @@ export const MapPOI = memo(({point: pointId}) => {
                         ),
                     }}
                     onPointerMove={__.ui.sceneManager.propagateEventToCanvas}
-                    onClick={expand}
+                    onPointerEnter={expand}
                     onPointerLeave={reduce}
 
                     onWheel={hideMenu}

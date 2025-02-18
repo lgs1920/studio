@@ -1,6 +1,6 @@
 import { POI_STANDARD_TYPE, STARTER_TYPE } from '@Core/constants'
 import {
-    faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationDotSlash, faPanorama, faPen,
+    faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationDotSlash, faLocationPen, faPanorama,
 }                                          from '@fortawesome/pro-regular-svg-icons'
 import { faMask }                          from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlPopup }                 from '@shoelace-style/shoelace/dist/react'
@@ -185,7 +185,7 @@ export const MapPOIContextMenu = () => {
                             }
 
                             <li>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPen)}></SlIcon>
+                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationPen)}></SlIcon>
                                 <span>Edit</span>
                             </li>
 
