@@ -95,6 +95,7 @@ swatches:
     - '#fc8452'
     - '#9a60b4'
     - '#ea7ccc'
+    - '#7fff00'
   distribution: 'sequence'
 
 ########################################
