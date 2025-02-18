@@ -211,6 +211,8 @@ export const INFO_DRAWER = 'info-drawer'
 export const LAYERS_DRAWER = 'layers-drawer'
 export const JOURNEY_EDITOR_DRAWER = 'journey-editor-drawer'
 export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'
+export const POIS_EDITOR_DRAWER = 'pois-editor-drawer'
+
 
 /** Jaurney, Track, POI **/
 

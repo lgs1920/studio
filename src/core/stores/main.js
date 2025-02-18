@@ -55,6 +55,9 @@ export const main = {
                 visible: false,
                 timer:   'context-timer',
             },
+            editor: {
+                visible: false,
+            },
         },
         profile: {
             visible: false,

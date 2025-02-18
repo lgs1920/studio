@@ -29,6 +29,8 @@ import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
 import { CallForActions }                   from './CallForActions'
 import { CameraTarget }                     from './CameraTarget'
 import { CreditsBar }                       from './credits/CreditsBar'
+import { Panel as MapPOIEditPanel }         from './MapPOI/Panel'
+import { PanelButton as POIEditButton }     from './MapPOI/PanelButton'
 import { SceneModeSelector }                from './SceneModeSelector'
 import { SupportUI }                        from './SupportUI'
 import { SupportUIButton }                  from './SupportUIButton'
@@ -169,7 +171,8 @@ export const MainUI = () => {
                         <div id={'primary-buttons-bar'} className={primaryEntrance}>
                             <SettingsButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                             <LayersButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
-                            <JourneyToolbar tooltip={'top'}></JourneyToolbar>
+                            <POIEditButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
+                            <JourneyToolbar tooltip={'top'}/>
                             <ProfileButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
 
                             <InformationButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
@@ -212,6 +215,7 @@ export const MainUI = () => {
                 <SettingsPanel/>
                 <LayersPanel/>
                 <TracksEditor/>
+                <MapPOIEditPanel/>
 
             </div>
             <MapPOICluster/>
