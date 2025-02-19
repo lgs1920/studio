@@ -101,7 +101,7 @@ export function LGS1920() {
                                                                               longitude: lgs.settings.starter.longitude,
                                                                               latitude:  lgs.settings.starter.latitude,
                                                                               height:    lgs.settings.starter.height,
-                                                                              name:      lgs.settings.starter.name,
+                                                                              title:     lgs.settings.starter.title,
                                                                               color:     lgs.settings.starter.color,
                                                                               type:      STARTER_TYPE,
                                                                           })
