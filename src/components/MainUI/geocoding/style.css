@@ -79,12 +79,6 @@ select-location-wrapper .select-location-item:last-child {
     margin-right: auto;
 }
 
-.nominatim-license {
-    font-size: var(--lgs-font-size-s);
-    line-height: 0.9;
-    text-align: end
-}
-
 .exact-geocoding {
     display: flex;
     width: min(15rem, 100%);

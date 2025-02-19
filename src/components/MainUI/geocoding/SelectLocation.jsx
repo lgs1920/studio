@@ -45,7 +45,6 @@ export const SelectLocation = ({select, address, submit}) => {
                     </LGSScrollbars>
 
                     <div className="call-for-actions">
-                        <div className="nominatim-license">{__.ui.geocoder.license}</div>
                         <SlDivider/>
                         <div className="buttons-bar">
                             <SlButton close size="small" outline onClick={handleClose}>
