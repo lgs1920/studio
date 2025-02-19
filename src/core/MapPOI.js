@@ -1,8 +1,9 @@
 import { POI_TMP_TYPE }      from '@Core/constants'
+import { MapElement }        from '@Core/MapElement'
 import { faFlagSwallowtail } from '@fortawesome/duotone-light-svg-icons'
 import { v4 as uuid }        from 'uuid'
 
-export class MapPOI {
+export class MapPOI extends MapElement {
     /**
      * @type {Camera}
      */
@@ -108,6 +109,7 @@ export class MapPOI {
      * @param {Object} options - The options object containing initial properties.
      */
     constructor(options = null) {
+        super()
         // If there is no id provided, we generate one
         options.id = options.id === null ? uuid() : options.id.toString()
         this.update(options)
@@ -127,27 +129,9 @@ export class MapPOI {
         }
     }
 
+    static deserialize = (object, json = false) => MapElement.deserialize(object, json)
 
-    /***********************************
-     * Getters and Setters
-     **********************************/
-
-    /**
-     * Sets the coordinates and height properties of the POI.
-     *
-     * @param {Object}  - An object containing longitude, latitude, height, and simulatedHeight.
-     */
-    set coordinates({
-                        longitude = this.longitude,
-                        latitude = this.latitude,
-                        height = this.height,
-                        simulatedHeight = this.simulatedHeight,
-                    }) {
-        this.longitude = longitude
-        this.latitude = latitude
-        this.height = height
-        this.simulatedHeight = simulatedHeight
-    }
+    static serialize = (props) => MapElement.serialize(props)
 
     /**
      * Updates the properties of the MapPOI instance.
@@ -176,5 +160,27 @@ export class MapPOI {
     show = () => {
         this.visible = true
     }
+
+    /***********************************
+     * Getters and Setters
+     **********************************/
+
+    /**
+     * Sets the coordinates and height properties of the POI.
+     *
+     * @param {Object}  - An object containing longitude, latitude, height, and simulatedHeight.
+     */
+    set coordinates({
+                        longitude = this.longitude,
+                        latitude = this.latitude,
+                        height = this.height,
+                        simulatedHeight = this.simulatedHeight,
+                    }) {
+        this.longitude = longitude
+        this.latitude = latitude
+        this.height = height
+        this.simulatedHeight = simulatedHeight
+    }
+
 
 }

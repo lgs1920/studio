@@ -69,7 +69,6 @@ export const CURRENT_TRACK = 'track'
 export const CURRENT_CAMERA = 'camera'
 
 export const CURRENT_POI = 'poi'
-export const STARTER_POI = `starter-${APP_KEY}`
 export const POI_THRESHOLD_DISTANCE = 50 // meters
 
 export const STARTER_TYPE = 'starter'
@@ -97,7 +96,7 @@ export const COLOR_SWATCHES_RANDOM = 'random'
 export const SETTING_EXCLUSIONS = [
     'layers.base', 'layers.terrain', 'layers.overlay',
     'layers.filter', 'layers.colorSettings',
-    'app', 'scene',
+    'app', 'scene', 'starter',
     'ui.camera', 'ui.welcome',
     'ui.menu',
 ].sort((a, b) => {

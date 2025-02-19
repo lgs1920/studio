@@ -10,7 +10,7 @@ import {
     WelcomeModal,
 }                           from '@Components/MainUI/WelcomeModal'
 import {
-    BASE_ENTITY, BOTTOM, FOCUS_LAST, FOCUS_STARTER, MOBILE_MAX, OVERLAY_ENTITY, STARTER_POI, STARTER_TYPE,
+    BASE_ENTITY, BOTTOM, FOCUS_LAST, FOCUS_STARTER, MOBILE_MAX, OVERLAY_ENTITY, STARTER_TYPE,
 }                           from '@Core/constants'
 import {
     LGS1920Context,
@@ -27,9 +27,7 @@ import {
 import {
     UIToast,
 }                           from '@Utils/UIToast'
-import {
-    useEffect,
-}                           from 'react'
+import { useEffect }        from 'react'
 import {
     useMediaQuery,
 }                           from 'react-responsive'
@@ -92,26 +90,50 @@ export function LGS1920() {
                               // Set the right terrain
                               await TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
 
-                              // Read DB
+                              // Read DB for journeys
                               await TrackUtils.readAllFromDB()
 
-                              // Add starter
-                              __.ui.poiManager.add({
-                                                       longitude: lgs.settings.starter.longitude,
-                                                       latitude:  lgs.settings.starter.latitude,
-                                                       height:    lgs.settings.starter.height,
-                                                       title:     lgs.settings.starter.name,
-                                                       color:     lgs.settings.starter.color,
-                                                       id:        STARTER_POI,
-                                                       type:      STARTER_TYPE,
-                                                   })
+                              // Read DB for POIs
+                              await __.ui.poiManager.readAllFromDB()
+                              const starter = __.ui.poiManager.starter
+                              if (!starter) {
+                                  const newStarter = __.ui.poiManager.add({
+                                                                              longitude: lgs.settings.starter.longitude,
+                                                                              latitude:  lgs.settings.starter.latitude,
+                                                                              height:    lgs.settings.starter.height,
+                                                                              name:      lgs.settings.starter.name,
+                                                                              color:     lgs.settings.starter.color,
+                                                                              type:      STARTER_TYPE,
+                                                                          })
+
+                                  // We force re/creation in DB to sync it.
+
+                                  await __.ui.poiManager.saveInDB(starter ?? newStarter)
+                              }
 
                               // According to the settings and saved information, we set the camera data
 
                               // Use app settings
                               if (__.ui.cameraManager.isAppFocusOn(FOCUS_STARTER)) {
                                   // Starter
-                                  lgs.cameraStore = __.ui.cameraManager.focusToStarterPOI()
+                                  const starter = __.ui.poiManager.starter
+                                  lgs.cameraStore = {
+                                      target: {
+                                          longitude: starter.longitude,
+                                          latitude:  starter.latitude,
+                                          height:    starter.height,
+                                      },
+
+                                      position: {
+                                          longitude: undefined,
+                                          latitude:  undefined,
+                                          height:    undefined,
+                                          heading:   lgs.settings.camera.heading,
+                                          pitch:     lgs.settings.camera.pitch,
+                                          roll:      lgs.settings.camera.roll,
+                                          range:     lgs.settings.camera.range,
+                                      },
+                                  }
                               }
                               else if (__.ui.cameraManager.isAppFocusOn(FOCUS_LAST)) {
                                   // Last Camera Position
@@ -133,11 +155,11 @@ export function LGS1920() {
                               // Do Focus
                               __.ui.sceneManager.focus(lgs.cameraStore.target, {
                                   heading:  lgs.cameraStore.position.heading,
-                                  pitch:  __.ui.sceneManager.noRelief() ? -90 : lgs.cameraStore.position.pitch,
+                                  pitch:    __.ui.sceneManager.noRelief() ? -90 : lgs.cameraStore.position.pitch,
                                   roll:     lgs.cameraStore.position.roll,
                                   range:    lgs.cameraStore.position.range,
                                   infinite: true,
-                                  rotate: lgs.settings.ui.camera.start.rotate.app,
+                                  rotate:   lgs.settings.ui.camera.start.rotate.app,
                                   lookAt:   true,
                                   rpm:      lgs.settings.starter.camera.rpm,
                               })

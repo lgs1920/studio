@@ -137,7 +137,7 @@ export class LocalDB {
             let end = content._mt_ + ttl
             content.ttl = {
                 duration: ttl,                                      // ttl in millis
-                end: end,                              // end in millis
+                end:      end,                              // end in millis
             }
             content._iso_.ttl = DateTime.fromMillis(end).toISO()
         }
@@ -227,6 +227,11 @@ export class LocalDB {
      */
     keys = async (store) => {
         return (await this.#db).getAllKeys(store)
+    }
+
+    hasKey = async (key) => {
+        const keys = await this.keys()
+        return this.keys.includes(key)
     }
 
 

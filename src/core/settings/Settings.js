@@ -12,7 +12,7 @@ export class Settings {
         }
 
         this.#sections = new Map()
-        Settings.instance= this
+        Settings.instance = this
     }
 
     /**
@@ -21,20 +21,23 @@ export class Settings {
      * @param {string} key
      * @param {object} section
      */
-    add = ( section) => {
+    add = (section) => {
         this.#sections.set(section.key, section)
         // key
         Object.defineProperty(this, section.key, {
-                get: function () {
-                    return this.#sections.get(section.key).content
-                }
-            })
+            get: function () {
+                return this.#sections.get(section.key).content
+            },
+            set: function (poi) {
+                this.#sections.get(section.key).content = poi
+            },
+        })
 
         // snapKey
         Object.defineProperty(this, __.app.camelCase(`get-${section.key}`), {
             get: function () {
                 return snapshot(this.#sections.get(section.key).content)
-            }
+            },
         })
     }
 }

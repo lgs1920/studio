@@ -1,6 +1,6 @@
+import { SETTING_EXCLUSIONS, SETTINGS_STORE } from '@Core/constants'
 import { detailedDiff }                       from 'deep-object-diff'
 import { proxy, subscribe }                   from 'valtio'
-import { SETTING_EXCLUSIONS, SETTINGS_STORE } from '@Core/constants'
 
 export class SettingsSection {
 
@@ -26,6 +26,10 @@ export class SettingsSection {
      */
     get content() {
         return (this.#content.__value !== undefined) ? this.#content.__value : this.#content
+    }
+
+    set content(value) {
+        this.#content = proxy({__value: value})
     }
 
     /**

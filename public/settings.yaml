@@ -51,7 +51,7 @@ starter:
   longitude: 5.70291
   latitude: 45.33524
   height: 1920
-  name: La Grande Sure
+  title: La Grande Sure
   color: "#7FFF00"  # chartreuse (127,255,0)
   ## Camera position
   camera:
@@ -190,7 +190,7 @@ ui:
       # last : focus on last camera position
 
       journey: center       # center: focus on journey centroid
-        # last : focus on last camera position
+      # last : focus on last camera position
       #        for the journey
       # Rotation after focus
       rotate:

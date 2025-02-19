@@ -25,6 +25,9 @@ export const MapPOIContextMenu = () => {
 
     const anchor = useRef(null)
     const snap = useSnapshot(lgs.mainProxy.components.pois)
+    const savePOI = () => {
+        __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(snap.current.id))
+    }
 
     /**
      * Hides the menu in the application by resuming the context timer and updating visibility settings.
@@ -39,20 +42,25 @@ export const MapPOIContextMenu = () => {
         Object.assign(__.ui.poiManager.list.get(snap.current.id), {
             type: POI_STANDARD_TYPE,
         })
+        savePOI()
         hideMenu()
     }
 
     const mask = () => {
         __.ui.poiManager.list.get(snap.current.id).visible = false
+        savePOI()
+        hideMenu()
     }
 
     const shrink = () => {
         __.ui.poiManager.list.get(snap.current.id).expanded = false
+        savePOI()
         hideMenu()
     }
 
     const expand = () => {
         __.ui.poiManager.list.get(snap.current.id).expanded = true
+        savePOI()
         hideMenu()
     }
 
@@ -142,11 +150,11 @@ export const MapPOIContextMenu = () => {
      * - Camera rotation is stopped if it was active.
      * - The context menu is hidden.
      */
-    const remove = () => {
+    const remove = async () => {
         if (__.ui.cameraManager.isRotating()) {
             __.ui.cameraManager.stopRotate()
         }
-
+        await __.ui.poiManager.removeInDB(__.ui.poiManager.list.get(snap.current.id))
         __.ui.poiManager.remove(snap.current.id)
         hideMenu()
     }
