@@ -18,6 +18,17 @@
     align-items: center;
 }
 
+.manage-profile-ui li svg {
+    font-size: var(--lgs-font-size-m);
+    display: inline-flex;
+    align-items: center;
+    padding-right: var(--lgs-gutter-s);
+    --fa-primary-color: var(--lgs-success-color);
+    --fa-secondary-color: var(--lgs-success-bg-color);
+    --fa-secondary-opacity: 0.8;
+
+}
+
 .manage-profile-ui sl-panel {
     font-size: var(--lgs-font-size-s);
 }

@@ -1,4 +1,7 @@
-import { faArrowsRotate, faSquareCheck }         from '@fortawesome/pro-regular-svg-icons'
+import { faSquareCheck }  from '@fortawesome/duotone-regular-svg-icons'
+import { faArrowsRotate } from '@fortawesome/pro-regular-svg-icons'
+
+import { FontAwesomeIcon }                       from '@fortawesome/react-fontawesome'
 import { SlButton, SlDetails, SlIcon, SlSwitch } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                 from '@Utils/FA2SL'
 import React                                     from 'react'
@@ -40,16 +43,16 @@ export const ResetProfile = () => {
                 <ul>
                     {snap.reset.lgs1920 &&
                         <li key={'reset-profile-lgs1920-confirm'}>
-                            <SlIcon library="fa" name={FA2SL.set(faSquareCheck)}/> Your journeys
+                            <FontAwesomeIcon icon={faSquareCheck}/> My journeys, POIs,...
                         </li>
                     }
                     {snap.reset.settings &&
                         <li key={'reset-profile-settings-confirm'}>
-                            <SlIcon library="fa" name={FA2SL.set(faSquareCheck)}/> Your settings
+                            <FontAwesomeIcon icon={faSquareCheck}/> My settings
                         </li>
                     }{snap.reset.vault &&
                     <li key={'reset-profile-vault-confirm'}>
-                        <SlIcon library="fa" name={FA2SL.set(faSquareCheck)}/> Your Tokens
+                        <FontAwesomeIcon icon={faSquareCheck}/> My Tokens
                     </li>
                 }
                 </ul>
@@ -73,20 +76,20 @@ export const ResetProfile = () => {
                 <SlSwitch align-right size="small" checked={snap.reset.lgs1920}
                           onSlChange={(event) => change(event, 'lgs1920')}>
                     Your journeys
-                    <span slot="help-text">{'Remove your journeys, POIs...'}</span>
+                    <span slot="help-text">{'Remove my journeys, POIs...'}</span>
                 </SlSwitch>
 
 
                 <SlSwitch align-right size="small" checked={snap.reset.settings}
                           onSlChange={(event) => change(event, 'settings')}>
                     Your settings
-                    <span slot="help-text">{'Reset all your settings and default data.'}</span>
+                    <span slot="help-text">{'Reset all my settings and default data.'}</span>
                 </SlSwitch>
 
                 <SlSwitch align-right size="small" checked={snap.reset.vault}
                           onSlChange={(event) => change(event, 'vault')}>
                     Your Tokens
-                    <span slot="help-text">{'Clear all your tokens for freemium/premium access.'}</span>
+                    <span slot="help-text">{'Clear all my tokens for freemium/premium access.'}</span>
                 </SlSwitch>
 
                 <SlButton variant="primary" onClick={reset}
