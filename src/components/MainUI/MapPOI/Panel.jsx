@@ -1,3 +1,4 @@
+import { MapPOIList }         from '@Components/MainUI/MapPOI/MapPOIList'
 import { POIS_EDITOR_DRAWER } from '@Core/constants'
 import { SlDrawer }           from '@shoelace-style/shoelace/dist/react'
 import React                  from 'react'
@@ -36,6 +37,7 @@ export const Panel = () => {
                       className={'lgs-theme'}
                       placement={menu.drawer}
             >
+                <MapPOIList/>
                 <DrawerFooter/>
 
             </SlDrawer>

@@ -131,3 +131,40 @@
     padding-right: var(--lgs-gutter-xs);
     gap: var(--lgs-gutter-xs);
 }
+
+/*******************************************************************************
+ * Edit Panel
+ */
+#edit-map-poi-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.edit-map-poi-item:hover {
+    box-shadow: var(--sl-shadow-x-large);
+}
+
+.edit-map-poi-item [slot="summary"],
+.edit-map-poi-item [slot="summary"] span {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+.edit-map-poi-item [slot="summary"] span:first-child {
+    overflow: hidden;
+    width: 15rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.edit-map-poi-item [slot="summary"] {
+    justify-content: space-between;
+    width: 100%;
+    margin-right: var(--lgs-gutter);
+}
+
+.map-poi-hidden::part(header) {
+    background: var(--lgs-disabled-bg-color);
+}
