@@ -59,8 +59,7 @@ export const MapPOIContent = ({point, hide}) => {
                                         </span>
                                         <br/>
                                         <span>
-                                            [{sprintf('%.5f', point.latitude)},{' '}
-                                            {sprintf('%.5f', point.longitude)}]
+                                            [{sprintf('%.5f , %.5f', point.latitude, point.longitude)}]
                                         </span>
                                         <br/>
 
