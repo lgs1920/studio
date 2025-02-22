@@ -1,14 +1,33 @@
-import { POI_STANDARD_TYPE, STARTER_TYPE } from '@Core/constants'
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ *
+ * File: MapPOIContextMenu.jsx
+ * Path: /home/christian/devs/assets/lgs1920/studio/src/components/MainUI/MapPOI/MapPOIContextMenu.jsx
+ *
+ * Author : Christian Denat
+ * email: christian.denat@orange.fr
+ *
+ * Created on: 2025-02-22
+ * Last modified: 2025-02-22
+ *
+ *
+ * Copyright © 2025 LGS1920
+ *
+ ******************************************************************************/
+
+import { POI_STANDARD_TYPE, POI_STARTER_TYPE } from '@Core/constants'
 import {
-    faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationDotSlash, faLocationPen, faPanorama,
-}                                          from '@fortawesome/pro-regular-svg-icons'
-import { faMask }                          from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlPopup }                 from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                           from '@Utils/FA2SL'
-import { UIToast }                         from '@Utils/UIToast'
-import React, { useRef }                   from 'react'
-import Timeout                             from 'smart-timeout'
-import { snapshot, useSnapshot }           from 'valtio'
+    faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama, faTrashCan, faXmark,
+}                                              from '@fortawesome/pro-regular-svg-icons'
+import { faMask }                              from '@fortawesome/pro-solid-svg-icons'
+import { SlIcon, SlPopup }                     from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                               from '@Utils/FA2SL'
+import { UIToast }                             from '@Utils/UIToast'
+import React, { useRef }                       from 'react'
+import Timeout                                 from 'smart-timeout'
+import { snapshot, useSnapshot }               from 'valtio'
 import './style.css'
 
 /**
@@ -25,9 +44,7 @@ export const MapPOIContextMenu = () => {
 
     const anchor = useRef(null)
     const snap = useSnapshot(lgs.mainProxy.components.pois)
-    const savePOI = () => {
-        __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(snap.current.id))
-    }
+
 
     /**
      * Hides the menu in the application by resuming the context timer and updating visibility settings.
@@ -35,33 +52,29 @@ export const MapPOIContextMenu = () => {
     const hideMenu = () => {
         Timeout.resume(lgs.mainProxy.components.pois.context.timer)
         lgs.mainProxy.components.pois.context.visible = false
-        lgs.mainProxy.components.pois.current = false
     }
 
     const saveAsPOI = () => {
         Object.assign(__.ui.poiManager.list.get(snap.current.id), {
             type: POI_STANDARD_TYPE,
         })
-        savePOI()
-        hideMenu()
+        __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(snap.current.id))
+            .then(() => hideMenu())
     }
 
-    const mask = () => {
-        __.ui.poiManager.list.get(snap.current.id).visible = false
-        savePOI()
-        hideMenu()
+    const hide = () => {
+        __.ui.poiManager.hide(snap.current.id)
+            .then(() => hideMenu())
     }
 
     const shrink = () => {
-        __.ui.poiManager.list.get(snap.current.id).expanded = false
-        savePOI()
-        hideMenu()
+        __.ui.poiManager.shrink(snap.current.id)
+            .then(() => hideMenu())
     }
 
     const expand = () => {
-        __.ui.poiManager.list.get(snap.current.id).expanded = true
-        savePOI()
-        hideMenu()
+        __.ui.poiManager.expand(snap.current.id)
+            .then(() => hideMenu())
     }
 
     /**
@@ -73,11 +86,11 @@ export const MapPOIContextMenu = () => {
      * - Camera rotation is stopped if it was active.
      * - The context menu is hidden.
      */
-    const rotationAround = () => {
+    const rotationAround = async () => {
 
         const camera = snapshot(lgs.mainProxy.components.camera)
         if (__.ui.cameraManager.isRotating()) {
-            __.ui.cameraManager.stopRotate()
+            await __.ui.cameraManager.stopRotate()
         }
         else {
             __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
@@ -94,14 +107,18 @@ export const MapPOIContextMenu = () => {
         hideMenu()
     }
 
-    const setAsStarter = () => {
-        const poi = __.ui.poiManager.setStarter(snap.current)
-        if (poi) {
+    const stopRotation = async () => {
+        await __.ui.cameraManager.stopRotate()
+        hideMenu()
+    }
+
+    const setAsStarter = async () => {
+        const {former, starter} = await __.ui.poiManager.setStarter(snap.current)
+        if (starter) {
             UIToast.success({
                                 caption: `${snap.current.title}`,
                                 text:    'Set as new starter POI.',
                             })
-            hideMenu()
         }
         else {
             UIToast.warning({
@@ -119,9 +136,9 @@ export const MapPOIContextMenu = () => {
      * Postconditions:
      * - The context menu is hidden.
      */
-    const panoramic = () => {
+    const panoramic = async () => {
         if (__.ui.cameraManager.isRotating()) {
-            __.ui.cameraManager.stopRotate()
+            await __.ui.cameraManager.stopRotate()
         }
         __.ui.cameraManager.panoramic()
         hideMenu()
@@ -134,13 +151,14 @@ export const MapPOIContextMenu = () => {
      * - The context menu is hidden.
      */
     const copy = () => {
-        __.ui.poiManager.copyCoordinatesToClipboard(snap.current).then(() => {
-            UIToast.success({
-                                caption: `${snap.current.title}`,
-                                text:    'Coordinates copied to the clipboard <br/>under the form: latitude, longitude',
-                            })
-            hideMenu()
-        })
+        __.ui.poiManager.copyCoordinatesToClipboard(snap.current)
+            .then(() => {
+                UIToast.success({
+                                    caption: `${snap.current.title}`,
+                                    text:    'Coordinates copied to the clipboard <br/>under the form: latitude, longitude',
+                                })
+            })
+            .then(() => hideMenu())
     }
 
     /**
@@ -152,11 +170,11 @@ export const MapPOIContextMenu = () => {
      */
     const remove = async () => {
         if (__.ui.cameraManager.isRotating()) {
-            __.ui.cameraManager.stopRotate()
+            await __.ui.cameraManager.stopRotate()
         }
-        await __.ui.poiManager.removeInDB(__.ui.poiManager.list.get(snap.current.id))
-        __.ui.poiManager.remove(snap.current.id)
-        hideMenu()
+        __.ui.poiManager.remove(snap.current.id, true)
+            .then(() => hideMenu())
+
     }
 
     return (
@@ -179,15 +197,15 @@ export const MapPOIContextMenu = () => {
                                     <span>Save as POI</span>
                                 </li>
                             }
-                            {snap.current.type !== STARTER_TYPE &&
+                            {snap.current.type !== POI_STARTER_TYPE &&
                                 <li onClick={setAsStarter}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFlag)}></SlIcon>
                                     <span>Set as Starter</span>
                                 </li>
                             }
-                            {snap.current.type !== STARTER_TYPE &&
+                            {snap.current.type !== POI_STARTER_TYPE &&
                                 <li onClick={remove}>
-                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationDotSlash)}></SlIcon>
+                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}></SlIcon>
                                     <span>Remove</span>
                                 </li>
                             }
@@ -211,8 +229,8 @@ export const MapPOIContextMenu = () => {
                                 </li>
                             }
 
-                            {snap.current.type !== STARTER_TYPE &&
-                                <li onClick={mask}>
+                            {snap.current.type !== POI_STARTER_TYPE &&
+                                <li onClick={hide}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMask)}></SlIcon>
                                     <span>Hide</span>
                                 </li>
@@ -222,14 +240,25 @@ export const MapPOIContextMenu = () => {
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCopy)}></SlIcon>
                                 <span>Copy Coords</span>
                             </li>
-                            <li onClick={rotationAround}>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowRotateRight)}></SlIcon>
-                                <span>Rotate Around</span>
-                            </li>
-                            <li onClick={panoramic}>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPanorama)}></SlIcon>
-                                <span>Panoramic</span>
-                            </li>
+                            {!__.ui.cameraManager.isRotating() &&
+                                <>
+                                    <li onClick={rotationAround}>
+                                        <SlIcon slot="prefix" library="fa"
+                                                name={FA2SL.set(faArrowRotateRight)}></SlIcon>
+                                        <span>Rotate Around</span>
+                                    </li>
+                                    <li onClick={panoramic}>
+                                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPanorama)}></SlIcon>
+                                        <span>Panoramic</span>
+                                    </li>
+                                </>
+                            }
+                            {__.ui.cameraManager.isRotating() &&
+                                <li onClick={stopRotation}>
+                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
+                                    <span>Stop</span>
+                                </li>
+                            }
                         </ul>
                     </div>
                 </SlPopup>

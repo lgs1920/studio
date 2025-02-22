@@ -1,10 +1,29 @@
-import { POI_STANDARD_TYPE, POI_THRESHOLD_DISTANCE, POIS_STORE, STARTER_TYPE } from '@Core/constants'
-import { MapPOI }                                                              from '@Core/MapPOI'
-import { Export }                                                              from '@Core/ui/Export'
-import { TrackUtils }                                                          from '@Utils/cesium/TrackUtils'
-import { KM }                                                                  from '@Utils/UnitUtils'
-import { v4 as uuid }                                                          from 'uuid'
-import { snapshot }                                                            from 'valtio/index'
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ *
+ * File: POIManager.js
+ * Path: /home/christian/devs/assets/lgs1920/studio/src/core/ui/POIManager.js
+ *
+ * Author : Christian Denat
+ * email: christian.denat@orange.fr
+ *
+ * Created on: 2025-02-22
+ * Last modified: 2025-02-22
+ *
+ *
+ * Copyright © 2025 LGS1920
+ *
+ ******************************************************************************/
+
+import { POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POIS_STORE } from '@Core/constants'
+import { MapPOI }                                                                  from '@Core/MapPOI'
+import { Export }                                                                  from '@Core/ui/Export'
+import { TrackUtils }                                                              from '@Utils/cesium/TrackUtils'
+import { KM }                                                                      from '@Utils/UnitUtils'
+import { v4 as uuid }                                                              from 'uuid'
+import { snapshot }                                                                from 'valtio/index'
 
 export class POIManager {
 
@@ -55,12 +74,12 @@ export class POIManager {
     }
 
     /**
-     * Removes a POI from the map by its ID
+     * Retrieve the starter POI
      *
-     * @param {string} id - The ID of the POI to remove
+     * @return {MapPOI}
      */
-    remove = (id) => {
-        this.list.delete(id)
+    get starter() {
+        return this.list.values().find(poi => poi.type === POI_STARTER_TYPE)
     }
 
     /**
@@ -78,8 +97,17 @@ export class POIManager {
         return false
     }
 
-    get starter() {
-        return this.list.values().find(poi => poi.type === STARTER_TYPE)
+    /**
+     * Removes a POI from the map by its ID
+     *
+     * @param {string} id - The ID of the POI to remove
+     * @param dbSync {boolean} - true for DB sync (false by default)
+     */
+    remove = async (id, dbSync = false) => {
+        this.list.delete(id)
+        if (dbSync) {
+            await this.removeInDB(this.list.get(id))
+        }
     }
 
     /**
@@ -147,7 +175,7 @@ export class POIManager {
      * @return {boolean} - true if there is one closer
      */
     isTooCloseThanExistingPoints = (newPoi, threshold = this.threshold) => {
-        if (newPoi.type === STARTER_TYPE) {
+        if (newPoi.type === POI_STARTER_TYPE) {
             return false
         }
         for (let poi of this.list.values()) {
@@ -174,26 +202,26 @@ export class POIManager {
      * @param current
      * @return {*|boolean}
      */
-    setStarter = (current) => {
-        const starter = this.getPOIByKeyValue('type', STARTER_TYPE)[0]
-        if (starter) {
+    setStarter = async (current) => {
+        const former = this.getPOIByKeyValue('type', POI_STARTER_TYPE)[0]
+        if (former) {
             // We force the former type of the starter and apply the right color
-            Object.assign(this.list.get(starter.id), {
-                type:  starter.formerType ?? POI_STANDARD_TYPE,
+            Object.assign(this.list.get(former.id), {
+                type: former.formerType ?? POI_STANDARD_TYPE,
                 color: lgs.settings.ui.poi.defaultColor,
             })
-            this.saveInDB(this.list.get(starter.id))
+            await this.saveInDB(this.list.get(former.id))
 
             // Then mark the current as Starter with the right color
             Object.assign(this.list.get(current.id), {
                 formerType: current.type ?? POI_STANDARD_TYPE,
-                type:       STARTER_TYPE,
+                type: POI_STARTER_TYPE,
                 color:      lgs.settings.starter.color,
             })
-            this.saveInDB(this.list.get(current.id))
-            this.starterSettings = this.list.get(current.id)
 
-            return current
+            await this.saveInDB(this.list.get(current.id))
+            const starter = this.starterSettings = this.list.get(current.id)
+            return {former, starter}
         }
         return false
     }
@@ -288,6 +316,63 @@ export class POIManager {
      */
     hasPOIs = () => {
         return this.list.size > 0
+    }
+
+    /**
+     * Update the poi type to POI
+     *
+     * @param id {string} POI id
+     */
+    saveAsPOI = async (id) => {
+        Object.assign(this.list.get(id), {
+            type: POI_STANDARD_TYPE,
+        })
+        await this.saveInDB(this.list.get(id))
+        return this.list.get(id)
+    }
+
+    /**
+     * "Shrink" a POI ie reduce it to its icon.
+     *
+     * @param id {string}
+     */
+    shrink = async (id) => {
+        this.list.get(id).expanded = false
+        await this.saveInDB(this.list.get(id))
+        return this.list.get(id)
+    }
+
+    /**
+     * "Expand" a POI ie expand it to a flag with more information.
+     *
+     * @param id {string}
+     */
+    expand = async (id) => {
+        this.list.get(id).expanded = true
+        await this.saveInDB(this.list.get(id))
+        return this.list.get(id)
+    }
+
+    /**
+     * Change the visibility  in order to hide the POI
+     *
+     * @param id {string}
+     */
+    hide = async (id) => {
+        this.list.get(id).visible = false
+        await this.saveInDB(this.list.get(id))
+        return this.list.get(id)
+    }
+
+    /**
+     * Change the visibility  in order to show the POI
+     *
+     * @param id {string}
+     */
+    show = async (id) => {
+        this.list.get(id).visible = true
+        await this.saveInDB(this.list.get(id))
+        return this.list.get(id)
     }
 
 

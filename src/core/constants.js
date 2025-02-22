@@ -1,3 +1,22 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ *
+ * File: constants.js
+ * Path: /home/christian/devs/assets/lgs1920/studio/src/core/constants.js
+ *
+ * Author : Christian Denat
+ * email: christian.denat@orange.fr
+ *
+ * Created on: 2025-02-22
+ * Last modified: 2025-02-22
+ *
+ *
+ * Copyright © 2025 LGS1920
+ *
+ ******************************************************************************/
+
 import { faCrown, faEarthEurope, faLock, faMap, faRoad, faUnlock, faUser } from '@fortawesome/pro-regular-svg-icons'
 
 
@@ -71,7 +90,7 @@ export const CURRENT_CAMERA = 'camera'
 export const CURRENT_POI = 'poi'
 export const POI_THRESHOLD_DISTANCE = 50 // meters
 
-export const STARTER_TYPE = 'starter'
+export const POI_STARTER_TYPE = 'starter'
 export const FLAG_START_TYPE = 'start'
 export const FLAG_STOP_TYPE = 'stop'
 export const POI_TRACK_TYPE = 'track'

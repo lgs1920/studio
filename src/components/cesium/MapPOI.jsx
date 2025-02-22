@@ -1,3 +1,22 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ *
+ * File: MapPOI.jsx
+ * Path: /home/christian/devs/assets/lgs1920/studio/src/components/cesium/MapPOI.jsx
+ *
+ * Author : Christian Denat
+ * email: christian.denat@orange.fr
+ *
+ * Created on: 2025-02-22
+ * Last modified: 2025-02-22
+ *
+ *
+ * Copyright © 2025 LGS1920
+ *
+ ******************************************************************************/
+
 import { MapPOIContent }                                  from '@Components/MainUI/MapPOI/MapPOIContent'
 import { POIUtils }                                       from '@Utils/cesium/POIUtils'
 import { SceneUtils }                                     from '@Utils/cesium/SceneUtils'
@@ -59,7 +78,6 @@ export const MapPOI = memo(({point: pointId}) => {
 
     const hideMenu = (event) => {
         lgs.mainProxy.components.pois.context.visible = false
-        lgs.mainProxy.components.pois.current = false
         if (event) {
             __.ui.sceneManager.propagateEventToCanvas(event)
         }

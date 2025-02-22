@@ -219,6 +219,8 @@ ui:
 
     defaultColor: "#FAFAFA"             # Hexa
 
+    focusOnEdit: true                   # Apply focus when editing a POI
+
   ## Geocoder
   geocoder:
     url: https://nominatim.openstreetmap.org

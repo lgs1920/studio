@@ -1,3 +1,22 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ *
+ * File: MapPOIContent.jsx
+ * Path: /home/christian/devs/assets/lgs1920/studio/src/components/MainUI/MapPOI/MapPOIContent.jsx
+ *
+ * Author : Christian Denat
+ * email: christian.denat@orange.fr
+ *
+ * Created on: 2025-02-22
+ * Last modified: 2025-02-22
+ *
+ *
+ * Copyright © 2025 LGS1920
+ *
+ ******************************************************************************/
+
 import { TextValueUI }     from '@Components/TextValueUI/TextValueUI'
 import { SECOND }          from '@Core/constants'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -13,7 +32,20 @@ export const MapPOIContent = ({point, hide}) => {
 
     const handleContextMenu = (event) => {
         event.preventDefault()
-        if (!__.ui.cameraManager.isRotating()) {
+
+        // Visible if the camera is not in rotation
+        // or when it is in rotation and
+        //  - current = false (at the app launch or after a poi removal) or
+        //  - we are on current point
+
+        console.log(lgs.mainProxy.components.pois.current, point)
+        if (!__.ui.cameraManager.isRotating()
+            || (__.ui.cameraManager.isRotating()
+                &&
+                (lgs.mainProxy.components.pois.current === false
+                    || lgs.mainProxy.components.pois.current.id === point.id)
+            )) {
+            lgs.mainProxy.components.pois.context.visible = true
             lgs.mainProxy.components.pois.context.visible = true
             lgs.mainProxy.components.pois.current = point
             __.ui.sceneManager.propagateEventToCanvas(event)

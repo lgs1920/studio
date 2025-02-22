@@ -1,4 +1,23 @@
 /*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ *
+ * File: style.css
+ * Path: /home/christian/devs/assets/lgs1920/studio/src/components/MainUI/MapPOI/style.css
+ *
+ * Author : Christian Denat
+ * email: christian.denat@orange.fr
+ *
+ * Created on: 2025-02-22
+ * Last modified: 2025-02-22
+ *
+ *
+ * Copyright © 2025 LGS1920
+ *
+ ******************************************************************************/
+
+/*******************************************************************************
  * POI on MAP
  ******************************************************************************/
 
@@ -154,7 +173,7 @@
 
 .edit-map-poi-item [slot="summary"] span:first-child {
     overflow: hidden;
-    width: 15rem;
+    width: 13rem;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
@@ -168,3 +187,82 @@
 .map-poi-hidden::part(header) {
     background: var(--lgs-disabled-bg-color);
 }
+
+.map-poi-starter::part(header) {
+    background: var(--map-poi-bg-header);
+}
+
+.edit-map-poi-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-edit-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-edit-item {
+    flex: 1;
+    max-width: calc((100% - 2 * var(--lgs-gutter-xs)) / 3);
+}
+
+.map-poi-color-actions {
+    display: flex;
+    max-height: 25px;
+    margin-bottom: -25px; /** TODO Found where this has been set */
+    margin-left: auto;
+    gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-edit-item.in-dms {
+    padding-left: var(--sl-input-spacing-small);
+}
+
+.map-poi-edit-warning-altitude span:not(::part) {
+    color: var(--lgs-warning-color)
+}
+
+.map-poi-edit-warning-altitude::part(input) {
+    background: var(--lgs-warning-bg-color);
+}
+
+.map-poi-edit-warning-altitude::part(suffix) {
+    color: var(--sl-input-color)
+    background: var(--lgs-warning-bg-color);
+}
+
+.map-poi-edit-warning-altitude::part(label) {
+    display: flex;
+    justify-content: space-between;
+}
+
+#map-poi-edit-settings {
+    display: flex;
+    width: 100%;
+}
+
+#map-poi-edit-settings sl-switch {
+    width: 40%;
+    margin-left: auto;
+}
+
+.edit-title-map-poi-input {
+    width: 100%;
+}
+
+.edit-title-map-poi-input::part(form-control-label) {
+    width: 100%;
+}
+
+.edit-title-map-poi {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+

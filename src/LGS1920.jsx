@@ -1,3 +1,22 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ *
+ * File: LGS1920.jsx
+ * Path: /home/christian/devs/assets/lgs1920/studio/src/LGS1920.jsx
+ *
+ * Author : Christian Denat
+ * email: christian.denat@orange.fr
+ *
+ * Created on: 2025-02-22
+ * Last modified: 2025-02-22
+ *
+ *
+ * Copyright © 2025 LGS1920
+ *
+ ******************************************************************************/
+
 import { MapLayer } from '@Components/cesium/MapLayer'
 import { Viewer }   from '@Components/cesium/Viewer'
 
@@ -10,7 +29,7 @@ import {
     WelcomeModal,
 }                           from '@Components/MainUI/WelcomeModal'
 import {
-    BASE_ENTITY, BOTTOM, FOCUS_LAST, FOCUS_STARTER, MOBILE_MAX, OVERLAY_ENTITY, STARTER_TYPE,
+    BASE_ENTITY, BOTTOM, FOCUS_LAST, FOCUS_STARTER, MOBILE_MAX, OVERLAY_ENTITY, POI_STARTER_TYPE,
 }                           from '@Core/constants'
 import {
     LGS1920Context,
@@ -103,7 +122,7 @@ export function LGS1920() {
                                                                               height:    lgs.settings.starter.height,
                                                                               title:     lgs.settings.starter.title,
                                                                               color:     lgs.settings.starter.color,
-                                                                              type:      STARTER_TYPE,
+                                                                              type: POI_STARTER_TYPE,
                                                                           })
 
                                   // We force re/creation in DB to sync it.
