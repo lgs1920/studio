@@ -18,6 +18,8 @@ export class DrawerManager {
 
     /** @param state {null|string} */
     drawers = null
+    /** @param {boolean} */
+    over = false
 
     constructor() {
         // Singleton

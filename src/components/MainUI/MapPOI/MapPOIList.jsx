@@ -48,16 +48,16 @@ export const MapPOIList = () => {
         if (drawers.action) {
             lgs.mainProxy.drawers.action = null
         }
-    }, [pois.current.id])
+    }, [store.current.id])
 
     const selectPOI = async (event) => {
         if (window.isOK(event)) {
             const id = event.target.id.split(`${prefix}`)[1]
-            if (drawers.open === POIS_EDITOR_DRAWER /*&& drawers.action === 'edit-current'*/ /* && store.current.id !== id */) {
+            if (drawers.open === POIS_EDITOR_DRAWER && store.current.id !== id) {
                 store.current = store.list.get(id)
             }
 
-            if (poiSetting.focusOnEdit && drawers.open === POIS_EDITOR_DRAWER) {
+            if (poiSetting.focusOnEdit && drawers.open === POIS_EDITOR_DRAWER && __.ui.drawerManager.over) {
                 const camera = snapshot(lgs.mainProxy.components.camera)
                 if (__.ui.cameraManager.isRotating()) {
                     await __.ui.cameraManager.stopRotate()
