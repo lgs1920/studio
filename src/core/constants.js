@@ -2,19 +2,16 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- *
  * File: constants.js
- * Path: /home/christian/devs/assets/lgs1920/studio/src/core/constants.js
  *
- * Author : Christian Denat
- * email: christian.denat@orange.fr
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-22
- * Last modified: 2025-02-22
+ * Created on: 2025-02-23
+ * Last modified: 2025-02-23
  *
  *
  * Copyright © 2025 LGS1920
- *
  ******************************************************************************/
 
 import { faCrown, faEarthEurope, faLock, faMap, faRoad, faUnlock, faUser } from '@fortawesome/pro-regular-svg-icons'
@@ -117,7 +114,7 @@ export const SETTING_EXCLUSIONS = [
     'layers.filter', 'layers.colorSettings',
     'app', 'scene', 'starter',
     'ui.camera', 'ui.welcome',
-    'ui.menu',
+    'ui.menu', 'ui.poi.rotate',
 ].sort((a, b) => {
     const segmentsA = a.split('.')
     const segmentsB = b.split('.')
