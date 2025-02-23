@@ -220,6 +220,7 @@ ui:
     defaultColor: "#FAFAFA"             # Hexa
 
     focusOnEdit: true                   # Apply focus when editing a POI
+    rotate: true                      # Rotation after POI focus
 
   ## Geocoder
   geocoder:

@@ -2,32 +2,29 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- *
  * File: MapPOIEditMenu.jsx
- * Path: /home/christian/devs/assets/lgs1920/studio/src/components/MainUI/MapPOI/MapPOIEditMenu.jsx
  *
- * Author : Christian Denat
- * email: christian.denat@orange.fr
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
  *
  * Created on: 2025-02-23
  * Last modified: 2025-02-23
  *
  *
  * Copyright © 2025 LGS1920
- *
  ******************************************************************************/
 
-import { POI_STARTER_TYPE }                                  from '@Core/constants'
+import { POI_STARTER_TYPE }                                 from '@Core/constants'
 import {
     faArrowRotateRight, faArrowsFromLine, faCopy, faCrosshairsSimple, faFlag, faLocationDot, faPanorama, faTrashCan,
     faXmark,
-}                                                            from '@fortawesome/pro-regular-svg-icons'
+}                                                           from '@fortawesome/pro-regular-svg-icons'
 import { faEye, faMask }                                    from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon }                                  from '@fortawesome/react-fontawesome'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                            from '@Utils/FA2SL'
 import { UIToast }                                          from '@Utils/UIToast'
-import React                                                 from 'react'
+import React                                                from 'react'
 import { snapshot, useSnapshot }                            from 'valtio'
 import './style.css'
 
@@ -99,13 +96,16 @@ export const MapPOIEditMenu = () => {
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
             range:      5000,
-            infinite:   true,
-            rotate:     true,
+            infinite:  false,
+            rpm:       3,
+            rotations: 1,
+            rotate:    lgs.settings.ui.poi.rotate,
             panoramic:  false,
             flyingTime: 0,    // no move, no time ! We're on target
         })
-
-        pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
+        if (lgs.settings.ui.poi.rotate) {
+            pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
+        }
     }
 
     const setAsStarter = async () => {

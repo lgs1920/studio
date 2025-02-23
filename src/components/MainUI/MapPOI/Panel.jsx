@@ -28,7 +28,6 @@ export const Panel = () => {
     const mainSnap = useSnapshot(mainStore)
     const menu = useSnapshot(lgs.editorSettingsProxy.menu)
 
-
     const closePOIsEditor = (event) => {
         if (window.isOK(event)) {
             window.dispatchEvent(new Event('resize'))
@@ -45,7 +44,6 @@ export const Panel = () => {
             closePOIsEditor(event)
         }
     }
-
 
     return (<div className={'drawer-wrapper'}>
             <SlDrawer id={POIS_EDITOR_DRAWER}

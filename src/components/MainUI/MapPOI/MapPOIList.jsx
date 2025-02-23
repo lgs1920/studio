@@ -22,7 +22,7 @@ import { SlDetails }                                          from '@shoelace-st
 import { UIToast }                                            from '@Utils/UIToast'
 import classNames                                             from 'classnames'
 import { Fragment, useEffect, useRef }                        from 'react'
-import { useSnapshot }                                        from 'valtio/index'
+import { snapshot, useSnapshot }                              from 'valtio/index'
 
 export const MapPOIList = () => {
 
@@ -31,7 +31,7 @@ export const MapPOIList = () => {
     const pois = useSnapshot(store)
     const prefix = 'edit-map-poi-'
     const drawers = useSnapshot(lgs.mainProxy.drawers)
-
+    const poiSetting = useSnapshot(lgs.settings.ui.poi)
     const handleCopyCoordinates = (poi) => {
         __.ui.poiManager.copyCoordinatesToClipboard(poi).then(() => {
             UIToast.success({
@@ -45,14 +45,39 @@ export const MapPOIList = () => {
     }, [])
 
     useEffect(() => {
-        __.ui.drawerManager.clean()
-    }, [store.current.id])
+        if (drawers.action) {
+            lgs.mainProxy.drawers.action = null
+        }
+    }, [pois.current.id])
 
     const selectPOI = async (event) => {
         if (window.isOK(event)) {
             const id = event.target.id.split(`${prefix}`)[1]
-            if (drawers.open === POIS_EDITOR_DRAWER && drawers.action === 'edit-current' && store.current.id !== id) {
-                store.current = pois.list.get(id)
+            if (drawers.open === POIS_EDITOR_DRAWER /*&& drawers.action === 'edit-current'*/ /* && store.current.id !== id */) {
+                store.current = store.list.get(id)
+            }
+
+            if (poiSetting.focusOnEdit && drawers.open === POIS_EDITOR_DRAWER) {
+                const camera = snapshot(lgs.mainProxy.components.camera)
+                if (__.ui.cameraManager.isRotating()) {
+                    await __.ui.cameraManager.stopRotate()
+                }
+                __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
+                    heading:    camera.position.heading,
+                    pitch:      camera.position.pitch,
+                    roll:       camera.position.roll,
+                    range:      5000,
+                    infinite:   false,
+                    rpm:        3,
+                    rotations:  1,
+                    rotate:     lgs.settings.ui.poi.rotate,
+                    panoramic:  false,
+                    flyingTime: 0,    // no move, no time ! We're on target
+                })
+                if (lgs.settings.ui.poi.rotate) {
+                    store.current = await __.ui.poiManager.startAnimation(store.current.id)
+                }
+
             }
         }
     }
@@ -69,7 +94,7 @@ export const MapPOIList = () => {
                         )}
                                    id={`${prefix}${id}`}
                                    onSlAfterShow={selectPOI}
-                                   open={id === pois.current.id && drawers.action === 'edit-current'}
+                                   open={pois.current.id === id && drawers.action !== null}
                                    small
                                    style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.color, 'rgba', 0.2)}}>
                             <div slot="summary">

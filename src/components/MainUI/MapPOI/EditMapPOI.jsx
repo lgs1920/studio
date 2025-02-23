@@ -2,19 +2,16 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- *
  * File: EditMapPOI.jsx
- * Path: /home/christian/devs/assets/lgs1920/studio/src/components/MainUI/MapPOI/EditMapPOI.jsx
  *
- * Author : Christian Denat
- * email: christian.denat@orange.fr
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
  *
  * Created on: 2025-02-23
  * Last modified: 2025-02-23
  *
  *
  * Copyright © 2025 LGS1920
- *
  ******************************************************************************/
 
 import { MapPOIEditMenu }                               from '@Components/MainUI/MapPOI/MapPOIEditMenu'
@@ -76,15 +73,13 @@ export const EditMapPOI = ({poi}) => {
 
     useEffect(() => {
         if (pois.current) {
-            setActive(pois.current.id === poi.id)
             setSimulated(point.simulatedHeight !== undefined)
         }
 
-    }, [pois.current, point])
+    }, [point])
 
     return (
-        <>
-            {active &&
+
                 <>
                     <SlDivider/>
                     <div className="edit-map-poi-wrapper">
@@ -154,8 +149,8 @@ export const EditMapPOI = ({poi}) => {
                             <span className="map-poi-edit-item"></span>
                         </div>
                     </div>
-                </>}
-        </>
+                </>
+
 
     )
 }
