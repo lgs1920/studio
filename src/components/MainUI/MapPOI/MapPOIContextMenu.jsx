@@ -2,32 +2,29 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- *
  * File: MapPOIContextMenu.jsx
- * Path: /home/christian/devs/assets/lgs1920/studio/src/components/MainUI/MapPOI/MapPOIContextMenu.jsx
  *
- * Author : Christian Denat
- * email: christian.denat@orange.fr
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
  *
  * Created on: 2025-02-23
  * Last modified: 2025-02-23
  *
  *
  * Copyright © 2025 LGS1920
- *
  ******************************************************************************/
 
-import { POI_STANDARD_TYPE, POI_STARTER_TYPE } from '@Core/constants'
+import { POI_STANDARD_TYPE, POI_STARTER_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
 import {
     faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama, faTrashCan, faXmark,
-}                                              from '@fortawesome/pro-regular-svg-icons'
-import { faMask }                              from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlPopup }                     from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                               from '@Utils/FA2SL'
-import { UIToast }                             from '@Utils/UIToast'
-import React, { useRef }                       from 'react'
-import Timeout                                 from 'smart-timeout'
-import { snapshot, useSnapshot }               from 'valtio'
+}                                                                  from '@fortawesome/pro-regular-svg-icons'
+import { faMask }                                                  from '@fortawesome/pro-solid-svg-icons'
+import { SlIcon, SlPopup }                                         from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                   from '@Utils/FA2SL'
+import { UIToast }                                                 from '@Utils/UIToast'
+import React, { useRef }                                           from 'react'
+import Timeout                                                     from 'smart-timeout'
+import { snapshot, useSnapshot }                                   from 'valtio'
 import './style.css'
 
 /**
@@ -179,6 +176,14 @@ export const MapPOIContextMenu = () => {
 
     }
 
+    /**
+     * We open the POI Edit drawer and the current POI settings
+     */
+    const openEdit = () => {
+        __.ui.drawerManager.open(POIS_EDITOR_DRAWER, 'edit-current')
+        hideMenu()
+    }
+
     return (
         <>
             {snap.current &&
@@ -212,7 +217,7 @@ export const MapPOIContextMenu = () => {
                                 </li>
                             }
 
-                            <li>
+                            <li onClick={openEdit}>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationPen)}></SlIcon>
                                 <span>Edit</span>
                             </li>
