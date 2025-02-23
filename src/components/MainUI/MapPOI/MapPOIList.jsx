@@ -2,30 +2,27 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- *
  * File: MapPOIList.jsx
- * Path: /home/christian/devs/assets/lgs1920/studio/src/components/MainUI/MapPOI/MapPOIList.jsx
  *
- * Author : Christian Denat
- * email: christian.denat@orange.fr
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-22
- * Last modified: 2025-02-22
+ * Created on: 2025-02-23
+ * Last modified: 2025-02-23
  *
  *
  * Copyright © 2025 LGS1920
- *
  ******************************************************************************/
 
-import { EditMapPOI }                     from '@Components/MainUI/MapPOI/EditMapPOI'
-import { POI_STARTER_TYPE, POI_TMP_TYPE } from '@Core/constants'
-import { faMask }                         from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon }                from '@fortawesome/react-fontawesome'
-import { SlDetails }                      from '@shoelace-style/shoelace/dist/react'
-import { UIToast }                        from '@Utils/UIToast'
-import classNames                         from 'classnames'
-import { Fragment, useEffect, useRef }    from 'react'
-import { snapshot, useSnapshot }          from 'valtio/index'
+import { EditMapPOI }                                         from '@Components/MainUI/MapPOI/EditMapPOI'
+import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
+import { faMask }                                             from '@fortawesome/pro-regular-svg-icons'
+import { FontAwesomeIcon }                                    from '@fortawesome/react-fontawesome'
+import { SlDetails }                                          from '@shoelace-style/shoelace/dist/react'
+import { UIToast }                                            from '@Utils/UIToast'
+import classNames                                             from 'classnames'
+import { Fragment, useEffect, useRef }                        from 'react'
+import { useSnapshot }                                        from 'valtio/index'
 
 export const MapPOIList = () => {
 
@@ -33,6 +30,7 @@ export const MapPOIList = () => {
     const store = lgs.mainProxy.components.pois
     const pois = useSnapshot(store)
     const prefix = 'edit-map-poi-'
+    const drawers = useSnapshot(lgs.mainProxy.drawers)
 
     const handleCopyCoordinates = (poi) => {
         __.ui.poiManager.copyCoordinatesToClipboard(poi).then(() => {
@@ -46,25 +44,15 @@ export const MapPOIList = () => {
         __.ui.ui.initDetailsGroup(poiList.current)
     }, [])
 
+    useEffect(() => {
+        __.ui.drawerManager.clean()
+    }, [store.current.id])
+
     const selectPOI = async (event) => {
         if (window.isOK(event)) {
             const id = event.target.id.split(`${prefix}`)[1]
-            store.current = pois.list.get(id)
-            const camera = snapshot(lgs.mainProxy.components.camera)
-            if (__.ui.cameraManager.isRotating()) {
-                await __.ui.cameraManager.stopRotate()
-            }
-            else if (lgs.settings.ui.poi.focusOnEdit) {
-                __.ui.sceneManager.focus(pois.list.get(id), {
-                    heading:    camera.position.heading,
-                    pitch:      camera.position.pitch,
-                    roll:       camera.position.roll,
-                    range:      5000,
-                    infinite:   true,
-                    rotate:     false,
-                    panoramic:  false,
-                    flyingTime: 0,
-                })
+            if (drawers.open === POIS_EDITOR_DRAWER && drawers.action === 'edit-current' && store.current.id !== id) {
+                store.current = pois.list.get(id)
             }
         }
     }
@@ -80,8 +68,8 @@ export const MapPOIList = () => {
                             poi.type === POI_STARTER_TYPE ? 'map-poi-starter' : undefined,
                         )}
                                    id={`${prefix}${id}`}
-
                                    onSlAfterShow={selectPOI}
+                                   open={id === pois.current.id && drawers.action === 'edit-current'}
                                    small
                                    style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.color, 'rgba', 0.2)}}>
                             <div slot="summary">

@@ -2,19 +2,16 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- *
  * File: main.js
- * Path: /home/christian/devs/assets/lgs1920/studio/src/core/stores/main.js
  *
- * Author : Christian Denat
- * email: christian.denat@orange.fr
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-22
- * Last modified: 2025-02-22
+ * Created on: 2025-02-23
+ * Last modified: 2025-02-23
  *
  *
  * Copyright © 2025 LGS1920
- *
  ******************************************************************************/
 
 import { proxyMap } from 'valtio/utils'
@@ -131,6 +128,7 @@ export const main = {
     drawers:         {
         open: null,
         over: false,
+        action: null,
     },
     modals:          {
         altitudeChoice: {

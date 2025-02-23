@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: DrawerManager.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-23
+ * Last modified: 2025-02-23
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 export class DrawerManager {
 
     /** @param state {null|string} */
@@ -44,8 +60,9 @@ export class DrawerManager {
      * Mark drawer state as open
      * @param id
      */
-    open = (id) => {
+    open = (id, action) => {
         this.drawers.open = id
+        this.drawers.action = action
     }
 
     /**
@@ -79,6 +96,10 @@ export class DrawerManager {
             drawer.addEventListener('mouseleave', this.mouseLeave)
             drawer.addEventListener('mouseenter', this.mouseEnter)
         })
+    }
+
+    clean = () => {
+        this.drawers.action = null
     }
 
 }
