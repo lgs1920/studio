@@ -2,20 +2,33 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- *
  * File: LGS1920.jsx
- * Path: /home/christian/devs/assets/lgs1920/studio/src/LGS1920.jsx
  *
- * Author : Christian Denat
- * email: christian.denat@orange.fr
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-22
- * Last modified: 2025-02-22
+ * Created on: 2025-02-23
+ * Last modified: 2025-02-23
  *
  *
  * Copyright © 2025 LGS1920
- *
  ******************************************************************************/
+
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: LGS1920.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-23
+ * Last modified: 2025-02-23
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/*/
 
 import { MapLayer } from '@Components/cesium/MapLayer'
 import { Viewer }   from '@Components/cesium/Viewer'
@@ -115,6 +128,8 @@ export function LGS1920() {
                               // Read DB for POIs
                               await __.ui.poiManager.readAllFromDB()
                               const starter = __.ui.poiManager.starter
+                              lgs.mainProxy.components.pois.current = starter
+
                               if (!starter) {
                                   const newStarter = __.ui.poiManager.add({
                                                                               longitude: lgs.settings.starter.longitude,
@@ -134,8 +149,6 @@ export function LGS1920() {
 
                               // Use app settings
                               if (__.ui.cameraManager.isAppFocusOn(FOCUS_STARTER)) {
-                                  // Starter
-                                  const starter = __.ui.poiManager.starter
                                   lgs.cameraStore = {
                                       target: {
                                           longitude: starter.longitude,
