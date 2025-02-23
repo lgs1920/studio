@@ -9,39 +9,26 @@
  * Author : Christian Denat
  * email: christian.denat@orange.fr
  *
- * Created on: 2025-02-22
- * Last modified: 2025-02-22
+ * Created on: 2025-02-23
+ * Last modified: 2025-02-23
  *
  *
  * Copyright © 2025 LGS1920
  *
  ******************************************************************************/
 
-import { POI_STARTER_TYPE } from '@Core/constants'
+import { POI_STARTER_TYPE }                                  from '@Core/constants'
 import {
-    faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faPanorama, faTrashCan, faXmark,
-}                           from '@fortawesome/pro-regular-svg-icons'
-import {
-    faEye, faMask,
-}                           from '@fortawesome/pro-solid-svg-icons'
-import {
-    FontAwesomeIcon,
-}                           from '@fortawesome/react-fontawesome'
-import {
-    SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem,
-}                           from '@shoelace-style/shoelace/dist/react'
-import {
-    FA2SL,
-}                           from '@Utils/FA2SL'
-import {
-    UIToast,
-}                           from '@Utils/UIToast'
-import React, {
-    useState,
-}                           from 'react'
-import {
-    snapshot, useSnapshot,
-}                           from 'valtio'
+    faArrowRotateRight, faArrowsFromLine, faCopy, faCrosshairsSimple, faFlag, faLocationDot, faPanorama, faTrashCan,
+    faXmark,
+}                                                            from '@fortawesome/pro-regular-svg-icons'
+import { faEye, faMask }                                    from '@fortawesome/pro-solid-svg-icons'
+import { FontAwesomeIcon }                                  from '@fortawesome/react-fontawesome'
+import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                            from '@Utils/FA2SL'
+import { UIToast }                                          from '@Utils/UIToast'
+import React                                                 from 'react'
+import { snapshot, useSnapshot }                            from 'valtio'
 import './style.css'
 
 /**
@@ -58,7 +45,7 @@ export const MapPOIEditMenu = () => {
 
     const pois = lgs.mainProxy.components.pois
     const snap = useSnapshot(pois)
-    const [rotation, setRotation] = useState(null)
+    const settings = useSnapshot(lgs.settings.ui.poi)
 
     const hide = async () => {
         pois.current = await __.ui.poiManager.hide(snap.current.id)
@@ -73,6 +60,23 @@ export const MapPOIEditMenu = () => {
 
     const expand = async () => {
         pois.current = await __.ui.poiManager.expand(snap.current.id)
+    }
+
+    const focus = async () => {
+        const camera = snapshot(lgs.mainProxy.components.camera)
+        if (__.ui.cameraManager.isRotating()) {
+            await __.ui.cameraManager.stopRotate()
+        }
+        __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
+            heading:    camera.position.heading,
+            pitch:      camera.position.pitch,
+            roll:       camera.position.roll,
+            range:      5000,
+            infinite:   true,
+            rotate:     false,
+            panoramic:  false,
+            flyingTime: 0,    // no move, no time ! We're on target
+        })
     }
 
     /**
@@ -100,7 +104,8 @@ export const MapPOIEditMenu = () => {
             panoramic:  false,
             flyingTime: 0,    // no move, no time ! We're on target
         })
-        setRotation(true)
+
+        pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
     }
 
     const setAsStarter = async () => {
@@ -136,13 +141,13 @@ export const MapPOIEditMenu = () => {
             await __.ui.cameraManager.stopRotate()
         }
         __.ui.cameraManager.panoramic()
-        setRotation(true)
+        //    pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
 
     }
 
     const stopRotation = async () => {
         await __.ui.cameraManager.stopRotate()
-        setRotation(false)
+        pois.current = await __.ui.poiManager.stopAnimation(snap.current.id)
     }
 
     /**
@@ -185,6 +190,12 @@ export const MapPOIEditMenu = () => {
                     </SlButton>
 
                     <SlMenu>
+                        {!settings.focusOnEdit &&
+                            <SlMenuItem onClick={focus} small>
+                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
+                                <span>Focus</span>
+                            </SlMenuItem>
+                        }
                         {snap.current.type !== POI_STARTER_TYPE &&
                             <SlMenuItem onClick={setAsStarter} small>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFlag)}></SlIcon>
@@ -230,7 +241,7 @@ export const MapPOIEditMenu = () => {
                             <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCopy)}></SlIcon>
                             <span>Copy Coords</span>
                         </SlMenuItem>
-                        {!__.ui.cameraManager.isRotating() &&
+                        {!snap.current.animated && !__.ui.cameraManager.isRotating() &&
                             <>
                                 <SlMenuItem onClick={rotationAround}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowRotateRight)}></SlIcon>
@@ -242,7 +253,7 @@ export const MapPOIEditMenu = () => {
                                 </SlMenuItem>
                             </>
                         }
-                        {__.ui.cameraManager.isRotating() &&
+                        {(snap.current.animated || __.ui.cameraManager.isRotating()) &&
                             <SlMenuItem onClick={stopRotation} loading>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
                                 <span>Stop</span>

@@ -9,8 +9,8 @@
  * Author : Christian Denat
  * email: christian.denat@orange.fr
  *
- * Created on: 2025-02-22
- * Last modified: 2025-02-22
+ * Created on: 2025-02-23
+ * Last modified: 2025-02-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,7 +38,6 @@ export const MapPOIContent = ({point, hide}) => {
         //  - current = false (at the app launch or after a poi removal) or
         //  - we are on current point
 
-        console.log(lgs.mainProxy.components.pois.current, point)
         if (!__.ui.cameraManager.isRotating()
             || (__.ui.cameraManager.isRotating()
                 &&

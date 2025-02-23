@@ -9,8 +9,8 @@
  * Author : Christian Denat
  * email: christian.denat@orange.fr
  *
- * Created on: 2025-02-22
- * Last modified: 2025-02-22
+ * Created on: 2025-02-23
+ * Last modified: 2025-02-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -372,6 +372,28 @@ export class POIManager {
     show = async (id) => {
         this.list.get(id).visible = true
         await this.saveInDB(this.list.get(id))
+        return this.list.get(id)
+    }
+
+    /**
+     * Indicate that there is an animation on thi POI
+     *
+     * @param id
+     * @return {unknown}
+     */
+    startAnimation = (id) => {
+        this.list.get(id).animated = true
+        return this.list.get(id)
+    }
+
+    /**
+     * There isno more animation on thi POI
+     *
+     * @param id
+     * @return {unknown}
+     */
+    stopAnimation = (id) => {
+        this.list.get(id).animated = false
         return this.list.get(id)
     }
 

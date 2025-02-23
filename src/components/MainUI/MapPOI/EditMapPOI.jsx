@@ -9,8 +9,8 @@
  * Author : Christian Denat
  * email: christian.denat@orange.fr
  *
- * Created on: 2025-02-22
- * Last modified: 2025-02-22
+ * Created on: 2025-02-23
+ * Last modified: 2025-02-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,7 +24,7 @@ import { SlColorPicker, SlDivider, SlInput, SlTooltip } from '@shoelace-style/sh
 import { UIUtils }                                      from '@Utils/UIUtils'
 import { ELEVATION_UNITS }                              from '@Utils/UnitUtils'
 import classNames                                       from 'classnames'
-import { useEffect, useState }                          from 'react'
+import React, { useEffect, useState }                   from 'react'
 import { useSnapshot }                                  from 'valtio'
 
 export const EditMapPOI = ({poi}) => {

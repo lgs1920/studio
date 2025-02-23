@@ -9,8 +9,8 @@
  * Author : Christian Denat
  * email: christian.denat@orange.fr
  *
- * Created on: 2025-02-22
- * Last modified: 2025-02-22
+ * Created on: 2025-02-23
+ * Last modified: 2025-02-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -43,15 +43,15 @@ import './style.css'
 export const MapPOIContextMenu = () => {
 
     const anchor = useRef(null)
-    const snap = useSnapshot(lgs.mainProxy.components.pois)
-
+    const pois = lgs.mainProxy.components.pois
+    const snap = useSnapshot(pois)
 
     /**
      * Hides the menu in the application by resuming the context timer and updating visibility settings.
      */
     const hideMenu = () => {
-        Timeout.resume(lgs.mainProxy.components.pois.context.timer)
-        lgs.mainProxy.components.pois.context.visible = false
+        Timeout.resume(pois.context.timer)
+        pois.context.visible = false
     }
 
     const saveAsPOI = () => {
@@ -93,7 +93,7 @@ export const MapPOIContextMenu = () => {
             await __.ui.cameraManager.stopRotate()
         }
         else {
-            __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
+            __.ui.sceneManager.focus(pois.current, {
                 heading:    camera.position.heading,
                 pitch:      camera.position.pitch,
                 roll:       camera.position.roll,
@@ -105,10 +105,12 @@ export const MapPOIContextMenu = () => {
             })
         }
         hideMenu()
+        pois.current = __.ui.poiManager.startAnimation(snap.current.id)
     }
 
     const stopRotation = async () => {
         await __.ui.cameraManager.stopRotate()
+        pois.current = __.ui.poiManager.stopAnimation(snap.current.id)
         hideMenu()
     }
 
@@ -240,7 +242,7 @@ export const MapPOIContextMenu = () => {
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCopy)}></SlIcon>
                                 <span>Copy Coords</span>
                             </li>
-                            {!__.ui.cameraManager.isRotating() &&
+                            {!snap.current.animated && !__.ui.cameraManager.isRotating() &&
                                 <>
                                     <li onClick={rotationAround}>
                                         <SlIcon slot="prefix" library="fa"
@@ -253,7 +255,7 @@ export const MapPOIContextMenu = () => {
                                     </li>
                                 </>
                             }
-                            {__.ui.cameraManager.isRotating() &&
+                            {(snap.current.animated || __.ui.cameraManager.isRotating()) &&
                                 <li onClick={stopRotation}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
                                     <span>Stop</span>

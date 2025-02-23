@@ -1,9 +1,33 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ *
+ * File: MapPOI.js
+ * Path: /home/christian/devs/assets/lgs1920/studio/src/core/MapPOI.js
+ *
+ * Author : Christian Denat
+ * email: christian.denat@orange.fr
+ *
+ * Created on: 2025-02-23
+ * Last modified: 2025-02-23
+ *
+ *
+ * Copyright © 2025 LGS1920
+ *
+ ******************************************************************************/
+
 import { POI_TMP_TYPE }      from '@Core/constants'
 import { MapElement }        from '@Core/MapElement'
 import { faFlagSwallowtail } from '@fortawesome/duotone-light-svg-icons'
 import { v4 as uuid }        from 'uuid'
 
 export class MapPOI extends MapElement {
+    /**
+     * @type {boolean}
+     */
+    animated = false
+
     /**
      * @type {Camera}
      */
