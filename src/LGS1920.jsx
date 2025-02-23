@@ -14,22 +14,6 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-/*******************************************************************************
- *
- * This file is part of the LGS1920/studio project.
- *
- * File: LGS1920.jsx
- *
- * Author : LGS1920 Team
- * email: contact@lgs1920.fr
- *
- * Created on: 2025-02-23
- * Last modified: 2025-02-23
- *
- *
- * Copyright © 2025 LGS1920
- ******************************************************************************/*/
-
 import { MapLayer } from '@Components/cesium/MapLayer'
 import { Viewer }   from '@Components/cesium/Viewer'
 
