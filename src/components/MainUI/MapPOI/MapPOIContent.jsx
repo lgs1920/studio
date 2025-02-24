@@ -2,19 +2,16 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- *
  * File: MapPOIContent.jsx
- * Path: /home/christian/devs/assets/lgs1920/studio/src/components/MainUI/MapPOI/MapPOIContent.jsx
  *
- * Author : Christian Denat
- * email: christian.denat@orange.fr
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-23
- * Last modified: 2025-02-23
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
  *
  *
  * Copyright © 2025 LGS1920
- *
  ******************************************************************************/
 
 import { TextValueUI }     from '@Components/TextValueUI/TextValueUI'
@@ -71,6 +68,7 @@ export const MapPOIContent = ({point, hide}) => {
 
                         <>
                             <h3> {point.title ?? 'Point Of Interest'}</h3>
+
                             {point.scale > 0.6 && (
                                 <div className="poi-full-coordinates">
                                     {!point.simulatedHeight && (

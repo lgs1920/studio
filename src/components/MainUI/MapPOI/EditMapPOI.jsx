@@ -7,22 +7,22 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-23
- * Last modified: 2025-02-23
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { MapPOIEditMenu }                               from '@Components/MainUI/MapPOI/MapPOIEditMenu'
-import { faSquareQuestion }                             from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon }                              from '@fortawesome/react-fontawesome'
-import { SlColorPicker, SlDivider, SlInput, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { UIUtils }                                      from '@Utils/UIUtils'
-import { ELEVATION_UNITS }                              from '@Utils/UnitUtils'
-import classNames                                       from 'classnames'
-import React, { useEffect, useState }                   from 'react'
-import { useSnapshot }                                  from 'valtio'
+import { MapPOIEditMenu }                                           from '@Components/MainUI/MapPOI/MapPOIEditMenu'
+import { faSquareQuestion }                                         from '@fortawesome/pro-regular-svg-icons'
+import { FontAwesomeIcon }                                          from '@fortawesome/react-fontawesome'
+import { SlColorPicker, SlDivider, SlInput, SlTextarea, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { UIUtils }                                                  from '@Utils/UIUtils'
+import { ELEVATION_UNITS }                                          from '@Utils/UnitUtils'
+import classNames                                                   from 'classnames'
+import React, { useEffect, useState }                               from 'react'
+import { useSnapshot }                                              from 'valtio'
 
 export const EditMapPOI = ({poi}) => {
 
@@ -71,6 +71,15 @@ export const EditMapPOI = ({poi}) => {
         }
     }
 
+    const handleChangeDescription = async event => {
+        if (window.isOK) {
+            Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
+                description: event.target.value,
+            })
+            await __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(point.id))
+        }
+    }
+
     useEffect(() => {
         if (pois.current) {
             setSimulated(point.simulatedHeight !== undefined)
@@ -96,12 +105,23 @@ export const EditMapPOI = ({poi}) => {
                             />
                             <MapPOIEditMenu/>
                         </div>
-                        <div>
 
-                            <SlInput size="small" value={point.title} onSlChange={handleChangeTitle}
+                        <div>
+                            <SlInput size="small" value={point.title}
+                                     onSlChange={handleChangeTitle}
+                                     onInput={handleChangeTitle}
                                      className="edit-title-map-poi-input">
                                 <span slot="label" className="edit-title-map-poi">{'Title'}</span>
                             </SlInput>
+                        </div>
+
+                        <div>
+                            <SlTextarea size="small" value={point.description ?? ''}
+                                        onSlChange={handleChangeDescription}
+                                        onInput={handleChangeDescription}
+                                        className="edit-title-map-poi-input">
+                                <span slot="label" className="edit-title-map-poi">{'Description'}</span>
+                            </SlTextarea>
                         </div>
 
                         <div className={'map-poi-edit-row'}>
@@ -117,7 +137,9 @@ export const EditMapPOI = ({poi}) => {
                                      label={'Longitude'} readonly/>
                             <SlInput
                                 className={classNames('map-poi-edit-item', simulated ? 'map-poi-edit-warning-altitude' : '')}
-                                size="small" onSlChange={handleChangeAltitude} type="number"
+                                size="small" type="number"
+                                onSlChange={handleChangeAltitude}
+                                onSlInput={handleChangeAltitude}
                                 pattern={/^\d+$/} min="0" max="8850"
                                 value={Math.round(point.height | point.simulatedHeight)}
                             >

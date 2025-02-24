@@ -2,19 +2,16 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- *
  * File: MapPOI.js
- * Path: /home/christian/devs/assets/lgs1920/studio/src/core/MapPOI.js
  *
- * Author : Christian Denat
- * email: christian.denat@orange.fr
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-23
- * Last modified: 2025-02-23
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
  *
  *
  * Copyright © 2025 LGS1920
- *
  ******************************************************************************/
 
 import { POI_TMP_TYPE }      from '@Core/constants'
@@ -37,6 +34,11 @@ export class MapPOI extends MapElement {
      * @type {string}
      */
     color
+
+    /**
+     * @type {string}
+     */
+    description
 
     /**
      * @type {boolean}
