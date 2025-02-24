@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-23
- * Last modified: 2025-02-23
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -53,6 +53,7 @@ export const Panel = () => {
                       onSlAfterHide={closePOIsEditor}
                       className={'lgs-theme'}
                       placement={menu.drawer}
+                      label={'Manage Your Points Of View'}
             >
                 <MapPOIEditSettings/>
                 <MapPOIList/>

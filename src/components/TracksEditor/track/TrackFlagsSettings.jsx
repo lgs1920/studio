@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: TrackFlagsSettings.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { ToggleStateIcon }                   from '@Components/ToggleStateIcon'
 import { JUST_SAVE }                         from '@Core/constants'
 import { faLocationPin, faLocationPinSlash } from '@fortawesome/pro-solid-svg-icons'
@@ -48,7 +64,7 @@ export const TrackFlagsSettings = function TrackSettings() {
     return (
         <>
             <SlTooltip hoist content={textVisibilityStartFlag}>
-                <ToggleStateIcon change={setStartFlagVisibility}
+                <ToggleStateIcon onChange={setStartFlagVisibility}
                                  id={'start-visibility'}
                                  icons={{
                                      shown: faLocationPin, hidden: faLocationPinSlash,
@@ -57,7 +73,7 @@ export const TrackFlagsSettings = function TrackSettings() {
                                  initial={editorSnapshot?.track.flags.start.visible}/>
             </SlTooltip>
             <SlTooltip hoist content={textVisibilityStopFlag}>
-                <ToggleStateIcon change={setStopFlagVisibility}
+                <ToggleStateIcon onChange={setStopFlagVisibility}
                                  id={'stop-visibility'}
                                  icons={{
                                      shown: faLocationPin, hidden: faLocationPinSlash,
