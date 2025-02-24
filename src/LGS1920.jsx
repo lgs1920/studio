@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-23
- * Last modified: 2025-02-23
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -179,6 +179,9 @@ export function LGS1920() {
                                   lookAt:   true,
                                   rpm:      lgs.settings.starter.camera.rpm,
                               })
+
+                              // set animated state
+                              lgs.mainProxy.components.pois.current.animated = lgs.settings.ui.camera.start.rotate.app
 
 
                               console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)

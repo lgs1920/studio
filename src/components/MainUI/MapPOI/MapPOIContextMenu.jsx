@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-23
+ * Created on: 2025-02-24
  * Last modified: 2025-02-23
  *
  *
@@ -88,6 +88,7 @@ export const MapPOIContextMenu = () => {
         const camera = snapshot(lgs.mainProxy.components.camera)
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
+            pois.current = __.ui.poiManager.stopAnimation(snap.current.id)
         }
         else {
             __.ui.sceneManager.focus(pois.current, {
@@ -138,6 +139,7 @@ export const MapPOIContextMenu = () => {
     const panoramic = async () => {
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
+            pois.current = __.ui.poiManager.stopAnimation(snap.current.id)
         }
         __.ui.cameraManager.panoramic()
         hideMenu()

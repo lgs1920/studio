@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-23
- * Last modified: 2025-02-23
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -114,7 +114,7 @@ export const SETTING_EXCLUSIONS = [
     'layers.filter', 'layers.colorSettings',
     'app', 'scene', 'starter',
     'ui.camera', 'ui.welcome',
-    'ui.menu', 'ui.poi.rotate',
+    'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit',
 ].sort((a, b) => {
     const segmentsA = a.split('.')
     const segmentsB = b.split('.')

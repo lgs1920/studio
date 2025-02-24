@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-23
- * Last modified: 2025-02-23
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -52,32 +52,37 @@ export const MapPOIList = () => {
 
     const selectPOI = async (event) => {
         if (window.isOK(event)) {
+
             const id = event.target.id.split(`${prefix}`)[1]
-            if (drawers.open === POIS_EDITOR_DRAWER && store.current.id !== id) {
-                store.current = store.list.get(id)
-            }
-
-            if (poiSetting.focusOnEdit && drawers.open === POIS_EDITOR_DRAWER && __.ui.drawerManager.over) {
-                const camera = snapshot(lgs.mainProxy.components.camera)
-                if (__.ui.cameraManager.isRotating()) {
-                    await __.ui.cameraManager.stopRotate()
-                }
-                __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
-                    heading:    camera.position.heading,
-                    pitch:      camera.position.pitch,
-                    roll:       camera.position.roll,
-                    range:      5000,
-                    infinite:   false,
-                    rpm:        3,
-                    rotations:  1,
-                    rotate:     lgs.settings.ui.poi.rotate,
-                    panoramic:  false,
-                    flyingTime: 0,    // no move, no time ! We're on target
-                })
-                if (lgs.settings.ui.poi.rotate) {
-                    store.current = await __.ui.poiManager.startAnimation(store.current.id)
+            if (store.current.id !== id) {
+                // Stop animation before changing
+                store.current.animated = false
+                if (drawers.open === POIS_EDITOR_DRAWER && store.current.id !== id) {
+                    store.current = store.list.get(id)
                 }
 
+                if (poiSetting.focusOnEdit && drawers.open === POIS_EDITOR_DRAWER && __.ui.drawerManager.over) {
+                    const camera = snapshot(lgs.mainProxy.components.camera)
+                    if (__.ui.cameraManager.isRotating()) {
+                        await __.ui.cameraManager.stopRotate()
+                        store.current = __.ui.poiManager.stopAnimation(pois.current.id)
+                    }
+                    __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
+                        heading:    camera.position.heading,
+                        pitch:      camera.position.pitch,
+                        roll:       camera.position.roll,
+                        range:      5000,
+                        infinite:   false,
+                        rpm:        3,
+                        rotations:  1,
+                        rotate:     lgs.settings.ui.poi.rotate,
+                        panoramic:  false,
+                        flyingTime: 0,    // no move, no time ! We're on target
+                    })
+                    if (lgs.settings.ui.poi.rotate) {
+                        store.current = await __.ui.poiManager.startAnimation(store.current.id)
+                    }
+                }
             }
         }
     }

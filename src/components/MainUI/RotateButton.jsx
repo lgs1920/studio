@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: RotateButton.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-23
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { faArrowRotateRight }          from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                       from '@Utils/FA2SL.js'
@@ -9,13 +25,12 @@ export const RotateButton = (props) => {
     const proxy = lgs.mainProxy.components.mainUI
     const rotate = useSnapshot(proxy).rotate
     const camera = useSnapshot(lgs.mainProxy.components.camera)
-
-    const handleRotation = () => {
-        // proxy.rotate.running = proxy.rotate.running ? __.ui.sceneManager.stopRotate
-        //                                             : __.ui.sceneManager.startRotate
-
-        if (proxy.rotate.running) {
+    const pois = lgs.mainProxy.components.pois
+    const snap = useSnapshot(pois)
+    const handleRotation = async () => {
+        if (rotate.running) {
             __.ui.cameraManager.stopRotate()
+            pois.current = await __.ui.poiManager.stopAnimation(snap.current.id)
         }
         else {
             __.ui.sceneManager.focus(camera.target, {
@@ -27,6 +42,8 @@ export const RotateButton = (props) => {
                 rotate:     true,
                 flyingTime: 0,    // no move, no time ! We're on target
             })
+            pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
+
         }
     }
 

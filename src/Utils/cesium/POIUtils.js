@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: POIUtils.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
@@ -243,7 +259,7 @@ export class POIUtils {
         }
 
         const pickedCartographic = Cartographic.fromCartesian(pickedPosition)
-        return Math.abs(pickedCartographic.height - (point.height ?? point.simulatedHeight)) < 20.0
+        return Math.abs(pickedCartographic.height - (point.height ?? point.simulatedHeight)) < 120.0
 
     }
 

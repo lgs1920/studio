@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-23
- * Last modified: 2025-02-23
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -90,22 +90,22 @@ export const MapPOIEditMenu = () => {
         const camera = snapshot(lgs.mainProxy.components.camera)
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
+            pois.current = await __.ui.poiManager.stopAnimation(snap.current.id)
         }
         __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
             range:      5000,
-            infinite:  false,
+            infinite: true,
             rpm:       3,
             rotations: 1,
-            rotate:    lgs.settings.ui.poi.rotate,
+            rotate:   true,
             panoramic:  false,
             flyingTime: 0,    // no move, no time ! We're on target
         })
-        if (lgs.settings.ui.poi.rotate) {
             pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
-        }
+
     }
 
     const setAsStarter = async () => {
@@ -241,7 +241,7 @@ export const MapPOIEditMenu = () => {
                             <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCopy)}></SlIcon>
                             <span>Copy Coords</span>
                         </SlMenuItem>
-                        {!snap.current.animated && !__.ui.cameraManager.isRotating() &&
+                        {!snap.current.animated &&
                             <>
                                 <SlMenuItem onClick={rotationAround}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowRotateRight)}></SlIcon>
@@ -253,7 +253,7 @@ export const MapPOIEditMenu = () => {
                                 </SlMenuItem>
                             </>
                         }
-                        {(snap.current.animated || __.ui.cameraManager.isRotating()) &&
+                        {(snap.current.animated) &&
                             <SlMenuItem onClick={stopRotation} loading>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
                                 <span>Stop</span>
