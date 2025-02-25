@@ -111,7 +111,7 @@ export const CameraSettings = (props) => {
                 <div className="horizontal-alignment two-columns">
                     <SlSwitch size="small" align-right checked={settings.start.rotate.app}
                               onSlChange={(event) => lgs.settings.ui.camera.start.rotate.app = switchValue(event)}>
-                        {'Rotation after initial focus}
+                        {'Rotation after initial focus'}
                     </SlSwitch>
                 </div>
 
