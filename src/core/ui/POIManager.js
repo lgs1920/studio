@@ -2,25 +2,23 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- *
  * File: POIManager.js
- * Path: /home/christian/devs/assets/lgs1920/studio/src/core/ui/POIManager.js
  *
- * Author : Christian Denat
- * email: christian.denat@orange.fr
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-23
- * Last modified: 2025-02-23
+ * Created on: 2025-02-25
+ * Last modified: 2025-02-25
  *
  *
  * Copyright © 2025 LGS1920
- *
  ******************************************************************************/
 
 import { POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POIS_STORE } from '@Core/constants'
 import { MapPOI }                                                                  from '@Core/MapPOI'
 import { Export }                                                                  from '@Core/ui/Export'
 import { TrackUtils }                                                              from '@Utils/cesium/TrackUtils'
+import { UIToast }                                                                 from '@Utils/UIToast'
 import { KM }                                                                      from '@Utils/UnitUtils'
 import { v4 as uuid }                                                              from 'uuid'
 import { snapshot }                                                                from 'valtio/index'
@@ -104,6 +102,15 @@ export class POIManager {
      * @param dbSync {boolean} - true for DB sync (false by default)
      */
     remove = async (id, dbSync = false) => {
+        const poi = this.list.get(id)
+        // NO deletion if it is the starter POI
+        if (poi.type === POI_STARTER_TYPE) {
+            UIToast.warning({
+                                caption: `${poi.title} not deleted !`,
+                                text:    'It is the starter POI',
+                            })
+            return
+        }
         this.list.delete(id)
         if (dbSync) {
             await this.removeInDB(this.list.get(id))

@@ -2,19 +2,16 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- *
  * File: style.css
- * Path: /home/christian/devs/assets/lgs1920/studio/src/components/MainUI/MapPOI/style.css
  *
- * Author : Christian Denat
- * email: christian.denat@orange.fr
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-22
- * Last modified: 2025-02-22
+ * Created on: 2025-02-25
+ * Last modified: 2025-02-25
  *
  *
  * Copyright © 2025 LGS1920
- *
  ******************************************************************************/
 
 /*******************************************************************************
@@ -154,6 +151,33 @@
 /*******************************************************************************
  * Edit Panel
  */
+
+.edit-map-poi-item-wrapper {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-bulk-indicator sl-icon-button {
+    font-size: var(--lgs-font-size);
+}
+
+.map-poi-bulk-indicator sl-icon-button::part(base) {
+    padding-top: 1rem;
+    padding-right: 0;
+    padding-left: 0;
+}
+
+.map-poi-bulk-indicator sl-icon-button::part(base) sl-icon {
+
+}
+
+.map-poi-bulk-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
 #edit-map-poi-list {
     display: flex;
     flex-direction: column;
@@ -195,26 +219,28 @@
 .edit-map-poi-wrapper {
     display: flex;
     flex-direction: column;
-    gap: var(--lgs-gutter-xs);
 }
+
+.edit-map-poi-item {
+    flex: 1;
+}
+
 
 .map-poi-edit-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
     gap: var(--lgs-gutter-xs);
 }
 
 .map-poi-edit-item {
     flex: 1;
-    max-width: calc((100% - 2 * var(--lgs-gutter-xs)) / 3);
+    width: 5rem;
 }
 
 .map-poi-color-actions {
     display: flex;
-    max-height: 25px;
-    margin-bottom: -25px; /** TODO Found where this has been set */
+    margin-bottom: -2rem; /** TODO Found where this has been set */
     margin-left: auto;
     gap: var(--lgs-gutter-xs);
 }
@@ -232,7 +258,7 @@
 }
 
 .map-poi-edit-warning-altitude::part(suffix) {
-    color: var(--sl-input-color)
+    color: var(--sl-input-color);
     background: var(--lgs-warning-bg-color);
 }
 
@@ -243,6 +269,7 @@
 
 #map-poi-edit-settings {
     display: flex;
+    flex-direction: column;
     width: 100%;
 }
 

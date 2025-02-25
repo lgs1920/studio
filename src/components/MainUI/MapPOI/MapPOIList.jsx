@@ -7,16 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-02-25
+ * Last modified: 2025-02-25
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { EditMapPOI }                                         from '@Components/MainUI/MapPOI/EditMapPOI'
+
+import { MapPOIEditContent }                                  from '@Components/MainUI/MapPOI/MapPOIEditContent'
+import { ToggleStateIcon }                                    from '@Components/ToggleStateIcon'
 import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
-import { faMask }                                             from '@fortawesome/pro-regular-svg-icons'
+import { faMask, faSquare, faSquareCheck }                    from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon }                                    from '@fortawesome/react-fontawesome'
 import { SlDetails }                                          from '@shoelace-style/shoelace/dist/react'
 import { UIToast }                                            from '@Utils/UIToast'
@@ -28,8 +30,13 @@ export const MapPOIList = () => {
 
     const poiList = useRef(null)
     const store = lgs.mainProxy.components.pois
+    const snap = useSnapshot(store)
+    const bulkList = store.bulkList
+    const filteredList = store.filteredList
+
     const pois = useSnapshot(store)
     const prefix = 'edit-map-poi-'
+    const bulkPrefix = 'bulk-map-poi-'
     const drawers = useSnapshot(lgs.mainProxy.drawers)
     const poiSetting = useSnapshot(lgs.settings.ui.poi)
     const handleCopyCoordinates = (poi) => {
@@ -42,23 +49,39 @@ export const MapPOIList = () => {
     }
     useEffect(() => {
         __.ui.ui.initDetailsGroup(poiList.current)
+        store.list.forEach((poi, id) => {
+            store.bulkList.set(id, false)
+        })
     }, [])
 
     useEffect(() => {
+        // Clear action once built
         if (drawers.action) {
             lgs.mainProxy.drawers.action = null
         }
-    }, [store.current.id])
+
+        // Manage the lists of selected POIs
+        store.filteredList.clear()
+        store.list.forEach((poi, id) => {
+            store.filteredList.set(id, poi)
+            store.bulkList.set(id, false)
+        })
+    }, [store?.current?.id])
+
+    const handleBulkList = (state, event) => {
+        const id = event.target.id.split(bulkPrefix).pop()
+        store.bulkList.set(id, state)
+    }
 
     const selectPOI = async (event) => {
         if (window.isOK(event)) {
 
-            const id = event.target.id.split(`${prefix}`)[1]
+            const id = event.target.id.split(prefix).pop()
             if (store.current.id !== id) {
                 // Stop animation before changing
                 store.current.animated = false
                 if (drawers.open === POIS_EDITOR_DRAWER && store.current.id !== id) {
-                    store.current = store.list.get(id)
+                    store.current = store.filteredList.get(id)
                 }
 
                 if (poiSetting.focusOnEdit && drawers.open === POIS_EDITOR_DRAWER && __.ui.drawerManager.over) {
@@ -87,22 +110,30 @@ export const MapPOIList = () => {
         }
     }
 
+
     return (
         <div id={'edit-map-poi-list'} ref={poiList}>
-            {Array.from(pois.list.entries()).map(([id, poi]) => (
+            {Array.from(pois.filteredList.entries()).map(([id, poi]) => (
                 <Fragment key={`${prefix}${id}`}>
                     {poi.type !== POI_TMP_TYPE &&
-                        <SlDetails className={classNames(
-                            `edit-map-poi-item`,
-                            poi.visible ? undefined : 'map-poi-hidden',
-                            poi.type === POI_STARTER_TYPE ? 'map-poi-starter' : undefined,
-                        )}
-                                   id={`${prefix}${id}`}
-                                   onSlAfterShow={selectPOI}
-                                   open={pois.current.id === id && drawers.action !== null}
-                                   small
-                                   style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.color, 'rgba', 0.2)}}>
-                            <div slot="summary">
+                        <div className="edit-map-poi-item-wrapper">
+                            <ToggleStateIcon initial={pois.bulkList.get(id)} className={'map-poi-bulk-indicator'}
+                                             icon={{true: faSquareCheck, false: faSquare}}
+                                             onChange={handleBulkList}
+                                             id={`${bulkPrefix}${id}`}
+                            />
+                            <SlDetails className={classNames(
+                                `edit-map-poi-item`,
+                                poi.visible ? undefined : 'map-poi-hidden',
+                                poi.type === POI_STARTER_TYPE ? 'map-poi-starter' : undefined,
+                            )}
+                                       id={`${prefix}${id}`}
+                                       onSlAfterShow={selectPOI}
+                                       open={pois.current.id === id && drawers.action !== null}
+                                       small
+                                       style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.color, 'rgba', 0.2)}}>
+                                <div slot="summary">
+
                                        <span>
                                        <FontAwesomeIcon icon={poi.visible ? poi.icon : faMask} style={{
                                            '--fa-secondary-color':   poi.color,
@@ -110,12 +141,13 @@ export const MapPOIList = () => {
                                        }}/>
                                            {poi.title}
                                        </span>
-                                <span>
+                                    <span>
                                        [{sprintf('%.5f, %.5f', poi.latitude, poi.longitude)}]
                         </span>
-                            </div>
-                            <EditMapPOI poi={poi}/>
-                        </SlDetails>
+                                </div>
+                                <MapPOIEditContent poi={poi}/>
+                            </SlDetails>
+                        </div>
                     }
                 </Fragment>
             ))

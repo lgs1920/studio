@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-02-25
+ * Last modified: 2025-02-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -36,7 +36,9 @@ export const ToggleStateIcon = (props) => {
 
     const toggleState = async (event) => {
         setState(!state)
-        change(!state, event)
+        if (change) {
+            change(!state, event)
+        }
     }
 
     useEffect(() => {
@@ -45,16 +47,16 @@ export const ToggleStateIcon = (props) => {
 
     return (
         <>
-            <div className={`toggle-state-icon ${props.className} ${size}`}  {...(props.id && {id})}>
+            <div className={`toggle-state-icon ${props.className} ${size}`}>
                 {state
                  ? <SlIconButton slot="suffix" library="fa" {...(props.style && {style})}
                                  className={'toggle-state-icon-true'}
                                  onClick={toggleState}
-                                 name={FA2SL.set(icons.true)}/>
+                                 name={FA2SL.set(icons.true)} {...(props.id && {id})}/>
                  : <SlIconButton slot="suffix" library="fa" {...(props.style && {style})}
                                  className={'toggle-state-icon-false'}
                                  onClick={toggleState}
-                                 name={FA2SL.set(icons.false)}/>
+                                 name={FA2SL.set(icons.false)}  {...(props.id && {id})}/>
                 }
             </div>
         </>

@@ -220,7 +220,18 @@ ui:
     defaultColor: "#FAFAFA"             # Hexa
 
     focusOnEdit: true                   # Apply focus when editing a POI
-    rotate: true                      # Rotation after POI focus
+    rotate: true                        # Rotation after POI focus
+
+  #    categories :
+  #      - POI
+  #      - Building
+  #      - View
+  #      - Peak
+  #      - Cave
+  #      - Car Park
+  #      - Castle
+  #      - MOnument
+  #      - Ruin
 
   ## Geocoder
   geocoder:
