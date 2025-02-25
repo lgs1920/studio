@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Geocoder.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-25
+ * Last modified: 2025-02-25
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { featureEach } from '@turf/meta'
 
 export class Geocoder {
@@ -49,8 +65,9 @@ export class Geocoder {
         url.searchParams.append('format', this.format)
         url.searchParams.append('email', this.email)
         url.searchParams.append('dedupe', 1)
-        //  url.searchParams.append('extratags', true)
-        //  url.searchParams.append('namedetails', false)
+        // url.searchParams.append('extratags', true)
+        url.searchParams.append('namedetails', 1)
+        url.searchParams.append('addressdetails', 1)
 
         //  url.searchParams.append(`polygon_${this.format}`, false)
         //url.searchParams.append('timestamp', new Date().getTime())
