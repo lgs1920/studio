@@ -85,7 +85,7 @@ export const MapPOIBulkActionsMenu = () => {
 
         store.bulkList.forEach((state, id) => {
             if (state) {
-                __.ui.poiManager.remove(id).then(store.filteredList.delete(id))
+                __.ui.poiManager.remove(id, true).then(store.filteredList.delete(id))
             }
         })
 
