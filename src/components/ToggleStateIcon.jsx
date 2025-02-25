@@ -23,15 +23,20 @@ export const ToggleStateIcon = (props) => {
 
     const change = props.onChange
     const initialState = props.initial ?? true
-    const icons = props.icons ?? {shown: faEye, hidden: faEyeSlash}
+    const icons = {false: faEye, true: faEyeSlash}
+    if (props.icon) {
+        icons.true = props.icon.hidden ?? props.icon.true
+        icons.false = props.icon.shown ?? props.icon.false
+    }
     const id = props.id ?? ''
     const style = props.style ?? ''
+    const size = props.size ?? ''
 
     const [state, setState] = useState(initialState)
 
-    const toggleState = async () => {
+    const toggleState = async (event) => {
         setState(!state)
-        change(!state)
+        change(!state, event)
     }
 
     useEffect(() => {
@@ -40,16 +45,16 @@ export const ToggleStateIcon = (props) => {
 
     return (
         <>
-            <div className="toggle-state-icon" {...(props.id && {id})}>
+            <div className={`toggle-state-icon ${props.className} ${size}`}  {...(props.id && {id})}>
                 {state
                  ? <SlIconButton slot="suffix" library="fa" {...(props.style && {style})}
-                                 className={'toggle-state-icon-hidden'}
+                                 className={'toggle-state-icon-true'}
                                  onClick={toggleState}
-                                 name={FA2SL.set(icons.hidden)}/>
+                                 name={FA2SL.set(icons.true)}/>
                  : <SlIconButton slot="suffix" library="fa" {...(props.style && {style})}
-                                 className={'toggle-state-icon-shown'}
+                                 className={'toggle-state-icon-false'}
                                  onClick={toggleState}
-                                 name={FA2SL.set(icons.shown)}/>
+                                 name={FA2SL.set(icons.false)}/>
                 }
             </div>
         </>
