@@ -107,6 +107,12 @@ export const MapPOIList = () => {
                     }
                 }
             }
+
+
+            // We force it in the view
+            const item = document.getElementById(`${prefix}${id}`)
+            item.scrollIntoView({behavior: 'instant', block: 'center'})
+            item.focus()
         }
     }
 
