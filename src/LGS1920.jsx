@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-02-25
+ * Last modified: 2025-02-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -111,23 +111,23 @@ export function LGS1920() {
 
                               // Read DB for POIs
                               await __.ui.poiManager.readAllFromDB()
-                              const starter = __.ui.poiManager.starter
-                              lgs.mainProxy.components.pois.current = starter
+                              let starter = __.ui.poiManager.starter
 
                               if (!starter) {
-                                  const newStarter = __.ui.poiManager.add({
-                                                                              longitude: lgs.settings.starter.longitude,
-                                                                              latitude:  lgs.settings.starter.latitude,
-                                                                              height:    lgs.settings.starter.height,
-                                                                              title:     lgs.settings.starter.title,
-                                                                              color:     lgs.settings.starter.color,
-                                                                              type: POI_STARTER_TYPE,
-                                                                          })
+                                  const starter = __.ui.poiManager.add({
+                                                                           longitude: lgs.settings.starter.longitude,
+                                                                           latitude:  lgs.settings.starter.latitude,
+                                                                           height:    lgs.settings.starter.height,
+                                                                           title:     lgs.settings.starter.title,
+                                                                           color:     lgs.settings.starter.color,
+                                                                           type:      POI_STARTER_TYPE,
+                                                                       })
+
 
                                   // We force re/creation in DB to sync it.
-
-                                  await __.ui.poiManager.saveInDB(starter ?? newStarter)
+                                  await __.ui.poiManager.saveInDB(starter)
                               }
+                              lgs.mainProxy.components.pois.current = starter
 
                               // According to the settings and saved information, we set the camera data
 
