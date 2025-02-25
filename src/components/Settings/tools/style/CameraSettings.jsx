@@ -111,7 +111,7 @@ export const CameraSettings = (props) => {
                 <div className="horizontal-alignment two-columns">
                     <SlSwitch size="small" align-right checked={settings.start.rotate.app}
                               onSlChange={(event) => lgs.settings.ui.camera.start.rotate.app = switchValue(event)}>
-                        {'Rotation after start focus'}
+                        {'Rotation after initial focus}
                     </SlSwitch>
                 </div>
 
@@ -119,12 +119,12 @@ export const CameraSettings = (props) => {
                 <div>
                     <SlSwitch size="small" align-right checked={poi.rotate}
                               onSlChange={(event) => lgs.settings.ui.poi.rotate = switchValue(event)}>
-                        {'Rotation after focus on a POI'}
+                        {'Rotation after focusing on a POI'}
                     </SlSwitch>
                     <br/>
                     <SlSwitch size="small" align-right checked={settings.start.rotate.journey}
                               onSlChange={(event) => lgs.settings.ui.camera.start.rotate.journey = switchValue(event)}>
-                        {'Rotation after focus on a journey'}
+                        {'Rotation after focusing on a journey'}
                     </SlSwitch>
                 </div>
             </>
