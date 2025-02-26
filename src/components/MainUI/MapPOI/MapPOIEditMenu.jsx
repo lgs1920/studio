@@ -38,25 +38,24 @@ import './style.css'
  * The component relies on the state of the application's POI data and uses the provided
  * UI functionalities to handle interactions with the POI and the map view.
  */
-export const MapPOIEditMenu = () => {
+export const MapPOIEditMenu = ({point}) => {
 
     const pois = lgs.mainProxy.components.pois
-    const snap = useSnapshot(pois)
     const settings = useSnapshot(lgs.settings.ui.poi)
 
     const hide = async () => {
-        pois.current = await __.ui.poiManager.hide(snap.current.id)
+        pois.current = await __.ui.poiManager.hide(point.id)
     }
     const show = async () => {
-        pois.current = await __.ui.poiManager.show(snap.current.id)
+        pois.current = await __.ui.poiManager.show(point.id)
     }
 
     const shrink = async () => {
-        pois.current = await __.ui.poiManager.shrink(snap.current.id)
+        pois.current = await __.ui.poiManager.shrink(point.id)
     }
 
     const expand = async () => {
-        pois.current = await __.ui.poiManager.expand(snap.current.id)
+        pois.current = await __.ui.poiManager.expand(point.id)
     }
 
     const focus = async () => {
@@ -90,7 +89,7 @@ export const MapPOIEditMenu = () => {
         const camera = snapshot(lgs.mainProxy.components.camera)
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
-            pois.current = await __.ui.poiManager.stopAnimation(snap.current.id)
+            pois.current = await __.ui.poiManager.stopAnimation(point.id)
         }
         __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
             heading:    camera.position.heading,
@@ -104,17 +103,17 @@ export const MapPOIEditMenu = () => {
             panoramic:  false,
             flyingTime: 0,    // no move, no time ! We're on target
         })
-            pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
+        pois.current = await __.ui.poiManager.startAnimation(point.id)
 
     }
 
     const setAsStarter = async () => {
 
-        const {former, starter} = await __.ui.poiManager.setStarter(snap.current)
+        const {former, starter} = await __.ui.poiManager.setStarter(point)
 
         if (starter) {
             UIToast.success({
-                                caption: `${snap.current.title}`,
+                                caption: `${point.title}`,
                                 text:    'Set as new starter POI.',
                             })
 
@@ -123,7 +122,7 @@ export const MapPOIEditMenu = () => {
         }
         else {
             UIToast.warning({
-                                caption: `${snap.current.title}`,
+                                caption: `${point.title}`,
                                 text:    'Change failed.',
                             })
         }
@@ -147,7 +146,7 @@ export const MapPOIEditMenu = () => {
 
     const stopRotation = async () => {
         await __.ui.cameraManager.stopRotate()
-        pois.current = await __.ui.poiManager.stopAnimation(snap.current.id)
+        pois.current = await __.ui.poiManager.stopAnimation(point.id)
     }
 
     /**
@@ -157,10 +156,10 @@ export const MapPOIEditMenu = () => {
      * - The context menu is hidden.
      */
     const copy = () => {
-        __.ui.poiManager.copyCoordinatesToClipboard(snap.current)
+        __.ui.poiManager.copyCoordinatesToClipboard(point)
             .then(() => {
                 UIToast.success({
-                                    caption: `${snap.current.title}`,
+                                    caption: `${point.title}`,
                                     text:    'Coordinates copied to the clipboard <br/>under the form: latitude, longitude',
                                 })
             })
@@ -178,7 +177,7 @@ export const MapPOIEditMenu = () => {
             await __.ui.cameraManager.stopRotate()
         }
 
-        __.ui.poiManager.remove(snap.current.id, true)
+        __.ui.poiManager.remove(point.id, true)
             .then((result) => {
                 if (result.success) {
                     pois.current = false
@@ -186,9 +185,9 @@ export const MapPOIEditMenu = () => {
             })
     }
 
-    return (
+    return (    
         <>
-            {(snap.current || snap.current.type === POI_STARTER_TYPE) &&
+            {(point || point.type === POI_STARTER_TYPE) &&
                 <SlDropdown>
                     <SlButton slot="trigger" caret size="small">
                         <FontAwesomeIcon slot="prefix" icon={faLocationDot}/>&nbsp;{'Select an action'}
@@ -201,40 +200,40 @@ export const MapPOIEditMenu = () => {
                                 <span>Focus</span>
                             </SlMenuItem>
                         }
-                        {snap.current.type !== POI_STARTER_TYPE &&
+                        {point.type !== POI_STARTER_TYPE &&
                             <SlMenuItem onClick={setAsStarter} small>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFlag)}></SlIcon>
                                 <span>Set as Starter</span>
                             </SlMenuItem>
                         }
-                        {snap.current.type !== POI_STARTER_TYPE &&
+                        {point.type !== POI_STARTER_TYPE &&
                             <SlMenuItem onClick={remove} small>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}></SlIcon>
                                 <span>Remove</span>
                             </SlMenuItem>
                         }
 
-                        {snap.current.expanded && !snap.current.showFlag && snap.current.visible &&
+                        {point.expanded && !point.showFlag && point.visible &&
                             <SlMenuItem onClick={shrink} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(snap.current.icon)}></SlIcon>
+                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(point.icon)}></SlIcon>
                                 <span>Reduce</span>
                             </SlMenuItem>
                         }
 
-                        {!snap.current.expanded && snap.current.visible &&
+                        {!point.expanded && point.visible &&
                             <SlMenuItem onClick={expand} small>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsFromLine)}></SlIcon>
                                 <span>Expand</span>
                             </SlMenuItem>
                         }
 
-                        {snap.current.type !== POI_STARTER_TYPE && snap.current.visible &&
+                        {point.type !== POI_STARTER_TYPE && point.visible &&
                             <SlMenuItem onClick={hide} small>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMask)}></SlIcon>
                                 <span>Hide</span>
                             </SlMenuItem>
                         }
-                        {snap.current.type !== POI_STARTER_TYPE && !snap.current.visible &&
+                        {point.type !== POI_STARTER_TYPE && !point.visible &&
                             <SlMenuItem onClick={show} small>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faEye)}></SlIcon>
                                 <span>Show</span>
@@ -246,7 +245,7 @@ export const MapPOIEditMenu = () => {
                             <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCopy)}></SlIcon>
                             <span>Copy Coords</span>
                         </SlMenuItem>
-                        {!snap.current.animated &&
+                        {!point.animated &&
                             <>
                                 <SlMenuItem onClick={rotationAround}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowRotateRight)}></SlIcon>
@@ -258,7 +257,7 @@ export const MapPOIEditMenu = () => {
                                 </SlMenuItem>
                             </>
                         }
-                        {(snap.current.animated) &&
+                        {(point.animated) &&
                             <SlMenuItem onClick={stopRotation} loading>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
                                 <span>Stop</span>

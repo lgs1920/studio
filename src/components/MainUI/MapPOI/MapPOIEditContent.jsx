@@ -108,7 +108,7 @@ export const MapPOIEditContent = ({poi}) => {
                                    disabled={!point?.visible}
                                    noFormatToggle
                     />
-                    <MapPOIEditMenu/>
+                    <MapPOIEditMenu point={point}/>
                 </div>
 
                 <div>
