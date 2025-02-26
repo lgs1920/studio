@@ -86,10 +86,16 @@ export const MapPOIBulkActionsMenu = () => {
         store.bulkList.forEach(async (state, id) => {
             if (state) {
                 actions.push(__.ui.poiManager.remove(id, true))
-                store.filteredList.delete(id)
             }
         })
-        await Promise.all(actions)
+        Promise.all(actions).then(results => {
+            let poi = 0
+            results.forEach(result => {
+                if (result.success) {
+                    store.filteredList.delete(result.id)
+                }
+            })
+        })
 
         // Change current id needed (false if the list is empty)
         if (needToChangeCurrent) {

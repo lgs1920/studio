@@ -100,23 +100,28 @@ export class POIManager {
      *
      * @param {string} id - The ID of the POI to remove
      * @param dbSync {boolean} - true for DB sync (false by default)
+     *
+     * @return {boolean} - true/false
      */
     remove = async (id, dbSync = false) => {
         const poi = this.list.get(id)
+        if (!poi) {
+            return {id: id, success: false}
+        }
         // NO deletion if it is the starter POI
         if (poi.type === POI_STARTER_TYPE) {
             UIToast.warning({
                                 caption: sprintf(`The POI "%s" can not be deleted !`, poi.title),
                                 text:    'It is the starter POI',
                             })
-            return
+            return {id: id, success: false}
         }
 
         if (dbSync) {
             await this.removeInDB(this.list.get(id))
         }
         this.list.delete(id)
-
+        return {id: id, success: true}
     }
 
     /**
