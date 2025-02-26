@@ -72,12 +72,11 @@ export const MapPOIList = () => {
 
     const selectPOI = async (event) => {
         if (window.isOK(event)) {
-
             const id = event.target.id.split(prefix).pop()
             if (store.current && store.current.id !== id) {
                 // Stop animation before changing
                 store.current.animated = false
-                if (drawers.open === POIS_EDITOR_DRAWER && store.current.id !== id) {
+                if (drawers.open === POIS_EDITOR_DRAWER) {
                     store.current = store.filteredList.get(id)
                 }
 
@@ -85,7 +84,7 @@ export const MapPOIList = () => {
                     const camera = snapshot(lgs.mainProxy.components.camera)
                     if (__.ui.cameraManager.isRotating()) {
                         await __.ui.cameraManager.stopRotate()
-                        store.current = __.ui.poiManager.stopAnimation(pois.current.id)
+                        store.current = __.ui.poiManager.stopAnimation(store.current.id)
                     }
                     __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
                         heading:    camera.position.heading,
