@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-25
- * Last modified: 2025-02-25
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -82,12 +82,14 @@ export const MapPOIBulkActionsMenu = () => {
         }
         // Check if current is in list
         const needToChangeCurrent = store.bulkList.has(pois.current.id)
-
-        store.bulkList.forEach((state, id) => {
+        const actions = []
+        store.bulkList.forEach(async (state, id) => {
             if (state) {
-                __.ui.poiManager.remove(id, true).then(store.filteredList.delete(id))
+                actions.push(__.ui.poiManager.remove(id, true))
+                store.filteredList.delete(id)
             }
         })
+        await Promise.all(actions)
 
         // Change current id needed (false if the list is empty)
         if (needToChangeCurrent) {

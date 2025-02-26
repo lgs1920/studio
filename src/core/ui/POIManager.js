@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-25
- * Last modified: 2025-02-25
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -111,10 +111,11 @@ export class POIManager {
                             })
             return
         }
-        this.list.delete(id)
+
         if (dbSync) {
             await this.removeInDB(this.list.get(id))
         }
+        this.list.delete(id)
     }
 
     /**

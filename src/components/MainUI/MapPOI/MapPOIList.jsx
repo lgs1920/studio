@@ -30,10 +30,6 @@ export const MapPOIList = () => {
 
     const poiList = useRef(null)
     const store = lgs.mainProxy.components.pois
-    const snap = useSnapshot(store)
-    const bulkList = store.bulkList
-    const filteredList = store.filteredList
-
     const pois = useSnapshot(store)
     const prefix = 'edit-map-poi-'
     const bulkPrefix = 'bulk-map-poi-'
@@ -67,6 +63,7 @@ export const MapPOIList = () => {
             store.bulkList.set(id, false)
         })
     }, [store?.current?.id])
+
 
     const handleBulkList = (state, event) => {
         const id = event.target.id.split(bulkPrefix).pop()

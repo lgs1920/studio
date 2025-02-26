@@ -134,6 +134,7 @@ export const GeocodingUI = () => {
      * @param event
      */
     const handleSelect = async (event) => {
+        lgs.mainProxy.components.pois.current = false
         await showPOI(store.list.get(event.target.parentElement.id * 1))
     }
 
