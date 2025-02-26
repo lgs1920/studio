@@ -106,7 +106,7 @@ export class POIManager {
         // NO deletion if it is the starter POI
         if (poi.type === POI_STARTER_TYPE) {
             UIToast.warning({
-                                caption: `${poi.title} not deleted !`,
+                                caption: sprintf(`The POI "%s" can not be deleted !`, poi.title),
                                 text:    'It is the starter POI',
                             })
             return
@@ -116,6 +116,7 @@ export class POIManager {
             await this.removeInDB(this.list.get(id))
         }
         this.list.delete(id)
+
     }
 
     /**
