@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-23
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -28,7 +28,7 @@ export const RotateButton = (props) => {
     const pois = lgs.mainProxy.components.pois
     const snap = useSnapshot(pois)
     const handleRotation = async () => {
-        if (rotate.running) {
+        if (rotate.running || !snap.current) {
             __.ui.cameraManager.stopRotate()
             pois.current = await __.ui.poiManager.stopAnimation(snap.current.id)
         }
@@ -43,7 +43,6 @@ export const RotateButton = (props) => {
                 flyingTime: 0,    // no move, no time ! We're on target
             })
             pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
-
         }
     }
 

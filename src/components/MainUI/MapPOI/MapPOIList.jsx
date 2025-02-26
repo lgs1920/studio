@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-25
- * Last modified: 2025-02-25
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -77,7 +77,7 @@ export const MapPOIList = () => {
         if (window.isOK(event)) {
 
             const id = event.target.id.split(prefix).pop()
-            if (store.current.id !== id) {
+            if (store.current && store.current.id !== id) {
                 // Stop animation before changing
                 store.current.animated = false
                 if (drawers.open === POIS_EDITOR_DRAWER && store.current.id !== id) {

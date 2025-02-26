@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-25
- * Last modified: 2025-02-24
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -81,11 +81,16 @@ export const MapPOIEditContent = ({poi}) => {
     }
 
     useEffect(() => {
-        if (pois.current) {
+        if (point && pois.current) {
             setSimulated(point.simulatedHeight !== undefined)
         }
 
     }, [point])
+
+    // Bail if point does not exist
+    if (!point) {
+        return false
+    }
 
     return (
 
@@ -96,11 +101,11 @@ export const MapPOIEditContent = ({poi}) => {
                 <div className={'map-poi-color-actions'}>
                     <SlColorPicker size={'small'}
                                    label={'Color'}
-                                   value={point.color}
+                                   value={point?.color}
                                    swatches={lgs.settings.getSwatches.list.join(';')}
                                    onSlChange={handleChangeColor}
                                    onSlInput={handleChangeColor}
-                                   disabled={!point.visible}
+                                   disabled={!point?.visible}
                                    noFormatToggle
                     />
                     <MapPOIEditMenu/>

@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: GeocodingUI.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { SelectLocation }                                          from '@Components/MainUI/geocoding/SelectLocation'
 import { faBullseyePointer, faSearch }                             from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlInput, SlPopup, SlSwitch, SlTooltip } from '@shoelace-style/shoelace/dist/react'
@@ -73,6 +89,7 @@ export const GeocodingUI = () => {
             longitude: geoPoint.geometry.coordinates[0],
             latitude:  geoPoint.geometry.coordinates[1],
             title:     geoPoint.properties.name,
+            description: geoPoint.properties.display_name.split(', ').join(' - '),
         }
         try {
             point.simulatedHeight = await __.ui.poiManager.getElevationFromTerrain({

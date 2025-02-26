@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -183,7 +183,7 @@ export const MapPOIEditMenu = () => {
 
     return (
         <>
-            {snap.current &&
+            {(snap.current || snap.current.type === POI_STARTER_TYPE) &&
                 <SlDropdown>
                     <SlButton slot="trigger" caret size="small">
                         <FontAwesomeIcon slot="prefix" icon={faLocationDot}/>&nbsp;{'Select an action'}

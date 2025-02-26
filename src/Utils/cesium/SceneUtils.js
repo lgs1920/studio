@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: SceneUtils.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import {
     ADD_JOURNEY, DRAWING, DRAWING_FROM_DB, FOCUS_LAST, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D,
     SCENE_MODE_COLUMBUS,
@@ -160,11 +176,13 @@ export class SceneUtils {
                                  const target = {
                                      longitude:       point.longitude,
                                      latitude:        point.latitude,
-                                     height: height,
+                                     height:      height,
                                      simulatedHeight: point?.simulatedHeight,
                                      title:           point.title,
-                                     color:           lgs.settings.ui.poi.defaultColor,
-                                     camera:          {
+                                     color:       point?.color ?? lgs.settings.ui.poi.defaultColor,
+                                     description: point?.description ?? '',
+
+                                     camera: {
                                          heading: heading,
                                          pitch:   pitch,
                                          roll:    roll,
