@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: AppUtils.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import {
     BUILD, CONFIGURATION, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, MILLIS, platforms, SERVERS, SETTINGS,
     SETTINGS_STORE, VAULT_STORE,
@@ -443,6 +459,26 @@ export class AppUtils {
      */
     static isEmpty = (obj = {}) => {
         return Object.keys(obj).length === 0
+    }
+
+    /**
+     * Return the prev and next values of map.
+     *
+     * @param map
+     * @param key
+     * @return {{prevValue: *, nextValue: *}}
+     */
+    static findAdjacentValues(map, key) {
+        const keys = Array.from(map.keys())
+        const index = keys.indexOf(key)
+
+        const prevKey = index > 0 ? keys[index - 1] : null
+        const nextKey = index < keys.length - 1 ? keys[index + 1] : null
+
+        const prevValue = prevKey ? map.get(prevKey) : null
+        const nextValue = nextKey ? map.get(nextKey) : null
+
+        return {prevValue, nextValue}
     }
 
 
