@@ -98,7 +98,7 @@ export const MapPOIEditMenu = () => {
             roll:       camera.position.roll,
             range:      5000,
             infinite: true,
-            rpm:       3,
+            rpm: lgs.settings.ui.poi.rpm,
             rotations: 1,
             rotate:   true,
             panoramic:  false,

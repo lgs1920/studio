@@ -101,6 +101,7 @@ export const MapPOIContextMenu = () => {
                 range:      5000,
                 infinite:   true,
                 rotate:     true,
+                rpm: lgs.settings.ui.poi.rpm,
                 panoramic:  false,
                 flyingTime: 0,    // no move, no time ! We're on target
             })

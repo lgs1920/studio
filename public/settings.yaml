@@ -63,7 +63,7 @@ starter:
     #    latitude: 45.34623
     #    height: 4300
     canRotate: true
-    rpm: 0.66  # rotation per minute
+    rpm: 4  # rotation per minute
 
 ########################################
 # Initial Camera Settings
@@ -79,7 +79,7 @@ camera:
   maximumHeight: 12000
   pitchAdjustHeight: 12000
   flyingTime: 3   # seconds
-  rpm: 2          # rotation per minute
+  rpm: 4          # rotation per minute
   rotations: 1    # total rotation
 
 ########################################
@@ -221,6 +221,8 @@ ui:
 
     focusOnEdit: true                   # Apply focus when editing a POI
     rotate: true                        # Rotation after POI focus
+    rpm: 4
+
 
   #    categories :
   #      - POI

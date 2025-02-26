@@ -105,6 +105,7 @@ export const GeocodingUI = () => {
             lookAt:   true,
             infinite: false,
             rotate: lgs.settings.ui.poi.rotate,
+            rpm: lgs.settings.ui.poi.rpm,
             callback: (poi) => {
                 const newPoi = __.ui.poiManager.add(poi)
                 if (newPoi) {

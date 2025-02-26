@@ -92,7 +92,7 @@ export const MapPOIList = () => {
                         roll:       camera.position.roll,
                         range:      5000,
                         infinite:   false,
-                        rpm: 4,
+                        rpm: lgs.settings.ui.poi.rpm,
                         rotations:  1,
                         rotate:     lgs.settings.ui.poi.rotate,
                         panoramic:  false,

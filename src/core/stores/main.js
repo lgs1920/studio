@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-25
- * Last modified: 2025-02-25
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -29,7 +29,7 @@ export const main = {
             rotate:        {
                 clockwise: false,
                 running:   false,
-                rpm:       1,
+                rpm: 4,
             },
         },
 

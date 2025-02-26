@@ -293,7 +293,7 @@ export class SceneUtils {
             roll:     0,
             range:    10000,
             lookAt:   true,
-            rpm:      1,
+            rpm: options.rpm ?? lgs.settings.camera.rpm,
             rotation: 1,
             infinite: false,
             bbox:    {data: theBbox, id: track.slug, show: false},
