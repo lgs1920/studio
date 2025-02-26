@@ -101,11 +101,10 @@ export const GeocodingUI = () => {
             point.simulatedHeight = 0
         }
 
-
         __.ui.sceneManager.focus(point, {
             lookAt:   true,
             infinite: false,
-            rotate:   true,
+            rotate: lgs.settings.ui.poi.rotate,
             callback: (poi) => {
                 const newPoi = __.ui.poiManager.add(poi)
                 if (newPoi) {
