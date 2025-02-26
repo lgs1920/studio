@@ -177,11 +177,14 @@ export const MapPOIContextMenu = () => {
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
         }
+
         __.ui.poiManager.remove(pois.current.id, true)
-            .then(() => hideMenu())
-
-        store.current = false
-
+            .then((result) => {
+                hideMenu()
+                if (result.success) {
+                    store.current = false
+                }
+            })
     }
 
     /**

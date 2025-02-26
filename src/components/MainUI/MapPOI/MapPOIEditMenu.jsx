@@ -177,8 +177,13 @@ export const MapPOIEditMenu = () => {
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
         }
+
         __.ui.poiManager.remove(snap.current.id, true)
-        pois.current = false
+            .then((result) => {
+                if (result.success) {
+                    pois.current = false
+                }
+            })
     }
 
     return (
