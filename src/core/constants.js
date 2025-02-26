@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -112,7 +112,7 @@ export const COLOR_SWATCHES_RANDOM = 'random'
 export const SETTING_EXCLUSIONS = [
     'layers.base', 'layers.terrain', 'layers.overlay',
     'layers.filter', 'layers.colorSettings',
-    'app', 'scene', 'starter',
+    'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem',
     'ui.camera', 'ui.welcome',
     'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit',
 ].sort((a, b) => {

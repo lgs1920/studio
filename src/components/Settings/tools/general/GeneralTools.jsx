@@ -1,22 +1,52 @@
-import { faTrianglePersonDigging } from '@fortawesome/pro-solid-svg-icons'
-import { SlAlert, SlIcon }         from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                   from '@Utils/FA2SL'
-import React                       from 'react'
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: GeneralTools.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
+import { UnitsSystem }       from '@Components/Settings/tools/general/UnitsSystem'
+import { SlDetails }         from '@shoelace-style/shoelace/dist/react'
+import { useEffect, useRef } from 'react'
 
 export const GeneralTools = () => {
+    const generalTools = useRef(null)
 
-    return (<SlAlert open variant="warning">
-            <SlIcon slot="icon" library="fa" name={FA2SL.set(faTrianglePersonDigging)}></SlIcon>
-            {'Working in Progress.'}<br/>
-        </SlAlert>
+    useEffect(() => {
+        __.ui.ui.initDetailsGroup(generalTools.current)
+    }, [])
+
+    const checkClose = (event) => {
+        // If we're over the drawer, ok else, stop event
+        if (window.isOK(event) && __.ui.drawerManager.over) {
+            return
+        }
+        event.preventDefault()
+    }
 
 
-        // <SlDetails small key={'tools-profile'} className={'lgs-theme'}>
-        //         <span slot="summary">
-        //             <SlIcon library="fa" name={FA2SL.set(faScrewdriverWrench)}/> {'Your Profile'}
-        //         </span>
-        //
-        // </SlDetails>
+    return (
+
+        <div ref={generalTools} id={'style-settings'}>
+            <SlDetails id={'tools-unit-system'}
+                       small open={false}
+                       className={'lgs-theme'}
+                       onSlHide={checkClose}
+            >
+                <UnitsSystem/>
+            </SlDetails>
+
+
+        </div>
 
     )
 }

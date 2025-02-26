@@ -1,9 +1,29 @@
-import { Duration }                  from 'luxon'
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: UnitUtils.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { DAY, HOUR, MILLIS, MINUTE } from '@Core/constants'
+import { Duration }                  from 'luxon'
 
 //check configuration.unitSystems for the values
 export const INTERNATIONAL = 0
 export const IMPERIAL = 1
+
+// Coordinates Units system
+export const DD = 0
+export const DMS = 1
 
 export class UnitUtils {
     /**
@@ -59,6 +79,13 @@ export class UnitUtils {
                 const hours = input >= HOUR / 1000 ? 'hh\'h\'' : ''
                 const minutes = 'mm\'m\''
                 return (input ? Duration.fromObject({seconds: input}) : undefined)?.toFormat(`${days} ${hours}${minutes}`)
+            },
+            toDMS: (input) => {
+                const degrees = Math.floor(input)
+                const minutesFloat = (input - degrees) * 60
+                const minutes = Math.floor(minutesFloat)
+                const seconds = Math.round((minutesFloat - minutes) * 60)
+                return `${degrees}° ${minutes}' ${seconds}"`
             },
         }
     }
