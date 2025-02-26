@@ -1,8 +1,24 @@
-import { MenuSettings }             from '@Components/Settings/tools/style/MenuSettings'
-import { SlDetails }                from '@shoelace-style/shoelace/dist/react'
-import React, { useEffect, useRef } from 'react'
-import { CameraSettings }           from './CameraSettings'
-import { WelcomeModal }             from './WelcomeModal'
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Style.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
+import { MenuSettings }      from '@Components/Settings/tools/style/MenuSettings'
+import { SlDetails }         from '@shoelace-style/shoelace/dist/react'
+import { useEffect, useRef } from 'react'
+import { CameraSettings }    from './CameraSettings'
+import { WelcomeModal }      from './WelcomeModal'
 
 export const Style = () => {
     const styleSettings = useRef(null)
