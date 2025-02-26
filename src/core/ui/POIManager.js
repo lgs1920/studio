@@ -407,9 +407,9 @@ export class POIManager {
      * @return {unknown}
      */
     stopAnimation = (id) => {
-        this.list.get(id).animated = false
-        return this.list.get(id)
+        if (id && this.list.get(id)) { // We got some times an error here. TODO fix
+            this.list.get(id).animated = false
+            return this.list.get(id)
+        }
     }
-
-
 }
