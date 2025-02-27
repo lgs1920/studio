@@ -815,7 +815,7 @@ sl-progress-bar {
  * Toggle State Icon
  ******************************************************************************/
 .toggle-state-icon sl-icon-button {
-    /*  font-size: var(--lgs-font-size-m);*/
+    font-size: var(--lgs-font-size-m);
 }
 
 .toggle-state-icon.small sl-icon-button {

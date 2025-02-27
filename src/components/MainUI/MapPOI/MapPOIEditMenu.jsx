@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-26
- * Last modified: 2025-02-26
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,8 +16,7 @@
 
 import { POI_STARTER_TYPE }                                 from '@Core/constants'
 import {
-    faArrowRotateRight, faArrowsFromLine, faCopy, faCrosshairsSimple, faFlag, faLocationDot, faPanorama, faTrashCan,
-    faXmark,
+    faArrowRotateRight, faArrowsFromLine, faCrosshairsSimple, faFlag, faLocationDot, faPanorama, faTrashCan, faXmark,
 }                                                           from '@fortawesome/pro-regular-svg-icons'
 import { faEye, faMask }                                    from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon }                                  from '@fortawesome/react-fontawesome'
@@ -150,22 +149,6 @@ export const MapPOIEditMenu = ({point}) => {
     }
 
     /**
-     * Copies the coordinates (latitude,longitude of the currently selected point of interest (POI) to the clipboard.
-     *
-     * Postconditions:
-     * - The context menu is hidden.
-     */
-    const copy = () => {
-        __.ui.poiManager.copyCoordinatesToClipboard(point)
-            .then(() => {
-                UIToast.success({
-                                    caption: `${point.title}`,
-                                    text:    'Coordinates copied to the clipboard <br/>under the form: latitude, longitude',
-                                })
-            })
-    }
-
-    /**
      * Removes the current Point of Interest (POI) and associated UI elements.
      *
      * Postconditions:
@@ -241,10 +224,6 @@ export const MapPOIEditMenu = ({point}) => {
                         }
                         <sl-divider/>
 
-                        <SlMenuItem onClick={copy}>
-                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCopy)}></SlIcon>
-                            <span>Copy Coords</span>
-                        </SlMenuItem>
                         {!point.animated &&
                             <>
                                 <SlMenuItem onClick={rotationAround}>

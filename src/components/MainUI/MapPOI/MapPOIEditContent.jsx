@@ -15,11 +15,18 @@
  ******************************************************************************/
 
 import { MapPOIEditMenu }                                            from '@Components/MainUI/MapPOI/MapPOIEditMenu'
-import { faSquareQuestion }                                          from '@fortawesome/pro-regular-svg-icons'
+import {
+    faCopy, faSquareQuestion,
+}                                                                    from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon }                                           from '@fortawesome/react-fontawesome'
-import { SlColorPicker, SlDivider, SlInput, SlTextarea, SlTooltip }  from '@shoelace-style/shoelace/dist/react'
+import {
+    SlColorPicker, SlDivider, SlIconButton, SlInput, SlTextarea, SlTooltip,
+}                                                                    from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                     from '@Utils/FA2SL'
+import { UIToast }                                                   from '@Utils/UIToast'
 import { ELEVATION_UNITS, foot, IMPERIAL, INTERNATIONAL, UnitUtils } from '@Utils/UnitUtils'
 import classNames                                                    from 'classnames'
+import parse                                                         from 'html-react-parser'
 import React, { useEffect, useState }                                from 'react'
 import { useSnapshot }                                               from 'valtio/index'
 
@@ -78,6 +85,21 @@ export const MapPOIEditContent = ({poi}) => {
             await __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(point.id))
         }
     }
+    /**
+     * Copies the coordinates (latitude,longitude of the currently selected point of interest (POI) to the clipboard.
+     *
+     * Postconditions:
+     * - The context menu is hidden.
+     */
+    const handleCopy = () => {
+        __.ui.poiManager.copyCoordinatesToClipboard(point)
+            .then(() => {
+                UIToast.success({
+                                    caption: `${point.title}`,
+                                    text:    'Coordinates copied to the clipboard <br/>under the form: latitude, longitude',
+                                })
+            })
+    }
 
     useEffect(() => {
         if (point && pois.current) {
@@ -134,6 +156,10 @@ export const MapPOIEditContent = ({poi}) => {
                 </div>
 
                 <div className="map-poi-edit-row">
+                    <SlTooltip content={'Copy Coordinates'}>
+                        <SlIconButton className="edit-poi-copy-coordinates" onClick={handleCopy}
+                                      library="fa" name={FA2SL.set(faCopy)}/>
+                    </SlTooltip>
                     <SlInput className={'map-poi-edit-item'} size="small" noSpinButtons
                              onSlChange={handleChangeLatitude}
                              value={__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)}
@@ -143,7 +169,7 @@ export const MapPOIEditContent = ({poi}) => {
                              value={__.convert(point.longitude).to(lgs.settings.coordinateSystem.current)}
                              label={'Longitude'} readonly/>
                     <SlInput
-                        className={classNames('map-poi-edit-item', simulated ? 'map-poi-edit-warning-altitude' : '')}
+                        className={classNames('map-poi-edit-item map-poi', simulated ? 'map-poi-edit-warning-altitude' : '')}
                         size="small" type="number"
                         onSlChange={handleChangeAltitude}
                         onSlInput={handleChangeAltitude}
@@ -163,7 +189,7 @@ export const MapPOIEditContent = ({poi}) => {
                             }
                         </div>
 
-                        <span slot="suffix">{ELEVATION_UNITS[lgs.settings.unitSystem.current]}</span>
+                        <span slot="suffix">{parse(ELEVATION_UNITS[lgs.settings.unitSystem.current] + '&nbsp;')}</span>
                     </SlInput>
                 </div>
 
