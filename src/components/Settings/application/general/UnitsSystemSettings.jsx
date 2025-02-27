@@ -35,7 +35,7 @@ export const UnitsSystemSettings = (props) => {
         lgs.settings.unitSystem.current = event.target.value * 1
     }
     const handleCoordinateUnits = (event) => {
-        lgs.settings.coordinateSystem.current = event.target.value * 1
+        lgs.settings.coordinateSystem.current = event.target.value
     }
 
     return (

@@ -7,33 +7,32 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-26
- * Last modified: 2025-02-26
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-27
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { MapPOIEditMenu }                                           from '@Components/MainUI/MapPOI/MapPOIEditMenu'
-import { faSquareQuestion }                                         from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon }                                          from '@fortawesome/react-fontawesome'
-import { SlColorPicker, SlDivider, SlInput, SlTextarea, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { UIUtils }                                                  from '@Utils/UIUtils'
-import { ELEVATION_UNITS }                                          from '@Utils/UnitUtils'
-import classNames                                                   from 'classnames'
-import React, { useEffect, useState }                               from 'react'
-import { useSnapshot }                                              from 'valtio/index'
+import { MapPOIEditMenu }                                            from '@Components/MainUI/MapPOI/MapPOIEditMenu'
+import { faSquareQuestion }                                          from '@fortawesome/pro-regular-svg-icons'
+import { FontAwesomeIcon }                                           from '@fortawesome/react-fontawesome'
+import { SlColorPicker, SlDivider, SlInput, SlTextarea, SlTooltip }  from '@shoelace-style/shoelace/dist/react'
+import { ELEVATION_UNITS, foot, IMPERIAL, INTERNATIONAL, UnitUtils } from '@Utils/UnitUtils'
+import classNames                                                    from 'classnames'
+import React, { useEffect, useState }                                from 'react'
+import { useSnapshot }                                               from 'valtio/index'
 
 export const MapPOIEditContent = ({poi}) => {
 
     const pois = useSnapshot(lgs.mainProxy.components.pois)
     const point = pois.list.get(poi.id)
-    const [active, setActive] = useState(false)
     const [simulated, setSimulated] = useState(false)
 
     const handleChangeAltitude = event => {
+        const height = event.target.value * 1
         Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
-            height:          event.target.value * 1,
+            height: lgs.settings.unitSystem.current === IMPERIAL ? UnitUtils.convertFeetToMeters(height) : height,
             simulatedHeight: undefined,
         })
     }
@@ -92,6 +91,11 @@ export const MapPOIEditContent = ({poi}) => {
         return false
     }
 
+    const altitude = lgs.settings.unitSystem.current === INTERNATIONAL
+                     ? point?.height || point?.simulatedHeight
+                     : __.convert(point?.height || point?.simulatedHeight).to(foot)
+
+
     return (
 
         <>
@@ -130,23 +134,20 @@ export const MapPOIEditContent = ({poi}) => {
                 </div>
 
                 <div className="map-poi-edit-row">
-                    <SlInput className={'map-poi-edit-item'} size="small" type="number" noSpinButtons
+                    <SlInput className={'map-poi-edit-item'} size="small" noSpinButtons
                              onSlChange={handleChangeLatitude}
-                             value={sprintf('%.5f', point.latitude)}
-                             pattern={'^-?(90(\.0+)?|[1-8]?\d(\.\d+)?)$'}
+                             value={__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)}
                              label={'Latitude'} readonly/>
-                    <SlInput className={'map-poi-edit-item'} size="small" type="number" noSpinButtons
+                    <SlInput className={'map-poi-edit-item'} size="small" noSpinButtons
                              onSlChange={handleChangeLongitude}
-                             value={sprintf('%.5f', point.longitude)}
-                             pattern={/^-?(180(\.0+)?|1[0-7]?\d(\.\d+)?|0?\d{1,2}(\.\d+)?)$/}
+                             value={__.convert(point.longitude).to(lgs.settings.coordinateSystem.current)}
                              label={'Longitude'} readonly/>
                     <SlInput
                         className={classNames('map-poi-edit-item', simulated ? 'map-poi-edit-warning-altitude' : '')}
                         size="small" type="number"
                         onSlChange={handleChangeAltitude}
                         onSlInput={handleChangeAltitude}
-                        pattern={/^\d+$/} min="0" max="8850"
-                        value={Math.round(point.height | point.simulatedHeight)}
+                        value={Math.round(altitude).toString()}
                     >
                         <div slot={'label'}>
                             {simulated ?
@@ -164,16 +165,6 @@ export const MapPOIEditContent = ({poi}) => {
 
                         <span slot="suffix">{ELEVATION_UNITS[lgs.settings.unitSystem.current]}</span>
                     </SlInput>
-                </div>
-
-                <div className="map-poi-edit-row">
-                    <SlInput className={'map-poi-edit-item'} size="small"
-                             value={UIUtils.toDMS(point.latitude)}
-                             readonly/>
-                    <SlInput className={'map-poi-edit-item'} size="small"
-                             value={UIUtils.toDMS(point.longitude)}
-                             readonly/>
-                    <span className="map-poi-edit-item"></span>
                 </div>
 
             </div>

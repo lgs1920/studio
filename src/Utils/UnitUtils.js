@@ -22,8 +22,8 @@ export const INTERNATIONAL = 0
 export const IMPERIAL = 1
 
 // Coordinates Units system
-export const DD = 0
-export const DMS = 1
+export const DD = 'dd'
+export const DMS = 'dms'
 
 export class UnitUtils {
     /**
@@ -63,6 +63,9 @@ export class UnitUtils {
                     case min:
                         return Duration.fromMillis(input * MILLIS).toFormat('mm:ss')
                     case dms: {
+                        if (!input) {
+                            return 'NaN'
+                        }
                         const degrees = Math.floor(input)
                         const minutesFloat = (input - degrees) * 60
                         const minutes = Math.floor(minutesFloat)
@@ -70,6 +73,9 @@ export class UnitUtils {
                         return `${degrees}° ${minutes}' ${seconds}"`
                     }
                     case dd:
+                        if (!input) {
+                            return 'NaN'
+                        }
                         return sprintf('%.5f', input)
                     default:
                         // metre, seconde
@@ -91,6 +97,8 @@ export class UnitUtils {
             },
         }
     }
+
+    static convertFeetToMeters = feet => feet / FOOT
 }
 
 /** Units */
@@ -110,8 +118,8 @@ export const hour = 'hr'
 export const min = 'mn'
 export const sec = 's'
 export const meter = 'm'
-export const dd = 0
-export const dms = 1
+export const dd = DD
+export const dms = DMS
 export const units = [km, mile, kmh, hkm, mkm, mpmile, ms, mph, meter, foot, yard, inche, hour, min, sec, dd, dms]
 
 /** Distance constants to convert from meter */

@@ -168,9 +168,9 @@ unitSystem:
   current: 0
 
 coordinateSystem:
-  dd: 0             # Decimal degres
-  dms: 1            # Degres Minutes Seconds
-  current: 0        #
+  dd: dd             # Decimal degres
+  dms: dms           # Degres Minutes Seconds
+  current: dd        #
 ########################################
 # UI : general
 ########################################

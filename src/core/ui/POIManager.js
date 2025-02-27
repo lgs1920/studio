@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-26
- * Last modified: 2025-02-26
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -166,7 +166,7 @@ export class POIManager {
     }
 
     copyCoordinatesToClipboard = async (point) => {
-        return Export.toClipboard(`${point.latitude}, ${point.longitude}`)
+        return Export.toClipboard(`${__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)}, ${__.convert(point.longitude).to(lgs.settings.coordinateSystem.current)}`)
     }
 
     getPOIByKeyValue = (key, value) => {
