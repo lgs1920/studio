@@ -62,15 +62,15 @@ export class UnitUtils {
                         return Duration.fromMillis(input * MILLIS).toFormat('hh:mm:ss')
                     case min:
                         return Duration.fromMillis(input * MILLIS).toFormat('mm:ss')
-                    case dd: {
+                    case dms: {
                         const degrees = Math.floor(input)
                         const minutesFloat = (input - degrees) * 60
                         const minutes = Math.floor(minutesFloat)
                         const seconds = Math.round((minutesFloat - minutes) * 60)
                         return `${degrees}° ${minutes}' ${seconds}"`
                     }
-                    case dms:
-                        return
+                    case dd:
+                        return sprintf('%.5f', input)
                     default:
                         // metre, seconde
                         return input
@@ -88,13 +88,6 @@ export class UnitUtils {
                 const hours = input >= HOUR / 1000 ? 'hh\'h\'' : ''
                 const minutes = 'mm\'m\''
                 return (input ? Duration.fromObject({seconds: input}) : undefined)?.toFormat(`${days} ${hours}${minutes}`)
-            },
-            toDMS: () => {
-                const degrees = Math.floor(input)
-                const minutesFloat = (input - degrees) * 60
-                const minutes = Math.floor(minutesFloat)
-                const seconds = Math.round((minutesFloat - minutes) * 60)
-                return `${degrees}° ${minutes}' ${seconds}"`
             },
         }
     }
@@ -117,8 +110,8 @@ export const hour = 'hr'
 export const min = 'mn'
 export const sec = 's'
 export const meter = 'm'
-const dd  = 'dd',
-      dms = 'dms'
+export const dd = 0
+export const dms = 1
 export const units = [km, mile, kmh, hkm, mkm, mpmile, ms, mph, meter, foot, yard, inche, hour, min, sec, dd, dms]
 
 /** Distance constants to convert from meter */
