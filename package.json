@@ -45,7 +45,7 @@
     "@turf/point-to-line-distance": "^7.2.0",
     "@turf/transform-rotate": "^7.2.0",
     "argparse": "^2.0.1",
-    "axios": "^1.7.9",
+    "axios": "^1.8.1",
     "babel-plugin-module-resolver": "^5.0.2",
     "canvg": "^4.0.2",
     "cesium": "^1.126.0",
@@ -93,7 +93,7 @@
     "zip-a-folder": "^3.1.8"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.3",
+    "@types/bun": "^1.2.4",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@typescript-eslint/eslint-plugin": "^8.25.0",

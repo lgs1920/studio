@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: MenuSample.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-17
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { BOTTOM, START }              from '@Core/constants'
 import { faCircleCheck }              from '@fortawesome/duotone-light-svg-icons'
 import { FontAwesomeIcon }            from '@fortawesome/react-fontawesome'

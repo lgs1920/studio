@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-26
- * Last modified: 2025-02-26
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-27
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { DAY, HOUR, MILLIS, MINUTE } from '@Core/constants'
-import { Duration }                  from 'luxon'
+import { Duration }                  from 'luxon' //check configuration.unitSystems for the values
 
 //check configuration.unitSystems for the values
 export const INTERNATIONAL = 0
@@ -62,6 +62,15 @@ export class UnitUtils {
                         return Duration.fromMillis(input * MILLIS).toFormat('hh:mm:ss')
                     case min:
                         return Duration.fromMillis(input * MILLIS).toFormat('mm:ss')
+                    case dd: {
+                        const degrees = Math.floor(input)
+                        const minutesFloat = (input - degrees) * 60
+                        const minutes = Math.floor(minutesFloat)
+                        const seconds = Math.round((minutesFloat - minutes) * 60)
+                        return `${degrees}° ${minutes}' ${seconds}"`
+                    }
+                    case dms:
+                        return
                     default:
                         // metre, seconde
                         return input
@@ -80,7 +89,7 @@ export class UnitUtils {
                 const minutes = 'mm\'m\''
                 return (input ? Duration.fromObject({seconds: input}) : undefined)?.toFormat(`${days} ${hours}${minutes}`)
             },
-            toDMS: (input) => {
+            toDMS: () => {
                 const degrees = Math.floor(input)
                 const minutesFloat = (input - degrees) * 60
                 const minutes = Math.floor(minutesFloat)
@@ -108,7 +117,9 @@ export const hour = 'hr'
 export const min = 'mn'
 export const sec = 's'
 export const meter = 'm'
-export const units = [km, mile, kmh, hkm, mkm, mpmile, ms, mph, meter, foot, yard, inche, hour, min, sec]
+const dd  = 'dd',
+      dms = 'dms'
+export const units = [km, mile, kmh, hkm, mkm, mpmile, ms, mph, meter, foot, yard, inche, hour, min, sec, dd, dms]
 
 /** Distance constants to convert from meter */
 export const METER = 1

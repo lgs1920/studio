@@ -2,27 +2,28 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: GeneralTools.jsx
+ * File: Style.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-26
- * Last modified: 2025-02-26
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-27
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { UnitsSystem }       from '@Components/Settings/tools/general/UnitsSystem'
+import { MenuSettings }      from '@Components/Settings/application/style/MenuSettings'
 import { SlDetails }         from '@shoelace-style/shoelace/dist/react'
 import { useEffect, useRef } from 'react'
+import { WelcomeModal }      from './WelcomeModal'
 
-export const GeneralTools = () => {
-    const generalTools = useRef(null)
+export const Style = () => {
+    const styleSettings = useRef(null)
 
     useEffect(() => {
-        __.ui.ui.initDetailsGroup(generalTools.current)
+        __.ui.ui.initDetailsGroup(styleSettings.current)
     }, [])
 
     const checkClose = (event) => {
@@ -36,14 +37,24 @@ export const GeneralTools = () => {
 
     return (
 
-        <div ref={generalTools} id={'style-settings'}>
-            <SlDetails id={'tools-unit-system'}
+        <div ref={styleSettings} id={'style-settings'}>
+            <SlDetails id={'ui-welcome-modal-settings'}
                        small open={false}
                        className={'lgs-theme'}
                        onSlHide={checkClose}
             >
-                <UnitsSystem/>
+                <WelcomeModal/>
+
             </SlDetails>
+
+            <SlDetails id={'ui-menu-settings'}
+                       small open={false}
+                       className={'lgs-theme'}
+                       onSlHide={checkClose}
+            >
+                <MenuSettings/>
+            </SlDetails>
+
 
 
         </div>
