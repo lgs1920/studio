@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: RemoveProfile.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-27
+ * Last modified: 2024-12-17
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { faTrashAlt, faWarning }                from '@fortawesome/pro-regular-svg-icons'
 import { SlAlert, SlButton, SlDetails, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                from '@Utils/FA2SL'

@@ -7,15 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-23
- * Last modified: 2025-02-23
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-27
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { FOCUS_CENTROID, FOCUS_LAST, FOCUS_STARTER, SCENE_MODE_3D } from '@Core/constants'
-import { faArrowsToCircle }                                        from '@fortawesome/pro-regular-svg-icons'
+import { faArrowsToCircle, faVideo }                                from '@fortawesome/pro-regular-svg-icons'
+import { FontAwesomeIcon }                                          from '@fortawesome/react-fontawesome'
 import { SlDivider, SlIcon, SlRadio, SlRadioGroup, SlSwitch }       from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                    from '@Utils/FA2SL'
 import React, { useRef }                                            from 'react'
@@ -142,7 +143,7 @@ export const CameraSettings = (props) => {
 
     return (
         <>
-            <span slot="summary">{'Camera Settings'}</span>
+            <span slot="summary"><FontAwesomeIcon icon={faVideo}/>{'Camera Settings'}</span>
             <SlDivider/>
             <TabInfo/>
             <TabPosition/>

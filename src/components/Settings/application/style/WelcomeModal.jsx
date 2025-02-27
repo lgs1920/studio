@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: WelcomeModal.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-27
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { SlDivider, SlInput, SlSwitch } from '@shoelace-style/shoelace/dist/react'
 import React                            from 'react'
 import { useSnapshot }                  from 'valtio'
