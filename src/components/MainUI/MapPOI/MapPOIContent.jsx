@@ -7,25 +7,27 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-27
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { TextValueUI }     from '@Components/TextValueUI/TextValueUI'
+import { NameValueUnit }   from '@Components/DataDisplay/NameValueUnit'
 import { SECOND }          from '@Core/constants'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { SlPopup }         from '@shoelace-style/shoelace/dist/react'
-import { UIUtils }         from '@Utils/UIUtils'
 import { ELEVATION_UNITS } from '@Utils/UnitUtils'
 import { useRef }          from 'react'
 import Timeout             from 'smart-timeout'
 import './style.css'
+import { useSnapshot }     from 'valtio'
 
-export const MapPOIContent = ({point, hide}) => {
+export const MapPOIContent = ({id, hide}) => {
     const inner = useRef(null)
+    const point = lgs.mainProxy.components.pois.list.get(id)
+    const snap = useSnapshot(point)
 
     const handleContextMenu = (event) => {
         event.preventDefault()
@@ -69,13 +71,13 @@ export const MapPOIContent = ({point, hide}) => {
                         <>
                             <h3> {point.title ?? 'Point Of Interest'}</h3>
 
-                            {point.scale > 0.6 && (
+                            {point.scale > 0.5 && (
                                 <div className="poi-full-coordinates">
                                     {!point.simulatedHeight && (
-                                        <TextValueUI
+                                        <NameValueUnit
                                             className="poi-elevation"
                                             text={'Altitude: '}
-                                            value={point.height}
+                                            value={snap.height.toFixed()}
                                             format={'%d'}
                                             units={ELEVATION_UNITS}
                                         />
@@ -83,14 +85,10 @@ export const MapPOIContent = ({point, hide}) => {
                                     {point.simulatedHeight && <span>&nbsp;</span>}
                                     <div className="poi-coordinates">
                                         <span>
-                                            {UIUtils.toDMS(point.latitude)},{' '}
-                                            {UIUtils.toDMS(point.longitude)}
+                                          {__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)},
+                                            {' '}
+                                            {__.convert(point.longitude).to(lgs.settings.coordinateSystem.current)}
                                         </span>
-                                        <br/>
-                                        <span>
-                                            [{sprintf('%.5f , %.5f', point.latitude, point.longitude)}]
-                                        </span>
-                                        <br/>
 
                                     </div>
                                 </div>

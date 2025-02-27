@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: FloatingMenu.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-27
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import './style.css'
 import { Track } from '@Core/Track'
 import {
@@ -15,6 +31,9 @@ import {
 import {
     FA2SL,
 }                from '@Utils/FA2SL'
+import {
+    km, meter, mile, mph,
+}                from '@Utils/UnitUtils'
 import parse     from 'html-react-parser'
 import {
     DateTime, Duration,
@@ -29,11 +48,8 @@ import {
     useSnapshot,
 }                from 'valtio'
 import {
-    km, meter, mile, mph,
-} from '@Utils/UnitUtils'
-import {
-    TextValueUI,
-}                from '../TextValueUI/TextValueUI'
+    NameValueUnit,
+}                from '../DataDisplay/NameValueUnit'
 
 export const FloatingMenu = function FloatingMenu() {
 
@@ -131,24 +147,24 @@ export const FloatingMenu = function FloatingMenu() {
                     Position
                 </div>
                 <div className={'floating-menu-item'}>
-                    <TextValueUI value={sprintf('%\' 2.5f', menuSnap.longitude)}
-                                 id={'cursor-longitude'}
-                                 text={'Lon:'}
-                                 units={'°'}/>
-                    <TextValueUI value={sprintf('%2.5f', menuSnap.latitude)}
-                                 id={'cursor-latitude'}
-                                 text={'Lat:'}
-                                 units={'°'}/>
+                    <NameValueUnit value={sprintf('%\' 2.5f', menuSnap.longitude)}
+                                   id={'cursor-longitude'}
+                                   text={'Lon:'}
+                                   units={'°'}/>
+                    <NameValueUnit value={sprintf('%2.5f', menuSnap.latitude)}
+                                   id={'cursor-latitude'}
+                                   text={'Lat:'}
+                                   units={'°'}/>
                 </div>
             </div>
             <div className={'floating-menu-data'}>
                 {menuSnap.type === POI_TYPE && track.hasAltitude &&
                     <div className={'floating-menu-item'}>
                         <div>
-                            <TextValueUI value={sprintf('%\' 6.2f', marker.altitude)}
-                                         id={'cursor-altitude'}
-                                         text={'Alt:'}
-                                         units={[meter, mile]}/>
+                            <NameValueUnit value={sprintf('%\' 6.2f', marker.altitude)}
+                                           id={'cursor-altitude'}
+                                           text={'Alt:'}
+                                           units={[meter, mile]}/>
                         </div>
                     </div>
                 }
@@ -207,10 +223,10 @@ export const FloatingMenu = function FloatingMenu() {
                         Time
                     </div>
                     <div className={'floating-menu-data one-line'}>
-                        <TextValueUI value={date}
-                                     id={'cursor-date'}/>
-                        <TextValueUI value={time}
-                                     id={'cursor-time'}/>
+                        <NameValueUnit value={date}
+                                       id={'cursor-date'}/>
+                        <NameValueUnit value={time}
+                                       id={'cursor-time'}/>
                     </div>
 
                 </>}
@@ -240,17 +256,17 @@ export const FloatingMenu = function FloatingMenu() {
                 <div className={'floating-menu-data one-line'}>
                     <sl-icon variant="primary" library="fa" name={FA2SL.set(faRulerHorizontal)}></sl-icon>
                     <div>
-                        <TextValueUI value={metrics.distance} //TODO units KM or ...
-                                     id={'cursor-distance'}
-                                     units={[km, mph]}/>
+                        <NameValueUnit value={metrics.distance} //TODO units KM or ...
+                                       id={'cursor-distance'}
+                                       units={[km, mph]}/>
                     </div>
                 </div>
                 {!isNaN(metrics.duration) &&
                     <div className={'floating-menu-data one-line'}>
                         <sl-icon variant="primary" library="fa" name={FA2SL.set(faStopwatch)}></sl-icon>
                         <div>
-                            <TextValueUI value={duration.toFormat(format())}
-                                         id={'cursor-duration'}/>
+                            <NameValueUnit value={duration.toFormat(format())}
+                                           id={'cursor-duration'}/>
                         </div>
                     </div>
                 }
@@ -265,9 +281,9 @@ export const FloatingMenu = function FloatingMenu() {
                 {!isNaN(metrics.minHeight) &&
                     <div className={'floating-menu-data'}>
                         <div>
-                            <TextValueUI value={metrics.minHeight}
-                                         text={'min.'}
-                                         units={meter}
+                            <NameValueUnit value={metrics.minHeight}
+                                           text={'min.'}
+                                           units={meter}
                             />
                         </div>
                     </div>
@@ -275,9 +291,9 @@ export const FloatingMenu = function FloatingMenu() {
                 {!isNaN(metrics.maxHeight) &&
                     <div className={'floating-menu-data'}>
                         <div>
-                            <TextValueUI value={metrics.maxHeight}
-                                         text={'max.'}
-                                         units={meter}
+                            <NameValueUnit value={metrics.maxHeight}
+                                           text={'max.'}
+                                           units={meter}
                             />
                         </div>
                     </div>
@@ -292,9 +308,9 @@ export const FloatingMenu = function FloatingMenu() {
                 {metrics.positiveElevation > 0 &&
                     <div className={'floating-menu-data'}>
                         <div>
-                            <TextValueUI value={sprintf('%\' .1f', metrics.positiveElevation)}
-                                         text={'Gain'}
-                                         units={meter}
+                            <NameValueUnit value={sprintf('%\' .1f', metrics.positiveElevation)}
+                                           text={'Gain'}
+                                           units={meter}
                             />
                         </div>
                     </div>
@@ -302,9 +318,9 @@ export const FloatingMenu = function FloatingMenu() {
                 {metrics.negativeElevation < 0 &&
                     <div className={'floating-menu-data'}>
                         <div>
-                            <TextValueUI value={sprintf('%\' .1f', metrics.negativeElevation)}
-                                         text={'Loss'}
-                                         units={meter}
+                            <NameValueUnit value={sprintf('%\' .1f', metrics.negativeElevation)}
+                                           text={'Loss'}
+                                           units={meter}
                             />
                         </div>
                     </div>

@@ -1,5 +1,21 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: CameraAndTargetPanel.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-27
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import './style.css'
-import { TextValueUI } from '@Components/TextValueUI/TextValueUI.jsx'
+import { NameValueUnit } from '@Components/DataDisplay/NameValueUnit.jsx'
 
 import { faAngle, faArrowsToCircle, faMountains, faVideo } from '@fortawesome/pro-regular-svg-icons'
 import { SlAnimation }                                     from '@shoelace-style/shoelace/dist/react'
@@ -9,7 +25,6 @@ import { proxy, useSnapshot }                              from 'valtio'
 
 
 export const CameraAndTargetPanel = () => {
-    //  lgs.viewer = useCesium().viewer
 
     const camera = useSnapshot(lgs.mainProxy.components.camera)
     const ui = useSnapshot(proxy(lgs.settings.ui))
@@ -21,22 +36,18 @@ export const CameraAndTargetPanel = () => {
                     <div className="camera-data-panel lgs-card on-map">
                         <sl-icon library="fa" name={FA2SL.set(faArrowsToCircle)}></sl-icon>
                         <div>
-                            <TextValueUI value={camera.target.longitude?.toFixed(5)}
-                                         className={'camera-longitude'}
-                                         text={'Lon:'}/>
-                            <TextValueUI value={camera.target.latitude?.toFixed(5)}
-                                         className={'camera-latitude'}
-                                         text={'Lat:'}/>
+                            {__.convert(camera.target.latitude).to(lgs.settings.coordinateSystem.current)},&nbsp;
+                            {__.convert(camera.target.longitude).to(lgs.settings.coordinateSystem.current)}
                             <sl-icon library="fa" name={FA2SL.set(faMountains)}></sl-icon>
-                            <TextValueUI value={camera.target.height?.toFixed()}
-                                         className={'camera-altitude'}
-                                         units={[meter, mile]}/>
+                            <NameValueUnit value={camera.target.height?.toFixed()}
+                                           className={'camera-altitude'}
+                                           units={[meter, mile]}/>
                             {__.ui.sceneManager.is2D &&
                                 <>
                                     <sl-icon library="fa" name={FA2SL.set(faVideo)}></sl-icon>
-                                    <TextValueUI value={camera.position?.height?.toFixed()}
-                                                 className={'camera-altitude'}
-                                                 units={[meter, mile]}/>
+                                    <NameValueUnit value={camera.position?.height?.toFixed()}
+                                                   className={'camera-altitude'}
+                                                   units={[meter, mile]}/>
                                 </>
                             }
                         </div>
@@ -51,16 +62,12 @@ export const CameraAndTargetPanel = () => {
                             <div className="camera-data-panel lgs-card on-map">
                                 <sl-icon library="fa" name={FA2SL.set(faVideo)}></sl-icon>
                                 <div>
-                                    <TextValueUI value={camera.position.longitude?.toFixed(5)}
-                                                 className={'camera-longitude'}
-                                                 text={'Lon:'}/>
-                                    <TextValueUI value={camera.position.latitude?.toFixed(5)}
-                                                 className={'camera-latitude'}
-                                                 text={'Lat:'}/>
+                                    {__.convert(camera.position?.latitude).to(lgs.settings.coordinateSystem.current)},&nbsp;
+                                    {__.convert(camera.position?.longitude).to(lgs.settings.coordinateSystem.current)}
                                     <sl-icon library="fa" name={FA2SL.set(faMountains)}></sl-icon>
-                                    <TextValueUI value={camera.position?.height?.toFixed()}
-                                                 className={'camera-altitude'}
-                                                 units={[meter, mile]}/>
+                                    <NameValueUnit value={camera.position?.height?.toFixed()}
+                                                   className={'camera-altitude'}
+                                                   units={[meter, mile]}/>
                                 </div>
                             </div>
                         </SlAnimation>
@@ -72,14 +79,14 @@ export const CameraAndTargetPanel = () => {
                                 <div className="camera-data-panel lgs-card on-map">
                                     <sl-icon library="fa" name={FA2SL.set(faAngle)}></sl-icon>
                                     <div>
-                                        <TextValueUI value={camera.position.heading?.toFixed()}
-                                                     className={'camera-heading'} text={'Heading:'} units={'°'}/>
+                                        <NameValueUnit value={camera.position.heading?.toFixed()}
+                                                       className={'camera-heading'} text={'Heading:'} units={'°'}/>
 
-                                        <TextValueUI value={(camera.position?.pitch)?.toFixed()}
-                                                     className={'camera-pitch'} text={'Pitch:'} units={'°'}/>
+                                        <NameValueUnit value={(camera.position?.pitch)?.toFixed()}
+                                                       className={'camera-pitch'} text={'Pitch:'} units={'°'}/>
 
-                                        <TextValueUI value={(camera.position?.roll)?.toFixed()}
-                                                     className={'camera-roll'} text={'Roll:'} units={'°'}/>
+                                        <NameValueUnit value={(camera.position?.roll)?.toFixed()}
+                                                       className={'camera-roll'} text={'Roll:'} units={'°'}/>
                                     </div>
                                 </div>
                             </>

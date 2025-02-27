@@ -1,8 +1,0 @@
-.lgs-text-value {
-    display: flex;
-    gap: var(--lgs-gutter-s);
-}
-
-.lgs-tv-unit {
-    margin-left: 3px;
-}

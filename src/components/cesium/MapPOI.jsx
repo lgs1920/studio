@@ -2,19 +2,16 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- *
  * File: MapPOI.jsx
- * Path: /home/christian/devs/assets/lgs1920/studio/src/components/cesium/MapPOI.jsx
  *
- * Author : Christian Denat
- * email: christian.denat@orange.fr
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-22
- * Last modified: 2025-02-22
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-27
  *
  *
  * Copyright © 2025 LGS1920
- *
  ******************************************************************************/
 
 import { MapPOIContent }                                  from '@Components/MainUI/MapPOI/MapPOIContent'
@@ -25,7 +22,9 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                    from 'valtio'
 
 export const MapPOI = memo(({point: pointId}) => {
-    const snap = useSnapshot(lgs.mainProxy.components.pois.list)
+
+    const store = lgs.mainProxy.components.pois.list
+    const snap = useSnapshot(store)
     const point = snap.get(pointId) // Récupère les informations du POI
 
     if (!point || !point.latitude || !point.longitude) {
@@ -86,7 +85,7 @@ export const MapPOI = memo(({point: pointId}) => {
     const expand = () => {
         if (!point.expanded && !point.showFlag) {
             Object.assign(
-                lgs.mainProxy.components.pois.list.get(point.id),
+                store.get(point.id),
                 {over: true},
             )
         }
@@ -94,7 +93,7 @@ export const MapPOI = memo(({point: pointId}) => {
 
     const reduce = () => {
         Object.assign(
-            lgs.mainProxy.components.pois.list.get(point.id),
+            store.get(point.id),
             {over: false},
         )
     }
@@ -129,7 +128,7 @@ export const MapPOI = memo(({point: pointId}) => {
                     onWheel={hideMenu}
                 >
                     {point.withinScreen && point.frontOfTerrain && point.visible && !point.tooFar &&
-                        <MapPOIContent point={point} hide={hideMenu}/>
+                        <MapPOIContent id={point.id} hide={hideMenu}/>
                     }
                 </div>
             )}
