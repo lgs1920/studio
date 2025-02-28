@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-25
- * Last modified: 2025-02-25
+ * Created on: 2025-02-28
+ * Last modified: 2025-02-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -101,4 +101,6 @@ export class Geocoder {
         const response = await lgs.axios.get(url)
         return response.data
     }
+
+    toDMS = __.ui.ui.DMS2DD
 }

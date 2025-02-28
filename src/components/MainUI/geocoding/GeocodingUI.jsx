@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-26
- * Last modified: 2025-02-26
+ * Created on: 2025-02-28
+ * Last modified: 2025-02-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,10 +20,12 @@ import { SlButton, SlIcon, SlInput, SlPopup, SlSwitch, SlTooltip } from '@shoela
 import * as turf                                                   from '@turf/helpers'
 import { FA2SL }                                                   from '@Utils/FA2SL'
 import { UIToast }                                                 from '@Utils/UIToast'
-import React, { useEffect, useRef, useState }                      from 'react'
-import { useSnapshot }                                             from 'valtio'
 
+import { convert }                            from 'geo-coordinates-parser'
+import React, { useEffect, useRef, useState } from 'react'
+import { useSnapshot }                        from 'valtio'
 import './style.css'
+
 
 export const GeocodingUI = () => {
     const store = lgs.mainProxy.components.geocoder
@@ -34,6 +36,7 @@ export const GeocodingUI = () => {
     const [poi, setPoi] = useState(null)
     const [exactMatch, setExactMatch] = useState(false)
     const [coordinates, setCoordinates] = useState(false)
+    const [ddCoordinates, setDdCoordinates] = useState(false)
 
     const handleSubmit = async (event) => {
         event.preventDefault()
@@ -45,12 +48,19 @@ export const GeocodingUI = () => {
         if (exactMatch && coordinates) {
             // Get latitude and longitude from input field.
             // Separator is spaces or comma or both
-            const [latitude, longitude] = address.current.value.split(/\s*,\s*|\s+/)
+            let latitude, longitude, regex = /\s*,\s*|\s+/
+            if (ddCoordinates) {
+                [latitude, longitude] = address.current.value.split(regex)
+            }
+            else {
+                [latitude, longitude] = convert(address.current.value).decimalCoordinates.split(regex)
+            }
             await showPOI(turf.point([longitude * 1, latitude * 1]))
             return
         }
 
         if (!store.dialog.submitDisabled) {
+            const value = ddCoordinates ? address.current.value : __.ui.geocoder.toDMS(address.current.value)
             __.ui.geocoder.search(address.current.value).then((results) => {
 
                 if (results.error) {
@@ -85,11 +95,14 @@ export const GeocodingUI = () => {
      * @param geoPoint GeoJSON point
      */
     const showPOI = async geoPoint => {
+
         const point = {
             longitude: geoPoint.geometry.coordinates[0],
             latitude:  geoPoint.geometry.coordinates[1],
-            title:     geoPoint.properties.name,
-            description: geoPoint.properties.display_name.split(', ').join(' - '),
+            title:       geoPoint.properties.name ?? '',
+            description: geoPoint.properties.display_name
+                         ? geoPoint.properties.display_name.split(', ').join(' - ')
+                         : '',
         }
         try {
             point.simulatedHeight = await __.ui.poiManager.getElevationFromTerrain({
@@ -106,6 +119,7 @@ export const GeocodingUI = () => {
             infinite: false,
             rotate: lgs.settings.ui.poi.rotate,
             rpm: lgs.settings.ui.poi.rpm,
+            flyingTime: 2,
             callback: (poi) => {
                 const newPoi = __.ui.poiManager.add(poi)
                 if (newPoi) {
@@ -149,8 +163,12 @@ export const GeocodingUI = () => {
         store.dialog.noResults = false
 
         // Check if it is lat,lon in degrees with spaces or comma or both as separateur
-        const regex = /^-?([1-8]?\d(\.\d+)?|90(\.0+)?)[ ,\s]+-?(1[0-7]\d(\.\d+)?|180(\.0+)?|\d{1,2}(\.\d+)?)$/
-        if (regex.test(address.current.value)) {
+        const ddRegex = /^-?([1-8]?\d(\.\d+)?|90(\.0+)?)[ ,\s]+-?(1[0-7]\d(\.\d+)?|180(\.0+)?|\d{1,2}(\.\d+)?)$/
+        const dmsRegex = /^-?\d{1,3}° \d{1,2}' \d{1,2}(?:\.\d+)?\"[ ,]+-?\d{1,3}° \d{1,2}' \d{1,2}(?:\.\d+)?\"$/
+
+
+        if (ddRegex.test(address.current.value) || dmsRegex.test(address.current.value)) {
+            setDdCoordinates(ddRegex.test(address.current.value))
             setCoordinates(true)
             setExactMatch(true)
         }

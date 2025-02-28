@@ -60,6 +60,7 @@
     "eslint-plugin-import": "^2.31.0",
     "fs": "^0.0.1-security",
     "fs.promises": "^0.1.2",
+    "geo-coordinates-parser": "^1.7.4",
     "geojson-extent": "^0.3.2",
     "geojson-minimum-bounding-rectangle": "^2.0.2",
     "html-react-parser": "^5.2.2",
