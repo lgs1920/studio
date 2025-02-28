@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-02-28
+ * Last modified: 2025-02-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -73,7 +73,15 @@ export const MapPOIList = () => {
     const selectPOI = async (event) => {
         if (window.isOK(event)) {
             const id = event.target.id.split(prefix).pop()
-            if (store.current && store.current.id !== id) {
+            let forceFocus = false
+            // We define the current if there is not
+            if (store.current === false) {
+                store.current = store.list.get(id)
+                forceFocus = true
+            }
+
+            // If defined and it is not the same, or we are in force mode, we focus on it
+            if ((store.current && store.current.id !== id) || forceFocus) {
                 // Stop animation before changing
                 store.current.animated = false
                 if (drawers.open === POIS_EDITOR_DRAWER) {
