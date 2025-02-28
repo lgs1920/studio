@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-26
- * Last modified: 2025-02-26
+ * Created on: 2025-02-28
+ * Last modified: 2025-02-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,9 +16,10 @@
 
 import { POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
 import {
-    faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama, faTrashCan, faXmark,
+    faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama, faTrashCan,
 }                                                                                from '@fortawesome/pro-regular-svg-icons'
 import { faMask }                                                                from '@fortawesome/pro-solid-svg-icons'
+import { FontAwesomeIcon }                                                       from '@fortawesome/react-fontawesome'
 import {
     SlIcon, SlPopup,
 }                                                                                from '@shoelace-style/shoelace/dist/react'
@@ -112,6 +113,9 @@ export const MapPOIContextMenu = () => {
 
     const stopRotation = async () => {
         await __.ui.cameraManager.stopRotate()
+        Object.assign(__.ui.poiManager.list.get(pois.current.id), {
+            animated: false,
+        })
         store.current = __.ui.poiManager.stopAnimation(pois.current.id)
         hideMenu()
     }
@@ -275,7 +279,7 @@ export const MapPOIContextMenu = () => {
                             }
                             {(pois.current.animated || __.ui.cameraManager.isRotating()) &&
                                 <li onClick={stopRotation}>
-                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
+                                    <FontAwesomeIcon icon={faArrowRotateRight} className="fa-spin"/>
                                     <span>Stop</span>
                                 </li>
                             }
