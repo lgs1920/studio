@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-25
- * Last modified: 2025-02-25
+ * Created on: 2025-02-28
+ * Last modified: 2025-02-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,9 +24,9 @@ export const ToggleStateIcon = (props) => {
     const change = props.onChange
     const initialState = props.initial ?? true
     const icons = {false: faEye, true: faEyeSlash}
-    if (props.icon) {
-        icons.true = props.icon.hidden ?? props.icon.true
-        icons.false = props.icon.shown ?? props.icon.false
+    if (props.icons) {
+        icons.true = props.icons.hidden ?? props.icons.true
+        icons.false = props.icons.shown ?? props.icons.false
     }
     const id = props.id ?? ''
     const style = props.style ?? ''
@@ -48,16 +48,10 @@ export const ToggleStateIcon = (props) => {
     return (
         <>
             <div className={`toggle-state-icon ${props.className} ${size}`}>
-                {state
-                 ? <SlIconButton slot="suffix" library="fa" {...(props.style && {style})}
+                <SlIconButton slot="suffix" library="fa" {...(props.style && {style})}
                                  className={'toggle-state-icon-true'}
                                  onClick={toggleState}
-                                 name={FA2SL.set(icons.true)} {...(props.id && {id})}/>
-                 : <SlIconButton slot="suffix" library="fa" {...(props.style && {style})}
-                                 className={'toggle-state-icon-false'}
-                                 onClick={toggleState}
-                                 name={FA2SL.set(icons.false)}  {...(props.id && {id})}/>
-                }
+                              name={FA2SL.set(icons[state])} {...(props.id && {id})}/>
             </div>
         </>
     )
