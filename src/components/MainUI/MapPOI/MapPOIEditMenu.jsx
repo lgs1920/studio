@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-02-28
+ * Last modified: 2025-02-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -171,7 +171,7 @@ export const MapPOIEditMenu = ({point}) => {
     return (    
         <>
             {(point || point.type === POI_STARTER_TYPE) &&
-                <SlDropdown>
+                <SlDropdown className={'edit-poi-menu'}>
                     <SlButton slot="trigger" caret size="small">
                         <FontAwesomeIcon slot="prefix" icon={faLocationDot}/>&nbsp;{'Select an action'}
                     </SlButton>
