@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-28
- * Last modified: 2025-02-28
+ * Created on: 2025-03-01
+ * Last modified: 2025-03-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -128,7 +128,7 @@ export const MapPOIList = () => {
                     {poi.type !== POI_TMP_TYPE &&
                         <div className="edit-map-poi-item-wrapper">
                             <ToggleStateIcon initial={pois.bulkList.get(id)} className={'map-poi-bulk-indicator'}
-                                             icon={{true: faSquareCheck, false: faSquare}}
+                                             icons={{true: faSquareCheck, false: faSquare}}
                                              onChange={handleBulkList}
                                              id={`${bulkPrefix}${id}`}
                             />

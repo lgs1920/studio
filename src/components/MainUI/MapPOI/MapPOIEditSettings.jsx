@@ -7,24 +7,26 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-25
- * Last modified: 2025-02-25
+ * Created on: 2025-03-01
+ * Last modified: 2025-03-01
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { MapPOIBulkActionsMenu }   from '@Components/MainUI/MapPOI/MapPOIBulkActionsMenu'
-import { ToggleStateIcon }         from '@Components/ToggleStateIcon'
-import { faSquare, faSquareCheck } from '@fortawesome/pro-regular-svg-icons'
-import { SlDivider, SlSwitch }     from '@shoelace-style/shoelace/dist/react'
-import { useEffect, useState }     from 'react'
-import { useSnapshot }             from 'valtio'
+import { MapPOIBulkActionsMenu }                                 from '@Components/MainUI/MapPOI/MapPOIBulkActionsMenu'
+import { ToggleStateIcon }                                       from '@Components/ToggleStateIcon'
+import { faArrowDownAZ, faArrowDownZA, faSquare, faSquareCheck } from '@fortawesome/pro-regular-svg-icons'
+import { SlDivider, SlInput, SlSwitch, SlTooltip }               from '@shoelace-style/shoelace/dist/react'
+import React, { useEffect, useState }                            from 'react'
+import { useSnapshot }                                           from 'valtio'
 
 export const MapPOIEditSettings = () => {
 
     const store = lgs.mainProxy.components.pois
     const pois = useSnapshot(store)
+
+    const settings = useSnapshot(lgs.settings.poi)
     const [allSelected, setAllSelected] = useState(false)
 
     const switchValue = (event) => {
@@ -39,6 +41,14 @@ export const MapPOIEditSettings = () => {
         })
     }
 
+    const handleFilterByName = (event) => {
+
+    }
+
+    const handleAlphabetic = (event) => {
+
+    }
+
     /**
      * Check if the global selection i son(all on) or off (at least one off)
      */
@@ -49,10 +59,29 @@ export const MapPOIEditSettings = () => {
     return (
         <>
             <div id="map-poi-edit-settings">
+
+                <div className="map-poi-edit-row">
+                    <div className="map-poi-bulk-filter-by-name">
+                        <SlInput size="small"
+                                 onSlChange={handleFilterByName}
+                                 onInput={handleFilterByName}
+                                 className="edit-title-map-poi-input">
+                            <span slot="label" className="edit-title-map-poi">{'By Name'}</span>
+                        </SlInput>
+                    </div>
+                    <SlTooltip hoist content={settings.filter.alphabetic ? 'Reverse Alphabetic' : 'Alphabetic'}>
+                        <ToggleStateIcon icons={{shown: faArrowDownAZ, hidden: faArrowDownZA}}
+                            // initial={layersSnap.filter.alphabetic}
+                                         onChange={handleAlphabetic}
+                        />
+                    </SlTooltip>
+                </div>
+
                 <div className="map-poi-edit-row">
                     <div className="map-poi-bulk-actions">
+
                         <ToggleStateIcon initial={allSelected} className={'map-poi-bulk-indicator'}
-                                         icon={{true: faSquareCheck, false: faSquare}}
+                                         icons={{true: faSquareCheck, false: faSquare}}
                                          id={'map-poi-bulk-action-global'}
                                          onChange={changeAll}
                         />
