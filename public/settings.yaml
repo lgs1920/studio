@@ -95,7 +95,17 @@ swatches:
     - '#fc8452'
     - '#9a60b4'
     - '#ea7ccc'
+    - '#ff2525'
+    - '#ffdd10'
+    - '#0044f0'
     - '#7fff00'
+    - '#000000'
+    - '#808080'
+    - '#cdcdcd'
+    - '#ffffff'
+
+
+
   distribution: 'sequence'
 
 ########################################
@@ -120,7 +130,28 @@ journey:
     ## Stop POI
     stop:
       color: '#228B22ff'
+########################################
+# Global pois
+########################################
+poi:
+  defaultColor: "#FAFAFA"             # Hexa
+  filter:
+    byName: ''
+    alphabetic: true
+    byCategories: null
+    byJourney: null
 
+
+  #    categories :
+  #      - POI
+  #      - Building
+  #      - View
+  #      - Peak
+  #      - Cave
+  #      - Car Park
+  #      - Castle
+  #      - MOnument
+  #      - Ruin
 ########################################
 # Profile
 ########################################
@@ -220,24 +251,9 @@ ui:
     minScaleFlag: 0.7                   # minimum POI size before replacing by flag (70% of max)
     minScale: 0.3                       # minScale before masking (30% of max)
     distanceThreshold: 8000             # min distance to see POI with 100% size
-
-    defaultColor: "#FAFAFA"             # Hexa
-
     focusOnEdit: true                   # Apply focus when editing a POI
     rotate: true                        # Rotation after POI focus
     rpm: 4
-
-
-  #    categories :
-  #      - POI
-  #      - Building
-  #      - View
-  #      - Peak
-  #      - Cave
-  #      - Car Park
-  #      - Castle
-  #      - MOnument
-  #      - Ruin
 
   ## Geocoder
   geocoder:
