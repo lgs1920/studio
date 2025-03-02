@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-03-02
+ * Last modified: 2025-02-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -114,9 +114,9 @@ export const MapPOI = memo(({point: pointId}) => {
                         left:                       pixels.x,
                         transform:                  `scale(${point?.scale ?? 1})`,
                         transformOrigin:            'left bottom',
-                        '--lgs-poi-color':          point.color ?? lgs.settings.ui.poi.defaultColor,
+                        '--lgs-poi-color':          point.color ?? lgs.settings.poi.defaultColor,
                         '--lgs-poi-gradient-color': __.ui.ui.hexToRGBA(
-                            point.color ?? lgs.settings.ui.poi.defaultColor,
+                            point.color ?? lgs.settings.poi.defaultColor,
                             'rgba',
                             0.3,
                         ),

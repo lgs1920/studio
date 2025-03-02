@@ -136,10 +136,11 @@ journey:
 poi:
   defaultColor: "#FAFAFA"             # Hexa
   filter:
-    byName: ''
+    byName: ""
     alphabetic: true
     byCategories: null
-    byJourney: null
+    open: false
+    active: false
 
 
   #    categories :

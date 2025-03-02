@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-03-01
- * Last modified: 2025-03-01
+ * Created on: 2025-03-02
+ * Last modified: 2025-03-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -31,6 +31,8 @@ export const MapPOIList = () => {
     const poiList = useRef(null)
     const store = lgs.mainProxy.components.pois
     const pois = useSnapshot(store)
+    const settings = useSnapshot(lgs.settings.poi)
+
     const prefix = 'edit-map-poi-'
     const bulkPrefix = 'bulk-map-poi-'
     const drawers = useSnapshot(lgs.mainProxy.drawers)
@@ -51,18 +53,32 @@ export const MapPOIList = () => {
     }, [])
 
     useEffect(() => {
-        // Clear action once built
-        if (drawers.action) {
-            lgs.mainProxy.drawers.action = null
-        }
+                  // Clear action once built
+                  if (drawers.action) {
+                      lgs.mainProxy.drawers.action = null
+                  }
 
-        // Manage the lists of selected POIs
-        store.filteredList.clear()
-        store.list.forEach((poi, id) => {
-            store.filteredList.set(id, poi)
-            store.bulkList.set(id, false)
-        })
-    }, [store?.current?.id])
+                  // Manage the lists of selected POIs
+                  store.filteredList.clear()
+                  // Apply filter byName
+                  let filteredArray = Array.from(store.list)
+                      .filter(entry => entry[1].title.toLowerCase().includes(settings.filter.byName.toLowerCase()))
+
+                  // Alphabetic/reverse sorting
+                  filteredArray = filteredArray.sort((a, b) => {
+                      if (settings.filter.alphabetic) {
+                          return a[1].title.localeCompare(b[1].title)
+                      }
+                      else {
+                          return b[1].title.localeCompare(a[1].title)
+                      }
+                  })
+                  filteredArray.forEach(([key, value]) => {
+                      store.filteredList.set(key, value)
+                      store.bulkList.set(key, false)
+                  })
+              }, [pois?.current?.id, settings?.filter.byName, settings?.filter.alphabetic],
+    )
 
 
     const handleBulkList = (state, event) => {
@@ -120,10 +136,10 @@ export const MapPOIList = () => {
         }
     }
 
-
     return (
         <div id={'edit-map-poi-list'} ref={poiList}>
-            {Array.from(pois.filteredList.entries()).map(([id, poi]) => (
+            {
+                Array.from(pois.filteredList.entries()).map(([id, poi]) => (
                 <Fragment key={`${prefix}${id}`}>
                     {poi.type !== POI_TMP_TYPE &&
                         <div className="edit-map-poi-item-wrapper">

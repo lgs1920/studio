@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-26
- * Last modified: 2025-02-26
+ * Created on: 2025-03-02
+ * Last modified: 2025-03-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -111,22 +111,22 @@ export const MapPOIBulkActionsMenu = () => {
 
     return (
         <SlDropdown disabled={disabled}>
-            <SlButton slot="trigger" caret>
+            <SlButton slot="trigger" size="small" caret>
                 <FontAwesomeIcon slot="prefix" icon={faLocationDot}/>&nbsp;{'Select a bulk action'}
             </SlButton>
 
-            <SlMenu>
-                <SlMenuItem onClick={remove} small>
+            <SlMenu small>
+                <SlMenuItem onClick={remove}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}></SlIcon>
                     <span>Remove</span>
                 </SlMenuItem>
 
-                <SlMenuItem onClick={shrink} small>
+                <SlMenuItem onClick={shrink}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsToLine)}></SlIcon>
                     <span>Reduce</span>
                 </SlMenuItem>
 
-                <SlMenuItem onClick={expand} small>
+                <SlMenuItem onClick={expand}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsFromLine)}></SlIcon>
                     <span>Expand</span>
                 </SlMenuItem>

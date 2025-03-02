@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-26
- * Last modified: 2025-02-26
+ * Created on: 2025-03-02
+ * Last modified: 2025-03-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -179,7 +179,7 @@ export class SceneUtils {
                                      height:      height,
                                      simulatedHeight: point?.simulatedHeight,
                                      title:           point.title,
-                                     color:       point?.color ?? lgs.settings.ui.poi.defaultColor,
+                                     color: point?.color ?? lgs.settings.poi.defaultColor,
                                      description: point?.description ?? '',
 
                                      camera: {

@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-28
+ * Created on: 2025-03-02
  * Last modified: 2025-02-28
  *
  *
@@ -57,7 +57,7 @@ export const MapPOIContextMenu = () => {
     const saveAsPOI = () => {
         Object.assign(__.ui.poiManager.list.get(pois.current.id), {
             type: POI_STANDARD_TYPE,
-            color: lgs.settings.ui.poi.defaultColor,
+            color: lgs.settings.poi.defaultColor,
         })
         __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(pois.current.id))
             .then(() => hideMenu())

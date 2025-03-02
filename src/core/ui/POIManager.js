@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-03-02
+ * Last modified: 2025-02-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -222,7 +222,7 @@ export class POIManager {
             // We force the former type of the starter and apply the right color
             Object.assign(this.list.get(former.id), {
                 type: former.formerType ?? POI_STANDARD_TYPE,
-                color: lgs.settings.ui.poi.defaultColor,
+                color: lgs.settings.poi.defaultColor,
             })
             await this.saveInDB(this.list.get(former.id))
 
