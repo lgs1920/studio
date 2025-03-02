@@ -40,8 +40,9 @@ export const MapPOIEditContent = ({poi}) => {
         const height = event.target.value * 1
         Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
             height: lgs.settings.unitSystem.current === IMPERIAL ? UnitUtils.convertFeetToMeters(height) : height,
-            simulatedHeight: undefined,
         })
+        await __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(point.id))
+
     }
 
     const handleChangeColor = async event => {
