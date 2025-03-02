@@ -114,7 +114,7 @@ export function LGS1920() {
                               let starter = __.ui.poiManager.starter
 
                               if (!starter) {
-                                  const starter = __.ui.poiManager.add({
+                                  starter = __.ui.poiManager.add({
                                                                            longitude: lgs.settings.starter.longitude,
                                                                            latitude:  lgs.settings.starter.latitude,
                                                                            height:    lgs.settings.starter.height,
