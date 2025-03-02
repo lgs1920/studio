@@ -29,7 +29,6 @@ export class Geocoder {
     email
     license
 
-
     constructor() {
         // Singleton
         if (Geocoder.instance) {
@@ -71,6 +70,7 @@ export class Geocoder {
 
         //  url.searchParams.append(`polygon_${this.format}`, false)
         //url.searchParams.append('timestamp', new Date().getTime())
+
         // Add exclude place
         if (this.excludePlaces.length > 0) {
             url.searchParams.append('exclude_place_ids', this.excludePlaces.join(','))
@@ -103,4 +103,5 @@ export class Geocoder {
     }
 
     toDMS = __.ui.ui.DMS2DD
+
 }
