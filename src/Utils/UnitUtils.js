@@ -1,9 +1,29 @@
-import { Duration }                  from 'luxon'
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: UnitUtils.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-27
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { DAY, HOUR, MILLIS, MINUTE } from '@Core/constants'
+import { Duration }                  from 'luxon' //check configuration.unitSystems for the values
 
 //check configuration.unitSystems for the values
 export const INTERNATIONAL = 0
 export const IMPERIAL = 1
+
+// Coordinates Units system
+export const DD = 'dd'
+export const DMS = 'dms'
 
 export class UnitUtils {
     /**
@@ -42,6 +62,21 @@ export class UnitUtils {
                         return Duration.fromMillis(input * MILLIS).toFormat('hh:mm:ss')
                     case min:
                         return Duration.fromMillis(input * MILLIS).toFormat('mm:ss')
+                    case dms: {
+                        if (!input) {
+                            return 'NaN'
+                        }
+                        const degrees = Math.floor(input)
+                        const minutesFloat = (input - degrees) * 60
+                        const minutes = Math.floor(minutesFloat)
+                        const seconds = Math.round((minutesFloat - minutes) * 60)
+                        return `${degrees}° ${minutes}' ${seconds}"`
+                    }
+                    case dd:
+                        if (!input) {
+                            return 'NaN'
+                        }
+                        return sprintf('%.5f', input)
                     default:
                         // metre, seconde
                         return input
@@ -62,6 +97,8 @@ export class UnitUtils {
             },
         }
     }
+
+    static convertFeetToMeters = feet => feet / FOOT
 }
 
 /** Units */
@@ -81,7 +118,9 @@ export const hour = 'hr'
 export const min = 'mn'
 export const sec = 's'
 export const meter = 'm'
-export const units = [km, mile, kmh, hkm, mkm, mpmile, ms, mph, meter, foot, yard, inche, hour, min, sec]
+export const dd = DD
+export const dms = DMS
+export const units = [km, mile, kmh, hkm, mkm, mpmile, ms, mph, meter, foot, yard, inche, hour, min, sec, dd, dms]
 
 /** Distance constants to convert from meter */
 export const METER = 1

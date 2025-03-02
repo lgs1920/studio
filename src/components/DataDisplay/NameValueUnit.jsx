@@ -1,6 +1,23 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: NameValueUnit.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-27
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import './style.css'
-import { INTERNATIONAL, units as unitsList } from '@Utils/UnitUtils'
-import { sprintf }                           from 'sprintf-js'
+import { units as unitsList }  from '@Utils/UnitUtils'
+import { useEffect, useState } from 'react'
+import { sprintf }             from 'sprintf-js'
 
 /**
  * TextValueUI Components to display data
@@ -20,16 +37,19 @@ import { sprintf }                           from 'sprintf-js'
  * @property {Function} callback                Used to format the value instead of sprintf
  *
  */
-export const TextValueUI = function TextValueUI(props, ref) {
+export const NameValueUnit = function TextValueUI(props, ref) {
+
     let toShow = (typeof props.value === 'string') ? props.value : Number(props.value) ?? null
     let units = props.units ?? ['', '']
     if (units instanceof Array) {
         if (units.length === 1) {
             units = [units[0], units[0]]
         }
-    } else {
+    }
+    else {
         units = [units, units]
     }
+    const [unitText, setUnit] = useState(units[lgs.settings?.unitSystem.current])
 
     if (unitsList.includes(units[0])) {
         toShow = __.convert(toShow).to(units[lgs.settings.getUnitSystem.current])
@@ -37,20 +57,24 @@ export const TextValueUI = function TextValueUI(props, ref) {
 
     if (toShow && props.callback) {
         toShow = props.callback(toShow)
-    } else {
+    }
+    else {
         toShow = (typeof toShow === 'number') ? sprintf(props.format ?? '%\' .2f', toShow) : toShow
     }
 
-    const classes = (props.class) ? props.class + ' ' : '' + 'lgs-text-value'
+    const classes = (props.className) ? props.className + ' ' : '' + 'lgs-text-value'
+
+    useEffect(() => {
+        setUnit(units[lgs.settings.unitSystem.current])
+    }, [lgs.settings.unitSystem.current])
 
     return (
         <div id={props.id} className={classes}>
-            {props.text && <span className="lgs-tv-text">{props.text}</span>}
-            <span>
-            {toShow && <span className="lgs-tv-value">{toShow}</span>}
-                {units[lgs.settings?.getUnitSystem.current !== INTERNATIONAL] !== '' &&
-                    <span className="lgs-tv-unit">{units[lgs.settings?.getUnitSystem.current]}</span>}
-        </span>
+            {props.text && <span className="lgs-nvu-text">{props.text}</span>}
+            {toShow &&
+                <span className="lgs-nvu-value">{toShow}</span>
+            }
+            <span className="lgs-nvu-unit">{unitText}</span>
         </div>
     )
 }

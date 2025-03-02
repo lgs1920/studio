@@ -32,13 +32,17 @@ export class LocalDB {
 
         this.#stores = stores
         this.#name = name
+        this.#version = version
 
         let tables = this.#stores // passe dto upgrad contest
-        this.#db = openDB(this.#name, this.#version, {
-            upgrade(db, old_version, new_version) {
+        this.#db = openDB(this.#name, version, {
+            upgrade(db, undefined, version) {
                 tables.forEach(table => {
-                    db.createObjectStore(table)
+                    if (!db.objectStoreNames.contains(table)) {
+                        db.createObjectStore(table)
+                    }
                 })
+                console.log(`Browser DB ${name} upgraded to version ${version}.`)
             },
         })
     }
@@ -133,7 +137,7 @@ export class LocalDB {
             let end = content._mt_ + ttl
             content.ttl = {
                 duration: ttl,                                      // ttl in millis
-                end: end,                              // end in millis
+                end:      end,                              // end in millis
             }
             content._iso_.ttl = DateTime.fromMillis(end).toISO()
         }
@@ -223,6 +227,11 @@ export class LocalDB {
      */
     keys = async (store) => {
         return (await this.#db).getAllKeys(store)
+    }
+
+    hasKey = async (key) => {
+        const keys = await this.keys()
+        return this.keys.includes(key)
     }
 
 

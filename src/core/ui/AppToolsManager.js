@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: AppToolsManager.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-28
+ * Last modified: 2025-02-28
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 export class AppToolsManager {
 
     /**
@@ -95,7 +111,9 @@ export class AppToolsManager {
         const degrees = Math.floor(coordinate)
         const minutesFloat = (coordinate - degrees) * 60
         const minutes = Math.floor(minutesFloat)
-        const seconds = Math.round((minutesFloat - minutes) * 60)
+        const secondsFloat = (minutesFloat - minutes) * 60
+        const seconds = parseFloat(secondsFloat.toFixed(6))
+
         return `${degrees}° ${minutes}' ${seconds}"`
     }
 

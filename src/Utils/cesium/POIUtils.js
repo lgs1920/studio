@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: POIUtils.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
@@ -222,18 +238,19 @@ export class POIUtils {
 
     /**
      *
-     * @param point  {longitude,latitude,elevation}
+     * @param point  {longitude,latitude,height,simulatedHeight}
      * @return {boolean}
      */
     static isPointVisible = (point) => {
         const globe = lgs.scene.globe
         const cartesian = Cartesian3.fromDegrees(point.longitude, point.latitude,
-                                                 __.ui.sceneManager.noRelief() ? 0 : point.elevation)
+                                                 __.ui.sceneManager.noRelief() ? 0 : (point.height ?? point.simulatedHeight))
 
         const screenPosition = lgs.scene.cartesianToCanvasCoordinates(cartesian)
         if (!screenPosition) {
             return false
         }
+
         const pickRay = lgs.camera.getPickRay(screenPosition)
         const pickedPosition = globe.pick(pickRay, lgs.scene)
 
@@ -242,7 +259,8 @@ export class POIUtils {
         }
 
         const pickedCartographic = Cartographic.fromCartesian(pickedPosition)
-        return Math.abs((pickedCartographic.height - (point?.elevation ?? 0))) < 30.00
+        return Math.abs(pickedCartographic.height - (point.height ?? point.simulatedHeight)) < 120.0
+
     }
 
     static adaptScaleToDistance = (point, scaler = {
@@ -250,18 +268,18 @@ export class POIUtils {
         minScaleFlag:      lgs.settings.ui.poi.minScaleFlag,
         minScale:          lgs.settings.ui.poi.minScale,
     }) => {
+
         const cartesian = Cartesian3.fromDegrees(point.longitude, point.latitude,
-                                                 __.ui.sceneManager.noRelief() ? 0 : point.elevation)
+                                                 __.ui.sceneManager.noRelief() ? 0 : (point.height ?? point.simulatedHeight))
         const cameraPosition = Cartesian3.fromDegrees(
             lgs.mainProxy.components.camera.position.longitude,
             lgs.mainProxy.components.camera.position.latitude,
             lgs.mainProxy.components.camera.position.elevation,
         )
         const scale = Math.max(scaler.minScale, Math.min(1 / (Cartesian3.distance(cartesian, cameraPosition) / scaler.distanceThreshold), 1))
-        const visible = scale > scaler.minScale
-        const flagVisible = visible && scale <= scaler.minScaleFlag
-
-        return {scale, flagVisible, visible}
+        const tooFar = scale <= scaler.minScale
+        const flagVisible = !tooFar && scale <= scaler.minScaleFlag
+        return {scale: scale, showFlag: flagVisible, tooFar: tooFar}
     }
 
     //

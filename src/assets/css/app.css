@@ -1,4 +1,21 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: app.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 @import url('https://fonts.googleapis.com/css2?family=Cookie&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@100;400;700&family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
 
 @import-normalize; /* bring in normalize.css styles */
 
@@ -81,7 +98,7 @@ main-logo.xlarge {
 }
 
 .main-logo img {
-    width: 100%;
+    width: 75%;
     height: auto;
 }
 

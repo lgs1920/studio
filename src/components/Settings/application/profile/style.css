@@ -1,0 +1,54 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-27
+ * Last modified: 2025-02-19
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
+
+.manage-profile-ui {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s)
+}
+
+.manage-profile-ui ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.manage-profile-ui li {
+    display: inline-flex;
+    align-items: center;
+}
+
+.manage-profile-ui li svg {
+    font-size: var(--lgs-font-size-m);
+    display: inline-flex;
+    align-items: center;
+    padding-right: var(--lgs-gutter-s);
+    --fa-primary-color: var(--lgs-success-color);
+    --fa-secondary-color: var(--lgs-success-bg-color);
+    --fa-secondary-opacity: 0.8;
+
+}
+
+.manage-profile-ui sl-panel {
+    font-size: var(--lgs-font-size-s);
+}
+
+.manage-profile-ui sl-button {
+    width: 12rem;
+}

@@ -3,9 +3,9 @@ import { Cartesian2, Cartesian3, Cartographic, Ellipsoid, Math as M, Matrix4, Sc
 
 export class CameraUtils {
 
-    static lookAt = (camera, center, hpr) => {
+    static lookAt = (camera, target, hpr) => {
         // Lock camera to a point
-        const point = new Cartesian3(center.x, center.y, center.z)
+        const point = Cesium.Cartesian3.fromDegrees(target.longitude, target.latitude, target.height)
         camera.lookAtTransform(Transforms.eastNorthUpToFixedFrame(point), hpr)
     }
 
@@ -70,10 +70,11 @@ export class CameraUtils {
                 longitude: M.toDegrees(longitude),
                 latitude: M.toDegrees(latitude),
                 height: height,
-                range: target?.range ?? lgs.settings.getCamera.range,
+                range: (height ?? lgs.settings.getCamera.range),
             },
         }
     }
+
 
     /**
      *

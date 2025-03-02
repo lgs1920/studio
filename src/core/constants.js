@@ -1,8 +1,24 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: constants.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-03-02
+ * Last modified: 2025-03-02
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { faCrown, faEarthEurope, faLock, faMap, faRoad, faUnlock, faUser } from '@fortawesome/pro-regular-svg-icons'
 
 
 export const SLOGAN = 'Replay Your Adventures!'
-/**
+/*******************************************************************************
  * Time and duration constants in seconds
  */
 const MILLIS = 1000
@@ -15,9 +31,11 @@ const MONTH = 30 * DAY
 const YEAR = 365 * DAY
 export { MILLIS, SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR }
 
-/** other */
 export const WRONG = -99999999999
 
+/*******************************************************************************
+ * Responsivity
+ ******************************************************************************/
 export const MOBILE_MAX = 767
 export const DESKTOP_MIN = 768
 
@@ -28,6 +46,7 @@ export const DESKTOP_MIN = 768
  */
 export const CONFIGURATION = 'config.yaml'
 export const SETTINGS = 'settings.yaml'
+export const LAYERS_TERRAINS_SETTINGS = 'layers-terrains.yaml'
 
 /**
  * Servers identification
@@ -60,9 +79,22 @@ export const VAULT_STORE = 'vault'
 export const CURRENT_STORE = 'current'
 export const JOURNEYS_STORE = 'journeys'
 export const ORIGIN_STORE = 'origin'
+export const POIS_STORE = 'pois'
 export const CURRENT_JOURNEY = 'journey'
 export const CURRENT_TRACK = 'track'
+export const CURRENT_CAMERA = 'camera'
+
 export const CURRENT_POI = 'poi'
+export const POI_THRESHOLD_DISTANCE = 50 // meters
+
+export const POI_STARTER_TYPE = 'starter'
+export const FLAG_START_TYPE = 'start'
+export const FLAG_STOP_TYPE = 'stop'
+export const POI_TRACK_TYPE = 'track'
+export const POI_STANDARD_TYPE = 'poi'
+export const POI_TMP_TYPE = undefined
+
+
 export const UPDATE_JOURNEY_THEN_DRAW = 1
 export const UPDATE_JOURNEY_SILENTLY = 2
 export const REMOVE_JOURNEY = 3
@@ -80,9 +112,9 @@ export const COLOR_SWATCHES_RANDOM = 'random'
 export const SETTING_EXCLUSIONS = [
     'layers.base', 'layers.terrain', 'layers.overlay',
     'layers.filter', 'layers.colorSettings',
-    'app', 'scene',
+    'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
     'ui.camera', 'ui.welcome',
-    'ui.menu',
+    'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit',
 ].sort((a, b) => {
     const segmentsA = a.split('.')
     const segmentsB = b.split('.')
@@ -196,6 +228,8 @@ export const INFO_DRAWER = 'info-drawer'
 export const LAYERS_DRAWER = 'layers-drawer'
 export const JOURNEY_EDITOR_DRAWER = 'journey-editor-drawer'
 export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'
+export const POIS_EDITOR_DRAWER = 'pois-editor-drawer'
+
 
 /** Jaurney, Track, POI **/
 
@@ -212,6 +246,7 @@ export const DRAWING = 0
 export const DRAWING_FROM_UI = 1
 export const DRAWING_FROM_DB = 3
 export const REFRESH_DRAWING = 2
+export const ADD_JOURNEY = 9
 export const FOCUS_ON_FEATURE = 1
 export const NO_FOCUS = 2
 
@@ -230,3 +265,8 @@ export const MENU_BOTTOM_END = 'bottom-end'
 
 export const REMOVE_JOURNEY_IN_EDIT = 'in-journey-edit'
 export const REMOVE_JOURNEY_IN_TOOLBAR = 'in-journey-toolbar'
+
+/** Focus */
+export const FOCUS_STARTER = 'starter'
+export const FOCUS_LAST = 'last'
+export const FOCUS_CENTROID = 'center'

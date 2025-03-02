@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: theme.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-28
+ * Last modified: 2025-02-28
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 :root {
     --lgs-gutter: 0.8rem;
     --lgs-gutter-s: 0.5rem;
@@ -66,8 +82,9 @@
     --lgs-border-s: var(--lgs-border-width-s) solid var(--sl-color-gray-400);
 
     --lgs-text-on-color: hsl(0 0% 98%);
-    --lgs-border-color: hsla(0 0% 98% / 0.25);
+    --lgs-border-on-color: hsla(0 0% 98% / 0.25);
     --lgs-blur: 5px;
+    --lgs-blur-s: 1px;
 
     --lgs-error-color: var(--sl-color-red-500);
     --lgs-error-bg-color: hsla(0 84.2% 60.2%/0.5);
@@ -110,6 +127,7 @@
 
     --lgs-card-on-map-bg-color: hsla(87.6 61.2% 20.2%/0.7);
     --lgs-card-on-map-border-color: hsla(79.6 89.1% 89.2% / 0.18);
+    --lgs-card-on-map-hover-bg-color: #ffffff22;
 
 
     --lgs-track-color-active: var(--lgs-dark-ui-secondary-color);
@@ -118,7 +136,10 @@
     --lgs-theme-background-color: var(--sl-color-neutral-0);
 
     --lgs-width-unit: 28rem;
-    --lgs-max-mobile-width: min(var(--lgs-width-unit), calc(100% - var(--left) - var(--top)))
+    --lgs-max-mobile-width: min(var(--lgs-width-unit), calc(100% - var(--left) - var(--top)));
+
+    --lgs-scroolbar-track-color: transparent;
+    --lgs-scroolbar-thumb-color: var(--sl-color-gray-700);
 }
 
 .lgs-theme, .lgs-theme::part(panel) {
@@ -168,6 +189,10 @@ sl-button::part(label) {
     padding-left: 0;
 }
 
+sl-button::part(spinner) {
+    font-size: var(--lgs-font-size-l);
+}
+
 .buttons-bar {
     display: flex;
     justify-content: flex-end;
@@ -176,12 +201,17 @@ sl-button::part(label) {
 
 .square-icon {
     width: var(--lgs-dimension) !important;
+    aspect-ratio: 1;
 }
 
 .square-icon::part(base) {
     height: var(--lgs-dimension);
     width: var(--lgs-dimension);
     padding: 0;
+}
+
+.square-icon[disabled]::part(base) {
+    color: var(--lgs-disabled-color)
 }
 
 .square-icon::part(label) {
@@ -204,6 +234,45 @@ sl-icon-button[size="small"], sl-icon[size="small"] {
     font-size: var(--sl-font-size-small);
 }
 
+.lgs-card.on-map sl-button[variant="default"]::part(base), .lgs-one-line-card.on-map[variant="default"]::part(base),
+.lgs-card.on-map sl-button[variant="default"]::part(prefix), .lgs-one-line-card.on-map[variant="default"]::part(prefix),
+.lgs-card.on-map sl-button[variant="default"]::part(suffix), .lgs-one-line-card.on-map[variant="default"]::part(suffix) {
+    color: var(--lgs-text-on-color);
+    border-color: var(--lgs-text-on-color);
+}
+
+/*******************************************************************************
+ * Main CFA
+ ******************************************************************************/
+
+.call-for-actions {
+    pointer-events: auto;
+    width: 100%;
+    justify-content: center;
+}
+
+.call-for-actions .buttons-bar {
+    display: flex;
+    gap: var(--lgs-gutter) !important;
+}
+
+.call-for-actions.buttons-bar {
+    top: unset;
+    position: relative;
+    display: flex;
+    gap: var(--lgs-gutter) !important;
+    /*justify-content: flex-end;*/
+}
+
+.call-for-actions [outline] {
+    border-color: var(--lgs-border-on-color) !important;
+    backdrop-filter: blur(var(--lgs-blur));
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.call-for-actions [outline]::part(base) {
+    color: var(--lgs-text-on-color);
+}
 
 /*******************************************************************************
  * Drawers
@@ -231,6 +300,10 @@ sl-drawer {
     --footer-spacing: var(--lgs-gutter-s) var(--lgs-gutter);
 }
 
+sl-drawer::part(header) {
+    font-family: "Open Sans", var(--sl-font-sans);
+    font-weight: 700 !important;
+}
 .mobile.portrait sl-drawer {
     --size: var(--lgs-vertical-panel-height)
 }
@@ -322,7 +395,7 @@ sl-card[variant="primary"]::part(base) {
     background: var(--lgs-card-on-map-bg-color);
     border-radius: var(--lgs-border-radius-xs);
     box-shadow: var(--sl-shadow-medium);
-    color: white;
+    color: var(--lgs-text-on-color);
     backdrop-filter: blur(var(--lgs-blur));
     border-color: var(--lgs-card-on-map-border-color);
     height: 100%;
@@ -351,6 +424,42 @@ cesium-compass {
 }
 
 /*******************************************************************************
+ * Scrollbars
+ ******************************************************************************/
+
+.lgs-scrollbars .track-horizontal {
+    --thumb-color: var(--lgs-scroolbar-thumb-color);
+    --track-color: var(--lgs-scroolbar-track-color);
+    right: 2px;
+    bottom: 2px;
+    left: 2px;
+    border-radius: 3px;
+    background-color: var(--track-color);
+}
+
+.lgs-scrollbars .track-vertical {
+    --thumb-color: var(--lgs-scroolbar-thumb-color);
+    --track-color: var(--lgs-scroolbar-track-color);
+    right: 2px;
+    bottom: 2px;
+    top: 2px;
+    border-radius: 3px;
+    background-color: var(--track-color);
+}
+
+.lgs-scrollbars .thumb-horizontal, .lgs-scrollbars .thumb-vertical {
+    cursor: pointer;
+    border-radius: inherit;
+    background-color: var(--thumb-color);
+    opacity: 0.3;
+}
+
+.on-map .lgs-scrollbars .track-horizontal, .on-map .lgs-scrollbars .track-vertical {
+    --thumb-color: var(--lgs-text-on-color)
+}
+
+
+/*******************************************************************************
  * Tooltips
  ******************************************************************************/
 sl-tooltip {
@@ -366,7 +475,7 @@ sl-tooltip {
 
     box-shadow: var(--sl-shadow-large);
     border-color: var(--lgs-tooltip-border-color);
-    --hide-delay: 1;
+    --hide-delay: 0.2s;
 }
 
 sl-tooltip::part(body)::first-letter {
@@ -404,9 +513,11 @@ sl-dialog::part(title) {
 
 
 .lgs-mini-remove-dialog {
+    position: relative;
+    z-index: 10;
     display: flex;
     gap: var(--lgs-gutter-xs);
-    margin-bottom: var(--lgs-gutter-s);
+    margin: 0 0 var(--lgs-gutter-xs) 0;
 
 }
 
@@ -436,6 +547,14 @@ sl-details::part(content) {
     flex-direction: column;
 }
 
+sl-details svg {
+    margin-right: var(--lgs-gutter-s);
+}
+
+sl-details [slot="prefix"], sl-details [slot="suffix"] {
+    margin-right: 0;
+}
+
 /*******************************************************************************
  * Dropdowns
  ******************************************************************************/
@@ -452,6 +571,45 @@ sl-details::part(content) {
     background-color: var(--sl-color-primary-50);
     border-color: var(--sl-color-primary-300);
     color: var(--sl-color-primary-700);
+}
+
+/*******************************************************************************
+ * Context menu
+ ******************************************************************************/
+.lgs-context-menu {
+    padding: 0;
+    margin: 0;
+}
+
+:root {
+    --lgs-hover-context-menu-bg-color: var(--lgs-card-on-map-hover-bg-color)
+}
+
+.lgs-context-menu ul {
+    margin: 0;
+    padding: 0 var(--lgs-gutter-xs);
+    list-style: none;
+}
+
+.lgs-context-menu li {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--lgs-gutter-xs);
+    border-radius: var(--lgs-border-radius-xs);
+    cursor: pointer;
+}
+
+.lgs-context-menu li:hover {
+    background: var(--lgs-hover-context-menu-bg-color);
+}
+
+.lgs-context-menu sl-divider {
+    --color: var(--lgs-card-on-map-border-color);
+);
+}
+
+.lgs-context-menu sl-icon, .lgs-context-menu svg {
+    margin-right: var(--lgs-gutter-s);
 }
 
 /*******************************************************************************
@@ -537,6 +695,19 @@ sl-switch[align-right]::part(label) {
 sl-switch[align-right]::part(control) {
     order: 1;
     margin-left: auto
+}
+
+/*******************************************************************************
+ * Alerts
+ ******************************************************************************/
+
+sl-alert::part(icon) {
+    padding-inline-start: var(--lgs-gutter-s)
+}
+
+sl-alert::part(message) {
+    padding: var(--lgs-gutter-s);
+    line-height: 1.3;
 }
 
 /*******************************************************************************
@@ -634,85 +805,29 @@ sl-switch[align-right]::part(control) {
 }
 
 /*******************************************************************************
- * POI on MAP
- ******************************************************************************/
-
-.poi-on-map-wrapper {
-    position: absolute;
-    display: flex;
-    min-width: 10rem;
-    min-height: 8rem;
-    pointer-events: none;
-    color: var(--lgs-poi-color);
-}
-
-.poi-on-map-wrapper.show-flag {
-    min-width: 2rem;
-    min-height: 2rem;
-}
-
-.poi-on-map {
-    color: var(--lgs-poi-color);
-    display: flex;
-    flex-direction: column;
-    font-size: var(--lgs-font-size);
-    font-weight: normal;
-    border-left: 1px solid var(--lgs-poi-color);
-    padding: var(--lgs-gutter-xs) 0 calc(5 * var(--lgs-gutter)) var(--lgs-gutter-xs);
-    text-shadow: 0 0 8px rgba(0, 0, 0, 0.50);
-    opacity: 1;
-    --lgs-animation-duration: 2s;
-    white-space: nowrap;
-}
-
-.poi-on-map-inner {
-    padding: var(--lgs-gutter-xs) var(--lgs-gutter-s) var(--lgs-gutter-s) var(--lgs-gutter-xs);
-    border-top-left-radius: 3px;
-    border-top: 1px solid;
-    border-left: 1px solid;
-    border-color: var(--lgs-poi-color);
-    background-image: linear-gradient(130deg, rgba(255, 255, 255, 0.8) 0%, rgba(0, 255, 255, 0.1) 30%, rgba(0, 255, 255, 0) 40%);
-    border-image: linear-gradient(var(--lgs-poi-color), rgba(0, 255, 255, 0)) 20%;
-}
-
-.poi-on-map-marker {
-    --width: var(--lgs-gutter);
-    position: absolute;
-    width: var(--width);
-    height: var(--width);
-    background: var(--lgs-poi-color);
-    border-radius: 50%;
-    left: calc(-0.5 * var(--width));
-    bottom: calc(-0.5 * var(--width));
-}
-
-.poi-on-map-inner h3 {
-    margin: 0;
-    font-weight: bold;
-    font-size: calc(1.5 * var(--lgs-font-size));
-    line-height: 1
-}
-
-.poi-on-map-inner .poi-full-coordinates {
-    line-height: 1.2;
-    display: flex;
-    flex-direction: column;
-    gap: var(--lgs-gutter-s);
-}
-
-.poi-on-map .flag-as-triangle {
-    width: 0;
-    height: 0;
-    border-top: 15px solid transparent;
-    border-bottom: 15px solid transparent;
-    border-left: 40px solid var(--lgs-poi-color);
-}
-
-/*******************************************************************************
  * Progress Bars
  ******************************************************************************/
 sl-progress-bar {
     --height: var(--lgs-gutter-xs)
+}
+
+/*******************************************************************************
+ * Toggle State Icon
+ ******************************************************************************/
+.toggle-state-icon sl-icon-button {
+    font-size: var(--lgs-font-size-m);
+}
+
+.toggle-state-icon.small sl-icon-button {
+    font-size: var(--lgs-font-size-s);
+}
+
+.toggle-state-icon.medium sl-icon-button {
+    font-size: var(--lgs-font-size-m);
+}
+
+.toggle-state-icon.large sl-icon-button {
+    font-size: var(--lgs-font-size-l);
 }
 
 /*******************************************************************************
@@ -749,3 +864,7 @@ h3 {
     font-weight: bold;
 }
 
+[readonly] {
+    user-select: none;
+    pointer-events: none;
+}

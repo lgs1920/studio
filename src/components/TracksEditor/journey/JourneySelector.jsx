@@ -1,8 +1,9 @@
-import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-icons'
-import { faRoute, faSquare }                from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlOption, SlSelect }       from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                            from '@Utils/FA2SL'
-import { useSnapshot }                      from 'valtio'
+import { faChevronDown }              from '@fortawesome/pro-regular-svg-icons'
+import { faMask, faRoute, faSquare }  from '@fortawesome/pro-solid-svg-icons'
+import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                      from '@Utils/FA2SL'
+import classNames                     from 'classnames'
+import { useSnapshot }                from 'valtio'
 
 export const JourneySelector = (props) => {
     const mainStore = lgs.mainProxy.components.journeyEditor
@@ -17,6 +18,8 @@ export const JourneySelector = (props) => {
     mainSnapshot.list.forEach(slug => {
         journeys.push(lgs.getJourneyBySlug(slug))
     })
+
+    const styled = props?.style === 'card'
 
     /**
      * Sort the list
@@ -43,9 +46,9 @@ export const JourneySelector = (props) => {
 
     // Look for colo to add in prefix
     const prefixColor = (journey) => {
-        const color = (journey.tracks.size === 1) ? journey.tracks.values().next().value.color : 'black'
-        return {color: color}
+        return (journey.tracks.size === 1) ? journey.tracks.values().next().value.color : 'black'
     }
+
 
     return (<>
         {mainSnapshot.list.length > 1 &&
@@ -53,42 +56,49 @@ export const JourneySelector = (props) => {
                       value={editorSnapshot.journey.slug}
                       onSlChange={props.onChange}
                       key={mainSnapshot.keys.journey.list}
-                      className="journey-selector"
+                      className={classNames('journey-selector', !editorSnapshot.journey.visible ? 'masked' : '')}
             >
                 <SlIcon library="fa"
-                        name={FA2SL.set(faRoute)}
+                        name={FA2SL.set(editorSnapshot.journey.visible ? faRoute : faMask)}
                         slot={'prefix'}
                         style={{
                             color: (theJourney.tracks.size === 1) ? editorSnapshot.track.color : 'black',
                         }}
+                        disabled={!editorSnapshot.journey.visible}
                 />
                 <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
 
-                {journeys.map(journey => <SlOption key={journey.title} value={journey.slug}>
-                    <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
-                    <SlIcon library="fa"
-                            name={FA2SL.set(faSquare)}
-                            slot={'prefix'}
-                            style={prefixColor(journey)}
-                    />
+                {journeys.map(journey =>
+                                  <SlOption key={journey.title} value={journey.slug}
+                                            className={classNames('journey-title', !journey.visible ? 'masked' : '')}>
 
-                    <SlIcon slot="suffix" library="fa" name={FA2SL.set(journey.visible ? faEye : faEyeSlash)}/>
-
-                    {journey.title}
-                </SlOption>)}
-            </SlSelect>}
-        {mainSnapshot.list.length === 1 && props.single && <>
-            <div className={`journey-title ${props?.style ? 'lgs-one-line-card' : ''}`}>
-                <SlIcon className={'journey-title-icon'}
-                        library="fa" name={FA2SL.set(faRoute)}
+                                      <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
+                                      <SlIcon library="fa"
+                                              name={FA2SL.set(journey.visible ? faSquare : faMask)}
+                                              slot={'prefix'}
+                                              style={{
+                                                  color: prefixColor(journey),
+                                              }}
+                                      />
+                                      {journey.title}
+                                  </SlOption>)}
+            </SlSelect>
+        }
+        {mainSnapshot.list.length === 1 && props.single &&
+            <div className={classNames(
+                'journey-title',
+                styled ? 'lgs-one-line-card' : '',
+                !editorSnapshot.journey.visible ? 'masked' : '',
+            )}>
+                <SlIcon className={'journey-title-prefix'} disabled={!editorSnapshot.journey.visible}
+                        library="fa" name={FA2SL.set(editorSnapshot.journey.visible ? faRoute : faMask)}
                         slot={'expand-icon'}
                         style={{
-                            color: (theJourney.tracks.size === 1) ? editorSnapshot?.track?.color : 'black',
+                            color: editorSnapshot.journey.visible ? editorSnapshot.track.color : 'var(--lgs-disabled-color)',
                         }}
                 />
                 {editorSnapshot.journey.title}
             </div>
-        </>}
-
+        }
     </>)
 }

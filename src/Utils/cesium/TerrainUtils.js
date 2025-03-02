@@ -1,7 +1,5 @@
-import { CesiumTerrainProvider, EllipsoidTerrainProvider, IonResource, Terrain } from 'cesium'
-import {
-    TERRAIN_FROM_CESIUM, TERRAIN_FROM_CESIUM_ELLIPSOID, TERRAIN_FROM_URL, URL_AUTHENT_KEY,
-} from '@Core/constants'
+import { TERRAIN_FROM_CESIUM, TERRAIN_FROM_CESIUM_ELLIPSOID, TERRAIN_FROM_URL, URL_AUTHENT_KEY } from '@Core/constants'
+import { CesiumTerrainProvider, EllipsoidTerrainProvider, IonResource, Terrain }                  from 'cesium'
 
 export class TerrainUtils {
 
@@ -50,7 +48,7 @@ export class TerrainUtils {
     static async changeTerrain(entity) {
         const terrain = new Terrain(await TerrainUtils.setTerrain(entity))
         if (terrain) {
-            lgs.scene.setTerrain(terrain)
+            await lgs.scene.setTerrain(terrain)
         }
     }
 }

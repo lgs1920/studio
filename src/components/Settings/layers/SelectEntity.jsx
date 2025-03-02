@@ -1,13 +1,14 @@
-import { useConfirm } from '@Components/Modals/ConfirmUI'
+import { useConfirm }    from '@Components/Modals/ConfirmUI'
 import {
     ACCESS_ICONS, FREE_ACCOUNT_ACCESS, FREE_ANONYMOUS_ACCESS, FREEMIUM_ACCESS, LAYERS_THUMBS_DIR, LOCKED_ACCESS,
     OVERLAY_ENTITY, PREMIUM_ACCESS, TERRAIN_ENTITY, UNLOCKED_ACCESS, VAULT_STORE,
-}                     from '@Core/constants'
+}                        from '@Core/constants'
+import { faCircleCheck } from '@fortawesome/duotone-light-svg-icons'
 
 import {
-    faArrowDownUpLock, faArrowUpRightFromSquare, faCircleCheck, faEllipsisVertical, faFilter, faLock, faTrashCan,
+    faArrowDownUpLock, faArrowUpRightFromSquare, faEllipsisVertical, faFilter, faLock, faTrashCan,
     faTriangleExclamation,
-}                          from '@fortawesome/pro-duotone-svg-icons'
+}                          from '@fortawesome/pro-regular-svg-icons'
 import {
     FontAwesomeIcon,
 }                          from '@fortawesome/react-fontawesome'

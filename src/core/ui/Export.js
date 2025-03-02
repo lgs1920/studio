@@ -115,6 +115,7 @@ export class Export {
             }
         } else {
             try {
+                document.body.focus()
                 await navigator.clipboard.writeText(text)
             }
             catch (error) {

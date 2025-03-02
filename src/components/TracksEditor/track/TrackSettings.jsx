@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: TrackSettings.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { ToggleStateIcon } from '@Components/ToggleStateIcon'
 import { JUST_SAVE }       from '@Core/constants'
 import {
@@ -149,7 +165,7 @@ export const TrackSettings = function TrackSettings() {
                     <div id="track-visibility" className={'editor-vertical-menu'}>
                         {editorStore.journey.tracks.size > 1 &&
                             <SlTooltip hoist content={textVisibilityTrack}>
-                            <ToggleStateIcon change={setTrackVisibility} initial={editorSnapshot.track.visible}/>
+                                <ToggleStateIcon onChange={setTrackVisibility} initial={editorSnapshot.track.visible}/>
                         </SlTooltip>}
                         <TrackFlagsSettings/>
                     </div>

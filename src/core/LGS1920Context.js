@@ -1,9 +1,10 @@
 import {
     APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, JOURNEYS_STORE, ORIGIN_STORE, platforms,
-    SERVERS, SETTINGS_STORE, VAULT_STORE,
+    POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE,
 }                          from '@Core/constants'
 import { AppToolsManager } from '@Core/ui/AppToolsManager'
 import { DeviceManager }   from '@Core/ui/DeviceManager'
+import { Geocoder }        from '@Core/ui/Geocoder'
 import { MenuManager }     from '@Core/ui/MenuManager'
 import { POIManager }      from '@Core/ui/POIManager'
 import { AppUtils }        from '@Utils/AppUtils'
@@ -32,6 +33,8 @@ export class LGS1920Context {
     #theJourneyEditorProxy
     /** @type {Proxy} */
     #editorSettingsProxy
+    /** @type {Proxy} */
+    #cameraProxy
 
     eventHandler = new MouseEventHandler()
     #viewer
@@ -69,40 +72,31 @@ export class LGS1920Context {
         // Utils are attached to window
         window.__ = {
             app: AppUtils,
-            ui: {
+            ui:  {
                 css: CSSUtils,
                 mouse: MouseUtils,
-                ui:UIUtils
+                ui:  UIUtils,
             },
             convert: UnitUtils.convert,
-        };
-
-    }
-
-    createDB = () => {
-        const dbPrefix = (this.platform === platforms.PROD) ? '' : `-${this.platform}`
-        this.db = {
-            lgs1920: new LocalDB({
-                                     name:             `${APP_KEY}${dbPrefix}`,
-                                     stores: [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE],
-                                     manageTransients: true,
-                                     version:          '0.1',
-                                 }),
-            settings: new LocalDB({
-                                      name: `settings-${APP_KEY}${dbPrefix}`,
-                                      stores: [SETTINGS_STORE],
-                                      manageTransients: true,
-                                      version:          '0.1',
-                                  }),
-            vault:    new LocalDB({
-                                      name:             `vault-${APP_KEY}${dbPrefix}`,
-                                      stores: [VAULT_STORE],
-                                      manageTransients: false,
-                                      version:          '0.1',
-                                  }),
         }
+
     }
 
+    /**
+     *
+     * @param journey
+     *
+     */
+    set theJourney(journey) {
+        this.#mainProxy.theJourney = journey
+        if (journey === null) {
+            this.db.lgs1920.delete(CURRENT_JOURNEY, CURRENT_STORE).then(
+                this.db.lgs1920.delete(CURRENT_TRACK, CURRENT_STORE).then(),
+            )
+            return
+        }
+        this.db.lgs1920.put(CURRENT_JOURNEY, journey.slug, CURRENT_STORE).then(journey.addToEditor())
+    }
 
     initializeConfig = async () => {
         this.configuration = await fetch(CONFIGURATION, {cache: 'no-store'}).then(
@@ -145,20 +139,28 @@ export class LGS1920Context {
         return this.#mainProxy.theJourney
     }
 
-    /**
-     *
-     * @param journey
-     *
-     */
-    set theJourney(journey) {
-        this.#mainProxy.theJourney = journey
-        if (journey === null) {
-            this.db.lgs1920.delete(CURRENT_JOURNEY, CURRENT_STORE).then(
-                this.db.lgs1920.delete(CURRENT_TRACK, CURRENT_STORE).then()
-            )
-            return
+    createDB = () => {
+        const dbPrefix = (this.platform === platforms.PROD) ? '' : `-${this.platform}`
+        this.db = {
+            lgs1920:  new LocalDB({
+                                      name:             `${APP_KEY}${dbPrefix}`,
+                                      stores:           [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE],
+                                      manageTransients: true,
+                                      version:          4, // integer
+                                  }),
+            settings: new LocalDB({
+                                      name:    `settings-${APP_KEY}${dbPrefix}`,
+                                      stores:  [SETTINGS_STORE],
+                                      manageTransients: true,
+                                      version: 1, // integer
+                                  }),
+            vault:    new LocalDB({
+                                      name:             `vault-${APP_KEY}${dbPrefix}`,
+                                      stores:  [VAULT_STORE],
+                                      manageTransients: false,
+                                      version: 1, // integer
+                                  }),
         }
-        this.db.lgs1920.put(CURRENT_JOURNEY, journey.slug, CURRENT_STORE).then(journey.addToEditor())
     }
 
     /**
@@ -239,7 +241,8 @@ export class LGS1920Context {
                 // Look if this theJourney already exist in context
                 this.journeys.set(journey.slug, journey)
                 this.mainProxy.components.journeyEditor.list[index] = journey.slug
-            } else {                    // Nope,we add it
+            }
+            else {                    // Nope,we add it
                 this.journeys.set(journey.slug, journey)
                 this.mainProxy.components.journeyEditor.list.push(journey.slug)
             }
@@ -258,6 +261,16 @@ export class LGS1920Context {
         }
     }
 
+    cleanContext = () => {
+        lgs.theJourney = null
+        lgs.theTrack = null
+        lgs.cleanEditor()
+        lgs.mainProxy.canViewJourneyData = false
+        lgs.mainProxy.components.profile.show = false
+        lgs.mainProxy.canViewProfile = false
+        lgs.mainProxy.theJourney = null
+    }
+
     addToEditor = (journey) => {
         this.theJourneyEditorProxy.journey = journey
     }
@@ -269,7 +282,7 @@ export class LGS1920Context {
     initManagers = () => {
         __.ui.profiler = new Profiler(this)
         __.ui.editor = {
-            journey:new JourneyEditor()
+            journey: new JourneyEditor(),
         }
 
         __.ui.wanderer = new Wanderer()
@@ -278,6 +291,7 @@ export class LGS1920Context {
         __.ui.sceneManager = new SceneManager()
         __.ui.menuManager = new MenuManager()
         __.ui.poiManager = new POIManager()
+        __.ui.geocoder = new Geocoder()
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()

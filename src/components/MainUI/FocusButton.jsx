@@ -17,11 +17,15 @@ export const FocusButton = (props) => {
             lgs.theJourney.updateVisibility(visibility)
             await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         }
-        lgs.theJourney.focus({resetCamera: true, action: REFRESH_DRAWING})
+        lgs.theJourney.focus({
+                                 resetCamera: true,
+                                 action:      REFRESH_DRAWING,
+                                 rotate:      lgs.settings.ui.camera.start.rotate.journey,
+                             })
     }
     return (
         <>
-            <SlTooltip hoist placement={placement} content="Focus on the current journey">
+            <SlTooltip hoist placement={placement} content={'Reset the Focus'}>
                 <SlButton size={'small'} className={'square-icon'} id={'focus-on-current-journey'}
                           onClick={focusOnJourney}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}/>

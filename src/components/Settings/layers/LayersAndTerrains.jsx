@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: LayersAndTerrains.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { faRegularSlidersSlash }                                                             from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { ALL, BASE_ENTITY, FREE_ANONYMOUS_ACCESS, OVERLAY_ENTITY, TERRAIN_ENTITY, UNLOCKED } from '@Core/constants'
 import {
@@ -147,20 +163,20 @@ export const LayersAndTerrains = () => {
                         <SlTooltip hoist content={layersSnap.filter.thumbnail ? 'Display List' : 'Display Thumbnails'}>
                             <ToggleStateIcon icons={{shown: faGrid2, hidden: faList}}
                                              initial={layersSnap.filter.thumbnail}
-                                             change={handleThumbnail}
+                                             onChange={handleThumbnail}
                             />
                         </SlTooltip>
                         <SlTooltip hoist content={layersSnap.filter.provider ? 'By Layer' : 'By Provider'}>
                             <ToggleStateIcon icons={{shown: faArrowDownWideShort, hidden: faArrowDownBigSmall}}
                                              initial={layersSnap.filter.provider}
-                                             change={handleProvider}
+                                             onChange={handleProvider}
                             />
                         </SlTooltip>
 
                         <SlTooltip hoist content={layersSnap.filter.alphabetic ? 'Reverse Alphabetic' : 'Alphabetic'}>
                             <ToggleStateIcon icons={{shown: faArrowDownAZ, hidden: faArrowDownZA}}
                                              initial={layersSnap.filter.alphabetic}
-                                             change={handleAlphabetic}
+                                             onChange={handleAlphabetic}
                             />
                         </SlTooltip>
 

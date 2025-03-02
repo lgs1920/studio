@@ -1,32 +1,53 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: main.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-26
+ * Last modified: 2025-02-26
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { proxyMap } from 'valtio/utils'
 
 export const main = {
-    components: {
+    components:      {
 
-        mainUI:{
-            show:false,
-            journeyLoader: {visible:  false},
-            support: {visible: false},
+        mainUI: {
+            show:          false,
+            journeyLoader: {visible: false},
+            support:       {visible: false},
 
             journeyMenu:         {timeout: 0, active: false},
             removeJourneyDialog: {active: proxyMap()},
+            rotate:        {
+                clockwise: false,
+                running:   false,
+                rpm: 4,
+            },
         },
 
-        fileLoader:{
+        fileLoader: {
             accepted: 0,
-            error:'',
-            dragging:     {
+            error:    '',
+            dragging: {
                 active: null,
                 files:  [],
             },
-            fileList:new proxyMap(),
-            empty:true,
+            fileList: new proxyMap(),
+            empty:    true,
         },
 
         camera: {
             position: {},
-            target: {},
-            event: false,
+            target:   {},
+            event:    false,
             targetIcon: {},
         },
 
@@ -37,33 +58,37 @@ export const main = {
                     list: 0,
                     settings: 0,
                 },
-                track: {
+                track:   {
                     list: 5000,
                     settings: 0,
                 },
             },
         },
-        floatingMenu: {
-            coordinates: {x: 0, y: -9999},
-            delay: 3,
-            type: undefined,
-            target: undefined,
-            show: true,
-            latitude: 0,
-            longitude: 0,
-            altitude: 0,
+        pois:          {
+            list:   new proxyMap(),
+            current: false,
+            context: {
+                visible: false,
+                timer:   'context-timer',
+            },
+            editor: {
+                visible: false,
+                active: false,
+            },
+            bulkList:     new proxyMap(),
+            filteredList: new proxyMap(),
         },
-        profile: {
+        profile:       {
             visible: false,
-            show: false,
-            key: 0,
-            width:'100%',
-            height:'100%',
-            zoom:false,
+            show:   false,
+            key:    0,
+            width:  '100%',
+            height: '100%',
+            zoom:   false,
         },
 
         settings: {
-            key:     0,
+            key: 0,
         },
 
         layers: {
@@ -72,15 +97,15 @@ export const main = {
         },
 
         wanderer: {
-            run: false,
-            pause:false,
+            run:     false,
+            pause:   false,
             forward: true,
             duration: undefined,
-            loop:false
+            loop:    false,
         },
 
-        informationPanel:{
-            tab:null
+        informationPanel: {
+            tab: null,
         },
 
         welcome: {
@@ -88,27 +113,36 @@ export const main = {
             flag:  false,
         },
 
-        poi: {
-            items: new proxyMap(),
-        }
+        geocoder: {
+            list:   proxyMap(),
+            dialog: {
+                visible:     false,
+                loading:     false,
+                noResults:   false,
+                moreResults: false,
+                submitDisabled: true,
+                showMore:    false,
+            },
+        },
 
 
     },
-    drawers:    {
+    drawers:         {
         open: null,
         over: false,
+        action: null,
     },
-    modals: {
+    modals:          {
         altitudeChoice: {
             show: false,
             model: 'terrain',
         },
     },
-    theJourney: null,
+    theJourney:      null,
     readyForTheShow: false,
-    fullSize: false,
+    fullSize:        false,
     canViewJourneyData: false,
-    canViewProfile: false,
-    theLayer: null,
+    canViewProfile:  false,
+    theLayer:        null,
     theLayerOverlay: null,
 }

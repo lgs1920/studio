@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: UIUtils.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-28
+ * Last modified: 2025-02-28
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 export class UIUtils {
 
     /**
@@ -21,7 +37,7 @@ export class UIUtils {
      * @param format        output format (rgb | rgba), default rgba
      * @return {string}       rgb() or rgba()
      */
-    static hexToRGBA = (hex, format = 'rgba') => {
+    static hexToRGBA = (hex, format = 'rgba', intensity = 1) => {
         hex = hex.replace(/^#/, '0x')
 
         // Transform #RGB to #RRGGBB orRRRRRGBFF
@@ -42,11 +58,18 @@ export class UIUtils {
         if (format === 'rgb') {
             return `rgb(${r},${g},${b})`
         }
+
+        if (intensity && intensity !== 1) {
+            return `rgba(${r},${g},${b},${intensity})`
+        }
+
         // and alpha,if it exists
         if (alpha) {
             const a = (hex & 0xff) / 0xff
             return `rgba(${r},${g},${b},${a})`
         }
+
+
     }
 
 
@@ -73,8 +96,19 @@ export class UIUtils {
         const degrees = Math.floor(coordinate)
         const minutesFloat = (coordinate - degrees) * 60
         const minutes = Math.floor(minutesFloat)
-        const seconds = Math.round((minutesFloat - minutes) * 60)
+        const secondsFloat = (minutesFloat - minutes) * 60
+        // Utilisation de toFixed pour plus de précision sur les secondes
+        const seconds = parseFloat(secondsFloat.toFixed(6))
+
         return `${degrees}° ${minutes}' ${seconds}"`
+    }
+
+    static DMS2DD = (dms) => {
+        const parts = dms.match(/(\d+)[° ]+(\d+)[' ]+([\d.]+)"?/)
+        if (parts) {
+            return parseFloat(parts[1]) + parseFloat(parts[2]) / 60 + parseFloat(parts[3]) / 3600
+        }
+        return 0
     }
 
 }

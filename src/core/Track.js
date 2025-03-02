@@ -384,7 +384,7 @@ export class Track extends MapElement {
 
         // Focus on the parent Journey
         if (mode === FOCUS_ON_FEATURE) {
-            TrackUtils.focus({track: this})
+            __.ui.sceneManager.focusOnJourney({track: this})
         }
     }
 

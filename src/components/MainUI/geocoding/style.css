@@ -1,0 +1,92 @@
+.geocoding-dialog {
+    display: flex;
+    gap: var(--lgs-gutter-s);
+    flex-direction: column;
+    width: min(calc(100vw - 3.5 * var(--lgs-dimension)), 35rem);
+}
+
+.geocoding-form {
+    display: flex;
+    gap: var(--lgs-gutter-xs);
+    width: 100%;
+    align-items: center;
+}
+
+.geocoding-dialog form {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+#geocoder-search-location {
+    flex-grow: 1;
+}
+
+#geocoder-search-location-submit {
+    flex-shrink: 0;
+}
+
+:root {
+    --lgs-select-location-size: min(360px, 60dvh)
+}
+
+.select-location-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+    width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.select-location-wrapper > div {
+    padding-left: 0;
+    height: auto;
+    flex-grow: 1;
+}
+
+.select-location-wrapper .select-location-item {
+    display: flex;
+    gap: var(--lgs-gutter-s);
+    width: 100%;
+    cursor: pointer;
+    padding: var(--lgs-gutter-xs);
+    padding-right: var(--lgs-gutter);
+    align-items: center;
+    line-height: 1.3;
+    background: transparent;
+}
+
+select-location-wrapper .select-location-item:last-child {
+    padding-bottom: 1px;
+}
+
+.select-location-wrapper .select-location-item:hover {
+    width: 100%;
+    cursor: pointer;
+    background: var(--lgs-hover-context-menu-bg-color);
+}
+
+.select-location-wrapper .select-location-item span {
+    flex-grow: 1;
+}
+
+.select-location-wrapper .select-location-item sl-icon {
+    flex-shrink: 0;
+}
+
+.select-location-wrapper sl-button[close] {
+    margin-right: auto;
+}
+
+.exact-geocoding {
+    display: flex;
+    width: min(15rem, 100%);
+    margin-left: auto;
+    margin-right: calc(var(--lgs-dimension) + var(--lgs-gutter-xs));
+}
+
+.exact-geocoding sl-switch {
+    width: 100%;
+}
+

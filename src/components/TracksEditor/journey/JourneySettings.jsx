@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneySettings.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-02-24
+ * Last modified: 2025-02-24
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { useConfirm } from '@Components/Modals/ConfirmUI'
 import {
     ToggleStateIcon,
@@ -276,8 +292,8 @@ export const JourneySettings = function JourneySettings() {
                     // Then we redraw the journey
                     await Utils.updateJourney(SIMULATE_ALTITUDE)
 
-                    // And updatePositionInformation editor
-                    Utils.updateJourneyEditor(theJourney.slug)
+                    // And update editor
+                    Utils.updateJourneyEditor(theJourney.slug, {})
 
                     // If the Profile UI is open, we re-sync it
                     __.ui.profiler.draw()
@@ -333,7 +349,11 @@ export const JourneySettings = function JourneySettings() {
      */
     const focusOnJourney = async () => {
         await setJourneyVisibility(true)
-        lgs.theJourney.focus({resetCamera: true, action: REFRESH_DRAWING})
+        lgs.theJourney.focus({
+                                 resetCamera: true,
+                                 action:      REFRESH_DRAWING,
+                                 rotate:      lgs.settings.ui.camera.start.rotate.journey,
+                             })
     }
 
     const textVisibilityJourney = sprintf('%s Journey', editorSnapshot.journey.visible ? 'Hide' : 'Show')
@@ -456,13 +476,13 @@ export const JourneySettings = function JourneySettings() {
                                               name={FA2SL.set(faCrosshairsSimple)}/>
                         </SlTooltip>
                         <SlTooltip hoist content={textVisibilityJourney}>
-                            <ToggleStateIcon change={setJourneyVisibility}
+                            <ToggleStateIcon onChange={setJourneyVisibility}
                                              initial={editorSnapshot.journey.visible}/>
                         </SlTooltip>
                             {editorSnapshot.journey.pois.size > 1 &&
                                 <SlTooltip hoist content={textVisibilityPOIs}>
                                     <ToggleStateIcon
-                                        change={setAllPOIsVisibility}
+                                        onChange={setAllPOIsVisibility}
                                         initial={editorSnapshot.journey.POIsVisible}
                                         icons={{
                                             shown: faLocationDot, hidden: faLocationDotSlash,

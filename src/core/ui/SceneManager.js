@@ -11,6 +11,8 @@ export class SceneManager {
         if (SceneManager.instance) {
             return SceneManager.instance
         }
+
+        this.proxy = SceneUtils
         SceneManager.instance = this
 
     }
@@ -106,7 +108,7 @@ export class SceneManager {
     afterMorphing = async () => {
 
         // Remove starting animation (rotate,...)
-        __.ui.cameraManager.move.releaseEvent()
+        __.ui.cameraManager.stopWatching()
 
         // Now it's time for the show. Draw all journeys
         const items = []
@@ -120,4 +122,43 @@ export class SceneManager {
         this.notifyMorph()
     }
 
+    focus = (point, options) => {
+        this.proxy.focus(point, options)
+    }
+
+    focusPreProcessing = (point, options) => {
+        // TODO calculer ici les parametres à pendre en fonctio nde l'action en cour
+    }
+
+    focusPostProcessing = (point, options) => {
+        // console.log(point, options)
+    }
+
+    focusOnJourney = (options) => {
+        this.proxy.focusOnJourney({
+                                      ...options,
+                                      initializer: this.focusPreProcessing,
+                                      callback:    this.focusPostProcessing,
+                                  })
+    }
+
+    getJourneyCentroid = async journey => await this.proxy.getJourneyCentroid(journey)
+
+
+    get startRotate() {
+        lgs.mainProxy.components.mainUI.rotate.running = true
+        return lgs.mainProxy.components.mainUI.rotate.running
+    }
+
+    get stopRotate() {
+        lgs.mainProxy.components.mainUI.rotate.running = false
+        return lgs.mainProxy.components.mainUI.rotate.running
+    }
+
+    /**
+     * Clone any event and propagate it to the canvas
+     *
+     * @param event
+     */
+    propagateEventToCanvas = (event) => this.proxy.propagateEventToCanvas(event)
 }

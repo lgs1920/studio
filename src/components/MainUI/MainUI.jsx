@@ -1,13 +1,18 @@
 import { CompassUI }                        from '@Components/cesium/CompassUI/CompassUI'
 import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
+import { GeocodingButton }                  from '@Components/MainUI/geocoding/GeocodingButton'
+import { GeocodingUI }                      from '@Components/MainUI/geocoding/GeocodingUI'
 import { JourneyToolbar }                   from '@Components/MainUI/JourneyToolbar'
+import { MapPOICluster }                    from '@Components/MainUI/MapPOI/MapPOICluster'
+import { MapPOIContextMenu }                from '@Components/MainUI/MapPOI/MapPOIContextMenu'
+import { RotateButton }                     from '@Components/MainUI/RotateButton'
 import { Profile }                          from '@Components/Profile/Profile'
+import { ProfileButton }                    from '@Components/Profile/ProfileButton'
 import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
 import {
     BOTTOM, DESKTOP_MIN, END, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
     MENU_START_START, MOBILE_MAX, SCENE_MODE_2D, SECOND, START, TOP,
 }                                           from '@Core/constants'
-import { CanvasEvents }                     from '@Core/events/CanvasEvents.js'
 import { useEffect }                        from 'react'
 
 import './style.css'
@@ -24,6 +29,8 @@ import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
 import { CallForActions }                   from './CallForActions'
 import { CameraTarget }                     from './CameraTarget'
 import { CreditsBar }                       from './credits/CreditsBar'
+import { Panel as MapPOIEditPanel }         from './MapPOI/Panel'
+import { PanelButton as POIEditButton }     from './MapPOI/PanelButton'
 import { SceneModeSelector }                from './SceneModeSelector'
 import { SupportUI }                        from './SupportUI'
 import { SupportUIButton }                  from './SupportUIButton'
@@ -55,8 +62,8 @@ export const MainUI = () => {
         }
 
         // Manage canvas related events
-        CanvasEvents.attach()
-        // CanvasEvents.addListeners()
+        //CanvasEvents.attach()
+        //CanvasEvents.addListeners()
 
     }, [])
 
@@ -164,16 +171,22 @@ export const MainUI = () => {
                         <div id={'primary-buttons-bar'} className={primaryEntrance}>
                             <SettingsButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                             <LayersButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
-                            <JourneyToolbar tooltip={'top'}></JourneyToolbar>
+                            <POIEditButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
+                            <JourneyToolbar tooltip={'top'}/>
+                            <ProfileButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
+
                             <InformationButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                             <SupportUIButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
-
                         </div>
                         <div id={'secondary-buttons-bar'} className={secondaryEntrance}>
                             <CompassUI scene={lgs.scene}/>
                             <div id="secondary-buttons-bar-content">
                                 <SceneModeSelector tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
+                                <GeocodingButton tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
+                                <RotateButton tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
                                 <FullScreenButton/>
+                                <GeocodingUI/>
+
                             </div>
 
                         </div>
@@ -196,17 +209,20 @@ export const MainUI = () => {
                     <CreditsBar/>
                 </div>
 
-
-                {/* <FloatingMenu/> */}
                 <CameraAndTargetPanel/>
                 <Profile/>
                 <InformationPanel/>
                 <SettingsPanel/>
                 <LayersPanel/>
                 <TracksEditor/>
+                <MapPOIEditPanel/>
+
             </div>
+            <MapPOICluster/>
+
             <SupportUIDialog/>
             <JourneyLoaderUI multiple/>
+            <MapPOIContextMenu/>
 
 
         </>
