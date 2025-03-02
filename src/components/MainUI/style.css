@@ -57,10 +57,11 @@ html {
 
 #secondary-buttons-bar-content {
     position: absolute;
+    top: var(--lgs-compass-size);
     display: flex;
     flex-direction: column;
+    pointer-events: auto;
     gap: var(--lgs-gutter-xs);
-    top: var(--lgs-compass-size);
 }
 
 #bottom-ui {
