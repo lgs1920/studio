@@ -23,6 +23,8 @@ import { useSnapshot }                                           from 'valtio/in
 export const MapPOIEditFilter = () => {
 
     const settings = useSnapshot(lgs.settings.poi)
+    const store = lgs.mainProxy.components.pois
+    const pois = useSnapshot(store)
 
     const handleFilter = () => {
         lgs.settings.poi.filter.open = !lgs.settings.poi.filter.open
@@ -37,14 +39,19 @@ export const MapPOIEditFilter = () => {
     }
 
     useEffect(() => {
+        if (pois.list.size === 1) {
+            lgs.settings.poi.filter.active = false
+            lgs.settings.poi.filter.open = false
+            return
+        }
         lgs.settings.poi.filter.active = lgs.settings.poi.filter.byName !== '' || !lgs.settings.poi.filter.alphabetic
-    }, [settings.filter])
+    }, [settings.filter, pois.list.size])
     return (
         <div className="map-poi-edit-filter">
             <div className="map-poi-edit-toggle-filter">
                 <SlTooltip content={settings.filter.open ? 'Hide Filters' : 'Show Filters'}>
                     <SlIconButton id="map-poi-edit-filter-trigger" onClick={handleFilter}
-                                  library="fa"
+                                  library="fa" disabled={pois.list.size === 1}
                                   name={FA2SL.set(settings.filter.open ? faFilterSlash : faFilter)}
                                   className={settings.filter.active ? 'map-poi-filter-active' : 'map-poi-filter-inactive'}
                     />
