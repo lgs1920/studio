@@ -36,7 +36,7 @@ export const MapPOIEditContent = ({poi}) => {
     const point = pois.list.get(poi.id)
     const [simulated, setSimulated] = useState(false)
 
-    const handleChangeAltitude = event => {
+    const handleChangeAltitude = async event => {
         const height = event.target.value * 1
         Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
             height: lgs.settings.unitSystem.current === IMPERIAL ? UnitUtils.convertFeetToMeters(height) : height,
