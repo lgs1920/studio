@@ -42,16 +42,16 @@ html {
 }
 
 #secondary-buttons-bar {
-    flex-direction: column;
-    align-items: center;
-    gap: var(--lgs-gutter-s);
-    --width: var(--lgs-compass-size);
-    pointer-events: auto;
     position: relative;
-    width: var(--lgs-compass-size);
     right: var(--secondary-buttons-bar-right);
     left: var(--secondary-buttons-bar-left);
-    margin-left: var(--secondary-buttons-bar-margin-left)
+    align-items: center;
+    flex-direction: column;
+    width: var(--lgs-compass-size);
+    margin-left: var(--secondary-buttons-bar-margin-left);
+    pointer-events: none;
+    gap: var(--lgs-gutter-s);
+    --width: var(--lgs-compass-size);
 }
 
 
