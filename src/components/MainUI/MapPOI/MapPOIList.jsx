@@ -155,7 +155,7 @@ export const MapPOIList = () => {
                             )}
                                        id={`${prefix}${id}`}
                                        onSlAfterShow={selectPOI}
-                                       open={pois.current.id === id && drawers.action !== null}
+                                       open={pois?.current?.id === id && drawers.action !== null}
                                        small
                                        style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.color, 'rgba', 0.2)}}>
                                 <div slot="summary">
