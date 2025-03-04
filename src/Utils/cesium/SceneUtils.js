@@ -119,7 +119,7 @@ export class SceneUtils {
         const result = new Cartesian2()
         lgs.scene.cartesianToCanvasCoordinates(
             Cartesian3.fromDegrees(point.longitude, point.latitude,
-                                   __.ui.sceneManager.noRelief() ? 0 : (point.height ?? point.simulatedHeight)), result)
+                                   __.ui.sceneManager.noRelief() ? 0 : (point.simulatedHeight)), result)
 
         return new Cartesian2(Math.round(result.x), Math.round(result.y))
     }
@@ -144,7 +144,7 @@ export class SceneUtils {
 
     static focus = async (point, options) => {
 
-        const height = point?.height ?? point.simulatedHeight
+        const height = point.simulatedHeight ?? point.height // compatibility <0.8.1
         const range = options.range ?? lgs.settings.camera.range
         const pitch = M.toRadians(options.pitch ?? lgs.settings.camera.pitch)
         const heading = M.toRadians(options.heading ?? lgs.settings.camera.heading)

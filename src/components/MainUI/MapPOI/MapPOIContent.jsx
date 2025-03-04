@@ -19,7 +19,7 @@ import { SECOND }          from '@Core/constants'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { SlPopup }         from '@shoelace-style/shoelace/dist/react'
 import { ELEVATION_UNITS } from '@Utils/UnitUtils'
-import { useRef }          from 'react'
+import { useRef, useEffect } from 'react'
 import Timeout             from 'smart-timeout'
 import './style.css'
 import { useSnapshot }     from 'valtio'
@@ -50,6 +50,10 @@ export const MapPOIContent = ({id, hide}) => {
         }
     }
 
+    useEffect(() => {
+
+    }, [point])
+
     return (
         <>
             <div className="poi-on-map">
@@ -73,7 +77,7 @@ export const MapPOIContent = ({id, hide}) => {
 
                             {point.scale > 0.5 && (
                                 <div className="poi-full-coordinates">
-                                    {!point.simulatedHeight && (
+                                    {point.height && point.height !== point.simulatedHeight && (
                                         <NameValueUnit
                                             className="poi-elevation"
                                             text={'Altitude: '}
@@ -82,7 +86,7 @@ export const MapPOIContent = ({id, hide}) => {
                                             units={ELEVATION_UNITS}
                                         />
                                     )}
-                                    {point.simulatedHeight && <span>&nbsp;</span>}
+                                    {!point.height || point.height === point.simulatedHeight && <span>&nbsp;</span>}
                                     <div className="poi-coordinates">
                                         <span>
                                           {__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)},

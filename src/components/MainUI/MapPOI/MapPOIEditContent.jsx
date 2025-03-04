@@ -42,7 +42,7 @@ export const MapPOIEditContent = ({poi}) => {
             height: lgs.settings.unitSystem.current === IMPERIAL ? UnitUtils.convertFeetToMeters(height) : height,
         })
         await __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(point.id))
-
+        setSimulated(point.height === point.simulatedHeight)
     }
 
     const handleChangeColor = async event => {
@@ -104,7 +104,7 @@ export const MapPOIEditContent = ({poi}) => {
 
     useEffect(() => {
         if (point && pois.current) {
-            setSimulated(point.simulatedHeight !== undefined)
+            setSimulated(point.height === undefined || point.height === point.simulatedHeight)
         }
 
     }, [point])
