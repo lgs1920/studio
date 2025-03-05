@@ -119,7 +119,7 @@ export class SceneUtils {
         const result = new Cartesian2()
         lgs.scene.cartesianToCanvasCoordinates(
             Cartesian3.fromDegrees(point.longitude, point.latitude,
-                                   __.ui.sceneManager.noRelief() ? 0 : (point.simulatedHeight)), result)
+                                   __.ui.sceneManager.noRelief() ? 0 : (point.simulatedHeight ?? point.height)), result)
 
         return new Cartesian2(Math.round(result.x), Math.round(result.y))
     }

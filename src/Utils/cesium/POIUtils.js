@@ -244,7 +244,7 @@ export class POIUtils {
     static isPointVisible = (point) => {
         const globe = lgs.scene.globe
         const cartesian = Cartesian3.fromDegrees(point.longitude, point.latitude,
-                                                 __.ui.sceneManager.noRelief() ? 0 : point.simulatedHeight)
+                                                 __.ui.sceneManager.noRelief() ? 0 : point.simulatedHeight ?? point.height)
 
         const screenPosition = lgs.scene.cartesianToCanvasCoordinates(cartesian)
         if (!screenPosition) {
@@ -259,7 +259,7 @@ export class POIUtils {
         }
 
         const pickedCartographic = Cartographic.fromCartesian(pickedPosition)
-        return Math.abs(pickedCartographic.height - point.simulatedHeight) < 20.0
+        return Math.abs(pickedCartographic.height - (point.simulatedHeight ?? point.height)) < 20.0
 
     }
 

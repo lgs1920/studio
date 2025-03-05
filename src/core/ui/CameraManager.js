@@ -298,7 +298,7 @@ export class CameraManager {
                 longitude: point.longitude,
                 latitude:  point.latitude,
                 height:          point.height,
-                simulatedHeight: point.simulatedHeight,
+                simulatedHeight: point.simulatedHeight ?? point.height,
             },
             position: {
                 heading: point.camera.heading,

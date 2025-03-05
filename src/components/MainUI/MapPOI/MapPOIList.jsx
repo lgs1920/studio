@@ -77,7 +77,7 @@ export const MapPOIList = () => {
                       store.filteredList.set(key, value)
                       store.bulkList.set(key, false)
                   })
-              }, [pois?.current?.id, settings?.filter.byName, settings?.filter.alphabetic],
+              }, [pois.list.size, pois?.current?.id, settings?.filter.byName, settings?.filter.alphabetic],
     )
 
 
