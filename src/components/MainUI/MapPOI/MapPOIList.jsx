@@ -77,7 +77,7 @@ export const MapPOIList = () => {
                       store.filteredList.set(key, value)
                       store.bulkList.set(key, false)
                   })
-              }, [pois?.current?.id, settings?.filter.byName, settings?.filter.alphabetic],
+              }, [pois.list.size, pois?.current?.id, settings?.filter.byName, settings?.filter.alphabetic],
     )
 
 
@@ -155,7 +155,7 @@ export const MapPOIList = () => {
                             )}
                                        id={`${prefix}${id}`}
                                        onSlAfterShow={selectPOI}
-                                       open={pois.current.id === id && drawers.action !== null}
+                                       open={pois?.current?.id === id && drawers.action !== null}
                                        small
                                        style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.color, 'rgba', 0.2)}}>
                                 <div slot="summary">
