@@ -54,7 +54,7 @@ export const MapPOIContent = ({id, hide}) => {
     const expand = () => {
         if (!point.expanded && !point.showFlag) {
             Object.assign(
-                store.get(point.id),
+                lgs.mainProxy.components.pois.list.get(point.id),
                 {over: true},
             )
         }
@@ -62,7 +62,7 @@ export const MapPOIContent = ({id, hide}) => {
 
     const reduce = () => {
         Object.assign(
-            store.get(point.id),
+            lgs.mainProxy.components.pois.list.get(point.id),
             {over: false},
         )
     }
@@ -87,13 +87,9 @@ export const MapPOIContent = ({id, hide}) => {
                     }}
 
                     onPointerDown={(event) => {
-                        console.log(event)
-                        __.ui.sceneManager.propagateEventToCanvas()
+                        __.ui.sceneManager.propagateEventToCanvas(event)
                     }
                     }
-
-                    onPointerEnter={expand}
-                    onPointerLeave={reduce}
 
                     id={`poi-inner-${point.id}`}
                 >
