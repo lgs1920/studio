@@ -29,6 +29,7 @@ import React, { useRef }                                                        
 import Timeout                                                                   from 'smart-timeout'
 import { snapshot, useSnapshot }                                                 from 'valtio'
 import './style.css'
+import { SlDivider } from '@shoelace-style/shoelace/dist/react'
 
 /**
  * Represents the context menu for interacting with Points of Interest (POI) on the map.
@@ -212,7 +213,18 @@ export const MapPOIContextMenu = () => {
                          onPointerLeave={() => Timeout.restart(lgs.mainProxy.components.pois.context.timer)}
                          onPointerEnter={() => Timeout.pause(lgs.mainProxy.components.pois.context.timer)}
                     >
+                        {!pois.current.expanded &&
+                            <>
+                                <div className="context-menu-title-when-reduced">
+                                    {pois.current.title ?? 'Point Of Interest'}
+                                    <SlDivider/>
+                                </div>
+
+                            </>
+                        }
                         <ul>
+
+
                             {pois.current.type === undefined &&
                                 <li onClick={saveAsPOI}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationDot)}></SlIcon>
@@ -259,7 +271,7 @@ export const MapPOIContextMenu = () => {
                                     <span>Hide</span>
                                 </li>
                             }
-                            <sl-divider/>
+                            <SlDivider/>
                             <li onClick={copy}>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCopy)}></SlIcon>
                                 <span>Copy Coords</span>

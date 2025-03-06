@@ -50,6 +50,23 @@ export const MapPOIContent = ({id, hide}) => {
         }
     }
 
+
+    const expand = () => {
+        if (!point.expanded && !point.showFlag) {
+            Object.assign(
+                store.get(point.id),
+                {over: true},
+            )
+        }
+    }
+
+    const reduce = () => {
+        Object.assign(
+            store.get(point.id),
+            {over: false},
+        )
+    }
+
     useEffect(() => {
 
     }, [point])
@@ -69,18 +86,14 @@ export const MapPOIContent = ({id, hide}) => {
                         )
                     }}
 
-                    onDragStart={(event) => {
+                    onPointerDown={(event) => {
                         console.log(event)
-                        __.ui.sceneManager.propagateEventToCanvas
-                    }}
-                    onDragEnd={(event) => {
-                        console.log(event)
-                        __.ui.sceneManager.propagateEventToCanvas
-                    }}
-                    onDrag={(event) => {
-                        console.log(event)
-                        __.ui.sceneManager.propagateEventToCanvas
-                    }}
+                        __.ui.sceneManager.propagateEventToCanvas()
+                    }
+                    }
+
+                    onPointerEnter={expand}
+                    onPointerLeave={reduce}
 
                     id={`poi-inner-${point.id}`}
                 >
@@ -122,7 +135,9 @@ export const MapPOIContent = ({id, hide}) => {
             {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
                 <SlPopup className="poi-icons" placement="left-start" anchor={`poi-inner-${point.id}`} active="true"
                          distance={__.tools.rem2px(__.ui.css.getCSSVariable('lgs-gutter'))}>
+                    <>
                     <FontAwesomeIcon icon={point.icon} className="poi-as-flag"/>
+                    </>
                 </SlPopup>
             }
         </>

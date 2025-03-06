@@ -82,22 +82,6 @@ export const MapPOI = memo(({point: pointId}) => {
         }
     }
 
-    const expand = () => {
-        if (!point.expanded && !point.showFlag) {
-            Object.assign(
-                store.get(point.id),
-                {over: true},
-            )
-        }
-    }
-
-    const reduce = () => {
-        Object.assign(
-            store.get(point.id),
-            {over: false},
-        )
-    }
-
     return (
         <>
             {pixels && (
@@ -122,9 +106,6 @@ export const MapPOI = memo(({point: pointId}) => {
                         ),
                     }}
                     onPointerMove={__.ui.sceneManager.propagateEventToCanvas}
-                    onPointerDown={__.ui.sceneManager.propagateEventToCanvas}
-                    onPointerEnter={expand}
-                    onPointerLeave={reduce}
                     onWheel={hideMenu}
                 >
                     {point.withinScreen && point.frontOfTerrain && point.visible && !point.tooFar &&

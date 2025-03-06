@@ -577,8 +577,10 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
  * Context menu
  ******************************************************************************/
 .lgs-context-menu {
-    padding: 0;
+    display: flex;
+    flex-direction: column;
     margin: 0;
+    padding: 0;
 }
 
 :root {
@@ -586,6 +588,7 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
 }
 
 .lgs-context-menu ul {
+    width: 100%;
     margin: 0;
     padding: 0 var(--lgs-gutter-xs);
     list-style: none;
@@ -594,9 +597,10 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
 .lgs-context-menu li {
     display: flex;
     align-items: center;
+    margin: 0;
     padding: 0 var(--lgs-gutter-xs);
-    border-radius: var(--lgs-border-radius-xs);
     cursor: pointer;
+    border-radius: var(--lgs-border-radius-xs);
 }
 
 .lgs-context-menu li:hover {
@@ -605,12 +609,12 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
 
 .lgs-context-menu sl-divider {
     --color: var(--lgs-card-on-map-border-color);
-);
 }
 
 .lgs-context-menu sl-icon, .lgs-context-menu svg {
     margin-right: var(--lgs-gutter-s);
 }
+
 
 /*******************************************************************************
  * Form elements

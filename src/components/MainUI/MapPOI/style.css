@@ -340,3 +340,11 @@
 .map-poi-filter-active {
     color: var(--lgs-success-color)
 }
+
+.context-menu-title-when-reduced {
+    overflow: hidden;
+    max-width: 10rem;
+    padding: 0 var(--lgs-gutter-xs);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
