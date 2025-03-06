@@ -68,6 +68,20 @@ export const MapPOIContent = ({id, hide}) => {
                             1.5 * SECOND,
                         )
                     }}
+
+                    onDragStart={(event) => {
+                        console.log(event)
+                        __.ui.sceneManager.propagateEventToCanvas
+                    }}
+                    onDragEnd={(event) => {
+                        console.log(event)
+                        __.ui.sceneManager.propagateEventToCanvas
+                    }}
+                    onDrag={(event) => {
+                        console.log(event)
+                        __.ui.sceneManager.propagateEventToCanvas
+                    }}
+
                     id={`poi-inner-${point.id}`}
                 >
                     {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
