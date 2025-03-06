@@ -27,7 +27,7 @@
     user-select: none;
     transition: transform 0.1s ease-out;
     transform: translate(0, 0);
-    pointer-events: none;
+    pointer-events: all;
     color: var(--lgs-poi-color);
 }
 
@@ -61,7 +61,7 @@
 .poi-on-map-inner {
     max-width: 100%;
     user-select: none;
-    pointer-events: none;
+    pointer-events: all;
 }
 
 .poi-on-map-wrapper:not(.poi-shrinked) .poi-on-map-inner {

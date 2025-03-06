@@ -122,9 +122,9 @@ export const MapPOI = memo(({point: pointId}) => {
                         ),
                     }}
                     onPointerMove={__.ui.sceneManager.propagateEventToCanvas}
+                    onPointerDown={__.ui.sceneManager.propagateEventToCanvas}
                     onPointerEnter={expand}
                     onPointerLeave={reduce}
-
                     onWheel={hideMenu}
                 >
                     {point.withinScreen && point.frontOfTerrain && point.visible && !point.tooFar &&
