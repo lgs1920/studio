@@ -94,16 +94,13 @@ export const MapPOI = memo(({point: pointId}) => {
                     ref={poi}
                     id={`${point.id}`}
                     style={{
-                        bottom:                     window.innerHeight - pixels.y,
-                        left:                       pixels.x,
-                        transform:                  `scale(${point?.scale ?? 1})`,
-                        transformOrigin:            'left bottom',
-                        '--lgs-poi-color':          point.color ?? lgs.settings.poi.defaultColor,
-                        '--lgs-poi-gradient-color': __.ui.ui.hexToRGBA(
-                            point.color ?? lgs.settings.poi.defaultColor,
-                            'rgba',
-                            0.3,
-                        ),
+                        bottom:                       window.innerHeight - pixels.y,
+                        left:                         pixels.x,
+                        transform:                    `translate( -50%,calc(-4 * var(--poi-border-width))) scale(${point?.scale ?? 1})`,
+                        transformOrigin:              'center bottom',
+                        '--lgs-poi-background-color': point.color ?? lgs.settings.poi.defaultColor,
+                        '--lgs-poi-border-color':     `var(${__.ui.ui.colorContrast(point.color ?? lgs.settings.poi.defaultColor)}2)`,
+                        '--lgs-poi-color':            `var(${__.ui.ui.colorContrast(point.color ?? lgs.settings.poi.defaultColor)})`,
                     }}
                     onPointerMove={__.ui.sceneManager.propagateEventToCanvas}
                     onWheel={hideMenu}

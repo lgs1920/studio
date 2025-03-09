@@ -111,6 +111,21 @@ export class UIUtils {
         return 0
     }
 
+
+    /**
+     * Color contrast
+     * https://gist.github.com/dcondrey/183971f17808e9277572?permalink_comment_id=4613640#gistcomment-4613640
+     *
+     * @returns light or dark color contrast
+     */
+
+    static colorContrast = (hex, factorAlpha = false) => {
+        let [r, g, b, a] = hex.replace(/^#?(?:(?:(..)(..)(..)(..)?)|(?:(.)(.)(.)(.)?))$/, '$1$5$5$2$6$6$3$7$7$4$8$8').match(/(..)/g)
+            .map(rgb => parseInt('0x' + rgb))
+        return ((~~(r * 299) + ~~(g * 587) + ~~(b * 114)) / 1000) >= 128 || (!!(~(128 / a) + 1) && factorAlpha)
+               ? '--lgs-dark-contrast-color' : '--lgs-light-contrast-color'
+    }
+
 }
 
 

@@ -81,7 +81,12 @@
     --lgs-border-width-s: 1px;
     --lgs-border-s: var(--lgs-border-width-s) solid var(--sl-color-gray-400);
 
-    --lgs-text-on-color: hsl(0 0% 98%);
+    --lgs-text-on-color: hsla(39 100% 87%/1);
+    --lgs-light-contrast-color: hsla(39 100% 87%/1);
+    --lgs-light-contrast-color2: hsla(39 100% 87%/0.5);
+    --lgs-dark-contrast-color: hsla(124 87% 9% / 0.78);
+    --lgs-dark-contrast-color2: hsla(124 87% 9% / 0.45);
+
     --lgs-border-on-color: hsla(0 0% 98% / 0.25);
     --lgs-blur: 5px;
     --lgs-blur-s: 1px;
@@ -89,6 +94,7 @@
     --lgs-error-color: var(--sl-color-red-500);
     --lgs-error-bg-color: hsla(0 84.2% 60.2%/0.5);
     --lgs-error-border-color: hsla(0 93.3% 94.1%/0.18);
+
 
     --lgs-success-color: var(--sl-color-green-500);
     --lgs-success-bg-color: hsla(142.1 70.6% 45.3% / 0.5);
