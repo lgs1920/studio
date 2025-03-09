@@ -368,6 +368,7 @@
 
 .context-menu-title-when-reduced {
     overflow: hidden;
+    width: 100%;
     max-width: 10rem;
     padding: 0 var(--lgs-gutter-xs);
     white-space: nowrap;
