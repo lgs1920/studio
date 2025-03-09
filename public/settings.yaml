@@ -142,17 +142,77 @@ poi:
     open: false
     active: false
 
+  categories:
+    POI:
+      name: POI
+      slug: poi
+      icon: faFlagSwallowtail
 
-  #    categories :
-  #      - POI
-  #      - Building
-  #      - View
-  #      - Peak
-  #      - Cave
-  #      - Car Park
-  #      - Castle
-  #      - MOnument
-  #      - Ruin
+    Shelter:
+      name: Shelter
+      slug: shelter
+      icon: faHouseBlank
+
+    Building:
+      name: Building
+      slug: building
+      icon: faBuildings
+
+    View:
+      name: Viewpoint
+      slug: viewpoint
+      icon: faBinoculars
+
+    Summit:
+      name: Summit
+      slug: summit
+      icon: faSummit
+
+    Cave:
+      name: Cave
+      slug: cave
+      icon: faIntersection
+
+    Car Park:
+      name: Car Park
+      slug: car-park
+      icon: faSquareParking
+
+    Castle:
+      name: Castle
+      slug: castle
+      icon: faFort
+
+    Worship:
+      name: Place of Worship
+      slug: place-of-worship
+      icon: faPlaceOfWorship
+
+    Cross:
+      name: Cross
+      slug: cross
+      icon: faCross
+
+    Monument:
+      name: Monument
+      slug: monument
+      icon: faBuildingColumns
+
+    Ruins:
+      name: Ruins
+      slug: ruins
+      icon: faCastleRuins
+
+    Tents:
+      name: Campground
+      slug: campground
+      icon: faCampground
+
+    PicNic:
+      name: Picnic Area
+      slug: picnic-area
+      icon: faTablePicnic
+
 ########################################
 # Profile
 ########################################
@@ -261,6 +321,6 @@ ui:
     url: https://nominatim.openstreetmap.org
     search: search
     reverse: reverse
-    limit: 5 # results per query
+    limit: 7 # results per query
     email: contact@lgs1920.fr
     minQuery: 3 # characters
