@@ -163,7 +163,7 @@ export const MapPOIList = () => {
                                        <span>
                                        <FontAwesomeIcon icon={poi.visible ? poi.icon : faMask} style={{
                                            '--fa-secondary-color':   poi.color,
-                                           '--fa-secondary-opacity': 1,
+                                           '--fa-secondary-opacity': 0,
                                        }}/>
                                            {poi.title}
                                        </span>

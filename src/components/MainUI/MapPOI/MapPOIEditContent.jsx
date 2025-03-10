@@ -14,6 +14,7 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { MapPOICategorySelector } from '@Components/MainUI/MapPOI/MapPOICategorySelector'
 import { MapPOIEditMenu }                                            from '@Components/MainUI/MapPOI/MapPOIEditMenu'
 import {
     faCopy, faSquareQuestion,
@@ -146,6 +147,7 @@ export const MapPOIEditContent = ({poi}) => {
                         <span slot="label" className="edit-title-map-poi">{'Title'}</span>
                     </SlInput>
                 </div>
+                <MapPOICategorySelector point={point}/>
 
                 <div>
                     <SlTextarea size="small" value={point.description ?? ''}

@@ -21,6 +21,7 @@ import { SlDrawer }           from '@shoelace-style/shoelace/dist/react'
 import React                  from 'react'
 import { useSnapshot }        from 'valtio'
 import './style.css'
+import { proxyMap } from 'valtio/utils'
 import { DrawerFooter }       from '../../DrawerFooter'
 
 export const Panel = () => {
@@ -44,6 +45,26 @@ export const Panel = () => {
             closePOIsEditor(event)
         }
     }
+
+
+    // Get POI categories and sort them
+    const categories = new Map()
+    Object.values(lgs.settings.poi.categories).map((category) => {
+        categories.set(category.slug, {
+            title: category.title, // Translate here
+            slug:  category.slug,
+        })
+    })
+
+    mainStore.components.pois.categories = new proxyMap([...categories.entries()].sort((a, b) => {
+        if (a[1].title.toLowerCase() < b[1].title.toLowerCase()) {
+            return -1
+        }
+        if (a[1].title.toLowerCase() > b[1].title.toLowerCase()) {
+            return 1
+        }
+        return 0
+    }))
 
     return (<div className={'drawer-wrapper'}>
             <SlDrawer id={POIS_EDITOR_DRAWER}

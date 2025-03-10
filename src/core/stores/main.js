@@ -66,6 +66,7 @@ export const main = {
         },
         pois:          {
             list:   new proxyMap(),
+            categories: new proxyMap(),
             current: false,
             context: {
                 visible: false,

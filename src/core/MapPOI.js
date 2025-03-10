@@ -14,10 +14,9 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { POI_TMP_TYPE }      from '@Core/constants'
-import { MapElement }        from '@Core/MapElement'
-import { faFlagSwallowtail } from '@fortawesome/duotone-light-svg-icons'
-import { v4 as uuid }        from 'uuid'
+import { POI_CATEGORY_ICONS, POI_STANDARD_TYPE, POI_TMP_TYPE } from '@Core/constants'
+import { MapElement }                                          from '@Core/MapElement'
+import { v4 as uuid }                                          from 'uuid'
 
 export class MapPOI extends MapElement {
     /**
@@ -29,6 +28,11 @@ export class MapPOI extends MapElement {
      * @type {Camera}
      */
     camera
+
+    /**
+     * @type {string}
+     */
+    category
 
     /**
      * @type {string}
@@ -54,9 +58,6 @@ export class MapPOI extends MapElement {
      * @type {number}
      */
     height
-
-    /** @type {object} **/
-    icon = faFlagSwallowtail
 
     /**
      * @type {string}
@@ -207,6 +208,11 @@ export class MapPOI extends MapElement {
         this.height = height
         this.simulatedHeight = simulatedHeight
     }
+
+    get icon() {
+        return Object.values(POI_CATEGORY_ICONS.get(this.category ?? POI_STANDARD_TYPE))[0]
+    }
+
 
 
 }

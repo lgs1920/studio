@@ -172,6 +172,15 @@
     gap: var(--lgs-gutter-xs);
 }
 
+.context-menu-title-when-reduced {
+    overflow: hidden;
+    width: 100%;
+    max-width: 10rem;
+    padding: 0 var(--lgs-gutter-xs);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
 /*******************************************************************************
  * Edit Panel
  */
@@ -366,11 +375,6 @@
     color: var(--lgs-success-color)
 }
 
-.context-menu-title-when-reduced {
-    overflow: hidden;
-    width: 100%;
-    max-width: 10rem;
-    padding: 0 var(--lgs-gutter-xs);
-    white-space: nowrap;
-    text-overflow: ellipsis;
+.map-poi-categorie-selector sl-option::part(prefix), .map-poi-categorie-selector::part(prefix) {
+    margin-right: var(--lgs-gutter-s);
 }

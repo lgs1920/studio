@@ -14,7 +14,12 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { faCrown, faEarthEurope, faLock, faMap, faRoad, faUnlock, faUser } from '@fortawesome/pro-regular-svg-icons'
+//import { faCastleRuins, faCave } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import {
+    faBinoculars, faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faEarthEurope, faFlagSwallowtail,
+    faFort, faHouseBlank, faLock, faMap, faMountains, faPlaceOfWorship, faRoad, faSquareParking, faTablePicnic,
+    faUnlock, faUser,
+} from '@fortawesome/duotone-regular-svg-icons'
 
 
 export const SLOGAN = 'Replay Your Adventures!'
@@ -270,3 +275,22 @@ export const REMOVE_JOURNEY_IN_TOOLBAR = 'in-journey-toolbar'
 export const FOCUS_STARTER = 'starter'
 export const FOCUS_LAST = 'last'
 export const FOCUS_CENTROID = 'center'
+
+let faSummit
+/** POI Categories **/
+export const POI_CATEGORY_ICONS = new Map([
+                                              [POI_STANDARD_TYPE, {faFlagSwallowtail}],
+                                              ['shelter', {faHouseBlank}],
+                                              ['building', {faBuildings}],
+                                              ['viewpoint', {faBinoculars}],
+                                              ['summit', {faMountains}],
+                                              // ['cave',{faCave}],
+                                              ['car-park', {faSquareParking}],
+                                              ['castle', {faFort}],
+                                              ['place-of-worship', {faPlaceOfWorship}],
+                                              ['cross', {faCross}],
+                                              ['monument', {faBuildingColumns}],
+                                              // ['ruins',{faCastleRuins}],
+                                              ['campground', {faCampground}],
+                                              ['picnic-area', {faTablePicnic}],
+                                          ])
