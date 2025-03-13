@@ -19,7 +19,7 @@ import { MapPOIEditMenu }                                            from '@Comp
 import {
     faCopy, faSquareQuestion,
 }                                                                    from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon }                                           from '@fortawesome/react-fontawesome'
+import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import {
     SlColorPicker, SlDivider, SlIconButton, SlInput, SlTextarea, SlTooltip,
 }                                                                    from '@shoelace-style/shoelace/dist/react'

@@ -103,6 +103,10 @@
     transform: translate(50%, -50%);
 }
 
+.poi-shrinked .poi-on-map-inner svg {
+    max-width: 22px !important;
+}
+
 .poi-on-map-marker {
     position: absolute;
     bottom: calc(-0.5 * var(--width));
@@ -155,9 +159,11 @@
 
 .poi-as-flag {
     width: calc(var(--poi-reduce-dimension) * 0.5);
+    color: var(--lgs-poi-color);
     --fa-primary-color: var(--lgs-poi-color); /* Couche primaire */
     --fa-secondary-color: var(--lgs-poi-background-color); /* Couche secondaire */
-    --fa-secondary-opacity: 0.8;
+    --fa-secondary-opacity: 1;
+    --fa-primary-opacity: 1;
 }
 
 .poi-icons .poi-as-flag {

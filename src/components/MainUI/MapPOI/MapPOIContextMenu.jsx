@@ -19,7 +19,7 @@ import {
     faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama, faTrashCan,
 }                                                                                from '@fortawesome/pro-regular-svg-icons'
 import { faMask }                                                                from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon }                                                       from '@fortawesome/react-fontawesome'
+import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import {
     SlIcon, SlPopup,
 }                                                                                from '@shoelace-style/shoelace/dist/react'
@@ -253,7 +253,7 @@ export const MapPOIContextMenu = () => {
 
                             {pois.current.expanded && !pois.current.showFlag &&
                                 <li onClick={shrink}>
-                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(pois.current.icon)}></SlIcon>
+                                    <FontAwesomeIcon slot="prefix" icon={pois.current.icon}></FontAwesomeIcon>
                                     <span>Reduce</span>
                                 </li>
                             }

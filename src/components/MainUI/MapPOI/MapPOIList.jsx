@@ -15,11 +15,11 @@
  ******************************************************************************/
 
 
+import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { MapPOIEditContent }                                  from '@Components/MainUI/MapPOI/MapPOIEditContent'
 import { ToggleStateIcon }                                    from '@Components/ToggleStateIcon'
 import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
 import { faMask, faSquare, faSquareCheck }                    from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon }                                    from '@fortawesome/react-fontawesome'
 import { SlDetails }                                          from '@shoelace-style/shoelace/dist/react'
 import { UIToast }                                            from '@Utils/UIToast'
 import classNames                                             from 'classnames'
@@ -159,13 +159,14 @@ export const MapPOIList = () => {
                                        small
                                        style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.color, 'rgba', 0.2)}}>
                                 <div slot="summary">
-
-                                       <span>
-                                       <FontAwesomeIcon icon={poi.visible ? poi.icon : faMask} style={{
-                                           '--fa-secondary-color':   poi.color,
-                                           '--fa-secondary-opacity': 0,
+                                    <span>
+                                        <FontAwesomeIcon icon={poi.visible ? poi.icon : faMask} style={{
+                                            '--fa-secondary-color':   poi.color,
+                                            '--fa-primary-opacity':   1,
+                                            '--fa-secondary-opacity': 1,
                                        }}/>
-                                           {poi.title}
+
+                                        {poi.title}
                                        </span>
                                     <span>
                         </span>

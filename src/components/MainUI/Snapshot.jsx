@@ -1,4 +1,4 @@
-import { faRegularCameraCircleArrowDown }                              from '@awesome.me/kit-938bf84c0d/icons/kit/custom'
+import { faRegularCameraCircleArrowDown } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { faImage, faVectorSquare }                                     from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                       from '@Utils/FA2SL'

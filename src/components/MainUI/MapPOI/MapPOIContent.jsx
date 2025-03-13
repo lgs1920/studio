@@ -16,7 +16,7 @@
 
 import { NameValueUnit }   from '@Components/DataDisplay/NameValueUnit'
 import { SECOND }          from '@Core/constants'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { SlPopup }         from '@shoelace-style/shoelace/dist/react'
 import { ELEVATION_UNITS } from '@Utils/UnitUtils'
 import { useRef, useEffect } from 'react'

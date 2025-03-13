@@ -149,6 +149,9 @@ poi:
     # Shelter
     - title: Shelter
       slug: shelter
+    # Shelter
+    - title: Refuge
+      slug: refuge
     # Building
     - title: Building
       slug: building
@@ -159,8 +162,8 @@ poi:
     - title: Summit
       slug: summit
     # Cave
-    #    - title: Cave
-    #      slug: cave
+    - title: Cave
+      slug: cave
     # Car Park
     - title: Car Park
       slug: car-park
@@ -178,8 +181,8 @@ poi:
     - title: Monument
       slug: monument
     # Ruins
-    #    - title: Ruins
-    #      slug: ruins
+    - title: Ruins
+      slug: ruins
     # Campground
     - title: Campground
       slug: campground

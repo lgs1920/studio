@@ -1,5 +1,5 @@
 import { POI_CATEGORY_ICONS, POI_STANDARD_TYPE } from '@Core/constants'
-import { FontAwesomeIcon }                       from '@fortawesome/react-fontawesome'
+import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { SlOption, SlSelect }                    from '@shoelace-style/shoelace/dist/react'
 import { useState }                              from 'react'
 import { useSnapshot }                           from 'valtio'
@@ -37,7 +37,9 @@ export const MapPOICategorySelector = (point, props) => {
                                                                       icon={Object.values(POI_CATEGORY_ICONS.get(slug))[0]}
                                                                       style={{
                                                                           '--fa-secondary-color':   pois.current.color,
-                                                                          '--fa-secondary-opacity': 0.5,
+                                                                          '--fa-secondary-opacity': 1,
+                                                                          '--fa-primary-opacity':   1,
+                                                                          // 'color':pois.current.color
                                                                       }}/>
                                                      {category.title}
                                                  </SlOption>,

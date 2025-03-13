@@ -14,10 +14,11 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+//TODO replace by Duotone
 //import { faCastleRuins, faCave } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import {
-    faBinoculars, faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faEarthEurope, faFlagSwallowtail,
-    faFort, faHouseBlank, faLock, faMap, faMountains, faPlaceOfWorship, faRoad, faSquareParking, faTablePicnic,
+    faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faEarthEurope, faFlagSwallowtail, faFort,
+    faHouseBlank, faLock, faMap, faMountains, faPlaceOfWorship, faRoad, faSquareParking, faTablePicnic, faTelescope,
     faUnlock, faUser,
 } from '@fortawesome/duotone-regular-svg-icons'
 
@@ -281,16 +282,17 @@ let faSummit
 export const POI_CATEGORY_ICONS = new Map([
                                               [POI_STANDARD_TYPE, {faFlagSwallowtail}],
                                               ['shelter', {faHouseBlank}],
+                                              ['refuge', ['house-bed.svg']],
                                               ['building', {faBuildings}],
-                                              ['viewpoint', {faBinoculars}],
+                                              ['viewpoint', {faTelescope}],
                                               ['summit', {faMountains}],
-                                              // ['cave',{faCave}],
+                                              ['cave', ['cave-in-mountains.svg']],
                                               ['car-park', {faSquareParking}],
                                               ['castle', {faFort}],
                                               ['place-of-worship', {faPlaceOfWorship}],
                                               ['cross', {faCross}],
                                               ['monument', {faBuildingColumns}],
-                                              // ['ruins',{faCastleRuins}],
+                                              ['ruins', ['ruins.svg']],
                                               ['campground', {faCampground}],
                                               ['picnic-area', {faTablePicnic}],
                                           ])

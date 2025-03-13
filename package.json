@@ -11,8 +11,7 @@
     "preview": "bunx --bun vite preview"
   },
   "dependencies": {
-    "@awesome.me/kit-938bf84c0d": "^1.0.89",
-    "@awesome.me/kit-eb5c406148": "^1.0.63",
+    "@awesome.me/kit-eb5c406148": "^1.0.79",
     "@eslint/migrate-config": "^1.3.8",
     "@fortawesome/duotone-light-svg-icons": "^6.7.2",
     "@fortawesome/duotone-regular-svg-icons": "^6.7.2",
@@ -27,7 +26,7 @@
     "@mapbox/extent": "^0.4.0",
     "@mapbox/geojson-extent": "^1.0.1",
     "@mapbox/togeojson": "^0.16.2",
-    "@shoelace-style/shoelace": "^2.20.0",
+    "@shoelace-style/shoelace": "^2.20.1",
     "@tmcw/togeojson": "^6.0.1",
     "@turf/bbox": "^7.2.0",
     "@turf/bbox-polygon": "^7.2.0",
@@ -45,7 +44,7 @@
     "@turf/point-to-line-distance": "^7.2.0",
     "@turf/transform-rotate": "^7.2.0",
     "argparse": "^2.0.1",
-    "axios": "^1.8.2",
+    "axios": "^1.8.3",
     "babel-plugin-module-resolver": "^5.0.2",
     "canvg": "^4.0.2",
     "cesium": "^1.127.0",
@@ -94,11 +93,11 @@
     "zip-a-folder": "^3.1.8"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.4",
+    "@types/bun": "^1.2.5",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
-    "@typescript-eslint/eslint-plugin": "^8.26.0",
-    "@typescript-eslint/parser": "^8.26.0",
+    "@typescript-eslint/eslint-plugin": "^8.26.1",
+    "@typescript-eslint/parser": "^8.26.1",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.22.0",
     "eslint-plugin-react-hooks": "^5.2.0",
