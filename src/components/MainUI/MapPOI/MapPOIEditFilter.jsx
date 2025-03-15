@@ -40,7 +40,7 @@ export const MapPOIEditFilter = () => {
     }
 
     const enoughPOIs = () => {
-        return Array.from(pois.list.values()).reduce((count, obj) => count + (obj.type !== undefined), 0) >= 2
+        return Array.from(pois.list.values()).reduce((count, obj) => count + (obj.type !== undefined), 0) >= 1
     }
     const handleCategories = async (event) => {
         if (event.target.nodeName !== 'SL-SWITCH') {
