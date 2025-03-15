@@ -138,7 +138,8 @@ poi:
   filter:
     byName: ""
     alphabetic: true
-    byCategories: null
+    byCategories: false               # in fact, empty array but need false instead
+    exclude: false
     open: false
     active: false
 

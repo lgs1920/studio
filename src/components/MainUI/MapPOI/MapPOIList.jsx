@@ -73,11 +73,26 @@ export const MapPOIList = () => {
                           return b[1].title.localeCompare(a[1].title)
                       }
                   })
+
+                  // Apply Filter by category
+                  if (settings.filter.byCategories.length > 0) {
+                      if (settings.filter.exclude) { // We exclude the items in the list
+                          filteredArray = filteredArray.filter(([id, objet]) => !(settings.filter.byCategories.includes(objet.category)))
+                      }
+                      else {
+                          filteredArray = filteredArray.filter(([id, objet]) => settings.filter.byCategories.includes(objet.category))
+                      }
+                  }
+
                   filteredArray.forEach(([key, value]) => {
                       store.filteredList.set(key, value)
                       store.bulkList.set(key, false)
                   })
-              }, [pois.list.size, pois?.current?.id, settings?.filter.byName, settings?.filter.alphabetic],
+              }, [
+                  pois.list.size, pois?.current?.id,
+                  settings?.filter.byName, settings?.filter.alphabetic,
+                  settings?.filter.exclude, settings?.filter.byCategories,
+              ],
     )
 
 
