@@ -205,34 +205,36 @@ sl-button::part(spinner) {
     gap: var(--lgs-gutter-s);
 }
 
-.square-icon {
-    width: var(--lgs-dimension) !important;
+.square-button {
+    width: var(--lgs-square-dimension) !important;
+    --lgs-square-dimension: var(--lgs-dimension);
     aspect-ratio: 1;
 }
 
-.square-icon::part(base) {
-    height: var(--lgs-dimension);
+
+.square-button::part(base) {
     width: var(--lgs-dimension);
+    height: var(--lgs-dimension);
     padding: 0;
 }
 
-.square-icon[disabled]::part(base) {
+.square-button[disabled]::part(base) {
     color: var(--lgs-disabled-color)
 }
 
-.square-icon::part(label) {
+.square-button::part(label) {
+    font-size: var(--lgs-line-dimension);
+    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    line-height: 1;
-    font-size: var(--lgs-line-dimension);
 }
 
 sl-button sl-icon, sl-icon-button {
     font-size: var(--sl-font-size-large);
 }
 
-sl-button:not(.square-icon) sl-icon:first-child {
+sl-button:not(.square-button) sl-icon:first-child {
     margin-right: var(--lgs-gutter-s);
 }
 

@@ -11,7 +11,8 @@ export const JourneyLoaderButton = (props) => {
     return (
         <>
             <SlTooltip hoist placement={props.tooltip} content="Add a new Journey">
-                <SlButton size={'small'} className={'square-icon'} onClick={()=>journeyLoaderStore.visible =!journeyLoaderStore.visible}>
+                <SlButton size={'small'} className={'square-button'}
+                          onClick={() => journeyLoaderStore.visible = !journeyLoaderStore.visible}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faSquarePlus)}/>
                 </SlButton>
             </SlTooltip>

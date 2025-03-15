@@ -21,7 +21,7 @@ export const ProfileButton = (props) => {
     return (<>
         {mainSnap.canViewProfile &&
             <SlTooltip hoist placement={props.tooltip} content="Open the current journey profile">
-                {<SlButton size={'small'} className={'square-icon'} id={'open-the-profile-panel'}
+                {<SlButton size={'small'} className={'square-button'} id={'open-the-profile-panel'}
                            onClick={toggleProfileButton}
                            key={mainSnap.components.profile.key}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faChartLine)}></SlIcon>

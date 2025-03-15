@@ -124,7 +124,7 @@ export const RemoveJourney = (props) => {
                 }
                 {props.style === 'button' &&
 
-                    <SlButton ref={removeButton} size={'small'} className={'square-icon'}
+                    <SlButton ref={removeButton} size={'small'} className={'square-button'}
                               onClick={toggleRemoveDialog}
                     >
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}/>

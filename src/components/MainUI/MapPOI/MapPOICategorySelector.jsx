@@ -30,7 +30,7 @@ export const MapPOICategorySelector = (point, props) => {
             <FontAwesomeIcon slot="prefix" icon={pois.current.icon} style={{
                 '--fa-secondary-color':   pois.current.color,
                 '--fa-secondary-opacity': 0.5,
-            }}/>
+            }} className={'square-button'}/>
             {Array.from(pois.categories).map(([slug, category]) =>
                                                  <SlOption key={slug} value={slug}>
                                                      <FontAwesomeIcon slot="prefix"

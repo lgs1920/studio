@@ -26,7 +26,7 @@ export const SnapshotMenu = (props) => {
 
 export const SnapshotTrigger = (props=> {
     return (<SlTooltip hoist placement={props.tooltip} content="Snapshot">
-        <SlButton size={'small'} className={'square-icon snapshot'}>
+        <SlButton size={'small'} className={'square-button snapshot'}>
             <SlIcon slot="prefix" library="fa"
                     name={FA2SL.set(faRegularCameraCircleArrowDown)}>
             </SlIcon>
