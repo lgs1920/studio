@@ -15,16 +15,17 @@
  ******************************************************************************/
 
 
-import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
-import { MapPOIEditContent }                                  from '@Components/MainUI/MapPOI/MapPOIEditContent'
-import { ToggleStateIcon }                                    from '@Components/ToggleStateIcon'
-import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
-import { faMask, faSquare, faSquareCheck }                    from '@fortawesome/pro-regular-svg-icons'
-import { SlDetails }                                          from '@shoelace-style/shoelace/dist/react'
-import { UIToast }                                            from '@Utils/UIToast'
-import classNames                                             from 'classnames'
-import { Fragment, useEffect, useRef }                        from 'react'
-import { snapshot, useSnapshot }                              from 'valtio/index'
+import { FontAwesomeIcon }                                        from '@Components/FontAwesomeIcon'
+import { MapPOIEditContent }                                      from '@Components/MainUI/MapPOI/MapPOIEditContent'
+import { ToggleStateIcon }                                        from '@Components/ToggleStateIcon'
+import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER }     from '@Core/constants'
+import { faMask, faSquare, faSquareCheck, faTriangleExclamation } from '@fortawesome/pro-regular-svg-icons'
+import { SlAlert, SlDetails, SlIcon }                             from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                  from '@Utils/FA2SL'
+import { UIToast }                                                from '@Utils/UIToast'
+import classNames                                                 from 'classnames'
+import { Fragment, useEffect, useRef }                            from 'react'
+import { snapshot, useSnapshot }                                  from 'valtio/index'
 
 export const MapPOIList = () => {
 
@@ -154,7 +155,7 @@ export const MapPOIList = () => {
 
     return (
         <div id={'edit-map-poi-list'} ref={poiList}>
-            {
+            {pois.filteredList.size > 0 &&
                 Array.from(pois.filteredList.entries()).map(([id, poi]) => (
                 <Fragment key={`${prefix}${id}`}>
                     {poi.type !== POI_TMP_TYPE &&
@@ -193,6 +194,13 @@ export const MapPOIList = () => {
                     }
                 </Fragment>
             ))
+            }
+
+            {pois.filteredList.size === 0 &&
+                <SlAlert variant="warning" open>
+                    <SlIcon slot="icon" library="fa" name={FA2SL.set(faTriangleExclamation)}/>
+                    {'There are no results matching your filter criteria.'}
+                </SlAlert>
             }
 
 
