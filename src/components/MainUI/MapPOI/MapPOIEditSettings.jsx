@@ -36,7 +36,8 @@ export const MapPOIEditSettings = () => {
     }
 
     const changeAll = (state) => {
-        store.bulkList.forEach((value, id) => {
+        store.bulkList.clear()
+        store.filteredList.forEach((value, id) => {
             store.bulkList.set(id, state)
         })
     }

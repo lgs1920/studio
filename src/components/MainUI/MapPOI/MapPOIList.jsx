@@ -61,11 +61,11 @@ export const MapPOIList = () => {
                   // Manage the lists of selected POIs
                   store.filteredList.clear()
                   // Apply filter byName
-                  let filteredArray = Array.from(store.list)
+        let poisToShow = Array.from(store.list)
                       .filter(entry => entry[1].title.toLowerCase().includes(settings.filter.byName.toLowerCase()))
 
                   // Alphabetic/reverse sorting
-                  filteredArray = filteredArray.sort((a, b) => {
+        poisToShow = poisToShow.sort((a, b) => {
                       if (settings.filter.alphabetic) {
                           return a[1].title.localeCompare(b[1].title)
                       }
@@ -77,14 +77,14 @@ export const MapPOIList = () => {
                   // Apply Filter by category
                   if (settings.filter.byCategories.length > 0) {
                       if (settings.filter.exclude) { // We exclude the items in the list
-                          filteredArray = filteredArray.filter(([id, objet]) => !(settings.filter.byCategories.includes(objet.category)))
+                          poisToShow = poisToShow.filter(([id, objet]) => !(settings.filter.byCategories.includes(objet.category)))
                       }
                       else {
-                          filteredArray = filteredArray.filter(([id, objet]) => settings.filter.byCategories.includes(objet.category))
+                          poisToShow = poisToShow.filter(([id, objet]) => settings.filter.byCategories.includes(objet.category))
                       }
                   }
 
-                  filteredArray.forEach(([key, value]) => {
+        poisToShow.forEach(([key, value]) => {
                       store.filteredList.set(key, value)
                       store.bulkList.set(key, false)
                   })
