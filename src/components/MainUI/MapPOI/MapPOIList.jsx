@@ -93,7 +93,7 @@ export const MapPOIList = () => {
                   pois.list.size, pois?.current?.id,
                   settings?.filter.byName, settings?.filter.alphabetic,
                   settings?.filter.exclude, settings?.filter.byCategories,
-        pois.current,
+        pois.current.title, pois.current.category,
               ],
     )
 
