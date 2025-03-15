@@ -69,16 +69,16 @@ export const MapPOIEditFilter = () => {
     return (
         <div className="map-poi-edit-filter">
             <div className="map-poi-edit-toggle-filter">
-                <SlTooltip content={settings.filter.open ? 'Hide Filters' : 'Show Filters'}>
                     <header>
                         {settings.filter.active && <span>{'Filters are active'}</span>}
-                    <SlIconButton id="map-poi-edit-filter-trigger" onClick={handleFilter}
+                        <SlTooltip content={settings.filter.open ? 'Hide Filters' : 'Show Filters'}>
+                            <SlIconButton id="map-poi-edit-filter-trigger" onClick={handleFilter}
                                   library="fa" disabled={!enoughPOIs()}
                                   name={FA2SL.set(settings.filter.open ? faFilterSlash : faFilter)}
                                   className={settings.filter.active ? 'map-poi-filter-active' : 'map-poi-filter-inactive'}
-                    />
+                            /> </SlTooltip>
                     </header>
-                </SlTooltip>
+
                 <SlDivider/>
             </div>
 
