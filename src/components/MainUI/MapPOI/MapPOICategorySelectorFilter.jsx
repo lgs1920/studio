@@ -22,9 +22,10 @@ export const MapPOICategorySelectorFilter = (props) => {
 
     return (
         <SlSelect value={settings.filter.byCategories} size={props?.size ?? 'small'}
-                  className="map-poi-categorie-selector-filter" multiple clearable onSlChange={props.handleCategories}
-                  maxOptionsVisible={3}>
-            <SlIconButton slot="clear-icon" library="fa" name={FA2SL.set(faTrashCan)}/>
+                  className="map-poi-categorie-selector-filter" multiple onSlChange={props.handleCategories}
+                  placeholder="Select categories" clearable
+        >
+            <FontAwesomeIcon slot="clear-icon" icon={faTrashCan}/>
             {Array.from(pois.categories).map(([slug, category]) =>
                                                  <SlOption key={slug} value={slug}>
                                                      <FontAwesomeIcon slot="prefix"
