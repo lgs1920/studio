@@ -211,10 +211,6 @@
     padding-left: 0;
 }
 
-.map-poi-bulk-indicator sl-icon-button::part(base) sl-icon {
-
-}
-
 .map-poi-bulk-actions {
     display: flex;
     align-items: center;
@@ -273,6 +269,7 @@
     display: flex;
     align-items: center;
     justify-content: space-around;
+    margin-top: var(--lgs-gutter-s);
     gap: var(--lgs-gutter-xs);
 }
 
@@ -317,7 +314,7 @@
 }
 
 #map-poi-edit-settings sl-switch {
-    width: 40%;
+    width: 35%;
     margin-left: auto;
 }
 
@@ -357,11 +354,22 @@
     justify-content: flex-end;
 }
 
-.map-poi-filter-by-name, .map-poi-filter-by-other {
+.map-poi-edit-toggle-filter ::part(base) {
+    height: unset;
+}
+
+.map-poi-edit-toggle-filter header {
+    display: flex;
+    align-items: center;
+}
+
+.map-poi-filter-by-name {
     display: flex;
     align-items: end;
     gap: var(--lgs-gutter-xs);
 }
+
+.map-poi-filter-by-name sl-input::part()
 
 #map-poi-filter-alphabetic {
     align-self: self-end;
@@ -383,4 +391,28 @@
 
 .map-poi-categorie-selector sl-option::part(prefix), .map-poi-categorie-selector::part(prefix) {
     margin-right: var(--lgs-gutter-s);
+}
+
+.map-poi-category-filter {
+    display: flex;
+    gap: var(--lgs-gutter-s);
+}
+
+.map-poi-categorie-selector-filter {
+    width: 100%;
+}
+
+.map-poi-categorie-selector-filter::part(form-control-label) {
+    width: 100%;
+}
+
+.map-poi-categorie-selector-filter::part(form-control-label) [slot="label"] sl-switch {
+    width: 30%;
+}
+
+[slot="clear-icon"] {
+    font-size: var(--lgs-font-size-s);
+    display: inline-flex;
+    width: 0.8rem;
+    height: 0.8rem;
 }
