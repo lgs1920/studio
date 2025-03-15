@@ -74,7 +74,7 @@ export const Panel = () => {
                       onSlAfterHide={closePOIsEditor}
                       className={'lgs-theme'}
                       placement={menu.drawer}
-                      label={'Points Of View'}
+                      label={'Points Of Interest'}
             >
                 <MapPOIEditSettings/>
                 <MapPOIList/>
