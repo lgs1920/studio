@@ -23,6 +23,10 @@ export class MapPOI extends MapElement {
      * @type {boolean}
      */
     animated = false
+    /**
+     * @type {string}
+     */
+    bgColor
 
     /**
      * @type {Camera}

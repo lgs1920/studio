@@ -17,7 +17,7 @@ export const FontAwesomeIcon = (props) => {
                     primary.style.fill = 'var(--fa-primary-color,currentColor)'
                     primary.style.opacity = 'var(--fa-primary-opacity,1)'
                     secondary.style.fill = 'var(--fa-secondary-color,currentColor)'
-                    secondary.style.opacity = 'var(--fa-secondary-opacity,0.4'
+                    secondary.style.opacity = 'var(--fa-secondary-opacity,0.4)'
                 }
             })
         }

@@ -174,11 +174,12 @@ export const MapPOIList = () => {
                                        onSlAfterShow={selectPOI}
                                        open={pois?.current?.id === id && drawers.action !== null}
                                        small
-                                       style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.color, 'rgba', 0.2)}}>
+                                       style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.bgColor ?? poi.color, 'rgba', 0.2)}}>
                                 <div slot="summary">
                                     <span>
                                         <FontAwesomeIcon icon={poi.visible ? poi.icon : faMask} style={{
-                                            '--fa-secondary-color':   poi.color,
+                                            '--fa-primary-color':   poi.color,
+                                            '--fa-secondary-color': poi.bgColor,
                                             '--fa-primary-opacity':   1,
                                             '--fa-secondary-opacity': 1,
                                        }}/>
