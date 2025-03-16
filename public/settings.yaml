@@ -100,11 +100,8 @@ swatches:
     - '#0044f0'
     - '#7fff00'
     - '#000000'
-    - '#808080'
-    - '#cdcdcd'
     - '#ffffff'
-
-
+    # 2 others are theme dependant
 
   distribution: 'sequence'
 

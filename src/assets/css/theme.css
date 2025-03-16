@@ -84,8 +84,7 @@
     --lgs-text-on-color: hsla(39 100% 87%/1);
     --lgs-light-contrast-color: hsla(39 100% 87%/1);
     --lgs-light-contrast-color2: hsla(39 100% 87%/0.5);
-    --lgs-dark-contrast-color: hsla(124 87% 9% / 0.78);
-    --lgs-dark-contrast-color2: hsla(124 87% 9% / 0.45);
+    --lgs-dark-contrast-color: hsla(125 87% 18% / 1);hsl() --lgs-dark-contrast-color2: hsla(125 87 % 18 % / 0.45);
 
     --lgs-border-on-color: hsla(0 0% 98% / 0.25);
     --lgs-blur: 5px;

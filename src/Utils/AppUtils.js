@@ -158,6 +158,7 @@ export class AppUtils {
             .then(text => YAML.parse(text),
             )
 
+
         // Get the setting sections ID
         lgs.settingSections = Object.keys(settings)
 
@@ -187,6 +188,10 @@ export class AppUtils {
         // Create an Axios instance
         lgs.axios = axios.create()
 
+        // Add theme dependant colors
+        lgs.configuration.swatches.list.push(__.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable('--lgs-light-contrast-color')))
+        lgs.configuration.swatches.list.push(__.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable('--lgs-dark-contrast-color')))
+
         /***************************************
          * Application settings
          */
@@ -199,6 +204,7 @@ export class AppUtils {
             await lgs.settings.add(section)
         })
         await Promise.all(promises)
+
 
         // Removed useless sections in DB  //TODO do not read and check if nothing changed
         const DBSections = await lgs.db.settings.keys(SETTINGS_STORE)
