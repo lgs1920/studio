@@ -50,7 +50,7 @@ export const RotateButton = (props) => {
         <>
             <SlTooltip hoist placement={props.tooltip}
                        content={rotate.running ? 'Stop Map Rotation' : 'Start Map Rotation'}>
-                <SlButton size={'small'} className={'square-icon'} id={'launch-rotation'}
+                <SlButton size={'small'} className={'square-button'} id={'launch-rotation'}
                           onClick={handleRotation} loading={rotate.running}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowRotateRight)}/>
 

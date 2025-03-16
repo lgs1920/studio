@@ -100,11 +100,8 @@ swatches:
     - '#0044f0'
     - '#7fff00'
     - '#000000'
-    - '#808080'
-    - '#cdcdcd'
     - '#ffffff'
-
-
+    # 2 others are theme dependant
 
   distribution: 'sequence'
 
@@ -138,21 +135,59 @@ poi:
   filter:
     byName: ""
     alphabetic: true
-    byCategories: null
+    byCategories: false               # in fact, empty array but need false instead
+    exclude: false
     open: false
     active: false
 
+  categories:
+    # POI
+    - title: POI
+      slug: poi
+    # Shelter
+    - title: Shelter
+      slug: shelter
+    # Shelter
+    - title: Refuge
+      slug: refuge
+    # Building
+    - title: Building
+      slug: building
+    # Viewpoint
+    - title: Viewpoint
+      slug: viewpoint
+    # Summit
+    - title: Summit
+      slug: summit
+    # Cave
+    - title: Cave
+      slug: cave
+    # Car Park
+    - title: Car Park
+      slug: car-park
+    # Castle
+    - title: Castle
+      slug: castle
+    # Place of Worship
+    - title: Place of Worship
+      slug: place-of-worship
+    # Cross
+    - title: Cross
+      slug: cross
+      icon: faCross
+    # Monument
+    - title: Monument
+      slug: monument
+    # Ruins
+    - title: Ruins
+      slug: ruins
+    # Campground
+    - title: Campground
+      slug: campground
+    # Picnic Area
+    - title: Picnic Area
+      slug: picnic-area
 
-  #    categories :
-  #      - POI
-  #      - Building
-  #      - View
-  #      - Peak
-  #      - Cave
-  #      - Car Park
-  #      - Castle
-  #      - MOnument
-  #      - Ruin
 ########################################
 # Profile
 ########################################
@@ -249,9 +284,9 @@ ui:
 
   ## POI
   poi:
-    minScaleFlag: 0.7                   # minimum POI size before replacing by flag (70% of max)
-    minScale: 0.3                       # minScale before masking (30% of max)
-    distanceThreshold: 8000             # min distance to see POI with 100% size
+    minScaleFlag: 0.5                   # minimum POI size before replacing by flag (70% of max)
+    minScale: 0.2                       # minScale before masking (30% of max)
+    distanceThreshold: 10000             # min distance to see POI with 100% size
     focusOnEdit: true                   # Apply focus when editing a POI
     rotate: true                        # Rotation after POI focus
     rpm: 4
@@ -261,6 +296,6 @@ ui:
     url: https://nominatim.openstreetmap.org
     search: search
     reverse: reverse
-    limit: 5 # results per query
+    limit: 7 # results per query
     email: contact@lgs1920.fr
     minQuery: 3 # characters

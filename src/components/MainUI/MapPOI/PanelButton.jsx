@@ -15,7 +15,7 @@ export const PanelButton = (props) => {
     return (
         <>
             <SlTooltip hoist placement={props.tooltip} content="Edit POIs">
-                <SlButton size={'small'} className={'square-icon'} id={'launch-the-pois'}
+                <SlButton size={'small'} className={'square-button'} id={'launch-the-pois'}
                           onClick={() => __.ui.drawerManager.toggle(POIS_EDITOR_DRAWER)}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationDot)}></SlIcon>
                 </SlButton>

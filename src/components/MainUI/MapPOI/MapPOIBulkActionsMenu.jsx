@@ -16,7 +16,7 @@
 
 import { faArrowsFromLine, faArrowsToLine, faLocationDot, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
 import { faEye, faMask }                                               from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon }                                             from '@fortawesome/react-fontawesome'
+import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem }            from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                       from '@Utils/FA2SL'
 import { useEffect, useState }                                         from 'react'

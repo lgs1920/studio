@@ -14,7 +14,7 @@ export const PanelButton = (props) => {
 
     return (
         <SlTooltip hoist placement={props.tooltip} content="Open Settings Panel">
-            {<SlButton size={'small'} className={'square-icon'} id={'open-the-setting-panel'}
+            {<SlButton size={'small'} className={'square-button'} id={'open-the-setting-panel'}
                        onClick={() => __.ui.drawerManager.toggle(SETTINGS_EDITOR_DRAWER)}
                        key={mainSnap.key}>
                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faGear)}></SlIcon>

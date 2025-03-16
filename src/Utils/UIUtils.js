@@ -72,6 +72,34 @@ export class UIUtils {
 
     }
 
+    static hsla2Hex = (h, s, l, a) => {
+        s /= 100
+        l /= 100
+        const k = n => (n + h / 30) % 12
+        const aValue = s * Math.min(l, 1 - l)
+        const f = n =>
+            l - aValue * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)))
+
+        const r = Math.round(f(0) * 255)
+        const g = Math.round(f(8) * 255)
+        const b = Math.round(f(4) * 255)
+
+        const toHex = x => x.toString(16).padStart(2, '0')
+        const alphaHex = Math.round(a * 255).toString(16).padStart(2, '0')
+
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}${alphaHex}`
+    }
+
+    static hslaString2Hex = (hslaString) => {
+
+        const regex = /hsla\(\s*(\d+)\s*[,\s]\s*(\d+)%\s*[,\s]\s*(\d+)%\s*[,\s\/]\s*(\d*\.?\d+)\s*\)/i
+        const match = hslaString.match(regex)
+        if (match) {
+            const [h, s, l, a] = match.slice(1).map(Number)
+            return UIUtils.hsla2Hex(h, s, l, a)
+        }
+        return false
+    }
 
     static RGB2RGBA = (rgbString, alpha = 1) => {
         let rgbValues = rgbString.match(/\d+/g)
@@ -109,6 +137,21 @@ export class UIUtils {
             return parseFloat(parts[1]) + parseFloat(parts[2]) / 60 + parseFloat(parts[3]) / 3600
         }
         return 0
+    }
+
+
+    /**
+     * Color contrast
+     * https://gist.github.com/dcondrey/183971f17808e9277572?permalink_comment_id=4613640#gistcomment-4613640
+     *
+     * @returns light or dark color contrast
+     */
+
+    static colorContrast = (hex, factorAlpha = false) => {
+        let [r, g, b, a] = hex.replace(/^#?(?:(?:(..)(..)(..)(..)?)|(?:(.)(.)(.)(.)?))$/, '$1$5$5$2$6$6$3$7$7$4$8$8').match(/(..)/g)
+            .map(rgb => parseInt('0x' + rgb))
+        return ((~~(r * 299) + ~~(g * 587) + ~~(b * 114)) / 1000) >= 128 || (!!(~(128 / a) + 1) && factorAlpha)
+               ? '--lgs-dark-contrast-color' : '--lgs-light-contrast-color'
     }
 
 }

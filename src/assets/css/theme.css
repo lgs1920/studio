@@ -81,7 +81,11 @@
     --lgs-border-width-s: 1px;
     --lgs-border-s: var(--lgs-border-width-s) solid var(--sl-color-gray-400);
 
-    --lgs-text-on-color: hsl(0 0% 98%);
+    --lgs-text-on-color: hsla(39 100% 87%/1);
+    --lgs-light-contrast-color: hsla(39 100% 87%/1);
+    --lgs-light-contrast-color2: hsla(39 100% 87%/0.5);
+    --lgs-dark-contrast-color: hsla(125 87% 18% / 1);hsl() --lgs-dark-contrast-color2: hsla(125 87 % 18 % / 0.45);
+
     --lgs-border-on-color: hsla(0 0% 98% / 0.25);
     --lgs-blur: 5px;
     --lgs-blur-s: 1px;
@@ -89,6 +93,7 @@
     --lgs-error-color: var(--sl-color-red-500);
     --lgs-error-bg-color: hsla(0 84.2% 60.2%/0.5);
     --lgs-error-border-color: hsla(0 93.3% 94.1%/0.18);
+
 
     --lgs-success-color: var(--sl-color-green-500);
     --lgs-success-bg-color: hsla(142.1 70.6% 45.3% / 0.5);
@@ -199,34 +204,36 @@ sl-button::part(spinner) {
     gap: var(--lgs-gutter-s);
 }
 
-.square-icon {
-    width: var(--lgs-dimension) !important;
+.square-button {
+    width: var(--lgs-square-dimension) !important;
+    --lgs-square-dimension: var(--lgs-dimension);
     aspect-ratio: 1;
 }
 
-.square-icon::part(base) {
-    height: var(--lgs-dimension);
+
+.square-button::part(base) {
     width: var(--lgs-dimension);
+    height: var(--lgs-dimension);
     padding: 0;
 }
 
-.square-icon[disabled]::part(base) {
+.square-button[disabled]::part(base) {
     color: var(--lgs-disabled-color)
 }
 
-.square-icon::part(label) {
+.square-button::part(label) {
+    font-size: var(--lgs-line-dimension);
+    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    line-height: 1;
-    font-size: var(--lgs-line-dimension);
 }
 
 sl-button sl-icon, sl-icon-button {
     font-size: var(--sl-font-size-large);
 }
 
-sl-button:not(.square-icon) sl-icon:first-child {
+sl-button:not(.square-button) sl-icon:first-child {
     margin-right: var(--lgs-gutter-s);
 }
 
@@ -240,6 +247,14 @@ sl-icon-button[size="small"], sl-icon[size="small"] {
     color: var(--lgs-text-on-color);
     border-color: var(--lgs-text-on-color);
 }
+
+/*******************************************************************************
+ * Icons
+ ******************************************************************************/
+sl-icon.is-duotone svg[part="svg"] {
+    fill: red;
+}
+
 
 /*******************************************************************************
  * Main CFA
@@ -577,8 +592,10 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
  * Context menu
  ******************************************************************************/
 .lgs-context-menu {
-    padding: 0;
+    display: flex;
+    flex-direction: column;
     margin: 0;
+    padding: 0;
 }
 
 :root {
@@ -586,6 +603,7 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
 }
 
 .lgs-context-menu ul {
+    width: 100%;
     margin: 0;
     padding: 0 var(--lgs-gutter-xs);
     list-style: none;
@@ -594,9 +612,10 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
 .lgs-context-menu li {
     display: flex;
     align-items: center;
+    margin: 0;
     padding: 0 var(--lgs-gutter-xs);
-    border-radius: var(--lgs-border-radius-xs);
     cursor: pointer;
+    border-radius: var(--lgs-border-radius-xs);
 }
 
 .lgs-context-menu li:hover {
@@ -605,12 +624,12 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
 
 .lgs-context-menu sl-divider {
     --color: var(--lgs-card-on-map-border-color);
-);
 }
 
 .lgs-context-menu sl-icon, .lgs-context-menu svg {
     margin-right: var(--lgs-gutter-s);
 }
+
 
 /*******************************************************************************
  * Form elements

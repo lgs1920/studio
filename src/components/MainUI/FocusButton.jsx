@@ -26,7 +26,7 @@ export const FocusButton = (props) => {
     return (
         <>
             <SlTooltip hoist placement={placement} content={'Reset the Focus'}>
-                <SlButton size={'small'} className={'square-icon'} id={'focus-on-current-journey'}
+                <SlButton size={'small'} className={'square-button'} id={'focus-on-current-journey'}
                           onClick={focusOnJourney}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
                 </SlButton>

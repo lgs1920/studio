@@ -74,12 +74,12 @@ export const Profile = function Profile() {
             {        mainSnap.components.profile.zoom &&
             <div className={'profile-additional'}>
             {/* <SlTooltip hoist placement={props.placement} content="Hide Marker"> */}
-            {/*     <SlButton id={'toggle-marker-visibility'} className={'square-icon'} onClick={toggleMarker}> */}
+                {/*     <SlButton id={'toggle-marker-visibility'} className={'square-button'} onClick={toggleMarker}> */}
             {/*         <SlIcon  slot="prefix" library="fa" name={FA2SL.set(faSolidCircleSlash)}/> */}
             {/*     </SlButton> */}
             {/* </SlTooltip> */}
             <SlTooltip hoist placement={props.placement} content="Reset zoom">
-                <SlButton id={'open-the-profile-panel'} className={'square-icon'} onClick={__.ui.profiler.resetZoom}>
+                <SlButton id={'open-the-profile-panel'} className={'square-button'} onClick={__.ui.profiler.resetZoom}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRegularArrowsRotateReverseMagnifyingGlass)}/>
                 </SlButton>
             </SlTooltip>

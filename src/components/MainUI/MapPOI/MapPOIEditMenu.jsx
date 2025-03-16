@@ -19,11 +19,10 @@ import {
     faArrowRotateRight, faArrowsFromLine, faCrosshairsSimple, faFlag, faLocationDot, faPanorama, faTrashCan, faXmark,
 }                                                           from '@fortawesome/pro-regular-svg-icons'
 import { faEye, faMask }                                    from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon }                                  from '@fortawesome/react-fontawesome'
+import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                            from '@Utils/FA2SL'
 import { UIToast }                                          from '@Utils/UIToast'
-import React                                                from 'react'
 import { snapshot, useSnapshot }                            from 'valtio'
 import './style.css'
 
@@ -198,7 +197,7 @@ export const MapPOIEditMenu = ({point}) => {
 
                         {point.expanded && !point.showFlag && point.visible &&
                             <SlMenuItem onClick={shrink} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(point.icon)}></SlIcon>
+                                <FontAwesomeIcon slot="prefix" icon={point.icon}></FontAwesomeIcon>
                                 <span>Reduce</span>
                             </SlMenuItem>
                         }

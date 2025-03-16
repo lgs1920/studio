@@ -23,7 +23,7 @@ export const GeocodingButton = (props) => {
     return (
         <>
             <SlTooltip hoist placement={props.tooltip} content="Search location">
-                <SlButton size={'small'} className={'square-icon'} id={'launch-the-geocoder'} onClick={handleClick}>
+                <SlButton size={'small'} className={'square-button'} id={'launch-the-geocoder'} onClick={handleClick}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMapLocationDot)}></SlIcon>
                 </SlButton>
             </SlTooltip>

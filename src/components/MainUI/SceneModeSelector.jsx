@@ -38,7 +38,7 @@ export const SceneModeSelector = (props) => {
                                placement={placement} hoist content={SCENE_MODES.get(mode).title}>
                         <SlButton size={'small'}
                                   visible={settings.mode.value === SCENE_MODES.get(mode).value}
-                                  className={'square-icon'} onclick={selectSceneMode}
+                                  className={'square-button'} onclick={selectSceneMode}
                                   data-scene-mode={SCENE_MODES.get(mode).value}
                                   disabled={mainUI.rotate.running}>
                             <SlIcon slot="prefix" library="fa" name={FA2SL.set(SCENE_MODES.get(mode).icon)}/>

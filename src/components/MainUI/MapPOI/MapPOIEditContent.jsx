@@ -14,27 +14,35 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { MapPOIEditMenu }                                            from '@Components/MainUI/MapPOI/MapPOIEditMenu'
+import { FontAwesomeIcon }             from '@Components/FontAwesomeIcon'
+import {
+    MapPOICategorySelector,
+}                                      from '@Components/MainUI/MapPOI/MapPOICategorySelector'
+import {
+    MapPOIEditMenu,
+}                                      from '@Components/MainUI/MapPOI/MapPOIEditMenu'
 import {
     faCopy, faSquareQuestion,
 }                                                                    from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon }                                           from '@fortawesome/react-fontawesome'
 import {
     SlColorPicker, SlDivider, SlIconButton, SlInput, SlTextarea, SlTooltip,
 }                                                                    from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                     from '@Utils/FA2SL'
 import { UIToast }                                                   from '@Utils/UIToast'
 import { ELEVATION_UNITS, foot, IMPERIAL, INTERNATIONAL, UnitUtils } from '@Utils/UnitUtils'
+import Color                           from 'color'
 import classNames                                                    from 'classnames'
 import parse                                                         from 'html-react-parser'
-import React, { useEffect, useState }                                from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSnapshot }                                               from 'valtio/index'
 
 export const MapPOIEditContent = ({poi}) => {
 
     const pois = useSnapshot(lgs.mainProxy.components.pois)
-    const point = pois.list.get(poi.id)
+    let point = pois.list.get(poi.id)
     const [simulated, setSimulated] = useState(false)
+    const poiColor = useRef(null)
+    const poiBgColor = useRef(null)
 
     const handleChangeAltitude = async event => {
         const height = event.target.value * 1
@@ -46,9 +54,19 @@ export const MapPOIEditContent = ({poi}) => {
     }
 
     const handleChangeColor = async event => {
-        Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
-            color: event.target.value,
-        })
+        if (event.target === poiColor.current) {
+            Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
+                color: event.target.value,
+            })
+        }
+        if (event.target === poiBgColor.current) {
+            __.ui.poiManager.list.get(point.id).color = __.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable(__.ui.ui.colorContrast(event.target.value)))
+            Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
+                bgColor: event.target.value,
+                color:   __.ui.poiManager.list.get(point.id).color,
+            })
+
+        }
         await __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(point.id))
 
         event.preventDefault()
@@ -126,15 +144,31 @@ export const MapPOIEditContent = ({poi}) => {
             <div className="edit-map-poi-wrapper">
 
                 <div className={'map-poi-color-actions'}>
+                    <SlTooltip content={'Background Color'}>
                     <SlColorPicker size={'small'}
                                    label={'Color'}
-                                   value={point?.color}
+                                   value={point?.bgColor}
                                    swatches={lgs.settings.getSwatches.list.join(';')}
                                    onSlChange={handleChangeColor}
                                    onSlInput={handleChangeColor}
                                    disabled={!point?.visible}
                                    noFormatToggle
+                                   ref={poiBgColor}
                     />
+                    </SlTooltip>
+                    <SlTooltip content={'Foreground Color'}>
+                        <SlColorPicker size={'small'}
+                                       label={'Color'}
+                                       value={point?.color}
+                                       swatches={lgs.settings.getSwatches.list.join(';')}
+                                       onSlChange={handleChangeColor}
+                                       onSlInput={handleChangeColor}
+                                       disabled={!point?.visible}
+                                       noFormatToggle
+                                       ref={poiColor}
+
+                        />
+                    </SlTooltip>
                     <MapPOIEditMenu point={point}/>
                 </div>
 
@@ -146,6 +180,7 @@ export const MapPOIEditContent = ({poi}) => {
                         <span slot="label" className="edit-title-map-poi">{'Title'}</span>
                     </SlInput>
                 </div>
+                <MapPOICategorySelector point={point}/>
 
                 <div>
                     <SlTextarea size="small" value={point.description ?? ''}

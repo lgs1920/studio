@@ -41,7 +41,7 @@ export const FullScreenButton = () => {
 
         return (<>
             <SlTooltip hoist placement="right" content={mainSnap.fullSize ? 'Exit Full screen' : 'Full Screen'}>
-                <SlButton size="small" onClick={toggleFullScreen} className={'square-icon'}>
+                <SlButton size="small" onClick={toggleFullScreen} className={'square-button'}>
                     {!mainSnap.fullSize &&
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faExpand)}></SlIcon>}
                     {mainSnap.fullSize &&

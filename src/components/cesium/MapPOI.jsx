@@ -82,22 +82,6 @@ export const MapPOI = memo(({point: pointId}) => {
         }
     }
 
-    const expand = () => {
-        if (!point.expanded && !point.showFlag) {
-            Object.assign(
-                store.get(point.id),
-                {over: true},
-            )
-        }
-    }
-
-    const reduce = () => {
-        Object.assign(
-            store.get(point.id),
-            {over: false},
-        )
-    }
-
     return (
         <>
             {pixels && (
@@ -110,21 +94,15 @@ export const MapPOI = memo(({point: pointId}) => {
                     ref={poi}
                     id={`${point.id}`}
                     style={{
-                        bottom:                     window.innerHeight - pixels.y,
-                        left:                       pixels.x,
-                        transform:                  `scale(${point?.scale ?? 1})`,
-                        transformOrigin:            'left bottom',
-                        '--lgs-poi-color':          point.color ?? lgs.settings.poi.defaultColor,
-                        '--lgs-poi-gradient-color': __.ui.ui.hexToRGBA(
-                            point.color ?? lgs.settings.poi.defaultColor,
-                            'rgba',
-                            0.3,
-                        ),
+                        bottom:                       window.innerHeight - pixels.y,
+                        left:                         pixels.x,
+                        transform:                    `translate( -50%,calc(-4 * var(--poi-border-width))) scale(${point?.scale ?? 1})`,
+                        transformOrigin:              'center bottom',
+                        '--lgs-poi-background-color': point.bgColor,
+                        '--lgs-poi-border-color':     point.color,
+                        '--lgs-poi-color':            point.color,
                     }}
                     onPointerMove={__.ui.sceneManager.propagateEventToCanvas}
-                    onPointerEnter={expand}
-                    onPointerLeave={reduce}
-
                     onWheel={hideMenu}
                 >
                     {point.withinScreen && point.frontOfTerrain && point.visible && !point.tooFar &&

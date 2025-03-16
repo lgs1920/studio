@@ -16,7 +16,7 @@
 
 import { NameValueUnit }   from '@Components/DataDisplay/NameValueUnit'
 import { SECOND }          from '@Core/constants'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { SlPopup }         from '@shoelace-style/shoelace/dist/react'
 import { ELEVATION_UNITS } from '@Utils/UnitUtils'
 import { useRef, useEffect } from 'react'
@@ -50,6 +50,23 @@ export const MapPOIContent = ({id, hide}) => {
         }
     }
 
+
+    const expand = () => {
+        if (!point.expanded && !point.showFlag) {
+            Object.assign(
+                lgs.mainProxy.components.pois.list.get(point.id),
+                {over: true},
+            )
+        }
+    }
+
+    const reduce = () => {
+        Object.assign(
+            lgs.mainProxy.components.pois.list.get(point.id),
+            {over: false},
+        )
+    }
+
     useEffect(() => {
 
     }, [point])
@@ -57,8 +74,9 @@ export const MapPOIContent = ({id, hide}) => {
     return (
         <>
             <div className="poi-on-map">
-                <div
-                    className="poi-on-map-inner"
+                <div className="poi-on-map-inner-background"/>
+                <div className="poi-on-map-triangle-down"/>
+                <div className="poi-on-map-inner"
                     ref={inner}
                     onContextMenu={handleContextMenu}
                     onPointerLeave={() => {
@@ -68,11 +86,18 @@ export const MapPOIContent = ({id, hide}) => {
                             1.5 * SECOND,
                         )
                     }}
+
+                    onPointerDown={(event) => {
+                        __.ui.sceneManager.propagateEventToCanvas(event)
+                    }
+                    }
+
                     id={`poi-inner-${point.id}`}
                 >
                     {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
 
                         <>
+
                             <h3> {point.title ?? 'Point Of Interest'}</h3>
 
                             {point.scale > 0.5 && (
@@ -107,7 +132,7 @@ export const MapPOIContent = ({id, hide}) => {
             </div>
             {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
                 <SlPopup className="poi-icons" placement="left-start" anchor={`poi-inner-${point.id}`} active="true"
-                         distance={__.tools.rem2px(__.ui.css.getCSSVariable('lgs-gutter'))}>
+                         distance={__.tools.rem2px(__.ui.css.getCSSVariable('lgs-gutter-s'))}>
                     <FontAwesomeIcon icon={point.icon} className="poi-as-flag"/>
                 </SlPopup>
             }

@@ -1,5 +1,5 @@
-import {findIconDefinition, icon, library} from '@fortawesome/fontawesome-svg-core'
-import {registerIconLibrary}               from '@shoelace-style/shoelace'
+import { findIconDefinition, icon, library } from '@fortawesome/fontawesome-svg-core'
+import { registerIconLibrary }               from '@shoelace-style/shoelace'
 
 /**
  * This class is used to insert font awesome icons (version 6.5 and higher) into Shoelace web components.

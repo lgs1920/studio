@@ -15,16 +15,17 @@
  ******************************************************************************/
 
 
-import { MapPOIEditContent }                                  from '@Components/MainUI/MapPOI/MapPOIEditContent'
-import { ToggleStateIcon }                                    from '@Components/ToggleStateIcon'
-import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
-import { faMask, faSquare, faSquareCheck }                    from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon }                                    from '@fortawesome/react-fontawesome'
-import { SlDetails }                                          from '@shoelace-style/shoelace/dist/react'
-import { UIToast }                                            from '@Utils/UIToast'
-import classNames                                             from 'classnames'
-import { Fragment, useEffect, useRef }                        from 'react'
-import { snapshot, useSnapshot }                              from 'valtio/index'
+import { FontAwesomeIcon }                                        from '@Components/FontAwesomeIcon'
+import { MapPOIEditContent }                                      from '@Components/MainUI/MapPOI/MapPOIEditContent'
+import { ToggleStateIcon }                                        from '@Components/ToggleStateIcon'
+import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER }     from '@Core/constants'
+import { faMask, faSquare, faSquareCheck, faTriangleExclamation } from '@fortawesome/pro-regular-svg-icons'
+import { SlAlert, SlDetails, SlIcon }                             from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                  from '@Utils/FA2SL'
+import { UIToast }                                                from '@Utils/UIToast'
+import classNames                                                 from 'classnames'
+import { Fragment, useEffect, useRef }                            from 'react'
+import { snapshot, useSnapshot }                                  from 'valtio/index'
 
 export const MapPOIList = () => {
 
@@ -61,11 +62,11 @@ export const MapPOIList = () => {
                   // Manage the lists of selected POIs
                   store.filteredList.clear()
                   // Apply filter byName
-                  let filteredArray = Array.from(store.list)
+        let poisToShow = Array.from(store.list)
                       .filter(entry => entry[1].title.toLowerCase().includes(settings.filter.byName.toLowerCase()))
 
                   // Alphabetic/reverse sorting
-                  filteredArray = filteredArray.sort((a, b) => {
+        poisToShow = poisToShow.sort((a, b) => {
                       if (settings.filter.alphabetic) {
                           return a[1].title.localeCompare(b[1].title)
                       }
@@ -73,11 +74,27 @@ export const MapPOIList = () => {
                           return b[1].title.localeCompare(a[1].title)
                       }
                   })
-                  filteredArray.forEach(([key, value]) => {
+
+                  // Apply Filter by category
+                  if (settings.filter.byCategories.length > 0) {
+                      if (settings.filter.exclude) { // We exclude the items in the list
+                          poisToShow = poisToShow.filter(([id, objet]) => !(settings.filter.byCategories.includes(objet.category)))
+                      }
+                      else {
+                          poisToShow = poisToShow.filter(([id, objet]) => settings.filter.byCategories.includes(objet.category))
+                      }
+                  }
+
+        poisToShow.forEach(([key, value]) => {
                       store.filteredList.set(key, value)
                       store.bulkList.set(key, false)
                   })
-              }, [pois.list.size, pois?.current?.id, settings?.filter.byName, settings?.filter.alphabetic],
+              }, [
+                  pois.list.size, pois?.current?.id,
+                  settings?.filter.byName, settings?.filter.alphabetic,
+                  settings?.filter.exclude, settings?.filter.byCategories,
+        pois.current.title, pois.current.category,
+              ],
     )
 
 
@@ -138,7 +155,7 @@ export const MapPOIList = () => {
 
     return (
         <div id={'edit-map-poi-list'} ref={poiList}>
-            {
+            {pois.filteredList.size > 0 &&
                 Array.from(pois.filteredList.entries()).map(([id, poi]) => (
                 <Fragment key={`${prefix}${id}`}>
                     {poi.type !== POI_TMP_TYPE &&
@@ -157,15 +174,17 @@ export const MapPOIList = () => {
                                        onSlAfterShow={selectPOI}
                                        open={pois?.current?.id === id && drawers.action !== null}
                                        small
-                                       style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.color, 'rgba', 0.2)}}>
+                                       style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.bgColor ?? poi.color, 'rgba', 0.2)}}>
                                 <div slot="summary">
-
-                                       <span>
-                                       <FontAwesomeIcon icon={poi.visible ? poi.icon : faMask} style={{
-                                           '--fa-secondary-color':   poi.color,
-                                           '--fa-secondary-opacity': 1,
+                                    <span>
+                                        <FontAwesomeIcon icon={poi.visible ? poi.icon : faMask} style={{
+                                            '--fa-primary-color':   poi.color,
+                                            '--fa-secondary-color': poi.bgColor,
+                                            '--fa-primary-opacity':   1,
+                                            '--fa-secondary-opacity': 1,
                                        }}/>
-                                           {poi.title}
+
+                                        {poi.title}
                                        </span>
                                     <span>
                         </span>
@@ -176,6 +195,13 @@ export const MapPOIList = () => {
                     }
                 </Fragment>
             ))
+            }
+
+            {pois.filteredList.size === 0 &&
+                <SlAlert variant="warning" open>
+                    <SlIcon slot="icon" library="fa" name={FA2SL.set(faTriangleExclamation)}/>
+                    {'There are no results matching your filter criteria.'}
+                </SlAlert>
             }
 
 

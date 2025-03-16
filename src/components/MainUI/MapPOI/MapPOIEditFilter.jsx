@@ -13,6 +13,7 @@
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
+import { MapPOICategorySelectorFilter } from '@Components/MainUI/MapPOI/MapPOICategorySelectorFilter'
 import { ToggleStateIcon }                                       from '@Components/ToggleStateIcon'
 import { faArrowDownAZ, faArrowDownZA, faFilter, faFilterSlash } from '@fortawesome/pro-regular-svg-icons'
 import { SlDivider, SlIconButton, SlInput, SlTooltip }           from '@shoelace-style/shoelace/dist/react'
@@ -38,34 +39,55 @@ export const MapPOIEditFilter = () => {
         lgs.settings.poi.filter.alphabetic = !lgs.settings.poi.filter.alphabetic
     }
 
-    useEffect(() => {
-        if (pois.list.size === 1) {
+    const enoughPOIs = () => {
+        return Array.from(pois.list.values()).reduce((count, obj) => count + (obj.type !== undefined), 0) >= 1
+    }
+    const handleCategories = async (event) => {
+        if (event.target.nodeName !== 'SL-SWITCH') {
+            lgs.settings.poi.filter.byCategories = event.target.value ?? []
+        }
+    }
+
+    const handleExclusion = () => {
+        lgs.settings.poi.filter.exclude = !lgs.settings.poi.filter.exclude
+    }
+
+    const applyFilter = () => {
+        if (!enoughPOIs()) {
             lgs.settings.poi.filter.active = false
             lgs.settings.poi.filter.open = false
             return
         }
-        lgs.settings.poi.filter.active = lgs.settings.poi.filter.byName !== '' || !lgs.settings.poi.filter.alphabetic
+        lgs.settings.poi.filter.active = lgs.settings.poi.filter.byName !== '' || !lgs.settings.poi.filter.alphabetic || lgs.settings.poi.filter.byCategories.length > 0
+    }
+
+    useEffect(() => {
+        applyFilter()
     }, [settings.filter, pois.list.size])
+
+
     return (
         <div className="map-poi-edit-filter">
             <div className="map-poi-edit-toggle-filter">
-                <SlTooltip content={settings.filter.open ? 'Hide Filters' : 'Show Filters'}>
-                    <SlIconButton id="map-poi-edit-filter-trigger" onClick={handleFilter}
-                                  library="fa" disabled={pois.list.size === 1}
+                    <header>
+                        {settings.filter.active && <span>{'Filters are active'}</span>}
+                        <SlTooltip content={settings.filter.open ? 'Hide Filters' : 'Show Filters'}>
+                            <SlIconButton id="map-poi-edit-filter-trigger" onClick={handleFilter}
+                                  library="fa" disabled={!enoughPOIs()}
                                   name={FA2SL.set(settings.filter.open ? faFilterSlash : faFilter)}
                                   className={settings.filter.active ? 'map-poi-filter-active' : 'map-poi-filter-inactive'}
-                    />
-                </SlTooltip>
+                            /> </SlTooltip>
+                    </header>
+
                 <SlDivider/>
             </div>
 
             {settings.filter.open &&
-                <>
+                <div className="map-poi-edit-toggle-filter lgs-card">
                     <div className="map-poi-filter-by-name">
-                        <SlInput size="small" value={settings.filter.byName}
+                        <SlInput label={'By Name'} type="text" size="small" value={settings.filter.byName}
                                  onSlChange={handleFilterByName}
                                  onInput={handleFilterByName}
-                                 placeholder={'Filter by Name'}
                                  className="edit-map-poi-input">
                         </SlInput>
                         <SlTooltip hoist content={settings.filter.alphabetic ? 'Reverse Alphabetic' : 'Alphabetic'}>
@@ -75,15 +97,14 @@ export const MapPOIEditFilter = () => {
                                              onChange={handleAlphabetic}
                             />
                         </SlTooltip>
-                        {/*     <SlInput size="small" */}
-                        {/*                                          onSlChange={handleFilterByName} */}
-                        {/*                                          onInput={handleFilterByName} */}
-                        {/*                                          className="edit-title-map-poi-input"> */}
-                        {/*     <span slot="label">{'By Categories'}</span> */}
-                        {/* </SlInput> */}
+
                     </div>
+                    <MapPOICategorySelectorFilter handleExclusion={handleExclusion}
+                                                  handleCategories={handleCategories}
+                                                  onChange={applyFilter}
+                    />
                     <SlDivider/>
-                </>
+                </div>
             }
         </div>
     )

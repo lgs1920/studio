@@ -219,7 +219,7 @@ export const GeocodingUI = () => {
 
                             </SlInput>
                             <SlTooltip placement="top" open={!snap.dialog.submitDisabled}>
-                                <SlButton size={'small'} className={'square-icon'} type="submit"
+                                <SlButton size={'small'} className={'square-button'} type="submit"
                                           id="geocoder-search-location-submit"
                                           loading={snap.dialog.loading}
                                           disabled={snap.dialog.submitDisabled}>
