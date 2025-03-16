@@ -60,10 +60,7 @@ export const MapPOIEditContent = ({poi}) => {
             })
         }
         if (event.target === poiBgColor.current) {
-            const color = Color(event.target.value)
             __.ui.poiManager.list.get(point.id).color = __.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable(__.ui.ui.colorContrast(event.target.value)))
-
-            console.log(color, __.ui.poiManager.list.get(point.id).color)
             Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
                 bgColor: event.target.value,
                 color:   __.ui.poiManager.list.get(point.id).color,
