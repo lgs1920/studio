@@ -31,8 +31,10 @@ export const MapPOICategorySelectorFilter = (props) => {
                                                      <FontAwesomeIcon slot="prefix"
                                                                       icon={Object.values(POI_CATEGORY_ICONS.get(slug))[0]}
                                                                       style={{
-                                                                          '--fa-secondary-color':   pois.current.color,
+                                                                          '--fa-secondary-color': 'var(--lgs-light-contrast-color)',
                                                                           '--fa-secondary-opacity': 1,
+                                                                          '--fa-primary-color':   'var(--lgs-dark-contrast-color)',
+
                                                                           '--fa-primary-opacity':   1,
                                                                           // 'color':pois.current.color
                                                                       }}/>
