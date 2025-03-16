@@ -284,9 +284,9 @@ ui:
 
   ## POI
   poi:
-    minScaleFlag: 0.7                   # minimum POI size before replacing by flag (70% of max)
-    minScale: 0.3                       # minScale before masking (30% of max)
-    distanceThreshold: 8000             # min distance to see POI with 100% size
+    minScaleFlag: 0.5                   # minimum POI size before replacing by flag (70% of max)
+    minScale: 0.2                       # minScale before masking (30% of max)
+    distanceThreshold: 10000             # min distance to see POI with 100% size
     focusOnEdit: true                   # Apply focus when editing a POI
     rotate: true                        # Rotation after POI focus
     rpm: 4
