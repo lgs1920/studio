@@ -77,6 +77,7 @@
     position: relative;
     user-select: none;
     pointer-events: all;
+    backdrop-filter: blur(var(--lgs-blur-s));
 }
 
 .poi-on-map-inner-background {
@@ -88,7 +89,7 @@
     opacity: 0.6;
     border-radius: var(--lgs-border-radius-xs);
     background-color: var(--lgs-poi-background-color);
-    backdrop-filter: blur(var(--lgs-blur));
+
 }
 
 .poi-on-map-wrapper:not(.poi-shrinked) .poi-on-map-inner {
