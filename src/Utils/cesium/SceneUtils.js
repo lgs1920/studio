@@ -180,6 +180,8 @@ export class SceneUtils {
                                      simulatedHeight: point?.simulatedHeight,
                                      title:           point.title,
                                      color: point?.color ?? lgs.settings.poi.defaultColor,
+                                     bgColor: point?.bgColor ?? lgs.settings.poi.defaultColor,
+
                                      description: point?.description ?? '',
 
                                      camera: {

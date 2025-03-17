@@ -1,12 +1,14 @@
-import * as Cesium                                                                                    from 'cesium'
-import { Cartesian2, Cartesian3, Cartographic, Ellipsoid, Math as M, Matrix4, SceneMode, Transforms } from 'cesium'
+import * as Cesium from 'cesium'
+import {
+    Cartesian2, Cartesian3, Cartographic, Ellipsoid, HeadingPitchRange, Math as M, Matrix4, SceneMode, Transforms,
+}                  from 'cesium'
 
 export class CameraUtils {
 
     static lookAt = (camera, target, hpr) => {
         // Lock camera to a point
         const point = Cesium.Cartesian3.fromDegrees(target.longitude, target.latitude, target.height)
-        camera.lookAtTransform(Transforms.eastNorthUpToFixedFrame(point), hpr)
+        camera.lookAtTransform(Transforms.eastNorthUpToFixedFrame(point), new HeadingPitchRange(hpr.heading, hpr.pitch, hpr.range))
     }
 
     static unlock = (camera) => {
