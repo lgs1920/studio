@@ -52,7 +52,8 @@ starter:
   latitude: 45.33524
   height: 1920
   title: La Grande Sure
-  color: "#7FFF00"  # chartreuse (127,255,0)
+  bgColor: "#7FFF00"  # chartreuse (127,255,0)
+  color: "#ffffff"
   ## Camera position
   camera:
     heading: 0

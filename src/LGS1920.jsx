@@ -120,6 +120,7 @@ export function LGS1920() {
                                                                            height:    lgs.settings.starter.height,
                                                                            title:     lgs.settings.starter.title,
                                                                            color:     lgs.settings.starter.color,
+                                                                     bgColor: lgs.settings.starter.bgColor,
                                                                            type:      POI_STARTER_TYPE,
                                                                        })
 
@@ -127,6 +128,13 @@ export function LGS1920() {
                                   // We force re/creation in DB to sync it.
                                   await __.ui.poiManager.saveInDB(starter)
                               }
+                              starter.bgColor = undefined
+                              // ---- < 0.8.3 compat. : patch to fix #200
+                              if (!starter.color || !starter.bgColor) {
+                                  starter.color = lgs.settings.starter.color
+                                  starter.bgColor = lgs.settings.starter.bgColor
+                              }
+                              // ---
                               lgs.mainProxy.components.pois.current = starter
 
                               // According to the settings and saved information, we set the camera data
