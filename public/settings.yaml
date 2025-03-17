@@ -54,6 +54,8 @@ starter:
   title: La Grande Sure
   bgColor: "#7FFF00"  # chartreuse (127,255,0)
   color: "#ffffff"
+  description: At 12 years old, the first time I reached the summit, it was my Everest!
+    I return there 2-3 times a year.
   ## Camera position
   camera:
     heading: 0

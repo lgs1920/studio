@@ -115,13 +115,14 @@ export function LGS1920() {
 
                               if (!starter) {
                                   starter = __.ui.poiManager.add({
-                                                                           longitude: lgs.settings.starter.longitude,
+                                                                     longitude:   lgs.settings.starter.longitude,
                                                                            latitude:  lgs.settings.starter.latitude,
                                                                            height:    lgs.settings.starter.height,
                                                                            title:     lgs.settings.starter.title,
-                                                                           color:     lgs.settings.starter.color,
+                                                                     description: lgs.settings.starter.description,
+                                                                     color:       lgs.settings.starter.color,
                                                                      bgColor: lgs.settings.starter.bgColor,
-                                                                           type:      POI_STARTER_TYPE,
+                                                                     type:        POI_STARTER_TYPE,
                                                                        })
 
 
