@@ -188,9 +188,13 @@ export class AppUtils {
         // Create an Axios instance
         lgs.axios = axios.create()
 
+        // Default colors (defined in theme.css)
+        lgs.lightContrastColor = __.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable('--lgs-light-contrast-color'))
+        lgs.darkContrastColor = __.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable('--lgs-dark-contrast-color'))
+
         // Add theme dependant colors
-        lgs.configuration.swatches.list.push(__.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable('--lgs-light-contrast-color')))
-        lgs.configuration.swatches.list.push(__.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable('--lgs-dark-contrast-color')))
+        lgs.configuration.swatches.list.push(lgs.lightContrastColor)
+        lgs.configuration.swatches.list.push(lgs.darkContrastColor)
 
         /***************************************
          * Application settings
