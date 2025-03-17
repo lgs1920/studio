@@ -101,7 +101,7 @@ export const MapPOIContextMenu = () => {
                 heading:    camera.position.heading,
                 pitch:      camera.position.pitch,
                 roll:       camera.position.roll,
-                range:      5000,
+                range: camera.position.range,
                 infinite:   true,
                 rotate:     true,
                 rpm: lgs.settings.ui.poi.rpm,
