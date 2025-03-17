@@ -28,16 +28,18 @@ export const RotateButton = (props) => {
     const pois = lgs.mainProxy.components.pois
     const snap = useSnapshot(pois)
     const handleRotation = async () => {
-        if (rotate.running || !snap.current) {
+        if (rotate.running) {
             __.ui.cameraManager.stopRotate()
+            if (snap.current) {
             pois.current = await __.ui.poiManager.stopAnimation(snap.current.id)
+            }
         }
         else {
             __.ui.sceneManager.focus(camera.target, {
                 heading:    camera.position.heading,
                 pitch:      camera.position.pitch,
                 roll:       camera.position.roll,
-                range:      5000,
+                range: camera.position.range,
                 infinite:   true,
                 rotate:     true,
                 flyingTime: 0,    // no move, no time ! We're on target

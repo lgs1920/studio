@@ -396,8 +396,12 @@ export class POIManager {
      * @return {unknown}
      */
     startAnimation = (id) => {
-        this.list.get(id).animated = true
-        return this.list.get(id)
+        const poi = this.list.get(id)
+        if (poi && poi.length) {
+            this.list.get(id).animated = true
+            return this.list.get(id)
+        }
+        return false
     }
 
     /**
