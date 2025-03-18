@@ -179,8 +179,8 @@ export class SceneUtils {
                                      height:      height,
                                      simulatedHeight: point?.simulatedHeight,
                                      title:           point.title,
-                                     color: point?.color ?? lgs.settings.poi.defaultColor,
-                                     bgColor: point?.bgColor ?? lgs.settings.poi.defaultColor,
+                                     color:   point?.color ?? lgs.poiDefaultColor,
+                                     bgColor: point?.bgColor ?? lgs.poiDefaultBackgroundColor,
 
                                      description: point?.description ?? '',
 

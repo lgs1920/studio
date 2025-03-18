@@ -129,12 +129,13 @@ export function LGS1920() {
                                   // We force re/creation in DB to sync it.
                                   await __.ui.poiManager.saveInDB(starter)
                               }
-                              starter.bgColor = undefined
+
+                              console.log(lgs.settings.starter)
                               // ---- < 0.8.3 compat. : patch to fix #200
-                              if (!starter.color || !starter.bgColor) {
+                              // if (!starter.color || !starter.bgColor) {
                                   starter.color = lgs.settings.starter.color
                                   starter.bgColor = lgs.settings.starter.bgColor
-                              }
+                              // }
                               // ---
                               lgs.mainProxy.components.pois.current = starter
 

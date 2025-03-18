@@ -58,7 +58,6 @@ export const MapPOIContextMenu = () => {
     const saveAsPOI = () => {
         Object.assign(__.ui.poiManager.list.get(pois.current.id), {
             type: POI_STANDARD_TYPE,
-            color: lgs.settings.poi.defaultColor,
             category: POI_STANDARD_TYPE,
         })
         __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(pois.current.id))

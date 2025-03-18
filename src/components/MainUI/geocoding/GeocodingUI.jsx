@@ -104,7 +104,7 @@ export const GeocodingUI = () => {
                          ? geoPoint.properties.display_name.split(', ').join(' - ')
                          : '',
             color:   lgs.darkContrastColor,
-            bgColor: lgs.lightContrastColor,
+            bgColor: lgs.poiDefaultBackgroundColor,
         }
         try {
             point.simulatedHeight = await __.ui.poiManager.getElevationFromTerrain({

@@ -98,9 +98,9 @@ export const MapPOI = memo(({point: pointId}) => {
                         left:                         pixels.x,
                         transform:                    `translate( -50%,calc(-4 * var(--poi-border-width))) scale(${point?.scale ?? 1})`,
                         transformOrigin:              'center bottom',
-                        '--lgs-poi-background-color': point.bgColor,
-                        '--lgs-poi-border-color':     point.color,
-                        '--lgs-poi-color':            point.color,
+                        '--lgs-poi-background-color': point.bgColor ?? lgs.poiDefaultBackgroundColor,
+                        '--lgs-poi-border-color':     point.color ?? lgs.poiDefaultColor,
+                        '--lgs-poi-color':            point.color ?? lgs.poiDefaultColor,
                     }}
                     onPointerMove={__.ui.sceneManager.propagateEventToCanvas}
                     onWheel={hideMenu}
