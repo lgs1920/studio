@@ -130,7 +130,6 @@ export function LGS1920() {
                                   await __.ui.poiManager.saveInDB(starter)
                               }
 
-                              console.log(lgs.settings.starter)
                               // ---- < 0.8.3 compat. : patch to fix #200
                               // if (!starter.color || !starter.bgColor) {
                                   starter.color = lgs.settings.starter.color
