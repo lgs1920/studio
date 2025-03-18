@@ -187,6 +187,8 @@ export const MapPOIContextMenu = () => {
             .then((result) => {
                 hideMenu()
                 if (result.success) {
+                    store.filteredList.delete(result.id)
+                    store.bulkList.delete(result.id)
                     store.current = false
                 }
             })

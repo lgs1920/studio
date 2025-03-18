@@ -162,6 +162,8 @@ export const MapPOIEditMenu = ({point}) => {
         __.ui.poiManager.remove(point.id, true)
             .then((result) => {
                 if (result.success) {
+                    pois.filteredList.delete(result.id)
+                    pois.bulkList.delete(result.id)
                     pois.current = false
                 }
             })
