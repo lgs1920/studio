@@ -147,7 +147,7 @@ export const MapPOIEditContent = ({poi}) => {
                     <SlTooltip content={'Background Color'}>
                     <SlColorPicker size={'small'}
                                    label={'Color'}
-                                   value={point?.bgColor}
+                                   value={point?.bgColor ?? lgs.poiDefaultBackgroundColor}
                                    swatches={lgs.settings.getSwatches.list.join(';')}
                                    onSlChange={handleChangeColor}
                                    onSlInput={handleChangeColor}
@@ -159,7 +159,7 @@ export const MapPOIEditContent = ({poi}) => {
                     <SlTooltip content={'Foreground Color'}>
                         <SlColorPicker size={'small'}
                                        label={'Color'}
-                                       value={point?.color}
+                                       value={point?.color ?? lgs.poiDefaultColor}
                                        swatches={lgs.settings.getSwatches.list.join(';')}
                                        onSlChange={handleChangeColor}
                                        onSlInput={handleChangeColor}

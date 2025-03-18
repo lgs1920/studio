@@ -24,30 +24,35 @@ export const MapPOICategorySelector = (point, props) => {
 
 
     return (
-        <SlSelect label={'Category'} value={pois.current.category} size={props?.size ?? 'small'}
-                  className="map-poi-categorie-selector"
-                  onSlChange={handleCategory}>
-            <FontAwesomeIcon slot="prefix" icon={pois.current.icon} style={{
-                '--fa-secondary-color':   pois.current.bgColor,
-                '--fa-secondary-opacity': 1,
-                '--fa-primary-color':     pois.current.color,
-                '--fa-primary-opacity':   1,
-            }} className={'square-button'}/>
-            {Array.from(pois.categories).map(([slug, category]) =>
-                                                 <SlOption key={slug} value={slug}>
-                                                     <FontAwesomeIcon slot="prefix"
-                                                                      icon={Object.values(POI_CATEGORY_ICONS.get(slug))[0]}
-                                                                      style={{
-                                                                          '--fa-secondary-color': pois.current.bgColor,
-                                                                          '--fa-secondary-opacity': 1,
-                                                                          '--fa-primary-color':   pois.current.color,
+        <>
+            {pois.current &&
+                <SlSelect label={'Category'} value={pois.current.category} size={props?.size ?? 'small'}
+                          className="map-poi-categorie-selector"
+                          onSlChange={handleCategory}>
 
-                                                                          '--fa-primary-opacity':   1,
-                                                                          // 'color':pois.current.color
-                                                                      }}/>
-                                                     {category.title}
-                                                 </SlOption>,
-            )}
-        </SlSelect>
+                    <FontAwesomeIcon slot="prefix" icon={pois.current.icon} style={{
+                        '--fa-secondary-color':   pois.current.bgColor,
+                        '--fa-secondary-opacity': 1,
+                        '--fa-primary-color':     pois.current.color,
+                        '--fa-primary-opacity':   1,
+                    }} className={'square-button'}/>
+
+                    {Array.from(pois.categories).map(([slug, category]) =>
+                                                         <SlOption key={slug} value={slug}>
+                                                             <FontAwesomeIcon slot="prefix"
+                                                                              icon={Object.values(POI_CATEGORY_ICONS.get(slug))[0]}
+                                                                              style={{
+                                                                                  '--fa-secondary-color':   pois.current.bgColor,
+                                                                                  '--fa-secondary-opacity': 1,
+                                                                                  '--fa-primary-color':     pois.current.color,
+
+                                                                                  '--fa-primary-opacity': 1,
+                                                                                  // 'color':pois.current.color
+                                                                              }}/>
+                                                             {category.title}
+                                                         </SlOption>,
+                    )}
+                </SlSelect>
+            }</>
     )
 }

@@ -58,7 +58,6 @@ export const MapPOIContextMenu = () => {
     const saveAsPOI = () => {
         Object.assign(__.ui.poiManager.list.get(pois.current.id), {
             type: POI_STANDARD_TYPE,
-            color: lgs.settings.poi.defaultColor,
             category: POI_STANDARD_TYPE,
         })
         __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(pois.current.id))
@@ -101,7 +100,7 @@ export const MapPOIContextMenu = () => {
                 heading:    camera.position.heading,
                 pitch:      camera.position.pitch,
                 roll:       camera.position.roll,
-                range:      5000,
+                range: camera.position.range,
                 infinite:   true,
                 rotate:     true,
                 rpm: lgs.settings.ui.poi.rpm,
@@ -188,6 +187,8 @@ export const MapPOIContextMenu = () => {
             .then((result) => {
                 hideMenu()
                 if (result.success) {
+                    store.filteredList.delete(result.id)
+                    store.bulkList.delete(result.id)
                     store.current = false
                 }
             })

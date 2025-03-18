@@ -222,7 +222,8 @@ export class POIManager {
             // We force the former type of the starter and apply the right color
             Object.assign(this.list.get(former.id), {
                 type: former.formerType ?? POI_STANDARD_TYPE,
-                color: lgs.settings.poi.defaultColor,
+                color:   lgs.poiDefaultColor,
+                bgColor: lgs.poiDefaultBackgroundColor,
             })
             await this.saveInDB(this.list.get(former.id))
 
@@ -396,8 +397,12 @@ export class POIManager {
      * @return {unknown}
      */
     startAnimation = (id) => {
-        this.list.get(id).animated = true
-        return this.list.get(id)
+        const poi = this.list.get(id)
+        if (poi && poi.length) {
+            this.list.get(id).animated = true
+            return this.list.get(id)
+        }
+        return false
     }
 
     /**

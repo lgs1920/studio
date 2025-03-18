@@ -115,18 +115,27 @@ export function LGS1920() {
 
                               if (!starter) {
                                   starter = __.ui.poiManager.add({
-                                                                           longitude: lgs.settings.starter.longitude,
+                                                                     longitude:   lgs.settings.starter.longitude,
                                                                            latitude:  lgs.settings.starter.latitude,
                                                                            height:    lgs.settings.starter.height,
                                                                            title:     lgs.settings.starter.title,
-                                                                           color:     lgs.settings.starter.color,
-                                                                           type:      POI_STARTER_TYPE,
+                                                                     description: lgs.settings.starter.description,
+                                                                     color:       lgs.settings.starter.color,
+                                                                     bgColor: lgs.settings.starter.bgColor,
+                                                                     type:        POI_STARTER_TYPE,
                                                                        })
 
 
                                   // We force re/creation in DB to sync it.
                                   await __.ui.poiManager.saveInDB(starter)
                               }
+
+                              // ---- < 0.8.3 compat. : patch to fix #200
+                              // if (!starter.color || !starter.bgColor) {
+                                  starter.color = lgs.settings.starter.color
+                                  starter.bgColor = lgs.settings.starter.bgColor
+                              // }
+                              // ---
                               lgs.mainProxy.components.pois.current = starter
 
                               // According to the settings and saved information, we set the camera data

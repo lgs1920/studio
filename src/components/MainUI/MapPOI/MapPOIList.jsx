@@ -59,8 +59,6 @@ export const MapPOIList = () => {
                       lgs.mainProxy.drawers.action = null
                   }
 
-                  // Manage the lists of selected POIs
-                  store.filteredList.clear()
                   // Apply filter byName
         let poisToShow = Array.from(store.list)
                       .filter(entry => entry[1].title.toLowerCase().includes(settings.filter.byName.toLowerCase()))
@@ -93,7 +91,7 @@ export const MapPOIList = () => {
                   pois.list.size, pois?.current?.id,
                   settings?.filter.byName, settings?.filter.alphabetic,
                   settings?.filter.exclude, settings?.filter.byCategories,
-        pois.current.title, pois.current.category,
+        pois?.current?.title, pois?.current?.category,
               ],
     )
 
@@ -112,7 +110,6 @@ export const MapPOIList = () => {
                 store.current = store.list.get(id)
                 forceFocus = true
             }
-
             // If defined and it is not the same, or we are in force mode, we focus on it
             if ((store.current && store.current.id !== id) || forceFocus) {
                 // Stop animation before changing
@@ -125,7 +122,7 @@ export const MapPOIList = () => {
                     const camera = snapshot(lgs.mainProxy.components.camera)
                     if (__.ui.cameraManager.isRotating()) {
                         await __.ui.cameraManager.stopRotate()
-                        store.current = __.ui.poiManager.stopAnimation(store.current.id)
+                        __.ui.poiManager.stopAnimation(store.current.id)
                     }
                     __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
                         heading:    camera.position.heading,
@@ -140,7 +137,7 @@ export const MapPOIList = () => {
                         flyingTime: 0,    // no move, no time ! We're on target
                     })
                     if (lgs.settings.ui.poi.rotate) {
-                        store.current = await __.ui.poiManager.startAnimation(store.current.id)
+                        await __.ui.poiManager.startAnimation(store.current.id)
                     }
                 }
             }
@@ -172,9 +169,9 @@ export const MapPOIList = () => {
                             )}
                                        id={`${prefix}${id}`}
                                        onSlAfterShow={selectPOI}
-                                       open={pois?.current?.id === id && drawers.action !== null}
+                                       open={pois?.current?.id === id /*&& drawers.action !== null*/}
                                        small
-                                       style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.bgColor ?? poi.color, 'rgba', 0.2)}}>
+                                       style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.bgColor ?? lgs.poiDefaultBackgroundColor, 'rgba', 0.2)}}>
                                 <div slot="summary">
                                     <span>
                                         <FontAwesomeIcon icon={poi.visible ? poi.icon : faMask} style={{

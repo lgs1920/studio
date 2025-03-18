@@ -65,7 +65,7 @@ export const MapPOIEditMenu = ({point}) => {
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
-            range:      5000,
+            range: camera.position.range,
             infinite:   true,
             rotate:     false,
             panoramic:  false,
@@ -93,7 +93,7 @@ export const MapPOIEditMenu = ({point}) => {
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
-            range:      5000,
+            range: camera.position.range,
             infinite: true,
             rpm: lgs.settings.ui.poi.rpm,
             rotations: 1,
@@ -162,6 +162,8 @@ export const MapPOIEditMenu = ({point}) => {
         __.ui.poiManager.remove(point.id, true)
             .then((result) => {
                 if (result.success) {
+                    pois.filteredList.delete(result.id)
+                    pois.bulkList.delete(result.id)
                     pois.current = false
                 }
             })

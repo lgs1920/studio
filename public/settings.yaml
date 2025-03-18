@@ -52,7 +52,10 @@ starter:
   latitude: 45.33524
   height: 1920
   title: La Grande Sure
-  color: "#7FFF00"  # chartreuse (127,255,0)
+  bgColor: "#7FFF00"  # chartreuse (127,255,0)
+  color: "#ffffff"
+  description: At 12 years old, the first time I reached the summit, it was my Everest!
+    I return there 2-3 times a year.
   ## Camera position
   camera:
     heading: 0
@@ -131,7 +134,6 @@ journey:
 # Global pois
 ########################################
 poi:
-  defaultColor: "#FAFAFA"             # Hexa
   filter:
     byName: ""
     alphabetic: true
