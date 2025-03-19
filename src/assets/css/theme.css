@@ -81,11 +81,13 @@
     --lgs-border-width-s: 1px;
     --lgs-border-s: var(--lgs-border-width-s) solid var(--sl-color-gray-400);
 
-    --lgs-text-on-color: hsla(39 100% 87%/1);
-    --lgs-light-contrast-color: hsla(39 100% 87%/1);
-    --lgs-light-contrast-color2: hsla(39 100% 87%/0.5);
-    --lgs-dark-contrast-color: hsla(125 87% 18% / 1);hsl() --lgs-dark-contrast-color2: hsla(125 87 % 18 % / 0.45);
+    --lgs-light-color: hsla(39 100% 87%/1);
+    --lgs-dark-color: hsla(125 87% 18% / 1);
 
+    --lgs-ocean-color: hsla(196 86% 69% / 1);
+    --lgs-ground-color: var(--lgs-dark-color);
+
+    --lgs-text-on-color: var(--lgs-light-color);
     --lgs-border-on-color: hsla(0 0% 98% / 0.25);
     --lgs-blur: 5px;
     --lgs-blur-s: 1px;
@@ -229,7 +231,7 @@ sl-button::part(spinner) {
     justify-content: center;
 }
 
-sl-button sl-icon, sl-icon-button {
+sl-button::part(prefix), sl-icon-button {
     font-size: var(--sl-font-size-large);
 }
 
