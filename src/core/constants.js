@@ -14,8 +14,6 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-//TODO replace by Duotone
-//import { faCastleRuins, faCave } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import {
     faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faEarthEurope, faFlagSwallowtail, faFort,
     faHouseBlank, faLock, faMap, faMountains, faPlaceOfWorship, faRoad, faSquareParking, faTablePicnic, faTelescope,

@@ -75,6 +75,9 @@ export class Deployment {
 
         this.pm2 = this.configuration.backend[this.platform].pm2
 
+        this.date = new Date().toISOString()
+            .replace(/[-:.]/g, '')
+            .slice(0, 15)
     }
 
     /**
@@ -266,12 +269,48 @@ export class Deployment {
     }
 
     /**
+     * Create a git tag
+     *
+     * tag: <platform>-<version>-<date>
+     * message 'Deployed on <platform>'
+     *
+     */
+    gitTag = () => {
+
+        // get git branch
+        let branch = ''
+        try {
+            branch = execSync('git rev-parse --abbrev-ref HEAD', {encoding: 'utf-8'}).trim()
+        }
+        catch (error) {
+            branch = 'unknown'
+        }
+
+        const tagName = `${this.platform}-${this.version}-${this.date}`
+        const message = `Branch ${branch} deployed on ${tagName}!`
+
+        const command = `git tag -a ${tagName} -m "${message}"`
+        console.log(`    > Commit tag on branch ${branch}`)
+
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error : ${error.message}`)
+                return
+            }
+            console.log(`    > tag : ${tagName}`)
+        })
+    }
+
+    /**
      * Handle som pre deployment (after the build) tasks
      *
      * @return {Promise<void>}
      */
     preDeployment = async () => {
         console.log('--- Pre deployment')
+
+        this.gitTag()
+
         console.log('    > Preparing files')
         switch (this.product) {
             case 'studio': {

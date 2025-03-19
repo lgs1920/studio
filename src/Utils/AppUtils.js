@@ -188,17 +188,21 @@ export class AppUtils {
         // Create an Axios instance
         lgs.axios = axios.create()
 
+        lgs.colors = {}
         // Default colors (defined in theme.css)
-        lgs.defaultLightColor = __.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable('--lgs-light-contrast-color'))
-        lgs.defaultDarkColor = __.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable('--lgs-dark-contrast-color'))
+        lgs.colors.light = __.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable('--lgs-light-color'))
+        lgs.colors.dark = __.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable('--lgs-dark-color'))
+
+        lgs.colors.ocean = __.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable('--lgs-ocean-color'))
+        lgs.colors.ground = __.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable('--lgs-ground-color'))
 
         // Add theme dependant colors
-        lgs.configuration.swatches.list.push(lgs.defaultLightColor)
-        lgs.configuration.swatches.list.push(lgs.darkContrastColor)
+        lgs.configuration.swatches.list.push(lgs.colors.light)
+        lgs.configuration.swatches.list.push(lgs.colors.dark)
 
         // Default POI colors
-        lgs.poiDefaultBackgroundColor = lgs.defaultLightColor
-        lgs.poiDefaultColor = lgs.defaultDarkColor
+        lgs.colors.poiDefaultBackground = lgs.colors.light
+        lgs.colors.poiDefault = lgs.colors.dark
 
         /***************************************
          * Application settings
@@ -494,6 +498,4 @@ export class AppUtils {
 
         return {prevValue, nextValue}
     }
-
-
 }

@@ -1,4 +1,5 @@
 import { SCENE_MODES }                 from '@Core/constants'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                       from '@Utils/FA2SL'
 import { useRef, useState }            from 'react'
@@ -41,7 +42,13 @@ export const SceneModeSelector = (props) => {
                                   className={'square-button'} onclick={selectSceneMode}
                                   data-scene-mode={SCENE_MODES.get(mode).value}
                                   disabled={mainUI.rotate.running}>
-                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(SCENE_MODES.get(mode).icon)}/>
+                            <FontAwesomeIcon slot="prefix" icon={SCENE_MODES.get(mode).icon}
+                                             style={{
+                                                 '--fa-secondary-color':   lgs.colors.ocean,
+                                                 '--fa-secondary-opacity': 1,
+                                                 '--fa-primary-color':     lgs.colors.ground,
+                                                 '--fa-primary-opacity':   1,
+                                             }}/>
                         </SlButton>
                     </SlTooltip>
                 ))

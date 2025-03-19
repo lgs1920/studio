@@ -171,7 +171,7 @@ export const MapPOIList = () => {
                                        onSlAfterShow={selectPOI}
                                        open={pois?.current?.id === id /*&& drawers.action !== null*/}
                                        small
-                                       style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.bgColor ?? lgs.poiDefaultBackgroundColor, 'rgba', 0.2)}}>
+                                       style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.bgColor ?? lgs.colors.poiDefaultBackground, 'rgba', 0.2)}}>
                                 <div slot="summary">
                                     <span>
                                         <FontAwesomeIcon icon={poi.visible ? poi.icon : faMask} style={{
