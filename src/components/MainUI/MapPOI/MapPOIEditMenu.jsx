@@ -14,15 +14,16 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { POI_STARTER_TYPE }                                 from '@Core/constants'
 import {
     faArrowRotateRight, faArrowsFromLine, faCrosshairsSimple, faFlag, faLocationDot, faPanorama, faTrashCan, faXmark,
 }                                                           from '@fortawesome/pro-regular-svg-icons'
 import { faEye, faMask }                                    from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                            from '@Utils/FA2SL'
 import { UIToast }                                          from '@Utils/UIToast'
+import { useLayoutEffect } from 'react'
 import { snapshot, useSnapshot }                            from 'valtio'
 import './style.css'
 
@@ -169,6 +170,10 @@ export const MapPOIEditMenu = ({point}) => {
             })
     }
 
+    useLayoutEffect(() => {
+        // we need this to redraw each time point changes
+    }, [point])
+
     return (    
         <>
             {(point || point.type === POI_STARTER_TYPE) &&
@@ -237,7 +242,7 @@ export const MapPOIEditMenu = ({point}) => {
                                 </SlMenuItem>
                             </>
                         }
-                        {(point.animated) &&
+                        {(point.animated || __.ui.cameraManager.isRotating()) &&
                             <SlMenuItem onClick={stopRotation} loading>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
                                 <span>Stop</span>
