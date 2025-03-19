@@ -194,7 +194,7 @@ export class AppUtils {
 
         // Add theme dependant colors
         lgs.configuration.swatches.list.push(lgs.defaultLightColor)
-        lgs.configuration.swatches.list.push(lgs.darkContrastColor)
+        lgs.configuration.swatches.list.push(lgs.defaultDarkColor)
 
         // Default POI colors
         lgs.poiDefaultBackgroundColor = lgs.defaultLightColor
