@@ -398,7 +398,7 @@ export class POIManager {
      */
     startAnimation = (id) => {
         const poi = this.list.get(id)
-        if (poi && poi.length) {
+        if (poi) {
             this.list.get(id).animated = true
             return this.list.get(id)
         }
