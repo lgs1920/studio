@@ -28,11 +28,12 @@
     position: absolute;
     left: -50%;
     display: flex;
-    max-width: 130px;
+    max-width: var(--max-width);
     user-select: none;
     transition: transform 0.1s ease-out;
     transform: translate(-50%, 0);
     pointer-events: all;
+    --max-width: 130px;
 }
 
 .poi-on-map-wrapper.poi-shrinked {
@@ -126,8 +127,9 @@
     font-size: calc(1.1 * var(--lgs-font-size));
     font-weight: 500;
     line-height: 1;
-    max-width: 100%;
+    width: var(--max-width);
 
+    max-width: 100%;
     margin: 0;
     text-wrap: wrap;
     word-wrap: normal;
@@ -144,6 +146,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-s);
+    text-wrap-mode: nowrap;
 }
 
 .poi-on-map-inner .poi-coordinates {
