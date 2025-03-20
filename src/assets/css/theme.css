@@ -278,7 +278,6 @@ sl-icon.is-duotone svg[part="svg"] {
     position: relative;
     display: flex;
     gap: var(--lgs-gutter) !important;
-    /*justify-content: flex-end;*/
 }
 
 .call-for-actions [outline] {
@@ -288,7 +287,7 @@ sl-icon.is-duotone svg[part="svg"] {
 }
 
 .call-for-actions [outline]::part(base) {
-    color: var(--lgs-text-on-color);
+    color: rgba(255, 255, 255, 1);;
 }
 
 /*******************************************************************************
