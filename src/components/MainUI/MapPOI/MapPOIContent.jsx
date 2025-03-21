@@ -129,10 +129,6 @@ export const MapPOIContent = ({id, hide}) => {
                     openEdit()
                 }
             }
-            console.log('Double tap détecté !')
-        }
-        else {
-
         }
         setLastTap(now)
     }
