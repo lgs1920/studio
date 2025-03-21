@@ -48,10 +48,11 @@ export class DrawerManager {
     /**
      * Toggle drawer state
      * @param id {string}
+     * @param action {string}
      */
-    toggle = (id) => {
+    toggle = (id, action) => {
         if (this.canOpen(id)) {
-            this.open(id)
+            this.open(id, action)
         }
         else {
             this.close()

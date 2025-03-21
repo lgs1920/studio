@@ -14,13 +14,13 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { NameValueUnit }   from '@Components/DataDisplay/NameValueUnit'
-import { SECOND }          from '@Core/constants'
-import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
+import { NameValueUnit }                                  from '@Components/DataDisplay/NameValueUnit'
+import { DOUBLE_CLICK_DELAY, POIS_EDITOR_DRAWER, SECOND } from '@Core/constants'
+import { FontAwesomeIcon }                                from '@Components/FontAwesomeIcon'
 import { SlPopup }         from '@shoelace-style/shoelace/dist/react'
-import { ELEVATION_UNITS } from '@Utils/UnitUtils'
-import { useRef, useEffect } from 'react'
-import Timeout             from 'smart-timeout'
+import { ELEVATION_UNITS }                                from '@Utils/UnitUtils'
+import { useRef, useEffect, useState }                    from 'react'
+import Timeout                                            from 'smart-timeout'
 import './style.css'
 import { useSnapshot }     from 'valtio'
 
@@ -28,6 +28,7 @@ export const MapPOIContent = ({id, hide}) => {
     const inner = useRef(null)
     const point = lgs.mainProxy.components.pois.list.get(id)
     const snap = useSnapshot(point)
+    const [clickTimeout, setClickTimeout] = useState(null)
 
     const handleContextMenu = (event) => {
         event.preventDefault()
@@ -43,7 +44,6 @@ export const MapPOIContent = ({id, hide}) => {
                 (lgs.mainProxy.components.pois.current === false
                     || lgs.mainProxy.components.pois.current.id === point.id)
             )) {
-            lgs.mainProxy.components.pois.context.visible = true
             lgs.mainProxy.components.pois.context.visible = true
             lgs.mainProxy.components.pois.current = point
             __.ui.sceneManager.propagateEventToCanvas(event)
@@ -66,6 +66,42 @@ export const MapPOIContent = ({id, hide}) => {
             {over: false},
         )
     }
+    /**
+     * We open the POI Edit drawer and the current POI settings
+     */
+    const toggleEdit = () => {
+        __.ui.drawerManager.toggle(POIS_EDITOR_DRAWER, 'edit-current')
+    }
+
+    const openEdit = () => {
+        __.ui.drawerManager.open(POIS_EDITOR_DRAWER, 'edit-current')
+    }
+
+    const handlePointerDown = (event) => {
+        if (!clickTimeout) {
+            const timeout = setTimeout(() => {
+                setClickTimeout(null)
+                __.ui.sceneManager.propagateEventToCanvas(event)
+            }, DOUBLE_CLICK_DELAY) // Délai pour détecter si un double clic suit
+            setClickTimeout(timeout)
+        }
+    }
+
+    const handleDoubleClick = (event) => {
+        if (clickTimeout) {
+            clearTimeout(clickTimeout) // Annule l'action de pointerdown
+            setClickTimeout(null)
+            console.log(snap.id, lgs.mainProxy.components.pois.current.id)
+            if (snap.id === lgs.mainProxy.components.pois.current.id) {
+                toggleEdit()
+            }
+            else {
+                lgs.mainProxy.components.pois.current = snap
+                openEdit()
+            }
+        }
+    }
+
 
     useEffect(() => {
 
@@ -87,10 +123,8 @@ export const MapPOIContent = ({id, hide}) => {
                         )
                     }}
 
-                    onPointerDown={(event) => {
-                        __.ui.sceneManager.propagateEventToCanvas(event)
-                    }
-                    }
+                     onDoubleClick={handleDoubleClick}
+                     onPointerDown={handlePointerDown}
 
                     id={`poi-inner-${point.id}`}
                 >

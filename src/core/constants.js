@@ -208,6 +208,9 @@ export const UNLOCKED = 'unlocked'
 /*******************************************************************************
  * UI Elements
  ******************************************************************************/
+
+export const DOUBLE_CLICK_DELAY = 300 //milliseconds
+
 /** Scene Mode **/
 
 export const SCENE_MODE_2D = {
