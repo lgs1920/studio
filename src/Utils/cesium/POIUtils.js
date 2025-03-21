@@ -268,18 +268,34 @@ export class POIUtils {
         minScaleFlag:      lgs.settings.ui.poi.minScaleFlag,
         minScale:          lgs.settings.ui.poi.minScale,
     }) => {
-
-        const cartesian = Cartesian3.fromDegrees(point.longitude, point.latitude,
-                                                 __.ui.sceneManager.noRelief() ? 0 : point.simulatedHeight)
-        const cameraPosition = Cartesian3.fromDegrees(
-            lgs.mainProxy.components.camera.position.longitude,
-            lgs.mainProxy.components.camera.position.latitude,
-            lgs.mainProxy.components.camera.position.elevation,
-        )
-        const scale = Math.max(scaler.minScale, Math.min(1 / (Cartesian3.distance(cartesian, cameraPosition) / scaler.distanceThreshold), 1))
+        const distance = POIUtils.distanceFromCamera(point)
+        const scale = Math.max(scaler.minScale, Math.min(1 / (distance / scaler.distanceThreshold), 1))
         const tooFar = scale <= scaler.minScale
         const flagVisible = !tooFar && scale <= scaler.minScaleFlag
-        return {scale: scale, showFlag: flagVisible, tooFar: tooFar}
+        return {
+            scale:          scale,
+            showFlag:       flagVisible,
+            tooFar:         tooFar,
+            cameraDistance: distance,
+        }
+    }
+
+
+    static distanceFromCamera = point => {
+        const cartesian = Cartesian3.fromDegrees(point.longitude, point.latitude,
+                                                 __.ui.sceneManager.noRelief() ? 0 : point.simulatedHeight ?? point.height)
+
+        if (lgs.mainProxy.components.camera.position.longitude && lgs.mainProxy.components.camera.position.latitude && lgs.mainProxy.components.camera.position.latitude) {
+            const cameraPosition = Cartesian3.fromDegrees(
+                lgs.mainProxy.components.camera.position.longitude,
+                lgs.mainProxy.components.camera.position.latitude,
+                lgs.mainProxy.components.camera.position.latitude,
+            )
+            return Cartesian3.distance(cartesian, cameraPosition)
+        }
+        else {
+            return 0
+        }
     }
 
     //
