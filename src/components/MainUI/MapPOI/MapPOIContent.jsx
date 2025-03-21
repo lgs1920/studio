@@ -15,20 +15,21 @@
  ******************************************************************************/
 
 import { NameValueUnit }                                  from '@Components/DataDisplay/NameValueUnit'
-import { DOUBLE_CLICK_DELAY, POIS_EDITOR_DRAWER, SECOND } from '@Core/constants'
-import { FontAwesomeIcon }                                from '@Components/FontAwesomeIcon'
-import { SlPopup }         from '@shoelace-style/shoelace/dist/react'
+import { FontAwesomeIcon }                                                  from '@Components/FontAwesomeIcon'
+import { DOUBLE_CLICK_DELAY, DOUBLE_TAP_DELAY, POIS_EDITOR_DRAWER, SECOND } from '@Core/constants'
+import { SlPopup }                                                          from '@shoelace-style/shoelace/dist/react'
 import { ELEVATION_UNITS }                                from '@Utils/UnitUtils'
-import { useRef, useEffect, useState }                    from 'react'
+import { useEffect, useRef, useState }                                      from 'react'
 import Timeout                                            from 'smart-timeout'
 import './style.css'
-import { useSnapshot }     from 'valtio'
+import { useSnapshot }                                                      from 'valtio'
 
 export const MapPOIContent = ({id, hide}) => {
     const inner = useRef(null)
     const point = lgs.mainProxy.components.pois.list.get(id)
     const snap = useSnapshot(point)
     const [clickTimeout, setClickTimeout] = useState(null)
+    const [lastTap, setLastTap] = useState(0)
 
     const handleContextMenu = (event) => {
         event.preventDefault()
@@ -77,21 +78,32 @@ export const MapPOIContent = ({id, hide}) => {
         __.ui.drawerManager.open(POIS_EDITOR_DRAWER, 'edit-current')
     }
 
+    /**
+     * Trap pointer down.
+     *
+     * @param event
+     */
     const handlePointerDown = (event) => {
         if (!clickTimeout) {
             const timeout = setTimeout(() => {
                 setClickTimeout(null)
+                // manage the simple click or tap (propagate it)
                 __.ui.sceneManager.propagateEventToCanvas(event)
-            }, DOUBLE_CLICK_DELAY) // Délai pour détecter si un double clic suit
+            }, DOUBLE_CLICK_DELAY)
             setClickTimeout(timeout)
         }
     }
 
+    /**
+     * Trap Double click
+     *
+     * @param event
+     */
     const handleDoubleClick = (event) => {
         if (clickTimeout) {
-            clearTimeout(clickTimeout) // Annule l'action de pointerdown
+            // We're in the delay, it is a double click
+            clearTimeout(clickTimeout)
             setClickTimeout(null)
-            console.log(snap.id, lgs.mainProxy.components.pois.current.id)
             if (snap.id === lgs.mainProxy.components.pois.current.id) {
                 toggleEdit()
             }
@@ -102,6 +114,28 @@ export const MapPOIContent = ({id, hide}) => {
         }
     }
 
+    const handleTouchStart = () => {
+        const now = Date.now()
+        if (now - lastTap < DOUBLE_TAP_DELAY) {
+            if (clickTimeout) {
+                // We're in the delay, it is a double touch
+                clearTimeout(clickTimeout)
+                setClickTimeout(null)
+                if (snap.id === lgs.mainProxy.components.pois.current.id) {
+                    toggleEdit()
+                }
+                else {
+                    lgs.mainProxy.components.pois.current = snap
+                    openEdit()
+                }
+            }
+            console.log('Double tap détecté !')
+        }
+        else {
+
+        }
+        setLastTap(now)
+    }
 
     useEffect(() => {
 
@@ -125,8 +159,9 @@ export const MapPOIContent = ({id, hide}) => {
 
                      onDoubleClick={handleDoubleClick}
                      onPointerDown={handlePointerDown}
+                     onTouchStart={handleTouchStart}
 
-                    id={`poi-inner-${point.id}`}
+                     id={`poi-inner-${point.id}`}
                 >
                     {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
 
@@ -145,7 +180,7 @@ export const MapPOIContent = ({id, hide}) => {
                                             units={ELEVATION_UNITS}
                                         />
                                     )}
-                                    {!point.height || point.height === point.simulatedHeight && <span>&nbsp;</span>}
+                                    {!point.height || point.height === point.simulatedHeight && <span>&nbsp</span>}
                                     <div className="poi-coordinates">
                                         <span>
                                           {__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)},

@@ -209,7 +209,8 @@ export const UNLOCKED = 'unlocked'
  * UI Elements
  ******************************************************************************/
 
-export const DOUBLE_CLICK_DELAY = 300 //milliseconds
+export const DOUBLE_CLICK_DELAY = 300 // milliseconds
+export const DOUBLE_TAP_DELAY = 300     // milliseconds
 
 /** Scene Mode **/
 
