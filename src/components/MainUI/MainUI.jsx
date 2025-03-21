@@ -200,7 +200,7 @@ export const MainUI = () => {
                     {
                         lgs.platform !== 'production' &&
                         <div id="used-platform"
-                             className={'lgs-card on-map'}> [{lgs.platform}-{lgs.versions.studio}]
+                             className={'lgs-card on-map'}> {lgs.platform}-{lgs.versions.studio}
                         </div>
                     }
                 </div>
