@@ -61,7 +61,7 @@ export const MapPOI = memo(({point: pointId}) => {
                                                      const max = Math.max(...Array.from(store.values()).map(poi => poi.cameraDistance))
 
                                                      if (min && max && poi.withinScreen && poi.frontOfTerrain && poi.visible && !poi.tooFar) {
-                                                         lgs.mainProxy.components.pois.visibleList.set(poi.id, Math.round((max - poi.cameraDistance) / (max - min) * 1000)) + 1
+                                                         lgs.mainProxy.components.pois.visibleList.set(poi.id, Math.round((max - poi.cameraDistance) / (max - min) * lgs.mainProxy.components.pois.visibleList.size)) + 1
                                                      }
                                                      else {
                                                          lgs.mainProxy.components.pois.visibleList.delete(poi.id)
