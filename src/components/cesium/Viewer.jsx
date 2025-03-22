@@ -1,4 +1,5 @@
 import '@shoelace-style/shoelace/dist/themes/light.css'
+import { CanvasEventManager } from '@Core/events/CanvasEventManager'
 import { LayersUtils }                                                           from '@Utils/cesium/LayersUtils'
 import { SceneUtils }                                                           from '@Utils/cesium/SceneUtils'
 import { ImageryLayerCollection, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
@@ -63,6 +64,9 @@ export function Viewer() {
 
     // Manage Camera
     lgs.camera.changed.addEventListener(raiseCameraUpdateEvent)
+
+    // Manage events
+    __.canvasEvents = new CanvasEventManager()
 
 
     return (<></>)

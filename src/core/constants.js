@@ -206,11 +206,41 @@ export const LOCKED = 'locked'
 export const UNLOCKED = 'unlocked'
 
 /*******************************************************************************
- * UI Elements
+ * UI Click/Touch events
  ******************************************************************************/
 
 export const DOUBLE_CLICK_DELAY = 300 // milliseconds
 export const DOUBLE_TAP_DELAY = 300     // milliseconds
+export const POINTER = {
+    LEFT_DOWN:         0,
+    LEFT_UP:           1,
+    LEFT_CLICK:        2,
+    LEFT_DOUBLE_CLICK: 3,
+    RIGHT_DOWN:        5,
+    RIGHT_UP:          6,
+    RIGHT_CLICK:       7,
+    MIDDLE_DOWN:       10,
+    MIDDLE_UP:         11,
+    MIDDLE_CLICK:      12,
+    MOUSE_MOVE:        15,
+    WHEEL:             16,
+    PINCH_START:       17,
+    PINCH_END:         18,
+    PINCH_MOVE:        19,
+}
+export const BUTTONS = {
+    LEFT:   0,
+    MIDDLE: 1,
+    RIGHT:  2,
+}
+export const KEYBOARD = {
+    SHIFT: 0,
+    CTRL:  1,
+    ALT:   2,
+}
+
+
+
 
 /** Scene Mode **/
 
