@@ -74,24 +74,33 @@ export const MainUI = () => {
             // We're in the delay, it is a double click or tap
             clearTimeout(clickTimeout.current)
             clickTimeout.current = null
-            __.ui.drawerManager.close()
+            closeDrawer()
         }
     }
 
-    const handleDoubleClick = () => {
+    const closeDrawer = () => {
         __.ui.drawerManager.close()
     }
+
+    const handleKeyDown = (event) => {
+        console.log(event.key)
+        if (event.key === 'Escape') {
+            closeDrawer()
+        }
+    }
+
 
     useEffect(() => {
         if (lgs.settings.scene.mode.value === SCENE_MODE_2D.value) {
             lgs.scene.morphTo2D(0)
         }
+        // we need to manage some canvas events
         __.canvasEvents.addEventListener(POINTER.LEFT_DOWN, handleDoubleTap)
-        __.canvasEvents.addEventListener(POINTER.LEFT_DOUBLE_CLICK, handleDoubleClick)
+        __.canvasEvents.addEventListener(POINTER.LEFT_DOUBLE_CLICK, closeDrawer)
 
         return () => {
             __.canvasEvents.removeEventListener(POINTER.LEFT_DOWN, handleDoubleTap)
-            __.canvasEvents.addEventListener(POINTER.LEFT_DOUBLE_CLICK, handleDoubleClick)
+            __.canvasEvents.addEventListener(POINTER.LEFT_DOUBLE_CLICK, closeDrawer)
 
         }
 
@@ -195,8 +204,7 @@ export const MainUI = () => {
 
     return (
         <>
-            <div id="lgs-main-ui"
-            >
+            <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
                 {snap.components.welcome.hidden &&
                     <>
                         <div id={'primary-buttons-bar'} className={primaryEntrance}>
