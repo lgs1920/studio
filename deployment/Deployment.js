@@ -65,7 +65,8 @@ export class Deployment {
         this.localDistPath = path.join(`${this.local}/${this.product}`, `./${this.dist}/${this.version}`)
 
         this.password = process.env[`LGS1920_PASSWORD_${this.platform.toUpperCase()}`]
-
+        this.github_token = process.env[`LGS1920_GITHUB_TOKEN`]
+        this.github_user = process.env[`LGS1920_GITHUB_USER`]
         this.sshConfig = {
             host:     this.remoteHost,
             port:     22,
@@ -289,8 +290,9 @@ export class Deployment {
         const tagName = `${this.platform}-${this.version}-${this.date}`
         const message = `Branch ${branch} deployed on ${tagName}!`
 
-        const command = `git tag -a ${tagName} -m "${message}"`
+        let command = `git tag -a ${tagName} -m "${message}"`
         console.log(`    > Git commit tag on branch ${branch}`)
+
 
         exec(command, (error, stdout, stderr) => {
             if (error) {
@@ -300,20 +302,28 @@ export class Deployment {
             console.log(`    > tag : ${tagName}`)
         })
 
-        // console.log(`    > Git push tag on branch ${branch}`)
-        // exec(`git push origin ${tagName}`, (error, stdout, stderr) => {
-        //     if (error) {
-        //         console.error(`Error : ${error.message}`);
-        //         return;
-        //     }
-        //
-        //     if (stderr) {
-        //         console.error(`Error: ${stderr}`);
-        //         return;
-        //     }
-        //
-        //     console.log(`The git push was successful for tag ${tagName}`);
-        // });
+        console.log(`    > Git push tag on branch ${branch}`)
+        exec(`git push origin ${tagName}`, {
+                 env: {
+                     ...process.env,
+                     GIT_ASKPASS:  'echo',
+                     GIT_USER:     '',
+                     GIT_PASSWORD: this.github_token,
+                 },
+             }
+            , (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`Error : ${error.message}`)
+                    return
+                }
+
+                if (stderr) {
+                    console.error(`Error: ${stderr}`)
+                    return
+                }
+
+                console.log(`The git push was successful for tag ${tagName}`)
+            })
 
     }
 
