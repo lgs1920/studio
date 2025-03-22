@@ -26,6 +26,7 @@ export const MapPOI = memo(({point: pointId}) => {
     const store = lgs.mainProxy.components.pois.list
     const snap = useSnapshot(store)
     const point = snap.get(pointId) // Récupère les informations du POI
+    const viewable = useSnapshot(lgs.mainProxy.components.pois.visibleList)
 
     if (!point || !point.latitude || !point.longitude) {
         return null
@@ -38,24 +39,41 @@ export const MapPOI = memo(({point: pointId}) => {
     const getPixelsCoordinates = useCallback(() => {
 
         // Check if the point is front of terrain
-        lgs.mainProxy.components.pois.list.get(point.id).frontOfTerrain = POIUtils.isPointVisible(point.coordinates)
+                                                 store.get(point.id).frontOfTerrain = POIUtils.isPointVisible(point.coordinates)
         // If so, we have some settings
-        if (lgs.mainProxy.components.pois.list.get(point.id).frontOfTerrain) {
-            // translate coordinates to pixels
-            const coordinates = SceneUtils.getPixelsCoordinates(point.coordinates)
-            if (coordinates) {
-                setPixels((prev) =>
-                              prev.x !== coordinates.x || prev.y !== coordinates.y ? coordinates : prev
-                )
-            }
-            // Set visibility, scale, flag mode
-            Object.assign(
-                lgs.mainProxy.components.pois.list.get(point.id),
-                POIUtils.adaptScaleToDistance(point.coordinates),
-            )
-        }
+                                                 if (store.get(point.id).frontOfTerrain) {
+                                                     // translate coordinates to pixels
+                                                     const coordinates = SceneUtils.getPixelsCoordinates(point.coordinates)
+                                                     if (coordinates) {
+                                                         setPixels((prev) =>
+                                                                       prev.x !== coordinates.x || prev.y !== coordinates.y ? coordinates : prev,
+                                                         )
+                                                     }
 
-    }, [point])
+                                                     // Set visibility, scale, flag mode, camera distance
+                                                     Object.assign(
+                                                         store.get(point.id),
+                                                         POIUtils.adaptScaleToDistance(point.coordinates),
+                                                     )
+                                                     const poi = store.get(point.id)
+
+                                                     const min = Math.min(...Array.from(store.values()).map(poi => poi.cameraDistance))
+                                                     const max = Math.max(...Array.from(store.values()).map(poi => poi.cameraDistance))
+                                                     let zIndex = 1
+                                                     if (min !== max) { // several POIs
+                                                         zIndex = Math.round((max - poi.cameraDistance) / (max - min) * lgs.mainProxy.components.pois.visibleList.size) + 1
+                                                     }
+                                                     if (min && max && poi.withinScreen && poi.frontOfTerrain && poi.visible && !poi.tooFar) {
+                                                         lgs.mainProxy.components.pois.visibleList.set(poi.id, zIndex)
+                                                     }
+                                                     else {
+                                                         lgs.mainProxy.components.pois.visibleList.delete(poi.id)
+                                                     }
+                                                 }
+                                             }
+
+        , [point],
+    )
 
     useEffect(() => {
         lgs.scene.preRender.addEventListener(getPixelsCoordinates)
@@ -84,7 +102,7 @@ export const MapPOI = memo(({point: pointId}) => {
 
     return (
         <>
-            {pixels && (
+            {pixels &&
                 <div
                     className={classNames(
                         'poi-on-map-wrapper',
@@ -92,7 +110,7 @@ export const MapPOI = memo(({point: pointId}) => {
                         (point?.showFlag || !point?.expanded) && !point?.over ? 'poi-shrinked' : '',
                     )}
                     ref={poi}
-                    id={`${point.id}`}
+                    id={point.id}
                     style={{
                         bottom:                       window.innerHeight - pixels.y,
                         left:                         pixels.x,
@@ -101,6 +119,7 @@ export const MapPOI = memo(({point: pointId}) => {
                         '--lgs-poi-background-color': point.bgColor ?? lgs.colors.poiDefaultBackground,
                         '--lgs-poi-border-color':     point.color ?? lgs.colors.poiDefault,
                         '--lgs-poi-color':            point.color ?? lgs.colors.poiDefault,
+                        zIndex: viewable.get(point.id),
                     }}
                     onPointerMove={__.ui.sceneManager.propagateEventToCanvas}
                     onWheel={hideMenu}
@@ -109,7 +128,7 @@ export const MapPOI = memo(({point: pointId}) => {
                         <MapPOIContent id={point.id} hide={hideMenu}/>
                     }
                 </div>
-            )}
+            }
         </>
     )
 })

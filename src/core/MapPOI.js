@@ -49,6 +49,11 @@ export class MapPOI extends MapElement {
     description
 
     /**
+     * @type {number}
+     */
+    cameraDistance
+
+    /**
      * @type {boolean}
      */
     expanded = true

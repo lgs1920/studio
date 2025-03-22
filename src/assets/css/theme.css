@@ -56,7 +56,7 @@
     --lgs-font-size-l: 1.5rem;
     --lgs-font-size-xl: 2rem;
 
-    --lgs-ui-layer-zindex: 200;
+    --lgs-ui-layer-zindex: 2000;
     --lgs-drop-zone-zindex: 10;
 
     --lgs-button-border-color: var(--lgs-dark-ui-secondary-color);
@@ -278,7 +278,6 @@ sl-icon.is-duotone svg[part="svg"] {
     position: relative;
     display: flex;
     gap: var(--lgs-gutter) !important;
-    /*justify-content: flex-end;*/
 }
 
 .call-for-actions [outline] {
@@ -288,7 +287,7 @@ sl-icon.is-duotone svg[part="svg"] {
 }
 
 .call-for-actions [outline]::part(base) {
-    color: var(--lgs-text-on-color);
+    color: rgba(255, 255, 255, 1);;
 }
 
 /*******************************************************************************

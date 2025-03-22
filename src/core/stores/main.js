@@ -78,6 +78,7 @@ export const main = {
             },
             bulkList:     new proxyMap(),
             filteredList: new proxyMap(),
+            visibleList: new proxyMap(),
         },
         profile:       {
             visible: false,

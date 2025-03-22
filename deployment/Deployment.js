@@ -290,7 +290,7 @@ export class Deployment {
         const message = `Branch ${branch} deployed on ${tagName}!`
 
         const command = `git tag -a ${tagName} -m "${message}"`
-        console.log(`    > Commit tag on branch ${branch}`)
+        console.log(`    > Git commit tag on branch ${branch}`)
 
         exec(command, (error, stdout, stderr) => {
             if (error) {
@@ -299,6 +299,22 @@ export class Deployment {
             }
             console.log(`    > tag : ${tagName}`)
         })
+
+        // console.log(`    > Git push tag on branch ${branch}`)
+        // exec(`git push origin ${tagName}`, (error, stdout, stderr) => {
+        //     if (error) {
+        //         console.error(`Error : ${error.message}`);
+        //         return;
+        //     }
+        //
+        //     if (stderr) {
+        //         console.error(`Error: ${stderr}`);
+        //         return;
+        //     }
+        //
+        //     console.log(`The git push was successful for tag ${tagName}`);
+        // });
+
     }
 
     /**

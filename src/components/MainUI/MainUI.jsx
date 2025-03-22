@@ -10,10 +10,12 @@ import { Profile }                          from '@Components/Profile/Profile'
 import { ProfileButton }                    from '@Components/Profile/ProfileButton'
 import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
 import {
-    BOTTOM, DESKTOP_MIN, END, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
-    MENU_START_START, MOBILE_MAX, SCENE_MODE_2D, SECOND, START, TOP,
-}                                           from '@Core/constants'
-import { useEffect }                        from 'react'
+    BOTTOM, DESKTOP_MIN, DOUBLE_CLICK_DELAY, DOUBLE_TAP_DELAY, END, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END,
+    MENU_END_START,
+    MENU_START_END,
+    MENU_START_START, MOBILE_MAX, POINTER, POIS_EDITOR_DRAWER, SCENE_MODE_2D, SECOND, START, TOP,
+}                                      from '@Core/constants'
+import { useEffect, useRef, useState } from 'react'
 
 import './style.css'
 import { useMediaQuery }                    from 'react-responsive'
@@ -40,7 +42,7 @@ export const MainUI = () => {
     const snap = useSnapshot(lgs.mainProxy)
     const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
     const settings = useSnapshot(lgs.settings.ui.menu)
-
+    const clickTimeout = useRef(null)
     let resizeTimer
     const windowResized = () => {
         clearTimeout(resizeTimer)
@@ -56,14 +58,51 @@ export const MainUI = () => {
         }, 0.3 * SECOND)
     }
 
+    /**
+     * Trap Double click
+     *
+     * @param event
+     */
+    const handleDoubleTap = () => {
+        if (!clickTimeout.current) {
+            const timeout = setTimeout(() => {
+                clickTimeout.current = null
+            }, DOUBLE_CLICK_DELAY)
+            clickTimeout.current = timeout
+        }
+        else {
+            // We're in the delay, it is a double click or tap
+            clearTimeout(clickTimeout.current)
+            clickTimeout.current = null
+            closeDrawer()
+        }
+    }
+
+    const closeDrawer = () => {
+        __.ui.drawerManager.close()
+    }
+
+    const handleKeyDown = (event) => {
+        console.log(event.key)
+        if (event.key === 'Escape') {
+            closeDrawer()
+        }
+    }
+
+
     useEffect(() => {
         if (lgs.settings.scene.mode.value === SCENE_MODE_2D.value) {
             lgs.scene.morphTo2D(0)
         }
+        // we need to manage some canvas events
+        __.canvasEvents.addEventListener(POINTER.LEFT_DOWN, handleDoubleTap)
+        __.canvasEvents.addEventListener(POINTER.LEFT_DOUBLE_CLICK, closeDrawer)
 
-        // Manage canvas related events
-        //CanvasEvents.attach()
-        //CanvasEvents.addListeners()
+        return () => {
+            __.canvasEvents.removeEventListener(POINTER.LEFT_DOWN, handleDoubleTap)
+            __.canvasEvents.addEventListener(POINTER.LEFT_DOUBLE_CLICK, closeDrawer)
+
+        }
 
     }, [])
 
@@ -165,7 +204,7 @@ export const MainUI = () => {
 
     return (
         <>
-            <div id="lgs-main-ui">
+            <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
                 {snap.components.welcome.hidden &&
                     <>
                         <div id={'primary-buttons-bar'} className={primaryEntrance}>
@@ -200,7 +239,7 @@ export const MainUI = () => {
                     {
                         lgs.platform !== 'production' &&
                         <div id="used-platform"
-                             className={'lgs-card on-map'}> [{lgs.platform}-{lgs.versions.studio}]
+                             className={'lgs-card on-map'}> {lgs.platform}-{lgs.versions.studio}
                         </div>
                     }
                 </div>

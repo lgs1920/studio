@@ -44,7 +44,7 @@
     "@turf/point-to-line-distance": "^7.2.0",
     "@turf/transform-rotate": "^7.2.0",
     "argparse": "^2.0.1",
-    "axios": "^1.8.3",
+    "axios": "^1.8.4",
     "babel-plugin-module-resolver": "^5.0.2",
     "canvg": "^4.0.3",
     "cesium": "^1.127.0",
@@ -91,14 +91,14 @@
     "valtio": "^2.1.4",
     "vite-plugin-cesium": "^1.2.23",
     "yaml": "^2.7.0",
-    "zip-a-folder": "^3.1.8"
+    "zip-a-folder": "^3.1.9"
   },
   "devDependencies": {
     "@types/bun": "^1.2.5",
-    "@types/react": "^19.0.11",
+    "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
-    "@typescript-eslint/eslint-plugin": "^8.26.1",
-    "@typescript-eslint/parser": "^8.26.1",
+    "@typescript-eslint/eslint-plugin": "^8.27.0",
+    "@typescript-eslint/parser": "^8.27.0",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.22.0",
     "eslint-plugin-react-hooks": "^5.2.0",

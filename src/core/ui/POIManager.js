@@ -33,15 +33,7 @@ export class POIManager {
             return POIManager.instance
         }
 
-        this.observer = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry) {
-                    if (this.list.get(entry.target.id)) {
-                        Object.assign(this.list.get(entry.target.id), {withinScreen: entry.isIntersecting})
-                    }
-                }
-            })
-        }, {ratio: 1, rootMargin: '-32px'})
+        this.observer = new IntersectionObserver(this.manageInScreen, {threshold: 0.5})
 
         ;(async () => {
             this.readAllFromDB()
@@ -53,6 +45,24 @@ export class POIManager {
         return lgs.mainProxy.components.pois.list
     }
 
+    /**
+     * Detects all viewable POIS on screen.
+     *
+     * @param entries
+     */
+    manageInScreen = (entries) => {
+        entries.forEach(entry => {
+            if (entry) {
+                // set thePOI as visible on screen
+                const poi = this.list.get(entry.target.id)
+                if (poi) {
+                    Object.assign(this.list.get(entry.target.id), {
+                        withinScreen: entry.isIntersecting,
+                    })
+                }
+            }
+        })
+    }
 
     /**
      * Adds a new POI to the map
