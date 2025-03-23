@@ -20,6 +20,7 @@
 import { exec, execSync } from 'child_process'
 import path               from 'path'
 import { Client as SCP }  from 'scp2'
+import { simpleGit }      from 'simple-git'
 import { Client as SSH2 } from 'ssh2'
 import { zip }            from 'zip-a-folder'
 
@@ -65,8 +66,16 @@ export class Deployment {
         this.localDistPath = path.join(`${this.local}/${this.product}`, `./${this.dist}/${this.version}`)
 
         this.password = process.env[`LGS1920_PASSWORD_${this.platform.toUpperCase()}`]
+
+
         this.github_token = process.env[`LGS1920_GITHUB_TOKEN`]
         this.github_user = process.env[`LGS1920_GITHUB_USER`]
+        this.git = simpleGit({
+                                 config: [
+                                     `http.extraHeader=Authorization: ${this.github_token}`,
+                                 ],
+                             })
+
         this.sshConfig = {
             host:     this.remoteHost,
             port:     22,
@@ -269,6 +278,20 @@ export class Deployment {
         })
     }
 
+    remote = async (target = 'origin') => {
+        try {
+            const remotes = await this.git.getRemotes(true)
+            return remotes.find(remote => remote.name === target)
+
+        }
+        catch (error) {
+            console.error('Error, can not find remotes:', error)
+            process.exit(1)
+        }
+    }
+
+
+
     /**
      * Create a git tag
      *
@@ -276,54 +299,22 @@ export class Deployment {
      * message 'Deployed on <platform>'
      *
      */
-    gitTag = () => {
+    gitTag = async () => {
 
         // get git branch
-        let branch = ''
-        try {
-            branch = execSync('git rev-parse --abbrev-ref HEAD', {encoding: 'utf-8'}).trim()
-        }
-        catch (error) {
-            branch = 'unknown'
-        }
+        const branch = (await this.git.status()).current
 
-        const tagName = `${this.platform}-${this.version}-${this.date}`
+
+        const tagName = `${this.platform}-${this.version}-${branch}-${this.date}`
         const message = `Branch ${branch} deployed on ${tagName}!`
 
-        let command = `git tag -a ${tagName} -m "${message}"`
-        console.log(`    > Git commit tag on branch ${branch}`)
+        console.log(`    > git commit tag : ${tagName}`)
+        await this.git.commit(message)
+        await this.git.addTag(tagName)
 
-
-        exec(command, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Error : ${error.message}`)
-                return
-            }
-            console.log(`    > tag : ${tagName}`)
-        })
-
-        console.log(`    > Git push tag on branch ${branch}`)
-        exec(`git push origin ${tagName}`, {
-                 env: {
-                     ...process.env,
-                     GIT_ASKPASS:  'echo',
-                     GIT_USER:     '',
-                     GIT_PASSWORD: this.github_token,
-                 },
-             }
-            , (error, stdout, stderr) => {
-                if (error) {
-                    console.error(`Error : ${error.message}`)
-                    return
-                }
-
-                if (stderr) {
-                    console.error(`Error: ${stderr}`)
-                    return
-                }
-
-                console.log(`The git push was successful for tag ${tagName}`)
-            })
+        // console.log(`    > Git push tag on branch ${branch}`) TODO
+        // await this.git.push()
+        // await this.git.pushTags()
 
     }
 
@@ -335,7 +326,7 @@ export class Deployment {
     preDeployment = async () => {
         console.log('--- Pre deployment')
 
-        this.gitTag()
+        await this.gitTag()
 
         console.log('    > Preparing files')
         switch (this.product) {
