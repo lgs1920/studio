@@ -38,10 +38,7 @@ export function Viewer() {
             geocoder:             false,
             infoBox:              false,
             sceneModePicker:      false,
-            showRenderLoopErrors: false,
-            shouldAnimate:           true,
-            requestRenderMode:       true,
-            maximumRenderTimeChange: Infinity,
+            showRenderLoopErrors: true,
             mapProjection:        new WebMercatorProjection(), // TODO is it a problem in 3D ?
             //*************************************
             // Avoid consuming Cesium Ion Sessions
@@ -57,6 +54,11 @@ export function Viewer() {
     // Add some globe parameters
     lgs.scene.globe.enableLighting = false
     lgs.scene.globe.depthTestAgainstTerrain = true
+    lgs.scene.requestRenderMode = true
+    lgs.scene.maximumRenderTimeChange = 10
+    //lgs.scene.debugShowFramesPerSecond=true
+    lgs.scene.shadows = true
+
 
     //Layers
     const layerCollection = new ImageryLayerCollection()
