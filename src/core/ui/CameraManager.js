@@ -365,9 +365,6 @@ export class CameraManager {
             this.unlock()
             __.ui.sceneManager.stopRotate
             cancelAnimationFrame(this.move.animation)
-
-            lgs.viewer.clock.canAnimate = false
-            lgs.viewer.clock.shouldAnimate = false
             this.enableMapDragging()
 
         }
