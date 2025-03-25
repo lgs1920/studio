@@ -111,18 +111,15 @@ export class Utils {
         const journey = Journey.deserialize({object: Journey.unproxify(lgs.theJourneyEditorProxy.journey)})
         const track = Track.deserialize({object: Track.unproxify(lgs.theJourneyEditorProxy.track)})
         //TODO compute only if it is necessary
-        await track.extractMetrics()
-
-
-        if (action === DRAW_THEN_SAVE || action === JUST_SAVE) {
-            lgs.saveJourneyInContext(journey)
-            // saveToDB toDB
-            await journey.saveToDB()
-        }
-
         if (action === DRAW_WITHOUT_SAVE || action === DRAW_THEN_SAVE) {
             await track.draw({action: REFRESH_DRAWING, mode: NO_FOCUS})
         }
+        if (action === DRAW_THEN_SAVE || action === JUST_SAVE) {
+            await journey.saveToDB()
+        }
+
+        await track.extractMetrics()
+        lgs.saveJourneyInContext(journey)
 
     }
 
@@ -148,6 +145,7 @@ export class Utils {
         } else {
             journey.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})
         }
+
         return journey
     }
 
