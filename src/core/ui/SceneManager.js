@@ -1,11 +1,13 @@
 import {
-    NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
+    CURRENT_JOURNEY, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
 }                                  from '@Core/constants'
 import { SceneUtils }              from '@Utils/cesium/SceneUtils'
 import { UIToast }                 from '@Utils/UIToast'
 import { LayersAndTerrainManager } from './LayerAndTerrainManager'
 
 export class SceneManager {
+
+    #type = ''
     constructor() {
         // Singleton
         if (SceneManager.instance) {
@@ -123,11 +125,12 @@ export class SceneManager {
     }
 
     focus = (point, options) => {
+        this.#type = options.targetType
         this.proxy.focus(point, options)
     }
 
     focusPreProcessing = (point, options) => {
-        // TODO calculer ici les parametres à pendre en fonctio nde l'action en cour
+        // TODO calculer ici les parametres à pendre en fonctio =n de l'action en cour
     }
 
     focusPostProcessing = (point, options) => {
@@ -135,6 +138,7 @@ export class SceneManager {
     }
 
     focusOnJourney = (options) => {
+        this.#type = CURRENT_JOURNEY
         this.proxy.focusOnJourney({
                                       ...options,
                                       initializer: this.focusPreProcessing,

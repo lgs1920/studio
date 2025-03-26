@@ -14,11 +14,11 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
-import { POI_STARTER_TYPE }                                 from '@Core/constants'
+import { FontAwesomeIcon }               from '@Components/FontAwesomeIcon'
+import { CURRENT_POI, POI_STARTER_TYPE } from '@Core/constants'
 import {
     faArrowRotateRight, faArrowsFromLine, faCrosshairsSimple, faFlag, faLocationDot, faPanorama, faTrashCan, faXmark,
-}                                                           from '@fortawesome/pro-regular-svg-icons'
+}                                        from '@fortawesome/pro-regular-svg-icons'
 import { faEye, faMask }                                    from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                            from '@Utils/FA2SL'
@@ -63,6 +63,7 @@ export const MapPOIEditMenu = ({point}) => {
             await __.ui.cameraManager.stopRotate()
         }
         __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
+            targetType: CURRENT_POI,
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
@@ -91,6 +92,7 @@ export const MapPOIEditMenu = ({point}) => {
             pois.current = await __.ui.poiManager.stopAnimation(point.id)
         }
         __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
+            targetType: CURRENT_POI,
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,

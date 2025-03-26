@@ -14,8 +14,9 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { SelectLocation }                                          from '@Components/MainUI/geocoding/SelectLocation'
-import { faBullseyePointer, faSearch }                             from '@fortawesome/pro-regular-svg-icons'
+import { SelectLocation }                 from '@Components/MainUI/geocoding/SelectLocation'
+import { CURRENT_POI, POI_STANDARD_TYPE } from '@Core/constants'
+import { faBullseyePointer, faSearch }    from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlInput, SlPopup, SlSwitch, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import * as turf                                                   from '@turf/helpers'
 import { FA2SL }                                                   from '@Utils/FA2SL'
@@ -117,6 +118,7 @@ export const GeocodingUI = () => {
         }
 
         __.ui.sceneManager.focus(point, {
+            targetType: CURRENT_POI,
             lookAt:   true,
             infinite: false,
             rotate: lgs.settings.ui.poi.rotate,

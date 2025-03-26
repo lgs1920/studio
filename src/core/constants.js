@@ -202,6 +202,7 @@ export const ACCESS_ICONS = {
 }
 
 export const ALL = 'all'
+export const NONE = 'none'
 export const LOCKED = 'locked'
 export const UNLOCKED = 'unlocked'
 
