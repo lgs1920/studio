@@ -1,12 +1,15 @@
-import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE }            from '@Core/constants'
+import { DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, SECOND } from '@Core/constants'
 import { SlColorPicker, SlDivider, SlRange, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { TrackUtils }                                   from '@Utils/cesium/TrackUtils'
-import { useSnapshot }                                  from 'valtio'
+import { TrackUtils }                                from '@Utils/cesium/TrackUtils'
+import { useEffect, useRef, useState }               from 'react'
+import { useSnapshot }                               from 'valtio'
 import { Utils }                                        from '../Utils'
 
 export const TrackStyleSettings = function TrackSettings() {
 
     const editorStore = lgs.theJourneyEditorProxy
+    const [update, setUpdate] = useState(false)
+    const timeoutRef = useRef(null)
 
     // If we're editing a single track journey, we need
     // to know the track
@@ -40,6 +43,45 @@ export const TrackStyleSettings = function TrackSettings() {
         await Utils.updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
     })
 
+    const requestRender = () => {
+        if (update) {
+            lgs.scene.requestRender()
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current) // Annuler le timeout en cours
+            }
+
+            timeoutRef.current = setTimeout(() => {
+                lgs.scene.postUpdate.removeEventListener(requestRender)
+                setUpdate(true)
+                timeoutRef.current = null
+            }, 0.5 * SECOND)
+        }
+    }
+
+    useEffect(() => {
+        setUpdate(true)
+        timeoutRef.current = null
+
+        const handleCameraMove = () => {
+            lgs.scene.postUpdate.removeEventListener(requestRender) // Retirer PostUpdate
+            lgs.scene.camera.changed.removeEventListener(handleCameraMove) // Nettoyage
+        }
+
+        // Ajouter les écouteurs
+        lgs.scene.postUpdate.addEventListener(requestRender)
+        lgs.scene.camera.changed.addEventListener(handleCameraMove)
+
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current)
+                timeoutRef.current = null
+            }
+
+            lgs.scene.postUpdate.removeEventListener(requestRender)
+            lgs.scene.camera.changed.removeEventListener(handleCameraMove)
+        }
+    }, [editorSnapshot.track.color, editorSnapshot.track.thickness])
+
     return (
         <div id="track-line-settings">
             <SlTooltip hoist content="Color">
@@ -49,7 +91,7 @@ export const TrackStyleSettings = function TrackSettings() {
                                value={editorSnapshot.track.color}
                                swatches={lgs.settings.getSwatches.list.join(';')}
                                onSlChange={setColor}
-                               onSlInput={setColor}
+                    // onSlInput={setColor}
                                disabled={!editorSnapshot.track.visible}
                                noFormatToggle
                 />
@@ -61,6 +103,7 @@ export const TrackStyleSettings = function TrackSettings() {
                          onSlChange={setThickness}
                          disabled={!editorSnapshot.track.visible}
                          tooltip={'bottom'}
+                         hoist
                 />
             </SlTooltip>
 

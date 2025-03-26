@@ -86,7 +86,6 @@ export class TrackUtils {
             lgs.viewer.dataSources.add(new CustomDataSource(journey.slug)))
 
         await Promise.all(dataSources)
-
     }
 
     /**
@@ -105,19 +104,13 @@ export class TrackUtils {
         switch (action) {
             case DRAWING_FROM_DB:
             case ADD_JOURNEY:
-                source.load(track.content,
+                await source.load(track.content,
                             {
                                 clampToGround: true,
                                 name:          track.title,
                             },
-                ).then(datasource => {
-                    const material = new PolylineOutlineMaterialProperty({
-                                                                             color: CColor.fromCssColorString(track.color),
-                                                                             // outlineColor: false,
-                                                                             outlineWidth: 0,
-                                                                         },
-                    )
-                })
+                )
+            // No break, show must go on
             case REFRESH_DRAWING:
             case DRAWING_FROM_UI:
                 const material = new PolylineOutlineMaterialProperty({
@@ -133,12 +126,9 @@ export class TrackUtils {
                     }
                 })
                 break
-
-
         }
         source.show = forcedToHide ? false : track.visible
         lgs.viewer.scene.requestRender()
-
     }
 
     /**
