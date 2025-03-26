@@ -1,17 +1,14 @@
-import { JourneyLoaderButton }                  from '@Components/FileLoader/JourneyLoaderButton'
-import { FocusButton }                          from '@Components/MainUI/FocusButton'
-import { JourneyVisibilityButton }              from '@Components/MainUI/JourneyVisibilityButton'
-import { REMOVE_JOURNEY_IN_TOOLBAR, SECOND }    from '@Core/constants'
-import { JourneySelector }                      from '@Editor/journey/JourneySelector'
-import { RemoveJourney }                        from '@Editor/journey/RemoveJourney'
+import { JourneyLoaderButton }                                      from '@Components/FileLoader/JourneyLoaderButton'
+import { JOURNEY_EDITOR_DRAWER, REMOVE_JOURNEY_IN_TOOLBAR, SECOND } from '@Core/constants'
+import { JourneySelector }                                          from '@Editor/journey/JourneySelector'
 import { TracksEditorButton }                   from '@Editor/TracksEditorButton'
 import { Utils }                                from '@Editor/Utils'
 import { faRoute }                              from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlIcon, SlPopup, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                from '@Utils/FA2SL'
-import classNames                               from 'classnames'
-import { useEffect, useRef }                    from 'react'
-import { useSnapshot }                          from 'valtio'
+import classNames                                                   from 'classnames'
+import { useEffect, useRef, useState }                              from 'react'
+import { useSnapshot }                                              from 'valtio'
 
 export const JourneyToolbar = (props) => {
 
@@ -25,7 +22,7 @@ export const JourneyToolbar = (props) => {
     const distance = __.tools.rem2px(__.ui.css.getCSSVariable('lgs-gutter-s'))
     const tooltip = props?.tooltip ?? 'top-left'
     const editorStore = useSnapshot(lgs.theJourneyEditorProxy)
-
+    const journeyLoaderStore = lgs.mainProxy.components.mainUI.journeyLoader
 
     let timer
 
@@ -35,16 +32,33 @@ export const JourneyToolbar = (props) => {
         clearTimeout(timer)
     }
     const showToolbar = () => {
-        mainUI.journeyMenu.active = true
-        clearTimeout(timer)
+        if (!__.ui.drawerManager.isCurrent(JOURNEY_EDITOR_DRAWER)) {
+            mainUI.journeyMenu.active = true
+            clearTimeout(timer)
+        }
     }
     const delayHideToolbar = () => {
         timer = setTimeout(hideToolbar, 1 * SECOND)
     }
 
+    const delayShowToolbar = () => {
+        timer = setTimeout(showToolbar, 1 * SECOND)
+    }
+
     const newJourneySelection = async (event) => {
         clearTimeout(timer)
         await Utils.updateJourneyEditor(event.target.value, {})
+    }
+
+    const openEditorOrLoader = () => {
+        if (lgs.theJourney === null) {
+            journeyLoaderStore.visible = true
+        }
+        else {
+            __.ui.drawerManager.toggle(JOURNEY_EDITOR_DRAWER)
+            hideToolbar()
+        }
+
     }
 
     useEffect(() => {
@@ -71,8 +85,11 @@ export const JourneyToolbar = (props) => {
             <div className="journey-toolbar-trigger" ref={journeyTrigger}>
                 <SlTooltip hoist placement={settings.toolBar.fromStart ? 'right' : 'left'}
                            content={snap.theJourney ? 'Journey actions' : 'Add a journey'}>
-                    <SlButton size={'small'} className={'square-button'} onClick={addAJourney}
-                              disabled={snap.theJourney !== null && snapUI.rotate.running}>
+                    <SlButton size={'small'} className={'square-button'}
+                              onMouseEnter={delayShowToolbar}
+                              onMouseLeave={delayHideToolbar}
+                              onClick={openEditorOrLoader}
+                    >
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRoute)}/>
                     </SlButton>
                 </SlTooltip>
@@ -87,12 +104,8 @@ export const JourneyToolbar = (props) => {
                     <div className={
                         classNames('journey-toolbar-content',
                                    settings.toolBar.fromStart ? 'lgs-slide-in-from-left' : 'lgs-slide-in-from-right')}>
-                        {fileLoader && <JourneyLoaderButton tooltip={tooltip}/>}
                         <JourneySelector onChange={newJourneySelection} single="true" style="card"/>
-                        <JourneyVisibilityButton/>
-                        {editorStore.journey.visible && <FocusButton tooltip={tooltip}/>}
-                        {editor && <TracksEditorButton tooltip={tooltip}/>}
-                        <RemoveJourney style={'button'} name={REMOVE_JOURNEY_IN_TOOLBAR}/>
+                        {fileLoader && <JourneyLoaderButton tooltip={tooltip}/>}
                     </div>
 
                 </SlPopup>
