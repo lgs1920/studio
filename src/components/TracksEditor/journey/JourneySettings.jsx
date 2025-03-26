@@ -287,7 +287,7 @@ export const JourneySettings = function JourneySettings() {
                     theJourney.getPOIsFromGeoJson()
                     await theJourney.extractMetrics()
                     theJourney.addToContext()
-                    theJourney.saveToDB()
+                    await theJourney.saveToDB()
 
                     // Then we redraw the journey
                     await Utils.updateJourney(SIMULATE_ALTITUDE)
