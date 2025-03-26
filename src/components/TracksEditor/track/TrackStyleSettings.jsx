@@ -9,6 +9,8 @@ export const TrackStyleSettings = function TrackSettings() {
 
     const editorStore = lgs.theJourneyEditorProxy
     const [update, setUpdate] = useState(false)
+    const [updateDone, setUpdateDone] = useState(false)
+
     const timeoutRef = useRef(null)
 
     // If we're editing a single track journey, we need
@@ -40,34 +42,42 @@ export const TrackStyleSettings = function TrackSettings() {
      */
     const setThickness = (async event => {
         editorStore.track.thickness = event.target.value
-        await Utils.updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
+        if (!timeoutRef.current) {
+            await Utils.updateTrack(DRAW_THEN_SAVE)
+        }
     })
 
     const requestRender = () => {
-        if (update) {
-            lgs.scene.requestRender()
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current) // Annuler le timeout en cours
-            }
-
+        setUpdate(false)
+        lgs.scene.requestRender()
+        if (!timeoutRef.current) {
             timeoutRef.current = setTimeout(() => {
                 lgs.scene.postUpdate.removeEventListener(requestRender)
-                setUpdate(true)
                 timeoutRef.current = null
-            }, 0.5 * SECOND)
+            }, 0.2 * SECOND)
         }
     }
 
+    const postRenderHandler = () => {
+        setUpdate(false)
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current)
+            timeoutRef.current = null
+        }
+    }
+
+    const handleCameraMove = () => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current)
+            timeoutRef.current = null
+        }
+        lgs.scene.postUpdate.removeEventListener(requestRender) // Retirer PostUpdate
+        lgs.scene.camera.changed.removeEventListener(handleCameraMove) // Nettoyage
+    }
     useEffect(() => {
         setUpdate(true)
         timeoutRef.current = null
 
-        const handleCameraMove = () => {
-            lgs.scene.postUpdate.removeEventListener(requestRender) // Retirer PostUpdate
-            lgs.scene.camera.changed.removeEventListener(handleCameraMove) // Nettoyage
-        }
-
-        // Ajouter les écouteurs
         lgs.scene.postUpdate.addEventListener(requestRender)
         lgs.scene.camera.changed.addEventListener(handleCameraMove)
 
@@ -76,9 +86,9 @@ export const TrackStyleSettings = function TrackSettings() {
                 clearTimeout(timeoutRef.current)
                 timeoutRef.current = null
             }
-
             lgs.scene.postUpdate.removeEventListener(requestRender)
             lgs.scene.camera.changed.removeEventListener(handleCameraMove)
+            lgs.scene.postRender.removeEventListener(postRenderHandler)
         }
     }, [editorSnapshot.track.color, editorSnapshot.track.thickness])
 
@@ -100,7 +110,7 @@ export const TrackStyleSettings = function TrackSettings() {
                 <SlRange min={1} max={10} step={1}
                          value={editorSnapshot.track.thickness}
                          onSlInput={setThickness}
-                         onSlChange={setThickness}
+                    //  onSlChange={setThickness}
                          disabled={!editorSnapshot.track.visible}
                          tooltip={'bottom'}
                          hoist
