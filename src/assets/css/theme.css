@@ -250,6 +250,22 @@ sl-icon-button[size="small"], sl-icon[size="small"] {
     border-color: var(--lgs-text-on-color);
 }
 
+.fa-icon-button {
+    font-size: var(--sl-font-size-large);
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+
+    padding: var(--sl-spacing-x-small);
+    cursor: pointer;
+    transition: var(--sl-transition-x-fast) color;
+    color: var(--sl-color-neutral-600);
+    border: none;
+    border-radius: var(--sl-border-radius-medium);
+    background: none;
+    -webkit-appearance: none;
+}
+
 /*******************************************************************************
  * Icons
  ******************************************************************************/
