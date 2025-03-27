@@ -2,6 +2,7 @@ import {
     NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
 }                                  from '@Core/constants'
 import { SceneUtils }              from '@Utils/cesium/SceneUtils'
+import { Mobility }                from '@Utils/Mobility'
 import { UIToast }                 from '@Utils/UIToast'
 import { LayersAndTerrainManager } from './LayerAndTerrainManager'
 
@@ -126,12 +127,18 @@ export class SceneManager {
 
     get startRotate() {
         lgs.mainProxy.components.mainUI.rotate.running = true
-        lgs.mainProxy.components.mainUI.rotate.target = this.#focusTarget
         return lgs.mainProxy.components.mainUI.rotate.running
     }
 
+    //
     focusPreProcessing = (point, options) => {
-        // TODO calculer ici les parametres à pendre en fonctio =n de l'action en cour
+        const from = lgs.mainProxy.components.mainUI.rotate.target
+        lgs.mainProxy.components.mainUI.rotate.target = point
+        const distance = Mobility.distance(from, point)
+        return {
+            distance: distance,
+            height:   Math.max(from.height, point.height),
+        }
     }
 
     focusPostProcessing = (point, options) => {
@@ -140,7 +147,6 @@ export class SceneManager {
 
     get stopRotate() {
         lgs.mainProxy.components.mainUI.rotate.running = false
-        lgs.mainProxy.components.mainUI.rotate.target = false
         return lgs.mainProxy.components.mainUI.rotate.running
     }
 
@@ -148,11 +154,16 @@ export class SceneManager {
 
     focus = (point, options) => {
         this.#focusTarget = options.target ?? null
-        this.proxy.focus(point, options)
+
+        this.proxy.focus(point, {
+            ...options,
+            initializer: this.focusPreProcessing,
+            callback:    this.focusPostProcessing,
+        })
     }
 
     focusOnJourney = async (options) => {
-        this.#focusTarget = options.target
+        this.#focusTarget = options.target ?? null
         await this.proxy.focusOnJourney({
                                             ...options,
                                             initializer: this.focusPreProcessing,
