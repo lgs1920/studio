@@ -22,7 +22,7 @@ import {
     ToggleStateIcon,
 }                   from '@Components/ToggleStateIcon'
 import {
-    CURRENT_JOURNEY, ORIGIN_STORE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE, UPDATE_JOURNEY_SILENTLY,
+    ORIGIN_STORE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE, UPDATE_JOURNEY_SILENTLY,
 }                   from '@Core/constants'
 import {
     ElevationServer,
@@ -67,7 +67,7 @@ import {
 import classNames   from 'classnames'
 import parse        from 'html-react-parser'
 import React, {
-    useEffect, useState,
+    useEffect, useRef, useState,
 }                   from 'react'
 import {
     sprintf,
@@ -91,7 +91,9 @@ export const JourneySettings = function JourneySettings() {
     const editorSnapshot = useSnapshot(editorStore)
     const former = editorStore.journey.elevationServer
     const [isRotating, setIsRotating] = useState(false)
-    const rotate = useSnapshot(lgs.mainProxy.components.mainUI.rotate)
+    const autoRotate = useSnapshot(lgs.mainProxy.components.mainUI.rotate)
+    const manualRotate = useRef(null)
+    const [launchRotation, setLaunchRotation] = useState(false)
 
     /**
      * Change journey description
@@ -353,18 +355,21 @@ export const JourneySettings = function JourneySettings() {
     /**
      * Focus on Journey
      */
-    const focusOnJourney = async () => {
+    const focusOnJourney = async (event) => {
+        setLaunchRotation(event.target === manualRotate.current)
+        if (!launchRotation) {
+            setLaunchRotation(autoRotate)
+        }
 
         if (isRotating) {
             await __.ui.cameraManager.stopRotate()
             return
         }
-
         await setJourneyVisibility(true)
         lgs.theJourney.focus({
                                  resetCamera: true,
                                  action:      REFRESH_DRAWING,
-                                 rotate:      lgs.settings.ui.camera.start.rotate.journey,
+                                 rotate: launchRotation || lgs.settings.ui.camera.start.rotate.journey,
                              })
     }
 
@@ -396,7 +401,9 @@ export const JourneySettings = function JourneySettings() {
 
     useEffect(() => {
         setIsRotating(__.ui.cameraManager.isRotating(lgs.theJourney))
-    }, [rotate])
+        console.log(isRotating)
+
+    }, [autoRotate, launchRotation])
 
 
     return (<>
@@ -487,20 +494,21 @@ export const JourneySettings = function JourneySettings() {
 
 
                     <div id="journey-visibility" className={'editor-vertical-menu'}>
-                        <span>
-               {!lgs.settings.ui.camera.start.rotate.journey &&
-                   <SlTooltip hoist
-                              content={__.ui.cameraManager.isRotating(lgs.theJourney) ? 'Stop rotation' : 'Start rotation'}>
-                       <FAButton icon={faArrowRotateRight} className={classNames(
-                           {'fa-spin': __.ui.cameraManager.isRotating(lgs.theJourney)})}/>
-                   </SlTooltip>
-               }
+                        <div>
+                            {!lgs.settings.ui.camera.start.rotate.journey &&
+                                <SlTooltip hoist
+                                           content={isRotating ? 'Stop rotation' : 'Start rotation'}>
+                                    <FAButton onClick={focusOnJourney}
+                                              ref={manualRotate}
+                                              icon={faArrowRotateRight}
+                                              className={classNames({'fa-spin': isRotating})}/>
+                                </SlTooltip>
+                            }
 
                             <SlTooltip hoist content={isRotating ? 'Stop rotation' : 'Focus on journey'}>
                                 <FAButton onClick={focusOnJourney}
-                                          icon={isRotating ? faArrowRotateRight : faCrosshairsSimple}
-                                          className={classNames(
-                                              {'fa-spin': isRotating})}/>
+                                          icon={(isRotating && lgs.settings.ui.camera.start.rotate.journey) ? faArrowRotateRight : faCrosshairsSimple}
+                                          className={classNames({'fa-spin': isRotating && lgs.settings.ui.camera.start.rotate.journey})}/>
                         </SlTooltip>
                         <SlTooltip hoist content={textVisibilityJourney}>
                             <ToggleStateIcon onChange={setJourneyVisibility}
@@ -518,7 +526,7 @@ export const JourneySettings = function JourneySettings() {
                             }
 
                             {editorSnapshot.journey.tracks.size === 1 && <TrackFlagsSettings/>}
-                        </span>
+                        </div>
 
                         <span>
                         <SlTooltip hoist content={'Export'}>

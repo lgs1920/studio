@@ -293,6 +293,9 @@ export class SceneUtils {
             point = await SceneUtils.getJourneyCentroid(journey)
         }
 
+        point.element = journey.element
+        point.slug = journey.slug
+
         // Depending on what we are doing, we need to convert the destination
         // from world coordinates to scene coordinates
         let convert = false
