@@ -151,13 +151,21 @@ export class SceneUtils {
         const roll = M.toRadians(options.roll ?? lgs.settings.camera.roll)
 
         const maximumHeight = options.maximumHeight ?? lgs.settings.camera.maximumHeight
-        const pitchAdjustHeight = options.pitchAdjustHeight ?? lgs.settings.camera.pitchAdjustHeight
-        const flyingTime = options.flyingTime ?? lgs.settings.camera.flyingTime
+        let pitchAdjustHeight = options.pitchAdjustHeight ?? lgs.settings.camera.pitchAdjustHeight
+        let flyingTime = options.flyingTime ?? lgs.settings.camera.flyingTime
 
-        if (options.initializer) {
-            options.initializer(point, options)
+        const initializer = options.initializer ? options.initializer(point, options) : null
+        if (initializer) {
+            if (initializer.distance < 4000) {
+                flyingTime = 0
+            }
+            else if (initializer.distance < 15000) {
+                flyingTime = (flyingTime > 2) ? 2 : flyingTime
+                pitchAdjustHeight = initializer.height + 1000
+            }
+
+
         }
-
         lgs.camera.flyTo({
                              destination:       Cartesian3.fromDegrees(
                                  point.longitude, point.latitude, height,
@@ -171,7 +179,7 @@ export class SceneUtils {
                              pitchAdjustHeight: pitchAdjustHeight,
                              duration:          flyingTime,
                              convert:           options?.convert ?? true,
-                             easingFunction:    EasingFunction.QUADRATIC_IN_OUT,
+                             easingFunction: EasingFunction.LINEAR_NONE,
                              complete:          async () => {
                                  const target = {
                                      longitude:       point.longitude,
