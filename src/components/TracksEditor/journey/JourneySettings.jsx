@@ -14,78 +14,84 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { useConfirm } from '@Components/Modals/ConfirmUI'
+import { FAButton } from '@Components/FAButton'
+import {
+    useConfirm,
+}                   from '@Components/Modals/ConfirmUI'
 import {
     ToggleStateIcon,
-}                     from '@Components/ToggleStateIcon'
+}                   from '@Components/ToggleStateIcon'
 import {
-    ORIGIN_STORE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE, UPDATE_JOURNEY_SILENTLY,
-}                     from '@Core/constants'
+    CURRENT_JOURNEY, ORIGIN_STORE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE, UPDATE_JOURNEY_SILENTLY,
+}                   from '@Core/constants'
 import {
     ElevationServer,
-}                     from '@Core/Elevation/ElevationServer'
+}                   from '@Core/Elevation/ElevationServer'
 import {
     Journey,
-}                     from '@Core/Journey'
+}                   from '@Core/Journey'
 import {
     RemoveJourney,
-}                     from '@Editor/journey/RemoveJourney'
+}                   from '@Editor/journey/RemoveJourney'
 import {
     TrackData,
-}                     from '@Editor/track/TrackData'
+}                   from '@Editor/track/TrackData'
 import {
     TrackFlagsSettings,
-}                     from '@Editor/track/TrackFlagsSettings'
+}                   from '@Editor/track/TrackFlagsSettings'
 import {
     TrackPoints,
-}                     from '@Editor/track/TrackPoints'
+}                   from '@Editor/track/TrackPoints'
 import {
     TrackStyleSettings,
-}                     from '@Editor/track/TrackStyleSettings'
+}                   from '@Editor/track/TrackStyleSettings'
 import {
     Utils,
-}                     from '@Editor/Utils'
+}                   from '@Editor/Utils'
 import {
-    faCircleDot, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList,
-    faTelescope,
-}                     from '@fortawesome/pro-regular-svg-icons'
+    faArrowRotateRight, faCircleDot, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash,
+    faPaintbrushPencil, faRectangleList, faTelescope,
+}                   from '@fortawesome/pro-regular-svg-icons'
 import {
     SlIcon, SlIconButton, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                     from '@shoelace-style/shoelace/dist/react'
+}                   from '@shoelace-style/shoelace/dist/react'
 import {
     FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                     from '@Utils/cesium/TrackUtils'
+}                   from '@Utils/cesium/TrackUtils'
 import {
     FA2SL,
-}                     from '@Utils/FA2SL'
+}                   from '@Utils/FA2SL'
 import {
     UIToast,
-}                     from '@Utils/UIToast'
-import parse          from 'html-react-parser'
+}                   from '@Utils/UIToast'
+import classNames   from 'classnames'
+import parse        from 'html-react-parser'
 import React, {
-    useEffect,
-}                     from 'react'
+    useEffect, useState,
+}                   from 'react'
 import {
     sprintf,
-}                     from 'sprintf-js'
+}                   from 'sprintf-js'
 import {
     useSnapshot,
-}                     from 'valtio'
+}                   from 'valtio'
 import {
     SelectElevationSource,
-}                     from '../../MainUI/SelectElevationSource'
+}                   from '../../MainUI/SelectElevationSource'
 import {
     JourneyData,
-}                     from './JourneyData'
+}                   from './JourneyData'
 import {
     JourneyPOIs,
-}                     from './JourneyPOIs'
+}                   from './JourneyPOIs'
 
 export const JourneySettings = function JourneySettings() {
 
     const editorStore = lgs.theJourneyEditorProxy
     const editorSnapshot = useSnapshot(editorStore)
     const former = editorStore.journey.elevationServer
+    const [isRotating, setIsRotating] = useState(false)
+    const rotate = useSnapshot(lgs.mainProxy.components.mainUI.rotate)
 
     /**
      * Change journey description
@@ -348,6 +354,12 @@ export const JourneySettings = function JourneySettings() {
      * Focus on Journey
      */
     const focusOnJourney = async () => {
+
+        if (isRotating) {
+            await __.ui.cameraManager.stopRotate()
+            return
+        }
+
         await setJourneyVisibility(true)
         lgs.theJourney.focus({
                                  resetCamera: true,
@@ -381,6 +393,11 @@ export const JourneySettings = function JourneySettings() {
             lgs.mainProxy.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
         })
     }, [lgs.mainProxy.components.mainUI.removeJourneyDialog.active])
+
+    useEffect(() => {
+        setIsRotating(__.ui.cameraManager.isRotating(lgs.theJourney))
+    }, [rotate])
+
 
     return (<>
         {editorSnapshot.journey &&
@@ -471,9 +488,19 @@ export const JourneySettings = function JourneySettings() {
 
                     <div id="journey-visibility" className={'editor-vertical-menu'}>
                         <span>
-                        <SlTooltip hoist content={'Focus on journey'}>
-                                <SlIconButton onClick={focusOnJourney} library="fa"
-                                              name={FA2SL.set(faCrosshairsSimple)}/>
+               {!lgs.settings.ui.camera.start.rotate.journey &&
+                   <SlTooltip hoist
+                              content={__.ui.cameraManager.isRotating(lgs.theJourney) ? 'Stop rotation' : 'Start rotation'}>
+                       <FAButton icon={faArrowRotateRight} className={classNames(
+                           {'fa-spin': __.ui.cameraManager.isRotating(lgs.theJourney)})}/>
+                   </SlTooltip>
+               }
+
+                            <SlTooltip hoist content={isRotating ? 'Stop rotation' : 'Focus on journey'}>
+                                <FAButton onClick={focusOnJourney}
+                                          icon={isRotating ? faArrowRotateRight : faCrosshairsSimple}
+                                          className={classNames(
+                                              {'fa-spin': isRotating})}/>
                         </SlTooltip>
                         <SlTooltip hoist content={textVisibilityJourney}>
                             <ToggleStateIcon onChange={setJourneyVisibility}

@@ -125,7 +125,7 @@ export const MapPOIList = () => {
                         __.ui.poiManager.stopAnimation(store.current.id)
                     }
                     __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
-                        targetType: CURRENT_POI,
+                        target: lgs.mainProxy.components.pois.current,
                         heading:    camera.position.heading,
                         pitch:      camera.position.pitch,
                         roll:       camera.position.roll,

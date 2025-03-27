@@ -1,5 +1,5 @@
 import {
-    CURRENT_JOURNEY, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
+    NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
 }                                  from '@Core/constants'
 import { SceneUtils }              from '@Utils/cesium/SceneUtils'
 import { UIToast }                 from '@Utils/UIToast'
@@ -7,7 +7,7 @@ import { LayersAndTerrainManager } from './LayerAndTerrainManager'
 
 export class SceneManager {
 
-    #type = ''
+    #focusTarget = null
     constructor() {
         // Singleton
         if (SceneManager.instance) {
@@ -124,9 +124,10 @@ export class SceneManager {
         this.notifyMorph()
     }
 
-    focus = (point, options) => {
-        this.#type = options.targetType
-        this.proxy.focus(point, options)
+    get startRotate() {
+        lgs.mainProxy.components.mainUI.rotate.running = true
+        lgs.mainProxy.components.mainUI.rotate.target = this.#focusTarget
+        return lgs.mainProxy.components.mainUI.rotate.running
     }
 
     focusPreProcessing = (point, options) => {
@@ -137,26 +138,26 @@ export class SceneManager {
         // console.log(point, options)
     }
 
-    focusOnJourney = (options) => {
-        this.#type = CURRENT_JOURNEY
-        this.proxy.focusOnJourney({
-                                      ...options,
-                                      initializer: this.focusPreProcessing,
-                                      callback:    this.focusPostProcessing,
-                                  })
+    get stopRotate() {
+        lgs.mainProxy.components.mainUI.rotate.running = false
+        lgs.mainProxy.components.mainUI.rotate.target = false
+        return lgs.mainProxy.components.mainUI.rotate.running
     }
 
     getJourneyCentroid = async journey => await this.proxy.getJourneyCentroid(journey)
 
-
-    get startRotate() {
-        lgs.mainProxy.components.mainUI.rotate.running = true
-        return lgs.mainProxy.components.mainUI.rotate.running
+    focus = (point, options) => {
+        this.#focusTarget = options.target ?? null
+        this.proxy.focus(point, options)
     }
 
-    get stopRotate() {
-        lgs.mainProxy.components.mainUI.rotate.running = false
-        return lgs.mainProxy.components.mainUI.rotate.running
+    focusOnJourney = async (options) => {
+        this.#focusTarget = options.target
+        await this.proxy.focusOnJourney({
+                                            ...options,
+                                            initializer: this.focusPreProcessing,
+                                            callback:    this.focusPostProcessing,
+                                        })
     }
 
     /**

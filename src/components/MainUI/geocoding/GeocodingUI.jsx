@@ -118,7 +118,7 @@ export const GeocodingUI = () => {
         }
 
         __.ui.sceneManager.focus(point, {
-            targetType: CURRENT_POI,
+            target: point,
             lookAt:   true,
             infinite: false,
             rotate: lgs.settings.ui.poi.rotate,

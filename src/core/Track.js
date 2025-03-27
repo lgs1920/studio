@@ -1,4 +1,4 @@
-import { DRAWING_FROM_UI, FOCUS_ON_FEATURE, REFRESH_DRAWING }                 from '@Core/constants'
+import { CURRENT_TRACK, DRAWING_FROM_UI, FOCUS_ON_FEATURE, REFRESH_DRAWING }  from '@Core/constants'
 import { MapElement }                                                         from '@Core/MapElement'
 import { POI }                                                                from '@Core/POI'
 import { ProfileTrackMarker }                                                 from '@Core/ProfileTrackMarker'
@@ -27,6 +27,10 @@ export class Track extends MapElement {
     flags = {start: undefined, stop: undefined}
     /** @type {ProfileTrackMarker | null} */
     marker = null
+    /**
+     * @type {string}
+     */
+    element = CURRENT_TRACK
 
     constructor(title, options = {}) {
         super()
@@ -384,7 +388,7 @@ export class Track extends MapElement {
 
         // Focus on the parent Journey
         if (mode === FOCUS_ON_FEATURE) {
-            __.ui.sceneManager.focusOnJourney({track: this})
+            __.ui.sceneManager.focusOnJourney({track: this, target: this.parent})
         }
     }
 

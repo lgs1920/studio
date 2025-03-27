@@ -29,6 +29,7 @@ export const main = {
             rotate:        {
                 clockwise: false,
                 running:   false,
+                target: false,
                 rpm: 4,
             },
         },

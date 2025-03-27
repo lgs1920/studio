@@ -63,7 +63,7 @@ export const MapPOIEditMenu = ({point}) => {
             await __.ui.cameraManager.stopRotate()
         }
         __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
-            targetType: CURRENT_POI,
+            target: lgs.mainProxy.components.pois.current,
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
@@ -92,7 +92,7 @@ export const MapPOIEditMenu = ({point}) => {
             pois.current = await __.ui.poiManager.stopAnimation(point.id)
         }
         __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
-            targetType: CURRENT_POI,
+            target: lgs.mainProxy.components.pois.current,
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,

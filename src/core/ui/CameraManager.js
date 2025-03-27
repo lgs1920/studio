@@ -375,8 +375,18 @@ export class CameraManager {
      *
      * @return {boolean}
      */
-    isRotating = () => {
-        return lgs.mainProxy.components.mainUI.rotate.running
+    isRotating = (target) => {
+        if (target) {
+            return lgs.mainProxy.components.mainUI.rotate.running
+                // type and slug are not defined in geocoding
+                && lgs.mainProxy.components.mainUI.rotate.target?.type === target.type
+                && lgs.mainProxy.components.mainUI.rotate.target?.slug === target.slug
+        }
+        else {
+            return lgs.mainProxy.components.mainUI.rotate.running
+        }
+
+
     }
 
     /**

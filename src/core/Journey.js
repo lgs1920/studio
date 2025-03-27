@@ -48,6 +48,11 @@ export class Journey extends MapElement {
     hasElevation = false
     hasTime = false
 
+    /**
+     * @type {string}
+     */
+    element = CURRENT_JOURNEY
+
     constructor(title, type, options) {
         super()
 
@@ -576,7 +581,7 @@ export class Journey extends MapElement {
 
     focus = (props={}) => {
         props.journey=this
-        props.targetType = CURRENT_JOURNEY
+        props.target = this
         __.ui.sceneManager.focusOnJourney(props)
     }
 

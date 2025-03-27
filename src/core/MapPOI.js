@@ -14,9 +14,9 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { POI_CATEGORY_ICONS, POI_STANDARD_TYPE, POI_TMP_TYPE } from '@Core/constants'
-import { MapElement }                                          from '@Core/MapElement'
-import { v4 as uuid }                                          from 'uuid'
+import { CURRENT_POI, POI_CATEGORY_ICONS, POI_STANDARD_TYPE, POI_TMP_TYPE } from '@Core/constants'
+import { MapElement }                                                       from '@Core/MapElement'
+import { v4 as uuid }                                                       from 'uuid'
 
 export class MapPOI extends MapElement {
     /**
@@ -52,6 +52,11 @@ export class MapPOI extends MapElement {
      * @type {number}
      */
     cameraDistance
+
+    /**
+     * @type {string}
+     */
+    element = CURRENT_POI
 
     /**
      * @type {boolean}
@@ -148,6 +153,7 @@ export class MapPOI extends MapElement {
         super()
         // If there is no id provided, we generate one
         options.id = options.id === null ? uuid() : options.id.toString()
+        options.slug = options.id
         this.update(options)
     }
 
@@ -221,7 +227,6 @@ export class MapPOI extends MapElement {
     get icon() {
         return Object.values(POI_CATEGORY_ICONS.get(this.category ?? POI_STANDARD_TYPE))[0]
     }
-
 
 
 }

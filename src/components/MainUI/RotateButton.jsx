@@ -44,7 +44,7 @@ export const RotateButton = (props) => {
                 infinite:   true,
                 rotate:     true,
                 flyingTime: 0,    // no move, no time ! We're on target
-                targetType: NONE,
+                target: null,
             })
             pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
         }

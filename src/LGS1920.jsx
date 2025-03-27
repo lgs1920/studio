@@ -114,7 +114,7 @@ export function LGS1920() {
                               await __.ui.poiManager.readAllFromDB()
                               let starter = __.ui.poiManager.starter
 
-                              let focusTargetType = NONE
+                              let focusTarget = null
 
                               if (!starter) {
                                   starter = __.ui.poiManager.add({
@@ -145,7 +145,7 @@ export function LGS1920() {
 
                               // Use app settings
                               if (__.ui.cameraManager.isAppFocusOn(FOCUS_STARTER)) {
-                                  focusTargetType = CURRENT_POI
+                                  focusTarget = starter
                                   lgs.cameraStore = {
                                       target: {
                                           longitude: starter.longitude,
@@ -176,7 +176,7 @@ export function LGS1920() {
                                   }
                                   else {
                                       // Centroid
-                                      focusTargetType = CURRENT_JOURNEY
+                                      focusTarget = lgs.theJourney
                                       lgs.cameraStore = lgs.theJourney.camera
                                       lgs.cameraStore.target = await __.ui.sceneManager.getJourneyCentroid(lgs.theJourney)
                                   }
@@ -184,7 +184,7 @@ export function LGS1920() {
 
                               // Do Focus
                               __.ui.sceneManager.focus(lgs.cameraStore.target, {
-                                  targetType: focusTargetType,
+                                  target: focusTarget,
                                   heading:  lgs.cameraStore.position.heading,
                                   pitch:    __.ui.sceneManager.noRelief() ? -90 : lgs.cameraStore.position.pitch,
                                   roll:     lgs.cameraStore.position.roll,

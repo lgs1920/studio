@@ -97,7 +97,7 @@ export const MapPOIContextMenu = () => {
         }
         else {
             __.ui.sceneManager.focus(store.current, {
-                targetType: POI_STANDARD_TYPE,
+                target: pois.current,
                 heading:    camera.position.heading,
                 pitch:      camera.position.pitch,
                 roll:       camera.position.roll,
