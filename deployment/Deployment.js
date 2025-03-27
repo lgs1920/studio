@@ -88,6 +88,9 @@ export class Deployment {
         this.date = new Date().toISOString()
             .replace(/[-:.]/g, '')
             .slice(0, 15)
+
+        this.branch = (await this.git.status()).current
+
     }
 
     /**
@@ -210,7 +213,7 @@ export class Deployment {
         execSync(`rm -rf ${this.localDistPath}`)
 
         return new Promise((resolve, reject) => {
-            console.log(`--- Building ${this.yellow}${this.product} ${this.version}${this.reset} for ${this.platform} ...`)
+            console.log(`--- Building ${this.yellow}${this.product}  (version: ${this.version} - branch ${this.branch}) ${this.reset} for ${this.platform} ...`)
             let buildCommand
             switch (this.product) {
                 case 'studio': {
@@ -301,18 +304,14 @@ export class Deployment {
      */
     gitTag = async () => {
 
-        // get git branch
-        const branch = (await this.git.status()).current
-
-
-        const tagName = `${this.platform}-${this.version}-${branch}-${this.date}`
-        const message = `Branch ${branch} deployed on ${tagName}!`
+        const tagName = `${this.platform}-${this.version}-${this.branch}-${this.date}`
+        const message = `Branch ${this.branch} deployed on ${tagName}!`
 
         console.log(`    > git commit tag : ${tagName}`)
         await this.git.commit(message)
         await this.git.addTag(tagName)
 
-        // console.log(`    > Git push tag on branch ${branch}`) TODO
+        // console.log(`    > Git push tag on branch ${ this.branch}`) TODO
         // await this.git.push()
         // await this.git.pushTags()
 
@@ -418,7 +417,7 @@ export class Deployment {
                     await this.postDeployment(connection)
 
                     console.log('\n---')
-                    console.log(`${this.yellow}Application ${this.green}${this.product} ${this.version}${this.yellow} deployed to ${this.platform} ${this.reset}`)
+                    console.log(`${this.yellow}Application ${this.green}${this.product} (version: ${this.version} - branch ${this.branch}) ${this.yellow} deployed to ${this.platform} ${this.reset}`)
                     console.log('---\n')
 
                 }
