@@ -157,8 +157,8 @@ export class SceneManager {
 
         this.proxy.focus(point, {
             ...options,
-            initializer: this.focusPreProcessing,
-            callback:    this.focusPostProcessing,
+            initializer: options.initializer ?? this.focusPreProcessing,
+            callback:    options.callback ?? this.focusPostProcessing,
         })
     }
 
@@ -166,8 +166,8 @@ export class SceneManager {
         this.#focusTarget = options.target ?? null
         await this.proxy.focusOnJourney({
                                             ...options,
-                                            initializer: this.focusPreProcessing,
-                                            callback:    this.focusPostProcessing,
+                                            initializer: options.initializer ?? this.focusPreProcessing,
+                                            callback:    options.callback ?? this.focusPostProcessing,
                                         })
     }
 
