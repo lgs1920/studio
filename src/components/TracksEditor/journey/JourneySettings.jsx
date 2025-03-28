@@ -401,8 +401,6 @@ export const JourneySettings = function JourneySettings() {
 
     useEffect(() => {
         setIsRotating(__.ui.cameraManager.isRotating(lgs.theJourney))
-        console.log(isRotating)
-
     }, [autoRotate, launchRotation])
 
 
@@ -496,7 +494,7 @@ export const JourneySettings = function JourneySettings() {
                     <div id="journey-visibility" className={'editor-vertical-menu'}>
                         <div>
                             {!lgs.settings.ui.camera.start.rotate.journey &&
-                                <SlTooltip hoist
+                                <SlTooltip hoist placement="left"
                                            content={isRotating ? 'Stop rotation' : 'Start rotation'}>
                                     <FAButton onClick={focusOnJourney}
                                               ref={manualRotate}
@@ -505,17 +503,18 @@ export const JourneySettings = function JourneySettings() {
                                 </SlTooltip>
                             }
 
-                            <SlTooltip hoist content={isRotating ? 'Stop rotation' : 'Focus on journey'}>
+                            <SlTooltip hoist content={isRotating ? 'Stop rotation' : 'Focus on journey'}
+                                       placement="left">
                                 <FAButton onClick={focusOnJourney}
                                           icon={(isRotating && lgs.settings.ui.camera.start.rotate.journey) ? faArrowRotateRight : faCrosshairsSimple}
                                           className={classNames({'fa-spin': isRotating && lgs.settings.ui.camera.start.rotate.journey})}/>
                         </SlTooltip>
-                        <SlTooltip hoist content={textVisibilityJourney}>
+                            <SlTooltip hoist content={textVisibilityJourney} placement="left">
                             <ToggleStateIcon onChange={setJourneyVisibility}
                                              initial={editorSnapshot.journey.visible}/>
                         </SlTooltip>
                             {editorSnapshot.journey.pois.size > 1 &&
-                                <SlTooltip hoist content={textVisibilityPOIs}>
+                                <SlTooltip hoist content={textVisibilityPOIs} placement="left">
                                     <ToggleStateIcon
                                         onChange={setAllPOIsVisibility}
                                         initial={editorSnapshot.journey.POIsVisible}
@@ -525,14 +524,14 @@ export const JourneySettings = function JourneySettings() {
                                 </SlTooltip>
                             }
 
-                            {editorSnapshot.journey.tracks.size === 1 && <TrackFlagsSettings/>}
+                            {editorSnapshot.journey.tracks.size === 1 && <TrackFlagsSettings tooltip="left"/>}
                         </div>
 
                         <span>
-                        <SlTooltip hoist content={'Export'}>
+                        <SlTooltip hoist content={'Export'} placement="left">
                                 <SlIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>
                         </SlTooltip>
-                        <RemoveJourney placement={'left'} name={REMOVE_JOURNEY_IN_EDIT}/>
+                        <RemoveJourney tooltip="left-start" name={REMOVE_JOURNEY_IN_EDIT}/>
 
                         </span>
                     </div>

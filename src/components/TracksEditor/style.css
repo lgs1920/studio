@@ -12,6 +12,16 @@
     border-radius: var(--sl-border-radius-medium);
 }
 
+#journey-editor-drawer header {
+    display: flex;
+    align-items: self-end;
+    gap: var(--lgs-gutter-s);
+}
+
+#journey-editor-drawer header sl-select, #journey-editor-drawer header .journey-title {
+    flex-grow: 1;
+}
+
 sl-tab sl-icon {
     margin-right: var(--lgs-gutter-xs);
 }
@@ -52,6 +62,11 @@ sl-tab sl-icon {
     width: 1.5rem;
     align-items: center;
     margin-left: auto
+}
+
+.editor-vertical-menu.in-header {
+    margin-bottom: 0;
+    margin-left: 0
 }
 
 #editor-journey-settings-panel .editor-vertical-menu {

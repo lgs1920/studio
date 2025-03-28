@@ -1,3 +1,4 @@
+import { faRegularRouteCirclePlus }             from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { JourneyLoaderButton }                                      from '@Components/FileLoader/JourneyLoaderButton'
 import { JOURNEY_EDITOR_DRAWER, REMOVE_JOURNEY_IN_TOOLBAR, SECOND } from '@Core/constants'
 import { JourneySelector }                                          from '@Editor/journey/JourneySelector'
@@ -90,7 +91,8 @@ export const JourneyToolbar = (props) => {
                               onMouseLeave={delayHideToolbar}
                               onClick={openEditorOrLoader}
                     >
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRoute)}/>
+                        <SlIcon slot="prefix" library="fa"
+                                name={FA2SL.set(lgs.journeys.size ? faRoute : faRegularRouteCirclePlus)}/>
                     </SlButton>
                 </SlTooltip>
             </div>

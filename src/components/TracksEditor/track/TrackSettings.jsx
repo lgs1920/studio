@@ -167,7 +167,7 @@ export const TrackSettings = function TrackSettings() {
                             <SlTooltip hoist content={textVisibilityTrack}>
                                 <ToggleStateIcon onChange={setTrackVisibility} initial={editorSnapshot.track.visible}/>
                         </SlTooltip>}
-                        <TrackFlagsSettings/>
+                        <TrackFlagsSettings tooltip="left"/>
                     </div>
                 </div>
             </>}

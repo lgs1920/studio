@@ -22,7 +22,7 @@ import { TrackUtils }                        from '@Utils/cesium/TrackUtils'
 import { useSnapshot }                       from 'valtio'
 import { Utils }                             from '../Utils'
 
-export const TrackFlagsSettings = function TrackSettings() {
+export const TrackFlagsSettings = (props) => {
 
     const editorStore = lgs.theJourneyEditorProxy
 
@@ -63,7 +63,7 @@ export const TrackFlagsSettings = function TrackSettings() {
 
     return (
         <>
-            <SlTooltip hoist content={textVisibilityStartFlag}>
+            <SlTooltip hoist content={textVisibilityStartFlag} placement={props.tooltip}>
                 <ToggleStateIcon onChange={setStartFlagVisibility}
                                  id={'start-visibility'}
                                  icons={{
@@ -72,7 +72,7 @@ export const TrackFlagsSettings = function TrackSettings() {
                                  style={{color: lgs.settings.getJourney.pois.start.color}}
                                  initial={editorSnapshot?.track.flags.start.visible}/>
             </SlTooltip>
-            <SlTooltip hoist content={textVisibilityStopFlag}>
+            <SlTooltip hoist content={textVisibilityStopFlag} placement={props.tooltip}>
                 <ToggleStateIcon onChange={setStopFlagVisibility}
                                  id={'stop-visibility'}
                                  icons={{
