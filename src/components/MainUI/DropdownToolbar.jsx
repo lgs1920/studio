@@ -1,8 +1,4 @@
-import { JourneyLoaderUI }                                               from '@Components/FileLoader/JourneyLoaderUI'
 import { ProfileButton }                                               from '@Components/Profile/ProfileButton'
-import {
-    TracksEditorButton,
-}                                                                      from '@Components/TracksEditor/TracksEditorButton'
 import { faEllipsisVertical }                                          from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL } from '@Utils/FA2SL.js'
@@ -23,10 +19,6 @@ export const DropdownToolbar = (props) => {
                     </SlTooltip>
                 </div>
                 <SlMenu>
-                    {props.editor &&
-                        <SlMenuItem><TracksEditorButton tooltip={props.tooltip}/></SlMenuItem>
-                    }
-
                     {props.fileLoader &&
                         <SlMenuItem><JourneyLoaderButton tooltip={props.tooltip}/></SlMenuItem>
                     }

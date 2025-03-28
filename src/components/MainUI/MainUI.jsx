@@ -1,9 +1,9 @@
 import { CompassUI }                        from '@Components/cesium/CompassUI/CompassUI'
 import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
 import { GeocodingButton }                  from '@Components/MainUI/geocoding/GeocodingButton'
-import { GeocodingUI }                      from '@Components/MainUI/geocoding/GeocodingUI'
-import { JourneyToolbar }                   from '@Components/MainUI/JourneyToolbar'
-import { MapPOICluster }                    from '@Components/MainUI/MapPOI/MapPOICluster'
+import { GeocodingUI }       from '@Components/MainUI/geocoding/GeocodingUI'
+import { TrackEditorButton } from '@Components/MainUI/TrackEditorButton'
+import { MapPOICluster }     from '@Components/MainUI/MapPOI/MapPOICluster'
 import { MapPOIContextMenu }                from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { RotateButton }                     from '@Components/MainUI/RotateButton'
 import { Profile }                          from '@Components/Profile/Profile'
@@ -211,7 +211,7 @@ export const MainUI = () => {
                             <SettingsButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                             <LayersButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                             <POIEditButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
-                            <JourneyToolbar tooltip={'top'}/>
+                            <TrackEditorButton tooltip={'top'}/>
                             <ProfileButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
 
                             <InformationButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
