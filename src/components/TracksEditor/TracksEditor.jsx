@@ -1,6 +1,6 @@
 import { JourneyLoaderButton } from '@Components/FileLoader/JourneyLoaderButton'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
-import { SlDrawer }              from '@shoelace-style/shoelace/dist/react'
+import { SlDivider, SlDrawer } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { useSnapshot }           from 'valtio'
 import { JourneySelector }       from './journey/JourneySelector'
@@ -58,7 +58,7 @@ export const TracksEditor = (props, ref) => {
                 >
                     {lgs.journeys.size > 0 &&
                         <div id={'track-settings-container'}>
-                            <header>
+                            <div className="selector-wrapper">
                         <JourneySelector onChange={Utils.initJourneyEdition}
                                          label={'Select a Journey:'}
                                          single={true}/>
@@ -66,14 +66,19 @@ export const TracksEditor = (props, ref) => {
                                                      mini="true"
                                                      className="editor-vertical-menu in-header"/>
 
-                            </header>
+                            </div>
                         <JourneySettings/>
                             {editorSnapshot.journey.visible &&
                                 <>
+                                    <SlDivider/>
+                                    <div className="selector-wrapper">
                             <TrackSelector onChange={Utils.initTrackEdition}
                                            label={'Select one of the tracks:'}/>
+                                        <div className="editor-vertical-menu ">&nbsp;</div>
+                                    </div>
                             <TrackSettings/>
-                        </>}
+                                </>
+                            }
                     </div>}
                     <div id="journey-editor-footer" slot={'footer'}></div>
                 </SlDrawer>}

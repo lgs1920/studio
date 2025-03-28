@@ -12,13 +12,13 @@
     border-radius: var(--sl-border-radius-medium);
 }
 
-#journey-editor-drawer header {
+#journey-editor-drawer .selector-wrapper {
     display: flex;
     align-items: self-end;
     gap: var(--lgs-gutter-s);
 }
 
-#journey-editor-drawer header sl-select, #journey-editor-drawer header .journey-title {
+#journey-editor-drawer .selector-wrapper sl-select, #journey-editor-drawer .selector-wrapper .journey-title {
     flex-grow: 1;
 }
 
