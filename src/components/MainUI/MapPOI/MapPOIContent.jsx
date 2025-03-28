@@ -176,7 +176,7 @@ export const MapPOIContent = ({id, hide}) => {
                                             units={ELEVATION_UNITS}
                                         />
                                     )}
-                                    {!point.height || point.height === point.simulatedHeight && <span>&nbsp</span>}
+                                    {!point.height || point.height === point.simulatedHeight && <span>&nbsp;</span>}
                                     <div className="poi-coordinates">
                                         <span>
                                           {__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)},
