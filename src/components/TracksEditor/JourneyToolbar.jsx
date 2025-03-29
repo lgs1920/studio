@@ -17,6 +17,7 @@ export const JourneyToolbar = (props) => {
     const grabber = useRef(null)
     const animationFrame = useRef(null)
     const journeyLoaderStore = lgs.mainProxy.components.mainUI.journeyLoader
+    let dragging
 
     const hideToolbar = (event) => {
         mainUI.journeyMenu.active = false
@@ -36,21 +37,29 @@ export const JourneyToolbar = (props) => {
         const offsetX = event.clientX - rect.left
         const offsetY = event.clientY - rect.top
         targetRef.current.classList.add('dragging')
+        dragging = true
+        document.body.classList.add('no-select')
 
         const handleMouseMove = (event) => {
-            if (animationFrame.current) {
-                cancelAnimationFrame(animationFrame.current)
+            if (dragging) {
+                if (animationFrame.current) {
+                    cancelAnimationFrame(animationFrame.current)
+                }
+                animationFrame.current = requestAnimationFrame(() => {
+                    store.y = event.clientY - offsetY
+                    store.x = event.clientX - offsetX
+                })
             }
-            animationFrame.current = requestAnimationFrame(() => {
-                store.y = event.clientY - offsetY
-                store.x = event.clientX - offsetX
-            })
         }
 
-        const handleMouseUp = () => {
+        const handleMouseUp = (event) => {
             document.removeEventListener('mousemove', handleMouseMove)
             document.removeEventListener('mouseup', handleMouseUp)
+
             targetRef.current.classList.remove('dragging')
+            document.body.classList.remove('no-select')
+
+            dragging = false
             if (animationFrame.current) {
                 cancelAnimationFrame(animationFrame.current)
                 animationFrame.current = null

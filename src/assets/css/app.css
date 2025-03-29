@@ -30,6 +30,10 @@ body {
     overflow: hidden;
 }
 
+.no-select {
+    user-select: none;
+}
+
 * {
     box-sizing: border-box;
 }
