@@ -15,6 +15,7 @@ import {
     MENU_START_END,
     MENU_START_START, MOBILE_MAX, POINTER, POIS_EDITOR_DRAWER, SCENE_MODE_2D, SECOND, START, TOP,
 }                                      from '@Core/constants'
+import { JourneyToolbar } from '@Editor/JourneyToolbar'
 import { useEffect, useRef, useState } from 'react'
 
 import './style.css'
@@ -262,7 +263,7 @@ export const MainUI = () => {
             <SupportUIDialog/>
             <JourneyLoaderUI multiple/>
             <MapPOIContextMenu/>
-
+            <JourneyToolbar/>
 
         </>
     )

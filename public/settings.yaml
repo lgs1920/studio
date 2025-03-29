@@ -301,3 +301,8 @@ ui:
     limit: 7 # results per query
     email: contact@lgs1920.fr
     minQuery: 3 # characters
+  ## JourneyToolbar
+  journeyToolbar:
+    show: true
+    x: 100
+    y: 100
