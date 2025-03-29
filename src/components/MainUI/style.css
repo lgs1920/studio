@@ -128,7 +128,7 @@ html {
 }
 
 .journey-toolbar {
-    position: absolute
+    position: absolute;
     display: flex;
     align-items: center;
     flex-direction: row;
