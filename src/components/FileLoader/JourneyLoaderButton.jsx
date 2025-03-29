@@ -18,7 +18,7 @@ export const JourneyLoaderButton = (props) => {
 
     return (
         <>
-            <SlTooltip hoist placement={props.tooltip} content="Add a new Journey">
+            <SlTooltip hoist placement={props.tooltip} content="Add a Journey">
                 {props.mini &&
                     <FAButton onClick={toggleVisibilityLoader} icon={faRegularRouteCirclePlus}
                               className={props.className}/>

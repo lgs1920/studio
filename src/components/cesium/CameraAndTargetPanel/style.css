@@ -4,7 +4,6 @@
 }
 
 .camera-data-panel {
-    background: transparent;
     flex-direction: row;
     align-items: center;
     flex-wrap: wrap;
@@ -12,7 +11,7 @@
 
 .camera-data-panel > sl-icon:first-child {
     width: 2rem;
-    border-right: 1px solid white;
+    border-right: 1px solid var(--lgs-card-on-map-border-color);
 }
 
 .camera-data-panel > div {

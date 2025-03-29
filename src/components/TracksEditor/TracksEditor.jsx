@@ -60,7 +60,6 @@ export const TracksEditor = (props, ref) => {
                         <div id={'track-settings-container'}>
                             <div className="selector-wrapper">
                         <JourneySelector onChange={Utils.initJourneyEdition}
-                                         label={'Select a Journey:'}
                                          single={true}/>
                                 <JourneyLoaderButton tooltip="left"
                                                      mini="true"

@@ -128,44 +128,33 @@ html {
 }
 
 .journey-toolbar {
+    position: absolute
     display: flex;
-    gap: var(--lgs-gutter-s);
+    align-items: center;
     flex-direction: row;
+    padding: 0;
+    gap: 0 !important;
 }
 
-.journey-toolbar-content {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--lgs-gutter-s);
-    margin-left: auto;
-    width: 40rem;
-    --lgs-animation-duration: 0.2s
-
+.journey-toolbar.dragging {
+    background-color: var(--lgs-dark-color-15);
 }
 
-.mobile .journey-toolbar-content {
-    /**
-     TODO width: calc(var(--lgs-max-mobile-width) - 3 * var(--lgs-line-dimension))
-     */
-    width: 15rem;
-    max-width: 15rem;
+.journey-toolbar .grabber {
+    font-size: var(--lgs-font-size-l);
+    cursor: grab;
 }
 
-[placement^="left-"] .journey-toolbar-content {
-    margin-right: auto;
-    flex-direction: row-reverse;
+.journey-toolbar .grabber::part(base) {
+    font-size: var(--lgs-font-size);
+    padding-right: 0;
+    padding-left: 0;
 }
 
-[placement^="right-"] .journey-toolbar-content {
-    margin-left: auto;
-    flex-direction: row;
+.journey-toolbar.dragging .grabber {
+    cursor: grabbing;
 }
 
-
-.mobile .journey-toolbar-content .journey-selector,
-.mobile .journey-toolbar-content .journey-title {
-    order: 10;
-}
 
 /***************************************
  * Dropdown Toolbar

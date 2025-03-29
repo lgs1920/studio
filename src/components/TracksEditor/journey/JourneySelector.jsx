@@ -52,7 +52,7 @@ export const JourneySelector = (props) => {
 
     return (<>
         {mainSnapshot.list.length > 1 &&
-            <SlSelect label={props.label}
+            <SlSelect label={props.label} size={props.size ?? 'medium'}
                       value={editorSnapshot.journey.slug}
                       onSlChange={props.onChange}
                       key={mainSnapshot.keys.journey.list}

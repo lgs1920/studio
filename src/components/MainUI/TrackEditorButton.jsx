@@ -1,6 +1,6 @@
 import { faRegularRouteCirclePlus }                         from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { JOURNEY_EDITOR_DRAWER, REMOVE_JOURNEY_IN_TOOLBAR } from '@Core/constants'
-import { faRoute }                                          from '@fortawesome/pro-solid-svg-icons'
+import { faRoute } from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip }                      from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                            from '@Utils/FA2SL'
 import { useEffect } from 'react'
@@ -32,7 +32,6 @@ export const TrackEditorButton = (props) => {
 
 
     return (
-        <div className="journey-toolbar" placement={props?.placement ?? 'left'}>
                 <SlTooltip hoist placement={settings.toolBar.fromStart ? 'right' : 'left'}
                            content={snap.theJourney ? 'Edit the Journey' : 'Add a journey'}>
                     <SlButton size={'small'} className={'square-button'} onClick={openEditorOrLoader}>
@@ -40,6 +39,5 @@ export const TrackEditorButton = (props) => {
                                 name={FA2SL.set(lgs.journeys.size ? faRoute : faRegularRouteCirclePlus)}/>
                     </SlButton>
                 </SlTooltip>
-        </div>
     )
 }
