@@ -1,21 +1,22 @@
-import { FAButton }                                                  from '@Components/FAButton'
-import { ToggleStateIcon }                                           from '@Components/ToggleStateIcon'
-import { CURRENT_JOURNEY, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
+import { FAButton }                                                          from '@Components/FAButton'
+import { ToggleStateIcon }                                                   from '@Components/ToggleStateIcon'
+import { CURRENT_JOURNEY, REFRESH_DRAWING, SECOND, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
 import {
     JourneySelector,
-}                                                                    from '@Editor/journey/JourneySelector'
-import { Utils }                                                     from '@Editor/Utils'
+}                                                                            from '@Editor/journey/JourneySelector'
+import { Utils }                                                             from '@Editor/Utils'
 import {
-    faArrowRotateRight, faCrosshairsSimple, faGripDotsVertical, faSquarePlus,
-}                                                                    from '@fortawesome/pro-regular-svg-icons'
+    faArrowRotateRight, faCrosshairsSimple, faGripDotsVertical, faSquarePlus, faXmark,
+}                                                                            from '@fortawesome/pro-regular-svg-icons'
 import {
+    SlDivider,
     SlIcon, SlIconButton, SlTooltip,
-}                                                                    from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                     from '@Utils/FA2SL'
-import classNames                                                    from 'classnames'
-import React, { useRef }                                             from 'react'
-import { sprintf }                                                   from 'sprintf-js'
-import { useSnapshot }                                               from 'valtio'
+}                                                                            from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                             from '@Utils/FA2SL'
+import classNames                                                            from 'classnames'
+import React, { useEffect, useRef }                                          from 'react'
+import { sprintf }                                                           from 'sprintf-js'
+import { useSnapshot }                                                       from 'valtio'
 
 export const JourneyToolbar = (props) => {
     const mainUI = lgs.mainProxy.components.mainUI
@@ -37,10 +38,6 @@ export const JourneyToolbar = (props) => {
     const manualRotate = useRef(null)
 
     const grabber = useRef(null)
-    
-    const hideToolbar = (event) => {
-        mainUI.journeyMenu.active = false
-    }
 
     const journeyLoader = () => {
         journeyLoaderStore.visible = true
@@ -101,12 +98,14 @@ export const JourneyToolbar = (props) => {
         Utils.renderJourneySettings()
     }
 
-    const forceRotate = async () => {
+    const forceRotate = async (event) => {
         rotationAllowed = !rotationAllowed
         await focusOnJourney()
     }
 
-    const maybeRotate = async () => {
+    const maybeRotate = async (event) => {
+        console.log(event)
+        event.stopPropagation()
         if ($rotate.running) {
             rotationAllowed = false
             stopRotate()
@@ -139,50 +138,104 @@ export const JourneyToolbar = (props) => {
                              })
     }
 
+    const controlToolbar = () => {
+        const w = window.innerWidth
+        const h = window.innerHeight
+        if ($journeyToolbar.x > w || $journeyToolbar.x === null) {
+            $journeyToolbar.x = w - 2 * _journeyToolbar.current.offsetWidth
+        }
+        if ($journeyToolbar.y > h || $journeyToolbar.y === null) {
+            $journeyToolbar.y = h - 2 * _journeyToolbar.current.offsetHeight
+        }
+    }
+
+    const closeToolbar = (event) => {
+        $journeyToolbar.show = false
+    }
+
+    $journeyToolbar.show = true
+
+    useEffect(() => {
+
+        controlToolbar()
+        const handleResize = () => {
+            if (__.app.isOutOfContainer(_journeyToolbar)) {
+                controlToolbar()
+            }
+        }
+        window.addEventListener('resize', handleResize)
+        return () => {
+            window.removeEventListener('resize', handleResize)
+        }
+    }, [])
+
+    useEffect(() => {
+        controlToolbar()
+        setTimeout(() => {
+            if (journeyToolbar.show) {
+                _journeyToolbar.current.style.visibility = 'visible'
+            }
+        }, 1.5 * SECOND)
+
+
+    }, [$journeyToolbar.x, $journeyToolbar.y])
+
     const textVisibilityJourney = sprintf('%s Journey', editorStore?.journey?.visible ? 'Hide' : 'Show')
     return (
-        <div className="journey-toolbar lgs-card on-map" ref={_journeyToolbar}
-             style={{top: journeyToolbar.y, left: journeyToolbar.x}}>
-            <SlTooltip hoist content={'Drag me'}>
-                <SlIcon ref={grabber} className="grabber" library="fa" name={FA2SL.set(faGripDotsVertical)}
-                        onPointerDown={handleMouseDown}
-                />
-            </SlTooltip>
+        <>
+            {journeyToolbar.show &&
+                <div className="journey-toolbar lgs-card on-map"
+                     ref={_journeyToolbar}
+                     style={{top: journeyToolbar.y, left: journeyToolbar.x}}
+                >
+                    <SlTooltip hoist content={'Drag me'}>
+                        <SlIcon ref={grabber} className="grabber" library="fa" name={FA2SL.set(faGripDotsVertical)}
+                                onPointerDown={handleMouseDown}
+                        />
+                    </SlTooltip>
 
-            <JourneySelector onChange={newJourneySelection} single="true" size="small" style="card"/>
+                    <JourneySelector onChange={newJourneySelection}
+                                     single="true" size="small" style="card"/>
 
-            <SlTooltip hoist content={'Add a journey'} placement="top">
-                <SlIconButton library="fa" onClick={journeyLoader} name={FA2SL.set(faSquarePlus)}/>
-            </SlTooltip>
-            <>
-                {editorStore.journey?.visible &&
+                    <SlTooltip hoist content={'Add a journey'} placement="top">
+                        <SlIconButton
+                            library="fa" onClick={journeyLoader} name={FA2SL.set(faSquarePlus)}/>
+                    </SlTooltip>
                     <>
-                        {!autoRotate.journey &&
-                            <SlTooltip hoist
-                                       content={rotate.running && rotate.target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
-                                       placement="top">
-                                <FAButton onClick={forceRotate}
-                                          ref={manualRotate}
-                                          icon={faArrowRotateRight}
-                                          className={classNames({'fa-spin': rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)})}/>
-                            </SlTooltip>
+                        {editorStore.journey?.visible &&
+                            <>
+                                {!autoRotate.journey &&
+                                    <SlTooltip hoist
+                                               content={rotate.running && rotate.target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
+                                               placement="top">
+                                        <FAButton onClick={forceRotate}
+                                                  ref={manualRotate}
+                                                  icon={faArrowRotateRight}
+                                                  className={classNames({'fa-spin': rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)})}/>
+                                    </SlTooltip>
+                                }
+
+                                <SlTooltip hoist
+                                           content={rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on journey'}
+                                           placement="top">
+                                    <FAButton onClick={maybeRotate}
+                                              icon={rotate.running && autoRotate.journey && (rotate.target?.instanceOf(CURRENT_JOURNEY)) ? faArrowRotateRight : faCrosshairsSimple}
+                                              className={classNames({'fa-spin': rotate.running && autoRotate.journey && rotate.target?.instanceOf(CURRENT_JOURNEY)})}/>
+                                </SlTooltip>
+                            </>
                         }
 
-                        <SlTooltip hoist
-                                   content={rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on journey'}
-                                   placement="top">
-                            <FAButton onClick={maybeRotate}
-                                      icon={rotate.running && autoRotate.journey && (rotate.target?.instanceOf(CURRENT_JOURNEY)) ? faArrowRotateRight : faCrosshairsSimple}
-                                      className={classNames({'fa-spin': rotate.running && autoRotate.journey && rotate.target?.instanceOf(CURRENT_JOURNEY)})}/>
+                        <SlTooltip hoist content={textVisibilityJourney} placement="top">
+                            <ToggleStateIcon onChange={setJourneyVisibility}
+                                             initial={editorStore?.journey?.visible}/>
+                        </SlTooltip>
+
+                        <SlTooltip hoist content="Close" placement="top">
+                            <FAButton id="close-journey-toolbar" onClick={closeToolbar} icon={faXmark}/>
                         </SlTooltip>
                     </>
-                }
-
-                <SlTooltip hoist content={textVisibilityJourney} placement="top">
-                    <ToggleStateIcon onChange={setJourneyVisibility}
-                                     initial={editorStore?.journey?.visible}/>
-                </SlTooltip>
-            </>
-        </div>
+                </div>
+            }
+        </>
     )
 }

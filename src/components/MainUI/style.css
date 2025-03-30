@@ -130,6 +130,7 @@ html {
 .journey-toolbar {
     position: absolute;
     display: flex;
+    visibility: hidden;
     align-items: center;
     flex-direction: row;
     padding: 0;
@@ -140,8 +141,12 @@ html {
     background-color: var(--lgs-dark-color-15);
 }
 
+.journey-toolbar {
+    flex-shrink: 0;
+}
 .journey-toolbar .grabber {
     font-size: var(--lgs-font-size-l);
+    flex-shrink: 0;
     cursor: grab;
 }
 
@@ -155,6 +160,15 @@ html {
     cursor: grabbing;
 }
 
+.journey-toolbar .journey-selector {
+    flex-shrink: 0;
+}
+
+#close-journey-toolbar {
+    height: 1.2rem;
+    border-left: 1px solid var(--lgs-card-on-map-border-color);
+    border-radius: 0;
+}
 
 /***************************************
  * Dropdown Toolbar
