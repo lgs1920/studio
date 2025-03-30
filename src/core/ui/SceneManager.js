@@ -1,6 +1,7 @@
 import {
     NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
 }                                  from '@Core/constants'
+import { MapTarget }               from '@Core/MapTarget'
 import { SceneUtils }              from '@Utils/cesium/SceneUtils'
 import { Mobility }                from '@Utils/Mobility'
 import { UIToast }                 from '@Utils/UIToast'
@@ -133,7 +134,12 @@ export class SceneManager {
     //
     focusPreProcessing = (point, options) => {
         const from = lgs.mainProxy.components.mainUI.rotate.target
-        lgs.mainProxy.components.mainUI.rotate.target = point
+        if (point instanceof MapTarget) {
+            lgs.mainProxy.components.mainUI.rotate.target = point
+        }
+        else {
+            lgs.mainProxy.components.mainUI.rotate.target = new MapTarget(point.element, point)
+        }
         const distance = Mobility.distance(from, point)
         return {
             distance: distance,

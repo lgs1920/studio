@@ -99,9 +99,9 @@ export const POI_STANDARD_TYPE = 'poi'
 export const POI_TMP_TYPE = undefined
 
 
-export const UPDATE_JOURNEY_THEN_DRAW = 1
-export const UPDATE_JOURNEY_SILENTLY = 2
-export const REMOVE_JOURNEY = 3
+export const UPDATE_JOURNEY_THEN_DRAW = 11
+export const UPDATE_JOURNEY_SILENTLY = 22
+export const REMOVE_JOURNEY = 33
 
 export const DRAW_THEN_SAVE = 1
 export const DRAW_WITHOUT_SAVE = 2

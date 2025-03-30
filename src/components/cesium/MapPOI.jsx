@@ -70,9 +70,7 @@ export const MapPOI = memo(({point: pointId}) => {
                                                          lgs.mainProxy.components.pois.visibleList.delete(poi.id)
                                                      }
                                                  }
-                                             }
-
-        , [point],
+                                             }, [point],
     )
 
     useEffect(() => {

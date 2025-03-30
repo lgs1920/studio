@@ -147,7 +147,7 @@ export class MapPOI extends MapElement {
     constructor(options = null) {
         super(CURRENT_POI)
         // If there is no id provided, we generate one
-        options.id = options?.id ? uuid() : options?.id.toString()
+        options.id = options?.id ? options.id.toString() : uuid()
         options.slug = options.id
         this.update(options)
     }

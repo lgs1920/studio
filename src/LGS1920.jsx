@@ -32,6 +32,8 @@ import {
 import {
     LGS1920Context,
 }                           from '@Core/LGS1920Context'
+import { MapPOI }    from '@Core/MapPOI'
+import { MapTarget } from '@Core/MapTarget'
 import {
     LayersAndTerrainManager,
 }                           from '@Core/ui/LayerAndTerrainManager'
@@ -178,7 +180,7 @@ export function LGS1920() {
                                       // Centroid
                                       focusTarget = lgs.theJourney
                                       lgs.cameraStore = lgs.theJourney.camera
-                                      lgs.cameraStore.target = await __.ui.sceneManager.getJourneyCentroid(lgs.theJourney)
+                                      lgs.cameraStore.target = new MapTarget(CURRENT_JOURNEY, await __.ui.sceneManager.getJourneyCentroid(lgs.theJourney))
                                   }
                               }
 
