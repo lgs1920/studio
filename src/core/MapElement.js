@@ -9,8 +9,15 @@ export class MapElement {
     /** @type {boolean} */
     visible    // Is it visible ?
 
+    /** @type {string} */
+    element    // element type (journey, POI, ...)
 
-    constructor() {
+    constructor(element) {
+        this.element = element
+    }
+
+    instanceOf = (request) => {
+        return this.element === request
     }
 
     /**

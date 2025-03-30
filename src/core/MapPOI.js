@@ -54,11 +54,6 @@ export class MapPOI extends MapElement {
     cameraDistance
 
     /**
-     * @type {string}
-     */
-    element = CURRENT_POI
-
-    /**
      * @type {boolean}
      */
     expanded = true
@@ -150,7 +145,7 @@ export class MapPOI extends MapElement {
      * @param {Object} options - The options object containing initial properties.
      */
     constructor(options = null) {
-        super()
+        super(CURRENT_POI)
         // If there is no id provided, we generate one
         options.id = options.id === null ? uuid() : options.id.toString()
         options.slug = options.id
