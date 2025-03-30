@@ -165,6 +165,7 @@ html {
 }
 
 #close-journey-toolbar {
+    font-size: var(--lgs-font-size);
     height: 1.2rem;
     border-left: 1px solid var(--lgs-card-on-map-border-color);
     border-radius: 0;
