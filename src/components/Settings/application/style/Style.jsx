@@ -26,7 +26,6 @@ export const Style = () => {
 
     const checkClose = (event) => {
         // If we're over the drawer, ok else, stop event
-        console.log(event)
         if (window.isOK(event) && __.ui.drawerManager.over) {
             return
         }
