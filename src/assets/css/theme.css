@@ -746,8 +746,9 @@ sl-range {
  ******************************************************************************/
 sl-switch[align-right]::part(base) {
     display: flex;
-    gap: var(--sl-spacing-3x-small) var(--gap-width);
     align-items: center;
+    gap: var(--sl-spacing-3x-small) var(--gap-width);
+    --thumb-size: var(--height)
 }
 
 sl-switch[align-right]::part(label) {
@@ -760,6 +761,10 @@ sl-switch[align-right]::part(control) {
     margin-left: auto
 }
 
+sl-switch[size="x-small"] {
+    --height: 10px;
+    --width: calc(2 * var(--height));
+}
 /*******************************************************************************
  * Alerts
  ******************************************************************************/
