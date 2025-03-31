@@ -64,10 +64,12 @@ export const TracksEditor = (props, ref) => {
                           placement={menu.drawer}
                           label={'Edit your Journey'}
                 >
+                    {journeyToolbar.usage &&
                     <div slot="header-actions">
                         <SlSwitch align-right size="x-small" checked={journeyToolbar.show}
                                   onSlChange={toggleToolbarVisibility}>{'Toolbar'}</SlSwitch>
                     </div>
+                    }
 
                     {lgs.journeys.size > 0 &&
                         <div id={'track-settings-container'}>
