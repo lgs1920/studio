@@ -44,6 +44,9 @@ export const MainUI = () => {
     const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
     const settings = useSnapshot(lgs.settings.ui.menu)
     const clickTimeout = useRef(null)
+
+    const journeyToolbar = useSnapshot(lgs.settings.ui.journeyToolbar)
+
     let resizeTimer
     const windowResized = () => {
         clearTimeout(resizeTimer)
@@ -263,7 +266,9 @@ export const MainUI = () => {
             <SupportUIDialog/>
             <JourneyLoaderUI multiple/>
             <MapPOIContextMenu/>
-            <JourneyToolbar/>
+
+            {journeyToolbar.show && <JourneyToolbar/>}
+
 
         </>
     )

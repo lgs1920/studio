@@ -12,6 +12,20 @@
     border-radius: var(--sl-border-radius-medium);
 }
 
+#journey-editor-drawer::part(header-actions) {
+    display: flex;
+    align-items: center;
+    color: inherit;
+}
+
+#journey-editor-drawer sl-switch {
+    padding-top: 3px;
+}
+
+#journey-editor-drawer sl-switch::part(control) {
+    margin-left: var(--lgs-gutter);
+}
+
 #journey-editor-drawer .selector-wrapper {
     display: flex;
     align-items: self-end;

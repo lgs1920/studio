@@ -1,6 +1,6 @@
 import { JourneyLoaderButton } from '@Components/FileLoader/JourneyLoaderButton'
-import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
-import { SlDivider, SlDrawer } from '@shoelace-style/shoelace/dist/react'
+import { JOURNEY_EDITOR_DRAWER }         from '@Core/constants'
+import { SlDivider, SlDrawer, SlSwitch } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { useSnapshot }           from 'valtio'
 import { JourneySelector }       from './journey/JourneySelector'
@@ -14,10 +14,13 @@ export const TracksEditor = (props, ref) => {
     const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
-    const editorStore = lgs.theJourneyEditorProxy
-    const editorSnapshot = useSnapshot(editorStore)
+    const $editor = lgs.theJourneyEditorProxy
+    const editor = useSnapshot($editor)
 
     const menu = useSnapshot(lgs.editorSettingsProxy.menu)
+
+    const $journeyToolbar = lgs.settings.ui.journeyToolbar
+    const journeyToolbar = useSnapshot($journeyToolbar)
 
     /**
      * Avoid click outside drawer
@@ -44,6 +47,11 @@ export const TracksEditor = (props, ref) => {
         }
     }
 
+    const toggleToolbarVisibility = (event) => {
+        $journeyToolbar.show = !$journeyToolbar.show
+        console.log($journeyToolbar.show)
+    }
+
     return (
         <div className={'drawer-wrapper'}>
             {mainSnap.canViewJourneyData &&
@@ -56,6 +64,11 @@ export const TracksEditor = (props, ref) => {
                           placement={menu.drawer}
                           label={'Edit your Journey'}
                 >
+                    <div slot="header-actions">
+                        <SlSwitch align-right size="x-small" checked={journeyToolbar.show}
+                                  onSlChange={toggleToolbarVisibility}>{'Toolbar'}</SlSwitch>
+                    </div>
+
                     {lgs.journeys.size > 0 &&
                         <div id={'track-settings-container'}>
                             <div className="selector-wrapper">
@@ -67,7 +80,7 @@ export const TracksEditor = (props, ref) => {
 
                             </div>
                         <JourneySettings/>
-                            {editorSnapshot.journey.visible &&
+                            {editor.journey.visible &&
                                 <>
                                     <SlDivider/>
                                     <div className="selector-wrapper">

@@ -104,7 +104,6 @@ export const JourneyToolbar = (props) => {
     }
 
     const maybeRotate = async (event) => {
-        console.log(event)
         event.stopPropagation()
         if ($rotate.running) {
             rotationAllowed = false
@@ -153,11 +152,16 @@ export const JourneyToolbar = (props) => {
         $journeyToolbar.show = false
     }
 
-    $journeyToolbar.show = true
-
     useEffect(() => {
 
         controlToolbar()
+
+        setTimeout(() => {
+            if (journeyToolbar.show && _journeyToolbar.current) {
+                _journeyToolbar.current.style.visibility = 'visible'
+            }
+        }, 1.5 * SECOND)
+
         const handleResize = () => {
             if (__.app.isOutOfContainer(_journeyToolbar)) {
                 controlToolbar()
@@ -171,19 +175,15 @@ export const JourneyToolbar = (props) => {
 
     useEffect(() => {
         controlToolbar()
-        setTimeout(() => {
-            if (journeyToolbar.show) {
-                _journeyToolbar.current.style.visibility = 'visible'
-            }
-        }, 1.5 * SECOND)
-
-
+        if (journeyToolbar.show) {
+            _journeyToolbar.current.style.visibility = 'visible'
+        }
     }, [$journeyToolbar.x, $journeyToolbar.y])
 
     const textVisibilityJourney = sprintf('%s Journey', editorStore?.journey?.visible ? 'Hide' : 'Show')
     return (
         <>
-            {journeyToolbar.show &&
+
                 <div className="journey-toolbar lgs-card on-map"
                      ref={_journeyToolbar}
                      style={{top: journeyToolbar.y, left: journeyToolbar.x}}
@@ -234,8 +234,9 @@ export const JourneyToolbar = (props) => {
                             <FAButton id="close-journey-toolbar" onClick={closeToolbar} icon={faXmark}/>
                         </SlTooltip>
                     </>
+
                 </div>
-            }
+
         </>
     )
 }
