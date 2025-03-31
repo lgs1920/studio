@@ -19,7 +19,6 @@ import { sprintf }                                                           fro
 import { useSnapshot }                                                       from 'valtio'
 
 export const JourneyToolbar = (props) => {
-    const mainUI = lgs.mainProxy.components.mainUI
     const $journeyToolbar = lgs.settings.ui.journeyToolbar
     const journeyToolbar = useSnapshot($journeyToolbar)
     const _journeyToolbar = useRef(null)
@@ -158,7 +157,7 @@ export const JourneyToolbar = (props) => {
 
         setTimeout(() => {
             if (journeyToolbar.show && _journeyToolbar.current) {
-                _journeyToolbar.current.style.visibility = 'visible'
+                _journeyToolbar.current.style.opacity = journeyToolbar.opacity
             }
         }, 1.5 * SECOND)
 
@@ -175,18 +174,14 @@ export const JourneyToolbar = (props) => {
 
     useEffect(() => {
         controlToolbar()
-        if (journeyToolbar.show) {
-            _journeyToolbar.current.style.visibility = 'visible'
-        }
     }, [$journeyToolbar.x, $journeyToolbar.y])
 
     const textVisibilityJourney = sprintf('%s Journey', editorStore?.journey?.visible ? 'Hide' : 'Show')
     return (
         <>
-
                 <div className="journey-toolbar lgs-card on-map"
                      ref={_journeyToolbar}
-                     style={{top: journeyToolbar.y, left: journeyToolbar.x}}
+                     style={{top: journeyToolbar.y, left: journeyToolbar.x, opacity: journeyToolbar.opacity}}
                 >
                     <SlTooltip hoist content={'Drag me'}>
                         <SlIcon ref={grabber} className="grabber" library="fa" name={FA2SL.set(faGripDotsVertical)}
@@ -224,7 +219,6 @@ export const JourneyToolbar = (props) => {
                                 </SlTooltip>
                             </>
                         }
-
                         <SlTooltip hoist content={textVisibilityJourney} placement="top">
                             <ToggleStateIcon onChange={setJourneyVisibility}
                                              initial={editorStore?.journey?.visible}/>
@@ -234,9 +228,7 @@ export const JourneyToolbar = (props) => {
                             <FAButton id="close-journey-toolbar" onClick={closeToolbar} icon={faXmark}/>
                         </SlTooltip>
                     </>
-
                 </div>
-
         </>
     )
 }

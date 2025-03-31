@@ -304,6 +304,9 @@ ui:
 
   ## JourneyToolbar
   journeyToolbar:
-    show: true
-    x: null      # null => center Horizontal
-    y: null      # null => center Vertical
+    usage: true           # Can we use it
+    show: true            # Toggle visibility
+    defaultOpacity: 0.75
+    opacity: 0.75         # 0.3 - 1
+    x: null
+    y: null

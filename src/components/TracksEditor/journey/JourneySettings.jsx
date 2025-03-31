@@ -557,13 +557,13 @@ export const JourneySettings = function JourneySettings() {
 
                         {theJourneyEditor.journey.tracks.size === 1 && <TrackFlagsSettings tooltip="left"/>}
 
-                        <span>
+                        <div>
                         <SlTooltip hoist content={'Export'} placement="left">
                                 <SlIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>
                         </SlTooltip>
                         <RemoveJourney tooltip="left-start" name={REMOVE_JOURNEY_IN_EDIT}/>
 
-                        </span>
+                        </div>
                     </div>
                 </div>
                 <ConfirmExportJourneyDialog/>

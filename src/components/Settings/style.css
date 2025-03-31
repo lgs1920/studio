@@ -179,3 +179,25 @@
     width: 5px;
     background-color: var(--lgs-theme-background-color);
 }
+
+/*******************************************************************************
+ * Editor settings
+ *******************************************************************************/
+.journey-editor-settings sl-switch {width: 100%}
+
+#journey-toolbar-opacity {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+}
+
+#journey-toolbar-opacity span {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+#journey-toolbar-opacity-reset {
+    font-size: var(--lgs-font-size);
+}

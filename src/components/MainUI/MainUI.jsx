@@ -267,7 +267,7 @@ export const MainUI = () => {
             <JourneyLoaderUI multiple/>
             <MapPOIContextMenu/>
 
-            {journeyToolbar.show && <JourneyToolbar/>}
+            {journeyToolbar.show && journeyToolbar.usage && <JourneyToolbar/>}
 
 
         </>
