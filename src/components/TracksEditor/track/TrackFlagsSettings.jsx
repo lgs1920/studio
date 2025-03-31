@@ -62,7 +62,7 @@ export const TrackFlagsSettings = (props) => {
     const textVisibilityStopFlag = sprintf('%s Flag', editorStore.track?.flags?.stop?.visible ? 'Hide' : 'Show')
 
     return (
-        <>
+        <div>
             <SlTooltip hoist content={textVisibilityStartFlag} placement={props.tooltip}>
                 <ToggleStateIcon onChange={setStartFlagVisibility}
                                  id={'start-visibility'}
@@ -81,7 +81,7 @@ export const TrackFlagsSettings = (props) => {
                                  style={{color: lgs.settings.getJourney.pois.stop.color}}
                                  initial={editorSnapshot?.track.flags.stop.visible}/>
             </SlTooltip>
-        </>
+        </div>
     )
 
 }
