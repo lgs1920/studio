@@ -98,6 +98,8 @@ export class LayersUtils {
             applySettings(lgs.theDefaultColorSettings, settings, DEFAULT_LAYERS_COLOR_SETTINGS)
         }
 
+        lgs.viewer.scene.requestRender()
+
 
     }
 

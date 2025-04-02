@@ -1,8 +1,8 @@
-import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
-import { SlDrawer }              from '@shoelace-style/shoelace/dist/react'
+import { JourneyLoaderButton } from '@Components/FileLoader/JourneyLoaderButton'
+import { JOURNEY_EDITOR_DRAWER }         from '@Core/constants'
+import { SlDivider, SlDrawer, SlSwitch } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { useSnapshot }           from 'valtio'
-import { Toolbar }               from '../MainUI/Toolbar'
 import { JourneySelector }       from './journey/JourneySelector'
 import { JourneySettings }       from './journey/JourneySettings'
 import { TrackSelector }         from './track/TrackSelector'
@@ -14,10 +14,13 @@ export const TracksEditor = (props, ref) => {
     const mainStore = lgs.mainProxy
     const mainSnap = useSnapshot(mainStore)
 
-    const editorStore = lgs.theJourneyEditorProxy
-    const editorSnapshot = useSnapshot(editorStore)
+    const $editor = lgs.theJourneyEditorProxy
+    const editor = useSnapshot($editor)
 
     const menu = useSnapshot(lgs.editorSettingsProxy.menu)
+
+    const $journeyToolbar = lgs.settings.ui.journeyToolbar
+    const journeyToolbar = useSnapshot($journeyToolbar)
 
     /**
      * Avoid click outside drawer
@@ -44,6 +47,11 @@ export const TracksEditor = (props, ref) => {
         }
     }
 
+    const toggleToolbarVisibility = (event) => {
+        $journeyToolbar.show = !$journeyToolbar.show
+        console.log($journeyToolbar.show)
+    }
+
     return (
         <div className={'drawer-wrapper'}>
             {mainSnap.canViewJourneyData &&
@@ -54,27 +62,37 @@ export const TracksEditor = (props, ref) => {
                           onSlAfterHide={closeTracksEditor}
                           className={'lgs-theme'}
                           placement={menu.drawer}
+                          label={'Edit your Journey'}
                 >
+                    {journeyToolbar.usage &&
                     <div slot="header-actions">
-                        <Toolbar editor={false}
-                                 profile={true}
-                                 fileLoader={true}
-                                 position={'horizontal'}
-                                 tooltip={'top'}
-                                 mode={'embed'}
-                        />
+                        <SlSwitch align-right size="x-small" checked={journeyToolbar.show}
+                                  onSlChange={toggleToolbarVisibility}>{'Toolbar'}</SlSwitch>
                     </div>
-                    {lgs.journeys.size > 0 && <div id={'track-settings-container'}>
-                        <JourneySelector onChange={Utils.initJourneyEdition}
-                                         label={'Select a Journey:'}
-                                         single={true}/>
-                        <JourneySettings/>
+                    }
 
-                        {editorSnapshot.journey.visible && <>
+                    {lgs.journeys.size > 0 &&
+                        <div id={'track-settings-container'}>
+                            <div className="selector-wrapper">
+                        <JourneySelector onChange={Utils.initJourneyEdition}
+                                         single={true}/>
+                                <JourneyLoaderButton tooltip="left"
+                                                     mini="true"
+                                                     className="editor-vertical-menu in-header"/>
+
+                            </div>
+                        <JourneySettings/>
+                            {editor.journey.visible &&
+                                <>
+                                    <SlDivider/>
+                                    <div className="selector-wrapper">
                             <TrackSelector onChange={Utils.initTrackEdition}
                                            label={'Select one of the tracks:'}/>
+                                        <div className="editor-vertical-menu ">&nbsp;</div>
+                                    </div>
                             <TrackSettings/>
-                        </>}
+                                </>
+                            }
                     </div>}
                     <div id="journey-editor-footer" slot={'footer'}></div>
                 </SlDrawer>}

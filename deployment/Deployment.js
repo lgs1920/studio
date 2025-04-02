@@ -20,6 +20,7 @@
 import { exec, execSync } from 'child_process'
 import path               from 'path'
 import { Client as SCP }  from 'scp2'
+import { simpleGit }      from 'simple-git'
 import { Client as SSH2 } from 'ssh2'
 import { zip }            from 'zip-a-folder'
 
@@ -66,6 +67,15 @@ export class Deployment {
 
         this.password = process.env[`LGS1920_PASSWORD_${this.platform.toUpperCase()}`]
 
+
+        this.github_token = process.env[`LGS1920_GITHUB_TOKEN`]
+        this.github_user = process.env[`LGS1920_GITHUB_USER`]
+        this.git = simpleGit({
+                                 config: [
+                                     `http.extraHeader=Authorization: ${this.github_token}`,
+                                 ],
+                             })
+
         this.sshConfig = {
             host:     this.remoteHost,
             port:     22,
@@ -78,6 +88,9 @@ export class Deployment {
         this.date = new Date().toISOString()
             .replace(/[-:.]/g, '')
             .slice(0, 15)
+
+        this.branch = (await this.git.status()).current
+
     }
 
     /**
@@ -200,7 +213,7 @@ export class Deployment {
         execSync(`rm -rf ${this.localDistPath}`)
 
         return new Promise((resolve, reject) => {
-            console.log(`--- Building ${this.yellow}${this.product} ${this.version}${this.reset} for ${this.platform} ...`)
+            console.log(`--- Building ${this.yellow}${this.product}  (version: ${this.version} - branch ${this.branch}) ${this.reset} for ${this.platform} ...`)
             let buildCommand
             switch (this.product) {
                 case 'studio': {
@@ -268,6 +281,20 @@ export class Deployment {
         })
     }
 
+    remote = async (target = 'origin') => {
+        try {
+            const remotes = await this.git.getRemotes(true)
+            return remotes.find(remote => remote.name === target)
+
+        }
+        catch (error) {
+            console.error('Error, can not find remotes:', error)
+            process.exit(1)
+        }
+    }
+
+
+
     /**
      * Create a git tag
      *
@@ -275,45 +302,18 @@ export class Deployment {
      * message 'Deployed on <platform>'
      *
      */
-    gitTag = () => {
+    gitTag = async () => {
 
-        // get git branch
-        let branch = ''
-        try {
-            branch = execSync('git rev-parse --abbrev-ref HEAD', {encoding: 'utf-8'}).trim()
-        }
-        catch (error) {
-            branch = 'unknown'
-        }
+        const tagName = `${this.platform}-${this.version}-${this.branch}-${this.date}`
+        const message = `Branch ${this.branch} deployed on ${tagName}!`
 
-        const tagName = `${this.platform}-${this.version}-${this.date}`
-        const message = `Branch ${branch} deployed on ${tagName}!`
+        console.log(`    > git commit tag : ${tagName}`)
+        await this.git.commit(message)
+        await this.git.addTag(tagName)
 
-        const command = `git tag -a ${tagName} -m "${message}"`
-        console.log(`    > Git commit tag on branch ${branch}`)
-
-        exec(command, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Error : ${error.message}`)
-                return
-            }
-            console.log(`    > tag : ${tagName}`)
-        })
-
-        // console.log(`    > Git push tag on branch ${branch}`)
-        // exec(`git push origin ${tagName}`, (error, stdout, stderr) => {
-        //     if (error) {
-        //         console.error(`Error : ${error.message}`);
-        //         return;
-        //     }
-        //
-        //     if (stderr) {
-        //         console.error(`Error: ${stderr}`);
-        //         return;
-        //     }
-        //
-        //     console.log(`The git push was successful for tag ${tagName}`);
-        // });
+        // console.log(`    > Git push tag on branch ${ this.branch}`) TODO
+        // await this.git.push()
+        // await this.git.pushTags()
 
     }
 
@@ -325,7 +325,7 @@ export class Deployment {
     preDeployment = async () => {
         console.log('--- Pre deployment')
 
-        this.gitTag()
+        await this.gitTag()
 
         console.log('    > Preparing files')
         switch (this.product) {
@@ -417,7 +417,7 @@ export class Deployment {
                     await this.postDeployment(connection)
 
                     console.log('\n---')
-                    console.log(`${this.yellow}Application ${this.green}${this.product} ${this.version}${this.yellow} deployed to ${this.platform} ${this.reset}`)
+                    console.log(`${this.yellow}Application ${this.green}${this.product} (version: ${this.version} - branch ${this.branch}) ${this.yellow} deployed to ${this.platform} ${this.reset}`)
                     console.log('---\n')
 
                 }

@@ -1,13 +1,15 @@
 import {
     ADD_JOURNEY, APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DRAWING, DRAWING_FROM_DB,
-    DRAWING_FROM_UI, FOCUS_ON_FEATURE, NO_FOCUS, SCENE_MODE_2D,
+    DRAWING_FROM_UI, FOCUS_ON_FEATURE, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
 }                                                  from '@Core/constants'
 import { Journey }                                 from '@Core/Journey'
 import { default as centroid }                     from '@turf/centroid'
 import { SceneUtils }                              from '@Utils/cesium/SceneUtils'
 import {
-    Cartesian3, Cartographic, Color, CustomDataSource, GeoJsonDataSource, Math, Rectangle, sampleTerrainMostDetailed,
+    Cartesian3, Cartographic, Color as CColor, CustomDataSource, GeoJsonDataSource, Math as M,
+    PolylineOutlineMaterialProperty, Rectangle, sampleTerrainMostDetailed,
 }                                                  from 'cesium'
+import Color                                       from 'color'
 import { UIToast }                                 from '../UIToast.js'
 import { FLAG_START, POI_FLAG, POI_STD, POIUtils } from './POIUtils'
 
@@ -84,7 +86,6 @@ export class TrackUtils {
             lgs.viewer.dataSources.add(new CustomDataSource(journey.slug)))
 
         await Promise.all(dataSources)
-
     }
 
     /**
@@ -98,17 +99,36 @@ export class TrackUtils {
     static draw = async (track, {action = DRAWING_FROM_UI, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
         // Load Geo Json for track then set visibility
         const source = lgs.viewer.dataSources.getByName(track.slug)[0]
-        return source.load(track.content,
-                           {
-                               stroke:      Color.fromCssColorString(track.color),
-                               strokeWidth: track.thickness,
-                               // Common options
-                               clampToGround: true,
-                               name:          track.title,
-                           },
-        ).then(dataSource => {
-            dataSource.show = forcedToHide ? false : track.visible
-        })
+        const color = Color(track.color)
+        const [r, g, b] = color.color
+        switch (action) {
+            case DRAWING_FROM_DB:
+            case ADD_JOURNEY:
+                await source.load(track.content,
+                            {
+                                clampToGround: true,
+                                name:          track.title,
+                            },
+                )
+            // No break, show must go on
+            case REFRESH_DRAWING:
+            case DRAWING_FROM_UI:
+                const material = new PolylineOutlineMaterialProperty({
+                                                                         color: CColor.fromCssColorString(track.color),
+                                                                         // outlineColor: false,
+                                                                         outlineWidth: 0,
+                                                                     },
+                )
+                source.entities.values.forEach(entity => {
+                    if (entity.polyline) {
+                        entity.polyline.material = material
+                        entity.polyline.width = track.thickness
+                    }
+                })
+                break
+        }
+        source.show = forcedToHide ? false : track.visible
+        lgs.viewer.scene.requestRender()
     }
 
     /**
@@ -170,13 +190,13 @@ export class TrackUtils {
                 default:
                     // We use destination
                     position = {
-                        longitude: Math.toDegrees(cartographic.longitude),
-                        latitude:  Math.toDegrees(cartographic.latitude),
+                        longitude: M.toDegrees(cartographic.longitude),
+                        latitude:  M.toDegrees(cartographic.latitude),
                     }
 
             }
             position.pitch = -90
-            position.height = Math.toDegrees(cartographic.height)
+            position.height = M.toDegrees(cartographic.height)
 
             __.ui.cameraManager.settings = {
                 position: position,
@@ -213,9 +233,9 @@ export class TrackUtils {
         // lgs.camera.flyTo({
         //                      destination:    destination,                               // Camera
         //                      orientation:    {                                         // Offset and Orientation
-        //                          heading: Math.toRadians(__.ui.cameraManager.settings.position.heading),
-        //                          pitch:   Math.toRadians(__.ui.cameraManager.settings.position.pitch),
-        //                          roll:    Math.toRadians(__.ui.cameraManager.settings.position.roll),
+        //                          heading: M.toRadians(__.ui.cameraManager.settings.position.heading),
+        //                          pitch:   M.toRadians(__.ui.cameraManager.settings.position.pitch),
+        //                          roll:    M.toRadians(__.ui.cameraManager.settings.position.roll),
         //                      },
         //                      maximumHeight:     lgs.camera.maximumHeight,
         //                      pitchAdjustHeight: lgs.camera.pitchAdjustHeight,

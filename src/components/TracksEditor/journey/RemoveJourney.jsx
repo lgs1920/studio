@@ -16,7 +16,7 @@ export const RemoveJourney = (props) => {
     const removeButton = useRef(null)
     const tooltipElement = useRef(null)
     const distance = 0
-    const tooltip = props?.tooltip ?? 'top'
+    const tooltip = props?.tooltip ?? 'top-start'
     const settings = useSnapshot(lgs.settings.ui.menu)
     const placement = props.placement ?? (settings.toolBar.fromStart ? 'top-start' : 'top-end')
 

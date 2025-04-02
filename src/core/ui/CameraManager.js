@@ -1,4 +1,4 @@
-import { CURRENT_CAMERA, CURRENT_STORE, JOURNEYS_STORE, MILLIS, MINUTE } from '@Core/constants'
+import { CURRENT_CAMERA, CURRENT_STORE, FOCUS_STARTER, JOURNEYS_STORE, MILLIS, MINUTE } from '@Core/constants'
 
 import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
 import { UIToast }     from '@Utils/UIToast'
@@ -365,9 +365,6 @@ export class CameraManager {
             this.unlock()
             __.ui.sceneManager.stopRotate
             cancelAnimationFrame(this.move.animation)
-
-            lgs.viewer.clock.canAnimate = false
-            lgs.viewer.clock.shouldAnimate = false
             this.enableMapDragging()
 
         }
@@ -378,8 +375,25 @@ export class CameraManager {
      *
      * @return {boolean}
      */
-    isRotating = () => {
-        return lgs.mainProxy.components.mainUI.rotate.running
+    isRotating = (target) => {
+        if (target) {
+            return lgs.mainProxy.components.mainUI.rotate.running
+                // type and slug are not defined in geocoding
+                && lgs.mainProxy.components.mainUI.rotate.target?.element === target.element
+                && lgs.mainProxy.components.mainUI.rotate.target?.slug === target.slug
+        }
+        else {
+            return lgs.mainProxy.components.mainUI.rotate.running
+        }
+
+
+    }
+
+    /**
+     * Reset focus to STARTER
+     */
+    reset = () => {
+        lgs.settings.ui.camera.start.app = FOCUS_STARTER
     }
 
     /**

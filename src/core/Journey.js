@@ -1,6 +1,6 @@
 import {
-    DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JOURNEYS_STORE, JSON_, KML, KMZ, NO_FOCUS,
-    ORIGIN_STORE, REFRESH_DRAWING, SIMULATE_ALTITUDE, TRACK_SLUG, UPDATE_JOURNEY_SILENTLY,
+    CURRENT_JOURNEY, DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JOURNEYS_STORE, JSON_, KML, KMZ,
+    NO_FOCUS, ORIGIN_STORE, REFRESH_DRAWING, SIMULATE_ALTITUDE, TRACK_SLUG, UPDATE_JOURNEY_SILENTLY,
 }                                      from '@Core/constants'
 import {
     gpx, kml,
@@ -49,7 +49,7 @@ export class Journey extends MapElement {
     hasTime = false
 
     constructor(title, type, options) {
-        super()
+        super(CURRENT_JOURNEY)
 
 
         if (title) {
@@ -576,6 +576,7 @@ export class Journey extends MapElement {
 
     focus = (props={}) => {
         props.journey=this
+        props.target = this
         __.ui.sceneManager.focusOnJourney(props)
     }
 

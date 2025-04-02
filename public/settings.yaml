@@ -79,8 +79,8 @@ camera:
   fps: 30
   orbitalPercentageChanged: 0.05
   percentageChanged: 0.05
-  maximumHeight: 12000
-  pitchAdjustHeight: 12000
+  maximumHeight: 9000
+  pitchAdjustHeight: 5000
   flyingTime: 3   # seconds
   rpm: 4          # rotation per minute
   rotations: 1    # total rotation
@@ -301,3 +301,12 @@ ui:
     limit: 7 # results per query
     email: contact@lgs1920.fr
     minQuery: 3 # characters
+
+  ## JourneyToolbar
+  journeyToolbar:
+    usage: true           # Can we use it
+    show: true            # Toggle visibility
+    defaultOpacity: 0.75
+    opacity: 0.75         # 0.3 - 1
+    x: null
+    y: null

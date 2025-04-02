@@ -14,6 +14,7 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { NONE } from '@Core/constants'
 import { faArrowRotateRight }          from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                       from '@Utils/FA2SL.js'
@@ -43,6 +44,7 @@ export const RotateButton = (props) => {
                 infinite:   true,
                 rotate:     true,
                 flyingTime: 0,    // no move, no time ! We're on target
+                target: null,
             })
             pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
         }

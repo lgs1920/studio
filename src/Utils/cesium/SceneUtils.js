@@ -15,9 +15,12 @@
  ******************************************************************************/
 
 import {
-    ADD_JOURNEY, DRAWING, DRAWING_FROM_DB, FOCUS_LAST, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D,
-    SCENE_MODE_COLUMBUS,
+    ADD_JOURNEY, CURRENT_JOURNEY, DRAWING, DRAWING_FROM_DB, FOCUS_LAST, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D,
+    SCENE_MODE_COLUMBUS, UPDATE_JOURNEY_SILENTLY,
 }                                                                                                  from '@Core/constants'
+import {
+    MapTarget,
+}                                                                                                  from '@Core/MapTarget'
 import bbox                                                                                        from '@turf/bbox'
 import centroid                                                                                    from '@turf/centroid'
 import { Cartesian2, Cartesian3, Color, EasingFunction, Math as M, Matrix4, Rectangle, SceneMode } from 'cesium'
@@ -151,13 +154,23 @@ export class SceneUtils {
         const roll = M.toRadians(options.roll ?? lgs.settings.camera.roll)
 
         const maximumHeight = options.maximumHeight ?? lgs.settings.camera.maximumHeight
-        const pitchAdjustHeight = options.pitchAdjustHeight ?? lgs.settings.camera.pitchAdjustHeight
-        const flyingTime = options.flyingTime ?? lgs.settings.camera.flyingTime
+        let pitchAdjustHeight = options.pitchAdjustHeight ?? lgs.settings.camera.pitchAdjustHeight
+        let flyingTime = options.flyingTime ?? lgs.settings.camera.flyingTime
 
-        if (options.initializer) {
-            options.initializer(point, options)
+
+        // fix flying time and pitch height if necessary
+        const initializer = options.initializer ? options.initializer(point, options) : null
+        if (initializer) {
+            if (initializer.distance < 4000) {
+                flyingTime = 0
+            }
+            else if (initializer.distance < 15000) {
+                flyingTime = (flyingTime > 2) ? 2 : flyingTime
+                pitchAdjustHeight = initializer.height + 1000
+            }
+
+
         }
-
         lgs.camera.flyTo({
                              destination:       Cartesian3.fromDegrees(
                                  point.longitude, point.latitude, height,
@@ -171,7 +184,7 @@ export class SceneUtils {
                              pitchAdjustHeight: pitchAdjustHeight,
                              duration:          flyingTime,
                              convert:           options?.convert ?? true,
-                             easingFunction:    EasingFunction.QUADRATIC_IN_OUT,
+                             easingFunction: EasingFunction.LINEAR_NONE,
                              complete:          async () => {
                                  const target = {
                                      longitude:       point.longitude,
@@ -275,12 +288,13 @@ export class SceneUtils {
         if (__.ui.cameraManager.isJourneyFocusOn(FOCUS_LAST)
             && options.action !== REFRESH_DRAWING && options.action !== ADD_JOURNEY) {
             if (journey?.camera) {
-                point = journey.camera.target
+                point = new MapTarget(CURRENT_JOURNEY, {...journey.camera.target, ...{slug: journey.slug}})
             }
         }
         else {
             // Centroid
-            point = await SceneUtils.getJourneyCentroid(journey)
+            const centroid = await SceneUtils.getJourneyCentroid(journey)
+            point = new MapTarget(CURRENT_JOURNEY, {...centroid, ...{slug: journey.slug}})
         }
 
         // Depending on what we are doing, we need to convert the destination
@@ -289,41 +303,43 @@ export class SceneUtils {
         if (__.ui.sceneManager.is2D && (options.action === DRAWING || options.action === DRAWING_FROM_DB)) {
             convert = true
         }
-        SceneUtils.focus(point, {
-            pitch:    -45,
-            heading:  0,
-            roll:     0,
-            range:    10000,
-            lookAt:   true,
-            rpm: options.rpm ?? lgs.settings.camera.rpm,
-            rotation: 1,
-            infinite: false,
-            bbox:    {data: theBbox, id: track.slug, show: false},
-            convert: convert,
-            rotate: options.rotate,
-            action:      options.action,
-            resetCamera: options.resetCamera,
-            callback:    options.callback,
-            initializer: options.initializer,
+        if (options.action !== UPDATE_JOURNEY_SILENTLY) {
+            SceneUtils.focus(point, {
+                pitch:       -45,
+                heading:     0,
+                roll:        0,
+                range:       10000,
+                lookAt:      true,
+                rpm:         options.rpm ?? lgs.settings.camera.rpm,
+                rotation:    1,
+                infinite:    false,
+                bbox:        {data: theBbox, id: track.slug, show: false},
+                convert:     convert,
+                rotate:      options.rotate,
+                action:      options.action,
+                resetCamera: options.resetCamera,
+                callback:    options.callback,
+                initializer: options.initializer,
 
-        })
+            })
 
-        //Show BBox if requested
-        if (options?.bbox ?? false) {
-            const id = `BBox#${track.slug}`
-            // We remove the BBox if it already exists
-            if (lgs.viewer.entities.getById(id)) {
-                lgs.viewer.entities.removeById(id)
+            //Show BBox if requested
+            if (options?.bbox ?? false) {
+                const id = `BBox#${track.slug}`
+                // We remove the BBox if it already exists
+                if (lgs.viewer.entities.getById(id)) {
+                    lgs.viewer.entities.removeById(id)
+                }
+                // Add the BBox
+                lgs.viewer.entities.add({
+                                            id:        id,
+                                            name:      id,
+                                            rectangle: {
+                                                coordinates: Rectangle.fromDegrees(myBbox[0], myBbox[1], myBbox[2], myBbox[3]),
+                                                material:    Color.CHARTREUSE.withAlpha(0.2),
+                                            },
+                                        })
             }
-            // Add the BBox
-            lgs.viewer.entities.add({
-                                        id:        id,
-                                        name:      id,
-                                        rectangle: {
-                                            coordinates: Rectangle.fromDegrees(myBbox[0], myBbox[1], myBbox[2], myBbox[3]),
-                                            material:    Color.CHARTREUSE.withAlpha(0.2),
-                                        },
-                                    })
         }
 
 

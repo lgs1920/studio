@@ -99,9 +99,9 @@ export const POI_STANDARD_TYPE = 'poi'
 export const POI_TMP_TYPE = undefined
 
 
-export const UPDATE_JOURNEY_THEN_DRAW = 1
-export const UPDATE_JOURNEY_SILENTLY = 2
-export const REMOVE_JOURNEY = 3
+export const UPDATE_JOURNEY_THEN_DRAW = 11
+export const UPDATE_JOURNEY_SILENTLY = 22
+export const REMOVE_JOURNEY = 33
 
 export const DRAW_THEN_SAVE = 1
 export const DRAW_WITHOUT_SAVE = 2
@@ -118,7 +118,7 @@ export const SETTING_EXCLUSIONS = [
     'layers.filter', 'layers.colorSettings',
     'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
     'ui.camera', 'ui.welcome',
-    'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit',
+    'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
 ].sort((a, b) => {
     const segmentsA = a.split('.')
     const segmentsB = b.split('.')
@@ -202,6 +202,7 @@ export const ACCESS_ICONS = {
 }
 
 export const ALL = 'all'
+export const NONE = 'none'
 export const LOCKED = 'locked'
 export const UNLOCKED = 'unlocked'
 

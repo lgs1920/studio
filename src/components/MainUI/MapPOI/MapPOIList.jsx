@@ -17,9 +17,9 @@
 
 import { FontAwesomeIcon }                                        from '@Components/FontAwesomeIcon'
 import { MapPOIEditContent }                                      from '@Components/MainUI/MapPOI/MapPOIEditContent'
-import { ToggleStateIcon }                                        from '@Components/ToggleStateIcon'
-import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER }     from '@Core/constants'
-import { faMask, faSquare, faSquareCheck, faTriangleExclamation } from '@fortawesome/pro-regular-svg-icons'
+import { ToggleStateIcon }                                                 from '@Components/ToggleStateIcon'
+import { CURRENT_POI, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
+import { faMask, faSquare, faSquareCheck, faTriangleExclamation }          from '@fortawesome/pro-regular-svg-icons'
 import { SlAlert, SlDetails, SlIcon }                             from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                  from '@Utils/FA2SL'
 import { UIToast }                                                from '@Utils/UIToast'
@@ -125,6 +125,7 @@ export const MapPOIList = () => {
                         __.ui.poiManager.stopAnimation(store.current.id)
                     }
                     __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
+                        target: lgs.mainProxy.components.pois.current,
                         heading:    camera.position.heading,
                         pitch:      camera.position.pitch,
                         roll:       camera.position.roll,

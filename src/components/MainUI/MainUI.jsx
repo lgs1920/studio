@@ -1,9 +1,9 @@
 import { CompassUI }                        from '@Components/cesium/CompassUI/CompassUI'
 import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
 import { GeocodingButton }                  from '@Components/MainUI/geocoding/GeocodingButton'
-import { GeocodingUI }                      from '@Components/MainUI/geocoding/GeocodingUI'
-import { JourneyToolbar }                   from '@Components/MainUI/JourneyToolbar'
-import { MapPOICluster }                    from '@Components/MainUI/MapPOI/MapPOICluster'
+import { GeocodingUI }       from '@Components/MainUI/geocoding/GeocodingUI'
+import { TrackEditorButton } from '@Components/MainUI/TrackEditorButton'
+import { MapPOICluster }     from '@Components/MainUI/MapPOI/MapPOICluster'
 import { MapPOIContextMenu }                from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { RotateButton }                     from '@Components/MainUI/RotateButton'
 import { Profile }                          from '@Components/Profile/Profile'
@@ -15,6 +15,7 @@ import {
     MENU_START_END,
     MENU_START_START, MOBILE_MAX, POINTER, POIS_EDITOR_DRAWER, SCENE_MODE_2D, SECOND, START, TOP,
 }                                      from '@Core/constants'
+import { JourneyToolbar } from '@Editor/JourneyToolbar'
 import { useEffect, useRef, useState } from 'react'
 
 import './style.css'
@@ -43,6 +44,9 @@ export const MainUI = () => {
     const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
     const settings = useSnapshot(lgs.settings.ui.menu)
     const clickTimeout = useRef(null)
+
+    const journeyToolbar = useSnapshot(lgs.settings.ui.journeyToolbar)
+
     let resizeTimer
     const windowResized = () => {
         clearTimeout(resizeTimer)
@@ -83,7 +87,6 @@ export const MainUI = () => {
     }
 
     const handleKeyDown = (event) => {
-        console.log(event.key)
         if (event.key === 'Escape') {
             closeDrawer()
         }
@@ -211,7 +214,7 @@ export const MainUI = () => {
                             <SettingsButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                             <LayersButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                             <POIEditButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
-                            <JourneyToolbar tooltip={'top'}/>
+                            <TrackEditorButton tooltip={'top'}/>
                             <ProfileButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
 
                             <InformationButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
@@ -262,6 +265,8 @@ export const MainUI = () => {
             <SupportUIDialog/>
             <JourneyLoaderUI multiple/>
             <MapPOIContextMenu/>
+
+            {journeyToolbar.show && journeyToolbar.usage && <JourneyToolbar/>}
 
 
         </>

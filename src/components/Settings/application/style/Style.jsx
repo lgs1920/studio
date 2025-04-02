@@ -14,6 +14,8 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { CameraSettings } from '@Components/Settings/application/general/CameraSettings'
+import { EditorSettings } from '@Components/Settings/application/style/EditorSettings'
 import { MenuSettings }      from '@Components/Settings/application/style/MenuSettings'
 import { SlDetails }         from '@shoelace-style/shoelace/dist/react'
 import { useEffect, useRef } from 'react'
@@ -21,10 +23,6 @@ import { WelcomeModal }      from './WelcomeModal'
 
 export const Style = () => {
     const styleSettings = useRef(null)
-
-    useEffect(() => {
-        __.ui.ui.initDetailsGroup(styleSettings.current)
-    }, [])
 
     const checkClose = (event) => {
         // If we're over the drawer, ok else, stop event
@@ -34,28 +32,36 @@ export const Style = () => {
         event.preventDefault()
     }
 
+    useEffect(() => {
+        __.ui.ui.initDetailsGroup(styleSettings.current)
+    }, [])
 
     return (
 
-        <div ref={styleSettings} id={'style-settings'}>
-            <SlDetails id={'ui-welcome-modal-settings'}
+        <div ref={styleSettings} id="style-settings">
+            <SlDetails id="ui-welcome-modal-settings"
                        small open={false}
-                       className={'lgs-theme'}
+                       className="lgs-theme"
                        onSlHide={checkClose}
             >
                 <WelcomeModal/>
-
             </SlDetails>
 
-            <SlDetails id={'ui-menu-settings'}
+            <SlDetails id="ui-menu-settings"
                        small open={false}
-                       className={'lgs-theme'}
+                       className="lgs-theme"
                        onSlHide={checkClose}
             >
                 <MenuSettings/>
             </SlDetails>
 
-
+            <SlDetails id="ui-editor-settings"
+                       small open={false}
+                       className="lgs-theme"
+                       onSlHide={checkClose}
+            >
+                <EditorSettings/>
+            </SlDetails>
 
         </div>
 

@@ -14,78 +14,91 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { useConfirm } from '@Components/Modals/ConfirmUI'
+import { FAButton } from '@Components/FAButton'
+import {
+    useConfirm,
+}                   from '@Components/Modals/ConfirmUI'
 import {
     ToggleStateIcon,
-}                     from '@Components/ToggleStateIcon'
+}                   from '@Components/ToggleStateIcon'
 import {
+    CURRENT_JOURNEY,
     ORIGIN_STORE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE, UPDATE_JOURNEY_SILENTLY,
-}                     from '@Core/constants'
+} from '@Core/constants'
 import {
     ElevationServer,
-}                     from '@Core/Elevation/ElevationServer'
+}                   from '@Core/Elevation/ElevationServer'
 import {
     Journey,
-}                     from '@Core/Journey'
+}                   from '@Core/Journey'
 import {
     RemoveJourney,
-}                     from '@Editor/journey/RemoveJourney'
+}                   from '@Editor/journey/RemoveJourney'
 import {
     TrackData,
-}                     from '@Editor/track/TrackData'
+}                   from '@Editor/track/TrackData'
 import {
     TrackFlagsSettings,
-}                     from '@Editor/track/TrackFlagsSettings'
+}                   from '@Editor/track/TrackFlagsSettings'
 import {
     TrackPoints,
-}                     from '@Editor/track/TrackPoints'
+}                   from '@Editor/track/TrackPoints'
 import {
     TrackStyleSettings,
-}                     from '@Editor/track/TrackStyleSettings'
+}                   from '@Editor/track/TrackStyleSettings'
 import {
     Utils,
-}                     from '@Editor/Utils'
+}                   from '@Editor/Utils'
 import {
-    faCircleDot, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil, faRectangleList,
-    faTelescope,
-}                     from '@fortawesome/pro-regular-svg-icons'
+    faArrowRotateRight, faCircleDot, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash,
+    faPaintbrushPencil, faRectangleList, faTelescope,
+}                   from '@fortawesome/pro-regular-svg-icons'
 import {
     SlIcon, SlIconButton, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                     from '@shoelace-style/shoelace/dist/react'
+}                   from '@shoelace-style/shoelace/dist/react'
 import {
     FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                     from '@Utils/cesium/TrackUtils'
+}                   from '@Utils/cesium/TrackUtils'
 import {
     FA2SL,
-}                     from '@Utils/FA2SL'
+}                   from '@Utils/FA2SL'
 import {
     UIToast,
-}                     from '@Utils/UIToast'
-import parse          from 'html-react-parser'
+}                   from '@Utils/UIToast'
+import classNames   from 'classnames'
+import parse        from 'html-react-parser'
 import React, {
-    useEffect,
-}                     from 'react'
+    useEffect, useRef, useState,
+}                   from 'react'
 import {
     sprintf,
-}                     from 'sprintf-js'
+}                   from 'sprintf-js'
 import {
     useSnapshot,
-}                     from 'valtio'
+}                   from 'valtio'
 import {
     SelectElevationSource,
-}                     from '../../MainUI/SelectElevationSource'
+}                   from '../../MainUI/SelectElevationSource'
 import {
     JourneyData,
-}                     from './JourneyData'
+}                   from './JourneyData'
 import {
     JourneyPOIs,
-}                     from './JourneyPOIs'
+}                   from './JourneyPOIs'
 
 export const JourneySettings = function JourneySettings() {
 
-    const editorStore = lgs.theJourneyEditorProxy
-    const editorSnapshot = useSnapshot(editorStore)
-    const former = editorStore.journey.elevationServer
+    const $theJourneyEditor = lgs.theJourneyEditorProxy
+    const theJourneyEditor = useSnapshot($theJourneyEditor)
+    const former = $theJourneyEditor.journey.elevationServer
+    const editorStore = useSnapshot(lgs.theJourneyEditorProxy)
+
+    const $rotate = lgs.mainProxy.components.mainUI.rotate
+    const rotate = useSnapshot($rotate)
+
+    const autoRotate = useSnapshot(lgs.settings.ui.camera.start.rotate)
+    let rotationAllowed = false
+    const manualRotate = useRef(null)
 
     /**
      * Change journey description
@@ -97,10 +110,10 @@ export const JourneySettings = function JourneySettings() {
         // Title is empty, we force the former value
         if (description === '') {
             const field = document.getElementById('journey-description')
-            field.value = editorStore.journey.description
+            field.value = $theJourneyEditor.journey.description
             return
         }
-        editorStore.journey.description = description
+        $theJourneyEditor.journey.description = description
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
     }
 
@@ -116,16 +129,16 @@ export const JourneySettings = function JourneySettings() {
         // Title is empty, we force the former value
         if (title === '') {
             const field = document.getElementById('journey-title')
-            field.value = editorStore.journey.title
+            field.value = $theJourneyEditor.journey.title
             return
         }
         // title should not been already used for another journey.
-        editorStore.journey.title = editorStore.journey.singleTitle(title)
+        $theJourneyEditor.journey.title = $theJourneyEditor.journey.singleTitle(title)
         // If it is a mono track, we need to sync track title
         if (lgs.theJourney.hasOneTrack()) {
             const [slug, track] = lgs.theJourney.tracks.entries().next().value
-            track.title = editorStore.journey.title
-            editorStore.journey.tracks.set(slug, track)
+            track.title = $theJourneyEditor.journey.title
+            $theJourneyEditor.journey.tracks.set(slug, track)
             track.addToEditor()
             __.ui.profiler.updateTitle()
 
@@ -141,7 +154,8 @@ export const JourneySettings = function JourneySettings() {
      *
      */
     const setJourneyVisibility = async visibility => {
-        editorStore.journey.visible = visibility
+        stopRotate()
+        $theJourneyEditor.journey.visible = visibility
         lgs.theJourney.updateVisibility(visibility)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneySettings()
@@ -151,7 +165,7 @@ export const JourneySettings = function JourneySettings() {
      *
      */
     const setAllPOIsVisibility = async visibility => {
-        editorStore.journey.POIsVisible = visibility
+        $theJourneyEditor.journey.POIsVisible = visibility
         TrackUtils.updatePOIsVisibility(lgs.theJourney, visibility)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneySettings()
@@ -163,17 +177,17 @@ export const JourneySettings = function JourneySettings() {
      * @type {computeElevation}
      */
     const computeElevation = async event => {
-        editorStore.journey.elevationServer = event.target.value
+        $theJourneyEditor.journey.elevationServer = event.target.value
 
-        editorStore.longTask = editorStore.journey.elevationServer !== ElevationServer.NONE
+        $theJourneyEditor.longTask = $theJourneyEditor.journey.elevationServer !== ElevationServer.NONE
 
         // use an Elevation server
-        const server = new ElevationServer(editorStore.journey.elevationServer)
+        const server = new ElevationServer($theJourneyEditor.journey.elevationServer)
 
         // Extract coordinates
         let allCoordinates = []
         // And Origin Data
-        lgs.origin = JSON.parse(await lgs.db.lgs1920.get(editorStore.journey.slug, ORIGIN_STORE))
+        lgs.origin = JSON.parse(await lgs.db.lgs1920.get($theJourneyEditor.journey.slug, ORIGIN_STORE))
 
         let allOrigin = []
 
@@ -204,7 +218,7 @@ export const JourneySettings = function JourneySettings() {
             .then(results => {
 
                 // Suppress in progress notification
-                editorStore.longTask = false
+                $theJourneyEditor.longTask = false
 
                 if (results.errors) {
                     // Failure notification
@@ -215,7 +229,7 @@ export const JourneySettings = function JourneySettings() {
                                       text:    'Changes aborted! Check logs to see error details.',
                                       error:   results.errors,
                                   })
-                    editorStore.journey.elevationServer = former
+                    $theJourneyEditor.journey.elevationServer = former
 
                     return []
                 }
@@ -223,7 +237,7 @@ export const JourneySettings = function JourneySettings() {
                     // Success notification
                     UIToast.success({
                                         caption: `Elevation data have been modified`,
-                                        text:    `Source:${ElevationServer.getServer(editorStore.journey.elevationServer).label}`,
+                                        text: `Source:${ElevationServer.getServer($theJourneyEditor.journey.elevationServer).label}`,
                                     })
                     const coordinates = []
                     results.coordinates.forEach(coordinate => {
@@ -287,7 +301,7 @@ export const JourneySettings = function JourneySettings() {
                     theJourney.getPOIsFromGeoJson()
                     await theJourney.extractMetrics()
                     theJourney.addToContext()
-                    theJourney.saveToDB()
+                    await theJourney.saveToDB()
 
                     // Then we redraw the journey
                     await Utils.updateJourney(SIMULATE_ALTITUDE)
@@ -302,13 +316,13 @@ export const JourneySettings = function JourneySettings() {
                 }
                 else {
                     // Changes are in error, we reset selection
-                    editorStore.journey.elevationServer = former
+                    $theJourneyEditor.journey.elevationServer = former
                 }
             })
 
             .catch(error => {
-                editorStore.longTask = false
-                editorStore.journey.elevationServer = former
+                $theJourneyEditor.longTask = false
+                $theJourneyEditor.journey.elevationServer = former
                 // Failure notification
                 console.error(error.errors ?? error)
                 UIToast.error({
@@ -327,7 +341,7 @@ export const JourneySettings = function JourneySettings() {
     const Message = () => {
         return (<>{`'Not Yet. Sorry.'`}</>)
     }
-    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export <strong>${editorSnapshot.journey.title}</strong> ?`, Message,
+    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export <strong>${theJourneyEditor.journey.title}</strong> ?`, Message,
                                                                           // {
                                                                           //     text:'Export',
                                                                           //     icon:faDownload
@@ -344,25 +358,55 @@ export const JourneySettings = function JourneySettings() {
         }
     }
 
+    const stopRotate = async () => {
+        if ($rotate.running) {
+            await __.ui.cameraManager.stopRotate()
+        }
+    }
+
+    const forceRotate = async () => {
+        rotationAllowed = !rotationAllowed
+        await focusOnJourney()
+    }
+
+    const maybeRotate = async () => {
+        if ($rotate.running) {
+            rotationAllowed = false
+            stopRotate()
+            if ($rotate.target.element && $rotate.target.element === lgs.theJourney.element) {
+                return
+            }
+        }
+
+        rotationAllowed = autoRotate.journey
+        await focusOnJourney()
+    }
+
     /**
      * Focus on Journey
      */
-    const focusOnJourney = async () => {
+    const focusOnJourney = async (event) => {
+        if ($rotate.running) {
+            await __.ui.cameraManager.stopRotate()
+            if (rotate.target?.instanceOf(CURRENT_JOURNEY)) {
+                return
+            }
+        }
         await setJourneyVisibility(true)
         lgs.theJourney.focus({
                                  resetCamera: true,
                                  action:      REFRESH_DRAWING,
-                                 rotate:      lgs.settings.ui.camera.start.rotate.journey,
+                                 rotate: rotationAllowed || autoRotate.journey,
                              })
     }
 
-    const textVisibilityJourney = sprintf('%s Journey', editorSnapshot.journey.visible ? 'Hide' : 'Show')
-    const textVisibilityPOIs = sprintf('%s POIs', editorSnapshot.journey.allPOIs ? 'Hide' : 'Show')
+    const textVisibilityJourney = sprintf('%s Journey', theJourneyEditor.journey.visible ? 'Hide' : 'Show')
+    const textVisibilityPOIs = sprintf('%s POIs', theJourneyEditor.journey.allPOIs ? 'Hide' : 'Show')
 
     let serverList = []
 
-    if (!editorSnapshot.journey.hasElevation) {
-        if (editorSnapshot.journey?.elevationServer === ElevationServer.NONE) {
+    if (!theJourneyEditor.journey.hasElevation) {
+        if (theJourneyEditor.journey?.elevationServer === ElevationServer.NONE) {
             serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.NONE))
         }
         else {
@@ -383,22 +427,23 @@ export const JourneySettings = function JourneySettings() {
     }, [lgs.mainProxy.components.mainUI.removeJourneyDialog.active])
 
     return (<>
-        {editorSnapshot.journey &&
+        {theJourneyEditor.journey &&
             <div id="journey-settings" key={lgs.mainProxy.components.journeyEditor.keys.journey.settings}>
                 <div className={'settings-panel'} id={'editor-journey-settings-panel'}>
                     <SlTabGroup className={'menu-panel'}>
-                        <SlTab slot="nav" panel="data" id="tab-journey-data" active={editorSnapshot.tabs.journey.data}>
+                        <SlTab slot="nav" panel="data" id="tab-journey-data"
+                               active={theJourneyEditor.tabs.journey.data}>
                             <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>Data
                         </SlTab>
-                        <SlTab slot="nav" panel="edit" active={editorSnapshot.tabs.journey.edit}>
+                        <SlTab slot="nav" panel="edit" active={theJourneyEditor.tabs.journey.edit}>
                             <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
                         </SlTab>
-                        {editorSnapshot.journey.tracks.size === 1 &&
-                            <SlTab slot="nav" panel="points" active={editorSnapshot.tabs.journey.points}>
+                        {theJourneyEditor.journey.tracks.size === 1 &&
+                            <SlTab slot="nav" panel="points" active={theJourneyEditor.tabs.journey.points}>
                                 <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points
                             </SlTab>
                         }
-                        <SlTab slot="nav" panel="pois" active={editorSnapshot.tabs.journey.pois}>
+                        <SlTab slot="nav" panel="pois" active={theJourneyEditor.tabs.journey.pois}>
                             <SlIcon library="fa" name={FA2SL.set(faTelescope)}/>POIs
                         </SlTab>
 
@@ -409,17 +454,17 @@ export const JourneySettings = function JourneySettings() {
                             {/* Add DEM instance selection if we do not have height initially (ie in the journey file) */}
                             <div className={'select-elevation-source'}>
                                 <SelectElevationSource
-                                    default={editorSnapshot.journey?.elevationServer}
+                                    default={theJourneyEditor.journey?.elevationServer}
                                     label={'Elevation:'}
                                     onChange={computeElevation}
                                     servers={serverList}
                                 />
 
-                                {editorSnapshot.longTask && <SlProgressBar indeterminate/>}
+                                {theJourneyEditor.longTask && <SlProgressBar indeterminate/>}
 
                             </div>
-                            {editorSnapshot.journey.tracks.size === 1 && <TrackData/>}
-                            {editorSnapshot.journey.tracks.size > 1 && <JourneyData/>}
+                            {theJourneyEditor.journey.tracks.size === 1 && <TrackData/>}
+                            {theJourneyEditor.journey.tracks.size > 1 && <JourneyData/>}
 
                         </SlTabPanel>
                         {/**
@@ -430,7 +475,7 @@ export const JourneySettings = function JourneySettings() {
                                 {/* Change visible name (title) */}
                                 <SlTooltip content={'Title'}>
                                     <SlInput id="journey-title"
-                                             value={editorSnapshot.journey.title}
+                                             value={theJourneyEditor.journey.title}
                                              onSlChange={setTitle}
                                     />
                                 </SlTooltip>
@@ -440,7 +485,7 @@ export const JourneySettings = function JourneySettings() {
                                     <SlTextarea row={2}
                                                 size={'small'}
                                                 id={'journey-description'}
-                                                value={parse(editorSnapshot.journey.description)}
+                                                value={parse(theJourneyEditor.journey.description)}
                                                 onSlChange={setDescription}
                                                 placeholder={'Journey description'}
                                     />
@@ -448,7 +493,7 @@ export const JourneySettings = function JourneySettings() {
 
 
                                 { // if there only one track, the track style is here.
-                                    editorSnapshot.journey.tracks.size === 1 && <TrackStyleSettings/>
+                                    theJourneyEditor.journey.tracks.size === 1 && <TrackStyleSettings/>
                                 }
 
                             </div>
@@ -470,36 +515,55 @@ export const JourneySettings = function JourneySettings() {
 
 
                     <div id="journey-visibility" className={'editor-vertical-menu'}>
-                        <span>
-                        <SlTooltip hoist content={'Focus on journey'}>
-                                <SlIconButton onClick={focusOnJourney} library="fa"
-                                              name={FA2SL.set(faCrosshairsSimple)}/>
-                        </SlTooltip>
-                        <SlTooltip hoist content={textVisibilityJourney}>
-                            <ToggleStateIcon onChange={setJourneyVisibility}
-                                             initial={editorSnapshot.journey.visible}/>
-                        </SlTooltip>
-                            {editorSnapshot.journey.pois.size > 1 &&
-                                <SlTooltip hoist content={textVisibilityPOIs}>
+                        <div>
+                            {editorStore.journey?.visible &&
+                                <>
+                                    {!autoRotate.journey &&
+                                        <SlTooltip hoist
+                                                   content={rotate.running && rotate.target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
+                                                   placement="left">
+                                            <FAButton onClick={forceRotate}
+                                                      ref={manualRotate}
+                                                      icon={faArrowRotateRight}
+                                                      className={classNames({'fa-spin': rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)})}/>
+                                        </SlTooltip>
+                                    }
+
+                                    <SlTooltip hoist
+                                               content={rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on journey'}
+                                               placement="left">
+                                        <FAButton onClick={maybeRotate}
+                                                  icon={rotate.running && autoRotate.journey && (rotate.target?.instanceOf(CURRENT_JOURNEY)) ? faArrowRotateRight : faCrosshairsSimple}
+                                                  className={classNames({'fa-spin': rotate.running && autoRotate.journey && rotate.target?.instanceOf(CURRENT_JOURNEY)})}/>
+                                    </SlTooltip>
+                                </>
+                            }
+
+                            <SlTooltip hoist content={textVisibilityJourney} placement="left">
+                                <ToggleStateIcon onChange={setJourneyVisibility}
+                                                 initial={editorStore?.journey?.visible}/>
+                            </SlTooltip>
+                        </div>
+                        {theJourneyEditor.journey.pois.size > 1 &&
+                                <SlTooltip hoist content={textVisibilityPOIs} placement="left">
                                     <ToggleStateIcon
                                         onChange={setAllPOIsVisibility}
-                                        initial={editorSnapshot.journey.POIsVisible}
+                                        initial={theJourneyEditor.journey.POIsVisible}
                                         icons={{
                                             shown: faLocationDot, hidden: faLocationDotSlash,
                                         }}/>
                                 </SlTooltip>
                             }
 
-                            {editorSnapshot.journey.tracks.size === 1 && <TrackFlagsSettings/>}
-                        </span>
+                        {theJourneyEditor.journey.tracks.size === 1 && <TrackFlagsSettings tooltip="left"/>}
 
-                        <span>
-                        <SlTooltip hoist content={'Export'}>
+                        <div>
+                        <SlTooltip hoist content={'Export'} placement="left">
                                 <SlIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>
                         </SlTooltip>
-                        <RemoveJourney placement={'left'} name={REMOVE_JOURNEY_IN_EDIT}/>
+                        <RemoveJourney tooltip="left-start" name={REMOVE_JOURNEY_IN_EDIT}/>
 
-                        </span>
+                        </div>
                     </div>
                 </div>
                 <ConfirmExportJourneyDialog/>

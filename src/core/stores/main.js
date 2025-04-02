@@ -29,6 +29,7 @@ export const main = {
             rotate:        {
                 clockwise: false,
                 running:   false,
+                target: false,
                 rpm: 4,
             },
         },
@@ -64,6 +65,7 @@ export const main = {
                 },
             },
         },
+
         pois:          {
             list:   new proxyMap(),
             categories: new proxyMap(),

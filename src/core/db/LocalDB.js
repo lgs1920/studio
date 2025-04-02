@@ -121,7 +121,7 @@ export class LocalDB {
             this.setTTL(content, ttl)
         }
 
-        (await this.#db).put(store, content, key)
+        await (await this.#db).put(store, content, key)
 
         this.#content = content
         return this.#content

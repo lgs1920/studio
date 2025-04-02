@@ -26,11 +26,14 @@ import {
     WelcomeModal,
 }                           from '@Components/MainUI/WelcomeModal'
 import {
-    BASE_ENTITY, BOTTOM, FOCUS_LAST, FOCUS_STARTER, MOBILE_MAX, OVERLAY_ENTITY, POI_STARTER_TYPE,
-}                           from '@Core/constants'
+    BASE_ENTITY, BOTTOM, FOCUS_LAST, FOCUS_STARTER, CURRENT_JOURNEY, MOBILE_MAX, OVERLAY_ENTITY,
+    POI_STANDARD_TYPE, POI_STARTER_TYPE, NONE,
+} from '@Core/constants'
 import {
     LGS1920Context,
 }                           from '@Core/LGS1920Context'
+import { MapPOI }    from '@Core/MapPOI'
+import { MapTarget } from '@Core/MapTarget'
 import {
     LayersAndTerrainManager,
 }                           from '@Core/ui/LayerAndTerrainManager'
@@ -113,6 +116,8 @@ export function LGS1920() {
                               await __.ui.poiManager.readAllFromDB()
                               let starter = __.ui.poiManager.starter
 
+                              let focusTarget = null
+
                               if (!starter) {
                                   starter = __.ui.poiManager.add({
                                                                      longitude:   lgs.settings.starter.longitude,
@@ -141,7 +146,12 @@ export function LGS1920() {
                               // According to the settings and saved information, we set the camera data
 
                               // Use app settings
+                              if (!lgs.theJourney) {
+                                  __.ui.cameraManager.reset()
+                              }
+
                               if (__.ui.cameraManager.isAppFocusOn(FOCUS_STARTER)) {
+                                  focusTarget = starter
                                   lgs.cameraStore = {
                                       target: {
                                           longitude: starter.longitude,
@@ -172,13 +182,15 @@ export function LGS1920() {
                                   }
                                   else {
                                       // Centroid
+                                      focusTarget = lgs.theJourney
                                       lgs.cameraStore = lgs.theJourney.camera
-                                      lgs.cameraStore.target = await __.ui.sceneManager.getJourneyCentroid(lgs.theJourney)
+                                      lgs.cameraStore.target = new MapTarget(CURRENT_JOURNEY, await __.ui.sceneManager.getJourneyCentroid(lgs.theJourney))
                                   }
                               }
 
                               // Do Focus
                               __.ui.sceneManager.focus(lgs.cameraStore.target, {
+                                  target: focusTarget,
                                   heading:  lgs.cameraStore.position.heading,
                                   pitch:    __.ui.sceneManager.noRelief() ? -90 : lgs.cameraStore.position.pitch,
                                   roll:     lgs.cameraStore.position.roll,
