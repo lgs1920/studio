@@ -49,7 +49,6 @@ export const TracksEditor = (props, ref) => {
 
     const toggleToolbarVisibility = (event) => {
         $journeyToolbar.show = !$journeyToolbar.show
-        console.log($journeyToolbar.show)
     }
 
     return (
