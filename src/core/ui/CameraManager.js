@@ -1,4 +1,4 @@
-import { CURRENT_CAMERA, CURRENT_STORE, JOURNEYS_STORE, MILLIS, MINUTE } from '@Core/constants'
+import { CURRENT_CAMERA, CURRENT_STORE, FOCUS_STARTER, JOURNEYS_STORE, MILLIS, MINUTE } from '@Core/constants'
 
 import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
 import { UIToast }     from '@Utils/UIToast'
@@ -387,6 +387,13 @@ export class CameraManager {
         }
 
 
+    }
+
+    /**
+     * Reset focus to STARTER
+     */
+    reset = () => {
+        lgs.settings.ui.camera.start.app = FOCUS_STARTER
     }
 
     /**

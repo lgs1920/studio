@@ -146,6 +146,10 @@ export function LGS1920() {
                               // According to the settings and saved information, we set the camera data
 
                               // Use app settings
+                              if (!lgs.theJourney) {
+                                  __.ui.cameraManager.reset()
+                              }
+
                               if (__.ui.cameraManager.isAppFocusOn(FOCUS_STARTER)) {
                                   focusTarget = starter
                                   lgs.cameraStore = {
