@@ -1,5 +1,7 @@
 import { FAButton }                                                          from '@Components/FAButton'
-import { ToggleStateIcon }                                                   from '@Components/ToggleStateIcon'
+import {
+    ToggleStateIcon,
+} from '@Components/ToggleStateIcon'
 import { CURRENT_JOURNEY, REFRESH_DRAWING, SECOND, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
 import {
     JourneySelector,
@@ -9,7 +11,6 @@ import {
     faArrowRotateRight, faCrosshairsSimple, faGripDotsVertical, faSquarePlus, faXmark,
 }                                                                            from '@fortawesome/pro-regular-svg-icons'
 import {
-    SlDivider,
     SlIcon, SlIconButton, SlTooltip,
 }                                                                            from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                             from '@Utils/FA2SL'
@@ -22,6 +23,9 @@ export const JourneyToolbar = (props) => {
     const $journeyToolbar = lgs.settings.ui.journeyToolbar
     const journeyToolbar = useSnapshot($journeyToolbar)
     const _journeyToolbar = useRef(null)
+
+    const $journeyEditor = lgs.mainProxy.components.journeyEditor
+    const journeyEditor = useSnapshot($journeyEditor)
 
     const $rotate = lgs.mainProxy.components.mainUI.rotate
     const rotate = useSnapshot($rotate)
@@ -153,6 +157,11 @@ export const JourneyToolbar = (props) => {
 
     useEffect(() => {
 
+        // If we do not have any journey, we should force toolbar visibility
+        if ($journeyToolbar.usage && $journeyEditor.list.length === 0) {
+            $journeyToolbar.show = true
+        }
+
         controlToolbar()
 
         setTimeout(() => {
@@ -170,6 +179,7 @@ export const JourneyToolbar = (props) => {
         return () => {
             window.removeEventListener('resize', handleResize)
         }
+
     }, [])
 
     useEffect(() => {
@@ -179,6 +189,7 @@ export const JourneyToolbar = (props) => {
     const textVisibilityJourney = sprintf('%s Journey', editorStore?.journey?.visible ? 'Hide' : 'Show')
     return (
         <>
+            {journeyEditor.list.length > 0 &&
                 <div className="journey-toolbar lgs-card on-map"
                      ref={_journeyToolbar}
                      style={{top: journeyToolbar.y, left: journeyToolbar.x, opacity: journeyToolbar.opacity}}
@@ -229,6 +240,8 @@ export const JourneyToolbar = (props) => {
                         </SlTooltip>
                     </>
                 </div>
+            }
+
         </>
     )
 }

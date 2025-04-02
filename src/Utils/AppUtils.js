@@ -498,4 +498,38 @@ export class AppUtils {
 
         return {prevValue, nextValue}
     }
+
+    /**
+     * Check if an element is inside its container
+     *
+     * @param element    React ref
+     * @param container  React ref or window
+     * @return {boolean}
+     */
+    static isOutOfContainer(element, container = window) {
+        const elementRect = element.current.getBoundingClientRect()
+        const containerRect =
+                  container === window ? {
+                          top:    0,
+                          left:   0,
+                          bottom: document.documentElement.clientHeight,
+                          right:  document.documentElement.clientWidth,
+                      }
+                                       : container.current.getBoundingClientRect()
+
+        // This is partially
+        // return (
+        //     elementRect.top < containerRect.top ||
+        //     elementRect.left < containerRect.left ||
+        //     elementRect.bottom > containerRect.bottom ||
+        //     elementRect.right > containerRect.right
+        // )
+
+        return (
+            elementRect.bottom < containerRect.top || // En dehors par le haut
+            elementRect.top > containerRect.bottom || // En dehors par le bas
+            elementRect.right < containerRect.left || // En dehors par la gauche
+            elementRect.left > containerRect.right    // En dehors par la droite
+        )
+    }
 }
