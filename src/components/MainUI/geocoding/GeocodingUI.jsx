@@ -14,9 +14,8 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { SelectLocation }                 from '@Components/MainUI/geocoding/SelectLocation'
-import { CURRENT_POI, POI_STANDARD_TYPE } from '@Core/constants'
-import { faBullseyePointer, faSearch }    from '@fortawesome/pro-regular-svg-icons'
+import { SelectLocation }              from '@Components/MainUI/geocoding/SelectLocation'
+import { faBullseyePointer, faSearch } from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlInput, SlPopup, SlSwitch, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import * as turf                                                   from '@turf/helpers'
 import { FA2SL }                                                   from '@Utils/FA2SL'
@@ -97,45 +96,27 @@ export const GeocodingUI = () => {
      */
     const showPOI = async geoPoint => {
 
-        const point = {
-            longitude: geoPoint.geometry.coordinates[0],
-            latitude:  geoPoint.geometry.coordinates[1],
-            title:       geoPoint.properties.name ?? '',
-            description: geoPoint.properties.display_name
-                         ? geoPoint.properties.display_name.split(', ').join(' - ')
-                         : '',
-            color:   lgs.darkContrastColor,
-            bgColor: lgs.colors.poiDefaultBackground,
-        }
-        try {
-            point.simulatedHeight = await __.ui.poiManager.getElevationFromTerrain({
-                                                                                       longitude: geoPoint.geometry.coordinates[0],
-                                                                                       latitude:  geoPoint.geometry.coordinates[1],
-                                                                                   })
-        }
-        catch {
-            point.simulatedHeight = 0
-        }
-
-        __.ui.sceneManager.focus(point, {
-            target: point,
-            lookAt:   true,
-            infinite: false,
-            rotate: lgs.settings.ui.poi.rotate,
-            rpm: lgs.settings.ui.poi.rpm,
-            flyingTime: 2,
-            callback: (poi) => {
-                const newPoi = __.ui.poiManager.add(poi)
-                if (newPoi) {
-                    setPoi(newPoi)
-                    return true
-                }
-                UIToast.warning({
-                                    caption: `POI not created !`,
-                                    text: `This location is too closed to an existing POI!`,
-                                })
-                return false
-            },
+        __.ui.poiManager.create(geoPoint, true).then(point => {
+            __.ui.sceneManager.focus(point, {
+                target:     point,
+                lookAt:     true,
+                infinite:   false,
+                rotate:     lgs.settings.ui.poi.rotate,
+                rpm:        lgs.settings.ui.poi.rpm,
+                flyingTime: 2,
+                callback:   (poi) => {
+                    const newPoi = __.ui.poiManager.add(poi)
+                    if (newPoi) {
+                        setPoi(newPoi)
+                        return true
+                    }
+                    UIToast.warning({
+                                        caption: `POI not created !`,
+                                        text:    `This location is too closed to an existing POI!`,
+                                    })
+                    return false
+                },
+            })
         })
 
         // Clear current values and states

@@ -71,14 +71,44 @@ export class POIManager {
      *
      * @return {MapPOI|false} - The new POI or false if it is closer than others
      */
-    add = (poi) => {
+    add = (poi, checkDistance = true) => {
         poi.id = poi.id ?? uuid()
-        if (this.isTooCloseThanExistingPoints(poi, this.threshold)) {
+        if (checkDistance && this.isTooCloseThanExistingPoints(poi, this.threshold)) {
             return false
         }
 
         this.list.set(poi.id, new MapPOI({...poi, ...this.poiDefaultStatus}))
         return this.list.get(poi.id)
+    }
+
+    create = async (poi, simulate = false) => {
+        const point = {
+            longitude:   poi.geometry.coordinates[0],
+            latitude:    poi.geometry.coordinates[1],
+            title:       poi.properties.name ?? '',
+            description: poi.properties.display_name
+                         ? poi.properties.display_name.split(', ').join(' - ')
+                         : '',
+            color:       lgs.darkContrastColor,
+            bgColor:     lgs.colors.poiDefaultBackground,
+        }
+
+        if (simulate) {
+            try {
+                point.simulatedHeight = await __.ui.poiManager.getElevationFromTerrain({
+                                                                                           longitude: poi.geometry.coordinates[0],
+                                                                                           latitude:  poi.geometry.coordinates[1],
+                                                                                       })
+            }
+            catch {
+                point.simulatedHeight = 0
+            }
+        }
+        else {
+            point.height = poi.height
+        }
+
+        return point
     }
 
     /**
@@ -347,10 +377,11 @@ export class POIManager {
      * Update the poi type to POI
      *
      * @param id {string} POI id
+     * @param type        the POI type (default to POI_STANDARD_TYPE)
      */
-    saveAsPOI = async (id) => {
+    saveAsPOI = async (id, type = POI_STANDARD_TYPE) => {
         Object.assign(this.list.get(id), {
-            type: POI_STANDARD_TYPE,
+            type: type,
         })
         await this.saveInDB(this.list.get(id))
         return this.list.get(id)
