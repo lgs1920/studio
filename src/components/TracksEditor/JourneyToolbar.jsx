@@ -143,11 +143,22 @@ export const JourneyToolbar = (props) => {
     const controlToolbar = () => {
         const w = window.innerWidth
         const h = window.innerHeight
-        if ($journeyToolbar.x > w || $journeyToolbar.x === null) {
-            $journeyToolbar.x = w - 2 * _journeyToolbar.current.offsetWidth
+
+        if (journeyEditor.list.length > 0) {
+            if ($journeyToolbar.x > w || $journeyToolbar.x === null) {
+                $journeyToolbar.x = w - 2 * _journeyToolbar.current.offsetWidth
+            }
+            if ($journeyToolbar.y > h || $journeyToolbar.y === null) {
+                $journeyToolbar.y = h - 2 * _journeyToolbar.current.offsetHeight
+            }
         }
-        if ($journeyToolbar.y > h || $journeyToolbar.y === null) {
-            $journeyToolbar.y = h - 2 * _journeyToolbar.current.offsetHeight
+        else {
+            if ($journeyToolbar.x === null) {
+                $journeyToolbar.x = w / 2 - 140  // approx...
+            }
+            if ($journeyToolbar.y === null) {
+                $journeyToolbar.y = 2 * h / 3
+            }
         }
     }
 
@@ -156,14 +167,6 @@ export const JourneyToolbar = (props) => {
     }
 
     useEffect(() => {
-
-        // If we do not have any journey, we should force toolbar visibility
-        if ($journeyToolbar.usage && $journeyEditor.list.length === 0) {
-            $journeyToolbar.show = true
-        }
-
-        controlToolbar()
-
         setTimeout(() => {
             if (journeyToolbar.show && _journeyToolbar.current) {
                 _journeyToolbar.current.style.opacity = journeyToolbar.opacity
