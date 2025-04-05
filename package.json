@@ -97,14 +97,14 @@
   "devDependencies": {
     "@types/bun": "^1.2.8",
     "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.0",
+    "@types/react-dom": "^19.1.1",
     "@typescript-eslint/eslint-plugin": "^8.29.0",
     "@typescript-eslint/parser": "^8.29.0",
     "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.23.0",
+    "eslint": "^9.24.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
-    "typescript": "^5.8.2",
+    "typescript": "^5.8.3",
     "vite": "6.2.3"
   },
   "module": "index.ts",
