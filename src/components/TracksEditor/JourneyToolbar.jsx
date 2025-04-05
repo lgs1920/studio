@@ -1,8 +1,11 @@
 import { FAButton }                                                          from '@Components/FAButton'
 import {
     ToggleStateIcon,
-} from '@Components/ToggleStateIcon'
+}                                                                            from '@Components/ToggleStateIcon'
 import { CURRENT_JOURNEY, REFRESH_DRAWING, SECOND, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
+import {
+    InteractionHandler,
+}                                                                            from '@Core/ui/InteractionHandler'
 import {
     JourneySelector,
 }                                                                            from '@Editor/journey/JourneySelector'
@@ -15,7 +18,7 @@ import {
 }                                                                            from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                             from '@Utils/FA2SL'
 import classNames                                                            from 'classnames'
-import React, { useEffect, useRef }                                          from 'react'
+import React, { useEffect, useLayoutEffect, useRef }                         from 'react'
 import { sprintf }                                                           from 'sprintf-js'
 import { useSnapshot }                                                       from 'valtio'
 
@@ -50,44 +53,6 @@ export const JourneyToolbar = (props) => {
         await Utils.updateJourneyEditor(event.target.value, {})
     }
 
-    const handleMouseDown = (event) => {
-        const rect = _journeyToolbar.current.getBoundingClientRect()
-        const offsetX = event.clientX - rect.left
-        const offsetY = event.clientY - rect.top
-        _journeyToolbar.current.classList.add('dragging')
-        dragging = true
-        document.body.classList.add('no-select')
-
-        const handleMouseMove = (event) => {
-            if (dragging) {
-                if (animationFrame.current) {
-                    cancelAnimationFrame(animationFrame.current)
-                }
-                animationFrame.current = requestAnimationFrame(() => {
-                    $journeyToolbar.y = event.clientY - offsetY
-                    $journeyToolbar.x = event.clientX - offsetX
-                })
-            }
-        }
-
-        const handleMouseUp = (event) => {
-            document.removeEventListener('mousemove', handleMouseMove)
-            document.removeEventListener('mouseup', handleMouseUp)
-
-            _journeyToolbar.current.classList.remove('dragging')
-            document.body.classList.remove('no-select')
-
-            dragging = false
-            if (animationFrame.current) {
-                cancelAnimationFrame(animationFrame.current)
-                animationFrame.current = null
-            }
-
-        }
-
-        document.addEventListener('mousemove', handleMouseMove)
-        document.addEventListener('mouseup', handleMouseUp)
-    }
     const stopRotate = async () => {
         if ($rotate.running) {
             await __.ui.cameraManager.stopRotate()
@@ -115,7 +80,6 @@ export const JourneyToolbar = (props) => {
                 return
             }
         }
-
         rotationAllowed = autoRotate.journey
         await focusOnJourney()
     }
@@ -166,28 +130,27 @@ export const JourneyToolbar = (props) => {
         $journeyToolbar.show = false
     }
 
-    useEffect(() => {
+    useLayoutEffect(() => {
+        let interactionHandler
         setTimeout(() => {
-            if (journeyToolbar.show && _journeyToolbar.current) {
-                _journeyToolbar.current.style.opacity = journeyToolbar.opacity
-            }
-        }, 1.5 * SECOND)
+            interactionHandler = new InteractionHandler({
+                                                            dragger:  grabber.current,
+                                                            parent:   _journeyToolbar.current,
+                                                            callback: (toolbar) => {
+                                                                // Let's save coordinates for the next run
+                                                                $journeyToolbar.x = toolbar.x
+                                                                $journeyToolbar.y = toolbar.y
+                                                            },
+                                                        })
+            interactionHandler.attachEvents()
+            _journeyToolbar.current.style.opacity = journeyToolbar.opacity
+        }, 2 * SECOND)
 
-        const handleResize = () => {
-            if (__.app.isOutOfContainer(_journeyToolbar)) {
-                controlToolbar()
-            }
-        }
-        window.addEventListener('resize', handleResize)
+        // Nettoyage
         return () => {
-            window.removeEventListener('resize', handleResize)
+            interactionHandler.detachEvents()
         }
-
     }, [])
-
-    useEffect(() => {
-        controlToolbar()
-    }, [$journeyToolbar.x, $journeyToolbar.y])
 
     const textVisibilityJourney = sprintf('%s Journey', editorStore?.journey?.visible ? 'Hide' : 'Show')
     return (
@@ -195,12 +158,10 @@ export const JourneyToolbar = (props) => {
             {journeyEditor.list.length > 0 &&
                 <div className="journey-toolbar lgs-card on-map"
                      ref={_journeyToolbar}
-                     style={{top: journeyToolbar.y, left: journeyToolbar.x, opacity: journeyToolbar.opacity}}
+                     style={{top: $journeyToolbar.y, left: $journeyToolbar.x, opacity: journeyToolbar.opacity}}
                 >
                     <SlTooltip hoist content={'Drag me'}>
-                        <SlIcon ref={grabber} className="grabber" library="fa" name={FA2SL.set(faGripDotsVertical)}
-                                onPointerDown={handleMouseDown}
-                        />
+                        <SlIcon ref={grabber} className="grabber" library="fa" name={FA2SL.set(faGripDotsVertical)}/>
                     </SlTooltip>
 
                     <JourneySelector onChange={newJourneySelection}
