@@ -470,16 +470,38 @@ sl-card[variant="primary"]::part(base) {
  * Compass
  ******************************************************************************/
 :root {
-    --lgs-compass-size: 95px;
+    --lgs-compass-size: 50px;
 }
 
-cesium-compass {
+.lgs-compass {
+    position: relative;
     width: var(--lgs-compass-size);
     height: var(--lgs-compass-size);
+    margin: var(--lgs-gutter-s);
+}
 
-    position: relative;
-    --cesium-compass-fill-color: var(--lgs-dark-ui-bg-color);
-    --cesium-compass-stroke-color: var(--lgs-dark-ui-fg-color);
+.lgs-compass-needle #north {
+    fill: var(--sl-color-red-800);
+}
+
+.lgs-compass-needle #south {
+    fill: var(--sl-color-amber-100);
+}
+
+.lgs-compass-text {
+    fill: var(--lgs-light-color);
+}
+
+.lgs-compass-poles, .lgs-compass-poles-circle {
+    fill: var(--lgs-light-color-50);
+}
+
+.lgs-compass-bg {
+    fill: var(--lgs-dark-color-75);
+}
+
+.lgs-compass-over-bg {
+    fill: var(--lgs-light-color-15);
 }
 
 /*******************************************************************************

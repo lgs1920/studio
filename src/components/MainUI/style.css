@@ -51,19 +51,16 @@ html {
     left: var(--secondary-buttons-bar-left);
     align-items: center;
     flex-direction: column;
-    width: var(--lgs-compass-size);
     margin-left: var(--secondary-buttons-bar-margin-left);
     pointer-events: none;
-    gap: var(--lgs-gutter-s);
-    --width: var(--lgs-compass-size);
+    gap: 0 !important;
 }
 
 
 #secondary-buttons-bar-content {
-    position: absolute;
-    top: var(--lgs-compass-size);
     display: flex;
     flex-direction: column;
+    margin-top: var(--lgs-gutter);
     pointer-events: auto;
     gap: var(--lgs-gutter-xs);
 }
