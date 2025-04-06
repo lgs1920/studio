@@ -496,6 +496,10 @@ sl-card[variant="primary"]::part(base) {
     fill: var(--lgs-light-color-50);
 }
 
+.lgs-compass-center {
+    fill: var(--sl-color-amber-500);
+}
+
 .lgs-compass-bg {
     fill: var(--lgs-dark-color-75);
 }

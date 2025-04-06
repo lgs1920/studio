@@ -205,6 +205,7 @@ export const MainUI = () => {
         return (<SupportUI/>)
     }
 
+
     return (
         <>
             <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
@@ -221,7 +222,7 @@ export const MainUI = () => {
                             <SupportUIButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                         </div>
                         <div id={'secondary-buttons-bar'} className={secondaryEntrance}>
-                            <Compass/>
+                            <Compass sensitivity={100}/>
                             <div id="secondary-buttons-bar-content">
                                 <SceneModeSelector tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingButton tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>

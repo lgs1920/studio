@@ -1,16 +1,17 @@
 import { Math as CMath }     from 'cesium'
 import { useEffect, useRef } from 'react'
 
-export const Compass = () => {
+export const Compass = ({sensitivity = 0.1}) => {
     const svgRef = useRef(null) // Ref for the SVG image
     const isDraggingRef = useRef(false) // State for dragging
     const lastPositionRef = useRef({x: 0, y: 0}) // Last mouse/touch position
     const doubleTapTimeoutRef = useRef(null) // Timeout for double-tap detection
 
+    console.log(sensitivity)
     useEffect(() => {
 
         // Function to update the SVG orientation based on the camera heading
-        const updateSvgOrientation = () => {
+        const rotateCompass = () => {
             const heading = lgs.camera.heading // Current heading in radians
             const headingDegrees = CMath.toDegrees(heading) // Convert to degrees
 
@@ -21,7 +22,7 @@ export const Compass = () => {
         }
 
         // Attach camera change event listener to dynamically update SVG orientation
-        lgs.camera.changed.addEventListener(updateSvgOrientation)
+        lgs.camera.changed.addEventListener(rotateCompass)
 
         const handleDragStart = (event) => {
             isDraggingRef.current = true
@@ -45,8 +46,8 @@ export const Compass = () => {
             lastPositionRef.current = {x: clientX, y: clientY}
 
             // Adjust camera heading and pitch based on drag movement
-            const newHeading = lgs.camera.heading - CMath.toRadians(deltaX * 0.1)
-            const newPitch = lgs.camera.pitch + CMath.toRadians(deltaY * 0.1)
+            const newHeading = lgs.camera.heading - CMath.toRadians(deltaX * sensitivity)
+            const newPitch = lgs.camera.pitch + CMath.toRadians(deltaY * sensitivity)
 
             // Constrain pitch to avoid flipping
             const constrainedPitch = Math.min(
@@ -163,13 +164,13 @@ export const Compass = () => {
 					c25.401,7.938,45.564,28.101,53.581,53.581v0.079c2.461,7.7,3.731,15.876,3.731,24.37
 					C337.682,301.087,301.008,337.762,256,337.762z"/>
                         </g>
-                        <g className="lgs-compass-needle" ref={svgRef} style={{rotate: '-45deg'}}>
+                        <g className="lgs-compass-needle" ref={svgRef} style={{rotate: '-45deg', scale: 0.8}}>
                             <path id="north" d="M296.327,296.354l-80.703-80.703l174.962-101.759c9.854-5.731,13.225-2.36,7.494,7.494
 					L296.327,296.354z"/>
                             <path id="south" d="M296.327,296.354L121.36,398.108c-9.854,5.731-13.225,2.36-7.494-7.494l101.759-174.962
 					L296.327,296.354z"/>
                         </g>
-                        <circle className="center" cx="255.973" cy="256" r="22.8"/>
+                        <circle className="lgs-compass-center" cx="255.973" cy="256" r="22.8"/>
                     </g>
 
 
