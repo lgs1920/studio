@@ -95,7 +95,7 @@ export class CameraUtils {
 
         try {
             const cameraData = await CameraUtils.getPositions(camera)
-            cameraData.position = {...cameraData.position, ...await CameraUtils.getHeadingPitchRoll(camera)}
+            cameraData.position = {...cameraData.position, ...await CameraUtils.getHeadingPitchRoll(camera), ...cameraData.target}
             return cameraData
         } catch (e) {
             console.error(e)
@@ -118,6 +118,14 @@ export class CameraUtils {
                 longitude: M.toDegrees(cartographic.longitude),
                 height: cartographic.height,
                 range: Cartesian3.distance(position, lgs.camera.position),
+            }
+        }
+        else {
+            return {
+                latitude:  lgs.mainProxy.components.camera.position.latitude,
+                longitude: lgs.mainProxy.components.camera.position.longitude,
+                height:    lgs.mainProxy.components.camera.position.height,
+                range:     lgs.camera.position,
             }
         }
     }
