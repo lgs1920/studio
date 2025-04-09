@@ -60,9 +60,10 @@ html {
 #secondary-buttons-bar-content {
     display: flex;
     flex-direction: column;
-    margin-top: var(--lgs-gutter);
+    margin: var(--lgs-gutter-s) var(--lgs-gutter-s) 0 var(--lgs-gutter-s);
     pointer-events: auto;
     gap: var(--lgs-gutter-xs);
+
 }
 
 #bottom-ui {

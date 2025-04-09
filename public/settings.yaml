@@ -310,3 +310,7 @@ ui:
     opacity: 0.75         # 0.3 - 1
     x: null
     y: null
+
+  ## Compass
+  compass:
+    mode: 1                # 0: none, 1: full, 2:light

@@ -69,9 +69,6 @@
     --lgs-button-hover-color: var(--lgs-dark-ui-secondary-color);
     --lgs-button-bg-hover-color: var(--lgs-dark-ui-primary-color);
 
-    --lgs-compass-stroke-color: var(--lgs-dark-ui-secondary-color);
-    --lgs-compass-fill-color: var(--lgs-dark-ui-secondary-color);
-
     --lgs-card-border-color: var(--sl-color-gray-300);
 
     --lgs-card-ui-bg-color: var(--lgs-dark-ui-secondary-color);
@@ -475,9 +472,22 @@ sl-card[variant="primary"]::part(base) {
 
 .lgs-compass {
     position: relative;
+    display: none;
+}
+
+.lgs-compass.mode-full, .lgs-compass.mode-light {
+    display: block;
     width: var(--lgs-compass-size);
     height: var(--lgs-compass-size);
     margin: var(--lgs-gutter-s);
+}
+
+.lgs-compass.mode-light {
+    --lgs-compass-size: var(--lgs-dimension);
+}
+
+.lgs-compass-needle {
+    transform-origin: center
 }
 
 .lgs-compass-needle #north {

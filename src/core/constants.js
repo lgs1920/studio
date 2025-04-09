@@ -329,3 +329,8 @@ export const POI_CATEGORY_ICONS = new Map([
                                               ['campground', {faCampground}],
                                               ['picnic-area', {faTablePicnic}],
                                           ])
+
+/** Compass **/
+export const NO_COMPASS = 0,
+COMPASS_FULL            = 1,
+COMPASS_LIGHT           = 2
