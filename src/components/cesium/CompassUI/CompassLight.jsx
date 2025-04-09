@@ -1,14 +1,11 @@
-export const CompassLight = ({dimension, ref}) => {
+export const CompassLight = ({width = '100%', height = '100%', ref}) => {
 
-    if (!dimension) {
-        dimension = '100%'
-    }
 
     return (
 
         // Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools
 
-        <svg height={dimension} width={dimension} xmlns="http://www.w3.org/2000/svg"
+        <svg height={height} width={width} xmlns="http://www.w3.org/2000/svg"
              xmlnsXlink="http://www.w3.org/1999/xlink"
              viewBox="0 0 512 512" xmlSpace="preserve">
             <g>

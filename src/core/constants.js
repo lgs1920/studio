@@ -119,6 +119,7 @@ export const SETTING_EXCLUSIONS = [
     'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
     'ui.camera', 'ui.welcome',
     'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
+    'ui.compass.mode',
 ].sort((a, b) => {
     const segmentsA = a.split('.')
     const segmentsB = b.split('.')

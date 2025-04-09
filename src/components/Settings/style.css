@@ -201,3 +201,35 @@
 #journey-toolbar-opacity-reset {
     font-size: var(--lgs-font-size);
 }
+
+/*******************************************************************************
+ * Compass settings
+ *******************************************************************************/
+
+.compass-settings sl-radio-group::part(form-control-input) {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+
+}
+
+.compass-settings sl-radio-group[align="right"]::part(form-control) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+}
+
+.compass-settings sl-radio::part(base) {
+    display: flex;
+    align-items: center;
+}
+
+.compass-settings svg {
+    margin-right: 0;
+}
+
+.compass-settings sl-radio[restrict-margin="true"] svg {
+    margin: 0 -10px;
+}
