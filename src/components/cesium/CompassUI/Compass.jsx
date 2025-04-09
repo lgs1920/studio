@@ -1,5 +1,5 @@
-import { CompactFull }  from '@Components/cesium/CompassUI/CompassFull'
-import { CompactLight } from '@Components/cesium/CompassUI/CompassLight'
+import { CompassFull }  from '@Components/cesium/CompassUI/CompassFull'
+import { CompassLight } from '@Components/cesium/CompassUI/CompassLight'
 
 import { COMPASS_FULL, COMPASS_LIGHT } from '@Core/constants'
 import { Math as CMath }               from 'cesium'
@@ -15,7 +15,7 @@ export const Compass = ({sensitivity = 0.1}) => {
     const currentAngleRef = useRef(0) // Ref for the current camera heading
     const doubleTapTimeoutRef = useRef(null) // Timeout for double-tap detection
 
-    const settings = useSnapshot(lgs.settings.ui)
+    const compass = useSnapshot(lgs.settings.ui.compass)
 
     useEffect(() => {
 
@@ -164,15 +164,14 @@ export const Compass = ({sensitivity = 0.1}) => {
 
     const modes = ['', 'mode-full', 'mode-light']
     return (
-        <div className={classNames('lgs-compass', modes[settings.compass.mode])} ref={_compass}>
-            {settings.compass.mode === COMPASS_FULL &&
-                <CompactFull ref={_needle}/>
+        <div className={classNames('lgs-compass', modes[compass.mode])} ref={_compass}>
+            {compass.mode === COMPASS_FULL.toString() &&
+                <CompassFull ref={_needle}/>
             }
 
-            {settings.compass.mode === COMPASS_LIGHT &&
-                <CompactLight ref={_needle}/>
+            {compass.mode === COMPASS_LIGHT.toString() &&
+                <CompassLight ref={_needle}/>
             }
-
         </div>
     )
 }

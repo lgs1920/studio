@@ -1,4 +1,4 @@
-export const CompactFull = ({dimension, ref}) => {
+export const CompassFull = ({dimension, ref}) => {
 
     if (!dimension) {
         dimension = '100%'
