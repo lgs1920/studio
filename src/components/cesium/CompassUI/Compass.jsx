@@ -165,11 +165,11 @@ export const Compass = ({sensitivity = 0.1}) => {
     const modes = ['', 'mode-full', 'mode-light']
     return (
         <div className={classNames('lgs-compass', modes[compass.mode])} ref={_compass}>
-            {compass.mode === COMPASS_FULL.toString() &&
+            {compass.mode.toString() === COMPASS_FULL.toString() &&
                 <CompassFull ref={_needle}/>
             }
 
-            {compass.mode === COMPASS_LIGHT.toString() &&
+            {compass.mode.toString() === COMPASS_LIGHT.toString() &&
                 <CompassLight ref={_needle}/>
             }
         </div>
