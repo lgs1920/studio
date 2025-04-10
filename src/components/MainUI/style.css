@@ -127,7 +127,7 @@ html {
 
 .journey-toolbar {
     position: absolute;
-    z-index: 3;
+    z-index: var(--lgs-ui-layer-zindex);
     display: flex;
     align-items: center;
     flex-direction: row;
