@@ -18,7 +18,7 @@ import {
 }                                                                            from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                             from '@Utils/FA2SL'
 import classNames                                                            from 'classnames'
-import React, { useEffect, useLayoutEffect, useRef }                         from 'react'
+import React, { useLayoutEffect, useRef } from 'react'
 import { sprintf }                                                           from 'sprintf-js'
 import { useSnapshot }                                                       from 'valtio'
 
@@ -104,21 +104,23 @@ export const JourneyToolbar = (props) => {
                              })
     }
 
-    const controlToolbar = () => {
+    const forcePosition = () => {
         const w = window.innerWidth
         const h = window.innerHeight
-
+        if (!_journeyToolbar.current) {
+            return;
+        }
         if (journeyEditor.list.length > 0) {
             if ($journeyToolbar.x > w || $journeyToolbar.x === null) {
                 $journeyToolbar.x = w - 2 * _journeyToolbar.current.offsetWidth
             }
             if ($journeyToolbar.y > h || $journeyToolbar.y === null) {
-                $journeyToolbar.y = h - 2 * _journeyToolbar.current.offsetHeight
+                $journeyToolbar.y = 2 * h / 3 - 2 * _journeyToolbar.current.offsetHeight
             }
         }
         else {
             if ($journeyToolbar.x === null) {
-                $journeyToolbar.x = w / 2 - 140  // approx...
+                $journeyToolbar.x = w / 2
             }
             if ($journeyToolbar.y === null) {
                 $journeyToolbar.y = 2 * h / 3
@@ -131,26 +133,45 @@ export const JourneyToolbar = (props) => {
     }
 
     useLayoutEffect(() => {
-        let interactionHandler
-        setTimeout(() => {
-            interactionHandler = new InteractionHandler({
-                                                            dragger:  grabber.current,
-                                                            parent:   _journeyToolbar.current,
-                                                            callback: (toolbar) => {
-                                                                // Let's save coordinates for the next run
-                                                                $journeyToolbar.x = toolbar.x
-                                                                $journeyToolbar.y = toolbar.y
-                                                            },
-                                                        })
-            interactionHandler.attachEvents()
-            _journeyToolbar.current.style.opacity = journeyToolbar.opacity
-        }, 2 * SECOND)
+        const toolbar = _journeyToolbar.current
+        const grabberElement = grabber.current
 
-        // Nettoyage
-        return () => {
-            interactionHandler.detachEvents()
+        // Ne rien faire si la toolbar n'est pas rendue ou si les références sont null
+        if (!toolbar || !grabberElement || journeyEditor.list.length === 0) {
+            return
         }
-    }, [])
+
+        console.log('trace')
+
+        // Initialiser la position au montage
+        //forcePosition();
+        toolbar.style.opacity = journeyToolbar.opacity
+
+        // Configurer InteractionHandler pour le dragging
+        const interactionHandler = new InteractionHandler({
+                                                              grabber:  grabberElement,
+                                                              parent:   toolbar,
+                                                              callback: (toolbarData) => {
+                                                                  $journeyToolbar.x = toolbarData.x
+                                                                  $journeyToolbar.y = toolbarData.y
+                                                              },
+                                                          })
+
+        // Attacher les événements de dragging
+        interactionHandler.attachEvents()
+
+        // Nettoyage : détacher les événements lorsque le composant est démonté ou la condition change
+        return () => {
+            interactionHandler.destroy()
+        };
+    }, [
+                        $journeyToolbar.x,
+                        $journeyToolbar.y,
+                        journeyToolbar.opacity,
+                        journeyEditor.list.length, // Dépendance clé pour re-déclencher l'effet quand la liste change
+                    ]);
+
+
 
     const textVisibilityJourney = sprintf('%s Journey', editorStore?.journey?.visible ? 'Hide' : 'Show')
     return (
@@ -158,8 +179,12 @@ export const JourneyToolbar = (props) => {
             {journeyEditor.list.length > 0 &&
                 <div className="journey-toolbar lgs-card on-map"
                      ref={_journeyToolbar}
-                     style={{top: $journeyToolbar.y, left: $journeyToolbar.x, opacity: journeyToolbar.opacity}}
-                >
+                     style={{
+                         top:      `${$journeyToolbar.y}px`,
+                         left:     `${$journeyToolbar.x}px`,
+                         opacity:  $journeyToolbar.opacity,
+                         position: 'absolute',
+                     }}>
                     <SlTooltip hoist content={'Drag me'}>
                         <SlIcon ref={grabber} className="grabber" library="fa" name={FA2SL.set(faGripDotsVertical)}/>
                     </SlTooltip>

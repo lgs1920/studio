@@ -158,7 +158,8 @@ html {
 }
 
 .journey-toolbar .journey-selector {
-    flex-shrink: 0;
+    min-width: 10rem;
+    max-width: min(30rem, 100%);
 }
 
 #close-journey-toolbar {
