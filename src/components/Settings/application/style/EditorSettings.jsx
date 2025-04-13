@@ -55,7 +55,7 @@ export const EditorSettings = (props) => {
                               $journeyToolbar.usage = switchValue(event)
                               event.preventDefault()
                           }}>
-                    {'Show Floating Toolbar'}
+                    {'Add Floating Toolbar'}
                 </SlSwitch>
                 {journeyToolbar.usage &&
                     <div id="journey-toolbar-opacity">
