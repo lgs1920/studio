@@ -1,7 +1,7 @@
 /**
  * Handles drag and resize interactions for a movable toolbar element.
  */
-export class InteractionHandler {
+export class DragHandler {
     /**
      * Creates an InteractionHandler instance.
      * @param {Object} options - Configuration options.

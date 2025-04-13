@@ -4,8 +4,8 @@ import {
 }                                                                            from '@Components/ToggleStateIcon'
 import { CURRENT_JOURNEY, REFRESH_DRAWING, SECOND, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
 import {
-    InteractionHandler,
-}                                                                            from '@Core/ui/InteractionHandler'
+    DragHandler,
+} from '@Core/ui/DragHandler'
 import {
     JourneySelector,
 }                                                                            from '@Editor/journey/JourneySelector'
@@ -148,7 +148,7 @@ export const JourneyToolbar = (props) => {
         toolbar.style.opacity = journeyToolbar.opacity
 
         // Configurer InteractionHandler pour le dragging
-        const interactionHandler = new InteractionHandler({
+        const interactionHandler = new DragHandler({
                                                               grabber:  grabberElement,
                                                               parent:   toolbar,
                                                               callback: (toolbarData) => {
