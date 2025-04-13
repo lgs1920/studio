@@ -241,6 +241,17 @@ export const KEYBOARD = {
     ALT:   2,
 }
 
+/*******************************************************************************
+ * Custom  events
+ ******************************************************************************/
+
+export const APP_EVENT = {
+    INITIAL_FOCUS: 'app/initial-focus',
+    WELCOME:       {
+        HIDE: 'app/welcome/hide',
+    },
+}
+
 
 
 
