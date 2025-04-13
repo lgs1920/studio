@@ -51,7 +51,7 @@
     "classnames": "^2.5.1",
     "color": "^5.0.0",
     "deep-object-diff": "^1.1.9",
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.5.0",
     "easy-file-picker": "^1.1.0",
     "echarts": "^5.6.0",
     "echarts-for-react": "^3.0.2",
@@ -96,8 +96,8 @@
     "zip-a-folder": "^3.1.9"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.8",
-    "@types/react": "^19.1.0",
+    "@types/bun": "^1.2.9",
+    "@types/react": "^19.1.1",
     "@types/react-dom": "^19.1.2",
     "@typescript-eslint/eslint-plugin": "^8.29.1",
     "@typescript-eslint/parser": "^8.29.1",
