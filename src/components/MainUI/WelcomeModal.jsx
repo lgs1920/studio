@@ -1,5 +1,5 @@
-import { INFO_DRAWER, MILLIS, SECOND, SLOGAN } from '@Core/constants'
-import { SlButton, SlCheckbox, SlDialog }      from '@shoelace-style/shoelace/dist/react'
+import { APP_EVENT, INFO_DRAWER, MILLIS, SECOND, SLOGAN } from '@Core/constants'
+import { SlButton, SlCheckbox, SlDialog }                 from '@shoelace-style/shoelace/dist/react'
 import { UIToast }                             from '@Utils/UIToast'
 import { useEffect, useRef, useState }         from 'react'
 import { StudioLogo }                          from './StudioLogo'
@@ -13,6 +13,12 @@ export const WelcomeModal = () => {
     const main = lgs.mainProxy
 
     const [closure, setClosure] = useState(lgs.settings.ui.welcome.displayTime)
+
+    const hideEvent = new CustomEvent(APP_EVENT.WELCOME.HIDE, {
+        detail: {
+            timestamp: Date.now(),
+        },
+    })
 
     const close = (event) => {
         document.activeElement?.blur() // Remove focus on children
@@ -28,6 +34,9 @@ export const WelcomeModal = () => {
         setOpen(false)
         lgs.mainUIStore.show = true
         main.components.welcome.hidden = true
+
+
+        window.dispatchEvent(hideEvent)
     }
 
     function showNews() {
@@ -57,6 +66,7 @@ export const WelcomeModal = () => {
         main.components.welcome.modal = false
         let timer
 
+
         // CountDown and Auto closure
         if (welcomeModal && lgs.settings.ui.welcome.showIntro && lgs.settings.ui.welcome.autoClose) {
             timer = setInterval(() => {
@@ -80,6 +90,8 @@ export const WelcomeModal = () => {
         }
         else {
             main.components.welcome.hidden = true
+            window.dispatchEvent(hideEvent)
+
         }
         return () => {
             if (timer) {

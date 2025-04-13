@@ -1,27 +1,29 @@
-import { FAButton }                                                          from '@Components/FAButton'
-import {
-    ToggleStateIcon,
-}                                                                            from '@Components/ToggleStateIcon'
+import { FAButton }                                            from '@Components/FAButton'
+import { ToggleStateIcon }                                     from '@Components/ToggleStateIcon'
 import { CURRENT_JOURNEY, REFRESH_DRAWING, SECOND, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
+import { DragHandler }                                         from '@Core/ui/DragHandler'
+import { JourneySelector }                                     from '@Editor/journey/JourneySelector'
+import { Utils }                                               from '@Editor/Utils'
 import {
-    DragHandler,
-} from '@Core/ui/DragHandler'
-import {
-    JourneySelector,
-}                                                                            from '@Editor/journey/JourneySelector'
-import { Utils }                                                             from '@Editor/Utils'
-import {
-    faArrowRotateRight, faCrosshairsSimple, faGripDotsVertical, faSquarePlus, faXmark,
-}                                                                            from '@fortawesome/pro-regular-svg-icons'
-import {
-    SlIcon, SlIconButton, SlTooltip,
-}                                                                            from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                             from '@Utils/FA2SL'
-import classNames                                                            from 'classnames'
-import React, { useLayoutEffect, useRef } from 'react'
-import { sprintf }                                                           from 'sprintf-js'
-import { useSnapshot }                                                       from 'valtio'
+    faArrowRotateRight,
+    faCrosshairsSimple,
+    faGripDotsVertical,
+    faSquarePlus,
+    faXmark,
+}                                                              from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon, SlIconButton, SlTooltip }                     from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                               from '@Utils/FA2SL'
+import classNames                                              from 'classnames'
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { sprintf }                                             from 'sprintf-js'
+import { useSnapshot }                                         from 'valtio'
 
+/**
+ * A toolbar component for managing journey-related actions, such as selecting journeys, toggling visibility, focusing,
+ * rotating, and dragging the toolbar.
+ * @param {Object} props - Component props
+ * @returns {JSX.Element} The rendered JourneyToolbar component
+ */
 export const JourneyToolbar = (props) => {
     const $journeyToolbar = lgs.settings.ui.journeyToolbar
     const journeyToolbar = useSnapshot($journeyToolbar)
@@ -44,21 +46,37 @@ export const JourneyToolbar = (props) => {
     const manualRotate = useRef(null)
 
     const grabber = useRef(null)
+    const [init, setInit] = useState(false)
 
+    /**
+     * Opens the journey loader by setting its visibility to true.
+     */
     const journeyLoader = () => {
         journeyLoaderStore.visible = true
     }
 
+    /**
+     * Handles the selection of a new journey and updates the journey editor.
+     * @param {Event} event - The change event from the journey selector
+     */
     const newJourneySelection = async (event) => {
         await Utils.updateJourneyEditor(event.target.value, {})
     }
 
+    /**
+     * Stops the camera rotation if it is currently running.
+     */
     const stopRotate = async () => {
         if ($rotate.running) {
             await __.ui.cameraManager.stopRotate()
         }
     }
-    const setJourneyVisibility = async visibility => {
+
+    /**
+     * Sets the visibility of the current journey and updates related settings.
+     * @param {boolean} visibility - Whether the journey should be visible
+     */
+    const setJourneyVisibility = async (visibility) => {
         stopRotate()
         $editorStore.journey.visible = visibility
         lgs.theJourney.updateVisibility(visibility)
@@ -66,11 +84,19 @@ export const JourneyToolbar = (props) => {
         Utils.renderJourneySettings()
     }
 
+    /**
+     * Toggles the rotation state and focuses on the journey.
+     * @param {Event} event - The click event
+     */
     const forceRotate = async (event) => {
         rotationAllowed = !rotationAllowed
         await focusOnJourney()
     }
 
+    /**
+     * Initiates rotation if allowed, or stops it, then focuses on the journey.
+     * @param {Event} event - The click event
+     */
     const maybeRotate = async (event) => {
         event.stopPropagation()
         if ($rotate.running) {
@@ -84,12 +110,10 @@ export const JourneyToolbar = (props) => {
         await focusOnJourney()
     }
 
-
     /**
-     * Focus on Journey
+     * Focuses the camera on the current journey, optionally resetting the camera and enabling rotation.
      */
     const focusOnJourney = async (event) => {
-
         if ($rotate.running) {
             await __.ui.cameraManager.stopRotate()
             if (rotate.target?.instanceOf(CURRENT_JOURNEY)) {
@@ -99,129 +123,144 @@ export const JourneyToolbar = (props) => {
         await setJourneyVisibility(true)
         lgs.theJourney.focus({
                                  resetCamera: true,
-                                 action:      REFRESH_DRAWING,
-                                 rotate:      rotationAllowed || autoRotate.journey,
+                                 action: REFRESH_DRAWING,
+                                 rotate: rotationAllowed || autoRotate.journey,
                              })
     }
 
-    const forcePosition = () => {
-        const w = window.innerWidth
-        const h = window.innerHeight
-        if (!_journeyToolbar.current) {
-            return;
-        }
-        if (journeyEditor.list.length > 0) {
-            if ($journeyToolbar.x > w || $journeyToolbar.x === null) {
-                $journeyToolbar.x = w - 2 * _journeyToolbar.current.offsetWidth
-            }
-            if ($journeyToolbar.y > h || $journeyToolbar.y === null) {
-                $journeyToolbar.y = 2 * h / 3 - 2 * _journeyToolbar.current.offsetHeight
-            }
-        }
-        else {
-            if ($journeyToolbar.x === null) {
-                $journeyToolbar.x = w / 2
-            }
-            if ($journeyToolbar.y === null) {
-                $journeyToolbar.y = 2 * h / 3
-            }
-        }
-    }
-
+    /**
+     * Closes the journey toolbar by hiding it.
+     * @param {Event} event - The click event
+     */
     const closeToolbar = (event) => {
         $journeyToolbar.show = false
     }
 
+
     useLayoutEffect(() => {
         const toolbar = _journeyToolbar.current
         const grabberElement = grabber.current
-
-        // Ne rien faire si la toolbar n'est pas rendue ou si les références sont null
+        const setToolbarOpacity = () => {
+            toolbar.style.opacity = journeyToolbar.opacity
+        }
+        // Do nothing if the toolbar is not rendered or references are null
         if (!toolbar || !grabberElement || journeyEditor.list.length === 0) {
             return
         }
 
-        console.log('trace')
+        // Configure InteractionHandler for dragging
+        const dragHandler = new DragHandler({
+                                                grabber:  grabberElement,
+                                                parent:   toolbar,
+                                                callback: (toolbarData) => {
+                                                    $journeyToolbar.x = toolbarData.x
+                                                    $journeyToolbar.y = toolbarData.y
+                                                },
+                                            })
 
-        // Initialiser la position au montage
-        //forcePosition();
-        toolbar.style.opacity = journeyToolbar.opacity
+        // Attach dragging events
+        dragHandler.attachEvents()
 
-        // Configurer InteractionHandler pour le dragging
-        const interactionHandler = new DragHandler({
-                                                              grabber:  grabberElement,
-                                                              parent:   toolbar,
-                                                              callback: (toolbarData) => {
-                                                                  $journeyToolbar.x = toolbarData.x
-                                                                  $journeyToolbar.y = toolbarData.y
-                                                              },
-                                                          })
+        if (!init) {
+            window.addEventListener('app/welcome/hide', setToolbarOpacity)
+            setInit(true)
+        }
+        else {
+            setToolbarOpacity()
+        }
 
-        // Attacher les événements de dragging
-        interactionHandler.attachEvents()
-
-        // Nettoyage : détacher les événements lorsque le composant est démonté ou la condition change
+        // Cleanup: detach events when the component unmounts or conditions change
         return () => {
-            interactionHandler.destroy()
-        };
+            dragHandler.destroy()
+            //    window.removeEventListener("app/welcome/hide", setToolbarOpacity)
+        }
     }, [
                         $journeyToolbar.x,
                         $journeyToolbar.y,
                         journeyToolbar.opacity,
-                        journeyEditor.list.length, // Dépendance clé pour re-déclencher l'effet quand la liste change
-                    ]);
-
-
+                        journeyEditor.list.length, // Key dependency to re-trigger the effect when the list changes
+                    ])
 
     const textVisibilityJourney = sprintf('%s Journey', editorStore?.journey?.visible ? 'Hide' : 'Show')
+
     return (
         <>
             {journeyEditor.list.length > 0 &&
-                <div className="journey-toolbar lgs-card on-map"
-                     ref={_journeyToolbar}
-                     style={{
-                         top:      `${$journeyToolbar.y}px`,
-                         left:     `${$journeyToolbar.x}px`,
-                         opacity:  $journeyToolbar.opacity,
-                         position: 'absolute',
-                     }}>
+                <div
+                    className="journey-toolbar lgs-card on-map"
+                    ref={_journeyToolbar}
+                    style={{
+                        top:      `${$journeyToolbar.y}px`,
+                        left:     `${$journeyToolbar.x}px`,
+                        position: 'absolute',
+                    }}
+                >
                     <SlTooltip hoist content={'Drag me'}>
                         <SlIcon ref={grabber} className="grabber" library="fa" name={FA2SL.set(faGripDotsVertical)}/>
                     </SlTooltip>
 
-                    <JourneySelector onChange={newJourneySelection}
-                                     single="true" size="small" style="card"/>
+                    <JourneySelector onChange={newJourneySelection} single="true" size="small" style="card"/>
 
                     <SlTooltip hoist content={'Add a journey'} placement="top">
-                        <SlIconButton
-                            library="fa" onClick={journeyLoader} name={FA2SL.set(faSquarePlus)}/>
+                        <SlIconButton library="fa" onClick={journeyLoader} name={FA2SL.set(faSquarePlus)}/>
                     </SlTooltip>
                     <>
                         {editorStore.journey?.visible &&
                             <>
                                 {!autoRotate.journey &&
-                                    <SlTooltip hoist
-                                               content={rotate.running && rotate.target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
-                                               placement="top">
-                                        <FAButton onClick={forceRotate}
-                                                  ref={manualRotate}
-                                                  icon={faArrowRotateRight}
-                                                  className={classNames({'fa-spin': rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)})}/>
+                                    <SlTooltip
+                                        hoist
+                                        content={
+                                            rotate.running && rotate.target.instanceOf(CURRENT_JOURNEY)
+                                            ? 'Stop rotation'
+                                            : 'Start rotation'
+                                        }
+                                        placement="top"
+                                    >
+                                        <FAButton
+                                            onClick={forceRotate}
+                                            ref={manualRotate}
+                                            icon={faArrowRotateRight}
+                                            className={classNames({
+                                                                      'fa-spin': rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY),
+                                                                  })}
+                                        />
                                     </SlTooltip>
                                 }
 
-                                <SlTooltip hoist
-                                           content={rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on journey'}
-                                           placement="top">
-                                    <FAButton onClick={maybeRotate}
-                                              icon={rotate.running && autoRotate.journey && (rotate.target?.instanceOf(CURRENT_JOURNEY)) ? faArrowRotateRight : faCrosshairsSimple}
-                                              className={classNames({'fa-spin': rotate.running && autoRotate.journey && rotate.target?.instanceOf(CURRENT_JOURNEY)})}/>
+                                <SlTooltip
+                                    hoist
+                                    content={
+                                        rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)
+                                        ? 'Stop rotation'
+                                        : 'Focus on journey'
+                                    }
+                                    placement="top"
+                                >
+                                    <FAButton
+                                        onClick={maybeRotate}
+                                        icon={
+                                            rotate.running &&
+                                            autoRotate.journey &&
+                                            rotate.target?.instanceOf(CURRENT_JOURNEY)
+                                            ? faArrowRotateRight
+                                            : faCrosshairsSimple
+                                        }
+                                        className={classNames({
+                                                                  'fa-spin':
+                                                                      rotate.running &&
+                                                                      autoRotate.journey &&
+                                                                      rotate.target?.instanceOf(CURRENT_JOURNEY),
+                                                              })}
+                                    />
                                 </SlTooltip>
                             </>
                         }
                         <SlTooltip hoist content={textVisibilityJourney} placement="top">
-                            <ToggleStateIcon onChange={setJourneyVisibility}
-                                             initial={editorStore?.journey?.visible}/>
+                            <ToggleStateIcon
+                                onChange={setJourneyVisibility}
+                                initial={editorStore?.journey?.visible}
+                            />
                         </SlTooltip>
 
                         <SlTooltip hoist content="Close" placement="top">
@@ -230,7 +269,6 @@ export const JourneyToolbar = (props) => {
                     </>
                 </div>
             }
-
         </>
     )
 }

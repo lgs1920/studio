@@ -27,7 +27,7 @@ import {
 }                           from '@Components/MainUI/WelcomeModal'
 import {
     BASE_ENTITY, BOTTOM, FOCUS_LAST, FOCUS_STARTER, CURRENT_JOURNEY, MOBILE_MAX, OVERLAY_ENTITY,
-    POI_STANDARD_TYPE, POI_STARTER_TYPE, NONE,
+    POI_STANDARD_TYPE, POI_STARTER_TYPE, NONE, APP_EVENT,
 } from '@Core/constants'
 import {
     LGS1920Context,
@@ -199,11 +199,19 @@ export function LGS1920() {
                                   rotate:   lgs.settings.ui.camera.start.rotate.app,
                                   lookAt:   true,
                                   rpm:      lgs.settings.starter.camera.rpm,
+                                  callback: (point) => {
+                                      const initEvent = new CustomEvent(APP_EVENT.INITIAL_FOCUS, {
+                                          detail: {
+                                              point:     point,
+                                              timestamp: Date.now(),
+                                          },
+                                      })
+                                      window.dispatchEvent(initEvent)
+                                  },
                               })
 
                               // set animated state
                               lgs.mainProxy.components.pois.current.animated = lgs.settings.ui.camera.start.rotate.app
-
 
                               console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
                               console.log(`Connected to backend ${lgs.versions.backend}.`)
