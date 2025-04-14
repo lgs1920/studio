@@ -69,9 +69,6 @@
     --lgs-button-hover-color: var(--lgs-dark-ui-secondary-color);
     --lgs-button-bg-hover-color: var(--lgs-dark-ui-primary-color);
 
-    --lgs-compass-stroke-color: var(--lgs-dark-ui-secondary-color);
-    --lgs-compass-fill-color: var(--lgs-dark-ui-secondary-color);
-
     --lgs-card-border-color: var(--sl-color-gray-300);
 
     --lgs-card-ui-bg-color: var(--lgs-dark-ui-secondary-color);
@@ -470,16 +467,56 @@ sl-card[variant="primary"]::part(base) {
  * Compass
  ******************************************************************************/
 :root {
-    --lgs-compass-size: 95px;
+    --lgs-compass-size: 50px;
 }
 
-cesium-compass {
+.lgs-compass {
+    position: relative;
+    display: none;
+    pointer-events: all;
+}
+
+.lgs-compass.mode-full, .lgs-compass.mode-light {
+    display: block;
     width: var(--lgs-compass-size);
     height: var(--lgs-compass-size);
+    margin: var(--lgs-gutter-s);
+}
 
-    position: relative;
-    --cesium-compass-fill-color: var(--lgs-dark-ui-bg-color);
-    --cesium-compass-stroke-color: var(--lgs-dark-ui-fg-color);
+.lgs-compass.mode-light {
+    --lgs-compass-size: var(--lgs-dimension);
+}
+
+.lgs-compass-needle {
+    transform-origin: center
+}
+
+.lgs-compass-needle #north {
+    fill: var(--sl-color-red-800);
+}
+
+.lgs-compass-needle #south {
+    fill: var(--sl-color-amber-100);
+}
+
+.lgs-compass-text {
+    fill: var(--lgs-light-color);
+}
+
+.lgs-compass-poles, .lgs-compass-poles-circle {
+    fill: var(--lgs-light-color-50);
+}
+
+.lgs-compass-center {
+    fill: var(--sl-color-amber-500);
+}
+
+.lgs-compass-bg {
+    fill: var(--lgs-dark-color-75);
+}
+
+.lgs-compass-over-bg {
+    fill: var(--lgs-light-color-15);
 }
 
 /*******************************************************************************

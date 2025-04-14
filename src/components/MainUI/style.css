@@ -51,21 +51,19 @@ html {
     left: var(--secondary-buttons-bar-left);
     align-items: center;
     flex-direction: column;
-    width: var(--lgs-compass-size);
     margin-left: var(--secondary-buttons-bar-margin-left);
     pointer-events: none;
-    gap: var(--lgs-gutter-s);
-    --width: var(--lgs-compass-size);
+    gap: 0 !important;
 }
 
 
 #secondary-buttons-bar-content {
-    position: absolute;
-    top: var(--lgs-compass-size);
     display: flex;
     flex-direction: column;
+    margin: var(--lgs-gutter-s) var(--lgs-gutter-s) 0 var(--lgs-gutter-s);
     pointer-events: auto;
     gap: var(--lgs-gutter-xs);
+
 }
 
 #bottom-ui {
@@ -129,7 +127,7 @@ html {
 
 .journey-toolbar {
     position: absolute;
-    z-index: 3;
+    z-index: var(--lgs-ui-layer-zindex);
     display: flex;
     align-items: center;
     flex-direction: row;
@@ -160,7 +158,8 @@ html {
 }
 
 .journey-toolbar .journey-selector {
-    flex-shrink: 0;
+    min-width: 15rem;
+    max-width: min(20rem, 100%);
 }
 
 #close-journey-toolbar {
@@ -225,12 +224,7 @@ html {
  */
 #welcome-modal::part(panel) {
     --body-spacing: 0;
-    /*background: rgba( 255, 255, 255, 0.15 );*/
-    /*background-image: linear-gradient(to right, rgba(255,188,0,0.30), rgba(255,114,15,0.30));*/
     box-shadow: var(--sl-shadow-x-large);
-    /*backdrop-filter: blur( var(--lgs-blur) );*/
-    /*border-radius: 10px;*/
-    /*border: 1px solid rgba( 255, 255, 255, 0.18 );*/
     color: black;
     cursor: pointer
 }

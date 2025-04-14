@@ -16,20 +16,29 @@
 
 import './style.css'
 import { NameValueUnit } from '@Components/DataDisplay/NameValueUnit.jsx'
+import { APP_EVENT }               from '@Core/constants'
 
 import { faAngle, faArrowsToCircle, faMountains, faVideo } from '@fortawesome/pro-regular-svg-icons'
 import { SlAnimation }                                     from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                           from '@Utils/FA2SL'
-import { meter, mile }                                     from '@Utils/UnitUtils'
-import { proxy, useSnapshot }                              from 'valtio'
+import { meter, mile }             from '@Utils/UnitUtils'
+import { useLayoutEffect, useRef } from 'react'
+import { proxy, useSnapshot }      from 'valtio'
 
 
 export const CameraAndTargetPanel = () => {
 
     const camera = useSnapshot(lgs.mainProxy.components.camera)
     const ui = useSnapshot(proxy(lgs.settings.ui))
+    const _panel = useRef(null)
+
+    useLayoutEffect(() => {
+        window.addEventListener(APP_EVENT.WELCOME.HIDE, () => {
+            _panel.current.style.opacity = 1
+        })
+    }, [])
     return (
-        <div id={'camera-and-target-position-panel'}>
+        <div id={'camera-and-target-position-panel'} ref={_panel}>
             {ui.camera.showTargetPosition && !__.ui.cameraManager.lookingAtTheSky(camera.target) &&
                 <SlAnimation size="small" easing="bounceInLeft" duration={1000} iterations={1}
                              play={ui.camera.showTargetPosition}>

@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { CameraSettings } from '@Components/Settings/application/general/CameraSettings'
+import { CompassSettings } from '@Components/Settings/application/style/CompassSettings'
 import { EditorSettings } from '@Components/Settings/application/style/EditorSettings'
 import { MenuSettings }      from '@Components/Settings/application/style/MenuSettings'
 import { SlDetails }         from '@shoelace-style/shoelace/dist/react'
@@ -53,6 +54,14 @@ export const Style = () => {
                        onSlHide={checkClose}
             >
                 <MenuSettings/>
+            </SlDetails>
+
+            <SlDetails id="ui-compass-settings"
+                       small open={false}
+                       className="lgs-theme"
+                       onSlHide={checkClose}
+            >
+                <CompassSettings/>
             </SlDetails>
 
             <SlDetails id="ui-editor-settings"

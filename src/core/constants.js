@@ -119,6 +119,7 @@ export const SETTING_EXCLUSIONS = [
     'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
     'ui.camera', 'ui.welcome',
     'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
+    'ui.compass.mode',
 ].sort((a, b) => {
     const segmentsA = a.split('.')
     const segmentsB = b.split('.')
@@ -240,6 +241,17 @@ export const KEYBOARD = {
     ALT:   2,
 }
 
+/*******************************************************************************
+ * Custom  events
+ ******************************************************************************/
+
+export const APP_EVENT = {
+    INITIAL_FOCUS: 'app/initial-focus',
+    WELCOME:       {
+        HIDE: 'app/welcome/hide',
+    },
+}
+
 
 
 
@@ -329,3 +341,8 @@ export const POI_CATEGORY_ICONS = new Map([
                                               ['campground', {faCampground}],
                                               ['picnic-area', {faTablePicnic}],
                                           ])
+
+/** Compass **/
+export const NO_COMPASS = 0,
+COMPASS_FULL            = 1,
+COMPASS_LIGHT           = 2

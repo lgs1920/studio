@@ -22,6 +22,7 @@ export const CallForActions = (props) => {
         const handleClickOutside = (event) => {
             if (cfa.current && !cfa.current.contains(event.target)) {
                 hide()
+                document.removeEventListener('mousedown', handleClickOutside)
             }
         }
         document.addEventListener('mousedown', handleClickOutside)

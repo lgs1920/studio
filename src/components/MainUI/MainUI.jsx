@@ -1,4 +1,4 @@
-import { CompassUI }                        from '@Components/cesium/CompassUI/CompassUI'
+import { Compass } from '@Components/cesium/CompassUI/Compass'
 import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
 import { GeocodingButton }                  from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }       from '@Components/MainUI/geocoding/GeocodingUI'
@@ -205,6 +205,7 @@ export const MainUI = () => {
         return (<SupportUI/>)
     }
 
+
     return (
         <>
             <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
@@ -221,7 +222,7 @@ export const MainUI = () => {
                             <SupportUIButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
                         </div>
                         <div id={'secondary-buttons-bar'} className={secondaryEntrance}>
-                            <CompassUI scene={lgs.scene}/>
+                            <Compass sensitivity={100}/>
                             <div id="secondary-buttons-bar-content">
                                 <SceneModeSelector tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingButton tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
