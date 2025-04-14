@@ -473,6 +473,7 @@ sl-card[variant="primary"]::part(base) {
 .lgs-compass {
     position: relative;
     display: none;
+    pointer-events: all;
 }
 
 .lgs-compass.mode-full, .lgs-compass.mode-light {
