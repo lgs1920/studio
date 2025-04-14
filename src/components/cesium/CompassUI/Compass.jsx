@@ -2,7 +2,7 @@ import { CompassFull }  from '@Components/cesium/CompassUI/CompassFull'
 import { CompassLight } from '@Components/cesium/CompassUI/CompassLight'
 
 import { COMPASS_FULL, COMPASS_LIGHT } from '@Core/constants'
-import { Math as CMath, Matrix4 } from 'cesium'
+import { Math as CMath } from 'cesium'
 import classNames                      from 'classnames'
 import { useEffect, useRef }           from 'react'
 import { useSnapshot }                 from 'valtio'
@@ -10,14 +10,12 @@ import { useSnapshot }                 from 'valtio'
 /**
  * Compass component that synchronizes with the camera heading.
  *
- * @param {Object} props - Component properties.
- * @param {number} props.sensitivity - Mouse sensitivity for interaction.
  * @returns {JSX.Element} Compass UI element.
  */
-export const Compass = ({sensitivity = 0.0}) => {
-    const needleRef = useRef(null) // Reference for the compass needle
-    const compassRef = useRef(null) // Reference for the compass container
-    const doubleTapTimeoutRef = useRef(null) // Timeout for double-tap detection
+export const Compass = () => {
+    const _needle = useRef(null)
+    const _compass = useRef(null)
+    const _doubleTapTimeout = useRef(null) 
 
     const compass = useSnapshot(lgs.settings.ui.compass) // Compass state
 
@@ -26,9 +24,9 @@ export const Compass = ({sensitivity = 0.0}) => {
          * Synchronizes the compass needle with the camera's heading.
          */
         const rotateCompass = () => {
-            if (needleRef.current) {
+            if (_needle.current) {
                 const headingDegrees = -CMath.toDegrees(lgs.camera.heading) % 360 // Convert heading to degrees
-                needleRef.current.style.transform = `rotate(${headingDegrees}deg)` // Rotate needle
+                _needle.current.style.transform = `rotate(${headingDegrees}deg)` // Rotate needle
             }
         }
 
@@ -55,39 +53,39 @@ export const Compass = ({sensitivity = 0.0}) => {
                 })
             }
 
-        };
+        }
 
+        const handleDoubleTap = () => {
+            // Handle double-tap for touch devices
+            if (!__.ui.cameraManager.isRotating()) {
+                if (_doubleTapTimeout.current) {
+                    clearTimeout(_doubleTapTimeout.current)
+                    _doubleTapTimeout.current = null
 
-        /**
-         * Handles double-tap events for resetting camera heading to north.
-         *
-         * @param {TouchEvent} event - Touch end event.
-         */
-        const handleDoubleTap = (event) => {
-            event.preventDefault()
-            if (doubleTapTimeoutRef.current) {
-                clearTimeout(doubleTapTimeoutRef.current)
-                doubleTapTimeoutRef.current = null
+                    const camera = lgs.mainProxy.components.camera
+                    camera.position.heading = CMath.toRadians(0)
 
-                lgs.camera.setView({
-                                       destination: lgs.camera.positionCartographic,
-
-                                       orientation: {
-                                           heading: 0,
-                                           pitch:   lgs.camera.pitch,
-                                           roll:    lgs.camera.roll,
-                                       },
-                                   });
+                    __.ui.sceneManager.focus(camera.target, {
+                        heading:    camera.position.heading,
+                        pitch:      camera.position.pitch,
+                        roll:       camera.position.roll,
+                        range:      camera.position.range,
+                        infinite:   true,
+                        rotate:     false,
+                        flyingTime: 0,
+                        target:     null,
+                    })
+                }
+                else {
+                    // Detect single tap and wait for second
+                    _doubleTapTimeout.current = setTimeout(() => {
+                        _doubleTapTimeout.current = null // Reset timeout after delay
+                    }, 300) // 300ms delay for double-tap detection
+                }
             }
-            else {
-                doubleTapTimeoutRef.current = setTimeout(() => {
-                    doubleTapTimeoutRef.current = null // Reset timeout
-                }, 300) // Double-tap threshold
-            }
         };
-
         // Add event listeners to the compass container
-        const compassElement = compassRef.current
+        const compassElement = _compass.current
         if (compassElement) {
             compassElement.addEventListener('dblclick', handleDoubleClick)
             compassElement.addEventListener('touchend', handleDoubleTap)
@@ -100,21 +98,18 @@ export const Compass = ({sensitivity = 0.0}) => {
         // Cleanup event listeners
         return () => {
             if (compassElement) {
-                compassElement.removeEventListener('mousedown', handleMouseDown)
-                compassElement.removeEventListener('mousemove', handleMouseMove)
-                compassElement.removeEventListener('mouseup', handleMouseUp)
                 compassElement.removeEventListener('dblclick', handleDoubleClick)
                 compassElement.removeEventListener('touchend', handleDoubleTap)
             }
             lgs.camera.changed.removeEventListener(rotateCompass)
-        };
-    }, [sensitivity]);
+        }
+    }, [])
 
     const modes = ['', 'mode-full', 'mode-light']
     return (
-        <div className={classNames('lgs-compass', modes[compass.mode])} ref={compassRef}>
-            {compass.mode.toString() === COMPASS_FULL.toString() && <CompassFull ref={needleRef}/>}
-            {compass.mode.toString() === COMPASS_LIGHT.toString() && <CompassLight ref={needleRef}/>}
+        <div className={classNames('lgs-compass', modes[compass.mode])} ref={_compass}>
+            {compass.mode.toString() === COMPASS_FULL.toString() && <CompassFull ref={_needle}/>}
+            {compass.mode.toString() === COMPASS_LIGHT.toString() && <CompassLight ref={_needle}/>}
         </div>
-    );
-};
+    )
+}
