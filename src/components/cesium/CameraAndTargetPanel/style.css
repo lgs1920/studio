@@ -41,11 +41,12 @@
 
 #camera-and-target-position-panel {
     position: absolute;
-    width: calc(100vw - var(--left) - var(--right));
-    display: flex;
     top: var(--top);
     left: var(--left);
-    justify-content: center;
+    display: flex;
     flex-wrap: wrap;
+    justify-content: center;
+    width: calc(100vw - var(--left) - var(--right));
+    opacity: 0;
 }
 

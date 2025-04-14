@@ -1,7 +1,7 @@
 import { FAButton }                                            from '@Components/FAButton'
-import { ToggleStateIcon }                                     from '@Components/ToggleStateIcon'
-import { CURRENT_JOURNEY, REFRESH_DRAWING, SECOND, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
-import { DragHandler }                                         from '@Core/ui/DragHandler'
+import { ToggleStateIcon }                                                              from '@Components/ToggleStateIcon'
+import { APP_EVENT, CURRENT_JOURNEY, REFRESH_DRAWING, SECOND, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
+import { DragHandler }                                                                  from '@Core/ui/DragHandler'
 import { JourneySelector }                                     from '@Editor/journey/JourneySelector'
 import { Utils }                                               from '@Editor/Utils'
 import {
@@ -162,7 +162,7 @@ export const JourneyToolbar = (props) => {
         dragHandler.attachEvents()
 
         if (!init) {
-            window.addEventListener('app/welcome/hide', setToolbarOpacity)
+            window.addEventListener(APP_EVENT.WELCOME.HIDE, setToolbarOpacity)
             setInit(true)
         }
         else {
