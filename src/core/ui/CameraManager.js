@@ -52,14 +52,14 @@ export class CameraManager {
         this.targetInPixels()
 
 
-        this.position.longitude = settings?.position?.longitude ?? lgs.settings.getCamera.longitude
-        this.position.latitude = settings?.position?.latitude ?? lgs.settings.getCamera.latitude
-        this.position.height = settings?.position?.height ?? lgs.settings.getCamera.height
+        this.position.longitude = settings?.position?.longitude ?? lgs.settings.camera.longitude
+        this.position.latitude = settings?.position?.latitude ?? lgs.settings.camera.latitude
+        this.position.height = settings?.position?.height ?? lgs.settings.camera.height
 
-        this.position.heading = settings?.position?.heading ?? lgs.settings.getCamera.heading
-        this.position.pitch = settings?.position?.pitch ?? lgs.settings.getCamera.pitch
-        this.position.roll = settings?.position?.roll ?? lgs.settings.getCamera.roll
-        this.position.range = settings?.position?.range ?? lgs.settings.getCamera.range
+        this.position.heading = settings?.position?.heading ?? lgs.settings.camera.heading
+        this.position.pitch = settings?.position?.pitch ?? lgs.settings.camera.pitch
+        this.position.roll = settings?.position?.roll ?? lgs.settings.camera.roll
+        this.position.range = settings?.position?.range ?? lgs.settings.camera.range
     }
 
     get settings() {
@@ -166,7 +166,7 @@ export class CameraManager {
         this.stopWatching()
 
         // Set move event
-        lgs.camera.percentageChanged = lgs.settings.getCamera.percentageChanged
+        lgs.camera.percentageChanged = lgs.settings.camera.percentageChanged
 
         this.move = {
             type:         CameraManager.NORMAL,
