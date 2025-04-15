@@ -95,7 +95,7 @@ export class CameraUtils {
 
         try {
             const cameraData = await CameraUtils.getPositions(camera)
-            cameraData.position = {...cameraData.position, ...await CameraUtils.getHeadingPitchRoll(camera), ...cameraData.target}
+            cameraData.position = {...cameraData.position, ...await CameraUtils.getHeadingPitchRoll(camera)}
             return cameraData
         } catch (e) {
             console.error(e)
@@ -122,9 +122,9 @@ export class CameraUtils {
         }
         else {
             return {
-                latitude:  lgs.mainProxy.components.camera.position.latitude,
-                longitude: lgs.mainProxy.components.camera.position.longitude,
-                height:    lgs.mainProxy.components.camera.position.height,
+                latitude:  lgs.mainProxy.components.camera.target.latitude,
+                longitude: lgs.mainProxy.components.camera.target.longitude,
+                height:    lgs.mainProxy.components.camera.target.height,
                 range:     lgs.camera.position,
             }
         }

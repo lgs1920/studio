@@ -285,11 +285,11 @@ export class POIUtils {
         const cartesian = Cartesian3.fromDegrees(point.longitude, point.latitude,
                                                  __.ui.sceneManager.noRelief() ? 0 : point.simulatedHeight ?? point.height)
 
-        if (lgs.mainProxy.components.camera.position.longitude && lgs.mainProxy.components.camera.position.latitude && lgs.mainProxy.components.camera.position.latitude) {
+        if (lgs.mainProxy.components.camera.position.longitude && lgs.mainProxy.components.camera.position.latitude && lgs.mainProxy.components.camera.position.height) {
             const cameraPosition = Cartesian3.fromDegrees(
                 lgs.mainProxy.components.camera.position.longitude,
                 lgs.mainProxy.components.camera.position.latitude,
-                lgs.mainProxy.components.camera.position.latitude,
+                lgs.mainProxy.components.camera.position.height,
             )
             return Cartesian3.distance(cartesian, cameraPosition)
         }
