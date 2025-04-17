@@ -55,7 +55,7 @@ export function Viewer() {
     lgs.scene.globe.enableLighting = false
     lgs.scene.globe.depthTestAgainstTerrain = true
     lgs.scene.requestRenderMode = true
-    lgs.scene.maximumRenderTimeChange = 10
+    //lgs.scene.maximumRenderTimeChange = 0.2
     //lgs.scene.debugShowFramesPerSecond=true
     lgs.scene.shadows = true
 
