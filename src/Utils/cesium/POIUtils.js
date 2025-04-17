@@ -298,6 +298,10 @@ export class POIUtils {
         }
     }
 
+    static almostEquals = (start, end, tolerance = 0.5) => {
+        return Cartographic.equalsEpsilon(Cartographic.fromDegrees(start.longitude, start.latitude), Cartographic.fromDegrees(end.longitude, end.latitude), tolerance)
+    }
+
     //
 
 

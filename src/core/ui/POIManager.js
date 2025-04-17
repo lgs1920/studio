@@ -14,18 +14,22 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POIS_STORE } from '@Core/constants'
-import { MapPOI }                                                                  from '@Core/MapPOI'
-import { Export }                                                                  from '@Core/ui/Export'
-import { TrackUtils }                                                              from '@Utils/cesium/TrackUtils'
-import { UIToast }                                                                 from '@Utils/UIToast'
-import { KM }                                                                      from '@Utils/UnitUtils'
-import { v4 as uuid }                                                              from 'uuid'
-import { snapshot }                                                                from 'valtio/index'
+import {
+    HIGH_TERRAIN_PRECISION, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE,
+}                     from '@Core/constants'
+import { MapPOI }     from '@Core/MapPOI'
+import { Export }     from '@Core/ui/Export'
+import { POIUtils }   from '@Utils/cesium/POIUtils'
+import { TrackUtils } from '@Utils/cesium/TrackUtils'
+import { UIToast }    from '@Utils/UIToast'
+import { KM }         from '@Utils/UnitUtils'
+import { v4 as uuid } from 'uuid'
+import { snapshot }   from 'valtio/index'
 
 export class POIManager {
 
     threshold = POI_THRESHOLD_DISTANCE
+    utils = POIUtils
 
     constructor() {
         // Singleton
@@ -95,7 +99,7 @@ export class POIManager {
 
         if (simulate) {
             try {
-                point.simulatedHeight = await __.ui.poiManager.getElevationFromTerrain({
+                this.simulatedHeight = await this.getHeightFromTerrain({
                                                                                            longitude: poi.geometry.coordinates[0],
                                                                                            latitude:  poi.geometry.coordinates[1],
                                                                                        })
@@ -249,6 +253,14 @@ export class POIManager {
     getElevationFromTerrain = async (point) => {
         return TrackUtils.getElevationFromTerrain(point)
     }
+    getHeightFromTerrain = async ({coordinates, precision = HIGH_TERRAIN_PRECISION, level = 11}) => {
+        return await __.ui.sceneManager.getHeightFromTerrain({
+                                                                 coordinates: coordinates,
+                                                                 precision:   precision,
+                                                                 level:       level,
+                                                             })
+    }
+
 
     /**
      * Pushes the current POI as starter and changes the former starter configuration
@@ -284,12 +296,14 @@ export class POIManager {
     /**
      * Saves a POI in DB
      *
-     * @param poi
+     * @param poi   if poi type is undefined or temp, we don't save it
      *
      * @return {Promise<void>}
      */
     saveInDB = async (poi = lgs.mainProxy.components.pois.current) => {
+        if (poi.type && poi.type !== POI_TMP_TYPE) {
         await lgs.db.lgs1920.put(poi.id, MapPOI.serialize({...poi, ...{__class: MapPOI}}), POIS_STORE)
+        }
     }
 
     /**
@@ -334,7 +348,18 @@ export class POIManager {
             const list = await Promise.all(poiPromises)
 
             // Build the list
-            list.forEach(poi => this.list.set(poi.id, new MapPOI(poi)))
+            for (const poi of list) {
+                if (!poi.simulatedHeight) {
+                    poi.simulatedHeight = await this.getHeightFromTerrain({
+                                                                              coordinates: {
+                                                                                  longitude: poi.longitude,
+                                                                                  latitude:  poi.latitude,
+                                                                                  height:    poi.height,
+                                                                              },
+                                                                          })
+                    this.list.set(poi.id, new MapPOI(poi))
+                }
+            }
             return this.list
         }
         catch (error) {
@@ -457,5 +482,9 @@ export class POIManager {
             this.list.get(id).animated = false
             return this.list.get(id)
         }
+    }
+
+    almostEquals = (start, end, distance = 0.5) => {
+        return end === null ? false : this.utils.almostEquals(start, end, distance)
     }
 }

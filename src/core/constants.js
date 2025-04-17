@@ -174,6 +174,9 @@ export const LOCKED_ACCESS = 'locked'
 export const TERRAIN_FROM_CESIUM = 'cesium'
 export const TERRAIN_FROM_CESIUM_ELLIPSOID = 'ellipsoid'
 export const TERRAIN_FROM_URL = 'url'
+export const LOW_TERRAIN_PRECISION = 1
+export const HIGH_TERRAIN_PRECISION = 2
+
 
 export const ACCESS_ICONS = {
     [FREEMIUM_ACCESS]:       {

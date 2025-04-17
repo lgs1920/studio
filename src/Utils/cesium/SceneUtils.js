@@ -15,14 +15,14 @@
  ******************************************************************************/
 
 import {
-    ADD_JOURNEY, CURRENT_JOURNEY, DRAWING, DRAWING_FROM_DB, FOCUS_LAST, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D,
-    SCENE_MODE_COLUMBUS, UPDATE_JOURNEY_SILENTLY,
+    ADD_JOURNEY, CURRENT_JOURNEY, DRAWING, DRAWING_FROM_DB, FOCUS_LAST, HIGH_TERRAIN_PRECISION, LOW_TERRAIN_PRECISION,
+    REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, UPDATE_JOURNEY_SILENTLY,
 }                    from '@Core/constants'
 import { MapTarget } from '@Core/MapTarget'
 import bbox          from '@turf/bbox'
 import centroid      from '@turf/centroid'
 import {
-    Cartesian2, Cartesian3, Cartographic, Color, EasingFunction, Math as M, Matrix4, Rectangle,
+    Cartesian2, Cartesian3, Cartographic, Color, EasingFunction, Math as M, Matrix4, Rectangle, sampleTerrain,
     sampleTerrainMostDetailed, SceneMode,
 }                    from 'cesium'
 
@@ -120,6 +120,48 @@ export class SceneUtils {
     }
 
     /**
+     * Get points altitude from Cesium Terrain
+     *
+     * @param coordinates {Array|object}    {longitude,latitude}
+     * @param precision                     LOW_TERRAIN_PRECISION or HIGH_TERRAIN_PRECISION (default)
+     * @param level                         Zoom level, only used with low precision
+     *
+     * @return {Array|number} altitude
+     */
+    static getHeightFromTerrain = async ({coordinates, precision = HIGH_TERRAIN_PRECISION, level = 11}) => {
+        const positions = []
+        let multi = true
+        if (!Array.isArray(coordinates)) {
+            multi = false
+            coordinates = [coordinates]
+        }
+
+        const cartographics = []
+        coordinates.forEach(point => cartographics.push(Cartographic.fromDegrees(point.longitude, point.latitude,
+                                                                                 __.ui.sceneManager.noRelief() ? 0 : (point.simulatedHeight ?? point.height))))
+        //TODO apply only if altitude is missing for some coordinates
+        const altitude = []
+        let results
+        switch (precision) {
+            case HIGH_TERRAIN_PRECISION:
+                results = await sampleTerrainMostDetailed(lgs.viewer.terrainProvider, cartographics)
+                break
+            case LOW_TERRAIN_PRECISION:
+                results = await sampleTerrain(lgs.viewer.terrainProvider, precision, cartographics)
+                break
+        }
+        // Get altitudes
+        results.forEach(coordinate => {
+            altitude.push(coordinate.height)
+        })
+
+        // Returns values in the same format as input
+        return multi ? altitude : altitude[0]
+
+    }
+
+
+    /**
      * Computes the canvas coordinates (X, Y) for a given longitude, latitude, and height.
      * If `clampToGround` is true, the height is adjusted using the terrain provider.
      *
@@ -129,16 +171,20 @@ export class SceneUtils {
      * @returns {Promise<{x: number, y: number, visible: boolean}>}
      */
     static degreesToPixelsCoordinates = async (point, clampToGround = true) => {
-        const cartographic = Cartographic.fromDegrees(point.longitude, point.latitude,
-                                                      __.ui.sceneManager.noRelief() ? 0 : (point.simulatedHeight ?? point.height))
+        // TODO add precision and level
 
-        // Adjust height based on clampToGround
-        if (clampToGround) {
-            const adjust = await sampleTerrainMostDetailed(lgs.viewer.terrainProvider, [cartographic])
-            cartographic.clamped = adjust[0].height
+        // simulatedHeight : height from Terrain.
+        let simulatedHeight
+        if (clampToGround && !__.ui.sceneManager.noRelief()) {
+            simulatedHeight = await SceneUtils.getHeightFromTerrain({coordinates: point})
+        }
+        else {
+            simulatedHeight = point.simulatedHeight
         }
 
-        const cartesian = Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, cartographic.clamped ?? cartographic.height)
+        const cartographic = Cartographic.fromDegrees(point.longitude, point.latitude,
+                                                      __.ui.sceneManager.noRelief() ? 0 : (simulatedHeight ?? point.height))
+        const cartesian = Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, simulatedHeight ?? cartographic.height)
         if (!cartesian) {
             return {visible: false}
         }
@@ -163,7 +209,7 @@ export class SceneUtils {
         return {
             x:       Math.round(pixels.x),
             y:       Math.round(pixels.y),
-            height:  __.ui.sceneManager.noRelief() ? 0 : (cartographic.clamped ?? point.simulatedHeight ?? point.height),
+            height: __.ui.sceneManager.noRelief() ? 0 : (simulatedHeight ?? cartographic.height),
             visible: true,
         }
     }
