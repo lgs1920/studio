@@ -223,5 +223,9 @@ export class MapPOI extends MapElement {
         return Object.values(POI_CATEGORY_ICONS.get(this.category ?? POI_STANDARD_TYPE))[0]
     }
 
+    draw = (visibility) => {
+        this.visibility = visibility
+    }
+
 
 }

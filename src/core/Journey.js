@@ -1,32 +1,30 @@
 import {
     CURRENT_JOURNEY, DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JOURNEYS_STORE, JSON_, KML, KMZ,
     NO_FOCUS, ORIGIN_STORE, REFRESH_DRAWING, SIMULATE_ALTITUDE, TRACK_SLUG, UPDATE_JOURNEY_SILENTLY,
-}                                      from '@Core/constants'
+}                from '@Core/constants'
 import {
     gpx, kml,
-}                                      from '@tmcw/togeojson'
+}                from '@tmcw/togeojson'
 import {
     getGeom,
-}                                      from '@turf/invariant'
+}                from '@turf/invariant'
 import {
-    FLAG_START, FLAG_STOP, JUST_ICON, POI_FLAG, POI_MARKER, POI_STD,
-}                                      from '@Utils/cesium/POIUtils'
+    FLAG_START, FLAG_STOP, JUST_ICON, POI_FLAG, POI_STD,
+}                from '@Utils/cesium/POIUtils'
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                                      from '@Utils/cesium/TrackUtils'
+}                from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
-}                                      from '@Utils/UIToast'
+}                from '@Utils/UIToast'
 import {
     ElevationServer,
-}                                      from './Elevation/ElevationServer'
+}                from './Elevation/ElevationServer'
 import {
     MapElement,
-}                                      from './MapElement'
-import { POI, POI_VERTICAL_ALIGN_TOP } from './POI'
-
-import { ProfileTrackMarker } from './ProfileTrackMarker'
-import { Track }              from './Track'
+}                from './MapElement'
+import { POI }   from './POI'
+import { Track } from './Track'
 
 
 export class Journey extends MapElement {
@@ -141,11 +139,9 @@ export class Journey extends MapElement {
             const object = new Track(track.title, track)
             object.flags.start = new POI(object.flags.start)
             object.flags.stop = new POI(object.flags.stop)
-            object.marker = new ProfileTrackMarker(object.marker)
             if (props.reset) {
                 object.flags.start.drawn  = false
                 object.flags.stop.drawn  = false
-                object.marker.drawn  = false
             }
             instance.tracks.set(slug, new Track(track.title, object))
         })
@@ -273,7 +269,6 @@ export class Journey extends MapElement {
                         thickness: keepContext ? track.thickness : lgs.settings.getJourney.thickness,
                         flags: keepContext?track.flags: {start: undefined, stop: undefined},
                         content: feature,
-                        marker:keepContext?track.marker:null
                     }
                     this.tracks.set(slug, new Track(title, parameters))
                 }
@@ -334,7 +329,7 @@ export class Journey extends MapElement {
                 const theSlug = this.#setTrackSlug({content:[this.slug,feature.properties.name]})
 
                 const common = {
-                    description: feature.properties.desc, size: lgs.POI_DEFAULT_SIZE, visible: true,
+                    description: feature.properties.desc, visible: true,
                 }
 
                 // We need to change coordinates array if it is a line string
@@ -368,7 +363,7 @@ export class Journey extends MapElement {
                             icon: feature.properties?.sym ?? feature.properties?.type,
                             foregroundColor: lgs.settings.getJourney.pois.color,
                         }
-                        this.pois.set(parameters.slug, new POI({...common, ...parameters}))
+                        __.ui.poiManager.add({...common, ...parameters})
                         break
                     }
                     case FEATURE_LINE_STRING :
@@ -383,23 +378,22 @@ export class Journey extends MapElement {
                         const start = coordinates[0][0]
                         const timeStart = this.#hasTime(feature.properties) ? times[0][0] : undefined
                         const startParameters = {
-                            parent: this.slug,
-                            usage:POI_FLAG,
-                            name: 'Track start',
-                            slug: this.#setPOISlug({
-                                                       suffix:  FLAG_START,
-                                                       content: theSlug,
-                                                       prefix:  POI_FLAG,
-                                                   }),
-                            coordinates: [start[0], start[1]],
-                            altitude: start[2] ?? undefined,
-                            time: timeStart,
-                            type: JUST_ICON,
-                            icon: FLAG_START,
-                            verticalOrigin: POI_VERTICAL_ALIGN_TOP,
-                            foregroundColor: lgs.settings.getJourney.pois.start.color,
+                            track:     this.slug,
+                            type:      FLAG_START,
+                            title:     'Track start',
+                            longitude: start[0],
+                            latitude:  start[1],
+                            height:    start[2] ?? undefined,
+                            time:      timeStart,
+                            color:     lgs.settings.getJourney.pois.start.color,
+                            id:        this.#setPOISlug({
+                                                            suffix:  FLAG_START,
+                                                            content: theSlug,
+                                                            prefix:  POI_FLAG,
+                                                        },
+                            ),
                         }
-                        const startFlag = new POI({...common, ...startParameters})
+                        const startFlag = __.ui.poiManager.add({...common, ...startParameters})
                         this.tracks.get(parentSlug).flags.start = startFlag
                         flags.push(startFlag)
 
@@ -410,36 +404,27 @@ export class Journey extends MapElement {
 
                         const timeStop = this.#hasTime(feature.properties) ? times[length][last] : undefined
                         const stopParameters = {
-                            parent: this.slug,
-                            usage:POI_FLAG,
-                            name: 'Track stop',
-                            slug: this.#setPOISlug({
-                                                       suffix:FLAG_STOP,
-                                                       content:theSlug,
-                                                       prefix:POI_FLAG
-                                                   }
-                            , ),
-                            coordinates: [stop[0], stop[1]],
-                            altitude: stop[2] ?? undefined,
+                            track: this.slug,
+                            type:  FLAG_STOP,
+                            title: 'Track stop',
+
+                            longitude: stop[0],
+                            latitude:  stop[1],
+                            height:    stop[2] ?? undefined,
                             time: timeStop,
-                            type: JUST_ICON,
                             icon: FLAG_STOP,
-                            verticalOrigin: POI_VERTICAL_ALIGN_TOP,
-                            foregroundColor: lgs.settings.getJourney.pois.stop.color,
+                            color:     lgs.settings.getJourney.pois.stop.color,
+                            id:        this.#setPOISlug({
+                                                            suffix:  FLAG_STOP,
+                                                            content: theSlug,
+                                                            prefix:  POI_FLAG,
+                                                        },
+                            ),
                         }
-                        const stopFlag = new POI({...common, ...stopParameters})
+                        const stopFlag = __.ui.poiManager.add({...common, ...stopParameters}, false)
+
                         this.tracks.get(parentSlug).flags.stop = stopFlag
                         flags.push(stopFlag)
-
-                        // Create marker flag
-                        this.tracks.get(parentSlug).marker = new ProfileTrackMarker(
-                            {
-                                color:this.tracks.get(parentSlug).marker?.color??this.tracks.get(parentSlug).color,
-                                border:{color:'transparent'},
-                                parent:this.slug,
-                                slug:this.#setPOISlug({content:`${theSlug}`,prefix: POI_MARKER}),
-                                visible: false,
-                            })
                     }
                         break
                 }

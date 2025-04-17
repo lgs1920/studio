@@ -1,6 +1,5 @@
 import { CURRENT_TRACK, DRAWING_FROM_UI, FOCUS_ON_FEATURE, REFRESH_DRAWING }  from '@Core/constants'
 import { MapElement }                                                         from '@Core/MapElement'
-import { POI }                                                                from '@Core/POI'
 import { ProfileTrackMarker }                                                 from '@Core/ProfileTrackMarker'
 import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
 import { Mobility }                                                           from '@Utils/Mobility'
@@ -378,12 +377,12 @@ export class Track extends MapElement {
                     this.flags.stop.draw(!forcedToHide)
                 }
 
-                if (this.marker) {
-                    if (action === REFRESH_DRAWING) {
-                        this.marker.drawn = false
-                    }
-                    this.marker.draw(forcedToHide)
-                }
+            // if (this.marker) {
+            //     if (action === REFRESH_DRAWING) {
+            //         this.marker.drawn = false
+            //     }
+            //     this.marker.draw(forcedToHide)
+            // }
         })
 
         // Focus on the parent Journey
