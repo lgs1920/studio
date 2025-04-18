@@ -76,4 +76,8 @@ export class MapElement {
         }
         return json ? JSON.stringify(result) : JSON.parse(JSON.stringify(result))
     }
+
+    static extractObject = (source) => {
+        return JSON.parse(JSON.stringify(source))
+    }
 }

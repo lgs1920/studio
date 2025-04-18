@@ -128,7 +128,7 @@ export function LGS1920() {
                                                                      color:       lgs.settings.starter.color,
                                                                      bgColor: lgs.settings.starter.bgColor,
                                                                      type:        POI_STARTER_TYPE,
-                                                                       })
+                                                                 }, false)
 
 
                                   // We force re/creation in DB to sync it.

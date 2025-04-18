@@ -75,13 +75,19 @@ export class POIManager {
      *
      * @return {MapPOI|false} - The new POI or false if it is closer than others
      */
-    add = (poi, checkDistance = true) => {
+    add = (poi, checkDistance = true, dbSync = true) => {
         poi.id = poi.id ?? uuid()
         if (checkDistance && this.isTooCloseThanExistingPoints(poi, this.threshold)) {
             return false
         }
 
         this.list.set(poi.id, new MapPOI({...poi, ...this.poiDefaultStatus}))
+        if (dbSync) {
+            ;(async () => {
+                this.saveInDB(this.list.get(poi.id))
+            })()
+        }
+
         return this.list.get(poi.id)
     }
 
@@ -162,6 +168,7 @@ export class POIManager {
         }
 
         if (dbSync) {
+            console.log(`${id} removed`)
             await this.removeInDB(this.list.get(id))
         }
         this.list.delete(id)

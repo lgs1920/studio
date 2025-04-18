@@ -170,6 +170,12 @@ export class MapPOI extends MapElement {
 
     static serialize = (props) => MapElement.serialize(props)
 
+    static clone = (source) => new MapPOI(MapPOI.extractObject(source))
+
+    static extractObject = (source) => {
+        return JSON.parse(JSON.stringify(source))
+    }
+
     /**
      * Updates the properties of the MapPOI instance.
      *

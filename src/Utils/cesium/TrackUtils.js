@@ -744,4 +744,13 @@ export class TrackUtils {
             return JOURNEY_KO
         }
     }
+
+    static removeAllTracks = (slug) => {
+        const dataSources = TrackUtils.getDataSourcesByName(slug)
+        dataSources.forEach(dataSource => {
+            lgs.viewer.dataSources.remove(dataSource)
+        })
+        lgs.scene.requestRender()
+    }
 }
+

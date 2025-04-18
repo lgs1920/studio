@@ -30,8 +30,8 @@ import { snapshot, useSnapshot }                                  from 'valtio/i
 export const MapPOIList = () => {
 
     const poiList = useRef(null)
-    const store = lgs.mainProxy.components.pois
-    const pois = useSnapshot(store)
+    const $store = lgs.mainProxy.components.pois
+    const pois = useSnapshot($store)
     const settings = useSnapshot(lgs.settings.poi)
 
     const prefix = 'edit-map-poi-'
@@ -48,8 +48,8 @@ export const MapPOIList = () => {
     }
     useEffect(() => {
         __.ui.ui.initDetailsGroup(poiList.current)
-        store.list.forEach((poi, id) => {
-            store.bulkList.set(id, false)
+        $store.list.forEach((poi, id) => {
+            $store.bulkList.set(id, false)
         })
     }, [])
 
@@ -60,7 +60,7 @@ export const MapPOIList = () => {
                   }
 
                   // Apply filter byName
-        let poisToShow = Array.from(store.list)
+        let poisToShow = Array.from($store.list)
                       .filter(entry => entry[1].title.toLowerCase().includes(settings.filter.byName.toLowerCase()))
 
                   // Alphabetic/reverse sorting
@@ -84,8 +84,8 @@ export const MapPOIList = () => {
                   }
 
         poisToShow.forEach(([key, value]) => {
-                      store.filteredList.set(key, value)
-                      store.bulkList.set(key, false)
+            $store.filteredList.set(key, value)
+            $store.bulkList.set(key, false)
                   })
               }, [
                   pois.list.size, pois?.current?.id,
@@ -98,7 +98,7 @@ export const MapPOIList = () => {
 
     const handleBulkList = (state, event) => {
         const id = event.target.id.split(bulkPrefix).pop()
-        store.bulkList.set(id, state)
+        $store.bulkList.set(id, state)
     }
 
     const selectPOI = async (event) => {
@@ -106,23 +106,23 @@ export const MapPOIList = () => {
             const id = event.target.id.split(prefix).pop()
             let forceFocus = false
             // We define the current if there is not
-            if (store.current === false) {
-                store.current = store.list.get(id)
+            if ($store.current === false) {
+                $store.current = $store.list.get(id)
                 forceFocus = true
             }
             // If defined and it is not the same, or we are in force mode, we focus on it
-            if ((store.current && store.current.id !== id) || forceFocus) {
+            if (($store.current && $store.current.id !== id) || forceFocus) {
                 // Stop animation before changing
-                store.current.animated = false
+                $store.current.animated = false
                 if (drawers.open === POIS_EDITOR_DRAWER) {
-                    store.current = store.filteredList.get(id)
+                    $store.current = $store.filteredList.get(id)
                 }
 
                 if (poiSetting.focusOnEdit && drawers.open === POIS_EDITOR_DRAWER && __.ui.drawerManager.over) {
                     const camera = snapshot(lgs.mainProxy.components.camera)
                     if (__.ui.cameraManager.isRotating()) {
                         await __.ui.cameraManager.stopRotate()
-                        __.ui.poiManager.stopAnimation(store.current.id)
+                        __.ui.poiManager.stopAnimation($store.current.id)
                     }
                     __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
                         target: lgs.mainProxy.components.pois.current,
@@ -138,7 +138,7 @@ export const MapPOIList = () => {
                         flyingTime: 0,    // no move, no time ! We're on target
                     })
                     if (lgs.settings.ui.poi.rotate) {
-                        await __.ui.poiManager.startAnimation(store.current.id)
+                        await __.ui.poiManager.startAnimation($store.current.id)
                     }
                 }
             }
