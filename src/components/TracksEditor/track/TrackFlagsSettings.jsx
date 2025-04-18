@@ -63,6 +63,7 @@ export const TrackFlagsSettings = (props) => {
 
     return (
         <div>
+            {editorSnapshot?.track.flags.start &&
             <SlTooltip hoist content={textVisibilityStartFlag} placement={props.tooltip}>
                 <ToggleStateIcon onChange={setStartFlagVisibility}
                                  id={'start-visibility'}
@@ -72,6 +73,8 @@ export const TrackFlagsSettings = (props) => {
                                  style={{color: lgs.settings.getJourney.pois.start.color}}
                                  initial={editorSnapshot?.track.flags.start.visible}/>
             </SlTooltip>
+            }
+            {editorSnapshot?.track.flags.stop &&
             <SlTooltip hoist content={textVisibilityStopFlag} placement={props.tooltip}>
                 <ToggleStateIcon onChange={setStopFlagVisibility}
                                  id={'stop-visibility'}
@@ -81,6 +84,7 @@ export const TrackFlagsSettings = (props) => {
                                  style={{color: lgs.settings.getJourney.pois.stop.color}}
                                  initial={editorSnapshot?.track.flags.stop.visible}/>
             </SlTooltip>
+            }
         </div>
     )
 
