@@ -17,17 +17,17 @@
 
 import { FontAwesomeIcon }                                        from '@Components/FontAwesomeIcon'
 import { MapPOIEditContent }                                      from '@Components/MainUI/MapPOI/MapPOIEditContent'
-import { ToggleStateIcon }                                                 from '@Components/ToggleStateIcon'
-import { CURRENT_POI, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
-import { faMask, faSquare, faSquareCheck, faTriangleExclamation }          from '@fortawesome/pro-regular-svg-icons'
+import { ToggleStateIcon }                                        from '@Components/ToggleStateIcon'
+import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER }     from '@Core/constants'
+import { faMask, faSquare, faSquareCheck, faTriangleExclamation } from '@fortawesome/pro-regular-svg-icons'
 import { SlAlert, SlDetails, SlIcon }                             from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                  from '@Utils/FA2SL'
 import { UIToast }                                                from '@Utils/UIToast'
 import classNames                                                 from 'classnames'
-import { Fragment, useEffect, useRef }                            from 'react'
+import { Fragment, memo, useEffect, useRef }                      from 'react'
 import { snapshot, useSnapshot }                                  from 'valtio/index'
 
-export const MapPOIList = () => {
+export const MapPOIList = memo(() => {
 
     const poiList = useRef(null)
     const $store = lgs.mainProxy.components.pois
@@ -205,5 +205,5 @@ export const MapPOIList = () => {
 
         </div>
     )
-}
+})
 

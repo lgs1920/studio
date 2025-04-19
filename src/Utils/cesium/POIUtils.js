@@ -29,8 +29,8 @@ export const PIN_COLOR = 3
 export const PIN_CIRCLE = 4
 export const JUST_ICON = 5
 
-export const FLAG_START = 'start'
-export const FLAG_STOP = 'stop'
+export const POI_FLAG_START = 'start'
+export const POI_FLAG_STOP = 'stop'
 export const POI_FLAG = 'flag'
 export const POI_STD = 'poi'
 export const POI_MARKER = 'marker'
@@ -47,8 +47,8 @@ export class POIUtils {
 
     static setIcon = (icon = '') => {
         switch (icon) {
-            case FLAG_START:
-            case FLAG_STOP:
+            case POI_FLAG_START:
+            case POI_FLAG_STOP:
                 return faLocationPin
             default:
                 return faLocationDot

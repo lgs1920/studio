@@ -4,10 +4,12 @@ import { ProfileTrackMarker }                                                 fr
 import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
 import { Mobility }                                                           from '@Utils/Mobility'
 import { DateTime }                                                           from 'luxon'
+import { v4 as uuid }                                                         from 'uuid'
 
 
 export class Track extends MapElement {
 
+    id
     /** @type {string} */
     title       // Track title
     /** @type {Journey |undefined} */
@@ -33,6 +35,7 @@ export class Track extends MapElement {
 
     constructor(title, options = {}) {
         super()
+        this.id = options.id ?? uuid()
         this.title = title
         this.parent = options.parent
         this.slug = options.slug
@@ -50,6 +53,7 @@ export class Track extends MapElement {
         this.content = options.content
         this.flags = options.flags ?? {start: undefined, stop: undefined}
         this.marker = options.marker ?? null
+        this.pois = options.pois ?? []
 
         this.metrics = options.metrics ?? {}
     }
@@ -69,6 +73,10 @@ export class Track extends MapElement {
             }
         }
         return false
+    }
+
+    static getBySlug(slug) {
+
     }
 
     static unproxify = (object) => {

@@ -21,30 +21,29 @@ import classNames                                         from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                    from 'valtio'
 
-export const MapPOI = memo(({point: pointId}) => {
+export const MapPOI = memo(({point}) => {
 
-    const store = lgs.mainProxy.components.pois.list
-    const snap = useSnapshot(store)
-    const point = snap.get(pointId) // Récupère les informations du POI
+    const $list = lgs.mainProxy.components.pois.list
+    const list = useSnapshot($list)
+    const thePOI = list.get(point) // Récupère les informations du POI
     const viewable = useSnapshot(lgs.mainProxy.components.pois.visibleList)
-    const isCameraIdle = useRef(false)
 
-    if (!point || !point.latitude || !point.longitude) {
+    if (!thePOI || !thePOI.latitude || !thePOI.longitude) {
         return null
     }
 
-    const poi = useRef(null)
+    const _poi = useRef(null)
     const [pixels, setPixels] = useState({x: 0, y: 0})
 
     const getPixelsCoordinates = useCallback(async () => {
 
-        __.ui.sceneManager.degreesToPixelsCoordinates(point.coordinates, false).then(coordinates => {
+                                                 __.ui.sceneManager.degreesToPixelsCoordinates(thePOI.coordinates, false).then(coordinates => {
             if (!coordinates.visible) {
                 return
             }
 
-            store.get(point.id).frontOfTerrain = coordinates.visible
-                                                 if (store.get(point.id).frontOfTerrain) {
+                                                     $list.get(thePOI.id).frontOfTerrain = coordinates.visible
+                                                     if ($list.get(thePOI.id).frontOfTerrain) {
 
                                                      // translate coordinates to pixels
                                                      setPixels((prev) =>
@@ -53,13 +52,13 @@ export const MapPOI = memo(({point: pointId}) => {
 
                                                      // Set visibility, scale, flag mode, camera distance
                                                      Object.assign(
-                                                         store.get(point.id),
-                                                         POIUtils.adaptScaleToDistance(point.coordinates),
+                                                         $list.get(thePOI.id),
+                                                         POIUtils.adaptScaleToDistance(thePOI.coordinates),
                                                      )
-                                                     const poi = store.get(point.id)
+                                                         const poi = $list.get(thePOI.id)
 
-                                                     const min = Math.min(...Array.from(store.values()).map(poi => poi.cameraDistance))
-                                                     const max = Math.max(...Array.from(store.values()).map(poi => poi.cameraDistance))
+                                                         const min = Math.min(...Array.from($list.values()).map(poi => poi.cameraDistance))
+                                                         const max = Math.max(...Array.from($list.values()).map(poi => poi.cameraDistance))
                                                      let zIndex = 1
                                                      if (min !== max) { // several POIs
                                                          zIndex = Math.round((max - poi.cameraDistance) / (max - min) * lgs.mainProxy.components.pois.visibleList.size) + 1
@@ -73,7 +72,7 @@ export const MapPOI = memo(({point: pointId}) => {
                                                  }
 
         })
-                                             }, [point],
+                                             }, [thePOI],
     )
 
     useEffect(() => {
@@ -84,54 +83,15 @@ export const MapPOI = memo(({point: pointId}) => {
     }, [getPixelsCoordinates])
 
     useEffect(() => {
-        if (poi.current) {
-            __.ui.poiManager.observer.observe(poi.current)
+        if (_poi.current) {
+            __.ui.poiManager.observer.observe(_poi.current)
         }
         return () => {
-            if (poi.current) {
-                __.ui.poiManager.observer.unobserve(poi.current)
+            if (_poi.current) {
+                __.ui.poiManager.observer.unobserve(_poi.current)
             }
         }
-    }, [poi.current])
-
-    // Camera idle detection using moveStart and moveEnd
-    useEffect(() => {
-        let animationFrameId // Store the animation frame ID
-
-        const syncWithFPS = () => {
-            getPixelsCoordinates() // Logic synchronized with FPS
-            animationFrameId = requestAnimationFrame(syncWithFPS) // Request the next frame
-        }
-
-        const handleCameraMoveStart = () => {
-            isCameraIdle.current = false // Camera is active
-            console.log('Camera started moving')
-            getPixelsCoordinates() // Initial update
-            syncWithFPS() // Start synchronization
-        }
-
-        const handleCameraMoveEnd = () => {
-            isCameraIdle.current = true // Camera is idle
-            console.log('Camera stopped moving')
-            if (animationFrameId) {
-                getPixelsCoordinates() // Logic synchronized with FPS
-                cancelAnimationFrame(animationFrameId) // Stop synchronization
-            }
-        }
-
-        // Add event listeners
-        lgs.scene.camera.moveStart.addEventListener(handleCameraMoveStart)
-        lgs.scene.camera.moveEnd.addEventListener(handleCameraMoveEnd)
-
-        // Cleanup listeners and cancel animation frame
-        return () => {
-            lgs.scene.camera.moveStart.removeEventListener(handleCameraMoveStart)
-            lgs.scene.camera.moveEnd.removeEventListener(handleCameraMoveEnd)
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId)
-            }
-        }
-    }, [getPixelsCoordinates])
+    }, [_poi.current])
 
     const hideMenu = (event) => {
         lgs.mainProxy.components.pois.context.visible = false
@@ -139,7 +99,6 @@ export const MapPOI = memo(({point: pointId}) => {
             __.ui.sceneManager.propagateEventToCanvas(event)
         }
     }
-
     return (
         <>
             {pixels &&
@@ -147,25 +106,25 @@ export const MapPOI = memo(({point: pointId}) => {
                     className={classNames(
                         'poi-on-map-wrapper',
                         'lgs-slide-in-from-top-bounced',
-                        (point?.showFlag || !point?.expanded) && !point?.over ? 'poi-shrinked' : '',
+                        (thePOI?.showFlag || !thePOI?.expanded) && !thePOI?.over ? 'poi-shrinked' : '',
                     )}
-                    ref={poi}
-                    id={point.id}
+                    ref={_poi}
+                    id={thePOI.id}
                     style={{
                         bottom:                       window.innerHeight - pixels.y,
                         left:                         pixels.x,
-                        transform:                    `translate( -50%,calc(-4 * var(--poi-border-width))) scale(${point?.scale ?? 1})`,
+                        transform:                    `translate( -50%,calc(-4 * var(--poi-border-width))) scale(${thePOI?.scale ?? 1})`,
                         transformOrigin:              'center bottom',
-                        '--lgs-poi-background-color': point.bgColor ?? lgs.colors.poiDefaultBackground,
-                        '--lgs-poi-border-color':     point.color ?? lgs.colors.poiDefault,
-                        '--lgs-poi-color':            point.color ?? lgs.colors.poiDefault,
-                        zIndex: viewable.get(point.id),
+                        '--lgs-poi-background-color': thePOI.bgColor ?? lgs.colors.poiDefaultBackground,
+                        '--lgs-poi-border-color':     thePOI.color ?? lgs.colors.poiDefault,
+                        '--lgs-poi-color':            thePOI.color ?? lgs.colors.poiDefault,
+                        zIndex:                       viewable.get(thePOI.id),
                     }}
                     onPointerMove={__.ui.sceneManager.propagateEventToCanvas}
                     onWheel={hideMenu}
                 >
-                    {point.withinScreen && point.frontOfTerrain && point.visible && !point.tooFar &&
-                        <MapPOIContent id={point.id} hide={hideMenu}/>
+                    {thePOI.withinScreen && thePOI.frontOfTerrain && thePOI.visible && !thePOI.tooFar &&
+                        <MapPOIContent id={thePOI.id} hide={hideMenu}/>
                     }
                 </div>
             }

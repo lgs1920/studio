@@ -1,32 +1,19 @@
 import {
     CURRENT_JOURNEY, DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JOURNEYS_STORE, JSON_, KML, KMZ,
-    NO_FOCUS, ORIGIN_STORE, REFRESH_DRAWING, SIMULATE_ALTITUDE, TRACK_SLUG, UPDATE_JOURNEY_SILENTLY,
-}                from '@Core/constants'
-import {
-    MapPOI,
-}                from '@Core/MapPOI'
-import {
-    gpx, kml,
-}                from '@tmcw/togeojson'
-import {
-    getGeom,
-}                from '@turf/invariant'
-import {
-    FLAG_START, FLAG_STOP, JUST_ICON, POI_STD,
-}                from '@Utils/cesium/POIUtils'
+    NO_FOCUS, ORIGIN_STORE, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, REFRESH_DRAWING, SIMULATE_ALTITUDE,
+    TRACK_SLUG, UPDATE_JOURNEY_SILENTLY,
+}                   from '@Core/constants'
+import { MapPOI }   from '@Core/MapPOI'
+import { gpx, kml } from '@tmcw/togeojson'
+import { getGeom }  from '@turf/invariant'
+
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                from '@Utils/cesium/TrackUtils'
-import {
-    UIToast,
-}                from '@Utils/UIToast'
-import {
-    ElevationServer,
-}                from './Elevation/ElevationServer'
-import {
-    MapElement,
-}                from './MapElement'
-import { Track } from './Track'
+}                          from '@Utils/cesium/TrackUtils'
+import { UIToast }         from '@Utils/UIToast'
+import { ElevationServer } from './Elevation/ElevationServer'
+import { MapElement }      from './MapElement'
+import { Track }           from './Track'
 
 
 export class Journey extends MapElement {
@@ -250,6 +237,7 @@ export class Journey extends MapElement {
                                                         ]
                 })
                 const track = keepContext?this.tracks.get(slug):null
+
                 if ([FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING].includes(geometry.type)) {
                     // Let's define some tracks parameters
                     const parameters = {
@@ -317,9 +305,9 @@ export class Journey extends MapElement {
      */
     getPOIsFromGeoJson = async () => {
         if (this.geoJson.type === FEATURE_COLLECTION) {
-            const flags = []
             // Extracts all POIs from FEATURE_POINT data and adds
             // POI on track limits
+            const pois = new Map(__.ui.poiManager.list)
             for (const feature of this.geoJson.features) {
                 const index = this.geoJson.features.indexOf(feature)
                 const geometry = getGeom(feature)
@@ -348,27 +336,29 @@ export class Journey extends MapElement {
                     case FEATURE_POINT: {
                         // Create a POI
                         const point = geometry.coordinates
+                        const clampedHeight = await __.ui.poiManager.getHeightFromTerrain({
+                                                                                              coordinates: {
+                                                                                                  longitude: point[0],
+                                                                                                  latitude:  point[1],
+                                                                                                  height:    point[2] ?? 0,
+                                                                                              },
+                                                                                          })
                         const parameters = {
                             //TODO a revoir
                             track:           trackSlug,
-                            usage:           POI_STD,
-                            name:            feature.properties.name,
-                            coordinates:     [point[0], point[1]],
+                            type:            POI_STANDARD_TYPE,
+                            title:           feature.properties.name,
+                            longitude:       point[0],
+                            latitude:        point[1],
                             height:          point[2] ?? undefined,
-                            simulatedHeight: await __.ui.poiManager.getHeightFromTerrain({
-                                                                                             coordinates: {
-                                                                                                 longitude: start[0],
-                                                                                                 latitude:  start[1],
-                                                                                                 height:    start[2] ?? 0,
-                                                                                             },
-                                                                                         }),
+                            simulatedHeight: clampedHeight,
+
                             time:            feature.properties?.time ?? undefined,
-                            type:            JUST_ICON,
-                            icon:            feature.properties?.sym ?? feature.properties?.type,
-                            foregroundColor: lgs.settings.getJourney.pois.color,
                             expanded:        false,
+                            visible:         true,
                         }
-                        __.ui.poiManager.add({...common, ...parameters})
+                        const poi = new MapPOI({...common, ...parameters})
+                        pois.set(poi.id, poi)
                         break
                     }
                     case FEATURE_LINE_STRING :
@@ -391,7 +381,7 @@ export class Journey extends MapElement {
                                                                                          })
                         const startParameters = {
                             track:           trackSlug,
-                            type:            FLAG_START,
+                            type:    POI_FLAG_START,
                             title:           'Track start',
                             longitude:       start[0],
                             latitude:        start[1],
@@ -401,10 +391,11 @@ export class Journey extends MapElement {
                             time:     timeStart,
                             color:    lgs.settings.getJourney.pois.start.color,
                             expanded: false,
+                            visible: false,
                         }
-                        const startFlag = __.ui.poiManager.add({...common, ...startParameters}, false)
+                        const startFlag = new MapPOI({...common, ...startParameters})
+                        pois.set(startFlag.id, startFlag)
                         this.tracks.get(parentSlug).flags.start = startFlag.id
-                        flags.push(startFlag.id)
 
                         // Create Track Stop Flag
                         const length = coordinates.length - 1
@@ -421,7 +412,7 @@ export class Journey extends MapElement {
                                                                                         })
                         const stopParameters = {
                             track: trackSlug,
-                            type:  FLAG_STOP,
+                            type:    POI_FLAG_STOP,
                             title: 'Track stop',
 
                             longitude:       stop[0],
@@ -429,13 +420,14 @@ export class Journey extends MapElement {
                             height:          stop[2] ?? undefined,
                             simulatedHeight: clampedStop,
                             time:            timeStop,
-                            icon:            FLAG_STOP,
+                            icon:    POI_FLAG_STOP,
                             color:           lgs.settings.getJourney.pois.stop.color,
                             expanded:        false,
+                            visible: false,
                         }
-                        const stopFlag = __.ui.poiManager.add({...common, ...stopParameters}, false)
+                        const stopFlag = new MapPOI({...common, ...stopParameters})
+                        pois.set(stopFlag.id, stopFlag)
                         this.tracks.get(parentSlug).flags.stop = stopFlag.id
-                        flags.push(stopFlag.id)
                     }
                         break
                 }
@@ -443,13 +435,16 @@ export class Journey extends MapElement {
             }
 
             // If we need to have Flags  on limits only (ie first on first track, last of last track)
-            // // we adapt the visibility for the flagged POIs
-            // if (this.poisOnLimits) {
-            //     flags.forEach((poi, index) => {
-            //         const track = poi.slug.split('#').slice(1, -1).join('#')
-            //         this.tracks.get(track).flags[(poi.slug.endsWith(FLAG_START)) ? 'start' : 'stop'].visible = (index === 0 || index === (flags.length - 1))
-            //     })
-            // }
+            // we adapt the visibility for the flagged POIs
+            if (this.poisOnLimits) {
+                Array.from(this.tracks.values()).forEach((track, index) => {
+                    pois.get(track.flags.start).visible = index === 0 // visible si premier
+                    pois.get(track.flags.stop).visible = index === this.tracks.size - 1
+                })
+
+            }
+            console.log(pois)
+            __.ui.poiManager.addMultiple(pois, false)
         }
     }
 

@@ -18,13 +18,13 @@ import { NameValueUnit }                                  from '@Components/Data
 import { FontAwesomeIcon }                                                  from '@Components/FontAwesomeIcon'
 import { DOUBLE_CLICK_DELAY, DOUBLE_TAP_DELAY, POIS_EDITOR_DRAWER, SECOND } from '@Core/constants'
 import { SlPopup }                                                          from '@shoelace-style/shoelace/dist/react'
-import { ELEVATION_UNITS }                                from '@Utils/UnitUtils'
-import { useEffect, useRef, useState }                                      from 'react'
-import Timeout                                            from 'smart-timeout'
+import { ELEVATION_UNITS }                   from '@Utils/UnitUtils'
+import { memo, useEffect, useRef, useState } from 'react'
+import Timeout                               from 'smart-timeout'
 import './style.css'
 import { useSnapshot }                                                      from 'valtio'
 
-export const MapPOIContent = ({id, hide}) => {
+export const MapPOIContent = memo(({id, hide}) => {
     const inner = useRef(null)
     const point = lgs.mainProxy.components.pois.list.get(id)
     const snap = useSnapshot(point)
@@ -134,7 +134,7 @@ export const MapPOIContent = ({id, hide}) => {
     }
 
     useEffect(() => {
-
+        console.log(point.id)
     }, [point])
 
     return (
@@ -203,4 +203,4 @@ export const MapPOIContent = ({id, hide}) => {
             }
         </>
     )
-}
+})

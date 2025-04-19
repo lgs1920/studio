@@ -136,7 +136,7 @@ export class MapPOI extends MapElement {
     /**
      * @type {boolean}
      */
-    withinScreen = null
+    withinScreen = true
 
     /**
      * Initializes a new instance of the MapPOI class.

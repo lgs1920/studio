@@ -25,6 +25,7 @@ import { UIToast }    from '@Utils/UIToast'
 import { KM }         from '@Utils/UnitUtils'
 import { v4 as uuid } from 'uuid'
 import { snapshot }   from 'valtio/index'
+import { proxyMap }   from 'valtio/utils'
 
 export class POIManager {
 
@@ -91,6 +92,46 @@ export class POIManager {
         return this.list.get(poi.id)
     }
 
+    /**
+     * Adds a multiple POIs to the map
+     *
+     * @param {Map} - The new MapPoi instances
+     *
+     */
+    addMultiple = (pois, checkDistance = true, dbSync = true) => {
+
+        pois.forEach(poi => {
+            if (checkDistance && this.isTooCloseThanExistingPoints(poi, this.threshold, pois)) {
+                pois.delete(poi.id)
+            }
+        })
+        pois.forEach((value, key) => {
+            this.list.set(key, value)
+        })
+        if (dbSync) {
+            lgs.db.lgs1920.keys(POIS_STORE).then(async keys => {
+                for (const poi of pois) {
+                    if (!keys.includes(poi.id)) {
+                        await this.saveInDB(this.list.get(poi.id))
+                    }
+                }
+            })
+        }
+    }
+
+    /**
+     * Returns the poi with poi.id = id
+     * @param id
+     * @return {MapPOI}
+     */
+    get = id => this.list.get(id)
+
+    /**
+     *
+     * @param poi
+     * @param simulate
+     * @return {Promise<{longitude: *, latitude: *, title: string, description: (*|string), color: *, bgColor}>}
+     */
     create = async (poi, simulate = false) => {
         const point = {
             longitude:   poi.geometry.coordinates[0],
@@ -239,11 +280,12 @@ export class POIManager {
      *
      * @return {boolean} - true if there is one closer
      */
-    isTooCloseThanExistingPoints = (newPoi, threshold = this.threshold) => {
+    isTooCloseThanExistingPoints = (newPoi, threshold = this.threshold, tempList = null) => {
+        const list = (tempList === null) ? this.list : tempList
         if (newPoi.type === POI_STARTER_TYPE) {
             return false
         }
-        for (let poi of this.list.values()) {
+        for (let poi of list.values()) {
             if (this.closerThan(newPoi, poi, threshold)) {
                 return true
             }

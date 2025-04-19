@@ -61,7 +61,6 @@ export class Utils {
 
         // Profile management
         TrackUtils.setProfileVisibility(editorStore.journey)
-        lgs.theTrack.marker.toggleVisibility()
 
         // Update Profile to show the correct Journey
         __.ui.profiler.draw()

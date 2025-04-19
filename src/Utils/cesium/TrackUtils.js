@@ -1,17 +1,17 @@
 import {
     ADD_JOURNEY, APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DRAWING, DRAWING_FROM_DB,
     DRAWING_FROM_UI, FOCUS_ON_FEATURE, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
-}                                                  from '@Core/constants'
-import { Journey }                                 from '@Core/Journey'
-import { default as centroid }                     from '@turf/centroid'
-import { SceneUtils }                              from '@Utils/cesium/SceneUtils'
+}                                                      from '@Core/constants'
+import { Journey }                                     from '@Core/Journey'
+import { default as centroid }                         from '@turf/centroid'
+import { SceneUtils }                                  from '@Utils/cesium/SceneUtils'
 import {
     Cartesian3, Cartographic, Color as CColor, CustomDataSource, GeoJsonDataSource, Math as M,
     PolylineOutlineMaterialProperty, Rectangle, sampleTerrainMostDetailed,
-}                                                  from 'cesium'
-import Color                                       from 'color'
-import { UIToast }                                 from '../UIToast.js'
-import { FLAG_START, POI_FLAG, POI_STD, POIUtils } from './POIUtils'
+}                                                      from 'cesium'
+import Color                                           from 'color'
+import { UIToast }                                     from '../UIToast.js'
+import { POI_FLAG, POI_FLAG_START, POI_STD, POIUtils } from './POIUtils'
 
 export const SUPPORTED_EXTENSIONS = ['geojson', 'json', 'kml', 'gpx' /* TODO 'kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -128,6 +128,51 @@ export class TrackUtils {
                 break
         }
         source.show = forcedToHide ? false : track.visible
+        // // Créer un canevas
+        // const canvas = document.createElement('canvas');
+        // canvas.width = 300;
+        // canvas.height = 150;
+        // const ctx = canvas.getContext('2d');
+        //
+        // // Dessiner la première ligne (taille normale)
+        // ctx.font = '20px Roboto';
+        // ctx.fillStyle = 'white';
+        // ctx.fillText('Ligne 1', 10, 40);
+        //
+        // // Dessiner la deuxième ligne (plus petite)
+        // ctx.font = '14px Roboto';
+        // ctx.fillStyle = 'white';
+        // ctx.fillText('Ligne 2 (plus petite)', 10, 80);
+        //
+        // // Dessiner la troisième ligne (taille normale)
+        // ctx.font = '20px Roboto';
+        // ctx.fillStyle = 'white';
+        // ctx.fillText('Ligne 3', 10, 120);
+        //
+        // // Ajouter un fond vert avec des bords arrondis
+        // ctx.fillStyle = 'green';
+        // ctx.strokeStyle = 'white';
+        // ctx.lineWidth = 6;
+        // ctx.beginPath();
+        // ctx.roundRect(0, 0, canvas.width, canvas.height, 25); // Angles arrondis
+        // ctx.closePath();
+        // ctx.fill();
+        // ctx.stroke();
+        // // Convertir le canevas en URL d'image
+        // const imageURL = canvas.toDataURL('image/png');
+        //
+        // // Ajouter un billboard dans Cesium
+        // const entity = lgs.viewer.entities.add({
+        //                                        position: Cartesian3.fromDegrees(5.70291, 45.33524, 1927), //
+        // Position à 50m du sol billboard: { image: imageURL, verticalOrigin: VerticalOrigin.BOTTOM, // Aligner avec
+        // le bas horizontalOrigin: HorizontalOrigin.CENTER } });  // const entity = lgs.viewer.entities.add({
+        // position: Cartesian3.fromDegrees(5.70291,45.33524,1926 ), // Position arbitraire label: { text: '<span
+        // style="font-size: 16px;">Ligne 1</span>\n<span style="font-size: 12px;">Ligne 2 (plus petite)</span>\n<span
+        // style="font-size: 16px;">Ligne 3</span>', // Trois lignes de texte font: '13px Inter', fillColor:
+        // CColor.WHITE, backgroundColor: CColor.GREEN.withAlpha(0.1), showBackground: true, horizontalOrigin:
+        // HorizontalOrigin.CENTER, verticalOrigin: VerticalOrigin.BOTTOM }, heightReference:
+        // HeightReference.CLAMP_TO_GROUND  });
+
         lgs.viewer.scene.requestRender()
     }
 
@@ -568,7 +613,7 @@ export class TrackUtils {
             const current = TrackUtils.getTrackFromEntityId(journey, entity.id)
             if (entity.id.startsWith(POI_FLAG) && entity.id.endsWith(type) && current.slug === track.slug) {
                 entity.show = POIUtils.setPOIVisibility(
-                    track.flags[entity.id.endsWith(FLAG_START) ? 'start' : 'stop'], visibility,
+                    track.flags[entity.id.endsWith(POI_FLAG_START) ? 'start' : 'stop'], visibility,
                 )
             }
         })
@@ -594,7 +639,7 @@ export class TrackUtils {
                     if (entity.id.startsWith(POI_FLAG)) {
                         const track = TrackUtils.getTrackFromEntityId(journey, entity.id)
                         entity.show = POIUtils.setPOIVisibility(
-                            track.flags[entity.id.endsWith(FLAG_START) ? 'start' : 'stop'], visibility,
+                            track.flags[entity.id.endsWith(POI_FLAG_START) ? 'start' : 'stop'], visibility,
                         )
                     }
                 })

@@ -97,6 +97,8 @@ export const FLAG_STOP_TYPE = 'stop'
 export const POI_TRACK_TYPE = 'track'
 export const POI_STANDARD_TYPE = 'poi'
 export const POI_TMP_TYPE = undefined
+export const POI_FLAG_START = 'start'
+export const POI_FLAG_STOP = 'stop'
 
 
 export const UPDATE_JOURNEY_THEN_DRAW = 11
