@@ -16,16 +16,28 @@
 
 import {
     HIGH_TERRAIN_PRECISION, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE,
-}                     from '@Core/constants'
-import { MapPOI }     from '@Core/MapPOI'
-import { Export }     from '@Core/ui/Export'
-import { POIUtils }   from '@Utils/cesium/POIUtils'
-import { TrackUtils } from '@Utils/cesium/TrackUtils'
-import { UIToast }    from '@Utils/UIToast'
-import { KM }         from '@Utils/UnitUtils'
-import { v4 as uuid } from 'uuid'
-import { snapshot }   from 'valtio/index'
-import { proxyMap }   from 'valtio/utils'
+}                                                                                                   from '@Core/constants'
+import { MapPOI }                                                                                   from '@Core/MapPOI'
+import {
+    Export,
+}                                                                                                   from '@Core/ui/Export'
+import {
+    POIUtils,
+}                                                                                                   from '@Utils/cesium/POIUtils'
+import {
+    TrackUtils,
+}                                                                                                   from '@Utils/cesium/TrackUtils'
+import {
+    UIToast,
+}                                                                                                   from '@Utils/UIToast'
+import {
+    ELEVATION_UNITS, KM,
+}                                                                                                   from '@Utils/UnitUtils'
+import { Cartesian2, Cartesian3, HeightReference, HorizontalOrigin, NearFarScalar, VerticalOrigin } from 'cesium'
+import Konva                                                                                        from 'konva'
+import { v4 as uuid }                                                                               from 'uuid'
+import { snapshot }                                                                                 from 'valtio/index'
+import { proxyMap }                                                                                 from 'valtio/utils'
 
 export class POIManager {
 
@@ -38,7 +50,7 @@ export class POIManager {
             return POIManager.instance
         }
 
-        this.observer = new IntersectionObserver(this.manageInScreen, {threshold: 0.5})
+        //this.observer = new IntersectionObserver(this.manageInScreen, {threshold: 0.5})
 
         ;(async () => {
             this.readAllFromDB()
@@ -48,6 +60,36 @@ export class POIManager {
 
     get list() {
         return lgs.mainProxy.components.pois.list
+    }
+
+    /**
+     * Retrieve the starter POI
+     *
+     * @return {MapPOI}
+     */
+    get starter() {
+        return this.list.values().find(poi => poi.type === POI_STARTER_TYPE)
+    }
+
+    set starterSettings(poi) {
+        Object.keys(lgs.settings.starter).forEach(key => {
+            lgs.settings.starter[key] = poi[key]
+        })
+    }
+
+    /**
+     * Retrieve the starter POI
+     *
+     * @return {MapPOI}
+     */
+    get starter() {
+        return this.list.values().find(poi => poi.type === POI_STARTER_TYPE)
+    }
+
+    set starterSettings(poi) {
+        Object.keys(lgs.settings.starter).forEach(key => {
+            lgs.settings.starter[key] = poi[key]
+        })
     }
 
     /**
@@ -74,49 +116,23 @@ export class POIManager {
      *
      * @param {Object} poi - The new POI object
      *
+     * @param checkDistance
+     * @param dbSync
      * @return {MapPOI|false} - The new POI or false if it is closer than others
      */
-    add = (poi, checkDistance = true, dbSync = true) => {
+    add = async (poi, checkDistance = true, dbSync = true) => {
         poi.id = poi.id ?? uuid()
         if (checkDistance && this.isTooCloseThanExistingPoints(poi, this.threshold)) {
             return false
         }
 
-        this.list.set(poi.id, new MapPOI({...poi, ...this.poiDefaultStatus}))
+        const thePoi = new MapPOI({...poi, ...this.poiDefaultStatus})
+        this.list.set(poi.id, thePoi)
         if (dbSync) {
-            ;(async () => {
-                this.saveInDB(this.list.get(poi.id))
-            })()
+            await this.saveInDB(thePoi)
         }
 
-        return this.list.get(poi.id)
-    }
-
-    /**
-     * Adds a multiple POIs to the map
-     *
-     * @param {Map} - The new MapPoi instances
-     *
-     */
-    addMultiple = (pois, checkDistance = true, dbSync = true) => {
-
-        pois.forEach(poi => {
-            if (checkDistance && this.isTooCloseThanExistingPoints(poi, this.threshold, pois)) {
-                pois.delete(poi.id)
-            }
-        })
-        pois.forEach((value, key) => {
-            this.list.set(key, value)
-        })
-        if (dbSync) {
-            lgs.db.lgs1920.keys(POIS_STORE).then(async keys => {
-                for (const poi of pois) {
-                    if (!keys.includes(poi.id)) {
-                        await this.saveInDB(this.list.get(poi.id))
-                    }
-                }
-            })
-        }
+        return thePoi
     }
 
     /**
@@ -147,9 +163,9 @@ export class POIManager {
         if (simulate) {
             try {
                 this.simulatedHeight = await this.getHeightFromTerrain({
-                                                                                           longitude: poi.geometry.coordinates[0],
-                                                                                           latitude:  poi.geometry.coordinates[1],
-                                                                                       })
+                                                                           longitude: poi.geometry.coordinates[0],
+                                                                           latitude:  poi.geometry.coordinates[1],
+                                                                       })
             }
             catch {
                 point.simulatedHeight = 0
@@ -160,15 +176,6 @@ export class POIManager {
         }
 
         return point
-    }
-
-    /**
-     * Retrieve the starter POI
-     *
-     * @return {MapPOI}
-     */
-    get starter() {
-        return this.list.values().find(poi => poi.type === POI_STARTER_TYPE)
     }
 
     /**
@@ -228,12 +235,6 @@ export class POIManager {
      */
     closerThan = (poi1, poi2, threshold = this.threshold) => {
         return this.haversineDistance(poi1, poi2) <= threshold
-    }
-
-    set starterSettings(poi) {
-        Object.keys(lgs.settings.starter).forEach(key => {
-            lgs.settings.starter[key] = poi[key]
-        })
     }
 
     /**
@@ -351,7 +352,7 @@ export class POIManager {
      */
     saveInDB = async (poi = lgs.mainProxy.components.pois.current) => {
         if (poi.type && poi.type !== POI_TMP_TYPE) {
-        await lgs.db.lgs1920.put(poi.id, MapPOI.serialize({...poi, ...{__class: MapPOI}}), POIS_STORE)
+            await lgs.db.lgs1920.put(poi.id, MapPOI.serialize({...poi, ...{__class: MapPOI}}), POIS_STORE)
         }
     }
 
@@ -535,5 +536,131 @@ export class POIManager {
 
     almostEquals = (start, end, distance = 0.5) => {
         return end === null ? false : this.utils.almostEquals(start, end, distance)
+    }
+
+    createContent = (poi) => {
+
+        const width = 130
+        const height = 60
+        const textFont = __.ui.css.getCSSVariable('--lgs-font-family')
+        const arrow = {width: 6, height: 6, content: ''}
+
+        const bgColor = poi.bgColor ?? lgs.colors.poiDefaultBackground
+        const borderColor = poi.color ?? lgs.colors.poiDefault
+        const color = poi.color ?? lgs.colors.poiDefault
+
+
+        const stage = new Konva.Stage({
+                                          container: 'konva-container', // ID du conteneur HTML
+                                          width:     width,
+                                          height:    height + arrow.height,
+                                      })
+
+        const layer = new Konva.Layer()
+        stage.add(layer)
+
+        const content = new Konva.Group({
+                                            x: 0,
+                                            y: 0,
+                                        })
+
+        const background = new Konva.Rect({
+                                              width:        width,
+                                              height:       height,
+                                              cornerRadius: 4,
+                                              fill:         bgColor,
+                                              opacity:      0.7,
+                                              stroke:       null,
+                                          })
+        background.filters([Konva.Filters.Blur])
+        background.blurRadius(10) // Intensité du flou
+
+        const border = new Konva.Rect({
+                                          width:        width - 2,
+                                          height:       height - 2,
+                                          x:            1,
+                                          y:            1,
+                                          cornerRadius: 4,
+                                          fill:         null,
+                                          stroke:       borderColor,
+                                          strokeWidth:  2,
+                                          opacity:      1,
+                                      })
+
+        arrow.content = new Konva.Line({
+                                           points:  [
+                                               width / 2, height + arrow.height, // Pointe inférieure (bas du triangle,
+                                                                                 // centre)
+                                               width / 2 - arrow.width / 2, height, // Coin supérieur gauche de la base
+                                               width / 2 + arrow.width / 2, height, // Coin supérieur droit de la base
+                                           ],
+                                           fill:    color, // Couleur du triangle
+                                           opacity: 1, // Opacité du triangle
+                                           closed:  true, // Fermer le triangle
+                                       })
+
+
+        const title = new Konva.Text({
+                                         x:          10,
+                                         y:          8,
+                                         text:       poi.title,
+                                         fontSize:   13,
+                                         fontStyle:  'bold',
+                                         fill:       color,
+                                         fontFamily: textFont,
+                                     })
+
+        const coordinates = new Konva.Text({
+                                               x:          10,
+                                               y:          43,
+                                               text:       `${__.convert(poi.latitude).to(lgs.settings.coordinateSystem.current)}, ${__.convert(poi.longitude).to(lgs.settings.coordinateSystem.current)}`,
+                                               fontSize:   11,
+                                               fill:       color,
+                                               fontFamily: textFont,
+                                           })
+
+
+        const hUnits = ELEVATION_UNITS[lgs.settings.getUnitSystem.current]
+        const theAltitude = __.convert(poi.height ?? 0).to(hUnits)
+
+        const altitude = new Konva.Text({
+                                            x:          10,
+                                            y:          29,
+                                            text:       poi.height ? sprintf('%d %s', theAltitude, hUnits) : '',
+                                            fontSize:   11,
+                                            fill:       color,
+                                            fontFamily: textFont,
+                                        })
+
+        // Build the content and export it as image
+        content.add(background)
+        content.add(border)
+        content.add(arrow.content)
+        content.add(title)
+        content.add(altitude)
+        content.add(coordinates)
+        layer.add(content)
+        stage.add(layer)
+        const dataURL = stage.toDataURL({pixelRatio: 2}) // HDPI
+        stage.destroy()
+        const entity = lgs.viewer.entities.add({
+                                                   position:                 Cartesian3.fromDegrees(poi.longitude, poi.latitude, poi.simulatedHeight ?? poi.height),
+                                                   billboard:                {
+                                                       heightReference:          __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
+                                                       image:                    dataURL,
+                                                       width:                    width,
+                                                       height:                   ((height + arrow.height) / width) * width,
+                                                       scale:                    1,
+                                                       verticalOrigin:           VerticalOrigin.BOTTOM,
+                                                       horizontalOrigin:         HorizontalOrigin.CENTER,
+                                                       scaleByDistance:          new NearFarScalar(10000.0, 1.0, 20000.0, 0),
+                                                       pixelOffset:              new Cartesian2(0, 0),
+                                                       disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7,
+                                                   },
+                                                   show:                     poi.visibility,
+                                                   disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7,
+                                               })
+
+        lgs.viewer.scene.requestRender()
     }
 }

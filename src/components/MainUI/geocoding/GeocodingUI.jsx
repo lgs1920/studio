@@ -104,8 +104,9 @@ export const GeocodingUI = () => {
                 rotate:     lgs.settings.ui.poi.rotate,
                 rpm:        lgs.settings.ui.poi.rpm,
                 flyingTime: 2,
-                callback:   (poi) => {
-                    const newPoi = __.ui.poiManager.add(poi)
+                callback: async (poi) => {
+                    const newPoi = await __.ui.poiManager.add(poi)
+                    newPoi.draw()
                     if (newPoi) {
                         setPoi(newPoi)
                         return true

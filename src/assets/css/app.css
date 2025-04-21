@@ -44,6 +44,10 @@ body {
     height: 100dvh;
 }
 
+#konva-container {
+    display: none;
+}
+
 
 #cesium-viewer {
     width: 100vw;

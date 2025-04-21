@@ -261,7 +261,7 @@ export const MainUI = () => {
                 <MapPOIEditPanel/>
 
             </div>
-            <MapPOICluster/>
+            {/* <MapPOICluster/> */}
 
             <SupportUIDialog/>
             <JourneyLoaderUI multiple/>

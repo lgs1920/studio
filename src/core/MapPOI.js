@@ -230,7 +230,7 @@ export class MapPOI extends MapElement {
     }
 
     draw = (visibility) => {
-        this.visibility = visibility
+        __.ui.poiManager.createContent(this, visibility)
     }
 
 

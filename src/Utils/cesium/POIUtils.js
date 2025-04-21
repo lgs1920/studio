@@ -18,8 +18,8 @@ import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 
-import { Canvg }                                                                        from 'canvg'
-import { Cartesian3, Cartographic, Color, HeightReference, PinBuilder, VerticalOrigin } from 'cesium'
+import { Canvg }                                                            from 'canvg'
+import { Cartesian3, Cartographic, Color, HeightReference, VerticalOrigin } from 'cesium'
 
 // Pin Marker Type
 export const PIN_ICON = 1
@@ -113,16 +113,13 @@ export class POIUtils {
             disableDepthTestDistance: disableTestDistance,
 
         }
-        const pinBuilder = new PinBuilder()
-
         const billboard = {
             heightReference:          __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
             verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
             show:           true,
             disableDepthTestDistance: disableTestDistance,
         }
-        const backgroundColor = poi.backgroundColor ? Color.fromCssColorString(poi.backgroundColor) : ''
-        const foregroundColor = poi.foregroundColor ? Color.fromCssColorString(poi.foregroundColor) : ''
+
 
         const dataSource = POIUtils.getDataSource(poi)
         if (!dataSource) {

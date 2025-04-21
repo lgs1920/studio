@@ -119,7 +119,7 @@ export function LGS1920() {
                               let focusTarget = null
 
                               if (!starter) {
-                                  starter = __.ui.poiManager.add({
+                                  starter = await __.ui.poiManager.add({
                                                                      longitude:   lgs.settings.starter.longitude,
                                                                            latitude:  lgs.settings.starter.latitude,
                                                                            height:    lgs.settings.starter.height,
@@ -134,6 +134,8 @@ export function LGS1920() {
                                   // We force re/creation in DB to sync it.
                                   await __.ui.poiManager.saveInDB(starter)
                               }
+
+                              starter.draw()
 
                               // ---- < 0.8.3 compat. : patch to fix #200
                               // if (!starter.color || !starter.bgColor) {

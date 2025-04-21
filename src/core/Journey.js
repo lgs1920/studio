@@ -19,7 +19,7 @@ import { Track }           from './Track'
 export class Journey extends MapElement {
 
     tracks = new Map()          // List of tracks
-    pois = new Map()            // List of pois
+    pois = []            // List of pois
     poisOnLimits = true               // Add POIs start/stop on journey limits or on each track
     type                                       // File type  GPX,KML,GEOJSON  //TODO KMZ
 
@@ -46,7 +46,7 @@ export class Journey extends MapElement {
 
             // If options property exists, we get them, else
             // we set the value to a default.
-            this.slug = options.slug ?? __.app.setSlug({ content : [title,type]})
+            this.slug = options.slug ?? __.app.setSlug({content: [title, type]})
             this.visible = options.visible ?? true
             this.POIsVisible = options.POIsVisible ?? true
 
@@ -85,8 +85,6 @@ export class Journey extends MapElement {
     }
 
 
-
-
     /**
      * Get all journeys from DB
      *
@@ -108,7 +106,8 @@ export class Journey extends MapElement {
                 )
             })
             return await Promise.all(journeyPromises)
-        } catch (error) {
+        }
+        catch (error) {
             console.error('Error when trying to get journeys from browser database :', error)
             return []
         }
@@ -118,12 +117,7 @@ export class Journey extends MapElement {
     static deserialize = (props) => {
         props.instance = new Journey()
         let instance = super.deserialize(props)
-
-        // Transform POIs from object to class
-        instance.pois.forEach((poi, slug) => {
-            instance.pois.set(slug, new MapPOI(poi))
-        })
-
+        
         // Transform Tracks from object to class
         instance.tracks.forEach((track, slug) => {
             const object = new Track(track.title, track)
@@ -205,12 +199,13 @@ export class Journey extends MapElement {
                     this.geoJson = JSON.parse(content)
             }
 
-        } catch (error) {
+        }
+        catch (error) {
             console.error(error)
             // Error => we notify
             UIToast.error({
-                caption: `An error occurs during loading <strong>${this.title}<strong>!`, text: error,
-            })
+                              caption: `An error occurs during loading <strong>${this.title}<strong>!`, text: error,
+                          })
             this.geoJson = undefined
         }
     }
@@ -231,28 +226,28 @@ export class Journey extends MapElement {
                 const title = feature.properties.name
 
                 const slug = this.#setTrackSlug({
-                                                    content:[
+                                                    content: [
                                                         this.slug,
-                                                        feature.properties.name
-                                                        ]
-                })
-                const track = keepContext?this.tracks.get(slug):null
+                                                        feature.properties.name,
+                                                    ],
+                                                })
+                const track = keepContext ? this.tracks.get(slug) : null
 
                 if ([FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING].includes(geometry.type)) {
                     // Let's define some tracks parameters
                     const parameters = {
-                        parent: this.slug,
-                        name: keepContext?track.name:slug,
-                        slug: slug,
-                        hasTime: this.#hasTime(feature.properties),
+                        parent:      this.slug,
+                        name:        keepContext ? track.name : slug,
+                        slug:        slug,
+                        hasTime:     this.#hasTime(feature.properties),
                         hasAltitude: this.#hasAltitude(geometry),
-                        description: keepContext?track.description:feature.properties.desc ?? '',
-                        segments: geometry.coordinates.length,
-                        visible: keepContext?track.visible:true,
-                        color :  keepContext?track.color: __.ui.editor.journey.newColor(),
-                        thickness: keepContext ? track.thickness : lgs.settings.getJourney.thickness,
-                        flags: keepContext?track.flags: {start: undefined, stop: undefined},
-                        content: feature,
+                        description: keepContext ? track.description : feature.properties.desc ?? '',
+                        segments:    geometry.coordinates.length,
+                        visible:     keepContext ? track.visible : true,
+                        color:       keepContext ? track.color : __.ui.editor.journey.newColor(),
+                        thickness:   keepContext ? track.thickness : lgs.settings.getJourney.thickness,
+                        flags:       keepContext ? track.flags : {start: undefined, stop: undefined},
+                        content:     feature,
                     }
                     this.tracks.set(slug, new Track(title, parameters))
                 }
@@ -267,7 +262,7 @@ export class Journey extends MapElement {
      * @return {number}
      */
     getTrackIndex = slug => {
-         return Array.from(this.tracks.keys()).indexOf(slug)
+        return Array.from(this.tracks.keys()).indexOf(slug)
     }
 
 
@@ -307,7 +302,7 @@ export class Journey extends MapElement {
         if (this.geoJson.type === FEATURE_COLLECTION) {
             // Extracts all POIs from FEATURE_POINT data and adds
             // POI on track limits
-            const pois = new Map(__.ui.poiManager.list)
+
             for (const feature of this.geoJson.features) {
                 const index = this.geoJson.features.indexOf(feature)
                 const geometry = getGeom(feature)
@@ -344,21 +339,22 @@ export class Journey extends MapElement {
                                                                                               },
                                                                                           })
                         const parameters = {
-                            //TODO a revoir
                             track:           trackSlug,
                             type:            POI_STANDARD_TYPE,
                             title:           feature.properties.name,
+                            Description: feature.properties.description ?? '',
                             longitude:       point[0],
                             latitude:        point[1],
                             height:          point[2] ?? undefined,
                             simulatedHeight: clampedHeight,
 
-                            time:            feature.properties?.time ?? undefined,
-                            expanded:        false,
-                            visible:         true,
+                            time:     feature.properties?.time ?? undefined,
+                            expanded: false,
+                            visible:  true,
                         }
                         const poi = new MapPOI({...common, ...parameters})
-                        pois.set(poi.id, poi)
+                        await __.ui.poiManager.add(poi, false)
+                        this.pois.push(poi.id)
                         break
                     }
                     case FEATURE_LINE_STRING :
@@ -380,9 +376,11 @@ export class Journey extends MapElement {
                                                                                              },
                                                                                          })
                         const startParameters = {
-                            track:           trackSlug,
-                            type:    POI_FLAG_START,
-                            title:           'Track start',
+                            track:       trackSlug,
+                            type:        POI_FLAG_START,
+                            title:       'Track start',
+                            Description: 'Track start',
+
                             longitude:       start[0],
                             latitude:        start[1],
                             height:          start[2] ?? undefined,
@@ -391,10 +389,11 @@ export class Journey extends MapElement {
                             time:     timeStart,
                             color:    lgs.settings.getJourney.pois.start.color,
                             expanded: false,
-                            visible: false,
+                            visible:     false,
                         }
                         const startFlag = new MapPOI({...common, ...startParameters})
-                        pois.set(startFlag.id, startFlag)
+                        await __.ui.poiManager.add(startFlag, false)
+                        this.pois.push(startFlag.id)
                         this.tracks.get(parentSlug).flags.start = startFlag.id
 
                         // Create Track Stop Flag
@@ -411,22 +410,25 @@ export class Journey extends MapElement {
                                                                                             },
                                                                                         })
                         const stopParameters = {
-                            track: trackSlug,
-                            type:    POI_FLAG_STOP,
-                            title: 'Track stop',
+                            track:       trackSlug,
+                            type:        POI_FLAG_STOP,
+                            title:       'Track stop',
+                            Description: 'Track stop',
 
                             longitude:       stop[0],
                             latitude:        stop[1],
                             height:          stop[2] ?? undefined,
                             simulatedHeight: clampedStop,
                             time:            timeStop,
-                            icon:    POI_FLAG_STOP,
+                            icon:        POI_FLAG_STOP,
                             color:           lgs.settings.getJourney.pois.stop.color,
                             expanded:        false,
-                            visible: false,
+                            visible:     false,
                         }
+
                         const stopFlag = new MapPOI({...common, ...stopParameters})
-                        pois.set(stopFlag.id, stopFlag)
+                        await __.ui.poiManager.add(stopFlag, false)
+                        this.pois.push(stopFlag.id)
                         this.tracks.get(parentSlug).flags.stop = stopFlag.id
                     }
                         break
@@ -438,13 +440,11 @@ export class Journey extends MapElement {
             // we adapt the visibility for the flagged POIs
             if (this.poisOnLimits) {
                 Array.from(this.tracks.values()).forEach((track, index) => {
-                    pois.get(track.flags.start).visible = index === 0 // visible si premier
-                    pois.get(track.flags.stop).visible = index === this.tracks.size - 1
+                    __.ui.poiManager.list.get(track.flags.start).visible = index === 0 // visible si premier
+                    __.ui.poiManager.list.get(track.flags.stop).visible = index === this.tracks.size - 1
                 })
 
             }
-            console.log(pois)
-            __.ui.poiManager.addMultiple(pois, false)
         }
     }
 
@@ -457,11 +457,11 @@ export class Journey extends MapElement {
      *
      * @return {string}
      */
-    #setPOISlug = ({suffix='', content='', prefix= POI_STD}) => {
+    #setPOISlug = ({suffix = '', content = '', prefix = POI_STD}) => {
         if (typeof content === 'number') {
-            content=content.toString()
+            content = content.toString()
         }
-        return __.app.setSlug({suffix : suffix, content : content, prefix : prefix})
+        return __.app.setSlug({suffix: suffix, content: content, prefix: prefix})
     }
 
     /**
@@ -474,7 +474,7 @@ export class Journey extends MapElement {
      * @return {string}
      */
     #setTrackSlug = ({suffix = '', content = '', prefix = TRACK_SLUG}) => {
-        return __.app.setSlug({suffix : suffix, content : content, prefix : prefix})
+        return __.app.setSlug({suffix: suffix, content: content, prefix: prefix})
     }
 
     /**
@@ -537,12 +537,13 @@ export class Journey extends MapElement {
             // If journey is not visible, we force tracks to be hidden, whatever their visibility
             // else we use their status.
             promises.push(track.draw({
-                action: action, mode: NO_FOCUS, forcedToHide: !this.visible,
-            }))
+                                         action: action, mode: NO_FOCUS, forcedToHide: !this.visible,
+                                     }))
         })
         // Draw POIs
         this.pois.forEach(poi => {
-            promises.push(poi.draw(this.POIsVisible))
+            console.log(poi, __.ui.poiManager.list.get(poi))
+            promises.push(__.ui.poiManager.list.get(poi).draw(this.POIsVisible))
         })
 
         await Promise.all(promises)
@@ -556,7 +557,7 @@ export class Journey extends MapElement {
                               ])
         UIToast.success({
                             caption: `${this.title}`, text: texts.get(action),
-        })
+                        })
 
         if (mode === FOCUS_ON_FEATURE && action !== DRAWING_FROM_DB && action !== UPDATE_JOURNEY_SILENTLY) {
             this.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})
@@ -565,8 +566,8 @@ export class Journey extends MapElement {
 
     }
 
-    focus = (props={}) => {
-        props.journey=this
+    focus = (props = {}) => {
+        props.journey = this
         props.target = this
         __.ui.sceneManager.focusOnJourney(props)
     }
@@ -675,7 +676,7 @@ export class Journey extends MapElement {
      *
      * @return {boolean}
      */
-    hasOneTrack = ()=> {
+    hasOneTrack = () => {
         return this.tracks.size === 1
     }
 
