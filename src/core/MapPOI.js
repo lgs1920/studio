@@ -16,6 +16,7 @@
 
 import { CURRENT_POI, POI_CATEGORY_ICONS, POI_STANDARD_TYPE, POI_TMP_TYPE } from '@Core/constants'
 import { MapElement }                                                       from '@Core/MapElement'
+import { POIUtils }                                                         from '@Utils/cesium/POIUtils'
 import { v4 as uuid }                                                       from 'uuid'
 
 export class MapPOI extends MapElement {
@@ -89,6 +90,11 @@ export class MapPOI extends MapElement {
     over = false
 
     /**
+     * @type {string[null]}
+     */
+    parent = null
+
+    /**
      * @type {number}
      */
     scale = 1
@@ -98,10 +104,8 @@ export class MapPOI extends MapElement {
      */
     showFlag = false
 
-    /**
-     * @type {string}
-     */
-    track
+    /** @type {POIUtils} **/
+    utils = POIUtils
 
     /**
      * @type {boolean}
@@ -229,8 +233,10 @@ export class MapPOI extends MapElement {
         return Object.values(POI_CATEGORY_ICONS.get(this.category ?? POI_STANDARD_TYPE))[0]
     }
 
-    draw = (visibility) => {
-        __.ui.poiManager.createContent(this, visibility)
+    draw = async () => {
+        this.image = __.ui.poiManager.createContent(this)
+        console.log(this.type, this.title)
+        await this.utils.draw(this)
     }
 
 

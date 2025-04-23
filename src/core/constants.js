@@ -327,8 +327,11 @@ export const FOCUS_STARTER = 'starter'
 export const FOCUS_LAST = 'last'
 export const FOCUS_CENTROID = 'center'
 
-let faSummit
-/** POI Categories **/
+/*******************************************************************************
+ * POI Design
+ ******************************************************************************/
+
+    // POI Categories
 export const POI_CATEGORY_ICONS = new Map([
                                               [POI_STANDARD_TYPE, {faFlagSwallowtail}],
                                               ['shelter', {faHouseBlank}],
@@ -346,6 +349,17 @@ export const POI_CATEGORY_ICONS = new Map([
                                               ['campground', {faCampground}],
                                               ['picnic-area', {faTablePicnic}],
                                           ])
+
+// POI Sizes
+export const POI_SIZES = {
+    'expanded': {width: 130, height: 60},
+    'reduced':  {width: 38.4, height: 38.4}, // 2.4rem => --lgs-square-dimension in theme.css
+    'arrow':    {width: 6, height: 6},
+}
+
+// POI Origins
+export const POI_VERTICAL_ALIGN_BOTTOM = -1 // Both are definedfor cesium engine
+export const POI_VERTICAL_ALIGN_CENTER = 0
 
 /** Compass **/
 export const NO_COMPASS = 0,

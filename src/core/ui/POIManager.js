@@ -15,29 +15,19 @@
  ******************************************************************************/
 
 import {
-    HIGH_TERRAIN_PRECISION, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE,
-}                                                                                                   from '@Core/constants'
-import { MapPOI }                                                                                   from '@Core/MapPOI'
-import {
-    Export,
-}                                                                                                   from '@Core/ui/Export'
-import {
-    POIUtils,
-}                                                                                                   from '@Utils/cesium/POIUtils'
-import {
-    TrackUtils,
-}                                                                                                   from '@Utils/cesium/TrackUtils'
-import {
-    UIToast,
-}                                                                                                   from '@Utils/UIToast'
-import {
-    ELEVATION_UNITS, KM,
-}                                                                                                   from '@Utils/UnitUtils'
-import { Cartesian2, Cartesian3, HeightReference, HorizontalOrigin, NearFarScalar, VerticalOrigin } from 'cesium'
-import Konva                                                                                        from 'konva'
-import { v4 as uuid }                                                                               from 'uuid'
-import { snapshot }                                                                                 from 'valtio/index'
-import { proxyMap }                                                                                 from 'valtio/utils'
+    HIGH_TERRAIN_PRECISION, POI_SIZES, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE,
+    POIS_STORE,
+}                              from '@Core/constants'
+import { MapPOI }              from '@Core/MapPOI'
+import { Export }              from '@Core/ui/Export'
+import { POIUtils }            from '@Utils/cesium/POIUtils'
+import { TrackUtils }          from '@Utils/cesium/TrackUtils'
+import { UIToast }             from '@Utils/UIToast'
+import { ELEVATION_UNITS, KM } from '@Utils/UnitUtils'
+import Konva                   from 'konva'
+import { v4 as uuid }          from 'uuid'
+import { snapshot }            from 'valtio/index'
+import { proxyMap }            from 'valtio/utils'
 
 export class POIManager {
 
@@ -407,8 +397,8 @@ export class POIManager {
                                                                                   height:    poi.height,
                                                                               },
                                                                           })
-                    this.list.set(poi.id, new MapPOI(poi))
                 }
+                this.list.set(poi.id, new MapPOI(poi))
             }
             return this.list
         }
@@ -540,10 +530,11 @@ export class POIManager {
 
     createContent = (poi) => {
 
-        const width = 130
-        const height = 60
+        const width = poi.expanded ? POI_SIZES.expanded.width : POI_SIZES.reduced.width
+        const height = poi.expanded ? POI_SIZES.expanded.height : POI_SIZES.reduced.height
+        const arrow = {width: POI_SIZES.arrow.width, height: POI_SIZES.arrow.height, content: ''}
+
         const textFont = __.ui.css.getCSSVariable('--lgs-font-family')
-        const arrow = {width: 6, height: 6, content: ''}
 
         const bgColor = poi.bgColor ?? lgs.colors.poiDefaultBackground
         const borderColor = poi.color ?? lgs.colors.poiDefault
@@ -573,94 +564,82 @@ export class POIManager {
                                               stroke:       null,
                                           })
         background.filters([Konva.Filters.Blur])
-        background.blurRadius(10) // Intensité du flou
+        background.blurRadius(10)
 
         const border = new Konva.Rect({
-                                          width:        width - 2,
-                                          height:       height - 2,
+                                          width:        width - 3,
+                                          height:       height - 3,
                                           x:            1,
-                                          y:            1,
-                                          cornerRadius: 4,
+                                          y:            2,
+                                          cornerRadius: 2,
                                           fill:         null,
                                           stroke:       borderColor,
-                                          strokeWidth:  2,
+                                          strokeWidth:  2.0,
                                           opacity:      1,
                                       })
 
         arrow.content = new Konva.Line({
                                            points:  [
-                                               width / 2, height + arrow.height, // Pointe inférieure (bas du triangle,
-                                                                                 // centre)
-                                               width / 2 - arrow.width / 2, height, // Coin supérieur gauche de la base
-                                               width / 2 + arrow.width / 2, height, // Coin supérieur droit de la base
+                                               width / 2, height + arrow.height,
+                                               width / 2 - arrow.width / 2, height,
+                                               width / 2 + arrow.width / 2, height,
                                            ],
-                                           fill:    color, // Couleur du triangle
-                                           opacity: 1, // Opacité du triangle
-                                           closed:  true, // Fermer le triangle
+                                           fill:    color,
+                                           opacity: 1,
+                                           closed:  true,
                                        })
 
-
-        const title = new Konva.Text({
-                                         x:          10,
-                                         y:          8,
-                                         text:       poi.title,
-                                         fontSize:   13,
-                                         fontStyle:  'bold',
-                                         fill:       color,
-                                         fontFamily: textFont,
-                                     })
-
-        const coordinates = new Konva.Text({
-                                               x:          10,
-                                               y:          43,
-                                               text:       `${__.convert(poi.latitude).to(lgs.settings.coordinateSystem.current)}, ${__.convert(poi.longitude).to(lgs.settings.coordinateSystem.current)}`,
-                                               fontSize:   11,
-                                               fill:       color,
-                                               fontFamily: textFont,
-                                           })
-
-
-        const hUnits = ELEVATION_UNITS[lgs.settings.getUnitSystem.current]
-        const theAltitude = __.convert(poi.height ?? 0).to(hUnits)
-
-        const altitude = new Konva.Text({
-                                            x:          10,
-                                            y:          29,
-                                            text:       poi.height ? sprintf('%d %s', theAltitude, hUnits) : '',
-                                            fontSize:   11,
-                                            fill:       color,
-                                            fontFamily: textFont,
-                                        })
-
-        // Build the content and export it as image
+        // Draw container and arrow
         content.add(background)
         content.add(border)
         content.add(arrow.content)
-        content.add(title)
-        content.add(altitude)
-        content.add(coordinates)
-        layer.add(content)
-        stage.add(layer)
-        const dataURL = stage.toDataURL({pixelRatio: 2}) // HDPI
-        stage.destroy()
-        const entity = lgs.viewer.entities.add({
-                                                   position:                 Cartesian3.fromDegrees(poi.longitude, poi.latitude, poi.simulatedHeight ?? poi.height),
-                                                   billboard:                {
-                                                       heightReference:          __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
-                                                       image:                    dataURL,
-                                                       width:                    width,
-                                                       height:                   ((height + arrow.height) / width) * width,
-                                                       scale:                    1,
-                                                       verticalOrigin:           VerticalOrigin.BOTTOM,
-                                                       horizontalOrigin:         HorizontalOrigin.CENTER,
-                                                       scaleByDistance:          new NearFarScalar(10000.0, 1.0, 20000.0, 0),
-                                                       pixelOffset:              new Cartesian2(0, 0),
-                                                       disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7,
-                                                   },
-                                                   show:                     poi.visibility,
-                                                   disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7,
+
+        if (poi.expanded) {
+            const title = new Konva.Text({
+                                             x:          10,
+                                             y:          8,
+                                             text:       poi.title,
+                                             fontSize:   13,
+                                             fontStyle:  'bold',
+                                             fill:       color,
+                                             fontFamily: textFont,
+                                         })
+
+            const coordinates = new Konva.Text({
+                                                   x:          10,
+                                                   y:          43,
+                                                   text:       `${__.convert(poi.latitude).to(lgs.settings.coordinateSystem.current)}, ${__.convert(poi.longitude).to(lgs.settings.coordinateSystem.current)}`,
+                                                   fontSize:   11,
+                                                   fill:       color,
+                                                   fontFamily: textFont,
                                                })
 
-        lgs.viewer.scene.requestRender()
+
+            const hUnits = ELEVATION_UNITS[lgs.settings.getUnitSystem.current]
+            const theAltitude = __.convert(poi.height ?? 0).to(hUnits)
+
+            const altitude = new Konva.Text({
+                                                x:          10,
+                                                y:          29,
+                                                text:       poi.height ? sprintf('%d %s', theAltitude, hUnits) : '',
+                                                fontSize:   11,
+                                                fill:       color,
+                                                fontFamily: textFont,
+                                            })
+
+            content.add(title)
+            content.add(altitude)
+            content.add(coordinates)
+        }
+        else {
+        }
+
+        // Add it to the stage an export result as HDPI image
+        layer.add(content)
+        stage.add(layer)
+        const image = stage.toDataURL({pixelRatio: 2}) // HDPI
+        stage.destroy()
+
+        return image
     }
 }

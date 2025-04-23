@@ -298,7 +298,7 @@ export const JourneySettings = function JourneySettings() {
 
                     // Now we need to rebuild the data
                     theJourney.getTracksFromGeoJson(true)
-                    theJourney.getPOIsFromGeoJson()
+                    await theJourney.getPOIsFromGeoJson()
                     await theJourney.extractMetrics()
                     theJourney.addToContext()
                     await theJourney.saveToDB()

@@ -567,6 +567,7 @@ export class TrackUtils {
         TrackUtils.getDataSourcesByName(journey.slug, true)[0].entities.values.forEach(entity => {
             // Filter flags on the right track
             const current = TrackUtils.getTrackFromEntityId(journey, entity.id)
+            console.log(entity.name, entity)
             if (entity.id.startsWith(POI_FLAG) && entity.id.endsWith(type) && current.slug === track.slug) {
                 entity.show = POIUtils.setPOIVisibility(
                     track.flags[entity.id.endsWith(POI_FLAG_START) ? 'start' : 'stop'], visibility,
@@ -690,7 +691,8 @@ export class TrackUtils {
                 // if (journey.extension === 'json' && typeof journey.content === 'string') {
                 //     journey.content = JSON.parse(journey.content)
                 // }
-                let theJourney = new Journey(journey.name, journey.extension, {
+
+                let theJourney = await Journey.create(journey.name, journey.extension, {
                     content:     journey.content,
                     allowRename: false,
                 })

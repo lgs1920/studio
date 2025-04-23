@@ -109,11 +109,14 @@ export function LGS1920() {
                               // Set the right terrain
                               await TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
 
+                              // Read DB for POIs
+                              await __.ui.poiManager.readAllFromDB()
+                              console.log(__.ui.poiManager.list)
+
                               // Read DB for journeys
                               await TrackUtils.readAllFromDB()
 
-                              // Read DB for POIs
-                              await __.ui.poiManager.readAllFromDB()
+
                               let starter = __.ui.poiManager.starter
 
                               let focusTarget = null
@@ -135,7 +138,7 @@ export function LGS1920() {
                                   await __.ui.poiManager.saveInDB(starter)
                               }
 
-                              starter.draw()
+                              await starter.draw()
 
                               // ---- < 0.8.3 compat. : patch to fix #200
                               // if (!starter.color || !starter.bgColor) {

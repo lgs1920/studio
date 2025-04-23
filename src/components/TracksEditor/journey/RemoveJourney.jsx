@@ -59,7 +59,7 @@ export const RemoveJourney = (props) => {
             // clean poi store
             journey.tracks.forEach(track => {
                 Array.from($pois.values())
-                    .filter(poi => poi.track === track.slug)
+                    .filter(poi => poi.parent === track.id)
                     .forEach(poi => $pois.delete(poi.id))
             })
 

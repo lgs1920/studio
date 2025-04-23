@@ -106,8 +106,9 @@ export const GeocodingUI = () => {
                 flyingTime: 2,
                 callback: async (poi) => {
                     const newPoi = await __.ui.poiManager.add(poi)
-                    newPoi.draw()
+
                     if (newPoi) {
+                        await newPoi.draw()
                         setPoi(newPoi)
                         return true
                     }

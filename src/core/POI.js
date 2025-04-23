@@ -108,7 +108,3 @@ export class POI {
     }
 
 }
-
-export const POI_VERTICAL_ALIGN_TOP = 'top'
-export const POI_VERTICAL_ALIGN_BOTTOM = 'bottom'
-export const POI_VERTICAL_ALIGN_CENTER = 'center'

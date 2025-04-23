@@ -39,6 +39,7 @@ export function Viewer() {
             infoBox:              false,
             sceneModePicker:      false,
             showRenderLoopErrors: true,
+            resolutionScale: 2,
             mapProjection:        new WebMercatorProjection(), // TODO is it a problem in 3D ?
             //*************************************
             // Avoid consuming Cesium Ion Sessions
@@ -55,8 +56,10 @@ export function Viewer() {
     lgs.scene.globe.enableLighting = false
     lgs.scene.globe.depthTestAgainstTerrain = true
     lgs.scene.requestRenderMode = true
+
     //lgs.scene.maximumRenderTimeChange = 0.2
     //lgs.scene.debugShowFramesPerSecond=true
+
     lgs.scene.shadows = true
 
 

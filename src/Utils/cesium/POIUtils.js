@@ -14,12 +14,15 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { POI_SIZES }     from '@Core/constants'
 import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 
-import { Canvg }                                                            from 'canvg'
-import { Cartesian3, Cartographic, Color, HeightReference, VerticalOrigin } from 'cesium'
+import { Canvg } from 'canvg'
+import {
+    Cartesian2, Cartesian3, Cartographic, Color, HeightReference, HorizontalOrigin, NearFarScalar, VerticalOrigin,
+}                from 'cesium'
 
 // Pin Marker Type
 export const PIN_ICON = 1
@@ -38,13 +41,39 @@ export const POI_PROFILER = 'profiler'
 
 
 export class POIUtils {
-    static verticalOrigin = () => {
-        const location = {
-            top: VerticalOrigin.TOP, bottom: VerticalOrigin.BOTTOM, center: VerticalOrigin.CENTER,
+
+
+    /**
+     * Returns the appropriate entity container based on POI track status.
+     *
+     * @param poi {MapPOI|object}- Point of Interest object
+     *
+     * For MapPOI objects attached to a journey, parent contains the track id,
+     *          but we need to get the associated DataSource because
+     *          a GeoJsonDataSource is not an EntityCollection (bug or feature?)
+     * For globals MapPOI, parent is null, the container is viewer.entities.
+     *
+     * @returns Entity container (DataSource or EntityCollection)
+     */
+    static getEntityContainer = (poi) => {
+        if (poi.parent) {
+            // parent = track#<journey>#<track-slug> with journey = <journey-slug>#<file type>
+            const [track, name, type, slug] = poi.parent.split('#')
+            const custom = lgs.viewer.dataSources.getByName(`${name}#${type}`)
+            return custom?.[0].entities ?? null
         }
-        return location?.origin ?? VerticalOrigin.CENTER
+        return lgs.viewer.entities
     }
 
+
+    /**
+     * Sets and returns the appropriate icon based on the provided icon type.
+     *
+     * @param {string} [icon=''] - The icon type to determine the corresponding FontAwesome icon.
+     *                             Defaults to an empty string.
+     *
+     * @returns {Object} - Returns the appropriate icon.
+     */
     static setIcon = (icon = '') => {
         switch (icon) {
             case POI_FLAG_START:
@@ -55,14 +84,6 @@ export class POIUtils {
 
         }
     }
-
-    /**
-     *
-     * @type {DataSource}
-     */
-    static getDataSource = (poi => {
-        return lgs.viewer.dataSources.getByName(poi.parent)[0]
-    })
 
     static update = (poi, options) => {
         const dataSource = POIUtils.getDataSource(poi)
@@ -87,79 +108,51 @@ export class POIUtils {
     }
 
     /**
+     * An asynchronous function responsible for drawing a Point of Interest (POI) on a map or scene.
+     * This function creates and configures a visual representation of a POI,
+     * based on input parameters.
      *
-     * @param poi
-     * @param parentVisibility
-     * @return {Promise<*>}
+     * @param {Object} poi - The Point of Interest object containing necessary data to render.
+     * @param {boolean} [parentVisibility=true] - Determines if the POI should be displayed based on its parent
+     *     visibility.
+     *
+     * @returns {Promise<void>} Resolves when the POI has been successfully drawn or updated in the scene.
      */
     static draw = async (poi, parentVisibility = true) => {
 
-        // Bail early if POI already drawn
-        if (poi.drawn) {
-            return
+        const width = poi.expanded ? POI_SIZES.expanded.width : POI_SIZES.reduced.width
+        const height = poi.expanded ? POI_SIZES.expanded.height : POI_SIZES.reduced.height
+        const arrow = {width: POI_SIZES.arrow.width, height: POI_SIZES.arrow.height, content: ''}
+
+        let options = {
+            name:                     poi.name,
+            id:                       poi.id,
+            position:                 Cartesian3.fromDegrees(poi.longitude, poi.latitude, poi.simulatedHeight ?? poi.height),
+            show:                     poi.visible,
+            disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7, // Diameter of Earth
         }
 
-        // Else we'll draw it
-        poi.drawn = true
-
-        const disableTestDistance = __.ui.sceneManager.is2D ? 0 : 1.2742018E7 // Diameter of Earth
-
-        let poiOptions = {
-            name:        poi.name,
-            id:          poi.slug,
-            description: poi.description,
-            position:                 Cartesian3.fromDegrees(poi.coordinates[0], poi.coordinates[1], poi.coordinates[2]),
-            show:        POIUtils.setPOIVisibility(poi, parentVisibility),
-            disableDepthTestDistance: disableTestDistance,
-
-        }
         const billboard = {
-            heightReference:          __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
-            verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
-            show:           true,
-            disableDepthTestDistance: disableTestDistance,
+            heightReference:  __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
+            horizontalOrigin: HorizontalOrigin.CENTER,
+            verticalOrigin:   VerticalOrigin.BOTTOM,
+            show:             true,
+            image:            poi.image,
+            width:            width,
+            height:           ((height + arrow.height) / width) * width,
+            scale:            1,
+            scaleByDistance:  new NearFarScalar(10000.0, 1.0, 20000.0, 0),
+            pixelOffset:      new Cartesian2(0, 0), // TODO X offset will change of expanded
         }
 
-
-        const dataSource = POIUtils.getDataSource(poi)
-        if (!dataSource) {
+        const container = POIUtils.getEntityContainer(poi)
+        if (!container) {
             return
         }
-        await POIUtils.remove(poi)
+        await POIUtils.remove(poi) // TODO replace only image
 
-        switch (poi.type) {
-            case PIN_CIRCLE:
-                return dataSource.entities.add({
-                                                   ...poiOptions,
-                                                   point: {
-                                                       pixelSize:      poi.size,
-                                                       color:          foregroundColor,
-                                                       outlineColor:   backgroundColor,
-                                                       outlineWidth:   poi.border,
-                                                       verticalOrigin: POIUtils.verticalOrigin(poi.vertical),
-                                                   },
-                                               })
-            case PIN_COLOR:
-                billboard.image = pinBuilder.fromColor(backgroundColor, poi.size).toDataURL()
-                poiOptions.billboard = {...billboard}
-                return await dataSource.entities.add(poiOptions)
-            case PIN_TEXT:
-                billboard.image = pinBuilder.fromText(poi.text, backgroundColor, poi.size).toDataURL()
-                poiOptions.billboard = {...billboard}
-                return await dataSource.entities.add(poiOptions)
-            case PIN_ICON:
-                pinBuilder.fromUrl(POIUtils.useFontAwesome(poi).src, backgroundColor, poi.size).then(async image => {
-                    billboard.image = image
-                    poiOptions.billboard = {...billboard}
-                    return await dataSource.entities.add(poiOptions)
-                })
-                break
-            case JUST_ICON:
-                billboard.image = POIUtils.useOnlyFontAwesome(poi)
-                poiOptions.billboard = {...billboard}
-                return await dataSource.entities.add(poiOptions)
-                break
-        }
+        await container.add({...options, billboard: billboard})
+        lgs.viewer.scene.requestRender()
 
     }
 
@@ -205,13 +198,24 @@ export class POIUtils {
             height: svg.viewBox.baseVal.height,
         }
     }
-
+    /**
+     * Asynchronously removes the specified point of interest (POI) entity from its containing entity container, if it
+     * exists.
+     *
+     * This function extracts the entity container corresponding to the given POI.
+     * It then iterates through the entities in the container to remove the entity that matches the ID of the given
+     * POI.
+     *
+     * @param {Object} poi - The point of interest object to be removed. It must contain an `id` property that uniquely
+     *     identifies it.
+     * @returns {Promise<void>} A promise that resolves when the removal operation is complete.
+     */
     static remove = async (poi) => {
-        const dataSource = POIUtils.getDataSource(poi)
-        if (dataSource?.entities) {
-            for (const entity of dataSource.entities.values) {
-                if (entity.id === poi.slug) {
-                    await dataSource.entities.remove(entity)
+        const container = POIUtils.getEntityContainer(poi)
+        if (container) {
+            for (const entity of container.values) {
+                if (entity.id === poi.id) {
+                    container.remove(entity)
                 }
             }
         }
@@ -233,33 +237,6 @@ export class POIUtils {
         return visibility ? poi?.visible : false
     }
 
-    /**
-     *
-     * @param point  {longitude,latitude,height,simulatedHeight}
-     * @return {boolean}
-     */
-    static isPointVisible = (point) => {
-        const globe = lgs.scene.globe
-        const cartesian = Cartesian3.fromDegrees(point.longitude, point.latitude,
-                                                 __.ui.sceneManager.noRelief() ? 0 : point.simulatedHeight ?? point.height)
-
-        const screenPosition = lgs.scene.cartesianToCanvasCoordinates(cartesian)
-        if (!screenPosition) {
-            return false
-        }
-
-        const pickRay = lgs.camera.getPickRay(screenPosition)
-        const pickedPosition = globe.pick(pickRay, lgs.scene)
-
-        if (!pickedPosition) {
-            return false
-        }
-
-        const pickedCartographic = Cartographic.fromCartesian(pickedPosition)
-        return Math.abs(pickedCartographic.height - (point.simulatedHeight ?? point.height)) < 20.0
-
-    }
-
     static adaptScaleToDistance = (point, scaler = {
         distanceThreshold: lgs.settings.ui.poi.distanceThreshold,
         minScaleFlag:      lgs.settings.ui.poi.minScaleFlag,
@@ -278,6 +255,19 @@ export class POIUtils {
     }
 
 
+    /**
+     * Calculates the distance from a given geographic point to the camera's current position.
+     *
+     * This function determines the distance between the provided point (converted into Cartesian
+     * coordinates) and the camera's current position in Cartesian space. The point's height is
+     * determined using either its simulated height, its actual height, or set to 0 if relief data
+     * is not being used.
+     *
+     * @param {Object} point - The geographic point to measure the distance from the camera.
+     *
+     * @returns {number} The distance from the point to the camera in meters. If the camera's current
+     *                   position is not specified, the function returns 0.
+     */
     static distanceFromCamera = point => {
         const cartesian = Cartesian3.fromDegrees(point.longitude, point.latitude,
                                                  __.ui.sceneManager.noRelief() ? 0 : point.simulatedHeight ?? point.height)
