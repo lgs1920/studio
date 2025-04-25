@@ -96,7 +96,7 @@ export const GeocodingUI = () => {
      */
     const showPOI = async geoPoint => {
 
-        __.ui.poiManager.create(geoPoint, true).then(point => {
+        __.ui.poiManager.getPointFromGeoJson(geoPoint, true).then(point => {
             __.ui.sceneManager.focus(point, {
                 target:     point,
                 lookAt:     true,
@@ -108,7 +108,6 @@ export const GeocodingUI = () => {
                     const newPoi = await __.ui.poiManager.add(poi)
 
                     if (newPoi) {
-                        await newPoi.draw()
                         setPoi(newPoi)
                         return true
                     }

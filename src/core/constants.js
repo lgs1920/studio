@@ -258,8 +258,6 @@ export const APP_EVENT = {
 }
 
 
-
-
 /** Scene Mode **/
 
 export const SCENE_MODE_2D = {
@@ -328,7 +326,7 @@ export const FOCUS_LAST = 'last'
 export const FOCUS_CENTROID = 'center'
 
 /*******************************************************************************
- * POI Design
+ * POI Management
  ******************************************************************************/
 
     // POI Categories
@@ -353,13 +351,18 @@ export const POI_CATEGORY_ICONS = new Map([
 // POI Sizes
 export const POI_SIZES = {
     'expanded': {width: 130, height: 60},
-    'reduced':  {width: 38.4, height: 38.4}, // 2.4rem => --lgs-square-dimension in theme.css
+    'reduced': {width: 32, height: 32},
     'arrow':    {width: 6, height: 6},
 }
 
 // POI Origins
-export const POI_VERTICAL_ALIGN_BOTTOM = -1 // Both are definedfor cesium engine
-export const POI_VERTICAL_ALIGN_CENTER = 0
+export const POI_VERTICAL_ALIGN_BOTTOM = -1, // Both are defined
+             POI_VERTICAL_ALIGN_CENTER = 0   // for cesium engine
+
+export const ADD_POI_EVENT    = 'poi/add',
+             REMOVE_POI_EVENT = 'poi/remove',
+             UPDATE_POI_EVENT = 'poi/update'
+
 
 /** Compass **/
 export const NO_COMPASS = 0,

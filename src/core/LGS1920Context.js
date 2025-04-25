@@ -2,6 +2,7 @@ import {
     APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, JOURNEYS_STORE, ORIGIN_STORE, platforms,
     POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE,
 }                            from '@Core/constants'
+import { StoresManager }     from '@Core/stores/StoresManager'
 import { AppToolsManager }   from '@Core/ui/AppToolsManager'
 import { DeviceManager }     from '@Core/ui/DeviceManager'
 import { Geocoder }          from '@Core/ui/Geocoder'
@@ -53,6 +54,8 @@ export class LGS1920Context {
 
         this.journeyEditorStore = this.#mainProxy.components.journeyEditor
         this.mainUIStore = this.#mainProxy.components.mainUI
+
+        this.stores = new StoresManager()// TODO change all stores
 
         // Get the first as current theJourney
         if (this.journeys.size) {
@@ -278,7 +281,8 @@ export class LGS1920Context {
         this.theJourneyEditorProxy = proxy(theJourneyEditor)
     }
 
-    initManagers = () => {
+    initManagers = async () => {
+
         __.ui.profiler = new Profiler(this)
         __.ui.editor = {
             journey: new JourneyEditor(),
@@ -289,11 +293,15 @@ export class LGS1920Context {
         __.ui.drawerManager = new DrawerManager()
         __.ui.sceneManager = new SceneManager()
         __.ui.menuManager = new MenuManager()
+
+        // Init POI management
         __.ui.poiManager = new POIManager()
+
         __.ui.geocoder = new Geocoder()
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()
+
 
     }
 

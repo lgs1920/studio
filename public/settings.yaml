@@ -116,20 +116,21 @@ journey:
   ## POIs
   pois:
     # Default POI
-    color: '#f2c55c'      # Color
-    border: '#ffffff99'   # Border
-    size: 13              # Size (pixels)
-    sizePin: 10           # TODO
+    color: ''      # Color
+    bgColor: '#ffffff99'   # Border
     ## Wanderer mode
     wanderer:
       color: '#1689CCff'
       border: '#FFF'
     ## Start POI
     start:
-      color: '#DC143Cff'
+      color: '#DC143C'
+      bgColor: '#f2c55c'
     ## Stop POI
     stop:
-      color: '#228B22ff'
+      color: '#228B22'
+      bgColor: '#f2c55c'
+
 ########################################
 # Global pois
 ########################################

@@ -14,10 +14,10 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { CURRENT_POI, POI_CATEGORY_ICONS, POI_STANDARD_TYPE, POI_TMP_TYPE } from '@Core/constants'
-import { MapElement }                                                       from '@Core/MapElement'
-import { POIUtils }                                                         from '@Utils/cesium/POIUtils'
-import { v4 as uuid }                                                       from 'uuid'
+import { CURRENT_POI, POI_CATEGORY_ICONS, POI_STANDARD_TYPE, POI_TMP_TYPE, POIS_STORE } from '@Core/constants'
+import { MapElement }                                                                   from '@Core/MapElement'
+import { POIUtils }                                                                     from '@Utils/cesium/POIUtils'
+import { v4 as uuid }                                                                   from 'uuid'
 
 export class MapPOI extends MapElement {
     /**
@@ -235,9 +235,19 @@ export class MapPOI extends MapElement {
 
     draw = async () => {
         this.image = __.ui.poiManager.createContent(this)
-        console.log(this.type, this.title)
         await this.utils.draw(this)
     }
+
+    saveToDB = async () => {
+        if (this.type && this.type !== POI_TMP_TYPE) {
+            await lgs.db.lgs1920.put(this.id, MapPOI.serialize({...this, ...{__class: MapPOI}}), POIS_STORE)
+        }
+    }
+
+    removeFromDB = async () => {
+        await lgs.db.lgs1920.delete(this.id, POIS_STORE)
+    }
+
 
 
 }

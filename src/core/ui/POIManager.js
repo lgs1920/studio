@@ -15,8 +15,8 @@
  ******************************************************************************/
 
 import {
-    HIGH_TERRAIN_PRECISION, POI_SIZES, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE,
-    POIS_STORE,
+    ADD_POI_EVENT, HIGH_TERRAIN_PRECISION, POI_SIZES, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE,
+    POI_TMP_TYPE, POIS_STORE, REMOVE_POI_EVENT, UPDATE_POI_EVENT,
 }                              from '@Core/constants'
 import { MapPOI }              from '@Core/MapPOI'
 import { Export }              from '@Core/ui/Export'
@@ -27,40 +27,76 @@ import { ELEVATION_UNITS, KM } from '@Utils/UnitUtils'
 import Konva                   from 'konva'
 import { v4 as uuid }          from 'uuid'
 import { snapshot }            from 'valtio/index'
-import { proxyMap }            from 'valtio/utils'
+import { proxyMap, watch }     from 'valtio/utils'
+import { subscribe }           from 'valtio/vanilla'
+
+/*******************************************************************************
+ * POIManager.js
+ *
+ * This class implements a comprehensive Point of Interest (POI)
+ * management system.
+ *
+ ******************************************************************************/
 
 export class POIManager {
-
     threshold = POI_THRESHOLD_DISTANCE
     utils = POIUtils
+    // To store our unsubscribe functions
+    unsubscribeFunctions = {
+        listStructure:  null,
+        contentChanges: null,
+    }
+    // To track previous state of POIs for change detection
+    previousPoiState = new Map()
+
+    // Flag to track initialization status
+    #initialized = false
 
     constructor() {
-        // Singleton
+        // Singleton pattern implementation
         if (POIManager.instance) {
             return POIManager.instance
         }
 
-        //this.observer = new IntersectionObserver(this.manageInScreen, {threshold: 0.5})
+        this.setupSubscriptions()
 
-        ;(async () => {
-            this.readAllFromDB()
+        window.addEventListener(ADD_POI_EVENT, async event => {
+            event.detail.poi.draw()
+            await event.detail.poi.saveToDB()
+
+        })
+        window.addEventListener(REMOVE_POI_EVENT, event => {
+            event.detail.poi.removeFromDB()
+        })
+        window.addEventListener(UPDATE_POI_EVENT, event => {
+            console.log(event.detail)
         })
         POIManager.instance = this
     }
 
+    /**
+     * Access the reactive POI list
+     * @return {Map} The proxied map of POIs
+     */
     get list() {
-        return lgs.mainProxy.components.pois.list
+        return lgs.stores.main.components.pois.list
     }
 
     /**
-     * Retrieve the starter POI
+     * Retrieves the special starter POI that serves as the application's initial focus point.
      *
-     * @return {MapPOI}
+     * @return {MapPOI} The starter POI object
      */
     get starter() {
         return this.list.values().find(poi => poi.type === POI_STARTER_TYPE)
     }
 
+    /**
+     * Updates application settings with properties from the starter POI.
+     * This allows the app to remember the last starter location.
+     *
+     * @param {MapPOI} poi - The POI to use for updating settings
+     */
     set starterSettings(poi) {
         Object.keys(lgs.settings.starter).forEach(key => {
             lgs.settings.starter[key] = poi[key]
@@ -68,83 +104,252 @@ export class POIManager {
     }
 
     /**
-     * Retrieve the starter POI
-     *
-     * @return {MapPOI}
+     * Static factory method to create and initialize a POIManager instance
+     * @returns {Promise<POIManager>} A fully initialized POIManager
      */
-    get starter() {
-        return this.list.values().find(poi => poi.type === POI_STARTER_TYPE)
+    static async create() {
+        const manager = new POIManager()
+        await manager.initialize()
+        return manager
     }
 
-    set starterSettings(poi) {
-        Object.keys(lgs.settings.starter).forEach(key => {
-            lgs.settings.starter[key] = poi[key]
+    /**
+     * Initializes the POIManager by loading data from the database
+     * @returns {Promise<void>}
+     */
+    async initialize() {
+        if (this.#initialized) {
+            return
+        }
+
+        try {
+            // Load POIs from database
+            await this.readAllFromDB()
+
+            // Initialize previous state with current POIs
+            this.updatePreviousState()
+
+            // Mark as initialized
+            this.#initialized = true
+
+        }
+        catch (error) {
+            console.error('Error initializing POIManager:', error)
+            throw error // Re-throw to allow caller to handle
+        }
+    }
+
+    /**
+     * Checks if the manager is initialized
+     * @returns {boolean}
+     */
+    isInitialized() {
+        return this.#initialized
+    }
+
+    /**
+     * Updates the previous state of all POIs to enable change detection
+     */
+    updatePreviousState() {
+        this.previousPoiState.clear()
+        // Clone the current state of each POI
+        lgs.stores.main.components.pois.list.forEach((poi, id) => {
+            this.previousPoiState.set(id, JSON.parse(JSON.stringify(poi)))
         })
     }
 
     /**
-     * Detects all viewable POIS on screen.
-     *
-     * @param entries
+     * Sets up subscriptions to monitor changes in the POI list
+     * Using DOM events on window object for communication
      */
-    manageInScreen = (entries) => {
-        entries.forEach(entry => {
-            if (entry) {
-                // set thePOI as visible on screen
-                const poi = this.list.get(entry.target.id)
-                if (poi) {
-                    Object.assign(this.list.get(entry.target.id), {
-                        withinScreen: entry.isIntersecting,
+    setupSubscriptions() {
+        // Initialisation du previousPoiState s'il n'existe pas déjà
+        this.previousPoiState = new Map()
+        // Clone the current state of each POI
+        lgs.stores.main.components.pois.list.forEach((poi, id) => {
+            this.previousPoiState.set(id, JSON.parse(JSON.stringify(poi)))
+        })
+
+        // Subscribe to structure changes (additions and removals)
+        this.unsubscribeFunctions.listStructure = subscribe(lgs.stores.main.components.pois.list, () => {
+            // Detect added POIs
+            const currentPoiIds = [...lgs.stores.main.components.pois.list.keys()]
+            const previousPoiIds = [...this.previousPoiState.keys()]
+
+            // Find POIs that were added (present in current but not in previous)
+            const addedPoiIds = currentPoiIds.filter(id => !previousPoiIds.includes(id))
+            addedPoiIds.forEach(poiId => {
+                const addedPoi = lgs.stores.main.components.pois.list.get(poiId)
+                if (addedPoi) {
+                    const event = new CustomEvent(ADD_POI_EVENT, {
+                        detail:  {
+                            poi: addedPoi,
+                        },
+                        bubbles: true,
                     })
+                    window.dispatchEvent(event)
+                }
+            })
+
+            // Find POIs that were removed (present in previous but not in current)
+            const removedPoiIds = previousPoiIds.filter(id => !currentPoiIds.includes(id))
+
+            // Important : traiter les suppressions AVANT de mettre à jour l'état précédent
+            removedPoiIds.forEach(poiId => {
+                const previousData = this.previousPoiState.get(poiId)
+                if (!previousData) {
+                    console.warn(`Missing previous data for POI ${poiId}`)
+                    return
+                }
+
+                const removedPoi = new MapPOI(previousData)
+
+                const event = new CustomEvent(REMOVE_POI_EVENT, {
+                    detail:  {
+                        poi: removedPoi,
+                    },
+                    bubbles: true,
+                })
+                window.dispatchEvent(event)
+            })
+
+            this.updatePreviousState()
+        })
+
+
+        // Subscribe to content changes
+        this.unsubscribeFunctions.contentChanges = watch((get) => {
+            const poiList = get(lgs.stores.main.components.pois.list)
+
+            poiList.forEach((poi, id) => {
+                const currentPoi = poi
+
+                if (this.previousPoiState.has(id)) {
+                    const previousPoi = this.previousPoiState.get(id)
+                    const changedFields = this.detectChanges(previousPoi, currentPoi)
+
+                    if (Object.keys(changedFields).length > 0) {
+                        const event = new CustomEvent(UPDATE_POI_EVENT, {
+                            detail:  {
+                                poi:           JSON.parse(JSON.stringify(currentPoi)),
+                                previousState: JSON.parse(JSON.stringify(previousPoi)),
+                                changedFields,
+                            },
+                            bubbles: true,
+                        })
+                        window.dispatchEvent(event)
+
+                        // Mise à jour de l'état précédent
+                        this.previousPoiState.set(id, JSON.parse(JSON.stringify(currentPoi)))
+                    }
+                }
+            })
+        }, {sync: true})
+
+    }
+
+    detectChanges(previous, current) {
+        const changes = {}
+
+        if (!previous || !current) {
+            return changes
+        }
+
+        // Ne compare que les propriétés énumérables et non-fonctions
+        for (const key in current) {
+            if (
+                typeof current[key] !== 'function' && // Ignore les méthodes
+                typeof previous[key] !== 'function' && // Ignore les méthodes
+                previous[key] !== current[key]
+            ) {
+                changes[key] = {
+                    previous: previous[key],
+                    current:  current[key],
                 }
             }
-        })
+        }
+        return changes
     }
 
     /**
-     * Adds a new POI to the map
+     * Unsubscribes all watchers when needed (e.g., component unmount)
+     */
+    unsubscribeAll() {
+        // Unsubscribe from structure changes
+        if (typeof this.unsubscribeFunctions.listStructure === 'function') {
+            this.unsubscribeFunctions.listStructure()
+            this.unsubscribeFunctions.listStructure = null
+        }
+
+        // Unsubscribe from content changes
+        if (typeof this.unsubscribeFunctions.contentChanges === 'function') {
+            this.unsubscribeFunctions.contentChanges()
+            this.unsubscribeFunctions.contentChanges = null
+        }
+    }
+
+    /**
+     * Adds a new POI to the map and optionally saves it to the database.
+     * Checks proximity to existing POIs to prevent overcrowding.
      *
-     * @param {Object} poi - The new POI object
-     *
-     * @param checkDistance
-     * @param dbSync
-     * @return {MapPOI|false} - The new POI or false if it is closer than others
+     * @param {Object} poi - The POI object to add
+     * @param {boolean} checkDistance - Whether to verify distance to existing POIs
+     * @param {boolean} dbSync - Whether to save to database
+     * @return {MapPOI|false} - The added POI or false if too close to existing points
      */
     add = async (poi, checkDistance = true, dbSync = true) => {
-        poi.id = poi.id ?? uuid()
+
+        if (!(poi instanceof MapPOI)) {
+            const id = poi.id ?? uuid()
+            poi = new MapPOI({...poi, id})
+        }
+
         if (checkDistance && this.isTooCloseThanExistingPoints(poi, this.threshold)) {
             return false
         }
 
-        const thePoi = new MapPOI({...poi, ...this.poiDefaultStatus})
-        this.list.set(poi.id, thePoi)
+        this.list.set(poi.id, poi)
+
         if (dbSync) {
-            await this.saveInDB(thePoi)
+            await this.saveInDB(poi)
         }
 
-        return thePoi
+        return poi
     }
 
     /**
-     * Returns the poi with poi.id = id
-     * @param id
-     * @return {MapPOI}
+     * Retrieves a POI by its unique identifier.
+     *
+     * @param {string} id - The POI identifier
+     * @return {MapPOI} The found POI or undefined
      */
     get = id => this.list.get(id)
 
     /**
+     * Extracts and normalizes POI data from a GeoJSON point feature.
      *
-     * @param poi
-     * @param simulate
-     * @return {Promise<{longitude: *, latitude: *, title: string, description: (*|string), color: *, bgColor}>}
+     * This method transforms a GeoJSON point feature into a standardized point object
+     * that can be used to create a POI in the application. It extracts coordinates,
+     * title, description, and applies default styling.
+     *
+     * When the 'simulate' parameter is true, the method will additionally calculate
+     * and include terrain height at the point's location using the terrain service.
+     * Otherwise, it will use the height value already present in the POI data.
+     *
+     * @async
+     * @param {Object} json - The GeoJSON point feature to extract data from
+     * @param {boolean} [simulate=false] - Whether to simulate height from terrain data
+     *
+     * @returns {Promise<Object>} A promise that resolves to a standardized point
+     * @throws {Error} If terrain height calculation fails during simulation, falls back to height=0
      */
-    create = async (poi, simulate = false) => {
+    getPointFromGeoJson = async (json, simulate = false) => {
         const point = {
-            longitude:   poi.geometry.coordinates[0],
-            latitude:    poi.geometry.coordinates[1],
-            title:       poi.properties.name ?? '',
-            description: poi.properties.display_name
-                         ? poi.properties.display_name.split(', ').join(' - ')
+            longitude:   json.geometry.coordinates[0],
+            latitude:    json.geometry.coordinates[1],
+            title:       json.properties.name ?? '',
+            description: json.properties.display_name
+                         ? json.properties.display_name.split(', ').join(' - ')
                          : '',
             color:       lgs.darkContrastColor,
             bgColor:     lgs.colors.poiDefaultBackground,
@@ -152,27 +357,28 @@ export class POIManager {
 
         if (simulate) {
             try {
-                this.simulatedHeight = await this.getHeightFromTerrain({
-                                                                           longitude: poi.geometry.coordinates[0],
-                                                                           latitude:  poi.geometry.coordinates[1],
-                                                                       })
+                point.simulatedHeight = await this.getHeightFromTerrain({
+                                                                            longitude: json.geometry.coordinates[0],
+                                                                            latitude:  json.geometry.coordinates[1],
+                                                                        })
             }
             catch {
                 point.simulatedHeight = 0
             }
         }
         else {
-            point.height = poi.height
+            point.height = json.height
         }
 
         return point
     }
 
     /**
-     * Updates an existing POI in the map
+     * Updates an existing POI with new properties.
      *
      * @param {string} id - The ID of the POI to update
-     * @param {Object} updates - The updates to apply to the POI
+     * @param {Object} updates - The updates to apply
+     * @return {MapPOI|false} Updated POI or false if not found
      */
     update = (id, updates) => {
         const poi = this.list.get(id)
@@ -184,19 +390,19 @@ export class POIManager {
     }
 
     /**
-     * Removes a POI from the map by its ID
+     * Removes a POI by its ID and optionally from the database.
+     * Prevents deletion of the starter POI.
      *
      * @param {string} id - The ID of the POI to remove
-     * @param dbSync {boolean} - true for DB sync (false by default)
-     *
-     * @return {boolean} - true/false
+     * @param {boolean} dbSync - Whether to remove from database
+     * @return {Object} Status object with ID and success indicator
      */
     remove = async (id, dbSync = false) => {
         const poi = this.list.get(id)
         if (!poi) {
             return {id: id, success: false}
         }
-        // NO deletion if it is the starter POI
+        // Cannot delete the starter POI as it's required for application function
         if (poi.type === POI_STARTER_TYPE) {
             UIToast.warning({
                                 caption: sprintf(`The POI "%s" can not be deleted !`, poi.title),
@@ -206,38 +412,36 @@ export class POIManager {
         }
 
         if (dbSync) {
-            console.log(`${id} removed`)
             await this.removeInDB(this.list.get(id))
         }
         this.list.delete(id)
+
         return {id: id, success: true}
     }
 
     /**
-     * We check whether the distance between two points is closer than a threshold
+     * Determines if two points are closer than a specified threshold.
      *
-     * @param {number} poi1 - first point
-     * @param {number} poi2 - second point
-     *
-     * @param {number} threshold - threshold distance in meters
-     *
-     * @returns {boolean} - true if they are closer
+     * @param {Object} poi1 - First point coordinates
+     * @param {Object} poi2 - Second point coordinates
+     * @param {number} threshold - Distance threshold in meters
+     * @return {boolean} True if points are closer than threshold
      */
     closerThan = (poi1, poi2, threshold = this.threshold) => {
         return this.haversineDistance(poi1, poi2) <= threshold
     }
 
     /**
-     * Computes Haversine distance between 2 points
+     * Calculates distance between two geographic points using the Haversine formula.
+     * This accounts for Earth's curvature to provide accurate distances.
      *
-     * @param {number} poi1 - first point
-     * @param {number} poi2 - second point
-     *
-     * @returns {number} - distance in meters
+     * @param {Object} poi1 - First point with latitude/longitude
+     * @param {Object} poi2 - Second point with latitude/longitude
+     * @return {number} Distance in meters
      */
     haversineDistance = (poi1, poi2) => {
         const toRadians = (degrees) => degrees * (Math.PI / 180)
-        const R = 6371  //Kms
+        const R = 6371  // Earth radius in kilometers
         const dLat = toRadians(poi2.latitude - poi1.latitude)
         const dLon = toRadians(poi2.longitude - poi1.longitude)
         const a =
@@ -245,13 +449,27 @@ export class POIManager {
                   Math.cos(toRadians(poi1.latitude)) * Math.cos(toRadians(poi2.latitude)) *
                   Math.sin(dLon / 2) * Math.sin(dLon / 2)
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-        return R * c / KM   // Meters
+        return R * c / KM   // Convert to meters
     }
 
+    /**
+     * Copies formatted coordinates to the system clipboard.
+     * Formats according to user's preferred coordinate system.
+     *
+     * @param {Object} point - Point with latitude and longitude
+     * @return {Promise<boolean>} Success indicator
+     */
     copyCoordinatesToClipboard = async (point) => {
         return Export.toClipboard(`${__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)}, ${__.convert(point.longitude).to(lgs.settings.coordinateSystem.current)}`)
     }
 
+    /**
+     * Searches for POIs matching a specific property value.
+     *
+     * @param {string} key - Property name to match
+     * @param {*} value - Value to match
+     * @return {Array<MapPOI>} Array of matching POIs
+     */
     getPOIByKeyValue = (key, value) => {
         const result = []
         this.list.forEach(poi => {
@@ -263,13 +481,13 @@ export class POIManager {
     }
 
     /**
-     * We want to know if there is an existing point that is closer than a given point
-     * in the list.
+     * Checks if a new POI would be too close to any existing POIs.
+     * Special exception for starter POIs which can be placed anywhere.
      *
-     * @param newPoi
-     * @param threshold
-     *
-     * @return {boolean} - true if there is one closer
+     * @param {Object} newPoi - POI to check
+     * @param {number} threshold - Distance threshold in meters
+     * @param {Object|null} tempList - Optional alternative POI list
+     * @return {boolean} True if too close to an existing POI
      */
     isTooCloseThanExistingPoints = (newPoi, threshold = this.threshold, tempList = null) => {
         const list = (tempList === null) ? this.list : tempList
@@ -285,33 +503,43 @@ export class POIManager {
     }
 
     /**
-     * Returns an elevation
+     * Gets elevation from terrain for a geographic point.
      *
-     * @param point
-     * @return {Promise<altitude>}
+     * @param {Object} point - Geographic point
+     * @return {Promise<number>} Elevation value
      */
     getElevationFromTerrain = async (point) => {
         return TrackUtils.getElevationFromTerrain(point)
     }
-    getHeightFromTerrain = async ({coordinates, precision = HIGH_TERRAIN_PRECISION, level = 11}) => {
-        return await __.ui.sceneManager.getHeightFromTerrain({
-                                                                 coordinates: coordinates,
-                                                                 precision:   precision,
-                                                                 level:       level,
-                                                             })
-    }
-
 
     /**
-     * Pushes the current POI as starter and changes the former starter configuration
+     * Gets terrain height with configurable precision and detail level.
      *
-     * @param current
-     * @return {*|boolean}
+     * @param {Object} options - Configuration parameters
+     * @param {Object} options.coordinates - Geographic coordinates
+     * @param {number} options.precision - Sampling precision
+     * @param {number} options.level - Detail level
+     * @return {Promise<number>} Height value
+     */
+    getHeightFromTerrain = async ({coordinates, precision = HIGH_TERRAIN_PRECISION, level = 11}) => {
+        return __.ui.sceneManager.getHeightFromTerrain({
+                                                           coordinates: coordinates,
+                                                           precision:   precision,
+                                                           level:       level,
+                                                       })
+    }
+
+    /**
+     * Designates a POI as the starter point and updates the previous starter.
+     * Handles visual styling and type changes for both POIs.
+     *
+     * @param {MapPOI} current - POI to designate as starter
+     * @return {Object|boolean} Object with old and new starter or false if no former starter
      */
     setStarter = async (current) => {
         const former = this.getPOIByKeyValue('type', POI_STARTER_TYPE)[0]
         if (former) {
-            // We force the former type of the starter and apply the right color
+            // Restore the former starter POI to its previous type with standard styling
             Object.assign(this.list.get(former.id), {
                 type: former.formerType ?? POI_STANDARD_TYPE,
                 color:   lgs.colors.poiDefault,
@@ -319,7 +547,7 @@ export class POIManager {
             })
             await this.saveInDB(this.list.get(former.id))
 
-            // Then mark the current as Starter with the right color
+            // Configure the new starter POI with appropriate type and styling
             Object.assign(this.list.get(current.id), {
                 formerType: current.type ?? POI_STANDARD_TYPE,
                 type: POI_STARTER_TYPE,
@@ -334,36 +562,34 @@ export class POIManager {
     }
 
     /**
-     * Saves a POI in DB
+     * Persists a POI to the database if it's not a temporary POI.
      *
-     * @param poi   if poi type is undefined or temp, we don't save it
-     *
+     * @param {MapPOI} poi - POI to save
      * @return {Promise<void>}
      */
-    saveInDB = async (poi = lgs.mainProxy.components.pois.current) => {
+    saveInDB = async (poi = lgs.stores.main.components.pois.current) => {
         if (poi.type && poi.type !== POI_TMP_TYPE) {
             await lgs.db.lgs1920.put(poi.id, MapPOI.serialize({...poi, ...{__class: MapPOI}}), POIS_STORE)
         }
     }
 
     /**
-     * Removes a POI in DB
+     * Removes a POI from the database.
      *
-     * @param poi
-     *
+     * @param {MapPOI} poi - POI to remove
      * @return {Promise<void>}
      */
-    removeInDB = async (poi = lgs.mainProxy.components.pois.current) => {
+    removeInDB = async (poi = lgs.stores.main.components.pois.current) => {
         await lgs.db.lgs1920.delete(poi.id, POIS_STORE)
     }
 
     /**
-     * Reads a POI from DB and populates the internal list
+     * Reads a specific POI from the database and adds it to the list.
      *
-     * @param poi
+     * @param {MapPOI} poi - POI to retrieve
      * @return {Promise<void>}
      */
-    readFromDB = async (poi = lgs.mainProxy.components.pois.current) => {
+    readFromDB = async (poi = lgs.stores.main.components.pois.current) => {
         const poiFromDB = await lgs.db.lgs1920.get(poi.id, POIS_STORE)
         if (poiFromDB) {
             this.list.set(poiFromDB.id, new MapPOI(poiFromDB))
@@ -371,23 +597,23 @@ export class POIManager {
     }
 
     /**
-     * Get all POIs from the database, populates and returns the internal list
+     * Loads all POIs from the database and populates the list.
+     * Ensures terrain heights are available for all POIs.
      *
-     * @return {proxyMap|false}
-     *
+     * @return {Promise<proxyMap|false>} List of POIs or false on error
      */
     readAllFromDB = async () => {
         try {
-            // get all ids
+            // Get all POI IDs from database
             const keys = await lgs.db.lgs1920.keys(POIS_STORE)
 
-            // Get each poi content
+            // Retrieve each POI by its ID
             const poiPromises = keys.map(async (key) => {
                 return await lgs.db.lgs1920.get(key, POIS_STORE)
             })
             const list = await Promise.all(poiPromises)
 
-            // Build the list
+            // Process and add each POI to the list
             for (const poi of list) {
                 if (!poi.simulatedHeight) {
                     poi.simulatedHeight = await this.getHeightFromTerrain({
@@ -406,13 +632,16 @@ export class POIManager {
             console.error('Error when trying to get pois from browser database :', error)
             return false
         }
-
     }
 
+    /**
+     * Persists all POIs to the database.
+     *
+     * @return {Promise<Array>} Promise resolving to operation results
+     */
     saveAllInDB = async () => {
         try {
-
-            // Put each poi content
+            // Save each POI in the database
             Array.from(this.list.entries()).map(async ([key, poi]) => {
                 return snapshot(
                     {
@@ -430,19 +659,20 @@ export class POIManager {
     }
 
     /**
-     * Internal list size checker
+     * Checks if any POIs exist in the collection.
      *
-     * @return {boolean} true if thecollction contaoins element otherwize false.
+     * @return {boolean} True if POIs exist, false otherwise
      */
     hasPOIs = () => {
         return this.list.size > 0
     }
 
     /**
-     * Update the poi type to POI
+     * Changes a POI's type to a standard or specified type.
      *
-     * @param id {string} POI id
-     * @param type        the POI type (default to POI_STANDARD_TYPE)
+     * @param {string} id - POI identifier
+     * @param {string} type - New POI type
+     * @return {Promise<MapPOI>} Updated POI
      */
     saveAsPOI = async (id, type = POI_STANDARD_TYPE) => {
         Object.assign(this.list.get(id), {
@@ -453,9 +683,10 @@ export class POIManager {
     }
 
     /**
-     * "Shrink" a POI ie reduce it to its icon.
+     * Collapses a POI to show minimal information.
      *
-     * @param id {string}
+     * @param {string} id - POI identifier
+     * @return {Promise<MapPOI>} Updated POI
      */
     shrink = async (id) => {
         this.list.get(id).expanded = false
@@ -464,9 +695,10 @@ export class POIManager {
     }
 
     /**
-     * "Expand" a POI ie expand it to a flag with more information.
+     * Expands a POI to show full information.
      *
-     * @param id {string}
+     * @param {string} id - POI identifier
+     * @return {Promise<MapPOI>} Updated POI
      */
     expand = async (id) => {
         this.list.get(id).expanded = true
@@ -475,9 +707,10 @@ export class POIManager {
     }
 
     /**
-     * Change the visibility  in order to hide the POI
+     * Makes a POI invisible.
      *
-     * @param id {string}
+     * @param {string} id - POI identifier
+     * @return {Promise<MapPOI>} Updated POI
      */
     hide = async (id) => {
         this.list.get(id).visible = false
@@ -486,9 +719,10 @@ export class POIManager {
     }
 
     /**
-     * Change the visibility  in order to show the POI
+     * Makes a POI visible.
      *
-     * @param id {string}
+     * @param {string} id - POI identifier
+     * @return {Promise<MapPOI>} Updated POI
      */
     show = async (id) => {
         this.list.get(id).visible = true
@@ -497,10 +731,10 @@ export class POIManager {
     }
 
     /**
-     * Indicate that there is an animation on thi POI
+     * Activates animation for a POI.
      *
-     * @param id
-     * @return {unknown}
+     * @param {string} id - POI identifier
+     * @return {MapPOI|false} Updated POI or false if not found
      */
     startAnimation = (id) => {
         const poi = this.list.get(id)
@@ -512,10 +746,10 @@ export class POIManager {
     }
 
     /**
-     * There isno more animation on thi POI
+     * Deactivates animation for a POI.
      *
-     * @param id
-     * @return {unknown}
+     * @param {string} id - POI identifier
+     * @return {MapPOI|undefined} Updated POI
      */
     stopAnimation = (id) => {
         if (id && this.list.get(id)) { // We got some times an error here. TODO fix
@@ -524,37 +758,53 @@ export class POIManager {
         }
     }
 
+    /**
+     * Determines if two points are approximately equal within a distance tolerance.
+     *
+     * @param {Object} start - First point
+     * @param {Object} end - Second point
+     * @param {number} distance - Distance tolerance in degrees
+     * @return {boolean} True if points are approximately equal
+     */
     almostEquals = (start, end, distance = 0.5) => {
         return end === null ? false : this.utils.almostEquals(start, end, distance)
     }
 
+    /**
+     * Generates a visual representation of a POI using Konva.js.
+     * Creates a canvas with background, border, arrow, and text elements.
+     *
+     * @param {MapPOI} poi - POI to visualize
+     * @return {string} Data URL of rendered image
+     */
     createContent = (poi) => {
-
+        // Calculate dimensions based on POI expanded state
         const width = poi.expanded ? POI_SIZES.expanded.width : POI_SIZES.reduced.width
         const height = poi.expanded ? POI_SIZES.expanded.height : POI_SIZES.reduced.height
         const arrow = {width: POI_SIZES.arrow.width, height: POI_SIZES.arrow.height, content: ''}
 
+        // Get styling from CSS and POI properties
         const textFont = __.ui.css.getCSSVariable('--lgs-font-family')
-
         const bgColor = poi.bgColor ?? lgs.colors.poiDefaultBackground
         const borderColor = poi.color ?? lgs.colors.poiDefault
         const color = poi.color ?? lgs.colors.poiDefault
 
-
+        // Create Konva stage and layer
         const stage = new Konva.Stage({
-                                          container: 'konva-container', // ID du conteneur HTML
+                                          container: 'konva-container', // HTML container ID
                                           width:     width,
                                           height:    height + arrow.height,
                                       })
-
         const layer = new Konva.Layer()
         stage.add(layer)
 
+        // Create content group
         const content = new Konva.Group({
                                             x: 0,
                                             y: 0,
                                         })
 
+        // Create background with blur effect
         const background = new Konva.Rect({
                                               width:        width,
                                               height:       height,
@@ -566,6 +816,7 @@ export class POIManager {
         background.filters([Konva.Filters.Blur])
         background.blurRadius(10)
 
+        // Create border
         const border = new Konva.Rect({
                                           width:        width - 3,
                                           height:       height - 3,

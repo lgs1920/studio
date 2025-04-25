@@ -30,7 +30,7 @@ import { snapshot, useSnapshot }                                  from 'valtio/i
 export const MapPOIList = memo(() => {
 
     const poiList = useRef(null)
-    const $store = lgs.mainProxy.components.pois
+    const $store = lgs.stores.main.components.pois
     const pois = useSnapshot($store)
     const settings = useSnapshot(lgs.settings.poi)
 
@@ -38,6 +38,7 @@ export const MapPOIList = memo(() => {
     const bulkPrefix = 'bulk-map-poi-'
     const drawers = useSnapshot(lgs.mainProxy.drawers)
     const poiSetting = useSnapshot(lgs.settings.ui.poi)
+
     const handleCopyCoordinates = (poi) => {
         __.ui.poiManager.copyCoordinatesToClipboard(poi).then(() => {
             UIToast.success({
@@ -83,12 +84,15 @@ export const MapPOIList = memo(() => {
                       }
                   }
 
+
+        $store.filteredList.clear()
+        $store.bulkList.clear()
         poisToShow.forEach(([key, value]) => {
             $store.filteredList.set(key, value)
             $store.bulkList.set(key, false)
                   })
               }, [
-                  pois.list.size, pois?.current?.id,
+                  pois.list, pois?.current?.id,
                   settings?.filter.byName, settings?.filter.alphabetic,
                   settings?.filter.exclude, settings?.filter.byCategories,
         pois?.current?.title, pois?.current?.category,

@@ -56,15 +56,6 @@ export const RemoveJourney = (props) => {
             // clean journey store
             $store.components.journeyEditor.list.splice(index, 1)
 
-            // clean poi store
-            journey.tracks.forEach(track => {
-                Array.from($pois.values())
-                    .filter(poi => poi.parent === track.id)
-                    .forEach(poi => $pois.delete(poi.id))
-            })
-
-            console.log($pois.values())
-
             // Remove the journey and it's children
             journey.remove()
 

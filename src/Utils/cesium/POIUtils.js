@@ -53,13 +53,29 @@ export class POIUtils {
      *          a GeoJsonDataSource is not an EntityCollection (bug or feature?)
      * For globals MapPOI, parent is null, the container is viewer.entities.
      *
+     *  parent is :
+     *    - for a POI bound to a track
+     *      track#<journey>#<track-slug> with journey = <journey-slug>#<file type>
+     *    - for a POI bound to a journey
+     *      <journey-slug>#<file type>
+     *
      * @returns Entity container (DataSource or EntityCollection)
      */
     static getEntityContainer = (poi) => {
         if (poi.parent) {
-            // parent = track#<journey>#<track-slug> with journey = <journey-slug>#<file type>
-            const [track, name, type, slug] = poi.parent.split('#')
-            const custom = lgs.viewer.dataSources.getByName(`${name}#${type}`)
+            let file
+            switch ((poi.parent.match(/#/g) || []).length) {
+                case 1: { // Journey
+                    const [name, type] = poi.parent.split('#')
+                    file = `${name}#${type}`
+                    break
+                }
+                default: { // Track
+                    const [track, name, type, slug] = poi.parent.split('#')
+                    file = `${name}#${type}`
+                }
+            }
+            const custom = lgs.viewer.dataSources.getByName(file)
             return custom?.[0].entities ?? null
         }
         return lgs.viewer.entities

@@ -66,7 +66,7 @@ if (initApp.status) {
     __.app.setTheme()
 
     // Init UI managers
-    lgs.initManagers()
+    await lgs.initManagers()
 
     // Init Layer
     __.layersAndTerrainManager = new LayersAndTerrainManager()
@@ -74,6 +74,7 @@ if (initApp.status) {
     // Read last camera position
     //  lgs.cameraStore = await __.ui.cameraManager.readCameraInformation()
 }
+
 
 export function LGS1920() {
 
@@ -109,13 +110,15 @@ export function LGS1920() {
                               // Set the right terrain
                               await TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
 
-                              // Read DB for POIs
-                              await __.ui.poiManager.readAllFromDB()
-                              console.log(__.ui.poiManager.list)
-
                               // Read DB for journeys
                               await TrackUtils.readAllFromDB()
 
+                              // Read DB for POIs
+                              const initPOIManager = async () => {
+                                  await __.ui.poiManager.initialize()
+                              }
+                              initPOIManager()
+                              await __.ui.poiManager.readAllFromDB()
 
                               let starter = __.ui.poiManager.starter
 
@@ -131,14 +134,9 @@ export function LGS1920() {
                                                                      color:       lgs.settings.starter.color,
                                                                      bgColor: lgs.settings.starter.bgColor,
                                                                      type:        POI_STARTER_TYPE,
-                                                                 }, false)
+                                                                       }, false, true)
 
-
-                                  // We force re/creation in DB to sync it.
-                                  await __.ui.poiManager.saveInDB(starter)
                               }
-
-                              await starter.draw()
 
                               // ---- < 0.8.3 compat. : patch to fix #200
                               // if (!starter.color || !starter.bgColor) {

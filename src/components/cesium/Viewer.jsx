@@ -1,8 +1,9 @@
 import '@shoelace-style/shoelace/dist/themes/light.css'
 import { CanvasEventManager } from '@Core/events/CanvasEventManager'
 import { LayersUtils }                                                           from '@Utils/cesium/LayersUtils'
-import { SceneUtils }                                                           from '@Utils/cesium/SceneUtils'
+import { SceneUtils }         from '@Utils/cesium/SceneUtils'
 import { ImageryLayerCollection, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
+import { useEffect }          from 'react'
 
 export function Viewer() {
 
@@ -49,6 +50,7 @@ export function Viewer() {
             baseLayerPicker: false,
         })
     }
+
     // Change scene mode
     lgs.viewer.scene.sceneMode = SceneUtils.modeFromLGSToGIS(lgs.settings.scene.mode)
 

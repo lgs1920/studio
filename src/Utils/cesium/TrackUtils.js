@@ -1,6 +1,6 @@
 import {
-    ADD_JOURNEY, APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DRAWING, DRAWING_FROM_DB,
-    DRAWING_FROM_UI, FOCUS_ON_FEATURE, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
+    ADD_JOURNEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DRAWING, DRAWING_FROM_DB, DRAWING_FROM_UI,
+    FOCUS_ON_FEATURE, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
 }                                                      from '@Core/constants'
 import { Journey }                                     from '@Core/Journey'
 import { default as centroid }                         from '@turf/centroid'
@@ -52,15 +52,6 @@ export class TrackUtils {
             hasAltitude: hasAltitude, hasTime: feature.properties?.coordinateProperties?.times !== undefined,
         }
     })
-
-    /**
-     * We need to create a common data source for some elements that are not related to tracks nor journeys
-     */
-    static createCommonMapObjectsStore = async () => {
-        if (lgs.viewer.dataSources.getByName(APP_KEY, true).length === 0) {
-            await lgs.viewer.dataSources.add(new CustomDataSource(APP_KEY))
-        }
-    }
 
     /**
      * Prepare all the Datasources for the tacks and POIs drawings for aJourney
@@ -458,7 +449,6 @@ export class TrackUtils {
         })
         await Promise.all(items)
 
-        await TrackUtils.createCommonMapObjectsStore()
         __.ui.cameraManager.settings = lgs.theJourney.cameraOrigin
 
     }
@@ -567,7 +557,6 @@ export class TrackUtils {
         TrackUtils.getDataSourcesByName(journey.slug, true)[0].entities.values.forEach(entity => {
             // Filter flags on the right track
             const current = TrackUtils.getTrackFromEntityId(journey, entity.id)
-            console.log(entity.name, entity)
             if (entity.id.startsWith(POI_FLAG) && entity.id.endsWith(type) && current.slug === track.slug) {
                 entity.show = POIUtils.setPOIVisibility(
                     track.flags[entity.id.endsWith(POI_FLAG_START) ? 'start' : 'stop'], visibility,
@@ -723,8 +712,6 @@ export class TrackUtils {
                     await __.ui.cameraManager.stopRotate()
 
                     __.ui.profiler.draw()
-                    await TrackUtils.createCommonMapObjectsStore()
-
 
                     return JOURNEY_OK
                 }
