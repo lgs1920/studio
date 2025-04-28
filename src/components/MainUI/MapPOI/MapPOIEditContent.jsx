@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -49,7 +49,7 @@ export const MapPOIEditContent = ({poi}) => {
         Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
             height: lgs.settings.unitSystem.current === IMPERIAL ? UnitUtils.convertFeetToMeters(height) : height,
         })
-        await __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(point.id))
+        await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
         setSimulated(point.height === point.simulatedHeight)
     }
 
@@ -67,7 +67,7 @@ export const MapPOIEditContent = ({poi}) => {
             })
 
         }
-        await __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(point.id))
+        await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
 
         event.preventDefault()
         event.stopPropagation()
@@ -77,14 +77,14 @@ export const MapPOIEditContent = ({poi}) => {
         Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
             latitude: event.target.value * 1,
         })
-        await __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(point.id))
+        await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
     }
 
     const handleChangeLongitude = async event => {
         Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
             longitude: event.target.value * 1,
         })
-        await __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(point.id))
+        await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
     }
 
     const handleChangeTitle = async event => {
@@ -92,7 +92,7 @@ export const MapPOIEditContent = ({poi}) => {
             Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
                 title: event.target.value,
             })
-            await __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(point.id))
+            await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
         }
     }
 
@@ -101,7 +101,7 @@ export const MapPOIEditContent = ({poi}) => {
             Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
                 description: event.target.value,
             })
-            await __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(point.id))
+            await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
         }
     }
     /**

@@ -15,8 +15,8 @@
  ******************************************************************************/
 
 import {
-    ADD_POI_EVENT, HIGH_TERRAIN_PRECISION, POI_SIZES, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE,
-    POI_TMP_TYPE, POIS_STORE, REMOVE_POI_EVENT, UPDATE_POI_EVENT,
+    ADD_POI_EVENT, FLAG_START_TYPE, FLAG_STOP_TYPE, HIGH_TERRAIN_PRECISION, POI_SIZES, POI_STANDARD_TYPE,
+    POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE, REMOVE_POI_EVENT, UPDATE_POI_EVENT,
 }                              from '@Core/constants'
 import { MapPOI }              from '@Core/MapPOI'
 import { Export }              from '@Core/ui/Export'
@@ -64,7 +64,7 @@ export class POIManager {
             await event.detail.poi.draw()
         })
         window.addEventListener(REMOVE_POI_EVENT, event => {
-            event.detail.poi.removeFromDB()
+            this.remove(event.detail.poi.id)
         })
         window.addEventListener(UPDATE_POI_EVENT, async event => {
             event.detail.poi.redraw(event.detail.changedFields)
@@ -257,7 +257,7 @@ export class POIManager {
                 detail:  {poi: removedPoi},
                 bubbles: true,
             }))
-        });
+        })
     }
 
     /**
@@ -292,7 +292,7 @@ export class POIManager {
                     this.previousPoiState.set(id, JSON.parse(JSON.stringify(currentPoi)))
                 }
             }
-        });
+        })
     }
 
     /**
@@ -372,7 +372,7 @@ export class POIManager {
         this.list.set(poi.id, poi)
 
         if (dbSync) {
-            await this.saveInDB(poi)
+            await this.persistToDatabase(poi)
         }
 
         return poi
@@ -458,7 +458,7 @@ export class POIManager {
      * @param {boolean} dbSync - Whether to remove from database
      * @return {Object} Status object with ID and success indicator
      */
-    remove = async (id, dbSync = false) => {
+    remove = async (id, dbSync = true) => {
         const poi = this.list.get(id)
         if (!poi) {
             return {id: id, success: false}
@@ -467,16 +467,28 @@ export class POIManager {
         if (poi.type === POI_STARTER_TYPE) {
             UIToast.warning({
                                 caption: sprintf(`The POI "%s" can not be deleted !`, poi.title),
-                                text:    'It is the starter POI',
+                                text: 'It is the starter POI.',
                             })
             return {id: id, success: false}
         }
 
-        if (dbSync) {
-            await this.removeInDB(this.list.get(id))
-        }
-        this.list.delete(id)
+        // // Cannot delete the flags too, they're attachedto the track
+        // if (poi.type === FLAG_START_TYPE || poi.type === FLAG_STOP_TYPE) {
+        //     UIToast.warning({
+        //                         caption: sprintf(`The POI "%s" can not be deleted !`, poi.title),
+        //                         text:    'Flags are attached to the track.',
+        //                     })
+        //     return {id: id, success: false}
+        // }
 
+        this.list.delete(id)
+        await poi.remove(dbSync)
+        if (poi.type !== FLAG_START_TYPE && poi.type !== FLAG_STOP_TYPE) {
+            UIToast.success({
+                                caption: sprintf(`The POI "%s" has been deleted !`, poi.title),
+                                text:    '',
+                            })
+        }
         return {id: id, success: true}
     }
 
@@ -628,7 +640,7 @@ export class POIManager {
      * @param {MapPOI} poi - POI to save
      * @return {Promise<void>}
      */
-    saveInDB = async (poi = lgs.stores.main.components.pois.current) => {
+    persistToDatabase = async (poi = lgs.stores.main.components.pois.current) => {
         if (poi.type && poi.type !== POI_TMP_TYPE) {
             await lgs.db.lgs1920.put(poi.id, MapPOI.serialize({...poi, ...{__class: MapPOI}}), POIS_STORE)
         }
@@ -739,7 +751,7 @@ export class POIManager {
         Object.assign(this.list.get(id), {
             type: type,
         })
-        await this.saveInDB(this.list.get(id))
+        await this.persistToDatabase(this.list.get(id))
         return this.list.get(id)
     }
 
@@ -751,7 +763,7 @@ export class POIManager {
      */
     shrink = async (id) => {
         this.list.get(id).expanded = false
-        await this.saveInDB(this.list.get(id))
+        await this.persistToDatabase(this.list.get(id))
         return this.list.get(id)
     }
 
@@ -763,7 +775,7 @@ export class POIManager {
      */
     expand = async (id) => {
         this.list.get(id).expanded = true
-        await this.saveInDB(this.list.get(id))
+        await this.persistToDatabase(this.list.get(id))
         return this.list.get(id)
     }
 
@@ -775,7 +787,7 @@ export class POIManager {
      */
     hide = async (id) => {
         this.list.get(id).visible = false
-        await this.saveInDB(this.list.get(id))
+        await this.persistToDatabase(this.list.get(id))
         return this.list.get(id)
     }
 
@@ -787,7 +799,7 @@ export class POIManager {
      */
     show = async (id) => {
         this.list.get(id).visible = true
-        await this.saveInDB(this.list.get(id))
+        await this.persistToDatabase(this.list.get(id))
         return this.list.get(id)
     }
 

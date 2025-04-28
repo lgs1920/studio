@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: MapPOICategorySelector.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-28
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { POI_CATEGORY_ICONS, POI_STANDARD_TYPE } from '@Core/constants'
 import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { SlOption, SlSelect }                    from '@shoelace-style/shoelace/dist/react'
@@ -16,7 +32,7 @@ export const MapPOICategorySelector = (point, props) => {
         Object.assign(__.ui.poiManager.list.get(pois.current.id), {
             category: event.target.value,
         })
-        await __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(pois.current.id))
+        await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(pois.current.id))
 
         setIcon(Object.values(POI_CATEGORY_ICONS.get(event.target.value))[0])
         setCategory(store.categories.get(event.target.value))

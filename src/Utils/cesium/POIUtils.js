@@ -8,7 +8,7 @@
  * email: contact@lgs1920.fr
  *
  * Created on: 2025-04-28
- * Last modified: 2025-04-26
+ * Last modified: 2025-04-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -76,7 +76,7 @@ export class POIUtils {
                 }
             }
             const custom = lgs.viewer.dataSources.getByName(file)
-            return custom?.[0].entities ?? null
+            return custom?.[0]?.entities ?? null
         }
         return lgs.viewer.entities
     }

@@ -741,7 +741,7 @@ export class Journey extends MapElement {
                 .filter(poi => poi.parent === track.slug)
                 .map(poi => poi.id)
             poisToRemove.forEach(poiId => {
-                __.ui.poiManager.remove(poiId, false)
+                __.ui.poiManager.remove(poiId)
             })
         })
 
@@ -750,7 +750,7 @@ export class Journey extends MapElement {
             .filter(poi => poi.parent === this.slug)
             .map(poi => poi.id)
         poisToRemove.forEach(poiId => {
-            __.ui.poiManager.remove(poiId, false)
+            __.ui.poiManager.remove(poiId)
         })
 
 
