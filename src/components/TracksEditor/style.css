@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-28
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 
 #journey-editor-drawer {
     position: fixed;
@@ -186,4 +202,12 @@ sl-tab::part(base) {
     flex-direction: column;
     gap: var(--lgs-gutter-s);
     margin-bottom: var(--lgs-gutter);
+}
+
+/***************************************
+ * Track Flag Visibility
+ */
+
+.flag-visibility .toggle-state-icon-false {
+    color: var(--lgs-disabled-color) !important
 }

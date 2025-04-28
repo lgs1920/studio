@@ -13,8 +13,9 @@
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
-import { ToggleStateIcon }                   from '@Components/ToggleStateIcon'
-import { faLocationPin, faLocationPinSlash } from '@fortawesome/pro-solid-svg-icons'
+import { ToggleStateIcon }                                   from '@Components/ToggleStateIcon'
+import { POI_CATEGORY_ICONS, POI_FLAG_START, POI_FLAG_STOP } from '@Core/constants'
+import { faLocationPin, faLocationPinSlash }                 from '@fortawesome/pro-solid-svg-icons'
 import { SlTooltip }                         from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                        from '@Utils/cesium/TrackUtils'
 import { useEffect, useMemo, useState } from 'react'
@@ -42,7 +43,7 @@ export const TrackFlagsSettings = (props) => {
     const textVisibilityStartFlag = useMemo(() => {
         // Dynamically generate tooltip text based on current visibility
         return startPOI
-               ? sprintf('%s Flag', startPOI.visible ? 'Hide' : 'Show')
+               ? sprintf('%s Stop Flag', startPOI.visible ? 'Hide' : 'Show')
                : 'Start Flag'
     }, [startPOI?.visible])
 
@@ -50,7 +51,7 @@ export const TrackFlagsSettings = (props) => {
     const textVisibilityStopFlag = useMemo(() => {
         // Dynamically generate tooltip text based on current visibility
         return stopPOI
-               ? sprintf('%s Flag', stopPOI.visible ? 'Hide' : 'Show')
+               ? sprintf('%s Start Flag', stopPOI.visible ? 'Hide' : 'Show')
                : 'Stop Flag'
     }, [stopPOI?.visible])
 
@@ -91,6 +92,9 @@ export const TrackFlagsSettings = (props) => {
             await poi.persistToDatabase()
         }
     }
+
+    const theStartIcon = Object.values(POI_CATEGORY_ICONS.get(POI_FLAG_START))[0]
+    const theEndIcon = Object.values(POI_CATEGORY_ICONS.get(POI_FLAG_STOP))[0]
     // Render flag visibility toggles
     return (
         <div>
@@ -98,8 +102,8 @@ export const TrackFlagsSettings = (props) => {
                 <SlTooltip hoist content={textVisibilityStartFlag} placement={props.tooltip}>
                     <ToggleStateIcon
                         onChange={setStartFlagVisibility}
-                        id={'start-visibility'}
-                        icons={{shown: faLocationPin, hidden: faLocationPinSlash}}
+                        className={'flag-visibility'}
+                        icons={{shown: theStartIcon, hidden: theStartIcon}}
                         style={{color: startPOI.bgColor ?? lgs.settings.journey.pois.start.color}}
                         initial={startPOI.visible}
                     />
@@ -109,8 +113,8 @@ export const TrackFlagsSettings = (props) => {
                 <SlTooltip hoist content={textVisibilityStopFlag} placement={props.tooltip}>
                     <ToggleStateIcon
                         onChange={setStopFlagVisibility}
-                        id={'stop-visibility'}
-                        icons={{shown: faLocationPin, hidden: faLocationPinSlash}}
+                        className={'flag-visibility'}
+                        icons={{shown: theEndIcon, hidden: theEndIcon}}
                         style={{color: stopPOI.bgColor ?? lgs.settings.journey.pois.stop.color}}
                         initial={stopPOI.visible}
                     />

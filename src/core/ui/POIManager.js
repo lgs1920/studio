@@ -472,15 +472,6 @@ export class POIManager {
             return {id: id, success: false}
         }
 
-        // // Cannot delete the flags too, they're attachedto the track
-        // if (poi.type === FLAG_START_TYPE || poi.type === FLAG_STOP_TYPE) {
-        //     UIToast.warning({
-        //                         caption: sprintf(`The POI "%s" can not be deleted !`, poi.title),
-        //                         text:    'Flags are attached to the track.',
-        //                     })
-        //     return {id: id, success: false}
-        // }
-
         this.list.delete(id)
         await poi.remove(dbSync)
         if (poi.type !== FLAG_START_TYPE && poi.type !== FLAG_STOP_TYPE) {

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-03-02
- * Last modified: 2025-03-02
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,7 +18,8 @@ import {
     faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faEarthEurope, faFlagSwallowtail, faFort,
     faHouseBlank, faLock, faMap, faMountains, faPlaceOfWorship, faRoad, faSquareParking, faTablePicnic, faTelescope,
     faUnlock, faUser,
-} from '@fortawesome/duotone-regular-svg-icons'
+}                        from '@fortawesome/duotone-regular-svg-icons'
+import { faFlagPennant } from '@fortawesome/pro-solid-svg-icons'
 
 
 export const SLOGAN = 'Replay Your Adventures!'
@@ -325,13 +326,35 @@ export const FOCUS_STARTER = 'starter'
 export const FOCUS_LAST = 'last'
 export const FOCUS_CENTROID = 'center'
 
-/*******************************************************************************
- * POI Management
- ******************************************************************************/
-
-    // POI Categories
+/**
+ * Mapping of Points of Interest (POI) categories to their associated icons.
+ * Each entry in the map associates a POI category name or type with a visual representation,
+ * which can be either a FontAwesome icon object or a custom SVG file path.
+ * This variable provides a convenient way to retrieve icons for various types of POIs.
+ *
+ * Key-Value Structure:
+ * - The key represents the POI category or identifier (e.g., 'shelter', POI_STANDARD_TYPE).
+ * - The value is an object or array containing the icon representation:
+ *   - FontAwesome icon objects use `{faIconName}` format.
+ *   - Custom SVG file paths are represented as strings within an array (e.g., ['icon.svg']).
+ *
+ * Use Cases:
+ * - Assigning graphical indicators to different POI types on a map application.
+ * - Enhancing user interfaces by visually differentiating POI categories.
+ *
+ * Example POI Categories (Keys in the Map):
+ * - 'shelter': Refers to a shelter icon.
+ * - 'castle': Refers to a castle icon.
+ * - 'viewpoint': Refers to a viewpoint telescope icon.
+ *
+ * Example Icon Types (Values in the Map):
+ * - FontAwesome Icons: Represented as `{faIconName}` objects.
+ * - Custom SVGs: File paths for custom icons, represented as strings in arrays.
+ */
 export const POI_CATEGORY_ICONS = new Map([
                                               [POI_STANDARD_TYPE, {faFlagSwallowtail}],
+                                              [POI_FLAG_START, {faFlagPennant}],
+                                              [POI_FLAG_STOP, {faFlagPennant}],
                                               ['shelter', {faHouseBlank}],
                                               ['refuge', ['house-bed.svg']],
                                               ['building', {faBuildings}],
@@ -348,7 +371,18 @@ export const POI_CATEGORY_ICONS = new Map([
                                               ['picnic-area', {faTablePicnic}],
                                           ])
 
-// POI Sizes
+
+/**
+ * A constant object representing different sizes for Points of Interest (POI).
+ *
+ * Each key in the object corresponds to a specific type of POI size, with
+ * associated dimensions provided as width and height properties.
+ *
+ * Properties:
+ * - expanded: Represents the dimensions for an expanded POI. Contains width and height.
+ * - reduced: Represents the dimensions for a reduced POI. Contains width and height.
+ * - arrow: Represents the dimensions for a POI arrow. Contains width and height.
+ */
 export const POI_SIZES = {
     'expanded': {width: 130, height: 60},
     'reduced': {width: 32, height: 32},

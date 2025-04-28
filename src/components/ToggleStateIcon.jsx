@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-28
- * Last modified: 2025-02-28
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -49,7 +49,7 @@ export const ToggleStateIcon = (props) => {
         <>
             <div className={`toggle-state-icon ${props.className} ${size}`}>
                 <SlIconButton slot="suffix" library="fa" {...(props.style && {style})}
-                                 className={'toggle-state-icon-true'}
+                              className={`toggle-state-icon-${state}`}
                                  onClick={toggleState}
                               name={FA2SL.set(icons[state])} {...(props.id && {id})}/>
             </div>
