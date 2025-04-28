@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-03-02
- * Last modified: 2025-03-02
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -62,7 +62,7 @@ export const MapPOIList = memo(() => {
 
                   // Apply filter byName
         let poisToShow = Array.from($store.list)
-                      .filter(entry => entry[1].title.toLowerCase().includes(settings.filter.byName.toLowerCase()))
+            .filter(entry => entry[1]?.title?.toLowerCase().includes(settings.filter.byName.toLowerCase()))
 
                   // Alphabetic/reverse sorting
         poisToShow = poisToShow.sort((a, b) => {

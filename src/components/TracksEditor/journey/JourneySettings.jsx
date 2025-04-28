@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -301,7 +301,7 @@ export const JourneySettings = function JourneySettings() {
                     await theJourney.getPOIsFromGeoJson()
                     await theJourney.extractMetrics()
                     theJourney.addToContext()
-                    await theJourney.saveToDB()
+                    await theJourney.persistToDatabase()
 
                     // Then we redraw the journey
                     await Utils.updateJourney(SIMULATE_ALTITUDE)

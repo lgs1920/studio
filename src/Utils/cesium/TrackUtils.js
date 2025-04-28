@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: TrackUtils.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-28
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import {
     ADD_JOURNEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DRAWING, DRAWING_FROM_DB, DRAWING_FROM_UI,
     FOCUS_ON_FEATURE, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
@@ -66,13 +82,14 @@ export class TrackUtils {
 
         const dataSources = []
 
-        // Manage Tracks
+        // We create first a GeoJson Data Source for the tracks
         journey.tracks.forEach(track => {
             dataSources.push(
                 lgs.viewer.dataSources.add(new GeoJsonDataSource(track.slug)))
         })
 
-        // Manage POIs
+        // Then a Custom we'll use for POIs or al other entities related to
+        // the journey
         dataSources.push(
             lgs.viewer.dataSources.add(new CustomDataSource(journey.slug)))
 
@@ -580,15 +597,7 @@ export class TrackUtils {
         TrackUtils.getDataSourcesByName(journey.slug).forEach(dataSource => {
             // For flags, we need to manage entities.
             if (dataSource.name === journey.slug) {
-                dataSource.entities.values.forEach(entity => {
-                    // Filter flags
-                    if (entity.id.startsWith(POI_FLAG)) {
-                        const track = TrackUtils.getTrackFromEntityId(journey, entity.id)
-                        entity.show = POIUtils.setPOIVisibility(
-                            track.flags[entity.id.endsWith(POI_FLAG_START) ? 'start' : 'stop'], visibility,
-                        )
-                    }
-                })
+                dataSource.show = visibility
             }
             else {
                 // We set the datasource with all entities.
@@ -632,10 +641,6 @@ export class TrackUtils {
         TrackUtils.getDataSourcesByName(track.slug).forEach(dataSource => {
             dataSource.show = visibility ? journey.tracks.get(dataSource.name).visible : false
         })
-        // Update the associated flags
-        TrackUtils.updateFlagsVisibility(journey, track, 'start', visibility)
-        TrackUtils.updateFlagsVisibility(journey, track, 'stop', visibility)
-
     }
 
     /**
@@ -703,7 +708,7 @@ export class TrackUtils {
 
                     TrackUtils.setProfileVisibility(lgs.theJourney)
 
-                    await theJourney.saveToDB()
+                    await theJourney.persistToDatabase()
                     await theJourney.saveOriginDataToDB()
 
                     mainStore.canViewJourneyData = true

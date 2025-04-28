@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-03-02
- * Last modified: 2025-02-28
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,6 @@
 
 import { MapPOIContent }                                  from '@Components/MainUI/MapPOI/MapPOIContent'
 import { POIUtils }                                       from '@Utils/cesium/POIUtils'
-import { SceneUtils }                                     from '@Utils/cesium/SceneUtils'
 import classNames                                         from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                    from 'valtio'
@@ -33,65 +32,6 @@ export const MapPOI = memo(({point}) => {
     }
 
     const _poi = useRef(null)
-    const [pixels, setPixels] = useState({x: 0, y: 0})
-
-    const getPixelsCoordinates = useCallback(async () => {
-
-                                                 __.ui.sceneManager.degreesToPixelsCoordinates(thePOI.coordinates, false).then(coordinates => {
-            if (!coordinates.visible) {
-                return
-            }
-
-                                                     $list.get(thePOI.id).frontOfTerrain = coordinates.visible
-                                                     if ($list.get(thePOI.id).frontOfTerrain) {
-
-                                                     // translate coordinates to pixels
-                                                     setPixels((prev) =>
-                                                                   prev.x !== coordinates.x || prev.y !== coordinates.y ? coordinates : prev,
-                                                     )
-
-                                                     // Set visibility, scale, flag mode, camera distance
-                                                     Object.assign(
-                                                         $list.get(thePOI.id),
-                                                         POIUtils.adaptScaleToDistance(thePOI.coordinates),
-                                                     )
-                                                         const poi = $list.get(thePOI.id)
-
-                                                         const min = Math.min(...Array.from($list.values()).map(poi => poi.cameraDistance))
-                                                         const max = Math.max(...Array.from($list.values()).map(poi => poi.cameraDistance))
-                                                     let zIndex = 1
-                                                     if (min !== max) { // several POIs
-                                                         zIndex = Math.round((max - poi.cameraDistance) / (max - min) * lgs.mainProxy.components.pois.visibleList.size) + 1
-                                                     }
-                                                     if (min && max && poi.withinScreen && poi.visible && !poi.tooFar) {
-                                                         lgs.mainProxy.components.pois.visibleList.set(poi.id, zIndex)
-                                                     }
-                                                     else {
-                                                         lgs.mainProxy.components.pois.visibleList.delete(poi.id)
-                                                     }
-                                                 }
-
-        })
-                                             }, [thePOI],
-    )
-
-    useEffect(() => {
-        lgs.scene.postRender.addEventListener(getPixelsCoordinates)
-        return () => {
-            lgs.scene.postRender.removeEventListener(getPixelsCoordinates)
-        }
-    }, [getPixelsCoordinates])
-
-    useEffect(() => {
-        if (_poi.current) {
-            __.ui.poiManager.observer.observe(_poi.current)
-        }
-        return () => {
-            if (_poi.current) {
-                __.ui.poiManager.observer.unobserve(_poi.current)
-            }
-        }
-    }, [_poi.current])
 
     const hideMenu = (event) => {
         lgs.mainProxy.components.pois.context.visible = false

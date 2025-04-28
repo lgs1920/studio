@@ -7,85 +7,115 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-28
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
-
 import { ToggleStateIcon }                   from '@Components/ToggleStateIcon'
-import { JUST_SAVE }                         from '@Core/constants'
 import { faLocationPin, faLocationPinSlash } from '@fortawesome/pro-solid-svg-icons'
 import { SlTooltip }                         from '@shoelace-style/shoelace/dist/react'
 import { TrackUtils }                        from '@Utils/cesium/TrackUtils'
-import { useSnapshot }                       from 'valtio'
-import { Utils }                             from '../Utils'
+import { useEffect, useMemo, useState } from 'react'
+import { sprintf }                      from 'sprintf-js'
+import { snapshot, useSnapshot }        from 'valtio'
 
 export const TrackFlagsSettings = (props) => {
+    // Reactive snapshot of the journey editor proxy
+    const $editor = lgs.stores.journeyEditor
+    const editor = useSnapshot($editor)
+    const $list = lgs.stores.main.components.pois.list
+    const list = useSnapshot($list)
 
-    const editorStore = lgs.theJourneyEditorProxy
+    // State management for POIs and loading
+    const [startPOI, setStartPOI] = useState(null)
+    const [stopPOI, setStopPOI] = useState(null)
+    const [isLoading, setIsLoading] = useState(true)
 
-    // If we're editing a single track journey, we need
-    // to know the track
-    if (editorStore.track === null || editorStore.track === undefined) {
-        (async () => await TrackUtils.setTheTrack(false))()
-    }
-    const editorSnapshot = useSnapshot(editorStore)
-
-    /**
-     * Change Start flag visibility
-     *
-     * @param visibility
-     *
-     */
-    const setStartFlagVisibility = async visibility => {
-        editorStore.track.flags.start.visible = visibility
-        TrackUtils.updateFlagsVisibility(editorStore.journey, editorStore.track, 'start', visibility)
-        await Utils.updateTrack(JUST_SAVE)
+    // Validate and initialize track if not exists
+    if (!editor.track) {
+        TrackUtils.setTheTrack(false)
     }
 
-    /**
-     *
-     * Change Stop flag visibility
-     *
-     * @param visibility
-     *
-     */
-    const setStopFlagVisibility = async visibility => {
-        editorStore.track.flags.stop.visible = visibility
-        TrackUtils.updateFlagsVisibility(editorStore.journey, editorStore.track, 'stop', visibility)
-        await Utils.updateTrack(JUST_SAVE)
+    // Visibility text for start flag
+    const textVisibilityStartFlag = useMemo(() => {
+        // Dynamically generate tooltip text based on current visibility
+        return startPOI
+               ? sprintf('%s Flag', startPOI.visible ? 'Hide' : 'Show')
+               : 'Start Flag'
+    }, [startPOI?.visible])
+
+    // Visibility text for stop flag
+    const textVisibilityStopFlag = useMemo(() => {
+        // Dynamically generate tooltip text based on current visibility
+        return stopPOI
+               ? sprintf('%s Flag', stopPOI.visible ? 'Hide' : 'Show')
+               : 'Stop Flag'
+    }, [stopPOI?.visible])
+
+    // Initialize  POIs on component mount
+    useEffect(() => {
+
+        // Retrieve start and stop flag IDs
+        const startFlagId = editor.track.flags?.start
+        const stopFlagId = editor.track.flags?.stop
+
+        // Load start POI if exists
+        if (startFlagId) {
+            setStartPOI(list.get(startFlagId))
+        }
+        // Load stop POI if exists
+        if (stopFlagId) {
+            setStopPOI(list.get(stopFlagId))
+        }
+
+    }, [snapshot($list), editor.track?.flags?.start, editor.track?.flags?.stop])
+
+    // Toggle visibility for start flag
+    const setStartFlagVisibility = async (visibility) => {
+        const poi = __.ui.poiManager.list.get(editor.track.flags.start)
+        if (poi) {
+            Object.assign(poi, {visible: visibility})
+            setStartPOI(poi)
+            await poi.persistToDatabase()
+        }
     }
 
-    const textVisibilityStartFlag = sprintf('%s Flag', editorStore.track?.flags?.start?.visible ? 'Hide' : 'Show')
-    const textVisibilityStopFlag = sprintf('%s Flag', editorStore.track?.flags?.stop?.visible ? 'Hide' : 'Show')
-
+    // Toggle visibility for stop flag
+    const setStopFlagVisibility = async (visibility) => {
+        const poi = __.ui.poiManager.list.get(editor.track.flags.stop)
+        if (poi) {
+            Object.assign(poi, {visible: visibility})
+            setStopPOI(poi)
+            await poi.persistToDatabase()
+        }
+    }
+    // Render flag visibility toggles
     return (
         <div>
-            {editorSnapshot?.track.flags.start &&
-            <SlTooltip hoist content={textVisibilityStartFlag} placement={props.tooltip}>
-                <ToggleStateIcon onChange={setStartFlagVisibility}
-                                 id={'start-visibility'}
-                                 icons={{
-                                     shown: faLocationPin, hidden: faLocationPinSlash,
-                                 }}
-                                 style={{color: lgs.settings.getJourney.pois.start.color}}
-                                 initial={editorSnapshot?.track.flags.start.visible}/>
-            </SlTooltip>
-            }
-            {editorSnapshot?.track.flags.stop &&
-            <SlTooltip hoist content={textVisibilityStopFlag} placement={props.tooltip}>
-                <ToggleStateIcon onChange={setStopFlagVisibility}
-                                 id={'stop-visibility'}
-                                 icons={{
-                                     shown: faLocationPin, hidden: faLocationPinSlash,
-                                 }}
-                                 style={{color: lgs.settings.getJourney.pois.stop.color}}
-                                 initial={editorSnapshot?.track.flags.stop.visible}/>
-            </SlTooltip>
-            }
+            {startPOI && (
+                <SlTooltip hoist content={textVisibilityStartFlag} placement={props.tooltip}>
+                    <ToggleStateIcon
+                        onChange={setStartFlagVisibility}
+                        id={'start-visibility'}
+                        icons={{shown: faLocationPin, hidden: faLocationPinSlash}}
+                        style={{color: startPOI.bgColor ?? lgs.settings.journey.pois.start.color}}
+                        initial={startPOI.visible}
+                    />
+                </SlTooltip>
+            )}
+            {stopPOI && (
+                <SlTooltip hoist content={textVisibilityStopFlag} placement={props.tooltip}>
+                    <ToggleStateIcon
+                        onChange={setStopFlagVisibility}
+                        id={'stop-visibility'}
+                        icons={{shown: faLocationPin, hidden: faLocationPinSlash}}
+                        style={{color: stopPOI.bgColor ?? lgs.settings.journey.pois.stop.color}}
+                        initial={stopPOI.visible}
+                    />
+                </SlTooltip>
+            )}
         </div>
     )
-
 }

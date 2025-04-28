@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,10 +19,10 @@ import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 
-import { Canvg } from 'canvg'
+import { Canvg, Property } from 'canvg'
 import {
-    Cartesian2, Cartesian3, Cartographic, Color, HeightReference, HorizontalOrigin, NearFarScalar, VerticalOrigin,
-}                from 'cesium'
+    Cartesian2, Cartesian3, Cartographic, HeightReference, HorizontalOrigin, JulianDate, NearFarScalar, VerticalOrigin,
+}                          from 'cesium' // Pin Marker Type
 
 // Pin Marker Type
 export const PIN_ICON = 1
@@ -101,27 +101,72 @@ export class POIUtils {
         }
     }
 
-    static update = (poi, options) => {
-        const dataSource = POIUtils.getDataSource(poi)
-        if (dataSource?.entities) {
-            const entity = dataSource.entities.getById(poi.slug)
-            if (entity) {
-                // Update positions
-                entity.position = options?.coordinates ? Cartesian3.fromDegrees(options.coordinates[0], options.coordinates[1], options.coordinates[2]) : entity.position
-                // Update visibility
-                if (options?.visibility !== undefined) {
-                    entity.show = options.visibility
-                }
-                if (options?.foregroundColor !== undefined) {
-                    entity.color = Color.fromCssColorString(options.foregroundColor)
-                }
-                else {
-                    entity.color = Color.fromCssColorString(lgs.theTrack.color)
-                }
-            }
+    /**
+     * Toggles the visibility of a Point of Interest (POI) entity.
+     * Finds the entity in its container and updates its visibility state
+     * based on the POI's visible property.
+     *
+     * @param {Object} poi - The Point of Interest object containing id and visible properties
+     * @returns {boolean} - True if visibility was successfully changed, false otherwise
+     */
+    static toggleVisibility = (poi) => {
+        // Check if POI is valid
+        if (!poi || !poi.id) {
+            console.warn('Cannot toggle visibility: Invalid POI object')
+            return false
         }
 
+        // Get the entity container for the POI
+        const entities = POIUtils.getEntityContainer(poi)
+        if (!entities) {
+            console.warn(`No entity container found for POI: ${poi.id}`)
+            return false
+        }
+
+        // Find and update the entity
+        const entity = entities.getById(poi.id)
+        if (!entity) {
+            console.warn(`Entity not found for POI: ${poi.id}`)
+            return false
+        }
+
+        // Update visibility state
+        entity.show = poi.visible
+        lgs.viewer.scene.requestRender()
+        return true
     }
+
+    /**
+     * Checks whether a given entity is within the current visible area of the camera.
+     *
+     * @param {Entity} entity - The Cesium entity to check.
+     * @returns {boolean} - Returns true if the entity is within the camera's visible area, otherwise false.
+     */
+    isEntityInView = (entity) => {
+        // Get the visible rectangle (bounding box) of the camera's current view
+        const visibleRectangle = lgs.camera.computeViewRectangle(lgs.scene.globe.ellipsoid)
+
+        if (!visibleRectangle) {
+            return false // The camera is not pointing to a visible area
+        }
+
+        // Retrieve the current position of the entity
+        const position = Property.getValueOrUndefined(entity.position, JulianDate.now())
+        if (!position) {
+            return false // The entity does not have a valid position
+        }
+
+        // Get geographic coordinates (longitude, latitude, height)
+        const cartographicPosition = Cartographic.fromCartesian(position)
+
+        // Check if the entity's position is within the visible rectangle of the camera
+        return (
+            cartographicPosition.longitude >= visibleRectangle.west &&
+            cartographicPosition.longitude <= visibleRectangle.east &&
+            cartographicPosition.latitude >= visibleRectangle.south &&
+            cartographicPosition.latitude <= visibleRectangle.north
+        )
+    };
 
     /**
      * An asynchronous function responsible for drawing a Point of Interest (POI) on a map or scene.

@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Journey.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-28
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import {
     CURRENT_JOURNEY, DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JOURNEYS_STORE, JSON_, KML, KMZ,
     NO_FOCUS, ORIGIN_STORE, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, REFRESH_DRAWING, SIMULATE_ALTITUDE,
@@ -105,7 +121,7 @@ export class Journey extends MapElement {
 
             this.prepareDrawing().then(async () => {
                 await this.getPOIsFromGeoJson()
-                await this.saveToDB()
+                await this.persistToDatabase()
             })
         }
         catch (error) {
@@ -336,7 +352,6 @@ export class Journey extends MapElement {
             for (const feature of this.geoJson.features) {
                 const index = this.geoJson.features.indexOf(feature)
                 const geometry = getGeom(feature)
-                console.log(this.slug, feature.properties.name)
 
                 const common = {
                     description: feature.properties.desc, visible: true,
@@ -520,7 +535,7 @@ export class Journey extends MapElement {
      *
      * @return {Promise<void>}
      */
-    saveToDB = async () => {
+    persistToDatabase = async () => {
         await lgs.db.lgs1920.put(this.slug, Journey.unproxify(this), JOURNEYS_STORE)
     }
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-03-02
- * Last modified: 2025-02-28
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -33,7 +33,7 @@ import { subscribe }           from 'valtio/vanilla'
 /*******************************************************************************
  * POIManager.js
  *
- * This class implements a comprehensive Point of Interest (POI)
+ * This class implements a Point of Interest (POI)
  * management system.
  *
  ******************************************************************************/
@@ -61,15 +61,13 @@ export class POIManager {
         this.setupSubscriptions()
 
         window.addEventListener(ADD_POI_EVENT, async event => {
-            event.detail.poi.draw()
-            await event.detail.poi.saveToDB()
-
+            await event.detail.poi.draw()
         })
         window.addEventListener(REMOVE_POI_EVENT, event => {
             event.detail.poi.removeFromDB()
         })
-        window.addEventListener(UPDATE_POI_EVENT, event => {
-            console.log(event.detail)
+        window.addEventListener(UPDATE_POI_EVENT, async event => {
+            event.detail.poi.redraw(event.detail.changedFields)
         })
         POIManager.instance = this
     }
@@ -159,95 +157,154 @@ export class POIManager {
     }
 
     /**
-     * Sets up subscriptions to monitor changes in the POI list
-     * Using DOM events on window object for communication
+     * Configures and sets up subscriptions for observing changes in POIs structure
+     * and content updates. It initializes the previous state of POIs and sets up appropriate listeners
+     * for handling changes.
+     *
+     * @return {void} No return value.
      */
     setupSubscriptions() {
-        // Initialisation du previousPoiState s'il n'existe pas déjà
+        // Initialize previous POI state
+        this.initializePreviousPoiState()
+
+        // Subscribe to structure changes (additions and removals)
+        this.unsubscribeFunctions.listStructure = subscribe(
+            lgs.stores.main.components.pois.list,
+            this.handleListStructureChanges.bind(this),
+        )
+
+        // Subscribe to content changes
+        this.unsubscribeFunctions.contentChanges = watch(
+            this.handleContentChanges.bind(this),
+            {sync: true},
+        )
+    }
+
+    /**
+     * Initializes the previousPoiState map to store deep copies of POI data.
+     * Iterates through the list of POIs and saves their deep-cloned state keyed by their ID.
+     *
+     * @return {void} Does not return a value.
+     */
+    initializePreviousPoiState() {
         this.previousPoiState = new Map()
-        // Clone the current state of each POI
         lgs.stores.main.components.pois.list.forEach((poi, id) => {
             this.previousPoiState.set(id, JSON.parse(JSON.stringify(poi)))
         })
-
-        // Subscribe to structure changes (additions and removals)
-        this.unsubscribeFunctions.listStructure = subscribe(lgs.stores.main.components.pois.list, () => {
-            // Detect added POIs
-            const currentPoiIds = [...lgs.stores.main.components.pois.list.keys()]
-            const previousPoiIds = [...this.previousPoiState.keys()]
-
-            // Find POIs that were added (present in current but not in previous)
-            const addedPoiIds = currentPoiIds.filter(id => !previousPoiIds.includes(id))
-            addedPoiIds.forEach(poiId => {
-                const addedPoi = lgs.stores.main.components.pois.list.get(poiId)
-                if (addedPoi) {
-                    const event = new CustomEvent(ADD_POI_EVENT, {
-                        detail:  {
-                            poi: addedPoi,
-                        },
-                        bubbles: true,
-                    })
-                    window.dispatchEvent(event)
-                }
-            })
-
-            // Find POIs that were removed (present in previous but not in current)
-            const removedPoiIds = previousPoiIds.filter(id => !currentPoiIds.includes(id))
-
-            // Important : traiter les suppressions AVANT de mettre à jour l'état précédent
-            removedPoiIds.forEach(poiId => {
-                const previousData = this.previousPoiState.get(poiId)
-                if (!previousData) {
-                    console.warn(`Missing previous data for POI ${poiId}`)
-                    return
-                }
-
-                const removedPoi = new MapPOI(previousData)
-
-                const event = new CustomEvent(REMOVE_POI_EVENT, {
-                    detail:  {
-                        poi: removedPoi,
-                    },
-                    bubbles: true,
-                })
-                window.dispatchEvent(event)
-            })
-
-            this.updatePreviousState()
-        })
-
-
-        // Subscribe to content changes
-        this.unsubscribeFunctions.contentChanges = watch((get) => {
-            const poiList = get(lgs.stores.main.components.pois.list)
-
-            poiList.forEach((poi, id) => {
-                const currentPoi = poi
-
-                if (this.previousPoiState.has(id)) {
-                    const previousPoi = this.previousPoiState.get(id)
-                    const changedFields = this.detectChanges(previousPoi, currentPoi)
-
-                    if (Object.keys(changedFields).length > 0) {
-                        const event = new CustomEvent(UPDATE_POI_EVENT, {
-                            detail:  {
-                                poi:           JSON.parse(JSON.stringify(currentPoi)),
-                                previousState: JSON.parse(JSON.stringify(previousPoi)),
-                                changedFields,
-                            },
-                            bubbles: true,
-                        })
-                        window.dispatchEvent(event)
-
-                        // Mise à jour de l'état précédent
-                        this.previousPoiState.set(id, JSON.parse(JSON.stringify(currentPoi)))
-                    }
-                }
-            })
-        }, {sync: true})
-
     }
 
+    /**
+     * Handles changes in the structure of the POI list by identifying added and removed POIs.
+     *
+     * This method compares the current POI identifiers with the previous state,
+     * determines the added and removed POIs, and performs the required operations
+     * for each case. It also updates the stored state to reflect the current structure.
+     *
+     * @return {void} Does not return a value. Executes handling of POI structure changes.
+     */
+    handleListStructureChanges() {
+        const currentPoiIds = [...lgs.stores.main.components.pois.list.keys()]
+        const previousPoiIds = [...this.previousPoiState.keys()]
+
+        this.handleAddedPois(currentPoiIds, previousPoiIds)
+        this.handleRemovedPois(currentPoiIds, previousPoiIds)
+
+        this.updatePreviousState()
+    }
+
+    /**
+     * Handles the processing of POIs (Points of Interest) that were added by comparing the current and previous POI
+     * IDs.
+     *
+     * @param {Array<string|number>} currentPoiIds - An array of POI IDs currently available.
+     * @param {Array<string|number>} previousPoiIds - An array of POI IDs that were previously available.
+     * @return {void} - Does not return a value.
+     */
+    handleAddedPois(currentPoiIds, previousPoiIds) {
+        const addedPoiIds = currentPoiIds.filter(id => !previousPoiIds.includes(id))
+
+        addedPoiIds.forEach(poiId => {
+            const addedPoi = lgs.stores.main.components.pois.list.get(poiId)
+            if (addedPoi) {
+                window.dispatchEvent(new CustomEvent(ADD_POI_EVENT, {
+                    detail:  {poi: addedPoi},
+                    bubbles: true,
+                }))
+            }
+        })
+    }
+
+    /**
+     * Identifies and handles POIs that were removed by comparing the current list of POI IDs
+     * with the previous list. For each removed POI, a custom event is dispatched to remove it.
+     *
+     * @param {Array<string>} currentPoiIds - An array of POI IDs that are currently active.
+     * @param {Array<string>} previousPoiIds - An array of POI IDs that were active previously.
+     * @return {void} This method does not return a value.
+     */
+    handleRemovedPois(currentPoiIds, previousPoiIds) {
+        const removedPoiIds = previousPoiIds.filter(id => !currentPoiIds.includes(id))
+
+        removedPoiIds.forEach(poiId => {
+            const previousData = this.previousPoiState.get(poiId)
+            if (!previousData) {
+                console.warn(`Missing previous data for POI ${poiId}`)
+                return
+            }
+
+            const removedPoi = new MapPOI(previousData)
+            window.dispatchEvent(new CustomEvent(REMOVE_POI_EVENT, {
+                detail:  {poi: removedPoi},
+                bubbles: true,
+            }))
+        });
+    }
+
+    /**
+     * Handles changes in the content of POIs by comparing
+     * the current state with the previously stored state, detecting changes,
+     * and dispatching an event if changes are found.
+     *
+     * @param {Function} get - The getter function to retrieve the latest state
+     * of the POI list from the store.
+     * @return {void} This method does not return a value.
+     */
+    handleContentChanges(get) {
+        const poiList = get(lgs.stores.main.components.pois.list)
+
+        poiList.forEach((currentPoi, id) => {
+            const previousPoi = this.previousPoiState.get(id)
+
+            if (previousPoi) {
+                const changedFields = this.detectChanges(previousPoi, currentPoi)
+
+                if (Object.keys(changedFields).length > 0) {
+                    window.dispatchEvent(new CustomEvent(UPDATE_POI_EVENT, {
+                        detail:  {
+                            poi:    new MapPOI(currentPoi),
+                            former: previousPoi,
+                            changedFields,
+                        },
+                        bubbles: true,
+                    }))
+
+                    // Update previous state for this POI
+                    this.previousPoiState.set(id, JSON.parse(JSON.stringify(currentPoi)))
+                }
+            }
+        });
+    }
+
+    /**
+     * Detects differences between two objects and returns an object representing the changes.
+     * Only enumerable properties that are non-function types are compared.
+     * If one of the objects is null or undefined, an empty object is returned.
+     *
+     * @param {Object} previous - The initial object to compare.
+     * @param {Object} current - The updated object to compare against the initial object.
+     * @return {Object} An object containing the properties that have changed, where each key maps to an object with
+     *     the previous and current values.
+     */
     detectChanges(previous, current) {
         const changes = {}
 
@@ -272,7 +329,11 @@ export class POIManager {
     }
 
     /**
-     * Unsubscribes all watchers when needed (e.g., component unmount)
+     * Unsubscribes all active event listeners related to structure changes and content changes.
+     * This method ensures that previously subscribed functions for monitoring these changes
+     * are properly cleaned up and set to null to avoid redundant operations.
+     *
+     * @return {void} No return value.
      */
     unsubscribeAll() {
         // Unsubscribe from structure changes
@@ -545,7 +606,7 @@ export class POIManager {
                 color:   lgs.colors.poiDefault,
                 bgColor: lgs.colors.poiDefaultBackground,
             })
-            await this.saveInDB(this.list.get(former.id))
+            await this.list.get(former.id).persistToDatabase()
 
             // Configure the new starter POI with appropriate type and styling
             Object.assign(this.list.get(current.id), {
@@ -554,7 +615,7 @@ export class POIManager {
                 color:      lgs.settings.starter.color,
             })
 
-            await this.saveInDB(this.list.get(current.id))
+            await this.list.get(current.id).persistToDatabase()
             const starter = this.starterSettings = this.list.get(current.id)
             return {former, starter}
         }

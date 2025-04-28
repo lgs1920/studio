@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Track.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-28
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { CURRENT_TRACK, DRAWING_FROM_UI, FOCUS_ON_FEATURE }                   from '@Core/constants'
 import { MapElement }                                                         from '@Core/MapElement'
 import { ProfileTrackMarker }                                                 from '@Core/ProfileTrackMarker'
@@ -381,7 +397,7 @@ export class Track extends MapElement {
     }
 
     addToEditor = () => {
-        lgs.theJourneyEditorProxy.track = this
+        lgs.stores.journeyEditor.track = this
     }
 
     addToContext = (setToCurrent = true) => {

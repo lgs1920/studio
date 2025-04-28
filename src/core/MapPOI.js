@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -60,11 +60,6 @@ export class MapPOI extends MapElement {
     expanded = true
 
     /**
-     * @type {boolean}
-     */
-    frontOfTerrain = true
-
-    /**
      * @type {number}
      */
     height
@@ -85,19 +80,9 @@ export class MapPOI extends MapElement {
     longitude
 
     /**
-     * @type {number}
-     */
-    over = false
-
-    /**
      * @type {string[null]}
      */
     parent = null
-
-    /**
-     * @type {number}
-     */
-    scale = 1
 
     /**
      * @type {boolean}
@@ -125,11 +110,6 @@ export class MapPOI extends MapElement {
     /**
      * @type {string}
      */
-    tooFar = false
-
-    /**
-     * @type {string}
-     */
     type = POI_TMP_TYPE
 
     /**
@@ -137,10 +117,6 @@ export class MapPOI extends MapElement {
      */
     formerType
 
-    /**
-     * @type {boolean}
-     */
-    withinScreen = true
 
     /**
      * Initializes a new instance of the MapPOI class.
@@ -170,6 +146,15 @@ export class MapPOI extends MapElement {
         }
     }
 
+    /**
+     * Retrieves the icon associated with the current category or a standard type if no category is specified.
+     *
+     * @return {string} The icon corresponding to the category or the standard type.
+     */
+    get icon() {
+        return Object.values(POI_CATEGORY_ICONS.get(this.category ?? POI_STANDARD_TYPE))[0]
+    }
+
     static deserialize = (object, json = false) => MapElement.deserialize(object, json)
 
     static serialize = (props) => MapElement.serialize(props)
@@ -179,7 +164,6 @@ export class MapPOI extends MapElement {
     static extractObject = (source) => {
         return JSON.parse(JSON.stringify(source))
     }
-
     /**
      * Updates the properties of the MapPOI instance.
      *
@@ -194,23 +178,78 @@ export class MapPOI extends MapElement {
         return this
     }
 
+    isView = (entity) => {
+        return this.utils.isEntityInView() //TODO
+    }
+
+    /**
+     * Updates the properties of the current MapPOI instance with the provided changes.
+     *
+     * Re draw the POI, with special handling for:
+     * - when specific keys are modified
+     * - Optional database synchronization
+     * - Handling visibility state
+     *
+     * @param {Object} changes - An object containing key-value pairs of properties to update
+     * @param {boolean} [dbSync=true] - Whether to synchronize changes with the database after updating
+     *
+     * @returns {Promise<MapPOI>} The updated MapPOI instance
+     */
+    redraw = async (changes, dbSync = true) => {
+        // Early return if no changes are provided
+        if (!changes) {
+            return this
+        }
+
+        // Define a set of keys that trigger a redraw when modified
+        const keys = new Set(['bgcolor', 'category', 'color', 'showFlag', 'category', 'expanded', 'type'])
+        // Additional keys to check when the item is expanded
+        const keysWhenExpanded = new Set(['title', 'description', 'height'])
+
+        let shouldRedraw = false
+
+        // If the item is expanded, add expanded-specific keys to the redraw keys
+        if (this.expanded) {
+            for (const value of keysWhenExpanded) {
+                keys.add(value)
+            }
+        }
+
+        // Iterate through the changes to determine if a redraw is necessary
+        for (const [key, value] of Object.entries(changes)) {
+            // If the changed key is in our predefined set, mark for redraw
+            if (keys.has(key)) {
+                shouldRedraw = true
+            }
+            else {
+                // Special handling for visibility changes
+                if (key === 'visible') {
+                    this.utils.toggleVisibility(this)
+                }
+            }
+        }
+
+        // If redraw is needed, call the draw method
+        if (shouldRedraw) {
+            await this.draw(dbSync)
+        }
+
+        // Optionally persist changes to database
+        if (dbSync) {
+            await this.persistToDatabase()
+        }
+
+        // Return the current instance for method chaining
+        return this
+    }
+
     /**
      *  Hide the POI
      */
     hide = () => {
         this.visible = false
+        let b = this.utils.toggleVisibility(this)
     }
-
-    /**
-     * show the POI
-     */
-    show = () => {
-        this.visible = true
-    }
-
-    /***********************************
-     * Getters and Setters
-     **********************************/
 
     /**
      * Sets the coordinates and height properties of the POI.
@@ -229,25 +268,74 @@ export class MapPOI extends MapElement {
         this.simulatedHeight = simulatedHeight
     }
 
-    get icon() {
-        return Object.values(POI_CATEGORY_ICONS.get(this.category ?? POI_STANDARD_TYPE))[0]
+    /**
+     * show the POI
+     */
+    show = () => {
+        this.visible = true
+        this.utils.toggleVisibility(this)
     }
 
-    draw = async () => {
+    /**
+     * Renders and processes a visual representation of POI.
+     *
+     * This function creates an image representation, performs drawing operations,
+     * and can optionally synchronize the resultant data with the database.
+     *
+     * @param {boolean} [dbSync=true] - Indicates whether the rendered result should be synchronized with the database.
+     * @returns {Promise<void>} A promise that resolves when the rendering and optional database synchronization are
+     *     complete.
+     */
+    draw = async (dbSync = true) => {
         this.image = __.ui.poiManager.createContent(this)
         await this.utils.draw(this)
-    }
-
-    saveToDB = async () => {
-        if (this.type && this.type !== POI_TMP_TYPE) {
-            await lgs.db.lgs1920.put(this.id, MapPOI.serialize({...this, ...{__class: MapPOI}}), POIS_STORE)
+        if (dbSync) {
+            await this.persistToDatabase()
         }
     }
 
-    removeFromDB = async () => {
-        await lgs.db.lgs1920.delete(this.id, POIS_STORE)
+    /**
+     * Saves the current Point of Interest (POI) object to the database.
+     * The method ensures that the POI has a valid type before attempting to persist data.
+     * If the type is invalid, the operation is aborted.
+     *
+     * This function serializes the POI data and stores it in a specified database store.
+     *
+     */
+    persistToDatabase = async () => {
+
+        // Guard clause to ensure the POI has a valid type
+        if (!this.type || this.type === POI_TMP_TYPE) {
+            return
+        }
+
+        // Persist the serialized POI data into the database
+        await lgs.db.lgs1920.put(this.id, MapPOI.serialize({
+                                                               ...this,
+                                                               __class: MapPOI,
+                                                           }), POIS_STORE)
     }
 
+
+    /**
+     * Removes an entry from the database
+     *
+     * @param {string} [id=this.id] - Identifier of the POI to remove
+     *
+     * @returns {Promise<void>}
+     */
+    removeFromDB = async (id = this.id) => {
+        try {
+            if (!id) {
+                console.warn('Cannot remove POI: No ID provided')
+                return
+            }
+            await lgs.db.lgs1920.delete(id, POIS_STORE)
+        }
+        catch (error) {
+            console.error(`Failed to remove POI from database: ${error.message}`)
+        }
+    }
 
 
 }
