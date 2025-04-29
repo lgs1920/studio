@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-28
+ * Created on: 2025-04-29
+ * Last modified: 2025-04-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -385,6 +385,37 @@ export class POIManager {
      * @return {MapPOI} The found POI or undefined
      */
     get = id => this.list.get(id)
+
+
+    /**
+     * Retrieves a list of POI with the same parent
+     *
+     * @param {string} parent - the parent identifier
+     *
+     * @return
+     */
+    getByParent = parent => {
+        return this.list.values().filter(poi => poi.parent === parent)
+    }
+
+    /**
+     * Set visibility for all POIs with the the same parent
+     *
+     * @param {string} parent - the parent identifier
+     * @param {boolean} visibility - the visibility
+     */
+
+    setVisibilityByParent = async (parent, visibility) => {
+        for (const poi of this.getByParent(parent)) {
+            if (visibility) {
+                poi.show()
+            }
+            else {
+                poi.hide()
+            }
+            await poi.persistToDatabase()
+        }
+    }
 
     /**
      * Extracts and normalizes POI data from a GeoJSON point feature.

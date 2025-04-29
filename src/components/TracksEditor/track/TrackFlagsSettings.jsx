@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-28
+ * Created on: 2025-04-29
+ * Last modified: 2025-04-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -71,7 +71,7 @@ export const TrackFlagsSettings = (props) => {
             setStopPOI(list.get(stopFlagId))
         }
 
-    }, [snapshot($list), editor.track?.flags?.start, editor.track?.flags?.stop])
+    }, [snapshot($list), editor.track.visibility, editor.track?.flags?.start, editor.track?.flags?.stop])
 
     // Toggle visibility for start flag
     const setStartFlagVisibility = async (visibility) => {

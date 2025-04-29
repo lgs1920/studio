@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-26
+ * Created on: 2025-04-29
+ * Last modified: 2025-04-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -88,12 +88,12 @@ import {
 
 export const JourneySettings = function JourneySettings() {
 
-    const $theJourneyEditor = lgs.theJourneyEditorProxy
+    const $theJourneyEditor = lgs.stores.journeyEditor
     const theJourneyEditor = useSnapshot($theJourneyEditor)
     const former = $theJourneyEditor.journey.elevationServer
     const editorStore = useSnapshot(lgs.theJourneyEditorProxy)
 
-    const $rotate = lgs.mainProxy.components.mainUI.rotate
+    const $rotate = lgs.stores.main.components.mainUI.rotate
     const rotate = useSnapshot($rotate)
 
     const autoRotate = useSnapshot(lgs.settings.ui.camera.start.rotate)
@@ -555,7 +555,8 @@ export const JourneySettings = function JourneySettings() {
                                 </SlTooltip>
                             }
 
-                        {theJourneyEditor.journey.tracks.size === 1 && <TrackFlagsSettings tooltip="left"/>}
+                        {theJourneyEditor.journey.tracks.size === 1 && theJourneyEditor.journey.visible &&
+                            <TrackFlagsSettings tooltip="left"/>}
 
                         <div>
                         <SlTooltip hoist content={'Export'} placement="left">

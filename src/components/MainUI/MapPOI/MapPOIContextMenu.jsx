@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
+ * Created on: 2025-04-29
  * Last modified: 2025-04-28
  *
  *
@@ -60,8 +60,7 @@ export const MapPOIContextMenu = () => {
             type: POI_STANDARD_TYPE,
             category: POI_STANDARD_TYPE,
         })
-        __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(pois.current.id))
-            .then(() => hideMenu())
+        hideMenu()
     }
 
     const hide = () => {

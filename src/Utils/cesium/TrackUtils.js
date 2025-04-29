@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-28
+ * Created on: 2025-04-29
+ * Last modified: 2025-04-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -641,6 +641,7 @@ export class TrackUtils {
         TrackUtils.getDataSourcesByName(track.slug).forEach(dataSource => {
             dataSource.show = visibility ? journey.tracks.get(dataSource.name).visible : false
         })
+
     }
 
     /**
