@@ -44,7 +44,7 @@
     "@turf/point-to-line-distance": "^7.2.0",
     "@turf/transform-rotate": "^7.2.0",
     "argparse": "^2.0.1",
-    "axios": "^1.8.4",
+    "axios": "^1.9.0",
     "babel-plugin-module-resolver": "^5.0.2",
     "canvg": "^4.0.3",
     "cesium": "~1.127.0",
