@@ -153,7 +153,7 @@ POIs can be:
 ### Prerequisites
 
 - Node.js 16+
-- bun package manager
+- npm or bun package manager
 - Modern web browser with WebGL support
 
 ### Setup
@@ -190,8 +190,6 @@ The upcoming video creation module will allow users to transform their journeys 
 - Reuse of styling and visualization settings
 - Integrated preview of video segments
 - Direct export to common video platforms
-  Libraries
-  The app is based on :
 
 ## License
 
