@@ -97,11 +97,11 @@
     "zip-a-folder": "^3.1.9"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.10",
+    "@types/bun": "^1.2.11",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
-    "@typescript-eslint/eslint-plugin": "^8.31.0",
-    "@typescript-eslint/parser": "^8.31.0",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
     "@vitejs/plugin-react": "^4.4.1",
     "eslint": "^9.25.1",
     "eslint-plugin-react-hooks": "^5.2.0",
