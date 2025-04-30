@@ -79,14 +79,18 @@ The second phase will expand the platform's capabilities with video generation f
 
 ## Technology Stack
 
-- **Frontend Framework**: React 19.1.0
-- **State Management**: Valtio for reactive state management
-- **3D Visualization**: Cesium.js for WebGL-based 3D globe rendering
-- **UI Components**: Shoelace and custom components
-- **Geospatial Processing**: Turf.js for geospatial operations
+- **Frontend Language**: JavaScript
+- **Frontend Framework**: [React 19.1.0](https://react.dev/) - A JavaScript library for building user interfaces
+- **State Management**: [Valtio](https://valtio.pmnd.rs) - A proxy-based state management tool for React
+- **3D Visualization**: [Cesium.js](https://cesium.com/) - The WebGL-based globe and map engine
+- **Canvas Rendering**: [Konva](https://konvajs.org/) - HTML5 Canvas JavaScript framework for drawings and animations
+- **UI Components**: [Shoelace](https://shoelace.style/) - A collection of web components used for the UI
+- **Geospatial Processing**: [Turf.js](https://turfjs.org/) - Advanced geospatial analysis for browsers and Node.js
 - **Data Storage**: IndexedDB for local storage with structured schema
-- **Build Tool**: Vite with TypeScript support
-- **Icons**: FontAwesome Pro with duotone and regular icon sets
+- **Build Tool**: [Vite](https://vitejs.dev/) - Next generation frontend tooling
+- **Icons**: [FontAwesome](https://fontawesome.com/) - The iconic SVG, font, and CSS toolkit
+- **Charts Library**: [ECharts](https://echarts.apache.org/en/index.html) - A powerful, interactive charting library
+- **JavaScript Runtime**: [Bun](https://bun.sh/) - A fast all-in-one JavaScript runtime
 
 ## Architecture
 
@@ -159,12 +163,6 @@ POIs can be:
 3. Configure environment variables in `.env`
 4. Run the development server with `npm run dev` or `bun run dev`
 
-### Building for Production
-
-1. Run `npm run build` or `bun run build`
-2. The build output will be in the `dist` directory
-3. Deploy the contents to a static web server
-
 ## Later in Phase 2: Journey Video Creation
 
 The upcoming video creation module will allow users to transform their journeys into engaging videos:
@@ -192,6 +190,8 @@ The upcoming video creation module will allow users to transform their journeys 
 - Reuse of styling and visualization settings
 - Integrated preview of video segments
 - Direct export to common video platforms
+  Libraries
+  The app is based on :
 
 ## License
 
