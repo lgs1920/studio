@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: MainUI.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-04-30
+ * Last modified: 2025-04-30
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { Compass } from '@Components/cesium/CompassUI/Compass'
 import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
 import { GeocodingButton }                  from '@Components/MainUI/geocoding/GeocodingButton'
@@ -10,11 +26,12 @@ import { Profile }                          from '@Components/Profile/Profile'
 import { ProfileButton }                    from '@Components/Profile/ProfileButton'
 import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
 import {
-    BOTTOM, DESKTOP_MIN, DOUBLE_CLICK_DELAY, DOUBLE_TAP_DELAY, END, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END,
+    BOTTOM, CESIUM_EVENTS, DESKTOP_MIN, DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, END, MENU_BOTTOM_END,
+    MENU_BOTTOM_START, MENU_END_END,
     MENU_END_START,
     MENU_START_END,
     MENU_START_START, MOBILE_MAX, POINTER, POIS_EDITOR_DRAWER, SCENE_MODE_2D, SECOND, START, TOP,
-}                                      from '@Core/constants'
+} from '@Core/constants'
 import { JourneyToolbar } from '@Editor/JourneyToolbar'
 import { useEffect, useRef, useState } from 'react'
 
@@ -62,27 +79,8 @@ export const MainUI = () => {
         }, 0.3 * SECOND)
     }
 
-    /**
-     * Trap Double click
-     *
-     * @param event
-     */
-    const handleDoubleTap = () => {
-        if (!clickTimeout.current) {
-            const timeout = setTimeout(() => {
-                clickTimeout.current = null
-            }, DOUBLE_CLICK_DELAY)
-            clickTimeout.current = timeout
-        }
-        else {
-            // We're in the delay, it is a double click or tap
-            clearTimeout(clickTimeout.current)
-            clickTimeout.current = null
-            closeDrawer()
-        }
-    }
-
-    const closeDrawer = () => {
+    const closeDrawer = (event) => {
+        console.log(event)
         __.ui.drawerManager.close()
     }
 
@@ -98,12 +96,12 @@ export const MainUI = () => {
             lgs.scene.morphTo2D(0)
         }
         // we need to manage some canvas events
-        __.canvasEvents.addEventListener(POINTER.LEFT_DOWN, handleDoubleTap)
-        __.canvasEvents.addEventListener(POINTER.LEFT_DOUBLE_CLICK, closeDrawer)
+        __.canvasEvents.addEventListener(__.canvasEvents.events.DOUBLE_TAP, closeDrawer)
+        __.canvasEvents.addEventListener(__.canvasEvents.events.LEFT_DOUBLE_CLICK, closeDrawer)
 
         return () => {
-            __.canvasEvents.removeEventListener(POINTER.LEFT_DOWN, handleDoubleTap)
-            __.canvasEvents.addEventListener(POINTER.LEFT_DOUBLE_CLICK, closeDrawer)
+            __.canvasEvents.removeEventListener(__.canvasEvents.events.DOUBLE_TAP, closeDrawer)
+            __.canvasEvents.removeEventListener(__.canvasEvents.events.LEFT_DOUBLE_CLICK, closeDrawer)
 
         }
 

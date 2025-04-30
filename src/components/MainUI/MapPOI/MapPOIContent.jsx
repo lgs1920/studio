@@ -7,17 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-04-30
+ * Last modified: 2025-04-30
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { NameValueUnit }                                  from '@Components/DataDisplay/NameValueUnit'
-import { FontAwesomeIcon }                                                  from '@Components/FontAwesomeIcon'
-import { DOUBLE_CLICK_DELAY, DOUBLE_TAP_DELAY, POIS_EDITOR_DRAWER, SECOND } from '@Core/constants'
-import { SlPopup }                                                          from '@shoelace-style/shoelace/dist/react'
+import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
+import { DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, POIS_EDITOR_DRAWER, SECOND } from '@Core/constants'
+import {
+    SlPopup,
+} from '@shoelace-style/shoelace/dist/react'
 import { ELEVATION_UNITS }                   from '@Utils/UnitUtils'
 import { memo, useEffect, useRef, useState } from 'react'
 import Timeout                               from 'smart-timeout'
@@ -89,7 +91,7 @@ export const MapPOIContent = memo(({id, hide}) => {
                 setClickTimeout(null)
                 // manage the simple click or tap (propagate it)
                 __.ui.sceneManager.propagateEventToCanvas(event)
-            }, DOUBLE_CLICK_DELAY)
+            }, DOUBLE_CLICK_TIMEOUT)
             setClickTimeout(timeout)
         }
     }
@@ -116,7 +118,7 @@ export const MapPOIContent = memo(({id, hide}) => {
 
     const handleTouchStart = () => {
         const now = Date.now()
-        if (now - lastTap < DOUBLE_TAP_DELAY) {
+        if (now - lastTap < DOUBLE_TAP_TIMEOUT) {
             if (clickTimeout) {
                 // We're in the delay, it is a double touch
                 clearTimeout(clickTimeout)

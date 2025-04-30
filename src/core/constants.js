@@ -7,20 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-28
+ * Created on: 2025-04-30
+ * Last modified: 2025-04-30
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { CESIUM_EVENTS as $CESIUM_EVENTS } from '@Core/events/cesiumEvents'
 import {
-    faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faEarthEurope, faFlagSwallowtail, faFort,
-    faHouseBlank, faLock, faMap, faMountains, faPlaceOfWorship, faRoad, faSquareParking, faTablePicnic, faTelescope,
-    faUnlock, faUser,
-}                        from '@fortawesome/duotone-regular-svg-icons'
-import { faFlagPennant } from '@fortawesome/pro-solid-svg-icons'
-
+    faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faEarthEurope, faFlagPennant, faFlagSwallowtail,
+    faFort, faHouseBlank, faLock, faMap, faMountains, faPlaceOfWorship, faRoad, faSquareParking, faTablePicnic,
+    faTelescope, faUnlock, faUser,
+}                                          from '@fortawesome/duotone-regular-svg-icons'
 
 export const SLOGAN = 'Replay Your Adventures!'
 /*******************************************************************************
@@ -217,8 +216,13 @@ export const UNLOCKED = 'unlocked'
  * UI Click/Touch events
  ******************************************************************************/
 
-export const DOUBLE_CLICK_DELAY = 300 // milliseconds
-export const DOUBLE_TAP_DELAY = 300     // milliseconds
+
+export const DOUBLE_CLICK_TIMEOUT = 300     // milliseconds
+export const DOUBLE_TAP_TIMEOUT = 300       // milliseconds
+export const LONG_TAP_TIMEOUT = 700         // milliseconds
+export const DOUBLE_TAP_DISTANCE = 20       // pixels
+export const CESIUM_EVENTS = $CESIUM_EVENTS
+
 export const POINTER = {
     LEFT_DOWN:         0,
     LEFT_UP:           1,

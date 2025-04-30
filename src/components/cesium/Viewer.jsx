@@ -1,6 +1,22 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Viewer.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-04-30
+ * Last modified: 2025-04-30
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import '@shoelace-style/shoelace/dist/themes/light.css'
 import { CanvasEventManager } from '@Core/events/CanvasEventManager'
-import { LayersUtils }                                                           from '@Utils/cesium/LayersUtils'
+import { LayersUtils }        from '@Utils/cesium/LayersUtils'
 import { SceneUtils }         from '@Utils/cesium/SceneUtils'
 import { ImageryLayerCollection, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
 import { useEffect }          from 'react'
