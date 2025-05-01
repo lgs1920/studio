@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-30
- * Last modified: 2025-04-30
+ * Created on: 2025-05-01
+ * Last modified: 2025-05-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -89,7 +89,7 @@ export function Viewer() {
     lgs.camera.changed.addEventListener(raiseCameraUpdateEvent)
 
     // Manage events
-    __.canvasEvents = new CanvasEventManager()
+    __.canvasEvents = new CanvasEventManager(lgs.viewer)
 
 
     return (<></>)

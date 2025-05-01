@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-29
- * Last modified: 2025-04-29
+ * Created on: 2025-05-01
+ * Last modified: 2025-05-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -370,6 +370,7 @@ export class POIManager {
         }
 
         this.list.set(poi.id, poi)
+
 
         if (dbSync) {
             await this.persistToDatabase(poi)

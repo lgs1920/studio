@@ -298,15 +298,6 @@ eventManager.addEventListener('LEFT_CLICK', (event, pickedEntity) => {
 | `priority`  | `number`        | `100`       | Priority of the handler (lower number = higher priority) |
 | `once`      | `boolean`       | `false`     | Whether the handler should be executed only once         |
 | `context`   | `object`        | `undefined` | Context object to be used as `this` in the callback      |
-| `modifiers` | `object`        | `undefined` | Object specifying required modifier key states           |
-
-### Modifiers Object
-
-| Property | Type      | Default     | Description                       |
-|----------|-----------|-------------|-----------------------------------|
-| `ctrl`   | `boolean` | `undefined` | Whether Ctrl key must be pressed  |
-| `alt`    | `boolean` | `undefined` | Whether Alt key must be pressed   |
-| `shift`  | `boolean` | `undefined` | Whether Shift key must be pressed |
 
 ## Browser Compatibility
 
@@ -330,12 +321,10 @@ functionality:
 ### Initialization with Cesium
 
 ```javascript
-// Initialize with an existing Cesium viewer 
+// Initialize with an existing Cesium viewer
 const viewer = new Cesium.Viewer('cesiumContainer');
-const eventManager = CanvasEventManager.getInstance();
-eventManager.initialize(viewer);
+const eventManager = new CanvasEventManager(viewer);
 ```
-
 ## Best Practices
 1. Use the appropriate event type for your use case
 2. Remove event listeners when they are no longer needed

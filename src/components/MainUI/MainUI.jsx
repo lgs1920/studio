@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-30
- * Last modified: 2025-04-30
+ * Created on: 2025-05-01
+ * Last modified: 2025-05-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -80,7 +80,6 @@ export const MainUI = () => {
     }
 
     const closeDrawer = (event) => {
-        console.log(event)
         __.ui.drawerManager.close()
     }
 
@@ -96,12 +95,12 @@ export const MainUI = () => {
             lgs.scene.morphTo2D(0)
         }
         // we need to manage some canvas events
-        __.canvasEvents.addEventListener(__.canvasEvents.events.DOUBLE_TAP, closeDrawer)
-        __.canvasEvents.addEventListener(__.canvasEvents.events.LEFT_DOUBLE_CLICK, closeDrawer)
+        __.canvasEvents.addEventListener(CESIUM_EVENTS.DOUBLE_TAP, closeDrawer)
+        __.canvasEvents.addEventListener(CESIUM_EVENTS.LEFT_DOUBLE_CLICK, closeDrawer)
 
         return () => {
-            __.canvasEvents.removeEventListener(__.canvasEvents.events.DOUBLE_TAP, closeDrawer)
-            __.canvasEvents.removeEventListener(__.canvasEvents.events.LEFT_DOUBLE_CLICK, closeDrawer)
+            __.canvasEvents.removeEventListener(CESIUM_EVENTS.events.DOUBLE_TAP, closeDrawer)
+            __.canvasEvents.removeEventListener(CESIUM_EVENTS.events.LEFT_DOUBLE_CLICK, closeDrawer)
 
         }
 

@@ -35,7 +35,7 @@ export const CESIUM_EVENTS = {
     // Mobile specific
     PINCH_START: 'PINCH_START',
     PINCH_MOVE:  'PINCH_MOVE',
-    PINCH_END:   'PINCH_END'
+    PINCH_END: 'PINCH_END',
 
     // Modifiers
     CTRL:  'CTRL',

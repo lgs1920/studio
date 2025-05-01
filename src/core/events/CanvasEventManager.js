@@ -15,14 +15,10 @@
  ******************************************************************************/
 
 import { CESIUM_EVENTS, DOUBLE_TAP_DISTANCE, DOUBLE_TAP_TIMEOUT, LONG_TAP_TIMEOUT } from '@Core/constants'
+import { EVENT_SEPARATOR }                                                          from '@Core/events/cesiumEvents'
 import { ScreenSpaceEventHandler, ScreenSpaceEventType }                            from 'cesium' // Separator for
-                                                                                                  // combined events
-                                                                                                  // (e.g.,
-                                                                                                  // CTRL_LEFT_CLICK)
 
-// Separator for combined events (e.g., CTRL_LEFT_CLICK)
-export const EVENT_SEPARATOR = '_'
-
+// CTRL_LEFT_CLICK)EVENT_SEPARATOR
 /**
  * CesiumEventManager - Manages all types of Cesium mouse and touch events
  * with support for custom event handling, entity targeting, and propagation control.
@@ -30,8 +26,9 @@ export const EVENT_SEPARATOR = '_'
 export class CanvasEventManager {
     /**
      * Constructor
+     * @param {Object} [viewer] - The Cesium viewer instance to use
      */
-    constructor() {
+    constructor(viewer) {
         // Singleton pattern
         if (CanvasEventManager.instance) {
             return CanvasEventManager.instance
@@ -46,6 +43,12 @@ export class CanvasEventManager {
         this.maxDoubleTapDistance = DOUBLE_TAP_DISTANCE
         this.tapTimer = null
         this.subscriptionId = 0
+
+        this.viewer = viewer
+
+        if (!this.viewer) {
+            console.warn('CanvasEventManager: No Cesium viewer provided')
+        }
 
         // Modifier keys state
         this.modifierKeys = {
@@ -346,6 +349,7 @@ export class CanvasEventManager {
         return distance <= this.maxDoubleTapDistance
     }
 
+
     /**
      * Handle an event by notifying all subscribers
      * @param {string} eventType - Type of event
@@ -383,24 +387,8 @@ export class CanvasEventManager {
                 continue
             }
 
-            // Skip if modifiers don't match
-            if (subscriber.modifiers) {
-                const {ctrl, alt, shift} = subscriber.modifiers
-
-                // Skip if any required modifier isn't pressed
-                if ((ctrl === true && !event.modifiers.ctrl) ||
-                    (alt === true && !event.modifiers.alt) ||
-                    (shift === true && !event.modifiers.shift)) {
-                    continue
-                }
-
-                // Skip if any forbidden modifier is pressed
-                if ((ctrl === false && event.modifiers.ctrl) ||
-                    (alt === false && event.modifiers.alt) ||
-                    (shift === false && event.modifiers.shift)) {
-                    continue
-                }
-            }
+            // Note: Removed checks for modifiers here as they are now directly handled
+            // through event types (e.g. CTRL_LEFT_CLICK)
 
             // Execute callback
             const result = subscriber.callback.call(
