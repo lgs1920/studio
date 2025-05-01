@@ -1,11 +1,9 @@
 # CanvasEventManager - Documentation
 
 ## Overview
-
 The `CanvasEventManager` is a powerful singleton class that manages Cesium mouse and touch events with support for custom event handling, entity targeting, and propagation control. It provides a comprehensive system for handling both standard Cesium events and custom touch events like taps, long taps, and double taps.
 
 ## Features
-
 - Singleton pattern for application-wide event management
 - Support for standard mouse events and custom touch gestures
 - Entity-specific event targeting
@@ -16,7 +14,6 @@ The `CanvasEventManager` is a powerful singleton class that manages Cesium mouse
 - Dynamic generation of modifier-key combination events
 
 ## Event Types
-
 The `CanvasEventManager` supports the following event types (defined in `CESIUM_EVENTS` constant):
 
 ### Standard Cesium Events:
@@ -54,89 +51,153 @@ All standard events can be combined with modifier keys to create composite event
 ### Initialization
 
 The `CanvasEventManager` is typically initialized as part of your application setup:
+
+```javascript
+// Get the singleton instance
+const eventManager = CanvasEventManager.getInstance();
+
+// OR using the static accessor (preferred singleton pattern)
+const eventManager = CanvasEventManager.instance;
 ```
-
-javascript // The manager is a singleton, so subsequent calls return the same instance const eventManager = new
-CanvasEventManager();
-
-``` 
 
 ### Adding Event Listeners
+
+```javascript
+// Basic event listener
+eventManager.addEventListener('LEFT_CLICK', (event, pickedEntity) => {
+    console.log('Left click detected', pickedEntity);
+});
+
+// Short form method
+eventManager.on('TAP', (event, pickedEntity) => {
+    console.log('Tap detected', pickedEntity);
+});
 ```
-
-javascript // Basic event listener eventManager.addEventListener('LEFT_CLICK', (event, pickedEntity) => { console.log('
-Left click detected', pickedEntity); });
-// Short form method eventManager.on('TAP', (event, pickedEntity) => { console.log('Tap detected', pickedEntity); });
-
-``` 
 
 ### Removing Event Listeners
-```
 
-javascript // Remove by subscription ID const subscriptionId = eventManager.addEventListener('MOUSE_MOVE', myHandler);
+```javascript
+// Remove by subscription ID
+const subscriptionId = eventManager.addEventListener('MOUSE_MOVE', myHandler);
 eventManager.removeEventListener('MOUSE_MOVE', subscriptionId);
-// Remove by function reference eventManager.removeEventListener('MOUSE_MOVE', myHandler);
-// Short form method eventManager.off('MOUSE_MOVE', subscriptionId);
 
-``` 
+// Remove by function reference
+eventManager.removeEventListener('MOUSE_MOVE', myHandler);
+
+// Short form method
+eventManager.off('MOUSE_MOVE', subscriptionId);
+```
 
 ## Advanced Usage Examples
 
 ### 1. Entity-Specific Event Handling
 
 Listen for events on a specific Cesium entity:
+
+```javascript
+// Handle double taps only on a specific entity 
+eventManager.addEventListener('DOUBLE_TAP', (event, pickedEntity) => {
+    console.log('Double tap on entity:', pickedEntity.id);
+    // Perform entity-specific actions 
+}, {
+                                  entity:    myEntity,    // Only trigger for this entity
+                                  propagate: false     // Don't let other handlers process this event
+                              });
 ```
-
-javascript // Handle double taps only on a specific entity eventManager.addEventListener('DOUBLE_TAP', (event,
-pickedEntity) => { console.log('Double tap on entity:', pickedEntity.id); // Perform entity-specific actions }, {
-entity: myEntity, // Only trigger for this entity propagate: false // Don't let other handlers process this event });
-
-``` 
 
 ### 2. Handling Events with Modifier Keys
 
 #### Method 1: Using the modifiers option
+
+```javascript
+// Handle Ctrl+Click using modifiers option 
+eventManager.addEventListener('LEFT_CLICK', (event, pickedEntity) => {
+    console.log('Ctrl+Click detected');
+}, {
+                                  modifiers: {
+                                      ctrl:  true,      // Ctrl must be pressed
+                                      alt:   false,      // Alt must NOT be pressed
+                                      shift: undefined  // Don't care about Shift state
+                                  }
+                              });
 ```
-
-javascript // Handle Ctrl+Click using modifiers option eventManager.addEventListener('LEFT_CLICK', (event,
-pickedEntity) => { console.log('Ctrl+Click detected'); }, { modifiers: { ctrl: true, // Ctrl must be pressed alt:
-false, // Alt must NOT be pressed shift: undefined // Don't care about Shift state } });
-
-``` 
 
 #### Method 2: Using composite event names (NEW)
+
+```javascript
+// Handle Ctrl+Click using composite event name
+eventManager.addEventListener('CTRL_LEFT_CLICK', (event, pickedEntity) => {
+    console.log('Ctrl+Click detected using composite event');
+});
+
+// Handle Alt+Shift+Click
+eventManager.addEventListener('ALT_SHIFT_LEFT_CLICK', (event, pickedEntity) => {
+    console.log('Alt+Shift+Click detected');
+});
+
+// Handle Ctrl+Alt+Double Click
+eventManager.addEventListener('CTRL_ALT_LEFT_DOUBLE_CLICK', (event, pickedEntity) => {
+    console.log('Ctrl+Alt+Double Click detected');
+});
 ```
-
-javascript // Handle Ctrl+Click using composite event name eventManager.addEventListener('CTRL_LEFT_CLICK', (event,
-pickedEntity) => { console.log('Ctrl+Click detected using composite event'); });
-// Handle Alt+Shift+Click eventManager.addEventListener('ALT_SHIFT_LEFT_CLICK', (event, pickedEntity) => { console.log('
-Alt+Shift+Click detected'); });
-// Handle Ctrl+Alt+Double Click eventManager.addEventListener('CTRL_ALT_LEFT_DOUBLE_CLICK', (event, pickedEntity) => {
-console.log('Ctrl+Alt+Double Click detected'); });
-
-``` 
 
 ### 3. One-Time Event Handlers
 
-```
-// This handler will execute only once
+One-time event handlers are perfect for situations where you need to respond to an event only once, such as
+initialization, user onboarding, or temporary interactions.
+
+```javascript
+// Method 1: Using options object with once: true
 eventManager.addEventListener('RIGHT_CLICK', (event, pickedEntity) => {
-    console.log('One-time right click handler');
+    console.log('This handler executes only for the first right click');
+    doSomethingImportant(pickedEntity);
 }, {
-    once: true
+                                  once: true  // Handler auto-removes after first execution
+                              });
+
+// Method 2: Alternative shorthand syntax (boolean as third parameter)
+eventManager.addEventListener('RIGHT_CLICK', myHandler, true);
+
+// Method 3: Using the shorthand 'on' method with options
+eventManager.on('TAP', (event, pickedEntity) => {
+    showOnboardingTip('You just tapped the screen!');
+}, {
+                    once: true
 });
 
-// Alternative syntax
-eventManager.addEventListener('RIGHT_CLICK', myHandler, true);
+// Example: Wait for user to click any entity exactly once
+eventManager.on('LEFT_CLICK', (event, pickedEntity) => {
+    if (pickedEntity) {
+        highlightEntity(pickedEntity);
+        showEntityInfo(pickedEntity);
+        console.log('First entity selection complete!');
+    }
+}, {
+                    once: true
+                });
+```
+
+One-time handlers are automatically removed after they execute, so there's no need to manually call
+`removeEventListener()`. They can be combined with other options like entity filtering, propagation control, and
+priority:
+
+```javascript
+// One-time handler with other options 
+eventManager.on('DOUBLE_TAP', handleInitialSelection, {
+    once:      true,
+    entity:    targetEntity,
+    priority:  50,
+    propagate: false
+});
 ```
 
 ### 4. Priority-Based Event Handling
 
-```
+```javascript
 // Higher priority handler (lower number = higher priority)
 eventManager.addEventListener('LEFT_CLICK', (event, pickedEntity) => {
     console.log('High priority handler');
-    return false;  // Prevent propagation to lower priority handlers
+    return false; // Prevent propagation to lower priority handlers
 }, {
                                   priority: 50  // Default is 100
                               });
@@ -151,7 +212,7 @@ eventManager.addEventListener('LEFT_CLICK', (event, pickedEntity) => {
 
 ### 5. Custom Context for Callbacks
 
-```
+```javascript
 eventManager.addEventListener('LONG_TAP', function (event, pickedEntity) {
     // 'this' refers to myObject
     this.handleLongTap(pickedEntity);
@@ -162,11 +223,9 @@ eventManager.addEventListener('LONG_TAP', function (event, pickedEntity) {
 
 ### 6. Manually Dispatching Events
 
-```
+```javascript
 // Manually trigger an event
-eventManager.dispatchEvent('TAP', {
-    position: {x: 100, y: 100}
-});
+eventManager.dispatchEvent('TAP', {position: {x: 100, y: 100}});
 
 // The system will automatically generate related modifier events if any modifiers are pressed
 // So if Ctrl is pressed, it will also trigger a 'CTRL_TAP' event
@@ -174,7 +233,7 @@ eventManager.dispatchEvent('TAP', {
 
 ### 7. Check Current State
 
-```
+```javascript
 // Check if a modifier key is pressed
 if (eventManager.isCtrlKeyPressed()) {
     // Special handling for Ctrl key
@@ -189,7 +248,7 @@ const hasSubscriptions = eventManager.hasEntitySubscriptions('TAP', myEntity);
 
 ### 8. Combining Multiple Modifier Keys
 
-```
+```javascript
 // Listen for Ctrl+Alt+Click
 eventManager.addEventListener('CTRL_ALT_LEFT_CLICK', (event, pickedEntity) => {
     console.log('Ctrl+Alt+Left click detected');
@@ -212,9 +271,82 @@ eventManager.addEventListener('LEFT_CLICK', (event, pickedEntity) => {
                               });
 ```
 
-## Best Practices
+## API Reference
 
+### CanvasEventManager Methods
+
+| Method                                           | Return Type          | Description                                                       |
+|--------------------------------------------------|----------------------|-------------------------------------------------------------------|
+| `getInstance()`                                  | `CanvasEventManager` | Static method to get the singleton instance                       |
+| `addEventListener(eventType, callback, options)` | `string`             | Registers an event handler and returns a subscription ID          |
+| `on(eventType, callback, options)`               | `string`             | Alias for addEventListener                                        |
+| `removeEventListener(eventType, subscription)`   | `boolean`            | Removes an event handler by subscription ID or callback reference |
+| `off(eventType, subscription)`                   | `boolean`            | Alias for removeEventListener                                     |
+| `dispatchEvent(eventType, eventData)`            | `void`               | Manually triggers an event                                        |
+| `isCtrlKeyPressed()`                             | `boolean`            | Returns whether the Ctrl key is currently pressed                 |
+| `isAltKeyPressed()`                              | `boolean`            | Returns whether the Alt key is currently pressed                  |
+| `isShiftKeyPressed()`                            | `boolean`            | Returns whether the Shift key is currently pressed                |
+| `listenerCount(eventType)`                       | `number`             | Returns the number of listeners for a specific event type         |
+| `hasEntitySubscriptions(eventType, entity)`      | `boolean`            | Checks if an entity has subscriptions for a specific event type   |
+
+### Options Object
+
+| Property    | Type            | Default     | Description                                              |
+|-------------|-----------------|-------------|----------------------------------------------------------|
+| `entity`    | `Cesium.Entity` | `undefined` | Only trigger for this specific entity                    |
+| `propagate` | `boolean`       | `true`      | Whether to allow event propagation to other handlers     |
+| `priority`  | `number`        | `100`       | Priority of the handler (lower number = higher priority) |
+| `once`      | `boolean`       | `false`     | Whether the handler should be executed only once         |
+| `context`   | `object`        | `undefined` | Context object to be used as `this` in the callback      |
+| `modifiers` | `object`        | `undefined` | Object specifying required modifier key states           |
+
+### Modifiers Object
+
+| Property | Type      | Default     | Description                       |
+|----------|-----------|-------------|-----------------------------------|
+| `ctrl`   | `boolean` | `undefined` | Whether Ctrl key must be pressed  |
+| `alt`    | `boolean` | `undefined` | Whether Alt key must be pressed   |
+| `shift`  | `boolean` | `undefined` | Whether Shift key must be pressed |
+
+## Browser Compatibility
+
+The `CanvasEventManager` is compatible with all modern browsers. However, please note:
+
+- Touch events (`TAP`, `DOUBLE_TAP`, `LONG_TAP`) are only available on touch-enabled devices
+- Mobile-specific events (`PINCH_START`, `PINCH_MOVE`, `PINCH_END`) require multitouch support
+- Key modifier events work best with physical keyboards and may have limitations on mobile devices
+- For best cross-platform compatibility, consider using basic events with device detection
+
+## Cesium Integration
+
+The `CanvasEventManager` works as a wrapper around Cesium's built-in event handling system, providing additional
+functionality:
+
+1. **Canvas Element**: The manager attaches event listeners to the Cesium canvas element
+2. **Entity Picking**: Uses Cesium's entity picking capability to determine which entity was clicked
+3. **Event Coordinates**: Converts screen coordinates to Cesium world coordinates when needed
+4. **Camera Integration**: Some events (like pinch gestures) automatically integrate with Cesium's camera controls
+
+### Initialization with Cesium
+
+```javascript
+// Initialize with an existing Cesium viewer 
+const viewer = new Cesium.Viewer('cesiumContainer');
+const eventManager = CanvasEventManager.getInstance();
+eventManager.initialize(viewer);
+```
+
+## Best Practices
 1. Use the appropriate event type for your use case
 2. Remove event listeners when they are no longer needed
 3. Use entity filtering to limit events to relevant objects
+4. Consider using composite event names for better code readability
+5. Handle errors appropriately in your event callbacks
 
+## Error Handling
+
+The `CanvasEventManager` includes built-in error handling:
+
+- Invalid event types will trigger a console warning but won't throw exceptions
+- Event handlers with errors are isolated and won't affect other handlers
+- All API methods include parameter validation with helpful error messages
