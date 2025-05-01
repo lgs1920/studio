@@ -7,15 +7,21 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-30
- * Last modified: 2025-04-30
+ * Created on: 2025-05-01
+ * Last modified: 2025-05-01
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { CESIUM_EVENTS, DOUBLE_TAP_DISTANCE, DOUBLE_TAP_TIMEOUT, LONG_TAP_TIMEOUT } from '@Core/constants'
-import { ScreenSpaceEventHandler, ScreenSpaceEventType }                            from 'cesium'
+import { ScreenSpaceEventHandler, ScreenSpaceEventType }                            from 'cesium' // Separator for
+                                                                                                  // combined events
+                                                                                                  // (e.g.,
+                                                                                                  // CTRL_LEFT_CLICK)
+
+// Separator for combined events (e.g., CTRL_LEFT_CLICK)
+export const EVENT_SEPARATOR = '_'
 
 /**
  * CesiumEventManager - Manages all types of Cesium mouse and touch events
@@ -48,6 +54,22 @@ export class CanvasEventManager {
             shift: false,
         }
 
+        // Constants for modifiers
+        this.MODIFIER_KEYS = {
+            CTRL:  'CTRL',
+            ALT:   'ALT',
+            SHIFT: 'SHIFT',
+        }
+
+        // Event types that don't need modifier combination versions
+        this.SKIP_MODIFIERS_FOR = [
+            this.events.MOUSE_MOVE,
+            this.events.WHEEL,
+            this.events.PINCH_START,
+            this.events.PINCH_MOVE,
+            this.events.PINCH_END,
+        ]
+
         // Track modifier keys
         this.setupModifierKeysTracking()
 
@@ -62,8 +84,8 @@ export class CanvasEventManager {
      * Setup tracking for modifier keys (Ctrl, Alt, Shift)
      */
     setupModifierKeysTracking() {
-        // Track key down events
-        document.addEventListener('keydown', (event) => {
+        // Create bindings for keyboard event handlers
+        this.handleKeyDown = (event) => {
             if (event.key === 'Control' || event.key === 'Meta') {
                 this.modifierKeys.ctrl = true
             }
@@ -73,10 +95,9 @@ export class CanvasEventManager {
             else if (event.key === 'Shift') {
                 this.modifierKeys.shift = true
             }
-        })
+        }
 
-        // Track key up events
-        document.addEventListener('keyup', (event) => {
+        this.handleKeyUp = (event) => {
             if (event.key === 'Control' || event.key === 'Meta') {
                 this.modifierKeys.ctrl = false
             }
@@ -86,14 +107,22 @@ export class CanvasEventManager {
             else if (event.key === 'Shift') {
                 this.modifierKeys.shift = false
             }
-        })
+        }
 
-        // Reset keys when window loses focus
-        window.addEventListener('blur', () => {
+        this.handleWindowBlur = () => {
             this.modifierKeys.ctrl = false
             this.modifierKeys.alt = false
             this.modifierKeys.shift = false
-        })
+        }
+
+        // Track key down events
+        document.addEventListener('keydown', this.handleKeyDown)
+
+        // Track key up events
+        document.addEventListener('keyup', this.handleKeyUp)
+
+        // Reset keys when window loses focus
+        window.addEventListener('blur', this.handleWindowBlur)
     }
 
     /**
@@ -123,7 +152,14 @@ export class CanvasEventManager {
         // Setup handlers for standard events
         cesiumEvents.forEach(({type, cesiumType}) => {
             this.screenSpaceEventHandler.setInputAction((event) => {
-                this.handleEvent(type, this.enrichEventWithModifiers(event))
+                const enrichedEvent = this.enrichEventWithModifiers(event)
+
+                // Handle standard event
+                this.handleEvent(type, enrichedEvent)
+
+                // Handle modifier combination events
+                this.handleModifierCombinationEvents(type, enrichedEvent)
+                
             }, cesiumType)
         })
 
@@ -142,6 +178,9 @@ export class CanvasEventManager {
                     this.tapTimer = null
                 }
                 this.handleEvent(this.events.DOUBLE_TAP, enrichedEvent)
+                // Also handle DOUBLE_TAP events with modifiers
+                this.handleModifierCombinationEvents(this.events.DOUBLE_TAP, enrichedEvent)
+                
                 this.lastTapTime = 0
                 this.lastTapPosition = null
                 return
@@ -155,6 +194,9 @@ export class CanvasEventManager {
             // Start timer for long tap detection
             this.tapTimer = setTimeout(() => {
                 this.handleEvent(this.events.LONG_TAP, enrichedEvent)
+                // Also handle LONG_TAP events with modifiers
+                this.handleModifierCombinationEvents(this.events.LONG_TAP, enrichedEvent)
+                
                 this.tapTimer = null
             }, this.longTapTimeout)
 
@@ -164,6 +206,9 @@ export class CanvasEventManager {
 
             // Handle the standard LEFT_DOWN event
             this.handleEvent(this.events.LEFT_DOWN, enrichedEvent)
+            // Also handle LEFT_DOWN events with modifiers
+            this.handleModifierCombinationEvents(this.events.LEFT_DOWN, enrichedEvent)
+            
         }, ScreenSpaceEventType.LEFT_DOWN)
 
         // Handle tap on mouse up
@@ -172,6 +217,8 @@ export class CanvasEventManager {
 
             // Always handle the standard LEFT_UP event
             this.handleEvent(this.events.LEFT_UP, enrichedEvent)
+            // Also handle LEFT_UP events with modifiers
+            this.handleModifierCombinationEvents(this.events.LEFT_UP, enrichedEvent)
 
             if (this.tapTimer) {
                 clearTimeout(this.tapTimer)
@@ -180,10 +227,98 @@ export class CanvasEventManager {
                 // If it's a simple tap (not a long tap or double tap in progress)
                 if (this.lastTapTime && (now - this.lastTapTime) < this.longTapTimeout) {
                     this.handleEvent(this.events.TAP, enrichedEvent)
+                    // Also handle TAP events with modifiers
+                    this.handleModifierCombinationEvents(this.events.TAP, enrichedEvent)
                 }
                 this.tapTimer = null
             }
         }, ScreenSpaceEventType.LEFT_UP)
+    }
+
+    /**
+     * Generates and triggers combination events with modifiers
+     * @param {string} baseEventType - Base event type (e.g., LEFT_CLICK)
+     * @param {Object} event - Event data
+     */
+    handleModifierCombinationEvents(baseEventType, event) {
+        // Don't create combination events for certain event types
+        if (this.SKIP_MODIFIERS_FOR.includes(baseEventType)) {
+            return
+        }
+
+        const {ctrl, alt, shift} = event.modifiers
+
+        // No modifiers pressed, no need to generate combinations
+        if (!ctrl && !alt && !shift) {
+            return
+        }
+
+        // Create modifier combinations
+        const modifierParts = []
+        if (ctrl) {
+            modifierParts.push(this.MODIFIER_KEYS.CTRL)
+        }
+        if (alt) {
+            modifierParts.push(this.MODIFIER_KEYS.ALT)
+        }
+        if (shift) {
+            modifierParts.push(this.MODIFIER_KEYS.SHIFT)
+        }
+
+        // Create all possible combinations of modifiers
+        const allCombinations = this.generateModifierCombinations(modifierParts)
+
+        // Trigger events for each combination
+        for (const combination of allCombinations) {
+            const composedEventType = combination.join(EVENT_SEPARATOR) + EVENT_SEPARATOR + baseEventType
+            this.handleEvent(composedEventType, event)
+        }
+    }
+
+    /**
+     * Generates all possible combinations of the active modifiers
+     * @param {Array<string>} modifiers - List of active modifiers
+     * @returns {Array<Array<string>>} - All possible combinations
+     */
+    generateModifierCombinations(modifiers) {
+        if (modifiers.length === 0) {
+            return []
+        }
+        if (modifiers.length === 1) {
+            return [modifiers]
+        }
+
+        const result = []
+
+        // Add each modifier individually
+        for (const mod of modifiers) {
+            result.push([mod])
+        }
+
+        // If 2 or more modifiers, add all possible combinations
+        if (modifiers.length >= 2) {
+            // Combination of 2 modifiers
+            for (let i = 0; i < modifiers.length - 1; i++) {
+                for (let j = i + 1; j < modifiers.length; j++) {
+                    // Create two possible orders (e.g., CTRL_ALT and ALT_CTRL)
+                    result.push([modifiers[i], modifiers[j]])
+                    result.push([modifiers[j], modifiers[i]])
+                }
+            }
+        }
+
+        // If 3 modifiers, add all permutations
+        if (modifiers.length === 3) {
+            const [a, b, c] = modifiers
+            result.push([a, b, c])
+            result.push([a, c, b])
+            result.push([b, a, c])
+            result.push([b, c, a])
+            result.push([c, a, b]);
+            result.push([c, b, a]);
+        }
+
+        return result;
     }
 
     /**
@@ -466,6 +601,12 @@ export class CanvasEventManager {
     dispatchEvent(eventType, eventData = {}) {
         const enrichedEvent = this.enrichEventWithModifiers(eventData)
         this.handleEvent(eventType, enrichedEvent)
+
+        // If it's a base event (not already a composite event), 
+        // also generate events with modifiers
+        if (!eventType.includes(EVENT_SEPARATOR) && !this.SKIP_MODIFIERS_FOR.includes(eventType)) {
+            this.handleModifierCombinationEvents(eventType, enrichedEvent)
+        }
     }
 
     /**
