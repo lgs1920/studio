@@ -118,7 +118,7 @@ console.log('Ctrl+Alt+Double Click detected'); });
 
 ### 3. One-Time Event Handlers
 
-```javascript
+```
 // This handler will execute only once
 eventManager.addEventListener('RIGHT_CLICK', (event, pickedEntity) => {
     console.log('One-time right click handler');
@@ -132,7 +132,7 @@ eventManager.addEventListener('RIGHT_CLICK', myHandler, true);
 
 ### 4. Priority-Based Event Handling
 
-```javascript
+```
 // Higher priority handler (lower number = higher priority)
 eventManager.addEventListener('LEFT_CLICK', (event, pickedEntity) => {
     console.log('High priority handler');
@@ -151,7 +151,7 @@ eventManager.addEventListener('LEFT_CLICK', (event, pickedEntity) => {
 
 ### 5. Custom Context for Callbacks
 
-```javascript
+```
 eventManager.addEventListener('LONG_TAP', function (event, pickedEntity) {
     // 'this' refers to myObject
     this.handleLongTap(pickedEntity);
@@ -162,7 +162,7 @@ eventManager.addEventListener('LONG_TAP', function (event, pickedEntity) {
 
 ### 6. Manually Dispatching Events
 
-```javascript
+```
 // Manually trigger an event
 eventManager.dispatchEvent('TAP', {
     position: {x: 100, y: 100}
@@ -174,7 +174,7 @@ eventManager.dispatchEvent('TAP', {
 
 ### 7. Check Current State
 
-```javascript
+```
 // Check if a modifier key is pressed
 if (eventManager.isCtrlKeyPressed()) {
     // Special handling for Ctrl key
@@ -189,7 +189,7 @@ const hasSubscriptions = eventManager.hasEntitySubscriptions('TAP', myEntity);
 
 ### 8. Combining Multiple Modifier Keys
 
-```javascript
+```
 // Listen for Ctrl+Alt+Click
 eventManager.addEventListener('CTRL_ALT_LEFT_CLICK', (event, pickedEntity) => {
     console.log('Ctrl+Alt+Left click detected');
