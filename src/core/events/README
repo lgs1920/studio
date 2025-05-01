@@ -1,5 +1,4 @@
-``` markdown
-# CanvasEventManager - Documentation 
+# CanvasEventManager - Documentation
 
 ## Overview
 
@@ -219,4 +218,3 @@ eventManager.addEventListener('LEFT_CLICK', (event, pickedEntity) => {
 2. Remove event listeners when they are no longer needed
 3. Use entity filtering to limit events to relevant objects
 
-```
