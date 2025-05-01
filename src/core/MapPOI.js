@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-28
+ * Created on: 2025-05-01
+ * Last modified: 2025-05-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -288,11 +288,46 @@ export class MapPOI extends MapElement {
      */
     draw = async (dbSync = true) => {
         this.image = __.ui.poiManager.createContent(this)
-        await this.utils.draw(this)
+        const entity = await this.utils.draw(this)
         if (dbSync) {
             await this.persistToDatabase()
         }
+
+        this.setupEvents(entity, {
+            // Gestionnaire de clic gauche
+            onClick: (event, entity) => {
+                console.log('POI clicked:', this.title)
+            },
+
+            // Gestionnaire de clic droit
+            onRightClick: (event, entity) => {
+                console.log('Right-click on POI:', this.id)
+                event.preventDefault()
+            },
+
+            // Gestionnaire de double-clic
+            onDoubleClick: (event, entity) => {
+                console.log('Double-click on POI:', this.id)
+            },
+
+            // Gestionnaire d'événement tactile (tap)
+            onTap: (event, entity) => {
+                console.log('Tap on POI:', this.id)
+            },
+
+            // Gestionnaire de tap long (maintien prolongé)
+            onLongTap: (event, entity) => {
+                console.log('Long tap on POI:', this.id)
+            },
+
+            // Gestionnaire de double tap
+            onDoubleTap: (event, entity) => {
+                console.log('Double tap on POI:', this.id)
+            },
+        })
+
     }
+
 
     /**
      * Saves the current Point of Interest (POI) object to the database.
@@ -338,4 +373,95 @@ export class MapPOI extends MapElement {
     }
 
 
+    /**
+     * Sets up event handlers for this POI entity
+     * Attaches various interaction events to the entity based on provided callbacks
+     *
+     * @param {Object} options - Options for event configuration
+     * @param {Function} [options.onClick] - Callback for left click events
+     * @param {Function} [options.onRightClick] - Callback for right click events
+     * @param {Function} [options.onDoubleClick] - Callback for double click events
+     * @param {Function} [options.onTap] - Callback for tap events (touch)
+     * @param {Function} [options.onLongTap] - Callback for long tap events (touch)
+     * @param {Function} [options.onDoubleTap] - Callback for double tap events (touch)
+     * @returns {MapPOI} - Returns this instance for method chaining
+     */
+    setupEvents = (entity, options = {}) => {
+        // Make sure we have a valid entity reference
+        if (!entity) {
+            console.warn(`Cannot setup events for POI ${this.id}: entity not created yet`)
+            return this
+        }
+
+        // Store subscription IDs for later cleanup
+        this.eventSubscriptions = this.eventSubscriptions || {}
+
+        // Clean up any existing subscriptions to prevent duplicates
+        this.clearEvents()
+
+        const eventOptions = {entity: entity, priority: 50, propagate: false}
+
+        // Setup left click event
+        if (typeof options.onClick === 'function') {
+            this.eventSubscriptions.click = __.canvasEvents.addEventListener(
+                'LEFT_CLICK', options.onClick, eventOptions,
+            )
+        }
+
+        // Setup right click event
+        if (typeof options.onRightClick === 'function') {
+            this.eventSubscriptions.rightClick = __.canvasEvents.addEventListener(
+                'RIGHT_CLICK', options.onRightClick, eventOptions,
+            )
+        }
+
+        // Setup double click event
+        if (typeof options.onDoubleClick === 'function') {
+            this.eventSubscriptions.doubleClick = __.canvasEvents.addEventListener(
+                'LEFT_DOUBLE_CLICK', options.onDoubleClick, eventOptions,
+            )
+        }
+
+        // Setup tap event (touch equivalent of click)
+        if (typeof options.onTap === 'function') {
+            this.eventSubscriptions.tap = __.canvasEvents.addEventListener(
+                'TAP', options.onTap, eventOptions,
+            )
+        }
+
+        // Setup long tap event
+        if (typeof options.onLongTap === 'function') {
+            this.eventSubscriptions.longTap = __.canvasEvents.addEventListener(
+                'LONG_TAP', options.onLongTap, eventOptions,
+            )
+        }
+
+        // Setup double tap event
+        if (typeof options.onDoubleTap === 'function') {
+            this.eventSubscriptions.doubleTap = __.canvasEvents.addEventListener(
+                'DOUBLE_TAP', options.onDoubleTap, eventOptions,
+            )
+        }
+        return this
+    }
+
+    /**
+     * Clears all event handlers associated with this POI
+     *
+     * @returns {MapPOI} - Returns this instance for method chaining
+     */
+    clearEvents = () => {
+
+        // Remove all existing subscriptions
+        if (this.eventSubscriptions) {
+            Object.entries(this.eventSubscriptions).forEach(([eventType, subId]) => {
+                if (subId) {
+                    __.canvasEvents.addEventListener.off(eventType, subId)
+                }
+            })
+            this.eventSubscriptions = {}
+        }
+
+        return this
+    }
 }

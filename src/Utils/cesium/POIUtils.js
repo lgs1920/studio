@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-28
+ * Created on: 2025-05-01
+ * Last modified: 2025-05-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -177,44 +177,63 @@ export class POIUtils {
      * @param {boolean} [parentVisibility=true] - Determines if the POI should be displayed based on its parent
      *     visibility.
      *
-     * @returns {Promise<void>} Resolves when the POI has been successfully drawn or updated in the scene.
+     * @returns {Promise<Entity|null>} A promise that resolves to the created Cesium Entity, or null if no container is
+     *     found.
      */
     static draw = async (poi, parentVisibility = true) => {
 
+        // Calculate dimensions based on POI expansion state
         const width = poi.expanded ? POI_SIZES.expanded.width : POI_SIZES.reduced.width
         const height = poi.expanded ? POI_SIZES.expanded.height : POI_SIZES.reduced.height
+        // Define arrow dimensions from constants
         const arrow = {width: POI_SIZES.arrow.width, height: POI_SIZES.arrow.height, content: ''}
 
+        // Configure base entity options
         let options = {
             name:                     poi.name,
             id:                       poi.id,
+            // Convert geographic coordinates to Cartesian3 position
             position:                 Cartesian3.fromDegrees(poi.longitude, poi.latitude, poi.simulatedHeight ?? poi.height),
             show:                     poi.visible,
+            // Set depth testing based on scene mode (2D or 3D)
             disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7, // Diameter of Earth
         }
 
+        // Configure billboard visual representation
         const billboard = {
+            // Determine height reference based on terrain settings
             heightReference:  __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
             horizontalOrigin: HorizontalOrigin.CENTER,
             verticalOrigin:   VerticalOrigin.BOTTOM,
             show:             true,
             image:            poi.image,
             width:            width,
+            // Calculate height ratio to maintain proportions including the arrow
             height:           ((height + arrow.height) / width) * width,
             scale:            1,
+            // Scale billboard based on distance from camera
             scaleByDistance:  new NearFarScalar(10000.0, 1.0, 20000.0, 0),
             pixelOffset:      new Cartesian2(0, 0), // TODO X offset will change of expanded
         }
 
+        // Get the appropriate entity container based on POI's parent
         const container = POIUtils.getEntityContainer(poi)
         if (!container) {
-            return
+            // Return null if no container is found
+            return null
         }
+
+        // Remove existing entity with the same ID before adding the new one
         await POIUtils.remove(poi) // TODO replace only image
 
-        await container.add({...options, billboard: billboard})
+        // Add the entity to the container and capture the reference
+        const entity = await container.add({...options, billboard: billboard})
+
+        // Request a scene render to display the changes
         lgs.viewer.scene.requestRender()
 
+        // Return the created entity for further manipulation
+        return entity
     }
 
     static useOnlyFontAwesome = (poi) => {
@@ -231,6 +250,21 @@ export class POIUtils {
         return canvas
     }
 
+    /**
+     * Processes a marker object to generate a customized Font Awesome SVG icon.
+     *
+     * @function useFontAwesome
+     * @param {Object} marker - The marker object containing icon and style properties.
+     * @param {Object} marker.icon - The Font Awesome icon to be used.
+     * @param {string} marker.foregroundColor - The color to apply to the icon paths.
+     * @param {string} marker.backgroundColor - The background color of the marker.
+     *                                          If equal to `lgs.POI_TRANSPARENT_COLOR`, no background is added.
+     * @returns {Object} An object representing the processed SVG, including:
+     *                   - `src` (string): Data URL encoding of the SVG.
+     *                   - `html` (string): The SVG as raw HTML markup.
+     *                   - `width` (number): The width of the SVG, derived from the viewBox.
+     *                   - `height` (number): The height of the SVG, derived from the viewBox.
+     */
     static useFontAwesome = (marker) => {
         library.add(marker.icon)
 
@@ -259,6 +293,7 @@ export class POIUtils {
             height: svg.viewBox.baseVal.height,
         }
     }
+
     /**
      * Asynchronously removes the specified point of interest (POI) entity from its containing entity container, if it
      * exists.
@@ -298,6 +333,23 @@ export class POIUtils {
         return visibility ? poi?.visible : false
     }
 
+    /**
+     * Adjusts the scale of a point in 3D space based on its distance from the camera.
+     * The function calculates the scale value such that it decreases with the distance,
+     * within defined thresholds. It also provides information about whether a flag
+     * should be shown and whether the point is too far from the camera.
+     *
+     * @param {Object} point - The 3D point for which the scale should be calculated.
+     * @param {Object} [scaler] - Configuration object that defines scaling thresholds.
+     * @param {number} [scaler.distanceThreshold] - The distance threshold at which scaling adjusts.
+     * @param {boolean} [scaler.minScaleFlag] - A flag indicating if the scale is at the minimum flag level.
+     * @param {number} [scaler.minScale] - The minimum scale value allowed for the point.
+     * @returns {Object} An object containing the following properties:
+     *   - {number} scale: The calculated scale for the point based on its distance.
+     *   - {boolean} showFlag: Indicates if a flag should be shown for the point based on its scale.
+     *   - {boolean} tooFar: Indicates whether the point is beyond the minimum scale threshold.
+     *   - {number} cameraDistance: The distance of the point from the camera.
+     */
     static adaptScaleToDistance = (point, scaler = {
         distanceThreshold: lgs.settings.ui.poi.distanceThreshold,
         minScaleFlag:      lgs.settings.ui.poi.minScaleFlag,
@@ -346,6 +398,23 @@ export class POIUtils {
         }
     }
 
+    /**
+     * Compares two geographical coordinates and determines if they are approximately equal
+     * within a specified tolerance level.
+     *
+     * The function uses Cartographic objects to represent the coordinates and relies on
+     * the equalsEpsilon method to perform the comparison with an optional tolerance parameter.
+     *
+     * @param {Object} start - The starting geographical coordinate containing latitude and longitude.
+     * @param {number} start.latitude - The latitude of the starting coordinate.
+     * @param {number} start.longitude - The longitude of the starting coordinate.
+     * @param {Object} end - The ending geographical coordinate containing latitude and longitude.
+     * @param {number} end.latitude - The latitude of the ending coordinate.
+     * @param {number} end.longitude - The longitude of the ending coordinate.
+     * @param {number} [tolerance=0.5] - The optional tolerance level for comparison. Default is 0.5.
+     * @returns {boolean} Returns true if the coordinates are approximately equal within the
+     * specified tolerance, otherwise returns false.
+     */
     static almostEquals = (start, end, tolerance = 0.5) => {
         return Cartographic.equalsEpsilon(Cartographic.fromDegrees(start.longitude, start.latitude), Cartographic.fromDegrees(end.longitude, end.latitude), tolerance)
     }

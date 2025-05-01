@@ -277,7 +277,6 @@ eventManager.addEventListener('LEFT_CLICK', (event, pickedEntity) => {
 
 | Method                                           | Return Type          | Description                                                       |
 |--------------------------------------------------|----------------------|-------------------------------------------------------------------|
-| `getInstance()`                                  | `CanvasEventManager` | Static method to get the singleton instance                       |
 | `addEventListener(eventType, callback, options)` | `string`             | Registers an event handler and returns a subscription ID          |
 | `on(eventType, callback, options)`               | `string`             | Alias for addEventListener                                        |
 | `removeEventListener(eventType, subscription)`   | `boolean`            | Removes an event handler by subscription ID or callback reference |

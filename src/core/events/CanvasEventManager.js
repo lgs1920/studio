@@ -16,12 +16,11 @@
 
 import { CESIUM_EVENTS, DOUBLE_TAP_DISTANCE, DOUBLE_TAP_TIMEOUT, LONG_TAP_TIMEOUT } from '@Core/constants'
 import { EVENT_SEPARATOR }                                                          from '@Core/events/cesiumEvents'
-import { ScreenSpaceEventHandler, ScreenSpaceEventType }                            from 'cesium' // Separator for
+import { ScreenSpaceEventHandler, ScreenSpaceEventType }                            from 'cesium'
 
-// CTRL_LEFT_CLICK)EVENT_SEPARATOR
 /**
- * CesiumEventManager - Manages all types of Cesium mouse and touch events
- * with support for custom event handling, entity targeting, and propagation control.
+ * CanvasEventManager - Manages all types of Cesium mouse and touch events
+ * with support for custom event handling, entity targeting, and event prioritization.
  */
 export class CanvasEventManager {
     /**
@@ -43,6 +42,9 @@ export class CanvasEventManager {
         this.maxDoubleTapDistance = DOUBLE_TAP_DISTANCE
         this.tapTimer = null
         this.subscriptionId = 0
+
+        // Map to track Cesium event type to handlers
+        this.cesiumEventHandlers = new Map()
 
         this.viewer = viewer
 
@@ -154,7 +156,8 @@ export class CanvasEventManager {
 
         // Setup handlers for standard events
         cesiumEvents.forEach(({type, cesiumType}) => {
-            this.screenSpaceEventHandler.setInputAction((event) => {
+            // Create the handler function
+            const handlerFunction = (event) => {
                 const enrichedEvent = this.enrichEventWithModifiers(event)
 
                 // Handle standard event
@@ -162,12 +165,17 @@ export class CanvasEventManager {
 
                 // Handle modifier combination events
                 this.handleModifierCombinationEvents(type, enrichedEvent)
-                
-            }, cesiumType)
-        })
+            };
+
+            // Store the handler function for later removal if needed
+            this.cesiumEventHandlers.set(cesiumType, handlerFunction)
+
+            // Set the input action
+            this.screenSpaceEventHandler.setInputAction(handlerFunction, cesiumType)
+        });
 
         // Special handling for custom touch events (tap, long tap, double tap)
-        this.screenSpaceEventHandler.setInputAction((event) => {
+        const leftDownHandler = (event) => {
             const now = Date.now()
             const position = event.position || {x: 0, y: 0}
             const enrichedEvent = this.enrichEventWithModifiers(event)
@@ -180,10 +188,13 @@ export class CanvasEventManager {
                     clearTimeout(this.tapTimer)
                     this.tapTimer = null
                 }
+
+                // Handle DOUBLE_TAP
                 this.handleEvent(this.events.DOUBLE_TAP, enrichedEvent)
+
                 // Also handle DOUBLE_TAP events with modifiers
                 this.handleModifierCombinationEvents(this.events.DOUBLE_TAP, enrichedEvent)
-                
+
                 this.lastTapTime = 0
                 this.lastTapPosition = null
                 return
@@ -197,9 +208,10 @@ export class CanvasEventManager {
             // Start timer for long tap detection
             this.tapTimer = setTimeout(() => {
                 this.handleEvent(this.events.LONG_TAP, enrichedEvent)
+
                 // Also handle LONG_TAP events with modifiers
                 this.handleModifierCombinationEvents(this.events.LONG_TAP, enrichedEvent)
-                
+
                 this.tapTimer = null
             }, this.longTapTimeout)
 
@@ -209,17 +221,24 @@ export class CanvasEventManager {
 
             // Handle the standard LEFT_DOWN event
             this.handleEvent(this.events.LEFT_DOWN, enrichedEvent)
+
             // Also handle LEFT_DOWN events with modifiers
             this.handleModifierCombinationEvents(this.events.LEFT_DOWN, enrichedEvent)
-            
-        }, ScreenSpaceEventType.LEFT_DOWN)
+        };
+
+        // Store the handler for later removal
+        this.cesiumEventHandlers.set(ScreenSpaceEventType.LEFT_DOWN, leftDownHandler)
+
+        // Set the input action
+        this.screenSpaceEventHandler.setInputAction(leftDownHandler, ScreenSpaceEventType.LEFT_DOWN)
 
         // Handle tap on mouse up
-        this.screenSpaceEventHandler.setInputAction((event) => {
+        const leftUpHandler = (event) => {
             const enrichedEvent = this.enrichEventWithModifiers(event)
 
             // Always handle the standard LEFT_UP event
             this.handleEvent(this.events.LEFT_UP, enrichedEvent)
+
             // Also handle LEFT_UP events with modifiers
             this.handleModifierCombinationEvents(this.events.LEFT_UP, enrichedEvent)
 
@@ -230,12 +249,34 @@ export class CanvasEventManager {
                 // If it's a simple tap (not a long tap or double tap in progress)
                 if (this.lastTapTime && (now - this.lastTapTime) < this.longTapTimeout) {
                     this.handleEvent(this.events.TAP, enrichedEvent)
+
                     // Also handle TAP events with modifiers
                     this.handleModifierCombinationEvents(this.events.TAP, enrichedEvent)
                 }
                 this.tapTimer = null
             }
-        }, ScreenSpaceEventType.LEFT_UP)
+        };
+
+        // Store the handler for later removal
+        this.cesiumEventHandlers.set(ScreenSpaceEventType.LEFT_UP, leftUpHandler)
+
+        // Set the input action
+        this.screenSpaceEventHandler.setInputAction(leftUpHandler, ScreenSpaceEventType.LEFT_UP)
+    }
+
+    /**
+     * Removes an input action for a specific event type
+     * Similar to Cesium's removeInputAction
+     * @param {ScreenSpaceEventType} eventType - The Cesium event type to remove
+     */
+    removeInputAction(eventType) {
+        if (this.screenSpaceEventHandler) {
+            // Remove from Cesium's handler
+            this.screenSpaceEventHandler.removeInputAction(eventType)
+
+            // Remove from our internal tracking
+            this.cesiumEventHandlers.delete(eventType)
+        }
     }
 
     /**
@@ -349,7 +390,6 @@ export class CanvasEventManager {
         return distance <= this.maxDoubleTapDistance
     }
 
-
     /**
      * Handle an event by notifying all subscribers
      * @param {string} eventType - Type of event
@@ -378,7 +418,6 @@ export class CanvasEventManager {
         const sortedSubscribers = [...subscribers].sort((a, b) => a.priority - b.priority)
 
         // Process subscribers in order
-        let shouldPropagate = true
         const oneTimeSubscribers = []
 
         for (const subscriber of sortedSubscribers) {
@@ -387,29 +426,16 @@ export class CanvasEventManager {
                 continue
             }
 
-            // Note: Removed checks for modifiers here as they are now directly handled
-            // through event types (e.g. CTRL_LEFT_CLICK)
-
             // Execute callback
-            const result = subscriber.callback.call(
+            subscriber.callback.call(
                 subscriber.context || this,
                 event,
                 pickedEntity,
             )
 
-            // Handle propagation
-            if (result === false || subscriber.propagate === false) {
-                shouldPropagate = false
-            }
-
             // Track one-time subscribers for removal after iteration
             if (subscriber.once) {
                 oneTimeSubscribers.push(subscriber.id)
-            }
-
-            // Stop if we shouldn't propagate
-            if (!shouldPropagate) {
-                break
             }
         }
 
@@ -425,7 +451,6 @@ export class CanvasEventManager {
      * @param {Function} callback - Callback function
      * @param {Object|boolean} [options] - Subscription options or boolean for once
      * @param {Object} [options.entity] - Entity to filter for
-     * @param {boolean} [options.propagate=true] - Whether to propagate to other handlers
      * @param {boolean} [options.once=false] - Whether to handle only once
      * @param {number} [options.priority=100] - Priority (lower = higher priority)
      * @param {Object} [options.context] - Context (this) for callback
@@ -454,7 +479,6 @@ export class CanvasEventManager {
             id,
             callback,
             entity:    parsedOptions.entity || null,
-            propagate: parsedOptions.propagate !== false,
             once:      parsedOptions.once === true,
             priority:  parsedOptions.priority || 100,
             context:   parsedOptions.context || null,
@@ -567,7 +591,6 @@ export class CanvasEventManager {
 
     /**
      * Propagate an event to canvas
-     * Similar to the propagateEventToCanvas function in SceneUtils
      * @param {Event} event - Event to propagate
      */
     propagateEventToCanvas(event) {
@@ -579,22 +602,6 @@ export class CanvasEventManager {
 
         // Propagate to Cesium canvas
         lgs.viewer.canvas.dispatchEvent(clone)
-    }
-
-    /**
-     * Dispatch an event manually
-     * @param {string} eventType - Type of event to dispatch
-     * @param {Object} eventData - Event data to pass to handlers
-     */
-    dispatchEvent(eventType, eventData = {}) {
-        const enrichedEvent = this.enrichEventWithModifiers(eventData)
-        this.handleEvent(eventType, enrichedEvent)
-
-        // If it's a base event (not already a composite event), 
-        // also generate events with modifiers
-        if (!eventType.includes(EVENT_SEPARATOR) && !this.SKIP_MODIFIERS_FOR.includes(eventType)) {
-            this.handleModifierCombinationEvents(eventType, enrichedEvent)
-        }
     }
 
     /**
@@ -630,12 +637,19 @@ export class CanvasEventManager {
         document.removeEventListener('keyup', this.handleKeyUp)
         window.removeEventListener('blur', this.handleWindowBlur)
 
+        // Remove all Cesium input actions
         if (this.screenSpaceEventHandler) {
+            // Remove all registered event handlers
+            for (const [eventType] of this.cesiumEventHandlers) {
+                this.screenSpaceEventHandler.removeInputAction(eventType)
+            }
+            this.cesiumEventHandlers.clear()
+
             this.screenSpaceEventHandler.destroy()
             this.screenSpaceEventHandler = null
         }
 
         this.handlers.clear()
-        lgs.viewer = null
+        this.viewer = null
     }
 }
