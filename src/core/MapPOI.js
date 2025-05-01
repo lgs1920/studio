@@ -302,7 +302,6 @@ export class MapPOI extends MapElement {
             // Gestionnaire de clic droit
             onRightClick: (event, entity) => {
                 console.log('Right-click on POI:', this.id)
-                event.preventDefault()
             },
 
             // Gestionnaire de double-clic
