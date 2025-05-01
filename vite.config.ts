@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: vite.config.ts
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-05-01
+ * Last modified: 2025-05-01
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import {defineConfig} from 'vite';
 import react from '@vitejs/plugin-react';
 import cesium from 'vite-plugin-cesium';
@@ -18,10 +34,16 @@ export default defineConfig({
             },
         },
     ],
+    server: {
+        host: '0.0.0.0',  // Écoute sur toutes les interfaces
+        port: 5173        // Le port que vous souhaitez utiliser
+    },
+
     define: {
         global: {},
     },
     build: {
+        sourcemap: true,
         minify: 'esbuild',
         target: 'esnext',
         chunkSizeWarningLimit: 500000,
