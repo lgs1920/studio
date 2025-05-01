@@ -51,6 +51,12 @@ export class CanvasEventManager {
         if (!this.viewer) {
             console.warn('CanvasEventManager: No Cesium viewer provided')
         }
+        else {
+            // suppress default zoom
+            this.viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK)
+            this.viewer.selectionIndicator.destroy()
+
+        }
 
         // Modifier keys state
         this.modifierKeys = {
@@ -135,7 +141,10 @@ export class CanvasEventManager {
      */
     setupEventHandlers() {
         // Create a screen space event handler for our viewer
-        this.screenSpaceEventHandler = new ScreenSpaceEventHandler(lgs.viewer.canvas)
+        this.screenSpaceEventHandler = new ScreenSpaceEventHandler(this.viewer.canvas)
+
+        // Désactiver le comportement de zoom par défaut sur double-clic (redondant mais par sécurité)
+        this.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK)
 
         // Map of Cesium standard events
         const cesiumEvents = [
@@ -265,391 +274,365 @@ export class CanvasEventManager {
     }
 
     /**
-     * Removes an input action for a specific event type
-     * Similar to Cesium's removeInputAction
-     * @param {ScreenSpaceEventType} eventType - The Cesium event type to remove
-     */
-    removeInputAction(eventType) {
-        if (this.screenSpaceEventHandler) {
-            // Remove from Cesium's handler
-            this.screenSpaceEventHandler.removeInputAction(eventType)
-
-            // Remove from our internal tracking
-            this.cesiumEventHandlers.delete(eventType)
-        }
-    }
-
-    /**
-     * Generates and triggers combination events with modifiers
-     * @param {string} baseEventType - Base event type (e.g., LEFT_CLICK)
-     * @param {Object} event - Event data
-     */
-    handleModifierCombinationEvents(baseEventType, event) {
-        // Don't create combination events for certain event types
-        if (this.SKIP_MODIFIERS_FOR.includes(baseEventType)) {
-            return
-        }
-
-        const {ctrl, alt, shift} = event.modifiers
-
-        // No modifiers pressed, no need to generate combinations
-        if (!ctrl && !alt && !shift) {
-            return
-        }
-
-        // Create modifier combinations
-        const modifierParts = []
-        if (ctrl) {
-            modifierParts.push(this.MODIFIER_KEYS.CTRL)
-        }
-        if (alt) {
-            modifierParts.push(this.MODIFIER_KEYS.ALT)
-        }
-        if (shift) {
-            modifierParts.push(this.MODIFIER_KEYS.SHIFT)
-        }
-
-        // Create all possible combinations of modifiers
-        const allCombinations = this.generateModifierCombinations(modifierParts)
-
-        // Trigger events for each combination
-        for (const combination of allCombinations) {
-            const composedEventType = combination.join(EVENT_SEPARATOR) + EVENT_SEPARATOR + baseEventType
-            this.handleEvent(composedEventType, event)
-        }
-    }
-
-    /**
-     * Generates all possible combinations of the active modifiers
-     * @param {Array<string>} modifiers - List of active modifiers
-     * @returns {Array<Array<string>>} - All possible combinations
-     */
-    generateModifierCombinations(modifiers) {
-        if (modifiers.length === 0) {
-            return []
-        }
-        if (modifiers.length === 1) {
-            return [modifiers]
-        }
-
-        const result = []
-
-        // Add each modifier individually
-        for (const mod of modifiers) {
-            result.push([mod])
-        }
-
-        // If 2 or more modifiers, add all possible combinations
-        if (modifiers.length >= 2) {
-            // Combination of 2 modifiers
-            for (let i = 0; i < modifiers.length - 1; i++) {
-                for (let j = i + 1; j < modifiers.length; j++) {
-                    // Create two possible orders (e.g., CTRL_ALT and ALT_CTRL)
-                    result.push([modifiers[i], modifiers[j]])
-                    result.push([modifiers[j], modifiers[i]])
-                }
-            }
-        }
-
-        // If 3 modifiers, add all permutations
-        if (modifiers.length === 3) {
-            const [a, b, c] = modifiers
-            result.push([a, b, c])
-            result.push([a, c, b])
-            result.push([b, a, c])
-            result.push([b, c, a])
-            result.push([c, a, b]);
-            result.push([c, b, a]);
-        }
-
-        return result;
-    }
-
-    /**
-     * Enrich an event with modifier key states
-     * @param {Object} event - Original event
-     * @returns {Object} Enriched event with modifier key states
-     */
-    enrichEventWithModifiers(event) {
-        return {
-            ...event,
-            modifiers: {...this.modifierKeys},
-        }
-    }
-
-    /**
-     * Check if two positions are within the maximum distance for a double tap
+     * Check if two positions are within a maximum distance of each other
      * @param {Object} pos1 - First position {x, y}
      * @param {Object} pos2 - Second position {x, y}
-     * @returns {boolean} True if within distance
+     * @returns {boolean} - True if within distance
      */
     isWithinDistance(pos1, pos2) {
         const dx = pos1.x - pos2.x
         const dy = pos1.y - pos2.y
-        const distance = Math.sqrt(dx * dx + dy * dy)
-        return distance <= this.maxDoubleTapDistance
+        return Math.sqrt(dx * dx + dy * dy) <= this.maxDoubleTapDistance
     }
 
     /**
-     * Handle an event by notifying all subscribers
-     * @param {string} eventType - Type of event
-     * @param {Object} event - Event data
+     * Add event-specific properties based on modifier keys
+     * @param {Object} event - The event object
+     * @returns {Object} - Enriched event object
      */
-    handleEvent(eventType, event) {
-        if (!this.handlers.has(eventType)) {
+    enrichEventWithModifiers(event) {
+        return {
+            ...event,
+            ctrl:  this.modifierKeys.ctrl,
+            alt:   this.modifierKeys.alt,
+            shift: this.modifierKeys.shift,
+        }
+    }
+
+    /**
+     * Handle modifier combination events (CTRL_LEFT_CLICK, etc.)
+     * @param {string} type - The base event type
+     * @param {Object} event - The event object with modifier information
+     */
+    handleModifierCombinationEvents(type, event) {
+        // Skip for certain events that don't need modifier versions
+        if (this.SKIP_MODIFIERS_FOR.includes(type)) {
             return
         }
 
-        const subscribers = this.handlers.get(eventType)
-        if (!subscribers || subscribers.length === 0) {
+        // Get active modifiers
+        const activeModifiers = []
+        if (event.ctrl) {
+            activeModifiers.push(this.MODIFIER_KEYS.CTRL)
+        }
+        if (event.alt) {
+            activeModifiers.push(this.MODIFIER_KEYS.ALT)
+        }
+        if (event.shift) {
+            activeModifiers.push(this.MODIFIER_KEYS.SHIFT)
+        }
+
+        // If no modifiers are active, we're done
+        if (activeModifiers.length === 0) {
             return
         }
 
-        // Get picked entity if position is available
+        // Generate all possible combinations of the active modifiers
+        const modifierCombinations = this.generateCombinations(activeModifiers)
+
+        // Handle each combination
+        modifierCombinations.forEach(combination => {
+            const eventName = combination.join(EVENT_SEPARATOR) + EVENT_SEPARATOR + type
+            this.handleEvent(eventName, event)
+        })
+    }
+
+    /**
+     * Generate all possible combinations of elements in an array
+     * @param {Array} arr - Array of elements
+     * @returns {Array} - Array of combinations
+     */
+    generateCombinations(arr) {
+        // Start with the individual elements
+        const result = arr.map(item => [item])
+
+        // If only one element, return it
+        if (arr.length <= 1) {
+            return result
+        }
+
+        // Generate combinations of 2+ elements
+        const allCombinations = [...result]
+        for (let i = 2; i <= arr.length; i++) {
+            // Get all combinations of length i
+            const combinations = this.getCombinations(arr, i)
+            allCombinations.push(...combinations)
+        }
+
+        return allCombinations
+    }
+
+    /**
+     * Get all combinations of a specific length from an array
+     * @param {Array} arr - Array of elements
+     * @param {number} len - Length of combinations to generate
+     * @returns {Array} - Array of combinations of specified length
+     */
+    getCombinations(arr, len) {
+        if (len > arr.length) {
+            return []
+        }
+        if (len === 1) {
+            return arr.map(el => [el])
+        }
+
+        const result = []
+        for (let i = 0; i <= arr.length - len; i++) {
+            const head = arr[i]
+            const tailCombinations = this.getCombinations(
+                arr.slice(i + 1),
+                len - 1,
+            )
+            for (const tailCombination of tailCombinations) {
+                result.push([head, ...tailCombination])
+            }
+        }
+        return result
+    }
+
+    /**
+     * Handle an event by dispatching it to all registered handlers
+     * @param {string} eventType - Type of the event to handle
+     * @param {Object} eventData - Data associated with the event
+     */
+    handleEvent(eventType, eventData) {
+        // Get handlers for this event type
+        const eventHandlers = this.handlers.get(eventType) || []
+
+        if (eventHandlers.length === 0) {
+            return
+        }
+
+        // Clone the handlers list to allow for handlers to remove themselves during execution
+        const handlers = [...eventHandlers]
+
+        // Sort by priority (lower number = higher priority)
+        handlers.sort((a, b) => a.priority - b.priority)
+
+        // Picked entity for events that involve clicking
         let pickedEntity = null
-        if (event.position) {
-            const pick = lgs.viewer.scene.pick(event.position)
-            if (pick && pick.id) {
-                pickedEntity = pick.id
+
+        // For mouse events with a position property, try to pick an entity
+        if (eventData.position && this.viewer) {
+            const picked = this.viewer.scene.pick(eventData.position)
+            if (picked && picked.id) {
+                pickedEntity = picked.id
             }
         }
 
-        // Sort subscribers by priority
-        const sortedSubscribers = [...subscribers].sort((a, b) => a.priority - b.priority)
+        // Record which subscription IDs to remove (for one-time handlers)
+        const toRemove = []
 
-        // Process subscribers in order
-        const oneTimeSubscribers = []
-
-        for (const subscriber of sortedSubscribers) {
-            // Skip if this subscriber is for a specific entity that doesn't match
-            if (subscriber.entity && (!pickedEntity || pickedEntity !== subscriber.entity)) {
+        // Process each handler
+        for (const handler of handlers) {
+            // Skip if handler specifically targets an entity and it's not the picked one
+            if (handler.entity && pickedEntity !== handler.entity) {
                 continue
             }
 
-            // Execute callback
-            subscriber.callback.call(
-                subscriber.context || this,
-                event,
-                pickedEntity,
-            )
+            // Check if modifier keys match the handler's requirements
+            if (handler.modifiers) {
+                const modifiersMatch =
+                          (handler.modifiers.ctrl === undefined || handler.modifiers.ctrl === eventData.ctrl) &&
+                          (handler.modifiers.alt === undefined || handler.modifiers.alt === eventData.alt) &&
+                          (handler.modifiers.shift === undefined || handler.modifiers.shift === eventData.shift)
 
-            // Track one-time subscribers for removal after iteration
-            if (subscriber.once) {
-                oneTimeSubscribers.push(subscriber.id)
+                if (!modifiersMatch) {
+                    continue
+                }
+            }
+
+            try {
+                // Call the handler with the right context and arguments
+                const shouldPropagate = handler.callback.call(
+                    handler.context || this,
+                    eventData,
+                    pickedEntity,
+                )
+
+                // If handler returns false or propagate is explicitly false, stop propagation
+                if (shouldPropagate === false || handler.propagate === false) {
+                    break
+                }
+            }
+            catch (e) {
+                console.error(`Error in ${eventType} event handler:`, e)
+            }
+
+            // Mark one-time handlers for removal
+            if (handler.once) {
+                toRemove.push(handler.id)
             }
         }
 
-        // Remove one-time subscribers after processing all events
-        for (const id of oneTimeSubscribers) {
+        // Remove any one-time handlers that were executed
+        for (const id of toRemove) {
             this.removeEventListener(eventType, id)
         }
     }
 
     /**
-     * Add an event listener - DOM-like API
-     * @param {string} eventType - Event type to subscribe to
-     * @param {Function} callback - Callback function
-     * @param {Object|boolean} [options] - Subscription options or boolean for once
-     * @param {Object} [options.entity] - Entity to filter for
-     * @param {boolean} [options.once=false] - Whether to handle only once
-     * @param {number} [options.priority=100] - Priority (lower = higher priority)
-     * @param {Object} [options.context] - Context (this) for callback
-     * @param {Object} [options.modifiers] - Modifier key requirements
-     * @param {boolean} [options.modifiers.ctrl] - Ctrl key state (true=required, false=forbidden, undefined=don't
-     *     care)
-     * @param {boolean} [options.modifiers.alt] - Alt key state (true=required, false=forbidden, undefined=don't care)
-     * @param {boolean} [options.modifiers.shift] - Shift key state (true=required, false=forbidden, undefined=don't
-     *     care)
-     * @returns {string} Subscription ID that can be used to remove the listener
+     * Add an event listener for a specific event type
+     * @param {string} eventType - The type of event to listen for
+     * @param {Function} callback - The function to call when the event occurs
+     * @param {Object|boolean} [options] - Options for the event handler or a boolean for 'once'
+     * @returns {string} - Subscription ID for removing the listener
      */
     addEventListener(eventType, callback, options = {}) {
+        if (typeof callback !== 'function') {
+            throw new Error('addEventListener requires a function as the second parameter')
+        }
+
+        // If options is a boolean, assume it's the 'once' option
+        if (typeof options === 'boolean') {
+            options = {once: options}
+        }
+
+        // Generate a unique subscription ID
+        const id = `${eventType}_${++this.subscriptionId}`
+
+        // Get or create the handlers array for this event type
         if (!this.handlers.has(eventType)) {
             this.handlers.set(eventType, [])
         }
 
-        // Handle addEventListener(event, callback, true) syntax for once
-        let parsedOptions = options
-        if (typeof options === 'boolean') {
-            parsedOptions = {once: options}
-        }
+        // Add the handler to the list
+        this.handlers.get(eventType).push({
+                                              id:        id,
+                                              callback:  callback,
+                                              entity:    options.entity || null,
+                                              propagate: options.propagate !== false,
+                                              priority:  options.priority || 100,
+                                              once:      options.once || false,
+                                              context:   options.context || null,
+                                              modifiers: options.modifiers || null,
+                                          })
 
-        const id = `sub_${++this.subscriptionId}`
-
-        const subscriber = {
-            id,
-            callback,
-            entity:    parsedOptions.entity || null,
-            once:      parsedOptions.once === true,
-            priority:  parsedOptions.priority || 100,
-            context:   parsedOptions.context || null,
-            modifiers: parsedOptions.modifiers,
-        }
-
-        this.handlers.get(eventType).push(subscriber)
         return id
     }
 
     /**
      * Shorthand for addEventListener
-     * @param {string} eventType - Event type
-     * @param {Function} callback - Callback function
-     * @param {Object|boolean} [options] - Options object or boolean for once
-     * @returns {string} Subscription ID
+     * @param {string} eventType - The type of event to listen for
+     * @param {Function} callback - The function to call when the event occurs
+     * @param {Object|boolean} [options] - Options for the event handler or a boolean for 'once'
+     * @returns {string} - Subscription ID for removing the listener
      */
     on(eventType, callback, options = {}) {
         return this.addEventListener(eventType, callback, options)
     }
 
     /**
-     * Remove an event listener
-     * @param {string} eventType - Event type
-     * @param {string|Function} subscriptionOrCallback - Subscription ID or callback function
-     * @returns {boolean} True if successfully removed
+     * Remove an event listener by type and subscription ID or callback reference
+     * @param {string} eventType - The type of event to remove
+     * @param {string|Function} subscription - The subscription ID or callback function
+     * @returns {boolean} - True if the listener was found and removed
      */
-    removeEventListener(eventType, subscriptionOrCallback) {
-        if (!this.handlers.has(eventType)) {
+    removeEventListener(eventType, subscription) {
+        // Get the handlers for this event type
+        const handlers = this.handlers.get(eventType)
+        if (!handlers) {
             return false
         }
 
-        const subscribers = this.handlers.get(eventType)
-        const initialCount = subscribers.length
+        const isString = typeof subscription === 'string'
+        const isFunction = typeof subscription === 'function'
 
-        if (typeof subscriptionOrCallback === 'string') {
-            // Unsubscribe by ID
-            const newSubscribers = subscribers.filter(sub => sub.id !== subscriptionOrCallback)
-            this.handlers.set(eventType, newSubscribers)
-        }
-        else if (typeof subscriptionOrCallback === 'function') {
-            // Unsubscribe by callback reference
-            const newSubscribers = subscribers.filter(sub => sub.callback !== subscriptionOrCallback)
-            this.handlers.set(eventType, newSubscribers)
+        if (!isString && !isFunction) {
+            throw new Error('removeEventListener requires a string ID or function as the second parameter')
         }
 
-        return this.handlers.get(eventType).length < initialCount
+        // Find the handler index
+        const index = handlers.findIndex(handler => {
+            if (isString) {
+                return handler.id === subscription
+            }
+            else {
+                return handler.callback === subscription
+            }
+        })
+
+        // If found, remove it
+        if (index !== -1) {
+            handlers.splice(index, 1)
+            return true
+        }
+
+        return false
     }
 
     /**
      * Shorthand for removeEventListener
-     * @param {string} eventType - Event type
-     * @param {string|Function} subscriptionOrCallback - Subscription ID or callback
-     * @returns {boolean} True if successfully removed
+     * @param {string} eventType - The type of event to remove
+     * @param {string|Function} subscription - The subscription ID or callback function
+     * @returns {boolean} - True if the listener was found and removed
      */
-    off(eventType, subscriptionOrCallback) {
-        return this.removeEventListener(eventType, subscriptionOrCallback)
+    off(eventType, subscription) {
+        return this.removeEventListener(eventType, subscription)
     }
 
     /**
-     * Remove all listeners for an event type or all events
-     * @param {string} [eventType] - Event type to clear, if omitted all events are cleared
+     * Manually dispatch an event
+     * @param {string} eventType - The type of event to dispatch
+     * @param {Object} [eventData={}] - Data to pass to the event handlers
      */
-    removeAllEventListeners(eventType) {
-        if (eventType) {
-            this.handlers.set(eventType, [])
-        }
-        else {
-            this.handlers.clear()
-        }
+    dispatchEvent(eventType, eventData = {}) {
+        // Enrich the event data with modifier information
+        const enrichedEvent = this.enrichEventWithModifiers(eventData)
+
+        // Handle the standard event
+        this.handleEvent(eventType, enrichedEvent)
+
+        // Handle modifier combination events
+        this.handleModifierCombinationEvents(eventType, enrichedEvent)
     }
 
     /**
-     * Get count of listeners for an event type
-     * @param {string} eventType - Event type
-     * @returns {number} Number of listeners
-     */
-    listenerCount(eventType) {
-        if (!this.handlers.has(eventType)) {
-            return 0
-        }
-        return this.handlers.get(eventType).length
-    }
-
-    /**
-     * Get all registered subscribers for an event type
-     * @param {string} eventType - Event type
-     * @returns {Array} Array of subscribers
-     */
-    getEventListeners(eventType) {
-        if (!this.handlers.has(eventType)) {
-            return []
-        }
-        return [...this.handlers.get(eventType)]
-    }
-
-    /**
-     * Check if an entity is currently targeted by an event
-     * @param {string} eventType - Event type
-     * @param {Object} entity - Entity to check
-     * @returns {boolean} True if entity has subscriptions
-     */
-    hasEntitySubscriptions(eventType, entity) {
-        if (!this.handlers.has(eventType)) {
-            return false
-        }
-
-        return this.handlers.get(eventType).some(sub => sub.entity === entity)
-    }
-
-    /**
-     * Propagate an event to canvas
-     * @param {Event} event - Event to propagate
-     */
-    propagateEventToCanvas(event) {
-        // Create a clone of the event
-        const NativeEvent = event?.nativeEvent?.constructor ?? event.constructor
-        const clone = new NativeEvent(event.type, event)
-        clone.preventDefault()
-        event.stopPropagation()
-
-        // Propagate to Cesium canvas
-        lgs.viewer.canvas.dispatchEvent(clone)
-    }
-
-    /**
-     * Check if Ctrl key is currently pressed
-     * @returns {boolean} True if Ctrl key is pressed
+     * Check if the Ctrl key is currently pressed
+     * @returns {boolean} - True if the Ctrl key is pressed
      */
     isCtrlKeyPressed() {
         return this.modifierKeys.ctrl
     }
 
     /**
-     * Check if Alt key is currently pressed
-     * @returns {boolean} True if Alt key is pressed
+     * Check if the Alt key is currently pressed
+     * @returns {boolean} - True if the Alt key is pressed
      */
     isAltKeyPressed() {
         return this.modifierKeys.alt
     }
 
     /**
-     * Check if Shift key is currently pressed
-     * @returns {boolean} True if Shift key is pressed
+     * Check if the Shift key is currently pressed
+     * @returns {boolean} - True if the Shift key is pressed
      */
     isShiftKeyPressed() {
         return this.modifierKeys.shift
     }
 
     /**
-     * Destroy the event manager and clean up all resources
+     * Get the count of listeners for a specific event type
+     * @param {string} eventType - The type of event to count listeners for
+     * @returns {number} - Number of listeners
      */
-    destroy() {
-        // Remove global event listeners
-        document.removeEventListener('keydown', this.handleKeyDown)
-        document.removeEventListener('keyup', this.handleKeyUp)
-        window.removeEventListener('blur', this.handleWindowBlur)
+    listenerCount(eventType) {
+        const handlers = this.handlers.get(eventType)
+        return handlers ? handlers.length : 0
+    }
 
-        // Remove all Cesium input actions
-        if (this.screenSpaceEventHandler) {
-            // Remove all registered event handlers
-            for (const [eventType] of this.cesiumEventHandlers) {
-                this.screenSpaceEventHandler.removeInputAction(eventType)
-            }
-            this.cesiumEventHandlers.clear()
-
-            this.screenSpaceEventHandler.destroy()
-            this.screenSpaceEventHandler = null
+    /**
+     * Check if a specific entity has any event subscriptions for a given event type
+     * @param {string} eventType - The type of event to check
+     * @param {Object} entity - The entity to check for
+     * @returns {boolean} - True if the entity has subscriptions
+     */
+    hasEntitySubscriptions(eventType, entity) {
+        const handlers = this.handlers.get(eventType)
+        if (!handlers) {
+            return false
         }
 
-        this.handlers.clear()
-        this.viewer = null
+        return handlers.some(handler => handler.entity === entity)
     }
 }

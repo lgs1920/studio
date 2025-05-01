@@ -17,9 +17,9 @@
 import '@shoelace-style/shoelace/dist/themes/light.css'
 import { CanvasEventManager } from '@Core/events/CanvasEventManager'
 import { LayersUtils }        from '@Utils/cesium/LayersUtils'
-import { SceneUtils }         from '@Utils/cesium/SceneUtils'
-import { ImageryLayerCollection, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
-import { useEffect }          from 'react'
+import { SceneUtils }                                                                                  from '@Utils/cesium/SceneUtils'
+import { ImageryLayerCollection, ScreenSpaceEventType, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
+import { useEffect }                                                                                   from 'react'
 
 export function Viewer() {
 
@@ -79,6 +79,9 @@ export function Viewer() {
     //lgs.scene.debugShowFramesPerSecond=true
 
     lgs.scene.shadows = true
+
+    this.viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK)
+    this.viewer.selectionIndicator.viewModel.showSelection = false
 
 
     //Layers
