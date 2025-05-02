@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-01
- * Last modified: 2025-05-01
+ * Created on: 2025-05-02
+ * Last modified: 2025-05-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -41,6 +41,10 @@ export const CESIUM_EVENTS = {
     CTRL:  'CTRL',
     ALT:   'ALT',
     SHIFT: 'SHIFT',
+
+    // Note: Keyboard letter events with modifiers are generated dynamically
+    // Examples: CTRL_R, SHIFT_A, CTRL_ALT_W, etc.
+    // These events will be triggered with the last picked entity
 }
 
 export const EVENT_SEPARATOR = '_'

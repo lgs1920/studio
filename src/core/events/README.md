@@ -271,22 +271,72 @@ eventManager.addEventListener('LEFT_CLICK', (event, pickedEntity) => {
                               });
 ```
 
+### 9. Entity Selection with Keyboard Shortcuts
+
+The `CanvasEventManager` now supports keyboard shortcuts with modifier keys on selected entities:
+
+```javascript
+// Setup entity default provider (e.g., current POI)
+canvasEventManager.setDefaultEntityProvider(() => {
+    return lgs.currentPOI || lgs.mapPointEntity;
+});
+
+// Listen for Ctrl+R on the selected entity
+canvasEventManager.addEventListener('CTRL_R', (event, entity) => {
+    if (entity) {
+        console.log('Ctrl+R applied to entity:', entity);
+        // Perform actions on the entity
+    }
+});
+```
+
+#### Entity Selection Workflow
+
+1. Click on an entity to select it
+2. Use keyboard shortcuts (like Ctrl+R) to perform actions on the selected entity
+3. If no entity is explicitly selected, the default entity (e.g., current POI) will be used
+
+#### API for Entity Selection
+
+``` javascript
+// Get the currently selected entity (or default if none selected)
+const entity = canvasEventManager.getSelectedEntity();
+
+// Manually set the selected entity
+canvasEventManager.setSelectedEntity(myEntity);
+
+// Clear the selected entity
+canvasEventManager.clearSelectedEntity();
+
+// Create a keyboard shortcut name
+const shortcutName = canvasEventManager.createKeyboardEventName('X', { 
+    ctrl: true,
+    alt: false,
+    shift: true
+}); // Returns "CTRL_SHIFT_X"
+```
+
 ## API Reference
 
 ### CanvasEventManager Methods
 
-| Method                                           | Return Type          | Description                                                       |
-|--------------------------------------------------|----------------------|-------------------------------------------------------------------|
-| `addEventListener(eventType, callback, options)` | `string`             | Registers an event handler and returns a subscription ID          |
-| `on(eventType, callback, options)`               | `string`             | Alias for addEventListener                                        |
-| `removeEventListener(eventType, subscription)`   | `boolean`            | Removes an event handler by subscription ID or callback reference |
-| `off(eventType, subscription)`                   | `boolean`            | Alias for removeEventListener                                     |
-| `dispatchEvent(eventType, eventData)`            | `void`               | Manually triggers an event                                        |
-| `isCtrlKeyPressed()`                             | `boolean`            | Returns whether the Ctrl key is currently pressed                 |
-| `isAltKeyPressed()`                              | `boolean`            | Returns whether the Alt key is currently pressed                  |
-| `isShiftKeyPressed()`                            | `boolean`            | Returns whether the Shift key is currently pressed                |
-| `listenerCount(eventType)`                       | `number`             | Returns the number of listeners for a specific event type         |
-| `hasEntitySubscriptions(eventType, entity)`      | `boolean`            | Checks if an entity has subscriptions for a specific event type   |
+| Method                                           | Return Type | Description                                                       |
+|--------------------------------------------------|-------------|-------------------------------------------------------------------|
+| `addEventListener(eventType, callback, options)` | `string`    | Registers an event handler and returns a subscription ID          |
+| `on(eventType, callback, options)`               | `string`    | Alias for addEventListener                                        |
+| `removeEventListener(eventType, subscription)`   | `boolean`   | Removes an event handler by subscription ID or callback reference |
+| `off(eventType, subscription)`                   | `boolean`   | Alias for removeEventListener                                     |
+| `dispatchEvent(eventType, eventData)`            | `void`      | Manually triggers an event                                        |
+| `isCtrlKeyPressed()`                             | `boolean`   | Returns whether the Ctrl key is currently pressed                 |
+| `isAltKeyPressed()`                              | `boolean`   | Returns whether the Alt key is currently pressed                  |
+| `isShiftKeyPressed()`                            | `boolean`   | Returns whether the Shift key is currently pressed                |
+| `listenerCount(eventType)`                       | `number`    | Returns the number of listeners for a specific event type         |
+| `hasEntitySubscriptions(eventType, entity)`      | `boolean`   | Checks if an entity has subscriptions for a specific event type   |
+| `setDefaultEntityProvider(func)`                 | `void`      | Sets a function that provides the default entity                  |
+| `getSelectedEntity()`                            | `Object`    | Gets the selected entity or default entity                        |
+| `setSelectedEntity(entity)`                      | `void`      | Sets the currently selected entity                                |
+| `clearSelectedEntity()`                          | `void`      | Clears the selected entity                                        |
+| `createKeyboardEventName(letter, options)`       | `string`    
 
 ### Options Object
 

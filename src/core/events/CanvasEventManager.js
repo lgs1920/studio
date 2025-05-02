@@ -1,3 +1,4 @@
+
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
@@ -7,13 +8,28 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-01
- * Last modified: 2025-05-01
+ * Created on: 2025-05-02
+ * Last modified: 2025-05-02
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: CanvasEventManager.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-05-02
+ * Last modified: 2025-05-02
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
 import { CESIUM_EVENTS, DOUBLE_TAP_DISTANCE, DOUBLE_TAP_TIMEOUT, LONG_TAP_TIMEOUT } from '@Core/constants'
 import { EVENT_SEPARATOR }                                                          from '@Core/events/cesiumEvents'
 import { ScreenSpaceEventHandler, ScreenSpaceEventType }                            from 'cesium'
@@ -43,6 +59,11 @@ export class CanvasEventManager {
         this.tapTimer = null
         this.subscriptionId = 0
 
+        // Track the selected entity for keyboard shortcuts
+        this.selectedEntity = null
+        // Default entity provider function (can be set later)
+        this.defaultEntityProvider = null
+
         // Map to track Cesium event type to handlers
         this.cesiumEventHandlers = new Map()
 
@@ -55,7 +76,6 @@ export class CanvasEventManager {
             // suppress default zoom
             this.viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK)
             this.viewer.selectionIndicator.destroy()
-
         }
 
         // Modifier keys state
@@ -92,6 +112,87 @@ export class CanvasEventManager {
     }
 
     /**
+     * Sets a function that provides the default entity when no entity is explicitly selected
+     * For example, this could return the current POI
+     * @param {Function} providerFunction - Function that returns the default entity
+     */
+    setDefaultEntityProvider(providerFunction) {
+        if (typeof providerFunction !== 'function') {
+            throw new Error('Default entity provider must be a function')
+        }
+        this.defaultEntityProvider = providerFunction
+    }
+
+    /**
+     * Gets the currently selected entity, or the default entity if none is selected
+     * @returns {Object|null} - The selected entity or default entity, or null if neither exists
+     */
+    getSelectedEntity() {
+        // If we have an explicitly selected entity, return it
+        if (this.selectedEntity) {
+            return this.selectedEntity
+        }
+
+        // Otherwise, try to get the default entity if a provider is set
+        if (this.defaultEntityProvider) {
+            try {
+                return this.defaultEntityProvider()
+            }
+            catch (e) {
+                console.error('Error in default entity provider:', e)
+            }
+        }
+
+        // If all else fails, return null
+        return null
+    }
+
+    /**
+     * Sets the selected entity
+     * @param {Object} entity - The entity to set as selected
+     */
+    setSelectedEntity(entity) {
+        this.selectedEntity = entity
+    }
+
+    /**
+     * Clears the selected entity
+     */
+    clearSelectedEntity() {
+        this.selectedEntity = null
+    }
+
+    /**
+     * Creates a keyboard letter event with modifiers
+     * @param {string} letter - The letter key (will be converted to uppercase)
+     * @param {Object} [options] - Options for the keyboard event
+     * @param {boolean} [options.ctrl=false] - Whether to include Ctrl modifier
+     * @param {boolean} [options.alt=false] - Whether to include Alt modifier
+     * @param {boolean} [options.shift=false] - Whether to include Shift modifier
+     * @returns {string} - The event name (e.g., "CTRL_R" or "SHIFT_ALT_W")
+     */
+    createKeyboardEventName(letter, options = {}) {
+        const upperLetter = letter.toUpperCase()
+        const modifiers = []
+
+        if (options.ctrl) {
+            modifiers.push(this.MODIFIER_KEYS.CTRL)
+        }
+        if (options.alt) {
+            modifiers.push(this.MODIFIER_KEYS.ALT)
+        }
+        if (options.shift) {
+            modifiers.push(this.MODIFIER_KEYS.SHIFT)
+        }
+
+        if (modifiers.length === 0) {
+            return upperLetter
+        }
+
+        return [...modifiers, upperLetter].join(EVENT_SEPARATOR)
+    }
+
+    /**
      * Setup tracking for modifier keys (Ctrl, Alt, Shift)
      */
     setupModifierKeysTracking() {
@@ -105,6 +206,42 @@ export class CanvasEventManager {
             }
             else if (event.key === 'Shift') {
                 this.modifierKeys.shift = true
+            }
+            // Handle letter keys with modifiers
+            else if (event.key && event.key.length === 1 && /[a-zA-Z]/.test(event.key)) {
+                // Only handle if at least one modifier is active
+                if (this.modifierKeys.ctrl || this.modifierKeys.alt || this.modifierKeys.shift) {
+                    const letter = event.key.toUpperCase()
+                    const modifiers = []
+
+                    if (this.modifierKeys.ctrl) {
+                        modifiers.push(this.MODIFIER_KEYS.CTRL)
+                    }
+                    if (this.modifierKeys.alt) {
+                        modifiers.push(this.MODIFIER_KEYS.ALT)
+                    }
+                    if (this.modifierKeys.shift) {
+                        modifiers.push(this.MODIFIER_KEYS.SHIFT)
+                    }
+
+                    // Generate event name like CTRL_R or SHIFT_ALT_W
+                    const eventName = [...modifiers, letter].join(EVENT_SEPARATOR)
+
+                    // Create event data with modifiers
+                    const eventData = {
+                        key:   letter,
+                        ctrl:  this.modifierKeys.ctrl,
+                        alt:   this.modifierKeys.alt,
+                        shift: this.modifierKeys.shift,
+                        // Don't include position, as it's a keyboard event
+                    }
+
+                    // Get the selected entity or default entity
+                    const targetEntity = this.getSelectedEntity()
+
+                    // Dispatch the keyboard event with the selected/default entity
+                    this.handleEvent(eventName, eventData, targetEntity)
+                }
             }
         }
 
@@ -143,7 +280,7 @@ export class CanvasEventManager {
         // Create a screen space event handler for our viewer
         this.screenSpaceEventHandler = new ScreenSpaceEventHandler(this.viewer.canvas)
 
-        // Désactiver le comportement de zoom par défaut sur double-clic (redondant mais par sécurité)
+        // Disable default zoom behavior on double-click (redundant but for safety)
         this.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK)
 
         // Map of Cesium standard events
@@ -169,19 +306,32 @@ export class CanvasEventManager {
             const handlerFunction = (event) => {
                 const enrichedEvent = this.enrichEventWithModifiers(event)
 
+                // For click events, track the picked entity
+                if (type === this.events.LEFT_CLICK && this.viewer) {
+                    // Try to pick an entity
+                    if (event.position) {
+                        const picked = this.viewer.scene.pick(event.position)
+                        if (picked && picked.id) {
+                            // Update the selected entity only if we actually picked something
+                            this.selectedEntity = picked.id
+                        }
+                        // Note: We don't clear selection when clicking on empty space
+                    }
+                }
+
                 // Handle standard event
                 this.handleEvent(type, enrichedEvent)
 
                 // Handle modifier combination events
                 this.handleModifierCombinationEvents(type, enrichedEvent)
-            };
+            }
 
             // Store the handler function for later removal if needed
             this.cesiumEventHandlers.set(cesiumType, handlerFunction)
 
             // Set the input action
             this.screenSpaceEventHandler.setInputAction(handlerFunction, cesiumType)
-        });
+        })
 
         // Special handling for custom touch events (tap, long tap, double tap)
         const leftDownHandler = (event) => {
@@ -233,7 +383,7 @@ export class CanvasEventManager {
 
             // Also handle LEFT_DOWN events with modifiers
             this.handleModifierCombinationEvents(this.events.LEFT_DOWN, enrichedEvent)
-        };
+        }
 
         // Store the handler for later removal
         this.cesiumEventHandlers.set(ScreenSpaceEventType.LEFT_DOWN, leftDownHandler)
@@ -264,7 +414,7 @@ export class CanvasEventManager {
                 }
                 this.tapTimer = null
             }
-        };
+        }
 
         // Store the handler for later removal
         this.cesiumEventHandlers.set(ScreenSpaceEventType.LEFT_UP, leftUpHandler)
@@ -394,8 +544,9 @@ export class CanvasEventManager {
      * Handle an event by dispatching it to all registered handlers
      * @param {string} eventType - Type of the event to handle
      * @param {Object} eventData - Data associated with the event
+     * @param {Object} [forcedEntity] - If provided, this entity will be used instead of picking from the scene
      */
-    handleEvent(eventType, eventData) {
+    handleEvent(eventType, eventData, forcedEntity = null) {
         // Get handlers for this event type
         const eventHandlers = this.handlers.get(eventType) || []
 
@@ -409,11 +560,11 @@ export class CanvasEventManager {
         // Sort by priority (lower number = higher priority)
         handlers.sort((a, b) => a.priority - b.priority)
 
-        // Picked entity for events that involve clicking
-        let pickedEntity = null
+        // Use forced entity if provided, otherwise try to pick from scene
+        let pickedEntity = forcedEntity
 
-        // For mouse events with a position property, try to pick an entity
-        if (eventData.position && this.viewer) {
+        // Only try to pick if not forced and we have a position
+        if (!forcedEntity && eventData.position && this.viewer) {
             const picked = this.viewer.scene.pick(eventData.position)
             if (picked && picked.id) {
                 pickedEntity = picked.id
