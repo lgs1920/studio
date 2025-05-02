@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-01
+ * Created on: 2025-05-02
  * Last modified: 2025-05-01
  *
  *
@@ -80,8 +80,8 @@ export function Viewer() {
 
     lgs.scene.shadows = true
 
-    this.viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK)
-    this.viewer.selectionIndicator.viewModel.showSelection = false
+    lgs.viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK)
+    lgs.viewer.selectionIndicator.viewModel.showSelection = false
 
 
     //Layers
