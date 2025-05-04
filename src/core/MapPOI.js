@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-03
- * Last modified: 2025-05-03
+ * Created on: 2025-05-04
+ * Last modified: 2025-05-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -53,6 +53,9 @@ export class MapPOI extends MapElement {
      * @type {number}
      */
     cameraDistance
+
+    eventSubscriptions = {}
+
 
     /**
      * @type {boolean}
@@ -291,7 +294,8 @@ export class MapPOI extends MapElement {
             await this.persistToDatabase()
         }
 
-        this.setupEvents(entity, {
+        // Configure handlers for this POI
+        const handlers = {
             // Click handler
             onClick: (event, entity) => {
                 console.log('POI clicked:', this.title)
@@ -321,11 +325,132 @@ export class MapPOI extends MapElement {
             onDoubleTap: (event, entity) => {
                 console.log('Double tap on POI:', this.title)
             },
-        })
+
+            // Modifier key combinations
+            onCtrlClick: (event, entity) => {
+                console.log('Ctrl+Click on POI:', this.title)
+            },
+
+            // onShiftClick: (event, entity) => {
+            //     console.log('Shift+Click on POI:', this.title)
+            // },
+
+            // onAltClick: (event, entity) => {
+            //     console.log('Alt+Click on POI:', this.title)
+            // },
+        }
+
+        // Use the setupEvents method to set up all the handlers
+        this.setupEvents(entity, handlers)
 
         return entity
     }
 
+    /**
+     * Sets up event handlers for a specified entity by registering them
+     * with the CanvasEventManager. This function ensures that only events
+     * associated with the given entity are handled and supports standard
+     * and modifier key combinations.
+     *
+     * @param {Object} entity - The entity to associate with events.
+     * @param {Object} handlers - An object containing event handler functions.
+     * @param {Function} [handlers.onClick] - Function to handle left-click events.
+     * @param {Function} [handlers.onRightClick] - Function to handle right-click events.
+     * @param {Function} [handlers.onDoubleClick] - Function to handle double-click events.
+     * @param {Function} [handlers.onTap] - Function to handle tap events.
+     * @param {Function} [handlers.onLongTap] - Function to handle long tap events.
+     * @param {Function} [handlers.onCtrlClick] - Function to handle left-click events with the Ctrl key.
+     * @param {Function} [handlers.onShiftClick] - Function to handle left-click events with the Shift key.
+     * @param {Function} [handlers.onAltClick] - Function to handle left-click events with the Alt key.
+     * @returns {Object} - The current instance.
+     */
+    setupEvents = (entity, handlers) => {
+        // Clear any existing event subscriptions first
+        this.clearEvents()
+
+        if (!__.canvasEvents || !entity) {
+            console.warn('Cannot set up events: missing CanvasEventManager or entity')
+            return this
+        }
+
+        // Map the handler names to CanvasEventManager event types
+        const eventMap = {
+            onClick:       __.canvasEvents.events.LEFT_CLICK,
+            onRightClick:  __.canvasEvents.events.RIGHT_CLICK,
+            onDoubleClick: __.canvasEvents.events.LEFT_DOUBLE_CLICK,
+            onTap:         __.canvasEvents.events.TAP,
+            onDoubleTap:   __.canvasEvents.events.DOUBLE_TAP,
+            onLongTap:     __.canvasEvents.events.LONG_TAP,
+        }
+
+        // Register standard event handlers
+        for (const [handlerName, eventType] of Object.entries(eventMap)) {
+            if (typeof handlers[handlerName] === 'function') {
+                // Create a filter that ensures the event only fires for this entity
+                const filter = {entity: entity}
+
+                // Register the event with the CanvasEventManager
+                const listenerId = __.canvasEvents.addEventListener(
+                    eventType,
+                    (event, pickedEntity) => {
+                        if (pickedEntity && pickedEntity.id === entity.id) {
+                            handlers[handlerName](event, entity)
+                        }
+                    },
+                    this,
+                    filter,
+                )
+
+                // Store the listener ID for cleanup
+                this.eventSubscriptions[eventType] = listenerId
+            }
+        }
+
+        // Handle modifier key combinations separately
+        if (typeof handlers.onCtrlClick === 'function') {
+            const listenerId = __.canvasEvents.addEventListener(
+                `CTRL${__.canvasEvents.events.EVENT_SEPARATOR}${__.canvasEvents.events.LEFT_CLICK}`,
+                (event, pickedEntity) => {
+                    if (pickedEntity && pickedEntity.id === entity.id) {
+                        handlers.onCtrlClick(event, entity)
+                    }
+                },
+                this,
+                {entity: entity},
+            )
+            this.eventSubscriptions['CTRL_LEFT_CLICK'] = listenerId
+        }
+
+        if (typeof handlers.onShiftClick === 'function') {
+            const listenerId = __.canvasEvents.addEventListener(
+                `SHIFT${__.canvasEvents.events.EVENT_SEPARATOR}${__.canvasEvents.events.LEFT_CLICK}`,
+                (event, pickedEntity) => {
+                    if (pickedEntity && pickedEntity.id === entity.id) {
+                        handlers.onShiftClick(event, entity)
+                    }
+                },
+                this,
+                {entity: entity},
+            )
+            this.eventSubscriptions['SHIFT_LEFT_CLICK'] = listenerId
+        }
+
+        if (typeof handlers.onAltClick === 'function') {
+            const listenerId = __.canvasEvents.addEventListener(
+                `ALT${__.canvasEvents.events.EVENT_SEPARATOR}${__.canvasEvents.events.LEFT_CLICK}`,
+                (event, pickedEntity) => {
+                    if (pickedEntity && pickedEntity.id === entity.id) {
+                        handlers.onAltClick(event, entity)
+                    }
+                },
+                this,
+                {entity: entity},
+            )
+            this.eventSubscriptions['ALT_LEFT_CLICK'] = listenerId
+        }
+
+        return this
+    }
     /**
      * Saves the current Point of Interest (POI) object to the database.
      * The method ensures that the POI has a valid type before attempting to persist data.
@@ -335,7 +460,6 @@ export class MapPOI extends MapElement {
      *
      */
     persistToDatabase = async () => {
-
         // Guard clause to ensure the POI has a valid type
         if (!this.type || this.type === POI_TMP_TYPE) {
             return
@@ -358,6 +482,7 @@ export class MapPOI extends MapElement {
      */
     remove = async (dbSync = true) => {
         try {
+            this.clearEvents()
             this.utils.remove(this)
 
             if (dbSync) {
@@ -371,62 +496,27 @@ export class MapPOI extends MapElement {
 
     /**
      * Sets up event handlers for this POI entity
-     * @param {Object} entity - The entity to set up events for
-     * @param {Object} options - Options for event configuration
-     * @returns {MapPOI} - Returns this instance for method chaining
+     * @param {Object} entity - The Cesium entity to attach events to
+     * @param {Object} handlers - Object containing event handler functions
+     * @returns {MapPOI} - Returns this for method chaining
      */
-    setupEvents = (entity, options = {}) => {
-        if (!entity) {
-            console.warn(`Cannot setup events for POI ${this.id}: entity not created yet`)
-            return this
-        }
 
-        // Store subscription IDs for later cleanup
-        this.eventSubscriptions = this.eventSubscriptions || {}
-
-        // Clean up any existing subscriptions
-        this.clearEvents()
-
-        // Standard event options
-        const standardEventOptions = {
-            entity:    entity,
-            priority:  50,
-            propagate: false,
-        }
-
-        // Handle standard mouse/touch events
-        const standardEvents = {
-            'LEFT_CLICK':        'onClick',
-            'RIGHT_CLICK':       'onRightClick',
-            'LEFT_DOUBLE_CLICK': 'onDoubleClick',
-            'TAP':               'onTap',
-            'LONG_TAP':          'onLongTap',
-            'DOUBLE_TAP':        'onDoubleTap',
-        }
-
-        // Register standard mouse/touch events
-        Object.entries(standardEvents).forEach(([eventName, handlerName]) => {
-            if (typeof options[handlerName] === 'function') {
-                this.eventSubscriptions[handlerName] = __.canvasEvents.addEventListener(
-                    eventName, options[handlerName], standardEventOptions,
-                )
-            }
-        })
-
-        return this
-    }
 
     /**
      * Clears all event subscriptions for this POI
      * @returns {MapPOI} - Returns this instance for method chaining
      */
     clearEvents = () => {
-        if (this.eventSubscriptions) {
-            Object.values(this.eventSubscriptions).forEach(subscriptionId => {
-                if (subscriptionId) {
-                    __.canvasEvents.removeEventListener(subscriptionId)
-                }
-            })
+        if (!__.canvasEvents) {
+            console.warn('Cannot clear events: missing CanvasEventManager')
+            return this
+        }
+
+        // Remove each registered event listener
+        for (const [eventType, listenerId] of Object.entries(this.eventSubscriptions)) {
+            if (listenerId) {
+                __.canvasEvents.removeEventListener(eventType, listenerId)
+            }
         }
 
         this.eventSubscriptions = {}
