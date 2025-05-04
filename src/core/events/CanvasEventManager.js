@@ -167,52 +167,7 @@ export class CanvasEventManager {
         })
     }
 
-    /**
-     * Detect if current event is from touch input
-     * Enhanced to handle browser mobile simulations better
-     */
-    detectTouchEvent() {
-        // Check for mobile simulation in user agent
-        const userAgent = navigator.userAgent.toLowerCase()
-        const mobileEmulationPatterns = [
-            'android', 'iphone', 'ipad', 'mobile', 'touch', 'tablet',
-        ]
-
-        // If debugging tools are emulating a mobile device in Chrome/Edge
-        const isEmulatingMobile = mobileEmulationPatterns.some(pattern =>
-                                                                   userAgent.includes(pattern),
-        )
-
-        // Check touch-screen capability
-        const hasTouchCapability = 'ontouchstart' in window ||
-            navigator.maxTouchPoints > 0 ||
-            navigator.msMaxTouchPoints > 0
-
-        // Check for recent touch activity
-        const now = Date.now()
-        const recentTouchActivity = now - this.lastTouchActivity < 1000
-
-        // Screen width/orientation check (mobile devices are typically narrower in portrait)
-        const isNarrowScreen = window.innerWidth < 800
-
-        // If DevTools is open and has mobile emulation enabled
-        const isDevToolsEmulation = window.navigator.plugins &&
-            window.navigator.plugins.length === 0 &&
-            isEmulatingMobile
-
-        // Use a weighted approach - if enough factors suggest touch, assume it's touch
-        const touchFactors = [
-            isEmulatingMobile,
-            hasTouchCapability,
-            recentTouchActivity,
-            isNarrowScreen,
-            isDevToolsEmulation,
-        ].filter(Boolean).length
-
-        // If at least 2 factors indicate touch, or we're definitely in a mobile emulation
-        return touchFactors >= 2 || isDevToolsEmulation || this.inMobileEmulation
-    }
-
+    
     /**
      * Add event-specific properties based on modifier keys
      * @param {Object} event - The event object
@@ -864,5 +819,65 @@ export class CanvasEventManager {
         // Clear references
         this.viewer = null
         this.selectedEntity = null
+    }
+
+    /**
+     * Detect if current event is from touch input
+     * Enhanced to handle browser mobile simulations better
+     * @returns {boolean} - True if the event is likely from a touch device
+     */
+    detectTouchEvent() {
+        // Check if we've already determined we're in mobile emulation mode
+        if (this.inMobileEmulation) {
+            return true
+        }
+
+        // Check for recent touch activity
+        const now = Date.now()
+        const recentTouchActivity = now - this.lastTouchActivity < 1000
+
+        // If we've had recent touch activity, it's definitely a touch device
+        if (recentTouchActivity) {
+            return true
+        }
+
+        // Base touch capability detection
+        const hasTouchCapability = 'ontouchstart' in window ||
+            navigator.maxTouchPoints > 0 ||
+            navigator.msMaxTouchPoints > 0
+
+        // For devices that report both mouse and touch capabilities,
+        // use additional heuristics
+        if (hasTouchCapability) {
+            // Check user agent for mobile patterns
+            const userAgent = navigator.userAgent.toLowerCase()
+            const mobilePatterns = [
+                'android', 'iphone', 'ipad', 'mobile', 'touch', 'tablet',
+            ]
+
+            const hasMobileUserAgent = mobilePatterns.some(pattern =>
+                                                               userAgent.includes(pattern),
+            )
+
+            // Check for narrow screen (typical for mobile devices)
+            const isNarrowScreen = window.innerWidth < 800
+
+            // If user agent suggests mobile or screen is narrow, likely a touch device
+            if (hasMobileUserAgent || isNarrowScreen) {
+                return true
+            }
+
+            // DevTools mobile emulation often has touch capability but empty plugins
+            const isLikelyDevToolsEmulation = window.navigator.plugins &&
+                window.navigator.plugins.length === 0 &&
+                hasMobileUserAgent
+
+            if (isLikelyDevToolsEmulation) {
+                return true
+            }
+        }
+
+        // Use a simpler approach that's less prone to false positives
+        return hasTouchCapability
     }
 }
