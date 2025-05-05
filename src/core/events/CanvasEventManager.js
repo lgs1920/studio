@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-04
- * Last modified: 2025-05-04
+ * Created on: 2025-05-05
+ * Last modified: 2025-05-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -133,31 +133,33 @@ export class CanvasEventManager {
      * Set up handlers for keyboard events to track modifier keys
      */
     setupKeyHandlers() {
+        // Fonction pour enregistrer l'état des touches modificatrices
+        const trackModifierState = (event, isKeyDown) => {
+            // Enregistrer l'état précédent pour détecter les changements
+            const prevState = {...this.modifierKeys}
+
+            // Mettre à jour l'état en fonction de la touche
+            if (event.key === 'Control' || event.key === 'Meta' || event.keyCode === 17) {
+                this.modifierKeys.ctrl = isKeyDown
+            }
+            else if (event.key === 'Shift' || event.keyCode === 16) {
+                this.modifierKeys.shift = isKeyDown
+            }
+            else if (event.key === 'Alt' || event.keyCode === 18) {
+                this.modifierKeys.alt = isKeyDown
+            }
+
+        }
+
         // Listen for keydown events to track modifier keys
         window.addEventListener('keydown', (event) => {
-            if (event.key === 'Control' || event.key === 'Meta') {
-                this.modifierKeys.ctrl = true
-            }
-            else if (event.key === 'Shift') {
-                this.modifierKeys.shift = true
-            }
-            else if (event.key === 'Alt') {
-                this.modifierKeys.alt = true
-            }
-        })
+            trackModifierState(event, true)
+        }, true) // Utiliser la phase de capture pour capturer avant tout autre gestionnaire
 
         // Listen for keyup events to track modifier keys
         window.addEventListener('keyup', (event) => {
-            if (event.key === 'Control' || event.key === 'Meta') {
-                this.modifierKeys.ctrl = false
-            }
-            else if (event.key === 'Shift') {
-                this.modifierKeys.shift = false
-            }
-            else if (event.key === 'Alt') {
-                this.modifierKeys.alt = false
-            }
-        })
+            trackModifierState(event, false)
+        }, true) // Utiliser la phase de capture
 
         // Clear modifiers when window loses focus
         window.addEventListener('blur', () => {
@@ -165,6 +167,7 @@ export class CanvasEventManager {
             this.modifierKeys.shift = false
             this.modifierKeys.alt = false
         })
+
     }
 
     
@@ -174,7 +177,13 @@ export class CanvasEventManager {
      * @returns {Object} - Enriched event object
      */
 
-    enrichEventWithModifiers(event) {
+    /**
+     * Add event-specific properties based on modifier keys
+     * @param {Object} event - The event object
+     * @param {string} eventName - The explicit name of the event (LEFT_CLICK, RIGHT_CLICK, etc.)
+     * @returns {Object} - Enriched event object
+     */
+    enrichEventWithModifiers(event, eventName = null) {
         // Get dynamic touch state that considers emulation
         const isTouch = this.detectTouchEvent()
 
@@ -183,16 +192,72 @@ export class CanvasEventManager {
             this.lastTouchActivity = Date.now()
         }
 
-        // Get modifier keys directly from the original event if available
-        const originalEvent = event.originalEvent || event
-        const ctrlKey = originalEvent.ctrlKey || this.modifierKeys.ctrl
-        const shiftKey = originalEvent.shiftKey || this.modifierKeys.shift
-        const altKey = originalEvent.altKey || this.modifierKeys.alt
+        let ctrlKey = false
+        let shiftKey = false
+        let altKey = false
 
-        console.log('Original event modifiers:', {
-            ctrlKey:  originalEvent.ctrlKey,
-            shiftKey: originalEvent.shiftKey,
-            altKey:   originalEvent.altKey,
+        // Check Cesium object
+        if (event) {
+            ctrlKey = ctrlKey || Boolean(event.ctrlKey)
+            shiftKey = shiftKey || Boolean(event.shiftKey)
+            altKey = altKey || Boolean(event.altKey)
+
+            if (event.modifier) {
+                ctrlKey = ctrlKey || Boolean(event.modifier.ctrl)
+                shiftKey = shiftKey || Boolean(event.modifier.shift)
+                altKey = altKey || Boolean(event.modifier.alt)
+            }
+
+            // 3. Vérifier l'événement d'origine s'il existe
+            if (event.originalEvent) {
+                ctrlKey = ctrlKey || Boolean(event.originalEvent.ctrlKey)
+                shiftKey = shiftKey || Boolean(event.originalEvent.shiftKey)
+                altKey = altKey || Boolean(event.originalEvent.altKey)
+            }
+        }
+
+        // use fallback if we do not have anything
+        ctrlKey = ctrlKey || this.modifierKeys.ctrl
+        shiftKey = shiftKey || this.modifierKeys.shift
+        altKey = altKey || this.modifierKeys.alt
+
+        // Déterminer le type d'événement
+        let eventType = 'unknown'
+
+        // Utiliser le nom d'événement fourni explicitement si disponible
+        if (eventName) {
+            eventType = eventName
+        }
+        // Essayer de déduire le type à partir de la structure de l'événement
+        else if (event) {
+            if (event.type) {
+                // Si l'événement a une propriété type explicite, l'utiliser
+                eventType = event.type
+            }
+            else if (event.position) {
+                // Événement de position (probablement un clic)
+                if (event.startPosition && event.endPosition) {
+                    eventType = eventName ?? 'MOUSE_MOVE'
+                }
+                else {
+                    eventType = eventName ?? 'CLICK'
+                }
+            }
+            else if (event.direction) {
+                // Événement de molette
+                eventType = 'WHEEL'
+            }
+            else if (event.dropTarget) {
+                eventType = 'DROP'
+            }
+        }
+
+        console.log('Modifier keys detected:', {
+            ctrl:      ctrlKey,
+            shift:     shiftKey,
+            alt:       altKey,
+            eventType: eventType,
+            eventName: eventName,
         })
 
         const enrichedEvent = {
@@ -204,16 +269,8 @@ export class CanvasEventManager {
             inMobileEmulation: this.inMobileEmulation,
         }
 
-        console.log('Enriched event with modifiers:', {
-            ctrl:      enrichedEvent.ctrl,
-            shift:     enrichedEvent.shift,
-            alt:       enrichedEvent.alt,
-            eventType: event.type || 'unknown',
-        })
-
         return enrichedEvent
     }
-
     /**
      * Setup all event handlers for Cesium
      */
@@ -241,7 +298,8 @@ export class CanvasEventManager {
         standardEvents.forEach(({type, cesiumType}) => {
             // Create the handler function
             const handlerFunction = (event) => {
-                const enrichedEvent = this.enrichEventWithModifiers(event)
+                console.log({type, cesiumType})
+                const enrichedEvent = this.enrichEventWithModifiers(event, type)
 
                 // Handle standard event
                 this.handleEvent(type, enrichedEvent)
@@ -259,18 +317,18 @@ export class CanvasEventManager {
 
         // Special handling for RIGHT_DOWN
         this.screenSpaceEventHandler.setInputAction((event) => {
-            const enrichedEvent = this.enrichEventWithModifiers(event)
+            const enrichedEvent = this.enrichEventWithModifiers(event, this.events.RIGHT_DOWN)
 
             // Only handle if not a touch event (prevents duplicate events on long tap)
             if (!enrichedEvent.isTouchEvent) {
-                this.handleEvent(this.events.RIGHT_DOWN, enrichedEvent)
+                this.handleEvent(eventName, enrichedEvent)
                 this.handleModifierCombinationEvents(this.events.RIGHT_DOWN, enrichedEvent)
             }
         }, ScreenSpaceEventType.RIGHT_DOWN)
 
         // Special handling for RIGHT_UP
         this.screenSpaceEventHandler.setInputAction((event) => {
-            const enrichedEvent = this.enrichEventWithModifiers(event)
+            const enrichedEvent = this.enrichEventWithModifiers(event, this.events.RIGHT_UP)
 
             // Only handle if not a touch event (prevents duplicate events on long tap)
             if (!enrichedEvent.isTouchEvent) {
@@ -283,10 +341,11 @@ export class CanvasEventManager {
         this.screenSpaceEventHandler.setInputAction((event) => {
             // Determine if this is a touch event
             const isTouch = this.detectTouchEvent()
+            console.log(event)
 
             // Enrich event
             const enrichedEvent = {
-                ...this.enrichEventWithModifiers(event),
+                ...this.enrichEventWithModifiers(event), //TODO SI isTouch
                 isTouch: isTouch,
             }
 
@@ -580,44 +639,39 @@ export class CanvasEventManager {
     }
 
     /**
-     * Handle events with modifier key combinations
-     * @param {string} baseEventType - The base event type
-     * @param {Object} event - The event data with modifiers
+     * Handle events combined with modifier keys
+     * @param {string} eventType - The type of event
+     * @param {Object} event - The event object with modifier flags
      */
-    handleModifierCombinationEvents(baseEventType, event) {
-        // Skip if no modifiers are active
-        if (!event.ctrl && !event.shift && !event.alt) {
-            return
-        }
+    handleModifierCombinationEvents(eventType, event) {
+        console.log(`Processing ${eventType} with modifiers:`, {
+            ctrl:  event.ctrl,
+            shift: event.shift,
+            alt:   event.alt,
+        })
 
-        // Create combined event types for each active modifier
-        if (event.ctrl) {
-            this.handleEvent(`ctrl+${baseEventType}`, event)
-        }
+        // Ne traiter que les événements qui ont au moins un modificateur actif
+        if (event.ctrl || event.shift || event.alt) {
+            // Define all possible modifier combinations
+            const modifierCombinations = [
+                {condition: event.ctrl && !event.shift && !event.alt, suffix: 'CTRL'},
+                {condition: !event.ctrl && event.shift && !event.alt, suffix: 'SHIFT'},
+                {condition: !event.ctrl && !event.shift && event.alt, suffix: 'ALT'},
+                {condition: event.ctrl && event.shift && !event.alt, suffix: 'CTRL_SHIFT'},
+                {condition: event.ctrl && !event.shift && event.alt, suffix: 'CTRL_ALT'},
+                {condition: !event.ctrl && event.shift && event.alt, suffix: 'SHIFT_ALT'},
+                {condition: event.ctrl && event.shift && event.alt, suffix: 'CTRL_SHIFT_ALT'},
+            ]
 
-        if (event.shift) {
-            this.handleEvent(`shift+${baseEventType}`, event)
-        }
-
-        if (event.alt) {
-            this.handleEvent(`alt+${baseEventType}`, event)
-        }
-
-        // Create combined event types for multiple modifiers
-        if (event.ctrl && event.shift) {
-            this.handleEvent(`ctrl+shift+${baseEventType}`, event)
-        }
-
-        if (event.ctrl && event.alt) {
-            this.handleEvent(`ctrl+alt+${baseEventType}`, event)
-        }
-
-        if (event.shift && event.alt) {
-            this.handleEvent(`shift+alt+${baseEventType}`, event)
-        }
-
-        if (event.ctrl && event.shift && event.alt) {
-            this.handleEvent(`ctrl+shift+alt+${baseEventType}`, event)
+            // Process each combination
+            for (const combination of modifierCombinations) {
+                if (combination.condition) {
+                    const modifiedEventType = `${eventType}_${combination.suffix}`
+                    console.log(`Firing modified event: ${modifiedEventType}`)
+                    this.handleEvent(modifiedEventType, event)
+                    return // Une fois qu'une combinaison est traitée, nous pouvons sortir
+                }
+            }
         }
     }
 
