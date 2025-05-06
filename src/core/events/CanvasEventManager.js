@@ -16,62 +16,77 @@
 
 import { DOUBLE_CLICK_TIMEOUT }                               from '@Core/constants'
 import { Cartesian2, ScreenSpaceEventHandler }                from 'cesium'
-import { CESIUM_EVENTS, EVENT_SEPARATOR, MODIFIER_SEPARATOR } from './cesiumEvents'
+import { CESIUM_EVENTS, EVENT_SEPARATOR, MODIFIER_SEPARATOR } from './cesiumEvents' // Configurable touch event
+                                                                                    // thresholds
 
-const TOUCH_DOUBLE_TAP_TIMEOUT = 300
-const TOUCH_LONG_TAP_TIMEOUT = 600
+// Configurable touch event thresholds
+const TOUCH_DOUBLE_TAP_TIMEOUT = 300 // ms
+const TOUCH_LONG_TAP_TIMEOUT = 600 // ms
+
 /**
- * CesiumEventManager handles mouse, mobile, and modifier-based events.
- * Event names follow the format "<MODIFIER>#<EVENT_TYPE>".
+ * CanvasEventManager handles mouse, touch, and modifier-based events for a Cesium viewer.
+ * Event names follow the format "<MODIFIER>#<EVENT_TYPE>" (e.g., "CTRL#CLICK").
  */
 export class CanvasEventManager {
     /** @type {Object} Constants for event types */
-    events = CESIUM_EVENTS
+    events = CESIUM_EVENTS;
+
+    // Declare private fields
+    #boundKeydown
+    #boundKeyup
 
     /**
-     * Creates a new CesiumEventManager.
+     * Creates a new CanvasEventManager.
      * @param {Viewer} viewer - The Cesium viewer instance.
+     * @throws {Error} If viewer is not provided or invalid.
      */
     constructor(viewer) {
+        if (!viewer || !viewer.scene || !viewer.scene.canvas) {
+            throw new Error('Invalid viewer: must be a valid Cesium Viewer instance')
+        }
         this.viewer = viewer
         this.handlers = new Map()
         this.screenSpaceEventHandler = new ScreenSpaceEventHandler(viewer.scene.canvas)
-        this.lastTapTime = 0
-        this.tapTimeout = null
-        this.isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0) ||
+        this.isTouchDevice =
+            'ontouchstart' in window ||
+            navigator.maxTouchPoints > 0 ||
             window.matchMedia('(pointer: coarse)').matches
 
-
-        // Track modifier key states globally
+        // Track modifier key states
         this.modifierState = {
-            CTRL:  false,
+            CTRL: false,
             SHIFT: false,
-            ALT:   false,
-        }
+            ALT:  false,
+        };
 
+        // Store touch event handler
+        this.touchEndHandler = null
 
-        window.addEventListener('keydown', (event) => this.#updateModifierState(event, true))
-        window.addEventListener('keyup', (event) => this.#updateModifierState(event, false))
+        // Bind modifier key listeners
+        this.#boundKeydown = (event) => this.#updateModifierState(event, true)
+        this.#boundKeyup = (event) => this.#updateModifierState(event, false)
+        window.addEventListener('keydown', this.#boundKeydown)
+        window.addEventListener('keyup', this.#boundKeyup)
     }
 
     /**
      * Updates the state of modifier keys (CTRL, SHIFT, ALT) based on key press events.
      * @param {KeyboardEvent} event - The keyboard event.
-     * @param {boolean} isActive - Indicates whether the key is pressed (true) or released (false).
+     * @param {boolean} isActive - Whether the key is pressed (true) or released (false).
      * @private
      */
     #updateModifierState(event, isActive) {
         const keyMap = {
-            ControlLeft:  'CTRL',
+            ControlLeft: 'CTRL',
             ControlRight: 'CTRL',
-            ShiftLeft:    'SHIFT',
-            ShiftRight:   'SHIFT',
-            AltLeft:      'ALT',
-            AltRight:     'ALT',
-            Control:      'CTRL',
-            Shift:        'SHIFT',
-            Alt:          'ALT',
-        }
+            ShiftLeft:   'SHIFT',
+            ShiftRight:  'SHIFT',
+            AltLeft:     'ALT',
+            AltRight:    'ALT',
+            Control:     'CTRL',
+            Shift:       'SHIFT',
+            Alt:         'ALT',
+        };
         const normalizedKey = keyMap[event.key] || event.key.toUpperCase()
         if (['CTRL', 'SHIFT', 'ALT'].includes(normalizedKey)) {
             this.modifierState[normalizedKey] = isActive
@@ -92,42 +107,73 @@ export class CanvasEventManager {
      * Registers an event listener with "<MODIFIER>#<EVENT_TYPE>" format.
      * @param {string} eventName - Formatted event name (e.g., "CTRL#CLICK").
      * @param {Function} callback - Function to execute on event trigger.
-     * @param {Object} [options={}|boolean] - true/false => once
-     *                                      - options: {useEntity, once}
+     * @param {Object|boolean} [options={}] - Options or boolean for one-time listener.
+     *                                       - {boolean} [options.once=false] - Remove after first trigger.
+     *                                       - {boolean} [options.useEntity=false] - Require picked entity.
+     * @throws {Error} If eventName is invalid or eventType is unsupported.
      */
     on(eventName, callback, options = {}) {
+        if (typeof eventName !== 'string' || !eventName.trim()) {
+            throw new Error('Invalid event name: must be a non-empty string')
+        }
+        if (typeof callback !== 'function') {
+            throw new Error('Callback must be a function')
+        }
+
         const {modifiers, eventType} = this.#parseEventName(eventName)
 
-        // If options is a boolean, convert it into an object { once: true }
+        // Convert boolean options to object
         if (typeof options === 'boolean') {
             options = {once: options}
         }
 
-
         const useEntity = options?.useEntity || false
 
-        if (this.events[eventType]) {
-            let handler
-            if (this.isTouchDevice) {
-                handler = this.#setupTouchEvents(eventType, callback, useEntity, modifiers)
-                this.viewer.scene.canvas.addEventListener('touchend', handler, false)
-            }
-            else {
-                handler = this.#setupMouseEvents(eventType, callback, useEntity, modifiers)
-            }
+        if (!this.events[eventType]) {
+            throw new Error(`Unsupported event type: ${eventType}`)
+        }
 
-            if (handler) {
-                // Store and attach handler to Cesium event system
-                this.handlers.set(eventName, handler)
-                this.screenSpaceEventHandler.setInputAction(handler, this.events[eventType].event)
+        let handler
+        if (this.isTouchDevice) {
+            handler = this.#setupTouchEvents(eventType, callback, useEntity, modifiers)
+        }
+        else {
+            handler = this.#setupMouseEvents(eventType, callback, useEntity, modifiers)
+        }
 
-                if (options.once) {
-                    this.off(eventName)
+        if (handler) {
+            // Store and attach handler
+            this.handlers.set(eventName, handler)
+            this.screenSpaceEventHandler.setInputAction(handler, this.events[eventType].event)
+
+            // Initialize touchend listener for touch devices
+            if (this.isTouchDevice && !this.touchEndHandler && handler) {
+                this.touchEndHandler = (touchEvent) => {
+                    this.handlers.forEach((h, key) => {
+                        const {eventType: keyEventType} = this.#parseEventName(key)
+                        if (keyEventType === eventType || key.startsWith(`touchend:${eventType}`)) {
+                            h(touchEvent)
+                        }
+                    })
                 }
+                this.viewer.scene.canvas.addEventListener('touchend', this.touchEndHandler, false)
+            }
+
+            if (options.once) {
+                this.off(eventName)
             }
         }
     }
 
+    /**
+     * Sets up mouse event handling for the specified event type.
+     * @param {string} eventType - Event type (e.g., LEFT_CLICK, LEFT_DOUBLE_CLICK).
+     * @param {Function} callback - Callback function.
+     * @param {boolean} useEntity - Whether to require a picked entity.
+     * @param {Array<string>} modifiers - Required modifier keys.
+     * @returns {Function} The event handler function.
+     * @private
+     */
     #setupMouseEvents = (eventType, callback, useEntity, modifiers) => {
         let lastClickTime = 0
         let clickTimeout = null
@@ -151,7 +197,7 @@ export class CanvasEventManager {
                     if (timeDiff > DOUBLE_CLICK_TIMEOUT) {
                         callback(event, pickedEntity?.id)
                     }
-                }, DOUBLE_CLICK_TIMEOUT + 50)
+                }, DOUBLE_CLICK_TIMEOUT + 50);
             }
             else if (this.events[eventType]?.type === 'LEFT_DOUBLE_CLICK') {
                 clearTimeout(clickTimeout)
@@ -160,9 +206,8 @@ export class CanvasEventManager {
             else {
                 callback(event, pickedEntity?.id)
             }
-        }
-    }
-
+        };
+    };
 
     /**
      * Unregisters an event listener.
@@ -176,20 +221,38 @@ export class CanvasEventManager {
         const {eventType} = this.#parseEventName(eventName)
         this.screenSpaceEventHandler.removeInputAction(this.events[eventType].event)
         this.handlers.delete(eventName)
+        this.handlers.delete(`touchend:${eventType}`)
+
+        // Remove touchend listener if no touch handlers remain
+        if (this.isTouchDevice && this.touchEndHandler && !this.#hasTouchHandlers()) {
+            this.viewer.scene.canvas.removeEventListener('touchend', this.touchEndHandler)
+            this.touchEndHandler = null
+        }
     }
 
     /**
-     * Adds an event listener using the existing `on` method.
+     * Checks if any touch handlers are registered.
+     * @returns {boolean} True if touch handlers exist, false otherwise.
+     * @private
+     */
+    #hasTouchHandlers() {
+        return Array.from(this.handlers.keys()).some((key) =>
+                                                         this.#parseEventName(key).eventType.includes('TAP') || key.startsWith('touchend:'),
+        )
+    }
+
+    /**
+     * Adds an event listener using the `on` method.
      * @param {string} eventName - Formatted event name (e.g., "CTRL#CLICK").
      * @param {Function} callback - The callback function.
-     * @param {Object} [options={}] - Additional options (`useEntity`, `once`).
+     * @param {Object} [options={}] - Options (`useEntity`, `once`).
      */
     addEventListener(eventName, callback, options = {}) {
         this.on(eventName, callback, options)
     }
 
     /**
-     * Removes a specific event listener using the existing `off` method.
+     * Removes a specific event listener using the `off` method.
      * @param {string} eventName - Formatted event name (e.g., "CTRL#CLICK").
      */
     removeEventListener(eventName) {
@@ -205,38 +268,34 @@ export class CanvasEventManager {
 
     /**
      * Extracts modifiers and event type from "<MODIFIER>#<EVENT_TYPE>" format.
-     * (# issthe default)
-     * If no "#" is found, the event type is assumed to have no modifiers.
-     *
      * @param {string} eventName - The formatted event name.
      * @returns {Object} { modifiers: Array<string>, eventType: string }
+     * @throws {Error} If eventName is invalid.
      * @private
      */
     #parseEventName(eventName) {
         if (typeof eventName !== 'string' || !eventName.trim()) {
             throw new Error('Invalid event name: must be a non-empty string')
         }
-        // Ensure the separator exists in the event name
+
         if (!eventName.includes(MODIFIER_SEPARATOR)) {
-            return {modifiers: [], eventType: eventName} // No modifiers, entire name is the event
+            return {modifiers: [], eventType: eventName}
         }
 
-        // Split based on the defined separator
-        const [modifierPart, eventType] = eventName.split(MODIFIER_SEPARATOR, 2) // Ensure only 2 splits
-
+        const [modifierPart, eventType] = eventName.split(MODIFIER_SEPARATOR, 2)
         return {
-            modifiers: modifierPart ? modifierPart.split(EVENT_SEPARATOR) : [], // Extract modifiers if present
-            eventType: eventType || modifierPart, // Ensure event type is correctly assigned
-        }
-
-
+            modifiers: modifierPart ? modifierPart.split(EVENT_SEPARATOR) : [],
+            eventType: eventType || modifierPart,
+        };
     }
 
-
     /**
-     * Handles touch interactions (long tap and double tap).
-     * @param {string} eventName - The formatted event name.
-     * @param {Function} callback - Function to execute.
+     * Sets up touch event handling for TAP, DOUBLE_TAP, and LONG_TAP.
+     * @param {string} eventType - The event type (e.g., TAP, DOUBLE_TAP, LONG_TAP).
+     * @param {Function} callback - Callback function.
+     * @param {boolean} useEntity - Whether to require a picked entity.
+     * @param {Array<string>} modifiers - Required modifier keys.
+     * @returns {Function|null} The event handler function or null if unsupported.
      * @private
      */
     #setupTouchEvents = (eventType, callback, useEntity, modifiers) => {
@@ -245,16 +304,22 @@ export class CanvasEventManager {
         }
 
         let lastTapTime = 0
-        let tapTimeout = null
         let longTapTimer = null
-        let isLongTapActive = false
+        let touchState = {
+            isDoubleTap:   false,
+            isLongTap:     false,
+            touchPosition: null,
+            event:         null,
+        }
+
         return (event) => {
             if (!event.changedTouches || event.changedTouches.length === 0) {
                 return
             }
 
             const touch = event.changedTouches[0]
-            const touchPosition = new Cartesian2(touch.clientX, touch.clientY)
+            touchState.touchPosition = new Cartesian2(touch.clientX, touch.clientY)
+            touchState.event = event
 
             if (!this.#checkKeyModifiers(modifiers)) {
                 return
@@ -264,55 +329,73 @@ export class CanvasEventManager {
             const tapDiff = tapNow - lastTapTime
             lastTapTime = tapNow
 
-            let isLongTapActive = false
-            let isDoubleTapActive = false
+            // Reset state for new touch sequence
+            touchState.isDoubleTap = false
+            touchState.isLongTap = false
 
-            // 🚀 Gestion du Double Tap
-            if (tapDiff < 300 && tapDiff > 0) {
+            // Handle DOUBLE_TAP
+            if (tapDiff < TOUCH_DOUBLE_TAP_TIMEOUT && tapDiff > 0) {
                 clearTimeout(longTapTimer)
-                clearTimeout(tapTimeout) // Annule le TAP
-                isDoubleTapActive = true // Marquer que DOUBLE_TAP a été validé
-                console.log('🚀 Double Tap détecté !')
+                touchState.isDoubleTap = true
                 if (this.events[eventType]?.type === 'DOUBLE_TAP') {
-                    callback(event, this.viewer.scene.pick(touchPosition)?.id)
+                    const pickedEntity = useEntity ? this.viewer.scene.pick(touchState.touchPosition) : null
+                    if (!useEntity || (pickedEntity && pickedEntity.id)) {
+                        callback(event, pickedEntity?.id)
+                        console.log('🚀 Double Tap detected!')
+                    }
                 }
                 return
             }
 
-            // 🕒 Gestion du `LONG_TAP`
+            // Handle LONG_TAP
             longTapTimer = setTimeout(() => {
-                console.log('⏳ Long Tap détecté !')
-                isLongTapActive = true
-                clearTimeout(tapTimeout) // Annule immédiatement le TAP
+                touchState.isLongTap = true
                 if (this.events[eventType]?.type === 'LONG_TAP') {
-                    callback(event, this.viewer.scene.pick(touchPosition)?.id)
+                    const pickedEntity = useEntity ? this.viewer.scene.pick(touchState.touchPosition) : null
+                    if (!useEntity || (pickedEntity && pickedEntity.id)) {
+                        callback(touchState.event, pickedEntity?.id)
+                        console.log('⏳ Long Tap detected!')
+                    }
                 }
-            }, 600)
+            }, TOUCH_LONG_TAP_TIMEOUT);
 
-            // 📱 Gestion du `TAP`
-            this.viewer.scene.canvas.addEventListener('touchend', (touchEvent) => {
-                if (isLongTapActive || isDoubleTapActive) { // Empêcher TAP si LONG_TAP ou DOUBLE_TAP a été validé
+            // Handle TAP (on touchend)
+            const touchEndHandler = (touchEvent) => {
+                if (touchState.isDoubleTap || touchState.isLongTap) {
                     return
                 }
-                isDoubleTapActive = false
-                isLongTapActive = false
 
-                console.log('📱 Tap détecté !')
-                if (this.events[eventType]?.type === 'TAP') {
-                    callback(event, this.viewer.scene.pick(new Cartesian2(touchEvent.changedTouches[0].clientX, touchEvent.changedTouches[0].clientY))?.id)
-                }
                 clearTimeout(longTapTimer)
-            }, {once: true})
-        }
-    }
+                if (this.events[eventType]?.type === 'TAP') {
+                    const pos = new Cartesian2(
+                        touchEvent.changedTouches[0].clientX,
+                        touchEvent.changedTouches[0].clientY,
+                    )
+                    const pickedEntity = useEntity ? this.viewer.scene.pick(pos) : null
+                    if (!useEntity || (pickedEntity && pickedEntity.id)) {
+                        callback(touchEvent, pickedEntity?.id)
+                        console.log('📱 Tap detected!')
+                    }
+                }
+            };
 
+            // Register touchend handler
+            this.handlers.set(`touchend:${eventType}`, touchEndHandler)
+        };
+    };
+
+    /**
+     * Cleans up all resources, removing event listeners and destroying the handler.
+     */
     destroy() {
         this.removeAllListeners()
-        window.removeEventListener('keydown', this.#updateModifierState)
-        window.removeEventListener('keyup', this.#updateModifierState)
+        window.removeEventListener('keydown', this.#boundKeydown)
+        window.removeEventListener('keyup', this.#boundKeyup)
         if (this.touchEndHandler) {
             this.viewer.scene.canvas.removeEventListener('touchend', this.touchEndHandler)
+            this.touchEndHandler = null
         }
         this.screenSpaceEventHandler.destroy()
+        this.handlers.clear()
     }
 }
