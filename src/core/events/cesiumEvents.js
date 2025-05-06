@@ -37,8 +37,8 @@ export const CESIUM_EVENTS = {
 
 
     // Touch events
-    TAP:         {type: 'TAP', event: 'TAP', touch: true},
-    DOUBLE_TAP:  {type: 'DOUBLE_TAP', event: 'DOUBLE_TAP', touch: true},
+    TAP:        {event: ScreenSpaceEventType.LEFT_CLICK, type: 'TAP', touch: true},
+    DOUBLE_TAP: {event: ScreenSpaceEventType.LEFT_DOUBLE_CLICK, type: 'DOUBLE_TAP', touch: true},
     LONG_TAP:    {type: 'LONG_TAP', event: 'LONG_TAP', touch: true},
     TOUCH_START: {type: 'TOUCH_START', event: 'TOUCH_START', touch: true},
     TOUCH_END:   {type: 'TOUCH_END', event: 'TOUCH_END', touch: true},
