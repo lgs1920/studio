@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-06
- * Last modified: 2025-05-06
+ * Created on: 2025-05-07
+ * Last modified: 2025-05-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -297,6 +297,15 @@ export class MapPOI extends MapElement {
         __.canvasEvents.addEventListener('CLICK', (event, entity) => {
             console.log('CLICK:', entity.id, event)
         }, {useEntity: true})
+        __.canvasEvents.on('TAP', (event, entity) => {
+            console.log('TAP callback 1:', entity.id, event)
+        }, {useEntity: true})
+        __.canvasEvents.on('TAP', (event, entity) => {
+            console.log('TAP callback 2:', entity.id, event)
+        }, {useEntity: true})
+        __.canvasEvents.on('DOUBLE_TAP', (event, entity) => {
+            console.log('DOUBLE_TAP callback 1:', entity.id, event)
+        }, {useEntity: true})
         // __.canvasEvents.addEventListener('CTRL#CLICK', (event,entity)=> {
         //     console.log('CTRL CLICK:', entity?.title,event)
         // },{useEntity:true})
@@ -307,13 +316,13 @@ export class MapPOI extends MapElement {
             console.log('RIGHT CLICK:', entity.id, event)
         }, {useEntity: true})
         __.canvasEvents.addEventListener('TAP', (event, entity) => {
-            console.log('TAP:', entity.id, event)
+            console.log('TAP callback 3:', entity.id, event)
         }, {useEntity: true})
         // __.canvasEvents.addEventListener('CTRL#CLICK', (event,entity)=> {
         //     console.log('CTRL CLICK:', entity?.title,event)
         // },{useEntity:true})
         __.canvasEvents.addEventListener('DOUBLE_TAP', (event, entity) => {
-            console.log('DOUBLE TAP:', entity.id, event)
+            console.log('DOUBLE_TAP callback 2:', entity.id, event)
         }, {useEntity: true})
         __.canvasEvents.addEventListener('LONG_TAP', (event, entity) => {
             console.log('LONG_TAP:', entity.id, event)
