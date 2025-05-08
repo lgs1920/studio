@@ -14,17 +14,17 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, EVENTS, LONG_TAP_TIMEOUT } from '@Core/constants'
-import { ScreenSpaceEventHandler }                                            from 'cesium'
-import { CESIUM_EVENTS, MODIFIER_SEPARATOR, MODIFIERS }                       from './cesiumEvents'
-
 /**
  * Manages canvas events for a Cesium viewer, handling both mouse and touch interactions.
  * Supports modifier keys (Ctrl, Shift, Alt) and formats event names as "<MODIFIER>#<EVENT_TYPE>" (e.g., "CTRL#CLICK").
  * Implements a singleton pattern to ensure a single instance per viewer.
  *
- * @class
+ * @class CanvasEventManager
  */
+import { DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, EVENTS, LONG_TAP_TIMEOUT } from '@Core/constants'
+import { ScreenSpaceEventHandler }                                            from 'cesium'
+import { CESIUM_EVENTS, MODIFIER_SEPARATOR, MODIFIERS }                       from './cesiumEvents'
+
 export class CanvasEventManager {
     /**
      * Singleton instance of CanvasEventManager.
@@ -41,7 +41,7 @@ export class CanvasEventManager {
     #events = CESIUM_EVENTS
 
     /**
-     * The Cesium viewer instance associated with this event manager.
+     * Cesium viewer instance associated with this event manager.
      * @type {Viewer}
      * @private
      */
@@ -49,6 +49,7 @@ export class CanvasEventManager {
 
     /**
      * Map storing event handlers for each event name.
+     * Each entry contains an array of handler objects with handler, callback, and options (including priority).
      * @type {Map<string, Array<{handler: Function|Object, callback: Function, options: Object}>>}
      * @private
      */
@@ -62,7 +63,7 @@ export class CanvasEventManager {
     #screenSpaceEventHandler
 
     /**
-     * Tracks the state of touch tap events for TAP, DOUBLE_TAP, and LONG_TAP detection.
+     * Tracks touch tap event state for TAP, DOUBLE_TAP, and LONG_TAP detection.
      * @type {{lastTapTime: number, tapCount: number, isProcessing: boolean, longTapTimer: number|null, suppressTap:
      *     boolean, pendingTap: number|null}}
      * @private
@@ -77,19 +78,17 @@ export class CanvasEventManager {
     }
 
     /**
-     * Creates a new CanvasEventManager instance or returns the existing singleton instance.
-     * Initializes the Cesium ScreenSpaceEventHandler and sets up touch/mouse event handling.
+     * Creates or returns the singleton instance of CanvasEventManager.
+     * Initializes the Cesium ScreenSpaceEventHandler and configures touch/mouse event handling.
      *
      * @param {Cesium.Viewer} viewer - The Cesium viewer instance.
      * @throws {Error} If the viewer is invalid or missing required properties.
      */
     constructor(viewer) {
-        // Return existing instance if singleton is already initialized
         if (CanvasEventManager.#instance) {
             return CanvasEventManager.#instance
         }
 
-        // Validate viewer
         if (!viewer || !viewer.scene || !viewer.scene.canvas) {
             throw new Error('Invalid viewer: must be a valid Cesium Viewer instance')
         }
@@ -98,7 +97,7 @@ export class CanvasEventManager {
         this.#screenSpaceEventHandler = new ScreenSpaceEventHandler(viewer.scene.canvas)
         this.isTouchDevice = this.#isTouchDevice()
 
-        // Prevent context menu on touch devices to avoid unintended RIGHT_CLICK events
+        // Disable context menu on touch devices to prevent unintended RIGHT_CLICK events
         if (this.isTouchDevice) {
             this.#viewer.scene.canvas.addEventListener('contextmenu', (e) => e.preventDefault())
         }
@@ -107,8 +106,7 @@ export class CanvasEventManager {
     }
 
     /**
-     * Detects whether the device supports touch events.
-     * Checks for touch support using multiple browser APIs for robustness.
+     * Checks if the device supports touch events using multiple browser APIs.
      *
      * @returns {boolean} True if the device supports touch events, false otherwise.
      * @private
@@ -123,7 +121,7 @@ export class CanvasEventManager {
 
     /**
      * Emits an event by executing all registered callbacks for the specified event name.
-     * Validates each handler's entity requirement before executing its callback.
+     * Callbacks are sorted by priority (highest first) and executed if entity requirements are met.
      *
      * @param {string} eventName - The event name (e.g., "CTRL#CLICK", "TAP").
      * @param {Object} event - The Cesium event object.
@@ -133,9 +131,10 @@ export class CanvasEventManager {
     #emit(eventName, event, pickedEntityId) {
         const handlers = this.#handlers.get(eventName)
         if (handlers) {
-            handlers.forEach(({callback, options}) => {
+            // Sort handlers by priority in descending order
+            const sortedHandlers = [...handlers].sort((a, b) => (b.options.priority || 0) - (a.options.priority || 0))
+            sortedHandlers.forEach(({callback, options}) => {
                 try {
-                    // Validate entity requirement for this handler using #validateEntity
                     const entityId = this.#validateEntity(event, options.entity ?? false, pickedEntityId)
                     if (entityId !== null || options.entity === false) {
                         callback(event, entityId)
@@ -167,72 +166,70 @@ export class CanvasEventManager {
     }
 
     /**
-     * Validates the entity based on the entity parameter, optionally using a pre-picked entity ID.
+     * Validates the entity based on the entity parameter and picked entity ID.
+     *
      * @param {Object} event - The Cesium event object (e.g., touch or mouse event).
      * @param {boolean|string|string[]} entity - Entity requirement:
      *   - `false`: Return `null` regardless of clicked entity.
      *   - `'id'`: Return ID only if the clicked entity's ID matches `id`.
      *   - `['id1', 'id2', ...]`: Return ID only if the clicked entity's ID is in the array.
      *   - `[]`: Return ID only if any entity is clicked.
-     * @param {string|null} [pickedEntityId] - Optional pre-picked entity ID to avoid redundant picking.
+     * @param {Object|null} [pickedEntityId] - Optional pre-picked entity to avoid redundant picking.
      * @returns {string|null} The entity ID if valid, null otherwise.
      * @private
      */
     #validateEntity(event, entity, pickedEntityId = null) {
-        // Use pre-picked entity ID if provided, otherwise pick the entity
+        // Use pre-picked entity ID if provided, otherwise pick entity at event position
         const entityId = pickedEntityId !== null ? pickedEntityId.id : this.#viewer.scene.pick(event.position)?.id
 
-        // Handle different entity parameter cases
         if (entity === false) {
-            return null // Always return null, regardless of entity
+            return null
         }
         else if (typeof entity === 'string') {
-            return entityId === entity ? entityId : null // Only return ID if it matches
+            return entityId === entity ? entityId : null
         }
         else if (Array.isArray(entity)) {
             if (entity.length === 0) {
-                return entityId ? entityId : null // Return ID if any entity is clicked
+                return entityId ? entityId : null
             }
             else {
-                return entity.includes(entityId) ? entityId : null // Return ID if in array
+                return entity.includes(entityId) ? entityId : null
             }
         }
 
-        return null // Default: no emit if entity parameter is invalid
+        return null
     }
 
     /**
-     * Sets up touch event handling for TAP, DOUBLE_TAP, and LONG_TAP.
+     * Sets up touch event handlers for TAP, DOUBLE_TAP, and LONG_TAP events.
+     *
      * @param {string} eventType - The event type (e.g., TAP, DOUBLE_TAP, LONG_TAP).
-     * @returns {Object} An object containing downHandler and upHandler for touch events.
+     * @returns {Object} Object containing downHandler and upHandler for touch events.
      * @private
      */
     #setupTouchEvents(eventType) {
         /**
          * Validates touch event conditions and returns the picked entity ID or null.
+         *
          * @param {Object} event - The touch event object from Cesium.
          * @returns {string|null} The entity ID if valid, null otherwise.
          * @private
          */
         const validateTouchEvent = (event) => {
-            // Check if the event is a touch event or if the device supports touch
             if (event.pointerType !== 'touch' && !this.isTouchDevice) {
                 return null
             }
             return this.#viewer.scene.pick(event.position)?.id || null
         }
 
-        // Track the last tap time for double-tap detection
         let lastTapTime = 0
-        // Store the TAP timer
         let tapTimeout = null
-        // Count consecutive taps
         let tapCount = 0
-        // Track the start time of the current tap
         let tapStartTime = 0
 
         /**
          * Handles the DOWN event for touch interactions.
+         *
          * @param {Object} event - The Cesium LEFT_DOWN event.
          */
         const downHandler = (event) => {
@@ -240,7 +237,7 @@ export class CanvasEventManager {
             if (entityId === null && !this.#handlers.get(EVENTS.TAP)?.some(h => h.options.entity === false) &&
                 !this.#handlers.get(EVENTS.DOUBLE_TAP)?.some(h => h.options.entity === false) &&
                 !this.#handlers.get(EVENTS.LONG_TAP)?.some(h => h.options.entity === false)) {
-                return // No emit if no handlers allow entity=false
+                return
             }
 
             const now = Date.now()
@@ -249,7 +246,6 @@ export class CanvasEventManager {
             tapCount++
             tapStartTime = now
 
-            // Cancel any existing timers
             if (tapTimeout) {
                 clearTimeout(tapTimeout)
                 tapTimeout = null
@@ -259,7 +255,6 @@ export class CanvasEventManager {
                 this.#tapState.longTapTimer = null
             }
 
-            // Start LONG_TAP timer
             this.#tapState.longTapTimer = setTimeout(() => {
                 this.#tapState.suppressTap = true
                 this.#emit(EVENTS.LONG_TAP, event, entityId)
@@ -268,7 +263,6 @@ export class CanvasEventManager {
                 tapStartTime = 0
             }, LONG_TAP_TIMEOUT)
 
-            // Suppress TAP if tap is held beyond DOUBLE_TAP_TIMEOUT
             setTimeout(() => {
                 if (tapStartTime && Date.now() - tapStartTime >= DOUBLE_TAP_TIMEOUT && this.#tapState.longTapTimer) {
                     this.#tapState.suppressTap = true
@@ -279,7 +273,6 @@ export class CanvasEventManager {
                 }
             }, DOUBLE_TAP_TIMEOUT)
 
-            // Handle TAP and DOUBLE_TAP
             if (tapCount === 1) {
                 tapTimeout = setTimeout(() => {
                     if (tapCount === 1 && !this.#tapState.suppressTap) {
@@ -311,16 +304,12 @@ export class CanvasEventManager {
          * Handles the UP event for touch interactions.
          */
         const upHandler = () => {
-            // Clear LONG_TAP timer
             if (this.#tapState.longTapTimer) {
                 clearTimeout(this.#tapState.longTapTimer)
                 this.#tapState.longTapTimer = null
             }
 
-            // Reset suppressTap to allow future TAPs
             this.#tapState.suppressTap = false
-
-            // Reset tap start time
             tapStartTime = 0
         }
 
@@ -328,7 +317,8 @@ export class CanvasEventManager {
     }
 
     /**
-     * Sets up mouse event handling for the specified event type.
+     * Sets up mouse event handlers for the specified event type.
+     *
      * @param {string} eventType - Event type (e.g., CLICK, DOUBLE_CLICK, RIGHT_CLICK).
      * @param {string[]} modifier - Required modifier keys.
      * @returns {Function} The event handler function.
@@ -350,7 +340,6 @@ export class CanvasEventManager {
                 return
             }
 
-            // Check if any handler allows entity=false to proceed with null entityId
             if (entityId === null && !this.#handlers.get(eventName)?.some(h => h.options.entity === false)) {
                 return
             }
@@ -380,19 +369,15 @@ export class CanvasEventManager {
     }
 
     /**
-     * Registers an event listener for a specific event.
-     * Supports both touch and mouse events, with optional modifier keys and entity requirements.
+     * Registers an event listener with support for priority, entity filtering, and one-time execution.
      *
      * @param {string} eventName - The event name (e.g., "TAP", "CTRL#CLICK").
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
-     * @throws {Error} If eventName is invalid or callback is not a function.
+     * @param {Function} callback - The callback function, receiving (event, entityId).
+     * @param {Object|boolean} [options={}] - Listener options.
+     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement.
+     * @param {boolean} [options.once=false] - Whether to remove the listener after triggering.
+     * @param {number} [options.priority=0] - Priority of the callback (higher number = executed first).
+     * @throws {Error} If eventName is invalid, callback is not a function, or event type is unsupported.
      */
     on(eventName, callback, options = {}) {
         if (typeof eventName !== 'string' || !eventName.trim()) {
@@ -408,24 +393,24 @@ export class CanvasEventManager {
 
         const {modifier, eventType} = this.#parseEventName(eventName)
 
-        // Vérifier si l'eventType est supporté
         if (!this.#events[eventType]) {
             throw new Error(`Event type ${eventType} is not supported`)
         }
 
-        // Handle boolean options for backward compatibility
         if (typeof options === 'boolean') {
             options = {once: options}
         }
         const entity = options?.entity ?? false
+        const priority = typeof options?.priority === 'number' ? options.priority : 0
         options.entity = entity
+        options.priority = priority
 
         let handler
         if (this.isTouchDevice) {
             if (this.#events[eventType]?.touch) {
                 handler = this.#setupTouchEvents(eventType)
                 if (!this.#handlers.has(eventName)) {
-                    this.#screenSpaceEventHandler.setInputAction(handler.downHandler, this.#events.DOWN.event)
+                    this.#screenSpaceEventHandler.setInputAction(handler.downHandler, this.#events[eventType].event)
                     this.#screenSpaceEventHandler.setInputAction(handler.upHandler, this.#events.UP.event)
                 }
             }
@@ -454,7 +439,6 @@ export class CanvasEventManager {
             }
         }
 
-        // Ajouter le gestionnaire et le callback
         if (!this.#handlers.has(eventName)) {
             this.#handlers.set(eventName, [])
         }
@@ -462,8 +446,7 @@ export class CanvasEventManager {
     }
 
     /**
-     * Unregisters an event listener for a specific event.
-     * Removes either a single callback or all handlers for the event.
+     * Unregisters an event listener for a specific event or all handlers for an event.
      *
      * @param {string} eventName - The event name to remove (e.g., "TAP", "CTRL#CLICK").
      * @param {Function} [callback] - The specific callback to remove. If omitted, all handlers are removed.
@@ -478,7 +461,7 @@ export class CanvasEventManager {
 
         const removeHandler = (handler) => {
             if (eventType === EVENTS.LONG_TAP) {
-                this.#screenSpaceEventHandler.removeInputAction(this.#events.DOWN.event, handler.downHandler)
+                this.#screenSpaceEventHandler.removeInputAction(this.#events[eventType].event, handler.downHandler)
                 this.#screenSpaceEventHandler.removeInputAction(this.#events.UP.event, handler.upHandler)
             }
             else if (this.#events[eventType]) {
@@ -489,7 +472,6 @@ export class CanvasEventManager {
         if (callback) {
             const index = handlers.findIndex((h) => h.callback === callback)
             if (index !== -1) {
-                // Only remove the specific handler if it's the last one for the event type
                 if (handlers.length === 1 && this.#handlers.get(eventName)) {
                     removeHandler(handlers[index].handler)
                     this.#handlers.delete(eventName)
@@ -498,7 +480,6 @@ export class CanvasEventManager {
             }
         }
         else {
-            // Remove all handlers for the event name
             if (this.#handlers.get(eventName)) {
                 handlers.forEach(({handler}) => removeHandler(handler))
                 this.#handlers.delete(eventName)
@@ -513,7 +494,6 @@ export class CanvasEventManager {
 
     /**
      * Parses an event name to extract modifier and event type.
-     * Handles formats like "<MODIFIER>#<EVENT_TYPE>" (e.g., "CTRL#CLICK") or simple event names (e.g., "TAP").
      *
      * @param {string} eventName - The event name to parse.
      * @returns {{modifier: {name: string, value: any}|null, eventType: string}} Parsed modifier and event type.
@@ -525,12 +505,10 @@ export class CanvasEventManager {
             throw new Error('Invalid event name: must be a non-empty string')
         }
 
-        // No separator means no modifier
         if (!eventName.includes(MODIFIER_SEPARATOR)) {
             return {modifier: null, eventType: eventName}
         }
 
-        // Get both modifier and event type
         const [modifierPart, eventType] = eventName.split(MODIFIER_SEPARATOR, 2)
         return {
             modifier:  {name: modifierPart, value: MODIFIERS[modifierPart]},
@@ -539,8 +517,7 @@ export class CanvasEventManager {
     }
 
     /**
-     * Cleans up all resources, removing event listeners and destroying the handler.
-     * Resets the singleton instance.
+     * Cleans up all resources, removes event listeners, and resets the singleton instance.
      */
     destroy() {
         this.removeAllListeners()
@@ -550,18 +527,18 @@ export class CanvasEventManager {
     }
 
     /**
-     * Adds an event listener (alias for `on` method).
+     * Alias for `on` method to add an event listener.
      *
      * @param {string} eventName - The event name (e.g., "TAP", "CTRL#CLICK").
      * @param {Function} callback - The callback function to execute.
-     * @param {Object|boolean} [options={}] - Options for the listener.
+     * @param {Object|boolean} [options={}] - Listener options.
      */
     addEventListener(eventName, callback, options = {}) {
         this.on(eventName, callback, options)
     }
 
     /**
-     * Removes an event listener (alias for `off` method).
+     * Alias for `off` method to remove an event listener.
      *
      * @param {string} eventName - The event name to remove.
      * @param {Function} [callback] - The specific callback to remove.
@@ -580,14 +557,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the CLICK event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onClick(callback, options = {}) {
@@ -613,14 +584,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the DOUBLE_CLICK event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onDoubleClick(callback, options = {}) {
@@ -646,14 +611,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the DOWN event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onDown(callback, options = {}) {
@@ -679,14 +638,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the UP event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onUp(callback, options = {}) {
@@ -712,14 +665,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the RIGHT_DOWN event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onRightDown(callback, options = {}) {
@@ -745,14 +692,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the RIGHT_UP event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onRightUp(callback, options = {}) {
@@ -778,14 +719,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the RIGHT_CLICK event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onRightClick(callback, options = {}) {
@@ -811,14 +746,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the MIDDLE_DOWN event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onMiddleDown(callback, options = {}) {
@@ -844,14 +773,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the MIDDLE_UP event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onMiddleUp(callback, options = {}) {
@@ -877,14 +800,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the MIDDLE_CLICK event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onMiddleClick(callback, options = {}) {
@@ -910,14 +827,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the MOUSE_MOVE event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onMouseMove(callback, options = {}) {
@@ -943,14 +854,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the WHEEL event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onWheel(callback, options = {}) {
@@ -976,14 +881,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the TAP event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onTap(callback, options = {}) {
@@ -1009,14 +908,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the DOUBLE_TAP event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onDoubleTap(callback, options = {}) {
@@ -1042,14 +935,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the LONG_TAP event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onLongTap(callback, options = {}) {
@@ -1075,14 +962,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the PINCH_START event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onPinchStart(callback, options = {}) {
@@ -1108,14 +989,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the PINCH_MOVE event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onPinchMove(callback, options = {}) {
@@ -1141,14 +1016,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the PINCH_END event.
      *
-     * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the listener.
-     * @param {boolean|string|string[]} [options.entity=false] - Entity requirement for the event:
-     *   - `false`: Emit with `entity=null` regardless of clicked entity (default).
-     *   - `'id'`: Emit only if the clicked entity's ID matches `id`.
-     *   - `['id1', 'id2', ...]`: Emit only if the clicked entity's ID is in the array.
-     *   - `[]`: Emit only if any entity is clicked.
-     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
+     * @param {Function} callback - The callback function to execute.
+     * @param {Object|boolean} [options={}] - Listener options.
      * @throws {Error} If callback is not a function.
      */
     onPinchEnd(callback, options = {}) {
