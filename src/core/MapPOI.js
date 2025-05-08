@@ -293,33 +293,6 @@ export class MapPOI extends MapElement {
         if (dbSync) {
             await this.persistToDatabase()
         }
-
-
-        __.canvasEvents.addEventListener('CLICK', (event, entity) => {
-            console.log('LEFT CLICK:', entity, event)
-        }, {entity: this.id})
-        __.canvasEvents.on('TAP', (event, entity) => {
-            console.log('TAP callback 1:', entity, event)
-        }, {entity: this.id})
-        __.canvasEvents.on('DOUBLE_TAP', (event, entity) => {
-            console.log('DOUBLE_TAP callback 1:', entity, event)
-        }, {entity: this.id})
-        __.canvasEvents.addEventListener('CTRL#CLICK', (event, entity) => {
-            console.log('CTRL CLICK:', entity, event)
-        }, {entity: this.id})
-        __.canvasEvents.addEventListener('DOUBLE_CLICK', (event, entity) => {
-            console.log('DOUBLE CLICK:', entity, event)
-        }, {entity: this.id})
-        __.canvasEvents.addEventListener('RIGHT_CLICK', (event, entity) => {
-            console.log('RIGHT CLICK:', entity, event)
-        }, {entity: this.id})
-        __.canvasEvents.addEventListener('ALT#RIGHT_CLICK', (event, entity) => {
-            console.log('ALT RIGHT CLICK:', entity, event)
-        }, {entity: this.id})
-        __.canvasEvents.addEventListener('LONG_TAP', (event, entity) => {
-            console.log('LONG_TAP:', entity, event)
-        }, {entity: this.id})
-
         return entity
     }
 
