@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-25
- * Last modified: 2025-02-25
+ * Created on: 2025-05-08
+ * Last modified: 2025-05-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,39 +17,23 @@
 import { MapLayer } from '@Components/cesium/MapLayer'
 import { Viewer }   from '@Components/cesium/Viewer'
 
-import { InitErrorMessage } from '@Components/InitErrorMessage'
-import {
-    MainUI,
-}                           from '@Components/MainUI/MainUI.jsx'
+import { InitErrorMessage }        from '@Components/InitErrorMessage'
+import { MainUI }                  from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
+import { SelectionIndicator }      from '@Components/MainUI/SelectionIndicator'
+import { WelcomeModal }            from '@Components/MainUI/WelcomeModal'
 import {
-    WelcomeModal,
-}                           from '@Components/MainUI/WelcomeModal'
-import {
-    BASE_ENTITY, BOTTOM, FOCUS_LAST, FOCUS_STARTER, CURRENT_JOURNEY, MOBILE_MAX, OVERLAY_ENTITY,
-    POI_STANDARD_TYPE, POI_STARTER_TYPE, NONE, APP_EVENT,
-} from '@Core/constants'
-import {
-    LGS1920Context,
-}                           from '@Core/LGS1920Context'
-import { MapPOI }    from '@Core/MapPOI'
-import { MapTarget } from '@Core/MapTarget'
-import {
-    LayersAndTerrainManager,
-}                           from '@Core/ui/LayerAndTerrainManager'
-import {
-    TerrainUtils,
-}                           from '@Utils/cesium/TerrainUtils'
-import {
-    TrackUtils,
-}                           from '@Utils/cesium/TrackUtils'
-import {
-    UIToast,
-}                           from '@Utils/UIToast'
-import { useEffect }        from 'react'
-import {
-    useMediaQuery,
-}                           from 'react-responsive'
+    APP_EVENT, BASE_ENTITY, BOTTOM, CURRENT_JOURNEY, FOCUS_LAST, FOCUS_STARTER, MOBILE_MAX, OVERLAY_ENTITY,
+    POI_STARTER_TYPE,
+}                                  from '@Core/constants'
+import { LGS1920Context }          from '@Core/LGS1920Context'
+import { MapTarget }               from '@Core/MapTarget'
+import { LayersAndTerrainManager } from '@Core/ui/LayerAndTerrainManager'
+import { TerrainUtils }            from '@Utils/cesium/TerrainUtils'
+import { TrackUtils }              from '@Utils/cesium/TrackUtils'
+import { UIToast }                 from '@Utils/UIToast'
+import { useEffect }               from 'react'
+import { useMediaQuery }           from 'react-responsive'
 
 /***************************************
  * Init Application context
@@ -126,22 +110,22 @@ export function LGS1920() {
 
                               if (!starter) {
                                   starter = await __.ui.poiManager.add({
-                                                                     longitude:   lgs.settings.starter.longitude,
-                                                                           latitude:  lgs.settings.starter.latitude,
-                                                                           height:    lgs.settings.starter.height,
-                                                                           title:     lgs.settings.starter.title,
-                                                                     description: lgs.settings.starter.description,
-                                                                     color:       lgs.settings.starter.color,
-                                                                     bgColor: lgs.settings.starter.bgColor,
-                                                                     type:        POI_STARTER_TYPE,
+                                                                           longitude:   lgs.settings.starter.longitude,
+                                                                           latitude:    lgs.settings.starter.latitude,
+                                                                           height:      lgs.settings.starter.height,
+                                                                           title:       lgs.settings.starter.title,
+                                                                           description: lgs.settings.starter.description,
+                                                                           color:       lgs.settings.starter.color,
+                                                                           bgColor:     lgs.settings.starter.bgColor,
+                                                                           type:        POI_STARTER_TYPE,
                                                                        }, false, true)
 
                               }
 
                               // ---- < 0.8.3 compat. : patch to fix #200
                               // if (!starter.color || !starter.bgColor) {
-                                  starter.color = lgs.settings.starter.color
-                                  starter.bgColor = lgs.settings.starter.bgColor
+                              starter.color = lgs.settings.starter.color
+                              starter.bgColor = lgs.settings.starter.bgColor
                               // }
                               // ---
                               lgs.mainProxy.components.pois.current = starter
@@ -262,8 +246,9 @@ export function LGS1920() {
                     <MapLayer type={OVERLAY_ENTITY}/>
 
                     <Viewer/>
-                    <MainUI/>
 
+                    <MainUI/>
+                    <SelectionIndicator/>
                 </>
 
             }
