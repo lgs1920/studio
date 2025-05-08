@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-02
- * Last modified: 2025-05-01
+ * Created on: 2025-05-08
+ * Last modified: 2025-05-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -58,6 +58,7 @@ export function Viewer() {
             showRenderLoopErrors: true,
             resolutionScale: 2,
             mapProjection:        new WebMercatorProjection(), // TODO is it a problem in 3D ?
+            //selectionIndicator: false,
             //*************************************
             // Avoid consuming Cesium Ion Sessions
             // DO NOT CHANGE the 2 following lines
@@ -73,15 +74,14 @@ export function Viewer() {
     // Add some globe parameters
     lgs.scene.globe.enableLighting = false
     lgs.scene.globe.depthTestAgainstTerrain = true
-    lgs.scene.requestRenderMode = true
 
     //lgs.scene.maximumRenderTimeChange = 0.2
     //lgs.scene.debugShowFramesPerSecond=true
 
     lgs.scene.shadows = true
+    lgs.scene.requestRenderMode = true
 
     lgs.viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK)
-    lgs.viewer.selectionIndicator.viewModel.showSelection = false
 
 
     //Layers
