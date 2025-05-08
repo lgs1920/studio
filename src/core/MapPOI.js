@@ -305,7 +305,7 @@ export class MapPOI extends MapElement {
             console.log('DOUBLE_TAP callback 1:', entity, event)
         }, {entity: this.id})
         __.canvasEvents.addEventListener('CTRL#CLICK', (event, entity) => {
-            console.log('CTRL CLICK:', entity?.title, event)
+            console.log('CTRL CLICK:', entity, event)
         }, {entity: this.id})
         __.canvasEvents.addEventListener('DOUBLE_CLICK', (event, entity) => {
             console.log('DOUBLE CLICK:', entity, event)

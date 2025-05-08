@@ -180,7 +180,7 @@ export class CanvasEventManager {
      */
     #validateEntity(event, entity, pickedEntityId = null) {
         // Use pre-picked entity ID if provided, otherwise pick the entity
-        const entityId = pickedEntityId !== null ? pickedEntityId : this.#viewer.scene.pick(event.position)?.id
+        const entityId = pickedEntityId !== null ? pickedEntityId.id : this.#viewer.scene.pick(event.position)?.id
 
         // Handle different entity parameter cases
         if (entity === false) {
@@ -408,19 +408,23 @@ export class CanvasEventManager {
 
         const {modifier, eventType} = this.#parseEventName(eventName)
 
+        // Vérifier si l'eventType est supporté
+        if (!this.#events[eventType]) {
+            throw new Error(`Event type ${eventType} is not supported`)
+        }
+
         // Handle boolean options for backward compatibility
         if (typeof options === 'boolean') {
             options = {once: options}
         }
         const entity = options?.entity ?? false
-        options.entity = entity // Ensure entity is stored in options
+        options.entity = entity
 
         let handler
         if (this.isTouchDevice) {
             if (this.#events[eventType]?.touch) {
                 handler = this.#setupTouchEvents(eventType)
-                // Register handlers only once per event type
-                if (!this.#handlers.has(eventType)) {
+                if (!this.#handlers.has(eventName)) {
                     this.#screenSpaceEventHandler.setInputAction(handler.downHandler, this.#events.DOWN.event)
                     this.#screenSpaceEventHandler.setInputAction(handler.upHandler, this.#events.UP.event)
                 }
@@ -432,10 +436,13 @@ export class CanvasEventManager {
         else {
             if (!this.#events[eventType]?.touch) {
                 handler = this.#setupMouseEvents(eventType, modifier)
-                // Register handler only once per event type
-                if (!this.#handlers.has(eventType)) {
-                    if (modifier) {
-                        this.#screenSpaceEventHandler.setInputAction(handler, this.#events[eventType].event, modifier)
+                if (!this.#handlers.has(eventName)) {
+                    if (modifier && modifier.value) {
+                        this.#screenSpaceEventHandler.setInputAction(
+                            handler,
+                            this.#events[eventType].event,
+                            modifier.value,
+                        )
                     }
                     else {
                         this.#screenSpaceEventHandler.setInputAction(handler, this.#events[eventType].event)
@@ -447,15 +454,11 @@ export class CanvasEventManager {
             }
         }
 
+        // Ajouter le gestionnaire et le callback
         if (!this.#handlers.has(eventName)) {
             this.#handlers.set(eventName, [])
         }
         this.#handlers.get(eventName).push({handler, callback, options})
-
-        // Store handler for the event type to prevent duplicate registrations
-        if (!this.#handlers.has(eventType)) {
-            this.#handlers.set(eventType, [{handler, callback: null, options: {}}])
-        }
     }
 
     /**
@@ -487,18 +490,18 @@ export class CanvasEventManager {
             const index = handlers.findIndex((h) => h.callback === callback)
             if (index !== -1) {
                 // Only remove the specific handler if it's the last one for the event type
-                if (handlers.length === 1 && this.#handlers.get(eventType)) {
+                if (handlers.length === 1 && this.#handlers.get(eventName)) {
                     removeHandler(handlers[index].handler)
-                    this.#handlers.delete(eventType)
+                    this.#handlers.delete(eventName)
                 }
                 handlers.splice(index, 1)
             }
         }
         else {
             // Remove all handlers for the event name
-            if (this.#handlers.get(eventType)) {
+            if (this.#handlers.get(eventName)) {
                 handlers.forEach(({handler}) => removeHandler(handler))
-                this.#handlers.delete(eventType)
+                this.#handlers.delete(eventName)
             }
             handlers.length = 0
         }
