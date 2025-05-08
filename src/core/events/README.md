@@ -173,7 +173,7 @@ The class supports the following events, as defined in `CESIUM_EVENTS`:
 
 ### Entity Requirements
 
-The `options.entity` parameter allows filtering events based on the clicked entity:
+The `options.entity` parameter allows filtering events based on the clicked entity's ID:
 
 * `false` (default): Triggers the callback with `entityId=null`, regardless of the clicked entity.
 * `'id'`: Triggers only if the clicked entity’s ID matches `'id'`.
@@ -377,19 +377,6 @@ Limitations
 * **Context Menu**: The context menu is disabled on touch devices to prevent unintended `RIGHT_CLICK` events.
 * **Entity Picking**: Entity picking relies on Cesium’s `scene.pick`, which may have performance implications in scenes
   with many entities.
-
-Contributing
-------------
-
-Contributions to the **LGS1920/studio** project are welcome! To contribute:
-
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/my-feature`).
-3. Commit your changes (`git commit -m 'Add my feature'`).
-4. Push to the branch (`git push origin feature/my-feature`).
-5. Open a pull request.
-
-Please ensure your code follows the project’s coding standards and includes tests where applicable.
 
 License
 -------
