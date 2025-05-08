@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-06
- * Last modified: 2025-05-05
+ * Created on: 2025-05-08
+ * Last modified: 2025-05-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -26,11 +26,11 @@ import { Profile }                          from '@Components/Profile/Profile'
 import { ProfileButton }                    from '@Components/Profile/ProfileButton'
 import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
 import {
-    BOTTOM, CESIUM_EVENTS, DESKTOP_MIN, DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, END, MENU_BOTTOM_END,
+    BOTTOM, DESKTOP_MIN, END, EVENTS, MENU_BOTTOM_END,
     MENU_BOTTOM_START, MENU_END_END,
     MENU_END_START,
     MENU_START_END,
-    MENU_START_START, MOBILE_MAX, POINTER, POIS_EDITOR_DRAWER, SCENE_MODE_2D, SECOND, START, TOP,
+    MENU_START_START, MOBILE_MAX, SCENE_MODE_2D, SECOND, START, TOP,
 } from '@Core/constants'
 import { JourneyToolbar } from '@Editor/JourneyToolbar'
 import { useEffect, useRef, useState } from 'react'
@@ -95,12 +95,12 @@ export const MainUI = () => {
             lgs.scene.morphTo2D(0)
         }
         // we need to manage some canvas events
-        __.canvasEvents.addEventListener('DOUBLE_TAP', closeDrawer)
-        __.canvasEvents.addEventListener('LEFT_DOUBLE_CLICK', closeDrawer)
+        __.canvasEvents.addEventListener(EVENTS.DOUBLE_TAP, closeDrawer)
+        __.canvasEvents.addEventListener(EVENTS.DOUBLE_CLICK, closeDrawer)
 
         return () => {
-            __.canvasEvents.removeEventListener('DOUBLE_TAP', closeDrawer)
-            __.canvasEvents.removeEventListener('LEFT_DOUBLE_CLICK', closeDrawer)
+            __.canvasEvents.removeEventListener(EVENTS.DOUBLE_TAP, closeDrawer)
+            __.canvasEvents.removeEventListener(EVENTS.DOUBLE_CLICK, closeDrawer)
 
         }
 

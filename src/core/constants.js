@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-30
- * Last modified: 2025-04-30
+ * Created on: 2025-05-08
+ * Last modified: 2025-05-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -220,35 +220,27 @@ export const UNLOCKED = 'unlocked'
 export const DOUBLE_CLICK_TIMEOUT = 300     // milliseconds
 export const DOUBLE_TAP_TIMEOUT = 300       // milliseconds
 export const LONG_TAP_TIMEOUT = 700         // milliseconds
-export const DOUBLE_TAP_DISTANCE = 20       // pixels
 export const CESIUM_EVENTS = $CESIUM_EVENTS
 
-export const POINTER = {
-    LEFT_DOWN:         0,
-    LEFT_UP:           1,
-    LEFT_CLICK:        2,
-    LEFT_DOUBLE_CLICK: 3,
-    RIGHT_DOWN:        5,
-    RIGHT_UP:          6,
-    RIGHT_CLICK:       7,
-    MIDDLE_DOWN:       10,
-    MIDDLE_UP:         11,
-    MIDDLE_CLICK:      12,
-    MOUSE_MOVE:        15,
-    WHEEL:             16,
-    PINCH_START:       17,
-    PINCH_END:         18,
-    PINCH_MOVE:        19,
-}
-export const BUTTONS = {
-    LEFT:   0,
-    MIDDLE: 1,
-    RIGHT:  2,
-}
-export const KEYBOARD = {
-    SHIFT: 0,
-    CTRL:  1,
-    ALT:   2,
+export const EVENTS = {
+    DOWN:         'DOWN',
+    UP:           'UP',
+    CLICK:        'CLICK',
+    TAP:          'TAP',
+    DOUBLE_TAP:   'DOUBLE_TAP',
+    LONG_TAP:     'LONG_TAP',
+    DOUBLE_CLICK: 'DOUBLE_CLICK',
+    RIGHT_DOWN:   'RIGHT_DOWN',
+    RIGHT_UP:     'RIGHT_UP',
+    RIGHT_CLICK:  'RIGHT_CLICK',
+    MIDDLE_DOWN:  'MIDDLE_DOWN',
+    MIDDLE_UP:    'MIDDLE_UP',
+    MIDDLE_CLICK: 'MIDDLE_CLICK',
+    MOUSE_MOVE:   'MOUSE_MOVE',
+    WHEEL:        'WHEEL',
+    PINCH_START:  'PINCH_START',
+    PINCH_END:    'PINCH_END',
+    PINCH_MOVE:   'PINCH_MOVE',
 }
 
 /*******************************************************************************
