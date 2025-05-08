@@ -7,137 +7,110 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-07
- * Last modified: 2025-05-07
+ * Created on: 2025-05-08
+ * Last modified: 2025-05-08
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { DOUBLE_CLICK_TIMEOUT }                               from '@Core/constants'
-import { ScreenSpaceEventHandler, ScreenSpaceEventType }      from 'cesium'
-import { CESIUM_EVENTS, EVENT_SEPARATOR, MODIFIER_SEPARATOR } from './cesiumEvents' // Configurable timeouts for touch
-// events
-
-// Configurable timeouts for touch events
-const TOUCH_DOUBLE_TAP_TIMEOUT = 300 // ms
-const TOUCH_LONG_TAP_TIMEOUT = 600 // ms
+import { DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, LONG_TAP_TIMEOUT } from '@Core/constants'
+import { ScreenSpaceEventHandler }                                    from 'cesium'
+import { CESIUM_EVENTS, MODIFIER_SEPARATOR, MODIFIERS }               from './cesiumEvents'
 
 /**
- * Manages canvas events for a Cesium viewer, including mouse and touch interactions,
- * with support for modifier keys (Ctrl, Shift, Alt).
- * Event names are formatted as "<MODIFIER>#<EVENT_TYPE>", e.g., "CTRL#CLICK".
+ * Manages canvas events for a Cesium viewer, handling both mouse and touch interactions.
+ * Supports modifier keys (Ctrl, Shift, Alt) and formats event names as "<MODIFIER>#<EVENT_TYPE>" (e.g., "CTRL#CLICK").
+ * Implements a singleton pattern to ensure a single instance per viewer.
+ *
+ * @class
  */
 export class CanvasEventManager {
     /**
      * Singleton instance of CanvasEventManager.
      * @type {CanvasEventManager|null}
+     * @private
      */
-    static instance = null;
+    static #instance = null
 
     /**
-     * Event configuration from CESIUM_EVENTS.
+     * Event configuration mapping from CESIUM_EVENTS.
      * @type {Object}
+     * @private
      */
-    events = CESIUM_EVENTS
+    #events = CESIUM_EVENTS
 
     /**
-     * The Cesium viewer instance.
-     * @type {Cesium.Viewer}
+     * The Cesium viewer instance associated with this event manager.
+     * @type {Viewer}
+     * @private
      */
-    viewer
+    #viewer
 
     /**
      * Map storing event handlers for each event name.
-     * Each event name maps to an array of { handler, callback, options } objects.
      * @type {Map<string, Array<{handler: Function|Object, callback: Function, options: Object}>>}
+     * @private
      */
-    handlers = new Map()
+    #handlers = new Map()
 
     /**
-     * Cesium ScreenSpaceEventHandler for handling canvas events.
-     * @type {Cesium.ScreenSpaceEventHandler}
+     * Cesium ScreenSpaceEventHandler for managing canvas input events.
+     * @type {ScreenSpaceEventHandler}
+     * @private
      */
-    screenSpaceEventHandler
+    #screenSpaceEventHandler
 
     /**
-     * Indicates whether the device supports touch events.
-     * @type {boolean}
-     */
-    isTouchDevice
-
-    /**
-     * Tracks the state of modifier keys (CTRL, SHIFT, ALT).
-     * @type {{CTRL: boolean, SHIFT: boolean, ALT: boolean}}
-     */
-    modifierState = {
-        CTRL:  false,
-        SHIFT: false,
-        ALT:   false,
-    }
-
-    /**
-     * Tracks the state of touch tap events.
+     * Tracks the state of touch tap events for TAP, DOUBLE_TAP, and LONG_TAP detection.
      * @type {{lastTapTime: number, tapCount: number, isProcessing: boolean, longTapTimer: number|null, suppressTap:
      *     boolean, pendingTap: number|null}}
+     * @private
      */
-    tapState = {
-        lastTapTime:  0,
-        tapCount:     0,
+    #tapState = {
+        lastTapTime: 0,
+        tapCount:    0,
         isProcessing: false,
         longTapTimer: null,
-        suppressTap:  false,
-        pendingTap:   null,
+        suppressTap: false,
+        pendingTap:  null,
     }
 
-    /**
-     * Bound keydown event handler.
-     * @type {Function}
-     * @private
-     */
-    #boundKeydown
 
     /**
-     * Bound keyup event handler.
-     * @type {Function}
-     * @private
-     */
-    #boundKeyup
-
-    /**
-     * Creates a new CanvasEventManager instance.
+     * Creates a new CanvasEventManager instance or returns the existing singleton instance.
+     * Initializes the Cesium ScreenSpaceEventHandler and sets up touch/mouse event handling.
+     *
      * @param {Cesium.Viewer} viewer - The Cesium viewer instance.
-     * @throws {Error} If viewer is not provided or invalid.
+     * @throws {Error} If the viewer is invalid or missing required properties.
      */
     constructor(viewer) {
-        if (CanvasEventManager.instance) {
-            return CanvasEventManager.instance
+        // Return existing instance if singleton is already initialized
+        if (CanvasEventManager.#instance) {
+            return CanvasEventManager.#instance
         }
 
+        // Validate viewer
         if (!viewer || !viewer.scene || !viewer.scene.canvas) {
             throw new Error('Invalid viewer: must be a valid Cesium Viewer instance')
         }
 
-        this.viewer = viewer
-        this.screenSpaceEventHandler = new ScreenSpaceEventHandler(viewer.scene.canvas)
+        this.#viewer = viewer
+        this.#screenSpaceEventHandler = new ScreenSpaceEventHandler(viewer.scene.canvas)
         this.isTouchDevice = this.#isTouchDevice()
 
-        // Bind modifier key listeners
-        this.#boundKeydown = (event) => this.#updateModifierState(event, true)
-        this.#boundKeyup = (event) => this.#updateModifierState(event, false)
-        window.addEventListener('keydown', this.#boundKeydown)
-        window.addEventListener('keyup', this.#boundKeyup)
-
-        // Prevent contextmenu events in touch mode to avoid RIGHT_CLICK
+        // Prevent context menu on touch devices to avoid unintended RIGHT_CLICK events
         if (this.isTouchDevice) {
-            this.viewer.scene.canvas.addEventListener('contextmenu', (e) => e.preventDefault())
+            this.#viewer.scene.canvas.addEventListener('contextmenu', (e) => e.preventDefault())
         }
 
-        CanvasEventManager.instance = this
+        CanvasEventManager.#instance = this
     }
 
     /**
-     * Checks if the device supports touch events.
+     * Detects whether the device supports touch events.
+     * Checks for touch support using multiple browser APIs for robustness.
+     *
      * @returns {boolean} True if the device supports touch events, false otherwise.
      * @private
      */
@@ -146,83 +119,47 @@ export class CanvasEventManager {
             'ontouchstart' in window ||
             navigator.maxTouchPoints > 0 ||
             window.matchMedia('(pointer: coarse)').matches
-        );
+        )
     }
 
     /**
-     * Updates the state of modifier keys (CTRL, SHIFT, ALT) based on key press events.
-     * @param {KeyboardEvent} event - The keyboard event.
-     * @param {boolean} isActive - Whether the key is pressed (true) or released (false).
-     * @private
-     */
-    #updateModifierState(event, isActive) {
-        const keyMap = {
-            ControlLeft: 'CTRL',
-            ControlRight: 'CTRL',
-            ShiftLeft:  'SHIFT',
-            ShiftRight: 'SHIFT',
-            AltLeft:    'ALT',
-            AltRight:   'ALT',
-            Control:    'CTRL',
-            Shift:      'SHIFT',
-            Alt:        'ALT',
-        };
-        const normalizedKey = keyMap[event.key] || event.key.toUpperCase()
-        if (['CTRL', 'SHIFT', 'ALT'].includes(normalizedKey)) {
-            this.modifierState[normalizedKey] = isActive
-        }
-    }
-
-    /**
-     * Checks whether the required modifier keys are active.
-     * @param {string[]} [requiredKeys=[]] - List of required keys (e.g., ["CTRL", "SHIFT"]).
-     * @returns {boolean} True if all required keys are active, false otherwise.
-     * @private
-     */
-    #checkKeyModifiers(requiredKeys = []) {
-        return requiredKeys.every((key) => this.modifierState[key])
-    }
-
-    /**
-     * Emits an event by executing all callbacks registered for the specified event type.
-     * @param {string} eventType - The event type (e.g., TAP, DOUBLE_TAP, LONG_TAP).
+     * Emits an event by executing all registered callbacks for the specified event name.
+     * Handles errors and supports one-time listeners via the `once` option.
+     *
+     * @param {string} eventName - The event name (e.g., "CTRL#CLICK", "TAP").
      * @param {...any} args - Arguments to pass to the callbacks.
      * @private
      */
-    #emit(eventType, ...args) {
-        Array.from(this.handlers.keys())
-            .filter((eventName) => {
-                const {eventType: parsedEventType} = this.#parseEventName(eventName)
-                return parsedEventType === eventType
-            })
-            .forEach((eventName) => {
-                const handlers = this.handlers.get(eventName)
-                handlers.forEach(({callback, options}) => {
-                    try {
-                        callback(...args)
-                        if (options.once) {
-                            this.off(eventName, callback)
-                        }
+    #emit(eventName, ...args) {
+        const handlers = this.#handlers.get(eventName)
+        if (handlers) {
+            handlers.forEach(({callback, options}) => {
+                try {
+                    callback(...args)
+                    if (options.once) {
+                        this.off(eventName, callback)
                     }
-                    catch (error) {
-                        console.error(`Error in callback for ${eventName}:`, error)
-                    }
-                })
+                }
+                catch (error) {
+                    console.error(`Error in callback for ${eventName}:`, error)
+                }
             })
+        }
     }
 
     /**
      * Checks if a callback is already registered for the specified event name.
-     * @param {string} eventName - The event name (e.g., TAP, DOUBLE_TAP).
-     * @param {Function} callback - The callback function to check.
-     * @returns {boolean} True if the callback is already registered, false otherwise.
+     *
+     * @param {string} eventName - The event name to check (e.g., "TAP", "DOUBLE_TAP").
+     * @param {Function} callback - The callback function to verify.
+     * @returns {boolean} True if the callback is registered, false otherwise.
      * @private
      */
     #hasCallback(eventName, callback) {
-        if (!this.handlers.has(eventName)) {
+        if (!this.#handlers.has(eventName)) {
             return false
         }
-        return this.handlers.get(eventName).some((handler) => handler.callback === callback)
+        return this.#handlers.get(eventName).some((handler) => handler.callback === callback)
     }
 
     /**
@@ -230,11 +167,10 @@ export class CanvasEventManager {
      * @param {string} eventType - The event type (e.g., TAP, DOUBLE_TAP, LONG_TAP).
      * @param {Function} callback - Callback function to execute when the event is triggered.
      * @param {boolean} useEntity - Whether to require a picked entity for the event.
-     * @param {string[]} modifiers - Required modifier keys (e.g., ["CTRL", "SHIFT"]).
      * @returns {Object} An object containing downHandler and upHandler for touch events.
      * @private
      */
-    #setupTouchEvents(eventType, callback, useEntity, modifiers) {
+    #setupTouchEvents(eventType, callback, useEntity) {
         /**
          * Validates common touch event conditions and returns the picked entity.
          * @param {Object} event - The touch event object from Cesium.
@@ -247,20 +183,15 @@ export class CanvasEventManager {
                 return null
             }
 
-            // Verify required modifier keys
-            if (!this.#checkKeyModifiers(modifiers)) {
-                return null
-            }
-
             // Pick the entity at the event position
-            const pickedEntity = this.viewer.scene.pick(event.position)
+            const pickedEntity = this.#viewer.scene.pick(event.position)
             // Ensure a valid entity is selected if useEntity is true
             if (useEntity && (!pickedEntity || !pickedEntity.id)) {
                 return null
             }
 
             return pickedEntity
-        };
+        }
 
         // Track the last tap time for double-tap detection
         let lastTapTime = 0
@@ -272,7 +203,7 @@ export class CanvasEventManager {
         let tapStartTime = 0
 
         /**
-         * Handles the LEFT_DOWN event for touch interactions.
+         * Handles the DOWN event for touch interactions.
          * @param {Object} event - The Cesium LEFT_DOWN event.
          */
         const downHandler = (event) => {
@@ -292,47 +223,47 @@ export class CanvasEventManager {
                 clearTimeout(tapTimeout)
                 tapTimeout = null
             }
-            if (this.tapState.longTapTimer) {
-                clearTimeout(this.tapState.longTapTimer)
-                this.tapState.longTapTimer = null;
+            if (this.#tapState.longTapTimer) {
+                clearTimeout(this.#tapState.longTapTimer)
+                this.#tapState.longTapTimer = null
             }
 
             // Start LONG_TAP timer
-            this.tapState.longTapTimer = setTimeout(() => {
-                this.tapState.suppressTap = true
+            this.#tapState.longTapTimer = setTimeout(() => {
+                this.#tapState.suppressTap = true
                 this.#emit('LONG_TAP', event, pickedEntity?.id)
                 tapCount = 0
                 tapTimeout = null
                 tapStartTime = 0
-            }, TOUCH_LONG_TAP_TIMEOUT)
+            }, LONG_TAP_TIMEOUT)
 
-            // Suppress TAP if tap is held beyond TOUCH_DOUBLE_TAP_TIMEOUT
+            // Suppress TAP if tap is held beyond DOUBLE_TAP_TIMEOUT
             setTimeout(() => {
-                if (tapStartTime && Date.now() - tapStartTime >= TOUCH_DOUBLE_TAP_TIMEOUT && this.tapState.longTapTimer) {
-                    this.tapState.suppressTap = true
+                if (tapStartTime && Date.now() - tapStartTime >= DOUBLE_TAP_TIMEOUT && this.#tapState.longTapTimer) {
+                    this.#tapState.suppressTap = true
                     if (tapTimeout) {
                         clearTimeout(tapTimeout)
                         tapTimeout = null
                     }
                 }
-            }, TOUCH_DOUBLE_TAP_TIMEOUT)
+            }, DOUBLE_TAP_TIMEOUT)
 
             // Handle TAP and DOUBLE_TAP
             if (tapCount === 1) {
                 tapTimeout = setTimeout(() => {
-                    if (tapCount === 1 && !this.tapState.suppressTap) {
+                    if (tapCount === 1 && !this.#tapState.suppressTap) {
                         this.#emit('TAP', event, pickedEntity?.id)
                     }
                     tapCount = 0
                     tapTimeout = null
                     tapStartTime = 0
-                }, TOUCH_DOUBLE_TAP_TIMEOUT + 50);
+                }, DOUBLE_TAP_TIMEOUT + 50)
             }
-            else if (tapCount === 2 && timeDiff < TOUCH_DOUBLE_TAP_TIMEOUT) {
+            else if (tapCount === 2 && timeDiff < DOUBLE_TAP_TIMEOUT) {
                 clearTimeout(tapTimeout)
-                clearTimeout(this.tapState.longTapTimer)
-                this.tapState.suppressTap = false
-                this.tapState.longTapTimer = null
+                clearTimeout(this.#tapState.longTapTimer)
+                this.#tapState.suppressTap = false
+                this.#tapState.longTapTimer = null
                 this.#emit('DOUBLE_TAP', event, pickedEntity?.id)
                 tapCount = 0
                 tapTimeout = null
@@ -343,52 +274,47 @@ export class CanvasEventManager {
                 tapCount = 1
                 lastTapTime = now
             }
-        };
+        }
 
         /**
-         * Handles the LEFT_UP event for touch interactions.
+         * Handles the UP event for touch interactions.
          */
         const upHandler = () => {
-            // Calculate tap duration
-            const tapDuration = tapStartTime ? Date.now() - tapStartTime : 0
-
             // Clear LONG_TAP timer
-            if (this.tapState.longTapTimer) {
-                clearTimeout(this.tapState.longTapTimer)
-                this.tapState.longTapTimer = null
+            if (this.#tapState.longTapTimer) {
+                clearTimeout(this.#tapState.longTapTimer)
+                this.#tapState.longTapTimer = null
             }
 
             // Reset suppressTap to allow future TAPs
-            this.tapState.suppressTap = false
+            this.#tapState.suppressTap = false
 
             // Reset tap start time
             tapStartTime = 0
-        };
+        }
 
         return {downHandler, upHandler}
     }
 
     /**
      * Sets up mouse event handling for the specified event type.
-     * @param {string} eventType - Event type (e.g., LEFT_CLICK, LEFT_DOUBLE_CLICK, RIGHT_CLICK).
+     * @param {string} eventType - Event type (e.g., CLICK, DOUBLE_CLICK, RIGHT_CLICK).
      * @param {Function} callback - Callback function to execute when the event is triggered.
      * @param {boolean} useEntity - Whether to require a picked entity.
-     * @param {string[]} modifiers - Required modifier keys.
+     * @param {string[]} modifier - Required modifier keys.
      * @returns {Function} The event handler function.
      * @private
      */
-    #setupMouseEvents(eventType, callback, useEntity, modifiers) {
+    #setupMouseEvents(eventType, callback, useEntity, modifier) {
         let lastClickTime = 0
         let clickTimeout = null
 
         return (event) => {
-            if (this.events[eventType]?.type === 'RIGHT_CLICK' && (this.isTouchDevice || event.pointerType === 'touch')) {
+            if (eventType === 'RIGHT_CLICK' && (this.isTouchDevice || event.pointerType === 'touch')) {
                 return
             }
-            if (!this.#checkKeyModifiers(modifiers)) {
-                return
-            }
-            const pickedEntity = this.viewer.scene.pick(event.position)
+
+            const pickedEntity = this.#viewer.scene.pick(event.position)
             if (useEntity && (!pickedEntity || !pickedEntity.id)) {
                 return
             }
@@ -397,39 +323,39 @@ export class CanvasEventManager {
             const timeDiff = now - lastClickTime
             lastClickTime = now
 
-            if (this.events[eventType]?.type === 'LEFT_CLICK') {
-                clearTimeout(clickTimeout)
-                clickTimeout = setTimeout(() => {
-                    if (timeDiff > DOUBLE_CLICK_TIMEOUT) {
-                        callback(event, pickedEntity?.id)
-                        console.log('[Mouse] Left Click detected!')
-                    }
-                }, DOUBLE_CLICK_TIMEOUT + 50);
+            const eventName = modifier ? `${modifier.name}${MODIFIER_SEPARATOR}${eventType}` : eventType
+
+            if (eventName && this.#handlers.has(eventName)) {
+                if (eventType === 'CLICK') {
+                    clearTimeout(clickTimeout)
+                    clickTimeout = setTimeout(() => {
+                        if (timeDiff > DOUBLE_CLICK_TIMEOUT) {
+                            this.#emit(eventName, event, pickedEntity?.id)
+                        }
+                    }, DOUBLE_CLICK_TIMEOUT + 50)
+                }
+                else if (eventType === 'DOUBLE_CLICK') {
+                    clearTimeout(clickTimeout)
+                    clickTimeout = null
+                    this.#emit(eventName, event, pickedEntity?.id)
+                }
+                else if (eventType === 'RIGHT_CLICK') {
+                    clearTimeout(clickTimeout)
+                    this.#emit(eventName, event, pickedEntity?.id)
+                }
             }
-            else if (this.events[eventType]?.type === 'LEFT_DOUBLE_CLICK') {
-                clearTimeout(clickTimeout)
-                callback(event, pickedEntity?.id)
-                console.log('[Mouse] Double Click detected!')
-            }
-            else if (this.events[eventType]?.type === 'RIGHT_CLICK') {
-                callback(event, pickedEntity?.id)
-                console.log('[Mouse] Right Click detected!')
-            }
-            else {
-                callback(event, pickedEntity?.id)
-            }
-        };
+        }
     }
 
     /**
-     * Registers an event listener for the specified event name.
-     * @param {string} eventName - The event name, e.g., "TAP", "DOUBLE_TAP", "LONG_TAP".
+     * Registers an event listener for a specific event.
+     * Supports both touch and mouse events, with optional modifier keys and entity requirements.
+     *
+     * @param {string} eventName - The event name (e.g., "TAP", "CTRL#CLICK").
      * @param {Function} callback - The callback function to execute when the event is triggered.
-     * @param {Object|boolean} [options={}] - Options for the event listener.
-     *   - If boolean, specifies whether the listener should be removed after the first trigger (once).
-     *   - If object, can contain:
-     *     - {boolean} [useEntity=false] - Whether to require a picked entity for the event.
-     *     - {boolean} [once=false] - Whether to remove the listener after the first trigger.
+     * @param {Object|boolean} [options={}] - Options for the listener.
+     * @param {boolean} [options.useEntity=false] - Whether a picked entity is required.
+     * @param {boolean} [options.once=false] - Whether the listener should be removed after triggering.
      * @throws {Error} If eventName is invalid or callback is not a function.
      */
     on(eventName, callback, options = {}) {
@@ -444,8 +370,9 @@ export class CanvasEventManager {
             return
         }
 
-        const {modifiers, eventType} = this.#parseEventName(eventName)
+        const {modifier, eventType} = this.#parseEventName(eventName)
 
+        // Handle boolean options for backward compatibility
         if (typeof options === 'boolean') {
             options = {once: options}
         }
@@ -453,87 +380,95 @@ export class CanvasEventManager {
 
         let handler
         if (this.isTouchDevice) {
-            if (this.events[eventType]?.touch) {
-                handler = this.#setupTouchEvents(eventType, callback, useEntity, modifiers)
-                this.screenSpaceEventHandler.setInputAction(handler.downHandler, ScreenSpaceEventType.LEFT_DOWN)
-                this.screenSpaceEventHandler.setInputAction(handler.upHandler, ScreenSpaceEventType.LEFT_UP)
+            if (this.#events[eventType]?.touch) {
+                handler = this.#setupTouchEvents(eventType, callback, useEntity)
+                this.#screenSpaceEventHandler.setInputAction(handler.downHandler, this.#events.DOWN.event)
+                this.#screenSpaceEventHandler.setInputAction(handler.upHandler, this.#events.UP.event)
             }
             else {
                 return
             }
         }
         else {
-            if (!this.events[eventType]?.touch) {
-                handler = this.#setupMouseEvents(eventType, callback, useEntity, modifiers)
-                this.screenSpaceEventHandler.setInputAction(handler, this.events[eventType].event)
+            if (!this.#events[eventType]?.touch) {
+                handler = this.#setupMouseEvents(eventType, callback, useEntity, modifier)
+                // Only register handler if not already registered for this event type
+                if (!this.#handlers.has(eventType)) {
+                    if (modifier) {
+                        this.#screenSpaceEventHandler.setInputAction(handler, this.#events[eventType].event, modifier)
+                    }
+                    else {
+                        this.#screenSpaceEventHandler.setInputAction(handler, this.#events[eventType].event)
+                    }
+                }
             }
             else {
                 return
             }
         }
 
-        if (!this.handlers.has(eventName)) {
-            this.handlers.set(eventName, [])
+        if (!this.#handlers.has(eventName)) {
+            this.#handlers.set(eventName, [])
         }
-        this.handlers.get(eventName).push({handler, callback, options})
+        this.#handlers.get(eventName).push({handler, callback, options})
 
+        // Handle one-time listeners
         if (options.once) {
             this.off(eventName, callback)
         }
     }
 
     /**
-     * Unregisters an event listener.
-     * @param {string} eventName - The event name to remove, e.g., "TAP", "DOUBLE_TAP".
-     * @param {Function} [callback] - The specific callback to remove. If omitted, all handlers for the event are
-     *     removed.
+     * Unregisters an event listener for a specific event.
+     * Removes either a single callback or all handlers for the event.
+     *
+     * @param {string} eventName - The event name to remove (e.g., "TAP", "CTRL#CLICK").
+     * @param {Function} [callback] - The specific callback to remove. If omitted, all handlers are removed.
      */
     off(eventName, callback) {
-        if (!this.handlers.has(eventName)) {
+        if (!this.#handlers.has(eventName)) {
             return
         }
 
+        const removeHandler = (handler) => {
+            if (eventType === 'LONG_TAP') {
+                this.#screenSpaceEventHandler.removeInputAction(this.#events.DOWN.event, handler.downHandler)
+                this.#screenSpaceEventHandler.removeInputAction(this.#events.UP.event, handler.upHandler)
+            }
+            else if (this.#events[eventType]) {
+                this.#screenSpaceEventHandler.removeInputAction(this.#events[eventType].event, handler)
+            }
+        }
+
         const {eventType} = this.#parseEventName(eventName)
-        const handlers = this.handlers.get(eventName)
+        const handlers = this.#handlers.get(eventName)
 
         if (callback) {
             const index = handlers.findIndex((h) => h.callback === callback)
             if (index !== -1) {
-                const {handler} = handlers[index]
-                if (eventType === 'LONG_TAP') {
-                    //   this.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOWN,
-                    // handler.downHandler);
-                    // this.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_UP, handler.upHandler);
-                }
-                else if (this.events[eventType]) {
-                    this.screenSpaceEventHandler.removeInputAction(this.events[eventType].event, handler)
-                }
+                removeHandler(handlers[index])
                 handlers.splice(index, 1)
             }
         }
         else {
             handlers.forEach(({handler}) => {
-                if (eventType === 'LONG_TAP') {
-                    this.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOWN, handler.downHandler)
-                    this.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_UP, handler.upHandler)
-                }
-                else if (this.events[eventType]) {
-                    this.screenSpaceEventHandler.removeInputAction(this.events[eventType].event, handler)
-                }
+                removeHandler(handler)
             })
             handlers.length = 0
         }
 
         if (handlers.length === 0) {
-            this.handlers.delete(eventName)
+            this.#handlers.delete(eventName)
         }
     }
 
     /**
-     * Extracts modifiers and event type from "<MODIFIER>#<EVENT_TYPE>" format.
-     * @param {string} eventName - The formatted event name.
-     * @returns {{modifiers: string[], eventType: string}} An object containing modifiers and eventType.
-     * @throws {Error} If eventName is invalid.
+     * Parses an event name to extract modifier and event type.
+     * Handles formats like "<MODIFIER>#<EVENT_TYPE>" (e.g., "CTRL#CLICK") or simple event names (e.g., "TAP").
+     *
+     * @param {string} eventName - The event name to parse.
+     * @returns {{modifier: {name: string, value: any}|null, eventType: string}} Parsed modifier and event type.
+     * @throws {Error} If the event name is invalid.
      * @private
      */
     #parseEventName(eventName) {
@@ -541,32 +476,34 @@ export class CanvasEventManager {
             throw new Error('Invalid event name: must be a non-empty string')
         }
 
+        // No separator means no modifier
         if (!eventName.includes(MODIFIER_SEPARATOR)) {
-            return {modifiers: [], eventType: eventName}
+            return {modifier: null, eventType: eventName}
         }
 
+        // Get both modifier and event type
         const [modifierPart, eventType] = eventName.split(MODIFIER_SEPARATOR, 2)
         return {
-            modifiers: modifierPart ? modifierPart.split(EVENT_SEPARATOR) : [],
+            modifier:  {name: modifierPart, value: MODIFIERS[modifierPart]},
             eventType: eventType || modifierPart,
-        };
+        }
     }
 
     /**
      * Cleans up all resources, removing event listeners and destroying the handler.
+     * Resets the singleton instance.
      */
     destroy() {
         this.removeAllListeners()
-        window.removeEventListener('keydown', this.#boundKeydown)
-        window.removeEventListener('keyup', this.#boundKeyup)
-        this.screenSpaceEventHandler.destroy()
-        this.handlers.clear()
-        CanvasEventManager.instance = null
+        this.#screenSpaceEventHandler.destroy()
+        this.#handlers.clear()
+        CanvasEventManager.#instance = null
     }
 
     /**
-     * Adds an event listener using the `on` method.
-     * @param {string} eventName - The event name, e.g., "TAP", "DOUBLE_TAP".
+     * Adds an event listener (alias for `on` method).
+     *
+     * @param {string} eventName - The event name (e.g., "TAP", "CTRL#CLICK").
      * @param {Function} callback - The callback function to execute.
      * @param {Object|boolean} [options={}] - Options for the listener.
      */
@@ -575,7 +512,8 @@ export class CanvasEventManager {
     }
 
     /**
-     * Removes a specific event listener using the `off` method.
+     * Removes an event listener (alias for `off` method).
+     *
      * @param {string} eventName - The event name to remove.
      * @param {Function} [callback] - The specific callback to remove.
      */
@@ -584,9 +522,9 @@ export class CanvasEventManager {
     }
 
     /**
-     * Removes all registered event listeners.
+     * Removes all registered event listeners for all events.
      */
     removeAllListeners() {
-        Array.from(this.handlers.keys()).forEach((eventName) => this.off(eventName))
+        Array.from(this.#handlers.keys()).forEach((eventName) => this.off(eventName))
     }
 }

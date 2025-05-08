@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-30
- * Last modified: 2025-04-30
+ * Created on: 2025-05-08
+ * Last modified: 2025-05-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -220,7 +220,6 @@ export const UNLOCKED = 'unlocked'
 export const DOUBLE_CLICK_TIMEOUT = 300     // milliseconds
 export const DOUBLE_TAP_TIMEOUT = 300       // milliseconds
 export const LONG_TAP_TIMEOUT = 700         // milliseconds
-export const DOUBLE_TAP_DISTANCE = 20       // pixels
 export const CESIUM_EVENTS = $CESIUM_EVENTS
 
 export const POINTER = {
