@@ -67,7 +67,7 @@
     "geojson-minimum-bounding-rectangle": "^2.0.2",
     "html-react-parser": "^5.2.3",
     "html2canvas": "^1.4.1",
-    "idb": "^8.0.2",
+    "idb": "^8.0.3",
     "import": "^0.0.6",
     "jspdf": "^3.0.1",
     "konva": "^9.3.20",
