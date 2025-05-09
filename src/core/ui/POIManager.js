@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-01
- * Last modified: 2025-05-01
+ * Created on: 2025-05-09
+ * Last modified: 2025-05-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -57,19 +57,7 @@ export class POIManager {
         if (POIManager.instance) {
             return POIManager.instance
         }
-
         this.setupSubscriptions()
-
-        window.addEventListener(ADD_POI_EVENT, async event => {
-            await event.detail.poi.draw()
-        })
-        window.addEventListener(REMOVE_POI_EVENT, event => {
-            this.remove(event.detail.poi.id)
-        })
-        window.addEventListener(UPDATE_POI_EVENT, async event => {
-            event.detail.poi.redraw(event.detail.changedFields)
-        })
-        POIManager.instance = this
     }
 
     /**
@@ -277,7 +265,6 @@ export class POIManager {
 
             if (previousPoi) {
                 const changedFields = this.detectChanges(previousPoi, currentPoi)
-
                 if (Object.keys(changedFields).length > 0) {
                     window.dispatchEvent(new CustomEvent(UPDATE_POI_EVENT, {
                         detail:  {
@@ -764,97 +751,6 @@ export class POIManager {
     }
 
     /**
-     * Changes a POI's type to a standard or specified type.
-     *
-     * @param {string} id - POI identifier
-     * @param {string} type - New POI type
-     * @return {Promise<MapPOI>} Updated POI
-     */
-    saveAsPOI = async (id, type = POI_STANDARD_TYPE) => {
-        Object.assign(this.list.get(id), {
-            type: type,
-        })
-        await this.persistToDatabase(this.list.get(id))
-        return this.list.get(id)
-    }
-
-    /**
-     * Collapses a POI to show minimal information.
-     *
-     * @param {string} id - POI identifier
-     * @return {Promise<MapPOI>} Updated POI
-     */
-    shrink = async (id) => {
-        this.list.get(id).expanded = false
-        await this.persistToDatabase(this.list.get(id))
-        return this.list.get(id)
-    }
-
-    /**
-     * Expands a POI to show full information.
-     *
-     * @param {string} id - POI identifier
-     * @return {Promise<MapPOI>} Updated POI
-     */
-    expand = async (id) => {
-        this.list.get(id).expanded = true
-        await this.persistToDatabase(this.list.get(id))
-        return this.list.get(id)
-    }
-
-    /**
-     * Makes a POI invisible.
-     *
-     * @param {string} id - POI identifier
-     * @return {Promise<MapPOI>} Updated POI
-     */
-    hide = async (id) => {
-        this.list.get(id).visible = false
-        await this.persistToDatabase(this.list.get(id))
-        return this.list.get(id)
-    }
-
-    /**
-     * Makes a POI visible.
-     *
-     * @param {string} id - POI identifier
-     * @return {Promise<MapPOI>} Updated POI
-     */
-    show = async (id) => {
-        this.list.get(id).visible = true
-        await this.persistToDatabase(this.list.get(id))
-        return this.list.get(id)
-    }
-
-    /**
-     * Activates animation for a POI.
-     *
-     * @param {string} id - POI identifier
-     * @return {MapPOI|false} Updated POI or false if not found
-     */
-    startAnimation = (id) => {
-        const poi = this.list.get(id)
-        if (poi) {
-            this.list.get(id).animated = true
-            return this.list.get(id)
-        }
-        return false
-    }
-
-    /**
-     * Deactivates animation for a POI.
-     *
-     * @param {string} id - POI identifier
-     * @return {MapPOI|undefined} Updated POI
-     */
-    stopAnimation = (id) => {
-        if (id && this.list.get(id)) { // We got some times an error here. TODO fix
-            this.list.get(id).animated = false
-            return this.list.get(id)
-        }
-    }
-
-    /**
      * Determines if two points are approximately equal within a distance tolerance.
      *
      * @param {Object} start - First point
@@ -988,5 +884,9 @@ export class POIManager {
         stage.destroy()
 
         return image
+    }
+
+    openEditor = (poi) => {
+
     }
 }

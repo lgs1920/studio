@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-08
- * Last modified: 2025-05-08
+ * Created on: 2025-05-09
+ * Last modified: 2025-05-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -135,6 +135,18 @@ export class MapPOI extends MapElement {
         this.update(options)
     }
 
+    toggleExpand = async (event, poi) => {
+        console.log(this.id)
+        if (this.expanded) {
+            await this.shrink()
+        }
+        else {
+            await this.expand()
+        }
+    }
+
+
+
     /**
      * Gets the coordinates (longitude, latitude, height, simulatedHeight) of the POI.
      *
@@ -198,7 +210,7 @@ export class MapPOI extends MapElement {
      *
      * @returns {Promise<MapPOI>} The updated MapPOI instance
      */
-    redraw = async (changes, dbSync = true) => {
+    redraw = (changes, dbSync = true) => {
         // Early return if no changes are provided
         if (!changes) {
             return this
@@ -234,25 +246,21 @@ export class MapPOI extends MapElement {
 
         // If redraw is needed, call the draw method
         if (shouldRedraw) {
-            await this.draw(dbSync)
+            this.draw(dbSync).then(async () => {
+                                       // Optionally persist changes to database
+                                       if (dbSync) {
+                                           await this.persistToDatabase()
+                                       }
+                                   },
+            )
         }
 
-        // Optionally persist changes to database
-        if (dbSync) {
-            await this.persistToDatabase()
-        }
+
 
         // Return the current instance for method chaining
         return this
     }
 
-    /**
-     *  Hide the POI
-     */
-    hide = () => {
-        this.visible = false
-        let b = this.utils.toggleVisibility(this)
-    }
 
     /**
      * Sets the coordinates and height properties of the POI.
@@ -271,15 +279,93 @@ export class MapPOI extends MapElement {
         this.simulatedHeight = simulatedHeight
     }
 
+
     /**
-     * show the POI
+     * Updates this POI with new properties and persists to database
+     * @private
+     * @param {Object} updates - Properties to update
+     * @returns {Promise<MapPOI>} Updated POI
      */
-    show = () => {
-        this.visible = true
-        this.utils.toggleVisibility(this)
+    #update = async updates => {
+        Object.assign(lgs.mainProxy.components.pois.list.get(this.id), updates)
+        Object.assign(this, updates)
+        await this.persistToDatabase()
+
+        return this
     }
 
+    /**
+     * Updates this POI's type
+     * @param {string} [type] - New POI type (defaults to standard)
+     * @returns {Promise<MapPOI>} Updated POI
+     */
+    saveAsPOI = async (type = POI_STANDARD_TYPE) => {
+        return this.#update({type})
+    }
 
+    /**
+     * Collapses this POI to show minimal information
+     * @returns {Promise<MapPOI>} Updated POI
+     */
+    shrink = async () => {
+        return this.#update({expanded: false})
+    }
+
+    /**
+     * Expands this POI to show full information
+     * @returns {Promise<MapPOI>} Updated POI
+     */
+    expand = async () => {
+        return this.#update({expanded: true})
+    }
+
+    /**
+     * Makes this POI invisible
+     * @returns {Promise<MapPOI>} Updated POI
+     */
+    hide = async () => {
+        this.#update({visible: false})
+        this.utils.toggleVisibility(this)
+        return this
+
+    }
+
+    /**
+     * Makes this POI visible
+     * @returns {Promise<MapPOI>} Updated POI
+     */
+    show = async () => {
+        this.#update({visible: true})
+        this.utils.toggleVisibility(this)
+        return this
+    }
+
+    /**
+     * Toggles this POI's animation state
+     * @private
+     * @param {boolean} state - Animation state
+     * @returns {MapPOI} Updated POI
+     */
+    #toggleAnimation = state => {
+        this.animated = state
+        return this
+    }
+
+    /**
+     * Activates animation for this POI
+     * @returns {MapPOI} Updated POI
+     */
+    startAnimation = () => {
+        return this.#toggleAnimation(true)
+    }
+
+    /**
+     * Deactivates animation for this POI
+     * @returns {MapPOI} Updated POI
+     */
+    stopAnimation = () => {
+        return this.#toggleAnimation(false)
+    }
     /**
      * Renders and processes a visual representation of POI.
      *
@@ -304,14 +390,14 @@ export class MapPOI extends MapElement {
      * This function serializes the POI data and stores it in a specified database store.
      *
      */
-    persistToDatabase = async () => {
+    persistToDatabase = () => {
         // Guard clause to ensure the POI has a valid type
         if (!this.type || this.type === POI_TMP_TYPE) {
             return
         }
 
         // Persist the serialized POI data into the database
-        await lgs.db.lgs1920.put(this.id, MapPOI.serialize({
+        lgs.db.lgs1920.put(this.id, MapPOI.serialize({
                                                                ...this,
                                                                __class: MapPOI,
                                                            }), POIS_STORE)
