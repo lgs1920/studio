@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-08
- * Last modified: 2025-05-08
+ * Created on: 2025-05-09
+ * Last modified: 2025-05-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,6 +18,7 @@ import { Compass } from '@Components/cesium/CompassUI/Compass'
 import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
 import { GeocodingButton }                  from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }       from '@Components/MainUI/geocoding/GeocodingUI'
+import { MapPOIMonitor } from '@Components/MainUI/MapPOI/MapPOIMonitor'
 import { TrackEditorButton } from '@Components/MainUI/TrackEditorButton'
 import { MapPOICluster }     from '@Components/MainUI/MapPOI/MapPOICluster'
 import { MapPOIContextMenu }                from '@Components/MainUI/MapPOI/MapPOIContextMenu'
@@ -263,6 +264,7 @@ export const MainUI = () => {
             <SupportUIDialog/>
             <JourneyLoaderUI multiple/>
             <MapPOIContextMenu/>
+            <MapPOIMonitor/>
 
             {journeyToolbar.show && journeyToolbar.usage && <JourneyToolbar/>}
 
