@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-26
- * Last modified: 2025-02-26
+ * Created on: 2025-05-09
+ * Last modified: 2025-05-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -532,4 +532,28 @@ export class AppUtils {
             elementRect.left > containerRect.right    // En dehors par la droite
         )
     }
+
+    /**
+     * Filters out methods from an object's own properties, returning a new object
+     * containing only non-function properties (data attributes).
+     *
+     * @param {Object} obj - The object to filter, typically an instance of a class.
+     * @returns {Object} A new object containing only the non-function own properties
+     * of the input object.
+     * @example
+     * const obj = { id: 'poi1', type: 'standard', getId: () => 'poi1' };
+     * filterAttributes(obj);
+     * // Returns: { id: 'poi1', type: 'standard' }
+     */
+    static filterAttributes = obj => {
+        const result = {}
+        for (const key of Object.getOwnPropertyNames(obj)) {
+            const value = obj[key]
+            if (typeof value !== 'function') {
+                result[key] = value
+            }
+        }
+        return result
+    }
+
 }
