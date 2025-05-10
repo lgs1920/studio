@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-08
- * Last modified: 2025-05-08
+ * Created on: 2025-05-10
+ * Last modified: 2025-05-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,7 +23,7 @@
  */
 import { DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, EVENTS, LONG_TAP_TIMEOUT } from '@Core/constants'
 import { ScreenSpaceEventHandler }                                            from 'cesium'
-import { CESIUM_EVENTS, MODIFIER_SEPARATOR, MODIFIERS }                       from './cesiumEvents'
+import { CESIUM_EVENTS, EVENT_LOWEST, MODIFIER_SEPARATOR, MODIFIERS }         from './cesiumEvents'
 
 export class CanvasEventManager {
     /**
@@ -122,6 +122,7 @@ export class CanvasEventManager {
     /**
      * Emits an event by executing all registered callbacks for the specified event name.
      * Callbacks are sorted by priority (highest first) and executed if entity requirements are met.
+     * If a callback has preventLowerPriority set to true, lower-priority callbacks are not executed.
      *
      * @param {string} eventName - The event name (e.g., "CTRL#CLICK", "TAP").
      * @param {Object} event - The Cesium event object.
@@ -133,7 +134,7 @@ export class CanvasEventManager {
         if (handlers) {
             // Sort handlers by priority in descending order
             const sortedHandlers = [...handlers].sort((a, b) => (b.options.priority || 0) - (a.options.priority || 0))
-            sortedHandlers.forEach(({callback, options}) => {
+            for (const {callback, options} of sortedHandlers) {
                 try {
                     const entityId = this.#validateEntity(event, options.entity ?? false, pickedEntityId)
                     if (entityId !== null || options.entity === false) {
@@ -141,28 +142,53 @@ export class CanvasEventManager {
                         if (options.once) {
                             this.off(eventName, callback)
                         }
+                        // Stop propagation to lower-priority handlers if preventLowerPriority is true
+                        if (options.preventLowerPriority) {
+                            break
+                        }
                     }
                 }
                 catch (error) {
                     console.error(`Error in callback for ${eventName}:`, error)
                 }
-            })
+            }
         }
     }
 
     /**
-     * Checks if a callback is already registered for the specified event name.
+     * Checks if a callback is already registered for the specified event name with identical options.
      *
      * @param {string} eventName - The event name to check (e.g., "TAP", "DOUBLE_TAP").
      * @param {Function} callback - The callback function to verify.
-     * @returns {boolean} True if the callback is registered, false otherwise.
+     * @param {Object} options - The options to verify (entity, once, priority, preventLowerPriority).
+     * @returns {boolean} True if the callback with identical options is registered, false otherwise.
      * @private
      */
-    #hasCallback(eventName, callback) {
+    #hasCallback(eventName, callback, options) {
         if (!this.#handlers.has(eventName)) {
             return false
         }
-        return this.#handlers.get(eventName).some((handler) => handler.callback === callback)
+        return this.#handlers.get(eventName).some((handler) => {
+            if (handler.callback !== callback) {
+                return false
+            }
+            const hOptions = handler.options
+
+            // Special comparison for entity
+            const entityMatch = (
+                hOptions.entity === options.entity ||
+                (Array.isArray(hOptions.entity) && Array.isArray(options.entity) &&
+                    hOptions.entity.length === options.entity.length &&
+                    hOptions.entity.every(id => options.entity.includes(id)))
+            )
+            if (!entityMatch) {
+                return false
+            }
+
+            // Compare only relevant options (once, priority, preventLowerPriority)
+            const relevantOptions = ['once', 'priority', 'preventLowerPriority']
+            return relevantOptions.every(key => hOptions[key] === options[key])
+        })
     }
 
     /**
@@ -369,7 +395,8 @@ export class CanvasEventManager {
     }
 
     /**
-     * Registers an event listener with support for priority, entity filtering, and one-time execution.
+     * Registers an event listener with support for priority, entity filtering, one-time execution, and propagation
+     * control.
      *
      * @param {string} eventName - The event name (e.g., "TAP", "CTRL#CLICK").
      * @param {Function} callback - The callback function, receiving (event, entityId).
@@ -377,6 +404,7 @@ export class CanvasEventManager {
      * @param {boolean|string|string[]} [options.entity=false] - Entity requirement.
      * @param {boolean} [options.once=false] - Whether to remove the listener after triggering.
      * @param {number} [options.priority=0] - Priority of the callback (higher number = executed first).
+     * @param {boolean} [options.preventLowerPriority=false] - If true, prevents execution of lower-priority listeners.
      * @throws {Error} If eventName is invalid, callback is not a function, or event type is unsupported.
      */
     on(eventName, callback, options = {}) {
@@ -387,7 +415,7 @@ export class CanvasEventManager {
             throw new Error('Callback must be a function')
         }
 
-        if (this.#hasCallback(eventName, callback)) {
+        if (this.#hasCallback(eventName, callback, options)) {
             return
         }
 
@@ -401,9 +429,16 @@ export class CanvasEventManager {
             options = {once: options}
         }
         const entity = options?.entity ?? false
-        const priority = typeof options?.priority === 'number' ? options.priority : 0
-        options.entity = entity
-        options.priority = priority
+        const once = options?.once ?? false
+        let priority = typeof options?.priority === 'number' ? options.priority : 0
+        const preventLowerPriority = options?.preventLowerPriority ?? false
+
+        // Set priority to EVENT_LOWEST if no entity and no priority are specified
+        if (entity === false && typeof options?.priority !== 'number') {
+            priority = EVENT_LOWEST
+        }
+
+        options = {entity, once, priority, preventLowerPriority}
 
         let handler
         if (this.isTouchDevice) {
@@ -489,6 +524,53 @@ export class CanvasEventManager {
 
         if (handlers.length === 0) {
             this.#handlers.delete(eventName)
+        }
+    }
+
+    /**
+     * Removes all event listeners associated with a specific entity.
+     *
+     * @param {boolean|string|string[]} entity - The entity to match:
+     *   - `false`: Remove listeners with no entity requirement.
+     *   - `'id'`: Remove listeners for the specific entity ID.
+     *   - `[]`: Remove listeners for any entity (all entities).
+     *   - `['id1', 'id2', ...]`: Remove listeners for the exact array of entity IDs.
+     */
+    removeAllListenersByEntity(entity) {
+        // Iterate over all event names in #handlers
+        for (const eventName of this.#handlers.keys()) {
+            const handlers = this.#handlers.get(eventName)
+            if (!handlers) {
+                continue
+            }
+
+            // Find handlers that match the entity
+            const handlersToRemove = handlers.filter(({options}) => {
+                if (entity === false) {
+                    return options.entity === false
+                }
+                else if (typeof entity === 'string') {
+                    return options.entity === entity || (Array.isArray(options.entity) && options.entity.includes(entity))
+                }
+                else if (Array.isArray(entity)) {
+                    if (entity.length === 0) {
+                        return Array.isArray(options.entity) && options.entity.length === 0
+                    }
+                    else {
+                        return (
+                            Array.isArray(options.entity) &&
+                            options.entity.length === entity.length &&
+                            options.entity.every(id => entity.includes(id))
+                        )
+                    }
+                }
+                return false
+            })
+
+            // Remove matching handlers
+            handlersToRemove.forEach(({callback}) => {
+                this.off(eventName, callback)
+            })
         }
     }
 

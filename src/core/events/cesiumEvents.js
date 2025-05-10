@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-08
- * Last modified: 2025-05-08
+ * Created on: 2025-05-10
+ * Last modified: 2025-05-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,6 +16,7 @@
 import { KeyboardEventModifier, ScreenSpaceEventType } from 'cesium'
 
 export const MODIFIER_SEPARATOR = '#'
+export const EVENT_LOWEST = -1000 // Lowest priority for event handlers
 export const CESIUM_EVENTS = {
     // Standard mouse events
     CLICK:        {event: ScreenSpaceEventType.LEFT_CLICK},
