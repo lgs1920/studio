@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-09
- * Last modified: 2025-05-09
+ * Created on: 2025-05-11
+ * Last modified: 2025-05-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -136,7 +136,6 @@ export class MapPOI extends MapElement {
     }
 
     toggleExpand = async (event, poi) => {
-        console.log(this.id)
         if (this.expanded) {
             await this.shrink()
         }
@@ -286,10 +285,10 @@ export class MapPOI extends MapElement {
      * @param {Object} updates - Properties to update
      * @returns {Promise<MapPOI>} Updated POI
      */
-    #update = async updates => {
+    #update = updates => {
         Object.assign(lgs.mainProxy.components.pois.list.get(this.id), updates)
         Object.assign(this, updates)
-        await this.persistToDatabase()
+        this.persistToDatabase()
 
         return this
     }
@@ -307,7 +306,7 @@ export class MapPOI extends MapElement {
      * Collapses this POI to show minimal information
      * @returns {Promise<MapPOI>} Updated POI
      */
-    shrink = async () => {
+    shrink = () => {
         return this.#update({expanded: false})
     }
 
@@ -315,7 +314,7 @@ export class MapPOI extends MapElement {
      * Expands this POI to show full information
      * @returns {Promise<MapPOI>} Updated POI
      */
-    expand = async () => {
+    expand = () => {
         return this.#update({expanded: true})
     }
 
@@ -323,7 +322,7 @@ export class MapPOI extends MapElement {
      * Makes this POI invisible
      * @returns {Promise<MapPOI>} Updated POI
      */
-    hide = async () => {
+    hide = () => {
         this.#update({visible: false})
         this.utils.toggleVisibility(this)
         return this
@@ -377,7 +376,7 @@ export class MapPOI extends MapElement {
         const entity = await this.utils.draw(this)
 
         if (dbSync) {
-            await this.persistToDatabase()
+            this.persistToDatabase()
         }
         return entity
     }
@@ -395,12 +394,12 @@ export class MapPOI extends MapElement {
         if (!this.type || this.type === POI_TMP_TYPE) {
             return
         }
-
         // Persist the serialized POI data into the database
         lgs.db.lgs1920.put(this.id, MapPOI.serialize({
-                                                               ...this,
-                                                               __class: MapPOI,
-                                                           }), POIS_STORE)
+                                                         ...this,
+                                                         __class: MapPOI,
+                                                     }), POIS_STORE).then()
+
     }
 
 
@@ -411,13 +410,13 @@ export class MapPOI extends MapElement {
      *
      * @returns {Promise<void>}
      */
-    remove = async (dbSync = true) => {
+    remove = (dbSync = true) => {
         try {
             this.clearEvents()
             this.utils.remove(this)
 
             if (dbSync) {
-                await lgs.db.lgs1920.delete(this.id, POIS_STORE)
+                lgs.db.lgs1920.delete(this.id, POIS_STORE)
             }
         }
         catch (error) {

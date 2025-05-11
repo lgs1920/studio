@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-09
- * Last modified: 2025-05-09
+ * Created on: 2025-05-11
+ * Last modified: 2025-05-11
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { useSnapshot }       from 'valtio'
-import { useEffect, useRef } from 'react'
-import { updatedDiff }       from 'deep-object-diff'
+import { POIS_EDITOR_DRAWER } from '@Core/constants'
+import { useSnapshot }        from 'valtio'
+import { useEffect, useRef }  from 'react'
+import { updatedDiff }        from 'deep-object-diff'
 
 /**
  * Checks if an object is empty by verifying it has no own properties
@@ -36,13 +37,24 @@ export const MapPOIMonitor = () => {
     // Store previous POI list state for comparison
     const _previousList = useRef(new Map())
 
+    const toggleEditor = () => {
+        __.ui.drawerManager.toggle(POIS_EDITOR_DRAWER, 'edit-current')
+    }
+
     /**
      * Adds event listeners for a MapPOI
      * @param {MapPOI} poi - MapPOI instance to add listeners for
      */
     const addPOIEventListeners = poi => {
-        // Register double-click event to toggle POI expansion
-        __.canvasEvents.onDoubleClick(poi.toggleExpand, {entity: poi.id})
+        // Toggles POI size on click
+        __.canvasEvents.onClick(poi.toggleExpand, {entity: poi.id})
+        __.canvasEvents.onTap(poi.toggleExpand, {entity: poi.id})
+
+        // Open editor on Double Click
+        __.canvasEvents.onDoubleClick(toggleEditor, {entity: poi.id, preventLowerPriority: true})
+        __.canvasEvents.onDoubleTap(toggleEditor, {entity: poi.id, preventLowerPriority: true})
+
+
     }
 
     /**
@@ -50,7 +62,7 @@ export const MapPOIMonitor = () => {
      * @param {MapPOI} poi - MapPOI instance to remove listeners for
      */
     const removePOIEventListeners = poi => {
-        __.canvasEvents.offDoubleClick(poi.toggleExpand)
+        __.canvasEvents.removeAllListenersByEntity(poi.id)
     }
 
     // Effect to detect changes in the POI list
@@ -63,7 +75,7 @@ export const MapPOIMonitor = () => {
             if (!previousList.has(id)) {
                 // Add event listeners and draw new POI
                 addPOIEventListeners(poi)
-                poi.draw()
+                poi.draw(false)
             }
         }
 
@@ -84,13 +96,14 @@ export const MapPOIMonitor = () => {
                 const changedFields = updatedDiff(__.app.filterAttributes(previous), __.app.filterAttributes(poi))
                 if (!isEmpty(changedFields)) {
                     // Log changes for debugging and redraw POI
-                    poi.draw()
+                    poi.draw(false)
                 }
             }
         }
 
         // Update previous list state
         _previousList.current = new Map(currentList)
+
     }, [currentList])
 
     return null

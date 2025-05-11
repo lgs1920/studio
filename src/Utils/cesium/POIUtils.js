@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-01
- * Last modified: 2025-05-01
+ * Created on: 2025-05-11
+ * Last modified: 2025-05-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -223,16 +223,22 @@ export class POIUtils {
             return null
         }
 
-        // Remove existing entity with the same ID before adding the new one
-        await POIUtils.remove(poi) // TODO replace only image
 
-        // Add the entity to the container and capture the reference
-        const entity = await container.add({...options, billboard: billboard})
+        // Check if entity already exists
+        const existingEntity = container.getById(poi.id)
+        if (existingEntity) {
+            // Update billboard image (or entire billboard)
+            if (existingEntity.billboard) {
+                existingEntity.billboard = billboard
+            }
+            lgs.viewer.scene.requestRender()
+            return existingEntity
+        }
 
-        // Request a scene render to display the changes
+        // Create new entity if it doesn't exist
+        const entity = container.add({...options, billboard})
         lgs.viewer.scene.requestRender()
 
-        // Return the created entity for further manipulation
         return entity
     }
 

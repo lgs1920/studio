@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-08
- * Last modified: 2025-05-08
+ * Created on: 2025-05-11
+ * Last modified: 2025-05-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,15 +23,15 @@ export const SelectionIndicator = () => {
         case 1:
             svg = `<?xml version="1.0" encoding="iso-8859-1"?>
         <!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
-    <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
     viewBox="0 0 512 512" xml:space="preserve">
-        <rect x="244.096" y="178.545" width="23.817" height="158.856"/>
-        <rect x="176.584" y="246.049" width="158.856" height="23.817"/>
+        <rect class="cesium-selection-wrapper-two" x="244.096" y="178.545" width="23.817" height="158.856"/>
+        <rect class="cesium-selection-wrapper-two" x="176.584" y="246.049" width="158.856" height="23.817"/>
         <g>
-        <polygon style="fill:#E21B1B;" points="49.594,170.677 1.961,170.677 1.961,3.914 176.536,3.914 176.536,51.547 49.594,51.547 	"/>
-        <polygon style="fill:#E21B1B;" points="343.276,47.633 343.276,0 510.039,0 510.039,174.591 462.406,174.591 462.406,47.633 	"/>
-        <polygon style="fill:#E21B1B;" points="49.594,345.237 1.961,345.237 1.961,512 176.536,512 176.536,464.367 49.594,464.367 	"/>
-        <polygon style="fill:#E21B1B;" points="343.276,464.367 343.276,512 510.039,512 510.039,337.417 462.406,337.417 462.406,464.367 
+        <polygon class="cesium-selection-wrapper-one" points="49.594,170.677 1.961,170.677 1.961,3.914 176.536,3.914 176.536,51.547 49.594,51.547 	"/>
+        <polygon class="cesium-selection-wrapper-one" points="343.276,47.633 343.276,0 510.039,0 510.039,174.591 462.406,174.591 462.406,47.633 	"/>
+        <polygon class="cesium-selection-wrapper-one" points="49.594,345.237 1.961,345.237 1.961,512 176.536,512 176.536,464.367 49.594,464.367 	"/>
+        <polygon class="cesium-selection-wrapper-one" points="343.276,464.367 343.276,512 510.039,512 510.039,337.417 462.406,337.417 462.406,464.367 
     "/>
     </g>
 </svg>`
