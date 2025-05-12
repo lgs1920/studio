@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-11
- * Last modified: 2025-05-11
+ * Created on: 2025-05-12
+ * Last modified: 2025-05-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,18 +23,21 @@ export const SelectionIndicator = () => {
         case 1:
             svg = `<?xml version="1.0" encoding="iso-8859-1"?>
         <!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
-    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-    viewBox="0 0 512 512" xml:space="preserve">
-        <rect class="cesium-selection-wrapper-two" x="244.096" y="178.545" width="23.817" height="158.856"/>
-        <rect class="cesium-selection-wrapper-two" x="176.584" y="246.049" width="158.856" height="23.817"/>
-        <g>
-        <polygon class="cesium-selection-wrapper-one" points="49.594,170.677 1.961,170.677 1.961,3.914 176.536,3.914 176.536,51.547 49.594,51.547 	"/>
-        <polygon class="cesium-selection-wrapper-one" points="343.276,47.633 343.276,0 510.039,0 510.039,174.591 462.406,174.591 462.406,47.633 	"/>
-        <polygon class="cesium-selection-wrapper-one" points="49.594,345.237 1.961,345.237 1.961,512 176.536,512 176.536,464.367 49.594,464.367 	"/>
-        <polygon class="cesium-selection-wrapper-one" points="343.276,464.367 343.276,512 510.039,512 510.039,337.417 462.406,337.417 462.406,464.367 
-    "/>
+   <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+    viewBox="0 0 36 36" width="36" height="36" xml:space="preserve">
+    <rect class="cesium-selection-wrapper-two" x="15.5" y="11.0" width="5.0" height="14.0"/>
+    <rect class="cesium-selection-wrapper-two" x="11.0" y="15.5" width="14.0" height="5.0"/>
+    <g stroke-width="2">
+        <polygon class="cesium-selection-wrapper-one" points="0,12 0,0 12,0 12,5 5,5 5,12"/>
+        <polygon class="cesium-selection-wrapper-one" points="24,5 24,0 36,0 36,12 31,12 31,5"/>
+        <polygon class="cesium-selection-wrapper-one" points="0,24 0,36 12,36 12,31 5,31 5,24"/>
+        <polygon class="cesium-selection-wrapper-one" points="24,31 24,36 36,36 36,24 31,24 31,31"/>
     </g>
-</svg>`
+</svg>
+
+
+
+`
             break
         case 2 :
             svg = `
