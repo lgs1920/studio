@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-11
- * Last modified: 2025-05-11
+ * Created on: 2025-05-13
+ * Last modified: 2025-05-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -33,12 +33,60 @@ const isEmpty = obj => Object.keys(obj).length === 0
  */
 export const MapPOIMonitor = () => {
     // Get reactive snapshot of the POI list from Valtio store
-    const currentList = useSnapshot(lgs.stores.main.components.pois).list
+    const $pois = lgs.stores.main.components.pois
+    const pois = useSnapshot($pois)
+    const currentList = pois.list
     // Store previous POI list state for comparison
     const _previousList = useRef(new Map())
+    let current = null
 
-    const toggleEditor = () => {
+    /**
+     * Get POI by id and set current poi.
+     *
+     * @param id
+     * @return {*}
+     */
+    const getPOI = (id) => {
+        const current = currentList.get(id)
+        $pois.current = current
+        return current
+    }
+
+    /**
+     * Toggle editor Handler
+     *
+     * For the same poi, it toggles the editor pane.
+     *
+     * When the editor is open on a poi  and the user double click on another one,
+     * the editor stays open but focuses on th new poi data.
+     *
+     * @param event
+     * @param entity
+     */
+    const handleEditor = (event, entity) => {
+        if (__.ui.drawerManager.drawers.open && entity !== current) {
+            __.ui.drawerManager.close()
+        }
+        getPOI(entity)
         __.ui.drawerManager.toggle(POIS_EDITOR_DRAWER, 'edit-current')
+        current = entity
+    }
+
+    /**
+     * Show context menu for the selected poi.
+     *
+     * @param event
+     * @param entity
+     */
+    const showContextMenu = (event, entity) => {
+        const poi = getPOI(entity)
+        if (poi && !__.ui.cameraManager.isRotating()
+            || (__.ui.cameraManager.isRotating()
+                &&
+                (pois.current === false || pois.current.id === poi.id)
+            )) {
+            $pois.context.visible = true
+        }
     }
 
     /**
@@ -50,11 +98,23 @@ export const MapPOIMonitor = () => {
         __.canvasEvents.onClick(poi.toggleExpand, {entity: poi.id})
         __.canvasEvents.onTap(poi.toggleExpand, {entity: poi.id})
 
-        // Open editor on Double Click
-        __.canvasEvents.onDoubleClick(toggleEditor, {entity: poi.id, preventLowerPriority: true})
-        __.canvasEvents.onDoubleTap(toggleEditor, {entity: poi.id, preventLowerPriority: true})
+        // Open editor on Double Click/double tap
+        __.canvasEvents.onDoubleClick(handleEditor, {entity: poi.id, preventLowerPriority: true})
+        __.canvasEvents.onDoubleTap(handleEditor, {entity: poi.id, preventLowerPriority: true})
 
+        // Open contextual menu on Right Click/long tap
+        __.canvasEvents.onRightClick(showContextMenu, {entity: poi.id, preventLowerPriority: true})
+        __.canvasEvents.onLongTap(showContextMenu, {entity: poi.id, preventLowerPriority: true})
 
+        __.canvasEvents.onKeyDown(
+            (event, entityId, options, userData) => {
+                if (event.altKey) { // Exclure Shift, même si Ctrl+Alt sont requis
+                    console.log('Alt+S (no Shift):', {entityId, userData})
+                }
+            },
+            {modifiers: ['alt'], keys: ['s'], entity: poi.id},
+            {action: 'save'},
+        )
     }
 
     /**
@@ -67,8 +127,10 @@ export const MapPOIMonitor = () => {
 
     // Effect to detect changes in the POI list
     useEffect(() => {
+
         // Reference previous list for comparison
         const previousList = _previousList.current
+
 
         // Detect added POIs
         for (const [id, poi] of currentList) {
