@@ -270,7 +270,6 @@ export const MainUI = () => {
 
             {journeyToolbar.show && journeyToolbar.usage && <JourneyToolbar/>}
 
-
         </>
     )
 }
