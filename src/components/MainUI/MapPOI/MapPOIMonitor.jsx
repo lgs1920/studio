@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-13
- * Last modified: 2025-05-13
+ * Created on: 2025-05-14
+ * Last modified: 2025-05-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -39,6 +39,7 @@ export const MapPOIMonitor = () => {
     // Store previous POI list state for comparison
     const _previousList = useRef(new Map())
     let current = null
+    const _menuMonitor = useRef(null)
 
     /**
      * Get POI by id and set current poi.
@@ -78,13 +79,14 @@ export const MapPOIMonitor = () => {
      * @param event
      * @param entity
      */
-    const showContextMenu = (event, entity) => {
+    const handleContextMenu = (event, entity) => {
         const poi = getPOI(entity)
         if (poi && !__.ui.cameraManager.isRotating()
             || (__.ui.cameraManager.isRotating()
                 &&
                 (pois.current === false || pois.current.id === poi.id)
             )) {
+            __.app.hooksContextMenu(event)
             $pois.context.visible = true
         }
     }
@@ -103,8 +105,8 @@ export const MapPOIMonitor = () => {
         __.canvasEvents.onDoubleTap(handleEditor, {entity: poi.id, preventLowerPriority: true})
 
         // Open contextual menu on Right Click/long tap
-        __.canvasEvents.onRightClick(showContextMenu, {entity: poi.id, preventLowerPriority: true})
-        __.canvasEvents.onLongTap(showContextMenu, {entity: poi.id, preventLowerPriority: true})
+        __.canvasEvents.onRightClick(handleContextMenu, {entity: poi.id, preventLowerPriority: true})
+        __.canvasEvents.onLongTap(handleContextMenu, {entity: poi.id, preventLowerPriority: true})
 
         __.canvasEvents.onKeyDown(
             (event, entityId, options, userData) => {
@@ -168,5 +170,5 @@ export const MapPOIMonitor = () => {
 
     }, [currentList])
 
-    return null
+    return false
 }

@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-09
- * Last modified: 2025-05-09
+ * Created on: 2025-05-14
+ * Last modified: 2025-05-14
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import {
-    BUILD, CONFIGURATION, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, MILLIS, platforms, SERVERS, SETTINGS,
-    SETTINGS_STORE, VAULT_STORE,
+    BUILD, CONFIGURATION, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, LGS_CONTEXT_MENU_HOOK, MILLIS, platforms,
+    SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE,
 }                           from '@Core/constants'
 import { ElevationServer }  from '@Core/Elevation/ElevationServer'
 import { Settings }         from '@Core/settings/Settings'
@@ -555,5 +555,17 @@ export class AppUtils {
         }
         return result
     }
+
+    /**
+     * Move the ContextMenu hook to the position of the event
+     *
+     * @param event cesium event (contains position={x,y})
+     */
+    static hooksContextMenu = (event) => {
+        const contextMenuHook = document.getElementById(LGS_CONTEXT_MENU_HOOK)
+        contextMenuHook.style.top = `${event.position.y}px`
+        contextMenuHook.style.left = `${event.position.x}px`
+    }
+
 
 }

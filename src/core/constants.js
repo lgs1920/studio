@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-08
- * Last modified: 2025-05-08
+ * Created on: 2025-05-14
+ * Last modified: 2025-05-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -398,3 +398,9 @@ export const ADD_POI_EVENT    = 'poi/add',
 export const NO_COMPASS = 0,
 COMPASS_FULL            = 1,
 COMPASS_LIGHT           = 2
+
+/*******************************************************************************
+ * Context Menu
+ ******************************************************************************/
+
+export const LGS_CONTEXT_MENU_HOOK = 'lgs-context-menu-hook'

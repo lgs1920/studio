@@ -7,14 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-29
- * Last modified: 2025-04-28
+ * Created on: 2025-05-14
+ * Last modified: 2025-05-14
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
+import {
+    LGS_CONTEXT_MENU_HOOK, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER,
+}                                   from '@Core/constants'
 import {
     faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama, faTrashCan,
 }                                                                                from '@fortawesome/pro-regular-svg-icons'
@@ -24,9 +26,9 @@ import {
     SlIcon, SlPopup,
 }                                                                                from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                                 from '@Utils/FA2SL'
-import { UIToast }                                                               from '@Utils/UIToast'
-import React, { useRef }                                                         from 'react'
-import Timeout                                                                   from 'smart-timeout'
+import { UIToast }                  from '@Utils/UIToast'
+import React, { useEffect, useRef } from 'react'
+import Timeout                      from 'smart-timeout'
 import { snapshot, useSnapshot }                                                 from 'valtio'
 import './style.css'
 import { SlDivider } from '@shoelace-style/shoelace/dist/react'
@@ -44,15 +46,15 @@ import { SlDivider } from '@shoelace-style/shoelace/dist/react'
 export const MapPOIContextMenu = () => {
 
     const anchor = useRef(null)
-    const store = lgs.mainProxy.components.pois
-    const pois = useSnapshot(store)
+    const $pois = lgs.mainProxy.components.pois
+    const pois = useSnapshot($pois)
 
     /**
      * Hides the menu in the application by resuming the context timer and updating visibility settings.
      */
     const hideMenu = () => {
-        Timeout.resume(store.context.timer)
-        store.context.visible = false
+        Timeout.resume($pois.context.timer)
+        $pois.context.visible = false
     }
 
     const saveAsPOI = () => {
@@ -92,10 +94,10 @@ export const MapPOIContextMenu = () => {
         const camera = snapshot(lgs.mainProxy.components.camera)
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
-            store.current = __.ui.poiManager.stopAnimation(pois.current.id)
+            $pois.current = __.ui.poiManager.stopAnimation(pois.current.id)
         }
         else {
-            __.ui.sceneManager.focus(store.current, {
+            __.ui.sceneManager.focus($pois.current, {
                 target: pois.current,
                 heading:    camera.position.heading,
                 pitch:      camera.position.pitch,
@@ -109,7 +111,7 @@ export const MapPOIContextMenu = () => {
             })
         }
         hideMenu()
-        store.current = __.ui.poiManager.startAnimation(pois.current.id)
+        $pois.current = __.ui.poiManager.startAnimation(pois.current.id)
     }
 
     const stopRotation = async () => {
@@ -117,7 +119,7 @@ export const MapPOIContextMenu = () => {
         Object.assign(__.ui.poiManager.list.get(pois.current.id), {
             animated: false,
         })
-        store.current = __.ui.poiManager.stopAnimation(pois.current.id)
+        $pois.current = __.ui.poiManager.stopAnimation(pois.current.id)
         hideMenu()
     }
 
@@ -148,7 +150,7 @@ export const MapPOIContextMenu = () => {
     const panoramic = async () => {
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
-            store.current = __.ui.poiManager.stopAnimation(pois.current.id)
+            $pois.current = __.ui.poiManager.stopAnimation(pois.current.id)
         }
         __.ui.cameraManager.panoramic()
         hideMenu()
@@ -187,9 +189,9 @@ export const MapPOIContextMenu = () => {
             .then((result) => {
                 hideMenu()
                 if (result.success) {
-                    store.filteredList.delete(result.id)
-                    store.bulkList.delete(result.id)
-                    store.current = false
+                    $pois.filteredList.delete(result.id)
+                    $pois.bulkList.delete(result.id)
+                    $pois.current = false
                 }
             })
     }
@@ -202,13 +204,22 @@ export const MapPOIContextMenu = () => {
         hideMenu()
     }
 
+    useEffect(() => {
+        console.log(pois.context.visible)
+        return () => {
+            console.log('supprimé')
+        }
+
+    }, [pois.context.visible])
+
+
     return (
         <>
             {pois.current &&
                 <SlPopup placement="right-start"
                          hover-bridge flip
                          ref={anchor}
-                         anchor={pois.current.id}
+                         anchor={LGS_CONTEXT_MENU_HOOK}
                          active={pois.context.visible}
                 >
                     <div className="lgs-context-menu poi-on-map-menu lgs-card on-map"
