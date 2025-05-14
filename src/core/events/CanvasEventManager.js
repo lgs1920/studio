@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-12
- * Last modified: 2025-05-12
+ * Created on: 2025-05-14
+ * Last modified: 2025-05-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,9 +22,11 @@
  *
  * @class CanvasEventManager
  */
-import { DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, EVENTS, LONG_TAP_TIMEOUT } from '@Core/constants'
-import { ScreenSpaceEventHandler }                                            from 'cesium'
-import { CESIUM_EVENTS, EVENT_LOWEST, MODIFIER_SEPARATOR, MODIFIERS }         from './cesiumEvents'
+import {
+    DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, EVENTS, LGS_CONTEXT_MENU_HOOK, LONG_TAP_TIMEOUT,
+}                                                                     from '@Core/constants'
+import { ScreenSpaceEventHandler }                                    from 'cesium'
+import { CESIUM_EVENTS, EVENT_LOWEST, MODIFIER_SEPARATOR, MODIFIERS } from './cesiumEvents'
 
 export class CanvasEventManager {
     /**
@@ -119,9 +121,15 @@ export class CanvasEventManager {
         this.#screenSpaceEventHandler = new ScreenSpaceEventHandler(viewer.scene.canvas)
         this.isTouchDevice = this.#isTouchDevice()
 
-        if (this.isTouchDevice) {
-            this.#viewer.scene.canvas.addEventListener('contextmenu', (e) => e.preventDefault())
-        }
+        // We invalidate browser contextual menu
+        document.addEventListener('contextmenu', (e) => {
+            // No browser context menu on Map POI
+            if (e.target.id === LGS_CONTEXT_MENU_HOOK) {
+                e.preventDefault()
+            }
+
+        }, {capture: false})
+
 
         this.#viewer.scene.canvas.setAttribute('tabindex', '0')
 
@@ -141,7 +149,7 @@ export class CanvasEventManager {
     #isTouchDevice() {
         return (
             'ontouchstart' in window ||
-            navigator.maxTouchPoints > 0 ||
+            navigator.maxTouchPoints > 1 ||
             window.matchMedia('(pointer: coarse)').matches
         )
     }
@@ -210,8 +218,8 @@ export class CanvasEventManager {
             }
         }
 
-        document.addEventListener('keydown', (event) => handleKeyEvent(event, 'KEY_DOWN'))
-        document.addEventListener('keyup', (event) => handleKeyEvent(event, 'KEY_UP'))
+        this.#viewer.scene.canvas.addEventListener('keydown', (event) => handleKeyEvent(event, 'KEY_DOWN'))
+        this.#viewer.scene.canvas.addEventListener('keyup', (event) => handleKeyEvent(event, 'KEY_UP'))
 
         window.addEventListener('blur', () => {
             this.#modifierState = {ctrl: false, alt: false, shift: false}
@@ -597,7 +605,9 @@ export class CanvasEventManager {
                         )
                     }
                     else {
-                        this.#screenSpaceEventHandler.setInputAction(handler, this.#events[eventType].event)
+                        this.#screenSpaceEventHandler.setInputAction(handler,
+                                                                     this.#events[eventType].event,
+                        )
                     }
                 }
             }
