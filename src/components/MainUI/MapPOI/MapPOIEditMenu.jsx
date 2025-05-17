@@ -87,12 +87,13 @@ export const MapPOIEditMenu = ({point}) => {
      */
     const rotationAround = async () => {
 
+        const current = pois.list.get(pois.current)
         const camera = snapshot(lgs.mainProxy.components.camera)
         if (__.ui.cameraManager.isRotating()) {
             stopRotation()
         }
-        __.ui.sceneManager.focus(pois.current, {
-            target: pois.current,
+        __.ui.sceneManager.focus(current, {
+            target: current,
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
@@ -104,10 +105,9 @@ export const MapPOIEditMenu = ({point}) => {
             panoramic:  false,
             flyingTime: 0,    // no move, no time ! We're on target
         })
-        Object.assign(__.ui.poiManager.list.get(pois.current.id), {
+        Object.assign(__.ui.poiManager.list.get(pois.current), {
             animated: true,
         })
-        $pois.current = __.ui.poiManager.list.get(pois.current.id)
     }
 
     const setAsStarter = async () => {
@@ -143,8 +143,6 @@ export const MapPOIEditMenu = ({point}) => {
             await __.ui.cameraManager.stopRotate()
         }
         __.ui.cameraManager.panoramic()
-        //    $pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
-
     }
 
     const stopRotation = async () => {
@@ -178,9 +176,8 @@ export const MapPOIEditMenu = ({point}) => {
 
     useEffect(() => {
 
-        $pois.current = point
+        // $pois.current = point
         //
-        console.log(point.id, point.animated)
     }, [point])
 
     return (    
@@ -251,7 +248,7 @@ export const MapPOIEditMenu = ({point}) => {
                                 </SlMenuItem>
                             </>
                         }
-                        {point.id === pois.current.id && pois.list.get(point.id)?.animated &&
+                        {point.id === pois.current && pois.list.get(point.id)?.animated &&
                             <SlMenuItem onClick={stopRotation} loading>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
                                 <span>{'Stop Rotation'}</span>

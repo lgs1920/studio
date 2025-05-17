@@ -8,7 +8,7 @@
  * email: contact@lgs1920.fr
  *
  * Created on: 2025-05-17
- * Last modified: 2025-05-14
+ * Last modified: 2025-05-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -49,7 +49,7 @@ export const MapPOIMonitor = () => {
      */
     const getPOI = (id) => {
         const current = currentList.get(id)
-        $pois.current = current
+        $pois.current = id
         return current
     }
 

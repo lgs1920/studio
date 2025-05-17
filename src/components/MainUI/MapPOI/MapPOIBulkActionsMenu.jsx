@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-03-02
- * Last modified: 2025-03-02
+ * Created on: 2025-05-17
+ * Last modified: 2025-05-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -35,19 +35,19 @@ import './style.css'
  */
 export const MapPOIBulkActionsMenu = () => {
 
-    const store = lgs.mainProxy.components.pois
-    const pois = useSnapshot(store)
+    const $pois = lgs.mainProxy.components.pois
+    const pois = useSnapshot($pois)
     const [disabled, setDisabled] = useState(false)
 
     const hide = async () => {
-        store.bulkList.forEach((state, id) => {
+        $pois.bulkList.forEach((state, id) => {
             if (state) {
                 __.ui.poiManager.hide(id).then()
             }
         })
     }
     const show = async () => {
-        store.bulkList.forEach((state, id) => {
+        $pois.bulkList.forEach((state, id) => {
             if (state) {
                 __.ui.poiManager.show(id).then()
             }
@@ -55,7 +55,7 @@ export const MapPOIBulkActionsMenu = () => {
     }
 
     const shrink = async () => {
-        store.bulkList.forEach((state, id) => {
+        $pois.bulkList.forEach((state, id) => {
             if (state) {
                 __.ui.poiManager.shrink(id).then()
             }
@@ -63,7 +63,7 @@ export const MapPOIBulkActionsMenu = () => {
     }
 
     const expand = async () => {
-        store.bulkList.forEach((state, id) => {
+        $pois.bulkList.forEach((state, id) => {
             if (state) {
                 __.ui.poiManager.expand(id).then()
             }
@@ -81,9 +81,9 @@ export const MapPOIBulkActionsMenu = () => {
             await __.ui.cameraManager.stopRotate()
         }
         // Check if current is in list
-        const needToChangeCurrent = store.bulkList.has(pois.current.id)
+        const needToChangeCurrent = $pois.bulkList.has(pois.current)
         const actions = []
-        store.bulkList.forEach(async (state, id) => {
+        $pois.bulkList.forEach(async (state, id) => {
             if (state) {
                 actions.push(__.ui.poiManager.remove(id, true))
             }
@@ -92,22 +92,22 @@ export const MapPOIBulkActionsMenu = () => {
             let poi = 0
             results.forEach(result => {
                 if (result.success) {
-                    store.filteredList.delete(result.id)
+                    $pois.filteredList.delete(result.id)
                 }
             })
         })
 
         // Change current id needed (false if the list is empty)
         if (needToChangeCurrent) {
-            store.current = store.filteredList.size > 0 ? store.filteredList.entries().next().value : false
+            $pois.current = $pois.filteredList.size > 0 ? $pois.filteredList.entries().next().value : false
         }
 
-        store.bulkList.clear()
+        $pois.bulkList.clear()
     }
 
     useEffect(() => {
         setDisabled(Array.from(pois.bulkList.values()).every((value) => value === false))
-    }, [store.bulkList.values()])
+    }, [$pois.bulkList.values()])
 
     return (
         <SlDropdown disabled={disabled}>

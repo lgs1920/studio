@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: RemoveJourney.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-05-17
+ * Last modified: 2025-05-17
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { Utils }                                              from '@Editor/Utils'
 import { faTrashCan }                                         from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlIconButton, SlPopup, SlTooltip } from '@shoelace-style/shoelace/dist/react'
@@ -31,7 +47,7 @@ export const RemoveJourney = (props) => {
         }
         else {
             mainUI.removeJourneyDialog.active.set(props.name, true)
-            tooltipElement.current.hide()
+            tooltipElement.hide()
         }
     }
 

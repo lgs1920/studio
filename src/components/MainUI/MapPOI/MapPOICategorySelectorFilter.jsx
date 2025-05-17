@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: MapPOICategorySelectorFilter.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-05-17
+ * Last modified: 2025-05-17
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { FontAwesomeIcon }                            from '@Components/FontAwesomeIcon'
 import { POI_CATEGORY_ICONS }                         from '@Core/constants'
 import { faTrashCan }                                 from '@fortawesome/pro-regular-svg-icons'
@@ -9,9 +25,8 @@ import { useSnapshot }                                from 'valtio'
 export const MapPOICategorySelectorFilter = (props) => {
 
     const settings = useSnapshot(lgs.settings.poi)
-    const store = lgs.mainProxy.components.pois
-    const pois = useSnapshot(store)
-
+    const $pois = lgs.mainProxy.components.pois
+    const pois = useSnapshot($pois)
 
     useEffect(() => {
         if (!settings.filter.byCategories) {
@@ -36,7 +51,6 @@ export const MapPOICategorySelectorFilter = (props) => {
                                                                           '--fa-primary-color':   'var(--lgs-dark-color)',
 
                                                                           '--fa-primary-opacity':   1,
-                                                                          // 'color':pois.current.color
                                                                       }}/>
                                                      {category.title}
                                                  </SlOption>,

@@ -108,25 +108,26 @@ export const MapPOIList = memo(() => {
     const selectPOI = async (event) => {
         if (window.isOK(event)) {
             const id = event.target.id.split(prefix).pop()
+            let current = $pois.list.get(id)
             let forceFocus = false
             // We define the current if there is not
             if ($pois.current === false) {
-                $pois.current = $pois.list.get(id)
+                $pois.current = id
                 forceFocus = true
             }
             // If defined and it is not the same, or we are in force mode, we focus on it
-            if ((pois.current && pois.current.id !== id) || forceFocus) {
+            if ((pois.current !== id) || forceFocus) {
                 // Stop animation before changing
-                $pois.current.animated = false
+                current.animated = false
                 if (drawers.open === POIS_EDITOR_DRAWER) {
-                    $pois.current = $pois.filteredList.get(id)
+                    current = $pois.filteredList.get(id)
                 }
 
                 if (poiSetting.focusOnEdit && drawers.open === POIS_EDITOR_DRAWER && __.ui.drawerManager.over) {
                     const camera = snapshot(lgs.mainProxy.components.camera)
                     if (__.ui.cameraManager.isRotating()) {
                         await __.ui.cameraManager.stopRotate()
-                        $pois.current = pois.current.stopAnimation()
+                        current.stopAnimation()
                     }
                     __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
                         target: lgs.mainProxy.components.pois.current,
@@ -142,7 +143,7 @@ export const MapPOIList = memo(() => {
                         flyingTime: 0,    // no move, no time ! We're on target
                     })
                     if (lgs.settings.ui.poi.rotate) {
-                        $pois.current = pois.current.startAnimation()
+                        current.startAnimation()
                     }
                 }
             }

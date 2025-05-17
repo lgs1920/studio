@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-28
+ * Created on: 2025-05-17
+ * Last modified: 2025-05-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,34 +22,36 @@ import { useSnapshot }                           from 'valtio'
 
 export const MapPOICategorySelector = (point, props) => {
 
-    const store = lgs.mainProxy.components.pois
-    const pois = useSnapshot(store)
+    const $pois = lgs.mainProxy.components.pois
+    const pois = useSnapshot($pois)
 
-    const [category, setCategory] = useState(store.categories.get(point.category ?? POI_STANDARD_TYPE))
+    const [category, setCategory] = useState($pois.categories.get(point.category ?? POI_STANDARD_TYPE))
     const [icon, setIcon] = useState(Object.values(POI_CATEGORY_ICONS.get(category.slug))[0])
 
+    const current = pois.list.get(pois.current)
+
     const handleCategory = async (event) => {
-        Object.assign(__.ui.poiManager.list.get(pois.current.id), {
+        Object.assign(__.ui.poiManager.list.get(pois.current), {
             category: event.target.value,
         })
-        await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(pois.current.id))
+        await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(pois.current))
 
         setIcon(Object.values(POI_CATEGORY_ICONS.get(event.target.value))[0])
-        setCategory(store.categories.get(event.target.value))
+        setCategory($pois.categories.get(event.target.value))
     }
 
 
     return (
         <>
-            {pois.current &&
-                <SlSelect label={'Category'} value={pois.current.category} size={props?.size ?? 'small'}
+            {pois.current && current &&
+                <SlSelect label={'Category'} value={current.category} size={props?.size ?? 'small'}
                           className="map-poi-categorie-selector"
                           onSlChange={handleCategory}>
 
-                    <FontAwesomeIcon slot="prefix" icon={pois.current.icon} style={{
-                        '--fa-secondary-color':   pois.current.bgColor,
+                    <FontAwesomeIcon slot="prefix" icon={current.icon} style={{
+                        '--fa-secondary-color': current.bgColor,
                         '--fa-secondary-opacity': 1,
-                        '--fa-primary-color':     pois.current.color,
+                        '--fa-primary-color':   current.color,
                         '--fa-primary-opacity':   1,
                     }} className={'square-button'}/>
 
@@ -58,12 +60,12 @@ export const MapPOICategorySelector = (point, props) => {
                                                              <FontAwesomeIcon slot="prefix"
                                                                               icon={Object.values(POI_CATEGORY_ICONS.get(slug))[0]}
                                                                               style={{
-                                                                                  '--fa-secondary-color':   pois.current.bgColor,
+                                                                                  '--fa-secondary-color': current.bgColor,
                                                                                   '--fa-secondary-opacity': 1,
-                                                                                  '--fa-primary-color':     pois.current.color,
+                                                                                  '--fa-primary-color':   current.color,
 
                                                                                   '--fa-primary-opacity': 1,
-                                                                                  // 'color':pois.current.color
+                                                                                  // 'color':current.color
                                                                               }}/>
                                                              {category.title}
                                                          </SlOption>,

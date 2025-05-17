@@ -55,10 +55,12 @@ import './style.css'
 export const MapPOIContextMenu = () => {
 
     const anchor = useRef(null)
-    const $pois = lgs.mainProxy.components.pois
+    const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
-    const current = pois?.current?.id
 
+    const current = () => {
+        return pois.list.get(pois.current)
+    }
     /**
      * Hides the menu in the application by resuming the context timer and updating visibility settings.
      */
@@ -68,7 +70,7 @@ export const MapPOIContextMenu = () => {
     }
 
     const saveAsPOI = () => {
-        Object.assign(__.ui.poiManager.list.get(pois.current.id), {
+        Object.assign(__.ui.poiManager.list.get(pois.current), {
             type: POI_STANDARD_TYPE,
             category: POI_STANDARD_TYPE,
         })
@@ -76,17 +78,17 @@ export const MapPOIContextMenu = () => {
     }
 
     const hide = () => {
-        $pois.current = pois.current.hide()
+        current().hide().id
         hideMenu()
     }
 
     const shrink = () => {
-        $pois.current = pois.current.shrink()
+        current().shrink().id
         hideMenu()
     }
 
     const expand = () => {
-        $pois.current = pois.current.expand()
+        current().expand().id
         hideMenu()
     }
 
@@ -104,11 +106,11 @@ export const MapPOIContextMenu = () => {
         const camera = snapshot(lgs.mainProxy.components.camera)
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
-            $pois.current = pois.current.stopAnimation()
+            current().stopAnimation().id
         }
         else {
-            __.ui.sceneManager.focus($pois.current, {
-                target: pois.current,
+            __.ui.sceneManager.focus(current(), {
+                target: current(),
                 heading:    camera.position.heading,
                 pitch:      camera.position.pitch,
                 roll:       camera.position.roll,
@@ -121,29 +123,30 @@ export const MapPOIContextMenu = () => {
             })
         }
         hideMenu()
-        $pois.current = pois.current.startAnimation()
+        current().startAnimation()
     }
 
     const stopRotation = async () => {
+        hideMenu()
         await __.ui.cameraManager.stopRotate()
-        Object.assign(__.ui.poiManager.list.get(pois.current.id), {
+        Object.assign(__.ui.poiManager.list.get(pois.current), {
             animated: false,
         })
-        $pois.current = pois.current.stopAnimation()
-        hideMenu()
+        current().stopAnimation()
     }
 
     const setAsStarter = async () => {
-        const {former, starter} = await __.ui.poiManager.setStarter(pois.current)
+        const current = current()
+        const {former, starter} = await __.ui.poiManager.setStarter(current)
         if (starter) {
             UIToast.success({
-                                caption: `${pois.current.title}`,
+                                caption: `${current.title}`,
                                 text:    'Set as new starter POI.',
                             })
         }
         else {
             UIToast.warning({
-                                caption: `${pois.current.title}`,
+                                caption: `${current.title}`,
                                 text:    'Change failed.',
                             })
         }
@@ -160,7 +163,7 @@ export const MapPOIContextMenu = () => {
     const panoramic = async () => {
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
-            $pois.current = __.ui.poiManager.stopAnimation(pois.current.id)
+            //__.ui.poiManager.stopAnimation(pois.current.id)
         }
         __.ui.cameraManager.panoramic()
         hideMenu()
@@ -173,10 +176,11 @@ export const MapPOIContextMenu = () => {
      * - The context menu is hidden.
      */
     const copy = () => {
-        __.ui.poiManager.copyCoordinatesToClipboard(pois.current)
+        const current = current()
+        __.ui.poiManager.copyCoordinatesToClipboard(current)
             .then(() => {
                 UIToast.success({
-                                    caption: `${pois.current.title}`,
+                                    caption: `${current.title}`,
                                     text:    'Coordinates copied to the clipboard <br/>under the form: latitude, longitude',
                                 })
             })
@@ -195,7 +199,7 @@ export const MapPOIContextMenu = () => {
             await __.ui.cameraManager.stopRotate()
         }
 
-        __.ui.poiManager.remove(pois.current.id, true)
+        __.ui.poiManager.remove(pois.current, true)
             .then((result) => {
                 hideMenu()
                 if (result.success) {
@@ -216,9 +220,9 @@ export const MapPOIContextMenu = () => {
 
     useEffect(() => {
 
-                  if (current) {
-                      $pois.current = pois.list.get(current)
-                  }
+                  // if (current) {
+                  //     $pois.current = set(current.id)
+                  // }
                   Timeout.set(
                       pois.context.timer,
                       hideMenu,
@@ -228,11 +232,12 @@ export const MapPOIContextMenu = () => {
                       Timeout.clear(pois.context.timer)
                   }
               }
-        , [pois.context.visible, pois.current])
+        , [pois.context.visible])
 
+    const _current = current()
     return (
         <>
-            {pois.current &&
+            {pois.current && _current &&
                 <SlPopup placement="right-start"
                          hover-bridge flip
                          ref={anchor}
@@ -247,10 +252,10 @@ export const MapPOIContextMenu = () => {
                              Timeout.pause(pois.context.timer)
                          }}
                     >
-                        {!pois.current.expanded &&
+                        {!_current.expanded &&
                             <>
                                 <div className="context-menu-title-when-reduced">
-                                    {pois.current.title ?? 'Point Of Interest'}
+                                    {_current.title ?? 'Point Of Interest'}
                                     <SlDivider/>
                                 </div>
 
@@ -259,26 +264,26 @@ export const MapPOIContextMenu = () => {
                         <ul>
 
 
-                            {pois.current.type === undefined &&
+                            {_current.type === undefined &&
                                 <li onClick={saveAsPOI}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationDot)}></SlIcon>
                                     <span>Save as POI</span>
                                 </li>
                             }
-                            {pois.current.type !== POI_STARTER_TYPE &&
+                            {_current.type !== POI_STARTER_TYPE &&
                                 <li onClick={setAsStarter}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFlag)}></SlIcon>
                                     <span>Set as Starter</span>
                                 </li>
                             }
-                            {pois.current.type !== POI_STARTER_TYPE &&
+                            {_current.type !== POI_STARTER_TYPE &&
                                 <li onClick={remove}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}></SlIcon>
                                     <span>Remove</span>
                                 </li>
                             }
 
-                            {pois.current.type !== POI_TMP_TYPE &&
+                            {_current.type !== POI_TMP_TYPE &&
                                 <li onClick={openEdit}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationPen)}></SlIcon>
                                     <span>Edit</span>

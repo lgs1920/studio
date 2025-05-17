@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-09
- * Last modified: 2025-05-09
+ * Created on: 2025-05-17
+ * Last modified: 2025-05-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -647,10 +647,14 @@ export class POIManager {
     /**
      * Persists a POI to the database if it's not a temporary POI.
      *
-     * @param {MapPOI} poi - POI to save
+     * @param poi {MapPOI|string}  - POI to save (id or MapPOI object) [default: current id]
      * @return {Promise<void>}
      */
     persistToDatabase = async (poi = lgs.stores.main.components.pois.current) => {
+        if (typeof poi === 'string') {
+            // let's get the poi according to the id
+            poi = lgs.stores.main.components.pois.list.get(poi)
+        }
         if (poi.type && poi.type !== POI_TMP_TYPE) {
             await lgs.db.lgs1920.put(poi.id, MapPOI.serialize({...poi, ...{__class: MapPOI}}), POIS_STORE)
         }
@@ -659,11 +663,15 @@ export class POIManager {
     /**
      * Removes a POI from the database.
      *
-     * @param {MapPOI} poi - POI to remove
+     * @param poi {MapPOI|string}  - POI to remove (id or MapPOI object) [default: current id]
      * @return {Promise<void>}
      */
     removeInDB = async (poi = lgs.stores.main.components.pois.current) => {
-        await lgs.db.lgs1920.delete(poi.id, POIS_STORE)
+        if (poi instanceof MapPOI) {
+            // It is a MapPOI object, let's get id
+            poi = poi.id
+        }
+        await lgs.db.lgs1920.delete(poi, POIS_STORE)
     }
 
     /**
@@ -673,7 +681,11 @@ export class POIManager {
      * @return {Promise<void>}
      */
     readFromDB = async (poi = lgs.stores.main.components.pois.current) => {
-        const poiFromDB = await lgs.db.lgs1920.get(poi.id, POIS_STORE)
+        if (poi instanceof MapPOI) {
+            // It is a MapPOI object, let's get id
+            poi = poi.id
+        }
+        const poiFromDB = await lgs.db.lgs1920.get(poi, POIS_STORE)
         if (poiFromDB) {
             this.list.set(poiFromDB.id, new MapPOI(poiFromDB))
         }
