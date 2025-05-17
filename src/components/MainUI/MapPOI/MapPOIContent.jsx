@@ -8,7 +8,7 @@
  * email: contact@lgs1920.fr
  *
  * Created on: 2025-05-17
- * Last modified: 2025-05-14
+ * Last modified: 2025-05-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -28,8 +28,11 @@ import { useSnapshot }                                                      from
 
 export const MapPOIContent = memo(({id, hide}) => {
     const inner = useRef(null)
-    const point = lgs.mainProxy.components.pois.list.get(id)
-    const snap = useSnapshot(point)
+    const $pois = lgs.stores.main.components.pois
+    const pois = useSnapshot($pois)
+
+    const $point = $pois.list.get(id)
+    const point = useSnapshot($point)
     const [clickTimeout, setClickTimeout] = useState(null)
     const [lastTap, setLastTap] = useState(0)
 
@@ -42,13 +45,10 @@ export const MapPOIContent = memo(({id, hide}) => {
         //  - we are on current point
 
         if (!__.ui.cameraManager.isRotating()
-            || (__.ui.cameraManager.isRotating()
-                &&
-                (lgs.mainProxy.components.pois.current === false
-                    || lgs.mainProxy.components.pois.current.id === point.id)
+            || (__.ui.cameraManager.isRotating() && (pois.current === false || pois.current === point.id)
             )) {
-            lgs.mainProxy.components.pois.context.visible = true
-            lgs.mainProxy.components.pois.current = point
+            $pois.context.visible = true
+            $pois.current = point.id
             __.ui.sceneManager.propagateEventToCanvas(event)
         }
     }
@@ -57,19 +57,19 @@ export const MapPOIContent = memo(({id, hide}) => {
     const expand = () => {
         if (!point.expanded && !point.showFlag) {
             Object.assign(
-                lgs.mainProxy.components.pois.list.get(point.id),
+                pois.list.get(point.id),
                 {over: true},
             )
-            lgs.mainProxy.components.pois.current = point
+            $pois.current = point.id
         }
     }
 
     const reduce = () => {
         Object.assign(
-            lgs.mainProxy.components.pois.list.get(point.id),
+            pois.list.get(point.id),
             {over: false},
         )
-        lgs.mainProxy.components.pois.current = point
+        $pois.current = point.id
 
     }
     /**
@@ -109,11 +109,11 @@ export const MapPOIContent = memo(({id, hide}) => {
             // We're in the delay, it is a double click
             clearTimeout(clickTimeout)
             setClickTimeout(null)
-            if (snap.id === lgs.mainProxy.components.pois.current.id) {
+            if (point.id === pois.current) {
                 toggleEdit()
             }
             else {
-                lgs.mainProxy.components.pois.current = snap
+                $pois.current = point.id
                 openEdit()
             }
         }
@@ -126,11 +126,11 @@ export const MapPOIContent = memo(({id, hide}) => {
                 // We're in the delay, it is a double touch
                 clearTimeout(clickTimeout)
                 setClickTimeout(null)
-                if (snap.id === lgs.mainProxy.components.pois.current.id) {
+                if (point.id === pois.current) {
                     toggleEdit()
                 }
                 else {
-                    lgs.mainProxy.components.pois.current = snap
+                    $pois.current = point.id
                     openEdit()
                 }
             }
@@ -139,7 +139,6 @@ export const MapPOIContent = memo(({id, hide}) => {
     }
 
     useEffect(() => {
-        console.log(point.id)
     }, [point])
 
     return (
@@ -152,7 +151,7 @@ export const MapPOIContent = memo(({id, hide}) => {
                     onContextMenu={handleContextMenu}
                     onPointerLeave={() => {
                         Timeout.set(
-                            lgs.mainProxy.components.pois.context.timer,
+                            pois.context.timer,
                             hide,
                             1.5 * SECOND,
                         )
@@ -176,7 +175,7 @@ export const MapPOIContent = memo(({id, hide}) => {
                                         <NameValueUnit
                                             className="poi-elevation"
                                             text={'Altitude: '}
-                                            value={snap.height.toFixed()}
+                                            value={point.height.toFixed()}
                                             format={'%d'}
                                             units={ELEVATION_UNITS}
                                         />

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-08
- * Last modified: 2025-05-08
+ * Created on: 2025-05-17
+ * Last modified: 2025-05-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -61,8 +61,9 @@ if (initApp.status) {
 
 
 export function LGS1920() {
-
+    const $pois = lgs.stores.main.components.pois
     const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
+
     if (isMobile) {
         document.body.classList.add('mobile')
         lgs.editorSettingsProxy.menu.drawer = BOTTOM
@@ -128,7 +129,7 @@ export function LGS1920() {
                               starter.bgColor = lgs.settings.starter.bgColor
                               // }
                               // ---
-                              lgs.mainProxy.components.pois.current = starter
+                              $pois.current = starter.id
 
                               // According to the settings and saved information, we set the camera data
 
@@ -198,8 +199,9 @@ export function LGS1920() {
                               })
 
                               // set animated state
-                              lgs.mainProxy.components.pois.current.animated = lgs.settings.ui.camera.start.rotate.app
+                              starter.animated = lgs.settings.ui.camera.start.rotate.app
 
+                              // log starting information
                               console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
                               console.log(`Connected to backend ${lgs.versions.backend}.`)
 

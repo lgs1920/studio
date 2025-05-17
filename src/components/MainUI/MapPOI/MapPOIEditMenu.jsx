@@ -14,17 +14,17 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { FontAwesomeIcon }               from '@Components/FontAwesomeIcon'
-import { CURRENT_POI, POI_STARTER_TYPE } from '@Core/constants'
+import { FontAwesomeIcon }       from '@Components/FontAwesomeIcon'
+import { POI_STARTER_TYPE }      from '@Core/constants'
 import {
     faArrowRotateRight, faArrowsFromLine, faCrosshairsSimple, faFlag, faLocationDot, faPanorama, faTrashCan, faXmark,
-}                                        from '@fortawesome/pro-regular-svg-icons'
-import { faEye, faMask }                                    from '@fortawesome/pro-solid-svg-icons'
+}                                from '@fortawesome/pro-regular-svg-icons'
+import { faMask }                from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                            from '@Utils/FA2SL'
-import { UIToast }                    from '@Utils/UIToast'
-import { useEffect, useLayoutEffect } from 'react'
-import { snapshot, useSnapshot }      from 'valtio'
+import { UIToast }               from '@Utils/UIToast'
+import { useEffect }             from 'react'
+import { snapshot, useSnapshot } from 'valtio'
 import './style.css'
 
 /**
@@ -68,7 +68,7 @@ export const MapPOIEditMenu = ({point}) => {
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
-            range: camera.position.range,
+            range:  camera.position.range,
             infinite:   true,
             rotate:     false,
             panoramic:  false,
@@ -87,27 +87,27 @@ export const MapPOIEditMenu = ({point}) => {
      */
     const rotationAround = async () => {
 
+        const current = pois.list.get(pois.current)
         const camera = snapshot(lgs.mainProxy.components.camera)
         if (__.ui.cameraManager.isRotating()) {
             stopRotation()
         }
-        __.ui.sceneManager.focus(pois.current, {
-            target: pois.current,
+        __.ui.sceneManager.focus(current, {
+            target:    current,
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
-            range: camera.position.range,
-            infinite: true,
-            rpm: lgs.settings.ui.poi.rpm,
+            range:     camera.position.range,
+            infinite:  true,
+            rpm:       lgs.settings.ui.poi.rpm,
             rotations: 1,
-            rotate:   true,
+            rotate:    true,
             panoramic:  false,
             flyingTime: 0,    // no move, no time ! We're on target
         })
-        Object.assign(__.ui.poiManager.list.get(pois.current.id), {
+        Object.assign(__.ui.poiManager.list.get(pois.current), {
             animated: true,
         })
-        $pois.current = __.ui.poiManager.list.get(pois.current.id)
     }
 
     const setAsStarter = async () => {
@@ -143,8 +143,6 @@ export const MapPOIEditMenu = ({point}) => {
             await __.ui.cameraManager.stopRotate()
         }
         __.ui.cameraManager.panoramic()
-        //    $pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
-
     }
 
     const stopRotation = async () => {
@@ -178,12 +176,11 @@ export const MapPOIEditMenu = ({point}) => {
 
     useEffect(() => {
 
-        $pois.current = point
+        // $pois.current = point
         //
-        console.log(point.id, point.animated)
     }, [point])
 
-    return (    
+    return (
         <>
             {(point || point.type === POI_STARTER_TYPE) &&
                 <SlDropdown className={'edit-poi-menu'}>
@@ -192,71 +189,79 @@ export const MapPOIEditMenu = ({point}) => {
                     </SlButton>
 
                     <SlMenu>
-                        {!settings.focusOnEdit &&
-                            <SlMenuItem onClick={focus} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
-                                <span>Focus</span>
-                            </SlMenuItem>
-                        }
-                        {point.type !== POI_STARTER_TYPE &&
-                            <SlMenuItem onClick={setAsStarter} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFlag)}></SlIcon>
-                                <span>Set as Starter</span>
-                            </SlMenuItem>
-                        }
-                        {point.type !== POI_STARTER_TYPE &&
-                            <SlMenuItem onClick={remove} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}></SlIcon>
-                                <span>Remove</span>
-                            </SlMenuItem>
-                        }
-
-                        {point.expanded && !point.showFlag && point.visible &&
-                            <SlMenuItem onClick={shrink} small>
-                                <FontAwesomeIcon slot="prefix" icon={point.icon}></FontAwesomeIcon>
-                                <span>Reduce</span>
-                            </SlMenuItem>
-                        }
-
-                        {!point.expanded && point.visible &&
-                            <SlMenuItem onClick={expand} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsFromLine)}></SlIcon>
-                                <span>Expand</span>
-                            </SlMenuItem>
-                        }
-
-                        {point.type !== POI_STARTER_TYPE && point.visible &&
-                            <SlMenuItem onClick={hide} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMask)}></SlIcon>
-                                <span>Hide</span>
-                            </SlMenuItem>
-                        }
-                        {point.type !== POI_STARTER_TYPE && !point.visible &&
-                            <SlMenuItem onClick={show} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faEye)}></SlIcon>
-                                <span>Show</span>
-                            </SlMenuItem>
-                        }
-                        <sl-divider/>
-
-                        {!pois.list.get(point.id)?.animated &&
+                        {point.visible &&
                             <>
-                                <SlMenuItem onClick={rotationAround}>
-                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowRotateRight)}></SlIcon>
-                                    <span>Rotate Around</span>
-                                </SlMenuItem>
-                                <SlMenuItem onClick={panoramic}>
-                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPanorama)}></SlIcon>
-                                    <span>Panoramic</span>
-                                </SlMenuItem>
+                                {!settings.focusOnEdit &&
+                                    <SlMenuItem onClick={focus} small>
+                                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
+                                        <span>Focus</span>
+                                    </SlMenuItem>
+                                }
+
+                                {point.type !== POI_STARTER_TYPE &&
+                                    <SlMenuItem onClick={setAsStarter} small>
+                                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFlag)}></SlIcon>
+                                        <span>Set as Starter</span>
+                                    </SlMenuItem>
+                                }
+                                {point.type !== POI_STARTER_TYPE &&
+                                    <SlMenuItem onClick={remove} small>
+                                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}></SlIcon>
+                                        <span>Remove</span>
+                                    </SlMenuItem>
+                                }
+
+                                {point.expanded && !point.showFlag &&
+                                    <SlMenuItem onClick={shrink} small>
+                                        <FontAwesomeIcon slot="prefix" icon={point.icon}></FontAwesomeIcon>
+                                        <span>Reduce</span>
+                                    </SlMenuItem>
+                                }
+
+                                {!point.expanded &&
+                                    <SlMenuItem onClick={expand} small>
+                                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsFromLine)}></SlIcon>
+                                        <span>Expand</span>
+                                    </SlMenuItem>
+                                }
+
+                                {point.type !== POI_STARTER_TYPE &&
+                                    <SlMenuItem onClick={hide} small>
+                                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMask)}></SlIcon>
+                                        <span>Hide</span>
+                                    </SlMenuItem>
+                                }
+
+                                <sl-divider/>
+
+                                {!pois.list.get(point.id)?.animated &&
+                                    <>
+                                        <SlMenuItem onClick={rotationAround}>
+                                            <SlIcon slot="prefix" library="fa"
+                                                    name={FA2SL.set(faArrowRotateRight)}></SlIcon>
+                                            <span>Rotate Around</span>
+                                        </SlMenuItem>
+                                        <SlMenuItem onClick={panoramic}>
+                                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPanorama)}></SlIcon>
+                                            <span>Panoramic</span>
+                                        </SlMenuItem>
+                                    </>
+                                }
+                                {point.id === pois.current && pois.list.get(point.id)?.animated &&
+                                    <SlMenuItem onClick={stopRotation} loading>
+                                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
+                                        <span>{'Stop Rotation'}</span>
+                                    </SlMenuItem>
+                                }
                             </>
                         }
-                        {point.id === pois.current.id && pois.list.get(point.id)?.animated &&
-                            <SlMenuItem onClick={stopRotation} loading>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
-                                <span>{'Stop Rotation'}</span>
+
+                        {!point.visible &&
+                            <SlMenuItem onClick={show} small>
+                                <span>{'Show'}</span>
                             </SlMenuItem>
                         }
+
                     </SlMenu>
                 </SlDropdown>
             }

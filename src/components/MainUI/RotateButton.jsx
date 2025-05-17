@@ -25,7 +25,7 @@ import { useSnapshot }                 from 'valtio'
 
 
 export const RotateButton = (props) => {
-    const $mainUI = lgs.mainProxy.components.mainUI
+    const $mainUI = lgs.stores.main.components.mainUI
     const rotate = useSnapshot($mainUI).rotate
     const camera = useSnapshot(lgs.mainProxy.components.camera)
     const $pois = lgs.mainProxy.components.pois
@@ -35,7 +35,7 @@ export const RotateButton = (props) => {
         if (rotate.running) {
             await __.ui.cameraManager.stopRotate()
             if (__.ui.sceneManager.target instanceof MapPOI) {
-                $pois.current = Object.assign({}, __.ui.sceneManager.target.stopAnimation())
+                Object.assign({}, __.ui.sceneManager.target.stopAnimation())
             }
         }
         else {
@@ -49,7 +49,7 @@ export const RotateButton = (props) => {
                 flyingTime: 0,    // no move, no time ! We're on target
                 target: null,
             })
-            $pois.current = pois.current.startAnimation()
+            pois.list.get(pois.current).startAnimation()
         }
     }
 

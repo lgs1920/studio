@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-28
- * Last modified: 2025-02-28
+ * Created on: 2025-05-17
+ * Last modified: 2025-05-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -28,8 +28,8 @@ import './style.css'
 
 
 export const GeocodingUI = () => {
-    const store = lgs.mainProxy.components.geocoder
-    const snap = useSnapshot(store)
+    const $geocoder = lgs.stores.main.components.geocoder
+    const geocoder = useSnapshot($geocoder)
     const settings = useSnapshot(lgs.settings.ui.menu)
 
     const address = useRef(null)
@@ -40,10 +40,10 @@ export const GeocodingUI = () => {
 
     const handleSubmit = async (event) => {
         event.preventDefault()
-        store.dialog.loading = true
-        store.dialog.noResults = false
-        store.dialog.error = false
-        store.dialog.loading = false
+        $geocoder.dialog.loading = true
+        $geocoder.dialog.noResults = false
+        $geocoder.dialog.error = false
+        $geocoder.dialog.loading = false
 
         if (exactMatch && coordinates) {
             // Get latitude and longitude from input field.
@@ -59,23 +59,23 @@ export const GeocodingUI = () => {
             return
         }
 
-        if (!store.dialog.submitDisabled) {
+        if (!$geocoder.dialog.submitDisabled) {
             const value = ddCoordinates ? address.current.value : __.ui.geocoder.toDMS(address.current.value)
             __.ui.geocoder.search(address.current.value).then((results) => {
 
                 if (results.error) {
-                    store.dialog.error = {message: results.error}
+                    $geocoder.dialog.error = {message: results.error}
                     return
                 }
 
                 if (results.size > 0) {
                     results.forEach((value, key) => {
-                        store.list.set(key, value)
+                        $geocoder.list.set(key, value)
                     })
-                    store.dialog.moreResults = results.size === __.ui.geocoder.limit
+                    $geocoder.dialog.moreResults = results.size === __.ui.geocoder.limit
                 }
                 else {
-                    store.dialog.noResults = true
+                    $geocoder.dialog.noResults = true
                 }
             })
         }
@@ -85,7 +85,7 @@ export const GeocodingUI = () => {
         __.ui.geocoder.init()
         setCoordinates(false)
         setExactMatch(false)
-        store.dialog.error = false
+        $geocoder.dialog.error = false
 
         handleSubmit(event)
     }
@@ -122,11 +122,11 @@ export const GeocodingUI = () => {
 
         // Clear current values and states
         __.ui.geocoder.init()
-        store.list.clear()
+        $geocoder.list.clear()
         address.current.value = ''
-        store.dialog.visible = false
-        store.dialog.noResults = false
-        store.dialog.submitDisabled = true
+        $geocoder.dialog.visible = false
+        $geocoder.dialog.noResults = false
+        $geocoder.dialog.submitDisabled = true
     }
 
     /**
@@ -135,18 +135,18 @@ export const GeocodingUI = () => {
      * @param event
      */
     const handleSelect = async (event) => {
-        lgs.mainProxy.components.pois.current = false
-        await showPOI(store.list.get(event.target.parentElement.id * 1))
+        lgs.stores.main.components.pois.current = false
+        await showPOI($geocoder.list.get(event.target.parentElement.id * 1))
     }
 
     const handleChange = () => {
-        store.dialog.noResults = false
-        store.dialog.error = false
+        $geocoder.dialog.noResults = false
+        $geocoder.dialog.error = false
         address.current.value = address.current.value.trimStart()
-        store.dialog.submitDisabled = address.current.value.length < lgs.settings.ui.geocoder.minQuery
+        $geocoder.dialog.submitDisabled = address.current.value.length < lgs.settings.ui.geocoder.minQuery
         __.ui.geocoder.init()
-        store.list.clear()
-        store.dialog.noResults = false
+        $geocoder.list.clear()
+        $geocoder.dialog.noResults = false
 
         // Check if it is lat,lon in degrees with spaces or comma or both as separateur
         const ddRegex = /^-?([1-8]?\d(\.\d+)?|90(\.0+)?)[ ,\s]+-?(1[0-7]\d(\.\d+)?|180(\.0+)?|\d{1,2}(\.\d+)?)$/
@@ -176,9 +176,9 @@ export const GeocodingUI = () => {
             __.ui.geocoder.init()
             // store.list.clear()
             address.current.value = ''
-            store.dialog.visible = false
-            store.dialog.noResults = true
-            store.dialog.error = false
+            $geocoder.dialog.visible = false
+            $geocoder.dialog.noResults = true
+            $geocoder.dialog.error = false
 
             setCoordinates(false)
             setExactMatch(false)
@@ -188,7 +188,7 @@ export const GeocodingUI = () => {
 
     return (
         <>
-            <SlPopup active={snap.dialog.visible}
+            <SlPopup active={geocoder.dialog.visible}
                      className={'lgs-theme'}
                      anchor="launch-the-geocoder"
                      placement={settings.toolBar.fromStart ? 'left-start' : 'right-start'}
@@ -204,11 +204,11 @@ export const GeocodingUI = () => {
                                      onFocus={handleChange}>
 
                             </SlInput>
-                            <SlTooltip placement="top" open={!snap.dialog.submitDisabled}>
+                            <SlTooltip placement="top" open={!geocoder.dialog.submitDisabled}>
                                 <SlButton size={'small'} className={'square-button'} type="submit"
                                           id="geocoder-search-location-submit"
-                                          loading={snap.dialog.loading}
-                                          disabled={snap.dialog.submitDisabled}>
+                                          loading={geocoder.dialog.loading}
+                                          disabled={geocoder.dialog.submitDisabled}>
                                     <SlIcon slot="prefix" library="fa"
                                             name={FA2SL.set(exactMatch ? faBullseyePointer : faSearch)}></SlIcon>
                                 </SlButton>

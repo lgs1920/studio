@@ -178,19 +178,19 @@ export class MapPOI extends MapElement {
     static extractObject = (source) => {
         return JSON.parse(JSON.stringify(source))
     }
-    /**
-     * Updates the properties of the MapPOI instance.
-     *
-     * @param {Object} options - The options object containing properties to update.
-     */
-    update = (options) => {
-        for (const key in options) {
-            if (this.hasOwnProperty(key)) {
-                this[key] = options[key]
-            }
-        }
-        return this
-    }
+    // /**
+    //  * Updates the properties of the MapPOI instance.
+    //  *
+    //  * @param {Object} options - The options object containing properties to update.
+    //  */
+    // updateCurrentPOI = (options) => {
+    //     for (const key in options) {
+    //         if (this.hasOwnProperty(key)) {
+    //             this[key] = options[key]
+    //         }
+    //     }
+    //     return this
+    // }
 
     isView = (entity) => {
         return this.utils.isEntityInView() //TODO
@@ -292,17 +292,14 @@ export class MapPOI extends MapElement {
         return this
     };
 
-    updateCurrentPOI(updates) {
-        const $pois = lgs.mainProxy.components.pois
+    update(updates) {
+        const $pois = lgs.stores.main.components.pois
         // Update the instance in $pois.list (ProxyMap handles reactivity)
         const poiInList = $pois.list.get(this.id)
         if (poiInList) {
             Object.assign(poiInList, updates)
         }
-        // Update $pois.current if this is the current POI
-        if ($pois.current?.id === this.id) {
-            Object.assign($pois.current, updates)
-        }
+
         // Update this instance
         Object.assign(this, updates)
         // Persist to database
@@ -362,8 +359,6 @@ export class MapPOI extends MapElement {
     startAnimation = () => {
         // Implementation to start POI animation
         this.#update({animated: true})
-        console.log(`MapPOI ${this.id} started animation, animated: ${this.animated}`)
-
         return this
     }
 
@@ -374,8 +369,6 @@ export class MapPOI extends MapElement {
     stopAnimation = () => {
         // Implementation to stop POI animation
         this.#update({animated: false})
-        console.log(`MapPOI ${this.id} stopped animation, animated: ${this.animated}`)
-
         return this
     }
     /**
