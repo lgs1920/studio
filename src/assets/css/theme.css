@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-14
+ * Created on: 2025-05-17
  * Last modified: 2025-05-14
  *
  *
@@ -695,7 +695,7 @@ translate(- 50 %, - 10 px);
 .lgs-context-menu ul {
     width: 100%;
     margin: 0;
-    padding: 0 var(--lgs-gutter-xs);
+    padding: var(--lgs-gutter-xs);
     list-style: none;
 }
 

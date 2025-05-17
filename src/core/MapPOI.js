@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-11
- * Last modified: 2025-05-11
+ * Created on: 2025-05-17
+ * Last modified: 2025-05-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -285,14 +285,30 @@ export class MapPOI extends MapElement {
      * @param {Object} updates - Properties to update
      * @returns {Promise<MapPOI>} Updated POI
      */
-    #update = updates => {
-        Object.assign(lgs.mainProxy.components.pois.list.get(this.id), updates)
+    #update = (updates) => {
+        // Private method for internal updates
         Object.assign(this, updates)
         this.persistToDatabase()
+        return this
+    };
 
+    updateCurrentPOI(updates) {
+        const $pois = lgs.mainProxy.components.pois
+        // Update the instance in $pois.list (ProxyMap handles reactivity)
+        const poiInList = $pois.list.get(this.id)
+        if (poiInList) {
+            Object.assign(poiInList, updates)
+        }
+        // Update $pois.current if this is the current POI
+        if ($pois.current?.id === this.id) {
+            Object.assign($pois.current, updates)
+        }
+        // Update this instance
+        Object.assign(this, updates)
+        // Persist to database
+        this.persistToDatabase()
         return this
     }
-
     /**
      * Updates this POI's type
      * @param {string} [type] - New POI type (defaults to standard)
@@ -340,22 +356,15 @@ export class MapPOI extends MapElement {
     }
 
     /**
-     * Toggles this POI's animation state
-     * @private
-     * @param {boolean} state - Animation state
-     * @returns {MapPOI} Updated POI
-     */
-    #toggleAnimation = state => {
-        this.animated = state
-        return this
-    }
-
-    /**
      * Activates animation for this POI
      * @returns {MapPOI} Updated POI
      */
     startAnimation = () => {
-        return this.#toggleAnimation(true)
+        // Implementation to start POI animation
+        this.#update({animated: true})
+        console.log(`MapPOI ${this.id} started animation, animated: ${this.animated}`)
+
+        return this
     }
 
     /**
@@ -363,7 +372,11 @@ export class MapPOI extends MapElement {
      * @returns {MapPOI} Updated POI
      */
     stopAnimation = () => {
-        return this.#toggleAnimation(false)
+        // Implementation to stop POI animation
+        this.#update({animated: false})
+        console.log(`MapPOI ${this.id} stopped animation, animated: ${this.animated}`)
+
+        return this
     }
     /**
      * Renders and processes a visual representation of POI.
@@ -452,4 +465,5 @@ export class MapPOI extends MapElement {
         this.eventSubscriptions = {}
         return this
     }
+
 }

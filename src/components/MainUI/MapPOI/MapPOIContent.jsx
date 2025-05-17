@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-30
- * Last modified: 2025-04-30
+ * Created on: 2025-05-17
+ * Last modified: 2025-05-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -60,6 +60,7 @@ export const MapPOIContent = memo(({id, hide}) => {
                 lgs.mainProxy.components.pois.list.get(point.id),
                 {over: true},
             )
+            lgs.mainProxy.components.pois.current = point
         }
     }
 
@@ -68,6 +69,8 @@ export const MapPOIContent = memo(({id, hide}) => {
             lgs.mainProxy.components.pois.list.get(point.id),
             {over: false},
         )
+        lgs.mainProxy.components.pois.current = point
+
     }
     /**
      * We open the POI Edit drawer and the current POI settings

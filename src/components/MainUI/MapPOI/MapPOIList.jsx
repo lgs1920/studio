@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-26
+ * Created on: 2025-05-17
+ * Last modified: 2025-05-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -30,8 +30,8 @@ import { snapshot, useSnapshot }                                  from 'valtio/i
 export const MapPOIList = memo(() => {
 
     const poiList = useRef(null)
-    const $store = lgs.stores.main.components.pois
-    const pois = useSnapshot($store)
+    const $pois = lgs.stores.main.components.pois
+    const pois = useSnapshot($pois)
     const settings = useSnapshot(lgs.settings.poi)
 
     const prefix = 'edit-map-poi-'
@@ -49,8 +49,8 @@ export const MapPOIList = memo(() => {
     }
     useEffect(() => {
         __.ui.ui.initDetailsGroup(poiList.current)
-        $store.list.forEach((poi, id) => {
-            $store.bulkList.set(id, false)
+        $pois.list.forEach((poi, id) => {
+            $pois.bulkList.set(id, false)
         })
     }, [])
 
@@ -61,7 +61,7 @@ export const MapPOIList = memo(() => {
                   }
 
                   // Apply filter byName
-        let poisToShow = Array.from($store.list)
+        let poisToShow = Array.from($pois.list)
             .filter(entry => entry[1]?.title?.toLowerCase().includes(settings.filter.byName.toLowerCase()))
 
                   // Alphabetic/reverse sorting
@@ -85,11 +85,11 @@ export const MapPOIList = memo(() => {
                   }
 
 
-        $store.filteredList.clear()
-        $store.bulkList.clear()
+        $pois.filteredList.clear()
+        $pois.bulkList.clear()
         poisToShow.forEach(([key, value]) => {
-            $store.filteredList.set(key, value)
-            $store.bulkList.set(key, false)
+            $pois.filteredList.set(key, value)
+            $pois.bulkList.set(key, false)
                   })
               }, [
                   pois.list, pois?.current?.id,
@@ -102,7 +102,7 @@ export const MapPOIList = memo(() => {
 
     const handleBulkList = (state, event) => {
         const id = event.target.id.split(bulkPrefix).pop()
-        $store.bulkList.set(id, state)
+        $pois.bulkList.set(id, state)
     }
 
     const selectPOI = async (event) => {
@@ -110,23 +110,23 @@ export const MapPOIList = memo(() => {
             const id = event.target.id.split(prefix).pop()
             let forceFocus = false
             // We define the current if there is not
-            if ($store.current === false) {
-                $store.current = $store.list.get(id)
+            if ($pois.current === false) {
+                $pois.current = $pois.list.get(id)
                 forceFocus = true
             }
             // If defined and it is not the same, or we are in force mode, we focus on it
-            if (($store.current && $store.current.id !== id) || forceFocus) {
+            if ((pois.current && pois.current.id !== id) || forceFocus) {
                 // Stop animation before changing
-                $store.current.animated = false
+                $pois.current.animated = false
                 if (drawers.open === POIS_EDITOR_DRAWER) {
-                    $store.current = $store.filteredList.get(id)
+                    $pois.current = $pois.filteredList.get(id)
                 }
 
                 if (poiSetting.focusOnEdit && drawers.open === POIS_EDITOR_DRAWER && __.ui.drawerManager.over) {
                     const camera = snapshot(lgs.mainProxy.components.camera)
                     if (__.ui.cameraManager.isRotating()) {
                         await __.ui.cameraManager.stopRotate()
-                        __.ui.poiManager.stopAnimation($store.current.id)
+                        $pois.current = pois.current.stopAnimation()
                     }
                     __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
                         target: lgs.mainProxy.components.pois.current,
@@ -142,7 +142,7 @@ export const MapPOIList = memo(() => {
                         flyingTime: 0,    // no move, no time ! We're on target
                     })
                     if (lgs.settings.ui.poi.rotate) {
-                        await __.ui.poiManager.startAnimation($store.current.id)
+                        $pois.current = pois.current.startAnimation()
                     }
                 }
             }

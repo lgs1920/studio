@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: SceneManager.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-05-17
+ * Last modified: 2025-05-16
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import {
     NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
 }                                  from '@Core/constants'
@@ -175,6 +191,10 @@ export class SceneManager {
                                             initializer: options.initializer ?? this.focusPreProcessing,
                                             callback:    options.callback ?? this.focusPostProcessing,
                                         })
+    }
+
+    get target() {
+        return this.#focusTarget
     }
 
     /**

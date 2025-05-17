@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-28
- * Last modified: 2025-02-28
+ * Created on: 2025-05-17
+ * Last modified: 2025-05-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,9 +22,9 @@ import {
 import { faEye, faMask }                                    from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                            from '@Utils/FA2SL'
-import { UIToast }                                          from '@Utils/UIToast'
-import { useLayoutEffect } from 'react'
-import { snapshot, useSnapshot }                            from 'valtio'
+import { UIToast }                    from '@Utils/UIToast'
+import { useEffect, useLayoutEffect } from 'react'
+import { snapshot, useSnapshot }      from 'valtio'
 import './style.css'
 
 /**
@@ -39,22 +39,23 @@ import './style.css'
  */
 export const MapPOIEditMenu = ({point}) => {
 
-    const pois = lgs.mainProxy.components.pois
+    const $pois = lgs.mainProxy.components.pois
+    const pois = useSnapshot($pois)
     const settings = useSnapshot(lgs.settings.ui.poi)
 
     const hide = async () => {
-        pois.current = await __.ui.poiManager.hide(point.id)
+        point = point.hide()
     }
     const show = async () => {
-        pois.current = await __.ui.poiManager.show(point.id)
+        point = point.show()
     }
 
     const shrink = async () => {
-        pois.current = await __.ui.poiManager.shrink(point.id)
+        point = point.shrink()
     }
 
     const expand = async () => {
-        pois.current = await __.ui.poiManager.expand(point.id)
+        point = point.expand()
     }
 
     const focus = async () => {
@@ -62,8 +63,8 @@ export const MapPOIEditMenu = ({point}) => {
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
         }
-        __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
-            target: lgs.mainProxy.components.pois.current,
+        __.ui.sceneManager.focus(point, {
+            target: point,
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
@@ -88,11 +89,10 @@ export const MapPOIEditMenu = ({point}) => {
 
         const camera = snapshot(lgs.mainProxy.components.camera)
         if (__.ui.cameraManager.isRotating()) {
-            await __.ui.cameraManager.stopRotate()
-            pois.current = await __.ui.poiManager.stopAnimation(point.id)
+            stopRotation()
         }
-        __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
-            target: lgs.mainProxy.components.pois.current,
+        __.ui.sceneManager.focus(pois.current, {
+            target: pois.current,
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
@@ -104,8 +104,10 @@ export const MapPOIEditMenu = ({point}) => {
             panoramic:  false,
             flyingTime: 0,    // no move, no time ! We're on target
         })
-        pois.current = await __.ui.poiManager.startAnimation(point.id)
-
+        Object.assign(__.ui.poiManager.list.get(pois.current.id), {
+            animated: true,
+        })
+        $pois.current = __.ui.poiManager.list.get(pois.current.id)
     }
 
     const setAsStarter = async () => {
@@ -118,8 +120,8 @@ export const MapPOIEditMenu = ({point}) => {
                                 text:    'Set as new starter POI.',
                             })
 
-            pois.list.set(former.id, former)
-            pois.list.set(starter.id, starter)
+            $pois.list.set(former.id, former)
+            $pois.list.set(starter.id, starter)
         }
         else {
             UIToast.warning({
@@ -141,13 +143,15 @@ export const MapPOIEditMenu = ({point}) => {
             await __.ui.cameraManager.stopRotate()
         }
         __.ui.cameraManager.panoramic()
-        //    pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
+        //    $pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
 
     }
 
     const stopRotation = async () => {
         await __.ui.cameraManager.stopRotate()
-        pois.current = await __.ui.poiManager.stopAnimation(point.id)
+        Object.assign($pois.list.get(point.id), {
+            animated: false,
+        })
     }
 
     /**
@@ -159,7 +163,7 @@ export const MapPOIEditMenu = ({point}) => {
      */
     const remove = async () => {
         if (__.ui.cameraManager.isRotating()) {
-            await __.ui.cameraManager.stopRotate()
+            stopRotation()
         }
 
         __.ui.poiManager.remove(point.id, true)
@@ -172,8 +176,11 @@ export const MapPOIEditMenu = ({point}) => {
             })
     }
 
-    useLayoutEffect(() => {
-        // we need this to redraw each time point changes
+    useEffect(() => {
+
+        $pois.current = point
+        //
+        console.log(point.id, point.animated)
     }, [point])
 
     return (    
@@ -232,7 +239,7 @@ export const MapPOIEditMenu = ({point}) => {
                         }
                         <sl-divider/>
 
-                        {!point.animated &&
+                        {!pois.list.get(point.id)?.animated &&
                             <>
                                 <SlMenuItem onClick={rotationAround}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowRotateRight)}></SlIcon>
@@ -244,10 +251,10 @@ export const MapPOIEditMenu = ({point}) => {
                                 </SlMenuItem>
                             </>
                         }
-                        {(point.animated || __.ui.cameraManager.isRotating()) &&
+                        {point.id === pois.current.id && pois.list.get(point.id)?.animated &&
                             <SlMenuItem onClick={stopRotation} loading>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
-                                <span>Stop</span>
+                                <span>{'Stop Rotation'}</span>
                             </SlMenuItem>
                         }
                     </SlMenu>

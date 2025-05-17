@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-14
+ * Created on: 2025-05-17
  * Last modified: 2025-05-14
  *
  *
@@ -108,15 +108,15 @@ export const MapPOIMonitor = () => {
         __.canvasEvents.onRightClick(handleContextMenu, {entity: poi.id, preventLowerPriority: true})
         __.canvasEvents.onLongTap(handleContextMenu, {entity: poi.id, preventLowerPriority: true})
 
-        __.canvasEvents.onKeyDown(
-            (event, entityId, options, userData) => {
-                if (event.altKey) { // Exclure Shift, même si Ctrl+Alt sont requis
-                    console.log('Alt+S (no Shift):', {entityId, userData})
-                }
-            },
-            {modifiers: ['alt'], keys: ['s'], entity: poi.id},
-            {action: 'save'},
-        )
+        // __.canvasEvents.onKeyDown(
+        //     (event, entityId, options, userData) => {
+        //         if (event.altKey) { // Exclure Shift, même si Ctrl+Alt sont requis
+        //             console.log('Alt+S (no Shift):', {entityId, userData})
+        //         }
+        //     },
+        //     {modifiers: ['alt'], keys: ['s'], entity: poi.id},
+        //     {action: 'save'},
+        // )
     }
 
     /**
@@ -132,7 +132,6 @@ export const MapPOIMonitor = () => {
 
         // Reference previous list for comparison
         const previousList = _previousList.current
-
 
         // Detect added POIs
         for (const [id, poi] of currentList) {
