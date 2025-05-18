@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-18
+ * Last modified: 2025-05-18
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { NONE } from '@Core/constants'
-import { MapPOI } from '@Core/MapPOI'
+import { NONE, POI_STANDARD_TYPE } from '@Core/constants'
+import { MapPOI }                  from '@Core/MapPOI'
 import { POI }    from '@Core/POI'
 import { faArrowRotateRight }          from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
@@ -31,11 +31,14 @@ export const RotateButton = (props) => {
     const $pois = lgs.mainProxy.components.pois
     const pois = useSnapshot($pois)
 
+    const DUMMY_TARGET = 'target'
+
     const handleRotation = async () => {
         if (rotate.running) {
             await __.ui.cameraManager.stopRotate()
-            if (__.ui.sceneManager.target instanceof MapPOI) {
-                Object.assign({}, __.ui.sceneManager.target.stopAnimation())
+            if (__.ui.sceneManager.target?.element === POI_STANDARD_TYPE) {
+                // Object.assign(__.ui.sceneManager.target,{animated:false})
+                Object.assign($pois.list.get(pois.current), {animated: false})
             }
         }
         else {
@@ -47,9 +50,10 @@ export const RotateButton = (props) => {
                 infinite:   true,
                 rotate:     true,
                 flyingTime: 0,    // no move, no time ! We're on target
-                target: null,
+                target: DUMMY_TARGET
+                ,
             })
-            pois.list.get(pois.current).startAnimation()
+            Object.assign($pois.list.get(pois.current), {animated: true})
         }
     }
 
