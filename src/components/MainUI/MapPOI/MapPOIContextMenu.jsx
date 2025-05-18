@@ -16,8 +16,10 @@
 
 import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import {
-    LGS_CONTEXT_MENU_HOOK, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER, SECOND,
-}                          from '@Core/constants'
+    LGS_CONTEXT_MENU_HOOK, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE,
+    POIS_EDITOR_DRAWER,
+    SECOND,
+} from '@Core/constants'
 import {
     faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama, faTrashCan,
 }                          from '@fortawesome/pro-regular-svg-icons'
@@ -276,9 +278,11 @@ export const MapPOIContextMenu = () => {
                                 </li>
                             }
                             {_current.type !== POI_STARTER_TYPE &&
+                                _current.type !== POI_FLAG_START &&
+                                _current.type !== POI_FLAG_STOP &&
                                 <li onClick={remove}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}></SlIcon>
-                                    <span>{'Remove'}</span>
+                                    <span>{'Remove'}</span>{_current.type}
                                 </li>
                             }
 

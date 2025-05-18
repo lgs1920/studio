@@ -14,11 +14,11 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { FontAwesomeIcon }       from '@Components/FontAwesomeIcon'
-import { POI_STARTER_TYPE }      from '@Core/constants'
+import { FontAwesomeIcon }                                 from '@Components/FontAwesomeIcon'
+import { POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants'
 import {
     faArrowRotateRight, faArrowsFromLine, faCrosshairsSimple, faFlag, faLocationDot, faPanorama, faTrashCan, faXmark,
-}                                from '@fortawesome/pro-regular-svg-icons'
+}                                                          from '@fortawesome/pro-regular-svg-icons'
 import { faMask }                from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                            from '@Utils/FA2SL'
@@ -202,6 +202,8 @@ export const MapPOIEditMenu = ({point}) => {
                                     </SlMenuItem>
                                 }
                                 {point.type !== POI_STARTER_TYPE &&
+                                    point.type !== POI_FLAG_START &&
+                                    point.type !== POI_FLAG_STOP &&
                                     <SlMenuItem onClick={remove} small>
                                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}></SlIcon>
                                         <span>Remove</span>
