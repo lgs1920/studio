@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-18
+ * Last modified: 2025-05-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -174,11 +174,8 @@ export const MapPOIEditMenu = ({point}) => {
             })
     }
 
-    useEffect(() => {
-
-        // $pois.current = point
-        //
-    }, [point])
+    // useEffect(() => {
+    // }, [point.expanded])
 
     return (
         <>

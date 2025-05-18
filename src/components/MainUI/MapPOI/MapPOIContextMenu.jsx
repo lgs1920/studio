@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-18
+ * Last modified: 2025-05-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -57,7 +57,7 @@ export const MapPOIContextMenu = () => {
     const anchor = useRef(null)
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
-    const _current = pois.list.get(pois.current)
+    let _current = pois.list.get(pois.current)
 
     /**
      * Hides the menu in the application by resuming the context timer and updating visibility settings.
@@ -68,7 +68,7 @@ export const MapPOIContextMenu = () => {
     }
 
     const saveAsPOI = () => {
-        Object.assign(__.ui.poiManager.list.get(pois.current), {
+        _current = Object.assign(__.ui.poiManager.list.get(pois.current), {
             type: POI_STANDARD_TYPE,
             category: POI_STANDARD_TYPE,
         })
@@ -81,12 +81,16 @@ export const MapPOIContextMenu = () => {
     }
 
     const shrink = () => {
-        _current.shrink()
+        _current = Object.assign(__.ui.poiManager.list.get(pois.current), {
+            expanded: false,
+        })
         hideMenu()
     }
 
     const expand = () => {
-        _current.expand()
+        _current = Object.assign(__.ui.poiManager.list.get(pois.current), {
+            expanded: true,
+        })
         hideMenu()
     }
 
@@ -121,7 +125,7 @@ export const MapPOIContextMenu = () => {
             })
         }
         hideMenu()
-        _current.startAnimation()
+        _current = _current.startAnimation()
     }
 
     const stopRotation = async () => {
@@ -130,12 +134,11 @@ export const MapPOIContextMenu = () => {
         Object.assign(__.ui.poiManager.list.get(pois.current), {
             animated: false,
         })
-        _current.stopAnimation()
+        _current = _current.stopAnimation()
     }
 
     const setAsStarter = async () => {
-        const current = _current
-        const {former, starter} = await __.ui.poiManager.setStarter(current)
+        const {former, starter} = await __.ui.poiManager.setStarter(_current)
         if (starter) {
             UIToast.success({
                                 caption: `${current.title}`,

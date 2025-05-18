@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-18
+ * Last modified: 2025-05-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -287,7 +287,12 @@ export class MapPOI extends MapElement {
      */
     #update = (updates) => {
         // Private method for internal updates
+        // Appliquer les mises à jour à l'objet local
         Object.assign(this, updates)
+
+        // Synchroniser avec le store Valtio
+        const $pois = lgs.mainProxy.components.pois
+        $pois.list.set(this.id, {...this})
         this.persistToDatabase()
         return this
     };
