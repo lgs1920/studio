@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-28
+ * Created on: 2025-05-19
+ * Last modified: 2025-05-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,7 +38,8 @@ import { useSnapshot }                                               from 'valti
 
 export const MapPOIEditContent = ({poi}) => {
 
-    const pois = useSnapshot(lgs.mainProxy.components.pois)
+    const $pois = lgs.stores.main.components.pois
+    const pois = useSnapshot($pois)
     let point = pois.list.get(poi.id)
     const [simulated, setSimulated] = useState(false)
     const poiColor = useRef(null)
@@ -54,6 +55,7 @@ export const MapPOIEditContent = ({poi}) => {
     }
 
     const handleChangeColor = async event => {
+        $pois.current = point.id
         if (event.target === poiColor.current) {
             Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
                 color: event.target.value,
@@ -74,6 +76,7 @@ export const MapPOIEditContent = ({poi}) => {
     }
 
     const handleChangeLatitude = async event => {
+        $pois.current = point.id
         Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
             latitude: event.target.value * 1,
         })
@@ -81,6 +84,7 @@ export const MapPOIEditContent = ({poi}) => {
     }
 
     const handleChangeLongitude = async event => {
+        $pois.current = point.id
         Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
             longitude: event.target.value * 1,
         })
@@ -89,6 +93,7 @@ export const MapPOIEditContent = ({poi}) => {
 
     const handleChangeTitle = async event => {
         if (window.isOK) {
+            $pois.current = point.id
             Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
                 title: event.target.value,
             })
@@ -98,6 +103,7 @@ export const MapPOIEditContent = ({poi}) => {
 
     const handleChangeDescription = async event => {
         if (window.isOK) {
+            $pois.current = point.id
             Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
                 description: event.target.value,
             })
@@ -124,6 +130,7 @@ export const MapPOIEditContent = ({poi}) => {
         if (point && pois.current) {
             setSimulated(point.height === undefined || point.height === point.simulatedHeight)
         }
+        console.log(point.id, pois.current)
 
     }, [point])
 

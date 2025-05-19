@@ -59,6 +59,7 @@ export const MapPOIEditMenu = ({point}) => {
     }
 
     const focus = async () => {
+        $pois.current = point.id
         const camera = snapshot(lgs.mainProxy.components.camera)
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
@@ -86,8 +87,8 @@ export const MapPOIEditMenu = ({point}) => {
      * - The context menu is hidden.
      */
     const rotationAround = async () => {
-
-        const current = pois.list.get(pois.current)
+        $pois.current = point.id
+        const current = pois.list.get(point.id)
         const camera = snapshot(lgs.mainProxy.components.camera)
         if (__.ui.cameraManager.isRotating()) {
             stopRotation()
@@ -169,13 +170,13 @@ export const MapPOIEditMenu = ({point}) => {
                 if (result.success) {
                     pois.filteredList.delete(result.id)
                     pois.bulkList.delete(result.id)
-                    pois.current = false
+                    $pois.current = false
                 }
             })
     }
 
-    // useEffect(() => {
-    // }, [point.expanded])
+    useEffect(() => {
+    }, [point])
 
     return (
         <>
