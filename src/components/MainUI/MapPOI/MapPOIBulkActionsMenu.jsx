@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-19
+ * Last modified: 2025-05-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -40,38 +40,42 @@ export const MapPOIBulkActionsMenu = () => {
     const [disabled, setDisabled] = useState(false)
 
     const hide = async () => {
-        $pois.bulkList.forEach((state, id) => {
-            if (state) {
-                __.ui.poiManager.hide(id).then()
+        $pois.bulkList.forEach((canHide, id) => {
+            if (canHide) {
+                const poi = pois.list.get(id)
+                poi.hide()
             }
         })
     }
     const show = async () => {
-        $pois.bulkList.forEach((state, id) => {
-            if (state) {
-                __.ui.poiManager.show(id).then()
+        $pois.bulkList.forEach((canShow, id) => {
+            if (canShow) {
+                const poi = pois.list.get(id)
+                poi.show()
             }
         })
     }
 
     const shrink = async () => {
-        $pois.bulkList.forEach((state, id) => {
-            if (state) {
-                __.ui.poiManager.shrink(id).then()
+        $pois.bulkList.forEach((canReduce, id) => {
+            if (canReduce) {
+                const poi = pois.list.get(id)
+                poi.shrink()
             }
         })
     }
 
     const expand = async () => {
-        $pois.bulkList.forEach((state, id) => {
-            if (state) {
-                __.ui.poiManager.expand(id).then()
+        $pois.bulkList.forEach((canExpand, id) => {
+            if (canExpand) {
+                const poi = pois.list.get(id)
+                poi.expand()
             }
         })
     }
 
     /**
-     * Removes the selected Poinst of Interest and associated UI elements.
+     * Removes the selected Points of Interest and associated UI elements.
      *
      * Postcondition:
      * - Camera rotation is stopped if it was active.
@@ -83,9 +87,9 @@ export const MapPOIBulkActionsMenu = () => {
         // Check if current is in list
         const needToChangeCurrent = $pois.bulkList.has(pois.current)
         const actions = []
-        $pois.bulkList.forEach(async (state, id) => {
-            if (state) {
-                actions.push(__.ui.poiManager.remove(id, true))
+        $pois.bulkList.forEach(async (canRemove, id) => {
+            if (canRemove) {
+                actions.push(__.ui.poiManager.remove({id: id}))
             }
         })
         Promise.all(actions).then(results => {

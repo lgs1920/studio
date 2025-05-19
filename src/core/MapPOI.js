@@ -420,18 +420,20 @@ export class MapPOI extends MapElement {
     /**
      * Removes the POI
      *
-     * @param {string} [id=this.id] - Identifier of the POI to remove
      *
      * @returns {Promise<void>}
+     * @param dbSync
      */
     remove = (dbSync = true) => {
         try {
             this.clearEvents()
-            this.utils.remove(this)
+            this.utils.remove(this).then(async () => {
+                if (dbSync) {
+                    await lgs.db.lgs1920.delete(this.id, POIS_STORE)
+                }
+            })
 
-            if (dbSync) {
-                lgs.db.lgs1920.delete(this.id, POIS_STORE)
-            }
+
         }
         catch (error) {
             console.error(`Failed to remove POI from database: ${error.message}`)

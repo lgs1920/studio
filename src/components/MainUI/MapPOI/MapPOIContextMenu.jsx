@@ -197,7 +197,7 @@ export const MapPOIContextMenu = () => {
             await __.ui.cameraManager.stopRotate()
         }
 
-        __.ui.poiManager.remove(pois.current, true)
+        __.ui.poiManager.remove({id: pois.current})
             .then((result) => {
                 hideMenu()
                 if (result.success) {

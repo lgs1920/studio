@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-28
+ * Created on: 2025-05-19
+ * Last modified: 2025-05-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -741,7 +741,7 @@ export class Journey extends MapElement {
                 .filter(poi => poi.parent === track.slug)
                 .map(poi => poi.id)
             poisToRemove.forEach(poiId => {
-                __.ui.poiManager.remove(poiId)
+                __.ui.poiManager.remove({id: poiId, force: true})
             })
         })
 
@@ -750,7 +750,7 @@ export class Journey extends MapElement {
             .filter(poi => poi.parent === this.slug)
             .map(poi => poi.id)
         poisToRemove.forEach(poiId => {
-            __.ui.poiManager.remove(poiId)
+            __.ui.poiManager.remove({id: poiId, force: true})
         })
 
 

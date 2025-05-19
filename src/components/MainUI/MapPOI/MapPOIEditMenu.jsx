@@ -165,7 +165,7 @@ export const MapPOIEditMenu = ({point}) => {
             stopRotation()
         }
 
-        __.ui.poiManager.remove(point.id, true)
+        __.ui.poiManager.remove({id: point.id})
             .then((result) => {
                 if (result.success) {
                     pois.filteredList.delete(result.id)

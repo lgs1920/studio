@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-19
+ * Last modified: 2025-05-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -470,37 +470,54 @@ export class POIManager {
     }
 
     /**
-     * Removes a POI by its ID and optionally from the database.
-     * Prevents deletion of the starter POI.
+     * Removes a Point of Interest (POI) from the list.
      *
-     * @param {string} id - The ID of the POI to remove
-     * @param {boolean} dbSync - Whether to remove from database
-     * @return {Object} Status object with ID and success indicator
+     * @param {Object} options - The removal options.
+     * @param {string} options.id - The ID of the POI to remove.
+     * @param {boolean} [options.dbSync=true] - Whether to sync with the database.
+     * @param {boolean} [options.force=false] - Whether to force deletion of START and STOP POIs.
+     * @returns {Promise<Object>} - The result of the removal operation.
      */
-    remove = async (id, dbSync = true) => {
+    remove = async ({id, dbSync = true, force = false} = {}) => {
         const poi = this.list.get(id)
+
+        // If the POI does not exist, return failure
         if (!poi) {
             return {id: id, success: false}
         }
-        // Cannot delete the starter POI as it's required for application function
+
+        // The STARTER POI cannot be deleted, as it is essential for the application
         if (poi.type === POI_STARTER_TYPE) {
             UIToast.warning({
                                 caption: sprintf(`The POI "%s" can not be deleted !`, poi.title),
                                 text: 'It is the starter POI.',
+                            });
+            return {id: id, success: false}
+        }
+
+        // If force is false, prevent deletion of START or STOP POIs
+        if ((poi.type === FLAG_START_TYPE || poi.type === FLAG_STOP_TYPE) && !force) {
+            UIToast.warning({
+                                caption: sprintf(`The POI "%s" can not be deleted !`, poi.title),
+                                text:    'It is a required POI.',
                             })
             return {id: id, success: false}
         }
 
+        // Remove the POI from the list and the database
         this.list.delete(id)
         await poi.remove(dbSync)
-        if (poi.type !== FLAG_START_TYPE && poi.type !== FLAG_STOP_TYPE) {
+
+        // Show a success toast only if force = true and the POI is not STARTER
+        if (poi.type !== POI_STARTER_TYPE && force) {
             UIToast.success({
                                 caption: sprintf(`The POI "%s" has been deleted !`, poi.title),
-                                text:    '',
-                            })
+                                text: '',
+                            });
         }
+
         return {id: id, success: true}
-    }
+    };
 
     /**
      * Determines if two points are closer than a specified threshold.
