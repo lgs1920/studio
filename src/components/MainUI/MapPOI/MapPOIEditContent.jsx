@@ -130,7 +130,6 @@ export const MapPOIEditContent = ({poi}) => {
         if (point && pois.current) {
             setSimulated(point.height === undefined || point.height === point.simulatedHeight)
         }
-        console.log(point.id, pois.current)
 
     }, [point])
 
