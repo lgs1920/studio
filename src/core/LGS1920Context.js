@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: LGS1920Context.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-05-19
+ * Last modified: 2025-05-19
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import {
     APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, JOURNEYS_STORE, ORIGIN_STORE, platforms,
     POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE,
@@ -147,13 +163,13 @@ export class LGS1920Context {
             lgs1920:  new LocalDB({
                                       name:             `${APP_KEY}${dbPrefix}`,
                                       stores:           [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE],
-                                      manageTransients: true,
+                                      manageTransients: false,
                                       version:          4, // integer
                                   }),
             settings: new LocalDB({
                                       name:    `settings-${APP_KEY}${dbPrefix}`,
                                       stores:  [SETTINGS_STORE],
-                                      manageTransients: true,
+                                      manageTransients: false,
                                       version: 1, // integer
                                   }),
             vault:    new LocalDB({
