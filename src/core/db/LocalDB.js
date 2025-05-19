@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: LocalDB.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-05-19
+ * Last modified: 2025-05-19
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 /**
  * Dependencies
  */
@@ -102,7 +118,7 @@ export class LocalDB {
      * @return the content saved
      */
     put = async (key, value, store, ttl = null) => {
-
+        console.log(`Putting key "${key}" into store "${store}" with value:`, value)
         let now = DateTime.now()
         let old = await this.get(key, store, true)
         let content = {_iso_: {}}
@@ -158,14 +174,94 @@ export class LocalDB {
     }
 
     /**
-     * delete a key
+     * Deletes a key from the specified store in the IndexedDB database.
+     * Ensures reliable deletion across all stores with minimal delays and fallback
+     * mechanisms to handle browser-specific IndexedDB quirks.
      *
-     * @param key
-     * @param store
-     * @return {Promise<*>}
+     * @param {string} key - The key to delete from the store.
+     * @param {string} store - The name of the store (e.g., 'pois', 'journeys', 'current').
+     * @returns {Promise<boolean>} A promise that resolves to `true` if the key was successfully
+     *                            deleted, `false` if the key did not exist, or throws an error
+     *                            if the operation fails.
+     * @throws {Error} If the key or store is invalid, or if the database operation fails.
      */
     delete = async (key, store) => {
-        return (await this.#db).delete(store, key)
+        const callId = Math.random().toString(36).slice(2, 8)
+        const startTime = performance.now()
+
+        try {
+            const db = await this.#getDB()
+
+            const tx = db.transaction(store, 'readwrite')
+            const storeObj = tx.objectStore(store)
+            const existsBefore = await storeObj.get(key)
+
+            if (!existsBefore) {
+                await tx.done
+                return false
+            }
+
+            await storeObj.delete(key)
+            await tx.done
+
+            // Universal commit delay to ensure transaction finalization
+            await new Promise(resolve => setTimeout(resolve, 100))
+
+            // Verify deletion with up to 2 retries
+            let existsAfter
+            for (let attempt = 1 attempt <= 2
+            attempt++
+        )
+            {
+                const verifyTx = db.transaction(store, 'readonly')
+                const verifyStore = verifyTx.objectStore(store)
+                existsAfter = await verifyStore.get(key)
+                await verifyTx.done
+
+                if (!existsAfter) {
+                    break
+                }
+                // Short delay before retry to handle transaction isolation
+                await new Promise(resolve => setTimeout(resolve, 50))
+            }
+
+            if (existsAfter) {
+                const fallbackTx = db.transaction(store, 'readwrite')
+                const fallbackStore = fallbackTx.objectStore(store)
+                await fallbackStore.delete(key)
+                await fallbackTx.done
+
+                const finalCheck = await db.get(store, key)
+                if (finalCheck) {
+                    console.error(`[${callId}][${store}] Fallback deletion failed: Key "${key}" still exists`)
+                    const keys = await db.getAllKeys(store)
+                    return false
+                }
+            }
+            return true
+        }
+        catch (error) {
+            console.error(`[${callId}][${store}] Failed to delete key "${key}":`, error)
+            throw error
+        }
+    }
+
+    /**
+     * Retrieves the initialized IndexedDB database instance.
+     * Handles errors during database access and ensures proper initialization.
+     *
+     * @returns {Promise<IDBDatabase>} A promise that resolves to the IndexedDB database instance.
+     * @throws {Error} If the database fails to initialize or open.
+     * @private
+     */
+    async #getDB() {
+        try {
+            return await this.#db
+        }
+        catch (error) {
+            console.error('Failed to open database:', error)
+            throw new Error('Database initialization failed.')
+        }
     }
 
     /**
