@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-19
+ * Last modified: 2025-05-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,6 +25,7 @@ import { FA2SL }                                                  from '@Utils/F
 import { UIToast }                                                from '@Utils/UIToast'
 import classNames                                                 from 'classnames'
 import { Fragment, memo, useEffect, useRef }                      from 'react'
+import { proxy } from 'valtio'
 import { snapshot, useSnapshot }                                  from 'valtio/index'
 
 export const MapPOIList = memo(() => {
@@ -33,11 +34,15 @@ export const MapPOIList = memo(() => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
     const settings = useSnapshot(lgs.settings.poi)
+    const editor = useSnapshot(lgs.stores.journeyEditor)
 
     const prefix = 'edit-map-poi-'
     const bulkPrefix = 'bulk-map-poi-'
     const drawers = useSnapshot(lgs.mainProxy.drawers)
     const poiSetting = useSnapshot(lgs.settings.ui.poi)
+    const theJourney = useRef(lgs.theJourney)
+
+    const _poi = useRef(pois.list.get(pois.current))
 
     const handleCopyCoordinates = (poi) => {
         __.ui.poiManager.copyCoordinatesToClipboard(poi).then(() => {
@@ -47,6 +52,8 @@ export const MapPOIList = memo(() => {
                             })
         })
     }
+
+
     useEffect(() => {
         __.ui.ui.initDetailsGroup(poiList.current)
         $pois.list.forEach((poi, id) => {
@@ -55,13 +62,23 @@ export const MapPOIList = memo(() => {
     }, [])
 
     useEffect(() => {
+
+        theJourney.current = editor.journey
+
                   // Clear action once built
                   if (drawers.action) {
                       lgs.mainProxy.drawers.action = null
                   }
 
+        let poisToShow = Array.from(pois.list)
+
+        // Apply filter by journey
+        if (theJourney.current) {
+            poisToShow = poisToShow.filter(([id, object]) => theJourney.current.pois.includes(id) || !object.parent)
+        }
+
                   // Apply filter byName
-        let poisToShow = Array.from($pois.list)
+        poisToShow = Array.from(poisToShow)
             .filter(entry => entry[1]?.title?.toLowerCase().includes(settings.filter.byName.toLowerCase()))
 
                   // Alphabetic/reverse sorting
@@ -92,10 +109,12 @@ export const MapPOIList = memo(() => {
             $pois.bulkList.set(key, false)
                   })
               }, [
-                  pois.list, pois?.current?.id,
+                  pois.list, pois.current,
                   settings?.filter.byName, settings?.filter.alphabetic,
                   settings?.filter.exclude, settings?.filter.byCategories,
-        pois?.current?.title, pois?.current?.category,
+                  _poi.current?.title, _poi.current?.category,
+                  _poi.current?.expanded,
+                  editor.journey,
               ],
     )
 
@@ -136,7 +155,7 @@ export const MapPOIList = memo(() => {
                         roll:       camera.position.roll,
                         range:      5000,
                         infinite:   false,
-                        rpm: lgs.settings.ui.poi.rpm,
+                        rpm:    lgs.settings.ui.poi.rpm,
                         rotations:  1,
                         rotate:     lgs.settings.ui.poi.rotate,
                         panoramic:  false,
@@ -151,7 +170,7 @@ export const MapPOIList = memo(() => {
 
             // We force it in the view
             const item = document.getElementById(`${prefix}${id}`)
-            item.scrollIntoView({behavior: 'instant', block: 'center'})
+            item.scrollIntoView({behavior: 'smooth', block: 'start'})
             item.focus()
         }
     }
@@ -160,44 +179,44 @@ export const MapPOIList = memo(() => {
         <div id={'edit-map-poi-list'} ref={poiList}>
             {pois.filteredList.size > 0 &&
                 Array.from(pois.filteredList.entries()).map(([id, poi]) => (
-                <Fragment key={`${prefix}${id}`}>
-                    {poi.type !== POI_TMP_TYPE &&
-                        <div className="edit-map-poi-item-wrapper">
-                            <ToggleStateIcon initial={pois.bulkList.get(id)} className={'map-poi-bulk-indicator'}
-                                             icons={{true: faSquareCheck, false: faSquare}}
-                                             onChange={handleBulkList}
-                                             id={`${bulkPrefix}${id}`}
-                            />
-                            <SlDetails className={classNames(
-                                `edit-map-poi-item`,
-                                poi.visible ? undefined : 'map-poi-hidden',
-                                poi.type === POI_STARTER_TYPE ? 'map-poi-starter' : undefined,
-                            )}
-                                       id={`${prefix}${id}`}
-                                       onSlAfterShow={selectPOI}
-                                       open={pois?.current?.id === id /*&& drawers.action !== null*/}
-                                       small
-                                       style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.bgColor ?? lgs.colors.poiDefaultBackground, 'rgba', 0.2)}}>
-                                <div slot="summary">
+                    <Fragment key={`${prefix}${id}`}>
+                        {poi.type !== POI_TMP_TYPE &&
+                            <div className="edit-map-poi-item-wrapper">
+                                <ToggleStateIcon initial={pois.bulkList.get(id)} className={'map-poi-bulk-indicator'}
+                                                 icons={{true: faSquareCheck, false: faSquare}}
+                                                 onChange={handleBulkList}
+                                                 id={`${bulkPrefix}${id}`}
+                                />
+                                <SlDetails className={classNames(
+                                    `edit-map-poi-item`,
+                                    poi.visible ? undefined : 'map-poi-hidden',
+                                    poi.type === POI_STARTER_TYPE ? 'map-poi-starter' : undefined,
+                                )}
+                                           id={`${prefix}${id}`}
+                                           onSlAfterShow={selectPOI}
+                                           open={pois.current === id /*&& drawers.action !== null*/}
+                                           small
+                                           style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.bgColor ?? lgs.colors.poiDefaultBackground, 'rgba', 0.2)}}>
+                                    <div slot="summary">
                                     <span>
                                         <FontAwesomeIcon icon={poi.visible ? poi.icon : faMask} style={{
                                             '--fa-primary-color':   poi.color,
                                             '--fa-secondary-color': poi.bgColor,
                                             '--fa-primary-opacity':   1,
                                             '--fa-secondary-opacity': 1,
-                                       }}/>
+                                        }}/>
 
                                         {poi.title}
                                        </span>
-                                    <span>
+                                        <span>
                         </span>
-                                </div>
-                                <MapPOIEditContent poi={poi}/>
-                            </SlDetails>
-                        </div>
-                    }
-                </Fragment>
-            ))
+                                    </div>
+                                    <MapPOIEditContent poi={poi}/>
+                                </SlDetails>
+                            </div>
+                        }
+                    </Fragment>
+                ))
             }
 
             {pois.filteredList.size === 0 &&

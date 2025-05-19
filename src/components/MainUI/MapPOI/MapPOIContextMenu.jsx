@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-18
- * Last modified: 2025-05-18
+ * Created on: 2025-05-19
+ * Last modified: 2025-05-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -83,16 +83,12 @@ export const MapPOIContextMenu = () => {
     }
 
     const shrink = () => {
-        _current = Object.assign(__.ui.poiManager.list.get(pois.current), {
-            expanded: false,
-        })
+        _current.shrink()
         hideMenu()
     }
 
     const expand = () => {
-        _current = Object.assign(__.ui.poiManager.list.get(pois.current), {
-            expanded: true,
-        })
+        _current.expand()
         hideMenu()
     }
 
@@ -221,10 +217,6 @@ export const MapPOIContextMenu = () => {
     }
 
     useEffect(() => {
-
-                  // if (current) {
-                  //     $pois.current = set(current.id)
-                  // }
                   Timeout.set(
                       pois.context.timer,
                       hideMenu,
@@ -234,7 +226,7 @@ export const MapPOIContextMenu = () => {
                       Timeout.clear(pois.context.timer)
                   }
               }
-        , [pois.context.visible])
+        , [pois.context.visible, _current])
 
     return (
         <>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-18
- * Last modified: 2025-05-18
+ * Created on: 2025-05-19
+ * Last modified: 2025-05-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -39,7 +39,7 @@ import './style.css'
  */
 export const MapPOIEditMenu = ({point}) => {
 
-    const $pois = lgs.mainProxy.components.pois
+    const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
     const settings = useSnapshot(lgs.settings.ui.poi)
 
