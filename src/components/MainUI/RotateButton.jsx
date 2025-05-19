@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-18
- * Last modified: 2025-05-18
+ * Created on: 2025-05-19
+ * Last modified: 2025-05-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -53,7 +53,9 @@ export const RotateButton = (props) => {
                 target: DUMMY_TARGET
                 ,
             })
-            Object.assign($pois.list.get(pois.current), {animated: true})
+            if (__.ui.sceneManager.target?.element === POI_STANDARD_TYPE) {
+                Object.assign($pois.list.get(pois.current), {animated: true})
+            }
         }
     }
 
