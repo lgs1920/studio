@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-18
- * Last modified: 2025-05-18
+ * Created on: 2025-05-19
+ * Last modified: 2025-05-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -169,6 +169,10 @@ export class MapPOI extends MapElement {
         return Object.values(POI_CATEGORY_ICONS.get(this.category ?? POI_STANDARD_TYPE))[0]
     }
 
+    set icon(icon) {
+        // we need it to avoid an error but icon iset by POI category
+    }
+
     static deserialize = (object, json = false) => MapElement.deserialize(object, json)
 
     static serialize = (props) => MapElement.serialize(props)
@@ -290,8 +294,7 @@ export class MapPOI extends MapElement {
         // Appliquer les mises à jour à l'objet local
         Object.assign(this, updates)
 
-        // Synchroniser avec le store Valtio
-        const $pois = lgs.mainProxy.components.pois
+        const $pois = lgs.stores.main.components.pois
         $pois.list.set(this.id, {...this})
         this.persistToDatabase()
         return this
