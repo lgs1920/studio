@@ -67,10 +67,10 @@
 - cesium
 - echarts
 - echarts-for-react
-- konva
 - html2canvas
 - canvg
 - jspdf
+- snapdom
 
 ### State Management
 

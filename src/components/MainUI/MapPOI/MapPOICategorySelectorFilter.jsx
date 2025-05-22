@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-22
+ * Last modified: 2025-05-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -37,7 +37,7 @@ export const MapPOICategorySelectorFilter = (props) => {
 
     return (
         <SlSelect value={settings.filter.byCategories} size={props?.size ?? 'small'}
-                  className="map-poi-categorie-selector-filter" multiple onSlChange={props.handleCategories}
+                  className="map-poi-category-selector-filter" multiple onSlChange={props.handleCategories}
                   placeholder="Select categories" clearable
         >
             <FontAwesomeIcon slot="clear-icon" icon={faTrashCan}/>

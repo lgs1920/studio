@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-22
+ * Last modified: 2025-05-22
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
 import { POIS_EDITOR_DRAWER } from '@Core/constants'
 import { useSnapshot }        from 'valtio'
 import { useEffect, useRef }  from 'react'
@@ -128,46 +129,53 @@ export const MapPOIMonitor = () => {
     }
 
     // Effect to detect changes in the POI list
-    useEffect(() => {
+    // useEffect(() => {
+    //
+    //     // Reference previous list for comparison
+    //     const previousList = _previousList.current
+    //
+    //     // Detect added POIs
+    //     for (const [id, poi] of currentList) {
+    //         if (!previousList.has(id)) {
+    //             // Add event listeners and draw new POI
+    //             addPOIEventListeners(poi)
+    //             poi.draw(false)
+    //         }
+    //     }
+    //
+    //     // Detect removed POIs
+    //     for (const [id, poi] of previousList) {
+    //         if (!currentList.has(id)) {
+    //             // Remove event listeners and remove POI
+    //             removePOIEventListeners(poi)
+    //             poi.remove()
+    //         }
+    //     }
+    //
+    //     // Detect changed POIs
+    //     for (const [id, poi] of currentList) {
+    //         const previous = previousList.get(id)
+    //         if (previous) {
+    //             // Compare attributes, excluding methods
+    //             const changedFields = updatedDiff(__.app.filterAttributes(previous), __.app.filterAttributes(poi))
+    //             if (!isEmpty(changedFields)) {
+    //                 // Log changes for debugging and redraw POI
+    //                 poi.draw(false)
+    //             }
+    //         }
+    //     }
+    //
+    //     // Update previous list state
+    //     _previousList.current = new Map(currentList)
+    //
+    // }, [currentList])
 
-        // Reference previous list for comparison
-        const previousList = _previousList.current
 
-        // Detect added POIs
-        for (const [id, poi] of currentList) {
-            if (!previousList.has(id)) {
-                // Add event listeners and draw new POI
-                addPOIEventListeners(poi)
-                poi.draw(false)
-            }
-        }
-
-        // Detect removed POIs
-        for (const [id, poi] of previousList) {
-            if (!currentList.has(id)) {
-                // Remove event listeners and remove POI
-                removePOIEventListeners(poi)
-                poi.remove()
-            }
-        }
-
-        // Detect changed POIs
-        for (const [id, poi] of currentList) {
-            const previous = previousList.get(id)
-            if (previous) {
-                // Compare attributes, excluding methods
-                const changedFields = updatedDiff(__.app.filterAttributes(previous), __.app.filterAttributes(poi))
-                if (!isEmpty(changedFields)) {
-                    // Log changes for debugging and redraw POI
-                    poi.draw(false)
-                }
-            }
-        }
-
-        // Update previous list state
-        _previousList.current = new Map(currentList)
-
-    }, [currentList])
-
-    return false
+    return (
+        <>
+            {Array.from(currentList, ([id, poi]) => (
+                <MapPOIContent key={id} poi={poi.id}/>
+            ))}
+        </>
+    )
 }

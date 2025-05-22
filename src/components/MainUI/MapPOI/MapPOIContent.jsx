@@ -7,171 +7,99 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-22
+ * Last modified: 2025-05-22
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { NameValueUnit }                                  from '@Components/DataDisplay/NameValueUnit'
-import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
-import { DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, POIS_EDITOR_DRAWER, SECOND } from '@Core/constants'
-import {
-    SlPopup,
-} from '@shoelace-style/shoelace/dist/react'
-import { ELEVATION_UNITS }                   from '@Utils/UnitUtils'
-import { memo, useEffect, useRef, useState } from 'react'
-import Timeout                               from 'smart-timeout'
+import { NameValueUnit }           from '@Components/DataDisplay/NameValueUnit'
+import { FontAwesomeIcon }         from '@Components/FontAwesomeIcon'
+import { SlPopup }                 from '@shoelace-style/shoelace/dist/react'
+import { ELEVATION_UNITS }         from '@Utils/UnitUtils'
+import { snapdom }                 from '@zumer/snapdom'
+import classNames                  from 'classnames'
+import { default as html2canvas }  from 'html2canvas'
+import { memo, useEffect, useRef } from 'react'
 import './style.css'
-import { useSnapshot }                                                      from 'valtio'
+import { useSnapshot }             from 'valtio'
 
-export const MapPOIContent = memo(({id, hide}) => {
+export const MapPOIContent = memo(({poi}) => {
     const inner = useRef(null)
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
-
-    const $point = $pois.list.get(id)
+    const $point = $pois.list.get(poi)
     const point = useSnapshot($point)
-    const [clickTimeout, setClickTimeout] = useState(null)
-    const [lastTap, setLastTap] = useState(0)
-
-    const handleContextMenu = (event) => {
-        event.preventDefault()
-
-        // Visible if the camera is not in rotation
-        // or when it is in rotation and
-        //  - current = false (at the app launch or after a poi removal) or
-        //  - we are on current point
-
-        if (!__.ui.cameraManager.isRotating()
-            || (__.ui.cameraManager.isRotating() && (pois.current === false || pois.current === point.id)
-            )) {
-            $pois.context.visible = true
-            $pois.current = point.id
-            __.ui.sceneManager.propagateEventToCanvas(event)
-        }
-    }
-
-
-    const expand = () => {
-        if (!point.expanded && !point.showFlag) {
-            Object.assign(
-                pois.list.get(point.id),
-                {over: true},
-            )
-            $pois.current = point.id
-        }
-    }
-
-    const reduce = () => {
-        Object.assign(
-            pois.list.get(point.id),
-            {over: false},
-        )
-        $pois.current = point.id
-
-    }
-    /**
-     * We open the POI Edit drawer and the current POI settings
-     */
-    const toggleEdit = () => {
-        __.ui.drawerManager.toggle(POIS_EDITOR_DRAWER, 'edit-current')
-    }
-
-    const openEdit = () => {
-        __.ui.drawerManager.open(POIS_EDITOR_DRAWER, 'edit-current')
-    }
-
-    /**
-     * Trap pointer down.
-     *
-     * @param event
-     */
-    const handlePointerDown = (event) => {
-        if (!clickTimeout) {
-            const timeout = setTimeout(() => {
-                setClickTimeout(null)
-                // manage the simple click or tap (propagate it)
-                __.ui.sceneManager.propagateEventToCanvas(event)
-            }, DOUBLE_CLICK_TIMEOUT)
-            setClickTimeout(timeout)
-        }
-    }
-
-    /**
-     * Trap Double click
-     *
-     * @param event
-     */
-    const handleDoubleClick = (event) => {
-        if (clickTimeout) {
-            // We're in the delay, it is a double click
-            clearTimeout(clickTimeout)
-            setClickTimeout(null)
-            if (point.id === pois.current) {
-                toggleEdit()
-            }
-            else {
-                $pois.current = point.id
-                openEdit()
-            }
-        }
-    }
-
-    const handleTouchStart = () => {
-        const now = Date.now()
-        if (now - lastTap < DOUBLE_TAP_TIMEOUT) {
-            if (clickTimeout) {
-                // We're in the delay, it is a double touch
-                clearTimeout(clickTimeout)
-                setClickTimeout(null)
-                if (point.id === pois.current) {
-                    toggleEdit()
-                }
-                else {
-                    $pois.current = point.id
-                    openEdit()
-                }
-            }
-        }
-        setLastTap(now)
-    }
+    const _poiContent = useRef(null)
+    const _poiWrapper = useRef(null)
 
     useEffect(() => {
-    }, [point])
+        const renderToCanvas = async () => {
+            if (!_poiContent.current || !_poiWrapper.current) {
+                return
+            }
+            try {
+                const scale = 2
+                console.log(__.ui.css.getCSSVariable('--poi-delta-x'))
+                snapdom(_poiContent.current, {scale: scale, embedFonts: true}).then(snap => {
+                    snap.toCanvas().then(canvas => {
+                        _poiContent.current?.remove()
+                        $point.image = {
+                            src:    canvas.toDataURL('image/jpg'),
+                            width:  canvas.width / scale,
+                            height: canvas.height / scale,
+                        }
+                        $point.pixelOffset = {
+                            x: point.expanded ? -13 : 0, // equiv of --poi-delta-x defined in style.css
+                            y: 0,
+                        }
+                        point.draw()
+                        lgs.scene.requestRender()
+                    })
+                })
+
+            }
+            catch (error) {
+                console.error('Error occurred during the conversion POI', error)
+            }
+
+        }
+
+        renderToCanvas()
+
+        // Nettoyage : supprimer l'entité Cesium lorsque le composant est démonté
+        return () => {
+            point.remove()
+        }
+    }, [point.title, point.icon, point.expanded, point.color, point.bgColor]);
 
     return (
-        <>
-            <div className="poi-on-map">
-                <div className="poi-on-map-inner-background"/>
-                <div className="poi-on-map-triangle-down"/>
+        <div ref={_poiWrapper}
+             className={classNames(
+                 'poi-on-map-wrapper',
+                 (point?.showFlag || !point?.expanded) && !point?.over ? 'poi-shrinked' : '',
+             )}
+             id={point.id}
+             style={{
+                 '--lgs-poi-background-color': point.bgColor ?? lgs.colors.poiDefaultBackground,
+                 '--lgs-poi-border-color':     point.color ?? lgs.colors.poiDefault,
+                 '--lgs-poi-color':            point.color ?? lgs.colors.poiDefault,
+             }}
+        >
+            <div className="poi-on-map" ref={_poiContent}>
                 <div className="poi-on-map-inner"
-                    ref={inner}
-                    onContextMenu={handleContextMenu}
-                    onPointerLeave={() => {
-                        Timeout.set(
-                            pois.context.timer,
-                            hide,
-                            1.5 * SECOND,
-                        )
-                    }}
-
-                     onDoubleClick={handleDoubleClick}
-                     onPointerDown={handlePointerDown}
-                     onTouchStart={handleTouchStart}
-
-                     id={`poi-inner-${point.id}`}
+                     ref={inner} id={`poi-inner-${point?.id}`}
                 >
+                    <div className="poi-on-map-triangle-down"/>
+
+                    <div className="poi-on-map-inner-background"/>
                     {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
-
                         <>
-
                             <h3> {point.title ?? 'Point Of Interest'}</h3>
-
-                            {point.scale > 0.5 && (
+                            {/* //   {point.scale >= 0 && ( */}
                                 <div className="poi-full-coordinates">
-                                    {point.height && point.height !== point.simulatedHeight && (
+                                    {point.height && point.height > 0 && point.height !== point.simulatedHeight && (
                                         <NameValueUnit
                                             className="poi-elevation"
                                             text={'Altitude: '}
@@ -180,31 +108,31 @@ export const MapPOIContent = memo(({id, hide}) => {
                                             units={ELEVATION_UNITS}
                                         />
                                     )}
-                                    {!point.height || point.height === point.simulatedHeight && <span>&nbsp;</span>}
+                                    {!point.height || point.height === point.simulatedHeight || point.height === 0 &&
+                                        <div>&nbsp;</div>}
                                     <div className="poi-coordinates">
                                         <span>
                                           {__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)},
-                                            {' '}
+                                            &nbsp;
                                             {__.convert(point.longitude).to(lgs.settings.coordinateSystem.current)}
                                         </span>
 
                                     </div>
                                 </div>
-                            )}
+                            {/* // )} */}
                         </>
                     }
                     {(point.showFlag || (!point.expanded && !point.over)) && (
                         <FontAwesomeIcon icon={point.icon} className="poi-as-flag"/>
                     )}
                 </div>
-                <div className="poi-on-map-marker"></div>
-            </div>
+
             {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
-                <SlPopup className="poi-icons" placement="left-start" anchor={`poi-inner-${point.id}`} active="true"
-                         distance={__.tools.rem2px(__.ui.css.getCSSVariable('lgs-gutter-s'))}>
+                <div className="poi-icons">
                     <FontAwesomeIcon icon={point.icon} className="poi-as-flag"/>
-                </SlPopup>
+                </div>
             }
-        </>
+            </div>
+        </div>
     )
 })

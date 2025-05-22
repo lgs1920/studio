@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-22
+ * Last modified: 2025-05-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -45,7 +45,7 @@ export const MapPOICategorySelector = (point, props) => {
         <>
             {pois.current && current &&
                 <SlSelect label={'Category'} value={current.category} size={props?.size ?? 'small'}
-                          className="map-poi-categorie-selector"
+                          className="map-poi-category-selector"
                           onSlChange={handleCategory}>
 
                     <FontAwesomeIcon slot="prefix" icon={current.icon} style={{

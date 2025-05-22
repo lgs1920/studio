@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-19
- * Last modified: 2025-05-19
+ * Created on: 2025-05-22
+ * Last modified: 2025-05-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,7 +25,6 @@ import { FA2SL }                                                  from '@Utils/F
 import { UIToast }                                                from '@Utils/UIToast'
 import classNames                                                 from 'classnames'
 import { Fragment, memo, useEffect, useRef }                      from 'react'
-import { proxy } from 'valtio'
 import { snapshot, useSnapshot }                                  from 'valtio/index'
 
 export const MapPOIList = memo(() => {
@@ -59,62 +58,65 @@ export const MapPOIList = memo(() => {
         $pois.list.forEach((poi, id) => {
             $pois.bulkList.set(id, false)
         })
-    }, [])
+    }, [pois.list.size])
 
     useEffect(() => {
+        if (editor.journey) {
+            theJourney.current = lgs.theJourney
 
-        theJourney.current = editor.journey
+            // Clear action once built
+            if (drawers.action) {
+                lgs.mainProxy.drawers.action = null
+            }
 
-                  // Clear action once built
-                  if (drawers.action) {
-                      lgs.mainProxy.drawers.action = null
-                  }
+            let poisToShow = Array.from(pois.list)
 
-        let poisToShow = Array.from(pois.list)
+            // Apply filter by journey
+            if (theJourney.current) {
+                poisToShow = poisToShow.filter(([id, object]) => theJourney.current.pois.includes(id) || !object.parent)
+            }
 
-        // Apply filter by journey
-        if (theJourney.current) {
-            poisToShow = poisToShow.filter(([id, object]) => theJourney.current.pois.includes(id) || !object.parent)
+            // Apply filter byName
+            poisToShow = Array.from(poisToShow)
+                .filter(entry => entry[1]?.title?.toLowerCase().includes(settings.filter.byName.toLowerCase()))
+
+            // Alphabetic/reverse sorting
+            poisToShow = poisToShow.sort((a, b) => {
+                if (settings.filter.alphabetic) {
+                    return a[1].title.localeCompare(b[1].title)
+                }
+                else {
+                    return b[1].title.localeCompare(a[1].title)
+                }
+            })
+
+            // Apply Filter by category
+            if (settings.filter.byCategories.length > 0) {
+                if (settings.filter.exclude) { // We exclude the items in the list
+                    poisToShow = poisToShow.filter(([id, objet]) => !(settings.filter.byCategories.includes(objet.category)))
+                }
+                else {
+                    poisToShow = poisToShow.filter(([id, objet]) => settings.filter.byCategories.includes(objet.category))
+                }
+            }
+
+
+            $pois.filteredList.clear()
+            $pois.bulkList.clear()
+            poisToShow.forEach(([key, value]) => {
+                $pois.filteredList.set(key, value)
+                $pois.bulkList.set(key, false)
+            })
+            console.log('new filtered')
         }
-
-                  // Apply filter byName
-        poisToShow = Array.from(poisToShow)
-            .filter(entry => entry[1]?.title?.toLowerCase().includes(settings.filter.byName.toLowerCase()))
-
-                  // Alphabetic/reverse sorting
-        poisToShow = poisToShow.sort((a, b) => {
-                      if (settings.filter.alphabetic) {
-                          return a[1].title.localeCompare(b[1].title)
-                      }
-                      else {
-                          return b[1].title.localeCompare(a[1].title)
-                      }
-                  })
-
-                  // Apply Filter by category
-                  if (settings.filter.byCategories.length > 0) {
-                      if (settings.filter.exclude) { // We exclude the items in the list
-                          poisToShow = poisToShow.filter(([id, objet]) => !(settings.filter.byCategories.includes(objet.category)))
-                      }
-                      else {
-                          poisToShow = poisToShow.filter(([id, objet]) => settings.filter.byCategories.includes(objet.category))
-                      }
-                  }
-
-
-        $pois.filteredList.clear()
-        $pois.bulkList.clear()
-        poisToShow.forEach(([key, value]) => {
-            $pois.filteredList.set(key, value)
-            $pois.bulkList.set(key, false)
-                  })
               }, [
-                  pois.list, pois.current,
+                  pois.list.size, pois.current,
                   settings?.filter.byName, settings?.filter.alphabetic,
                   settings?.filter.exclude, settings?.filter.byCategories,
-                  _poi.current?.title, _poi.current?.category,
-                  _poi.current?.expanded,
-                  editor.journey,
+                  // _poi.current?.title, _poi.current?.category,
+                  // _poi.current?.color, _poi.current?.bgColor,
+                  // _poi.current?.expanded,
+                  editor.journey?.slug,
               ],
     )
 
@@ -148,8 +150,8 @@ export const MapPOIList = memo(() => {
                         await __.ui.cameraManager.stopRotate()
                         current.stopAnimation()
                     }
-                    __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
-                        target: lgs.mainProxy.components.pois.current,
+                    __.ui.sceneManager.focus(current, {
+                        target: current,
                         heading:    camera.position.heading,
                         pitch:      camera.position.pitch,
                         roll:       camera.position.roll,
@@ -174,6 +176,7 @@ export const MapPOIList = memo(() => {
             item.focus()
         }
     }
+
 
     return (
         <div id={'edit-map-poi-list'} ref={poiList}>

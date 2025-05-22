@@ -7,28 +7,27 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-19
- * Last modified: 2025-05-19
+ * Created on: 2025-05-22
+ * Last modified: 2025-05-21
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import {
-    ADD_POI_EVENT, FLAG_START_TYPE, FLAG_STOP_TYPE, HIGH_TERRAIN_PRECISION, POI_SIZES, POI_STANDARD_TYPE,
-    POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE, REMOVE_POI_EVENT, UPDATE_POI_EVENT,
-}                              from '@Core/constants'
-import { MapPOI }              from '@Core/MapPOI'
-import { Export }              from '@Core/ui/Export'
-import { POIUtils }            from '@Utils/cesium/POIUtils'
-import { TrackUtils }          from '@Utils/cesium/TrackUtils'
-import { UIToast }             from '@Utils/UIToast'
-import { ELEVATION_UNITS, KM } from '@Utils/UnitUtils'
-import Konva                   from 'konva'
-import { v4 as uuid }          from 'uuid'
-import { snapshot }            from 'valtio/index'
-import { proxyMap, watch }     from 'valtio/utils'
-import { subscribe }           from 'valtio/vanilla'
+    ADD_POI_EVENT, FLAG_START_TYPE, FLAG_STOP_TYPE, HIGH_TERRAIN_PRECISION, POI_STANDARD_TYPE, POI_STARTER_TYPE,
+    POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE, REMOVE_POI_EVENT, UPDATE_POI_EVENT,
+}                          from '@Core/constants'
+import { MapPOI }          from '@Core/MapPOI'
+import { Export }          from '@Core/ui/Export'
+import { POIUtils }        from '@Utils/cesium/POIUtils'
+import { TrackUtils }      from '@Utils/cesium/TrackUtils'
+import { UIToast }         from '@Utils/UIToast'
+import { KM }              from '@Utils/UnitUtils'
+import { v4 as uuid }      from 'uuid'
+import { snapshot }        from 'valtio/index'
+import { proxyMap, watch } from 'valtio/utils'
+import { subscribe }       from 'valtio/vanilla'
 
 /*******************************************************************************
  * POIManager.js
@@ -789,130 +788,6 @@ export class POIManager {
      */
     almostEquals = (start, end, distance = 0.5) => {
         return end === null ? false : this.utils.almostEquals(start, end, distance)
-    }
-
-    /**
-     * Generates a visual representation of a POI using Konva.js.
-     * Creates a canvas with background, border, arrow, and text elements.
-     *
-     * @param {MapPOI} poi - POI to visualize
-     * @return {string} Data URL of rendered image
-     */
-    createContent = (poi) => {
-        // Calculate dimensions based on POI expanded state
-        const width = poi.expanded ? POI_SIZES.expanded.width : POI_SIZES.reduced.width
-        const height = poi.expanded ? POI_SIZES.expanded.height : POI_SIZES.reduced.height
-        const arrow = {width: POI_SIZES.arrow.width, height: POI_SIZES.arrow.height, content: ''}
-
-        // Get styling from CSS and POI properties
-        const textFont = __.ui.css.getCSSVariable('--lgs-font-family')
-        const bgColor = poi.bgColor ?? lgs.colors.poiDefaultBackground
-        const borderColor = poi.color ?? lgs.colors.poiDefault
-        const color = poi.color ?? lgs.colors.poiDefault
-
-        // Create Konva stage and layer
-        const stage = new Konva.Stage({
-                                          container: 'konva-container', // HTML container ID
-                                          width:     width,
-                                          height:    height + arrow.height,
-                                      })
-        const layer = new Konva.Layer()
-        stage.add(layer)
-
-        // Create content group
-        const content = new Konva.Group({
-                                            x: 0,
-                                            y: 0,
-                                        })
-
-        // Create background with blur effect
-        const background = new Konva.Rect({
-                                              width:        width,
-                                              height:       height,
-                                              cornerRadius: 4,
-                                              fill:         bgColor,
-                                              opacity:      0.7,
-                                              stroke:       null,
-                                          })
-        background.filters([Konva.Filters.Blur])
-        background.blurRadius(10)
-
-        // Create border
-        const border = new Konva.Rect({
-                                          width:        width - 3,
-                                          height:       height - 3,
-                                          x:            1,
-                                          y:            2,
-                                          cornerRadius: 2,
-                                          fill:         null,
-                                          stroke:       borderColor,
-                                          strokeWidth:  2.0,
-                                          opacity:      1,
-                                      })
-
-        arrow.content = new Konva.Line({
-                                           points:  [
-                                               width / 2, height + arrow.height,
-                                               width / 2 - arrow.width / 2, height,
-                                               width / 2 + arrow.width / 2, height,
-                                           ],
-                                           fill:    color,
-                                           opacity: 1,
-                                           closed:  true,
-                                       })
-
-        // Draw container and arrow
-        content.add(background)
-        content.add(border)
-        content.add(arrow.content)
-
-        if (poi.expanded) {
-            const title = new Konva.Text({
-                                             x:          10,
-                                             y:          8,
-                                             text:       poi.title,
-                                             fontSize:   13,
-                                             fontStyle:  'bold',
-                                             fill:       color,
-                                             fontFamily: textFont,
-                                         })
-
-            const coordinates = new Konva.Text({
-                                                   x:          10,
-                                                   y:          43,
-                                                   text:       `${__.convert(poi.latitude).to(lgs.settings.coordinateSystem.current)}, ${__.convert(poi.longitude).to(lgs.settings.coordinateSystem.current)}`,
-                                                   fontSize:   11,
-                                                   fill:       color,
-                                                   fontFamily: textFont,
-                                               })
-
-
-            const hUnits = ELEVATION_UNITS[lgs.settings.getUnitSystem.current]
-            const theAltitude = __.convert(poi.height ?? 0).to(hUnits)
-
-            const altitude = new Konva.Text({
-                                                x:          10,
-                                                y:          29,
-                                                text:       poi.height ? sprintf('%d %s', theAltitude, hUnits) : '',
-                                                fontSize:   11,
-                                                fill:       color,
-                                                fontFamily: textFont,
-                                            })
-
-            content.add(title)
-            content.add(altitude)
-            content.add(coordinates)
-        }
-        else {
-        }
-
-        // Add it to the stage an export result as HDPI image
-        layer.add(content)
-        stage.add(layer)
-        const image = stage.toDataURL({pixelRatio: 2}) // HDPI
-        stage.destroy()
-
-        return image
     }
 
     openEditor = (poi) => {

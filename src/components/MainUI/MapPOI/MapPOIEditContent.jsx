@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-19
- * Last modified: 2025-05-19
+ * Created on: 2025-05-22
+ * Last modified: 2025-05-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -47,45 +47,51 @@ export const MapPOIEditContent = ({poi}) => {
 
     const handleChangeAltitude = async event => {
         const height = event.target.value * 1
-        Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
+        point = Object.assign($pois.list.get(point.id), {
             height: lgs.settings.unitSystem.current === IMPERIAL ? UnitUtils.convertFeetToMeters(height) : height,
+        })
+        // Object.assign($pois.filteredList.get(point.id), point)
+        $pois.filteredList.set(point.id, {
+            ...$pois.filteredList.get(point.id),
+            color:   point.color,
+            bgColor: point.bgColor,
         })
         await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
         setSimulated(point.height === point.simulatedHeight)
     }
 
     const handleChangeColor = async event => {
-        $pois.current = point.id
         if (event.target === poiColor.current) {
-            Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
+            point = Object.assign($pois.list.get(point.id), {
                 color: event.target.value,
             })
         }
         if (event.target === poiBgColor.current) {
-            __.ui.poiManager.list.get(point.id).color = __.ui.ui.hslaString2Hex(__.ui.css.getCSSVariable(__.ui.ui.colorContrast(event.target.value)))
-            Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
+            point = Object.assign($pois.list.get(point.id), {
                 bgColor: event.target.value,
-                color:   __.ui.poiManager.list.get(point.id).color,
             })
 
         }
-        await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
+        $pois.filteredList.set(point.id, {
+            ...$pois.filteredList.get(point.id),
+            color:   point.color,
+            bgColor: point.bgColor,
+        })
+        await __.ui.poiManager.persistToDatabase(point)
 
         event.preventDefault()
         event.stopPropagation()
     }
 
     const handleChangeLatitude = async event => {
-        $pois.current = point.id
-        Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
+        point = Object.assign($pois.list.get(point.id), {
             latitude: event.target.value * 1,
         })
         await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
     }
 
     const handleChangeLongitude = async event => {
-        $pois.current = point.id
-        Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
+        point = Object.assign($pois.list.get(point.id), {
             longitude: event.target.value * 1,
         })
         await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
@@ -93,8 +99,7 @@ export const MapPOIEditContent = ({poi}) => {
 
     const handleChangeTitle = async event => {
         if (window.isOK) {
-            $pois.current = point.id
-            Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
+            point = Object.assign($pois.list.get(point.id), {
                 title: event.target.value,
             })
             await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
@@ -103,8 +108,7 @@ export const MapPOIEditContent = ({poi}) => {
 
     const handleChangeDescription = async event => {
         if (window.isOK) {
-            $pois.current = point.id
-            Object.assign(lgs.mainProxy.components.pois.list.get(point.id), {
+            point = Object.assign($pois.list.get(point.id), {
                 description: event.target.value,
             })
             await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
@@ -147,7 +151,7 @@ export const MapPOIEditContent = ({poi}) => {
 
         <>
             <SlDivider/>
-            <div className="edit-map-poi-wrapper">
+            <div className="edit-map-poi-wrapper" id={`edit-map-poi-content-${point.id}`}>
 
                 <div className={'map-poi-color-actions'}>
                     <SlTooltip content={'Background Color'}>
@@ -156,7 +160,7 @@ export const MapPOIEditContent = ({poi}) => {
                                    value={point?.bgColor ?? lgs.colors.poiDefaultBackground}
                                    swatches={lgs.settings.getSwatches.list.join(';')}
                                    onSlChange={handleChangeColor}
-                                   onSlInput={handleChangeColor}
+                        // onSlInput={handleChangeColor}
                                    disabled={!point?.visible}
                                    noFormatToggle
                                    ref={poiBgColor}

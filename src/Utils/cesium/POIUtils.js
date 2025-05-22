@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-11
- * Last modified: 2025-05-11
+ * Created on: 2025-05-22
+ * Last modified: 2025-05-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -183,8 +183,8 @@ export class POIUtils {
     static draw = async (poi, parentVisibility = true) => {
 
         // Calculate dimensions based on POI expansion state
-        const width = poi.expanded ? POI_SIZES.expanded.width : POI_SIZES.reduced.width
-        const height = poi.expanded ? POI_SIZES.expanded.height : POI_SIZES.reduced.height
+        const width = poi.image.width
+        const height = poi.image.height
         // Define arrow dimensions from constants
         const arrow = {width: POI_SIZES.arrow.width, height: POI_SIZES.arrow.height, content: ''}
 
@@ -197,6 +197,7 @@ export class POIUtils {
             show:                     poi.visible,
             // Set depth testing based on scene mode (2D or 3D)
             disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7, // Diameter of Earth
+            heightReference: __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
         }
 
         // Configure billboard visual representation
@@ -206,14 +207,14 @@ export class POIUtils {
             horizontalOrigin: HorizontalOrigin.CENTER,
             verticalOrigin:   VerticalOrigin.BOTTOM,
             show:             true,
-            image:            poi.image,
+            image: poi.image.src,
             width:            width,
             // Calculate height ratio to maintain proportions including the arrow
-            height:           ((height + arrow.height) / width) * width,
+            height:      height,
             scale:            1,
             // Scale billboard based on distance from camera
             scaleByDistance:  new NearFarScalar(10000.0, 1.0, 20000.0, 0),
-            pixelOffset:      new Cartesian2(0, 0), // TODO X offset will change of expanded
+            pixelOffset: new Cartesian2(poi.pixelOffset.x, poi.pixelOffset.y),
         }
 
         // Get the appropriate entity container based on POI's parent

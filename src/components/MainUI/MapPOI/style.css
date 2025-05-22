@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-03-02
- * Last modified: 2025-03-02
+ * Created on: 2025-05-22
+ * Last modified: 2025-05-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,55 +18,53 @@
  * POI on MAP
  ******************************************************************************/
 :root {
-    --poi-border-width: 2px;
-    --poi-reduce-dimension: 32px
+    --poi-border-width: 3px;
+    --poi-reduce-dimension: var(--lgs-dimension);
+    --poi-icons-column-width: calc(0.8 * var(--lgs-dimension));
+    --poi-delta-x: calc(var(--poi-icons-column-width) / 2);
+    --poi-expanded-dimension: 140px;
+    --triangle-size: calc(3 * var(--poi-border-width));
+    --poi-padding: var(--lgs-gutter-xs);
 }
 
 .poi-on-map-wrapper {
     font-size: var(--lgs-font-size);
     font-weight: normal;
     position: absolute;
-    left: -50%;
+    top: -9999px;
+    left: -9999px;
     display: flex;
-    max-width: var(--max-width);
-    user-select: none;
-    transition: transform 0.1s ease-out;
-    transform: translate(-50%, 0);
-    pointer-events: all;
-    --max-width: 130px;
+
 }
 
 .poi-on-map-wrapper.poi-shrinked {
     font-size: var(--poi-reduce-dimension);
     line-height: 1;
     width: var(--poi-reduce-dimension);
-    height: var(--poi-reduce-dimension);
+    height: calc(var(--poi-reduce-dimension) + var(--triangle-size));
+    --poi-delta-x: 0;
 }
 
 .poi-on-map {
     display: flex;
     flex-direction: column;
-    width: 100%;
-    height: 100%;
+    width: calc(var(--poi-expanded-dimension) + var(--poi-icons-column-width));
     pointer-events: none;
     opacity: 1;
-    border: var(--poi-border-width) solid var(--lgs-poi-border-color);
-    border-radius: var(--lgs-border-radius-s);
-    box-shadow: 0 5px calc(10 * var(--poi-border-width)) var(--poi-border-width) rgba(0, 0, 0, 0.3);
-    --lgs-animation-duration: 2s;
 }
 
 .poi-on-map-triangle-down {
     position: absolute;
-    bottom: calc(-4 * var(--poi-border-width));
+    bottom: calc(-1 * var(--triangle-size) - var(--poi-border-width));
     left: 50%;
     width: 0;
     height: 0;
     transform: translateX(-50%);
-    opacity: 0.8;
-    border-top: calc(4 * var(--poi-border-width)) solid var(--lgs-poi-color);
-    border-right: calc(2 * var(--poi-border-width)) solid transparent;
-    border-left: calc(2 * var(--poi-border-width)) solid transparent;
+    opacity: 1;
+    border-top: calc(var(--triangle-size)) solid var(--lgs-poi-color);
+    border-right: calc(var(--demi)) solid transparent;
+    border-left: calc(var(--demi)) solid transparent;
+    --demi: var(--triangle-size)/2;
 }
 
 .poi-shrinked .poi-on-map {
@@ -75,60 +73,52 @@
 }
 
 .poi-on-map-inner {
-    position: relative;
-    user-select: none;
-    pointer-events: all;
+    display: flex;
+    flex-direction: column;
+    width: var(--poi-expanded-dimension);
+    margin-bottom: var(--triangle-size);
+    margin-left: calc(1 * var(--poi-icons-column-width));
+    border: var(--poi-border-width) solid var(--lgs-poi-border-color);
+    border-radius: var(--lgs-border-radius-s);
     backdrop-filter: blur(var(--lgs-blur-s));
-}
-
-.poi-on-map-inner-background {
-    position: absolute;
-    top: var(--poi-border-width);
-    right: var(--poi-border-width);
-    bottom: var(--poi-border-width);
-    left: var(--poi-border-width);
-    opacity: 0.6;
-    border-radius: var(--lgs-border-radius-xs);
-    background-color: var(--lgs-poi-background-color);
-
-}
-
-.poi-on-map-wrapper:not(.poi-shrinked) .poi-on-map-inner {
-    padding: var(--lgs-gutter-xs);
-    color: var(--lgs-poi-color);
 }
 
 .poi-shrinked .poi-on-map-inner {
     position: absolute;
-    top: 50%;
-    right: 50%;
-    transform: translate(50%, -50%);
+    width: var(--poi-reduce-dimension);
+    height: var(--poi-reduce-dimension);
+    margin: 0;
+}
+
+.poi-on-map-inner-background {
+    position: absolute;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+    margin: calc(var(--poi-padding) * -1);
+    opacity: 0.6;
+    border-radius: var(--lgs-border-radius-xs);
+    background-color: var(--lgs-poi-background-color);
+}
+
+.poi-on-map-wrapper:not(.poi-shrinked) .poi-on-map-inner {
+    padding: var(--poi-padding);
+    color: var(--lgs-poi-color);
+}
+
+.poi-shrinked .poi-on-map-inner-background {
+    margin: 0;
 }
 
 .poi-shrinked .poi-on-map-inner svg {
-    max-width: 22px !important;
-}
-
-.poi-on-map-marker {
-    position: absolute;
-    bottom: calc(-0.5 * var(--width));
-    left: calc(-0.5 * var(--width));
-    width: var(--width);
-    height: var(--width);
-    border-radius: 50%;
-    --width: var(--lgs-gutter);
-}
-
-.poi-shrinked .poi-on-map-marker {
-    --width: var(--lgs-gutter-s);
+    align-self: center;
+    max-width: var(--poi-reduce-dimension) !important;
 }
 
 .poi-on-map-inner h3 {
     font-size: calc(1.1 * var(--lgs-font-size));
     font-weight: 500;
     line-height: 1;
-    width: var(--max-width);
-
     max-width: 100%;
     margin: 0;
     text-wrap: wrap;
@@ -173,10 +163,11 @@
 .poi-icons .poi-as-flag {
     height: calc(var(--poi-reduce-dimension) * 0.67);
 }
+
 .poi-on-map-wrapper .poi-icons {
     font-size: var(--lgs-font-size-m);
     position: absolute;
-    left: -10px;
+    /*left: -10px;*/
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-xs);
@@ -373,8 +364,7 @@
     gap: var(--lgs-gutter-xs);
 }
 
-.map-poi-filter-by-name sl-input::part()
-
+/*.map-poi-filter-by-name sl-input::part()*/
 #map-poi-filter-alphabetic {
     align-self: self-end;
 }
@@ -384,8 +374,7 @@
 }
 
 #map-poi-edit-filter-trigger {
-    margin: 0;
-    margin-left: auto;
+    margin: 0 0 0 auto;
     padding: 0;
 }
 
@@ -393,7 +382,7 @@
     color: var(--lgs-success-color)
 }
 
-.map-poi-categorie-selector sl-option::part(prefix), .map-poi-categorie-selector::part(prefix) {
+.map-poi-category-selector sl-option::part(prefix), .map-poi-category-selector::part(prefix) {
     margin-right: var(--lgs-gutter-s);
 }
 
@@ -402,15 +391,15 @@
     gap: var(--lgs-gutter-s);
 }
 
-.map-poi-categorie-selector-filter {
+.map-poi-category-selector-filter {
     width: 100%;
 }
 
-.map-poi-categorie-selector-filter::part(form-control-label) {
+.map-poi-category-selector-filter::part(form-control-label) {
     width: 100%;
 }
 
-.map-poi-categorie-selector-filter::part(form-control-label) [slot="label"] sl-switch {
+.map-poi-category-selector-filter::part(form-control-label) [slot="label"] sl-switch {
     width: 30%;
 }
 

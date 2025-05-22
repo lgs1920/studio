@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-19
- * Last modified: 2025-05-19
+ * Created on: 2025-05-22
+ * Last modified: 2025-05-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -60,7 +60,7 @@ export class MapPOI extends MapElement {
     /**
      * @type {boolean}
      */
-    expanded = true
+    expanded = false
 
     /**
      * @type {number}
@@ -386,7 +386,7 @@ export class MapPOI extends MapElement {
      * @returns {Promise<Object>} A promise that resolves to the created entity
      */
     draw = async (dbSync = true) => {
-        this.image = __.ui.poiManager.createContent(this)
+        //this.image = __.ui.poiManager.createContent(this)
         const entity = await this.utils.draw(this)
 
         if (dbSync) {
