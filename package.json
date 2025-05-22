@@ -45,6 +45,7 @@
     "@turf/nearest-point-on-line": "^7.2.0",
     "@turf/point-to-line-distance": "^7.2.0",
     "@turf/transform-rotate": "^7.2.0",
+    "@zumer/snapdom": "^1.0.0",
     "argparse": "^2.0.1",
     "axios": "^1.9.0",
     "babel-plugin-module-resolver": "^5.0.2",
@@ -70,7 +71,6 @@
     "idb": "^8.0.3",
     "import": "^0.0.6",
     "jspdf": "^3.0.1",
-    "konva": "^9.3.20",
     "luxon": "^3.6.1",
     "path": "^0.12.7",
     "pm2": "^6.0.6",
@@ -99,8 +99,8 @@
     "zip-a-folder": "^3.1.9"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.13",
-    "@types/react": "^19.1.4",
+    "@types/bun": "^1.2.14",
+    "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
     "@typescript-eslint/eslint-plugin": "^8.32.1",
     "@typescript-eslint/parser": "^8.32.1",
