@@ -51,6 +51,7 @@ starter:
   longitude: 5.70291
   latitude: 45.33524
   height: 1920
+  simulatedHeight: 1924 # pseudo height for cesium
   title: La Grande Sure
   bgColor: "#7FFF00"  # chartreuse (127,255,0)
   color: "#ffffff"
