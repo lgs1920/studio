@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-22
+ * Created on: 2025-05-23
  * Last modified: 2025-05-22
  *
  *
@@ -182,19 +182,6 @@ export class MapPOI extends MapElement {
     static extractObject = (source) => {
         return JSON.parse(JSON.stringify(source))
     }
-    // /**
-    //  * Updates the properties of the MapPOI instance.
-    //  *
-    //  * @param {Object} options - The options object containing properties to update.
-    //  */
-    // updateCurrentPOI = (options) => {
-    //     for (const key in options) {
-    //         if (this.hasOwnProperty(key)) {
-    //             this[key] = options[key]
-    //         }
-    //     }
-    //     return this
-    // }
 
     isView = (entity) => {
         return this.utils.isEntityInView() //TODO
@@ -432,8 +419,6 @@ export class MapPOI extends MapElement {
                     await lgs.db.lgs1920.delete(this.id, POIS_STORE)
                 }
             })
-
-
         }
         catch (error) {
             console.error(`Failed to remove POI from database: ${error.message}`)

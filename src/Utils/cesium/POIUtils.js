@@ -7,21 +7,21 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-22
- * Last modified: 2025-05-22
+ * Created on: 2025-05-23
+ * Last modified: 2025-05-23
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { POI_SIZES }     from '@Core/constants'
 import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 
 import { Canvg, Property } from 'canvg'
 import {
-    Cartesian2, Cartesian3, Cartographic, HeightReference, HorizontalOrigin, JulianDate, NearFarScalar, VerticalOrigin,
+    BillboardGraphics, Cartesian2, Cartesian3, Cartographic, HeightReference, HorizontalOrigin, JulianDate,
+    NearFarScalar, VerticalOrigin,
 }                          from 'cesium' // Pin Marker Type
 
 // Pin Marker Type
@@ -181,66 +181,65 @@ export class POIUtils {
      *     found.
      */
     static draw = async (poi, parentVisibility = true) => {
+        // Default dimensions if poi.image is undefined
+        const width = poi.image?.width ?? 32
+        const height = poi.image?.height ?? 32
 
-        // Calculate dimensions based on POI expansion state
-        const width = poi.image.width
-        const height = poi.image.height
-        // Define arrow dimensions from constants
-        const arrow = {width: POI_SIZES.arrow.width, height: POI_SIZES.arrow.height, content: ''}
-
-        // Configure base entity options
-        let options = {
+        // Base entity options
+        const options = {
             name:                     poi.name,
             id:                       poi.id,
-            // Convert geographic coordinates to Cartesian3 position
             position:                 Cartesian3.fromDegrees(poi.longitude, poi.latitude, poi.simulatedHeight ?? poi.height),
-            show:                     poi.visible,
-            // Set depth testing based on scene mode (2D or 3D)
-            disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7, // Diameter of Earth
+            show:                     poi.visible && parentVisibility,
+            disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7,
             heightReference: __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
-        }
+        };
 
-        // Configure billboard visual representation
+        // Billboard configuration
         const billboard = {
-            // Determine height reference based on terrain settings
-            heightReference:  __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
+            image:           poi.image?.src ?? '',
+            width:           width,
+            height:          height,
+            scale:           1,
+            scaleByDistance: new NearFarScalar(10000.0, 1.0, 50000.0, 0.5),
+            pixelOffset:     poi.pixelOffset ? new Cartesian2(poi.pixelOffset.x, poi.pixelOffset.y) : new Cartesian2(0, 0),
             horizontalOrigin: HorizontalOrigin.CENTER,
-            verticalOrigin:   VerticalOrigin.BOTTOM,
-            show:             true,
-            image: poi.image.src,
-            width:            width,
-            // Calculate height ratio to maintain proportions including the arrow
-            height:      height,
-            scale:            1,
-            // Scale billboard based on distance from camera
-            scaleByDistance:  new NearFarScalar(10000.0, 1.0, 20000.0, 0),
-            pixelOffset: new Cartesian2(poi.pixelOffset.x, poi.pixelOffset.y),
-        }
+            verticalOrigin:  VerticalOrigin.BOTTOM,
+            show:            true,
+        };
 
-        // Get the appropriate entity container based on POI's parent
+        // Get entity container
         const container = POIUtils.getEntityContainer(poi)
         if (!container) {
-            // Return null if no container is found
-            return null
+            return null;
         }
 
-
-        // Check if entity already exists
-        const existingEntity = container.getById(poi.id)
-        if (existingEntity) {
-            // Update billboard image (or entire billboard)
-            if (existingEntity.billboard) {
-                existingEntity.billboard = billboard
+        // Check for existing entity
+        const entity = container.getById(poi.id)
+        if (entity) {
+            // Update billboard properties
+            if (entity.billboard) {
+                entity.billboard.image = billboard.image
+                entity.billboard.width = billboard.width
+                entity.billboard.height = billboard.height
+                entity.billboard.scale = billboard.scale
+                entity.billboard.scaleByDistance = billboard.scaleByDistance
+                entity.billboard.pixelOffset = billboard.pixelOffset
+                entity.billboard.horizontalOrigin = billboard.horizontalOrigin
+                entity.billboard.verticalOrigin = billboard.verticalOrigin
+                entity.billboard.show = billboard.show
             }
-            lgs.viewer.scene.requestRender()
-            return existingEntity
+            else {
+                entity.billboard = new BillboardGraphics(billboard)
+            }
+        }
+        else {
+            // Create new entity
+            container.add({...options, billboard: new BillboardGraphics(billboard)})
         }
 
-        // Create new entity if it doesn't exist
-        const entity = container.add({...options, billboard})
         lgs.viewer.scene.requestRender()
-
-        return entity
+        return entity || container.getById(poi.id)
     }
 
     static useOnlyFontAwesome = (poi) => {

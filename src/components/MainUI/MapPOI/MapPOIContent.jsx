@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-22
- * Last modified: 2025-05-22
+ * Created on: 2025-05-23
+ * Last modified: 2025-05-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,6 +16,7 @@
 
 import { NameValueUnit }           from '@Components/DataDisplay/NameValueUnit'
 import { FontAwesomeIcon }         from '@Components/FontAwesomeIcon'
+import { POIS_EDITOR_DRAWER } from '@Core/constants'
 import { SlPopup }                 from '@shoelace-style/shoelace/dist/react'
 import { ELEVATION_UNITS }         from '@Utils/UnitUtils'
 import { snapdom }                 from '@zumer/snapdom'
@@ -32,51 +33,136 @@ export const MapPOIContent = memo(({poi}) => {
     const $point = $pois.list.get(poi)
     const point = useSnapshot($point)
     const _poiContent = useRef(null)
-    const _poiWrapper = useRef(null)
+    let current = null
+
+    /**
+     * Get POI by id and set current poi.
+     *
+     * @param id
+     * @return {*}
+     */
+    const getPOI = (id) => {
+        const current = pois.list.get(id)
+        $pois.current = id
+        return current
+    }
+
+    /**
+     * Toggle editor Handler
+     *
+     * For the same poi, it toggles the editor pane.
+     *
+     * When the editor is open on a poi  and the user double click on another one,
+     * the editor stays open but focuses on th new poi data.
+     *
+     * @param event
+     * @param entity
+     */
+    const handleEditor = (event, entity) => {
+        if (__.ui.drawerManager.drawers.open && entity !== current) {
+            __.ui.drawerManager.close()
+        }
+        getPOI(entity)
+        __.ui.drawerManager.toggle(POIS_EDITOR_DRAWER, 'edit-current')
+        current = entity
+    }
+
+    /**
+     * Show context menu for the selected poi.
+     *
+     * @param event
+     * @param entity
+     */
+    const handleContextMenu = (event, entity) => {
+        const poi = getPOI(entity)
+        if (poi && !__.ui.cameraManager.isRotating()
+            || (__.ui.cameraManager.isRotating()
+                &&
+                (pois.current === false || pois.current.id === poi.id)
+            )) {
+            __.app.hooksContextMenu(event)
+            $pois.context.visible = true
+        }
+    }
+
+    /**
+     * Adds event listeners for a MapPOI
+     * @param {MapPOI} poi - MapPOI instance to add listeners for
+     */
+    const addPOIEventListeners = poi => {
+        // Toggles POI size on click
+        __.canvasEvents.onClick(poi.toggleExpand, {entity: poi.id})
+        __.canvasEvents.onTap(poi.toggleExpand, {entity: poi.id})
+
+
+        // Open editor on Double Click/double tap
+        __.canvasEvents.onDoubleClick(handleEditor, {entity: poi.id, preventLowerPriority: true})
+        __.canvasEvents.onDoubleTap(handleEditor, {entity: poi.id, preventLowerPriority: true})
+
+        // Open contextual menu on Right Click/long tap
+        __.canvasEvents.onRightClick(handleContextMenu, {entity: poi.id, preventLowerPriority: true})
+        __.canvasEvents.onLongTap(handleContextMenu, {entity: poi.id, preventLowerPriority: true})
+
+        // __.canvasEvents.onKeyDown(
+        //     (event, entityId, options, userData) => {
+        //         if (event.altKey) { // Exclure Shift, même si Ctrl+Alt sont requis
+        //             console.log('Alt+S (no Shift):', {entityId, userData})
+        //         }
+        //     },
+        //     {modifiers: ['alt'], keys: ['s'], entity: poi.id},
+        //     {action: 'save'},
+        // )
+    }
+
+    /**
+     * Removes event listeners for a MapPOI
+     * @param {MapPOI} poi - MapPOI instance to remove listeners for
+     */
+    const removePOIEventListeners = poi => {
+        __.canvasEvents.removeAllListenersByEntity(poi.id)
+    }
 
     useEffect(() => {
         const renderToCanvas = async () => {
-            if (!_poiContent.current || !_poiWrapper.current) {
+            if (!_poiContent.current) {
                 return
             }
             try {
                 const scale = 2
-                console.log(__.ui.css.getCSSVariable('--poi-delta-x'))
                 snapdom(_poiContent.current, {scale: scale, embedFonts: true}).then(snap => {
                     snap.toCanvas().then(canvas => {
-                        _poiContent.current?.remove()
                         $point.image = {
                             src:    canvas.toDataURL('image/jpg'),
                             width:  canvas.width / scale,
                             height: canvas.height / scale,
                         }
+
                         $point.pixelOffset = {
-                            x: point.expanded ? -13 : 0, // equiv of --poi-delta-x defined in style.css
+                            x: point.expanded ? -13 : 0, // equiv of --poi-delta-x defined in ./style.css
                             y: 0,
                         }
                         point.draw()
                         lgs.scene.requestRender()
                     })
                 })
-
             }
             catch (error) {
                 console.error('Error occurred during the conversion POI', error)
             }
 
         }
-
         renderToCanvas()
+        addPOIEventListeners(point)
 
-        // Nettoyage : supprimer l'entité Cesium lorsque le composant est démonté
+
         return () => {
+            removePOIEventListeners(point)
             point.remove()
         }
     }, [point.title, point.icon, point.expanded, point.color, point.bgColor]);
 
     return (
-        <div ref={_poiWrapper}
-             className={classNames(
+        <div className={classNames(
                  'poi-on-map-wrapper',
                  (point?.showFlag || !point?.expanded) && !point?.over ? 'poi-shrinked' : '',
              )}

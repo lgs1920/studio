@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-22
+ * Created on: 2025-05-23
  * Last modified: 2025-05-22
  *
  *
@@ -107,7 +107,6 @@ export const MapPOIList = memo(() => {
                 $pois.filteredList.set(key, value)
                 $pois.bulkList.set(key, false)
             })
-            console.log('new filtered')
         }
               }, [
                   pois.list.size, pois.current,
