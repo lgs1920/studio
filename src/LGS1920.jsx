@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-23
+ * Last modified: 2025-05-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -123,12 +123,6 @@ export function LGS1920() {
 
                               }
 
-                              // ---- < 0.8.3 compat. : patch to fix #200
-                              // if (!starter.color || !starter.bgColor) {
-                              starter.color = lgs.settings.starter.color
-                              starter.bgColor = lgs.settings.starter.bgColor
-                              // }
-                              // ---
                               $pois.current = starter.id
 
                               // According to the settings and saved information, we set the camera data
