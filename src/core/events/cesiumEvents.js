@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-10
- * Last modified: 2025-05-10
+ * Created on: 2025-05-23
+ * Last modified: 2025-05-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -31,7 +31,8 @@ export const CESIUM_EVENTS = {
     MIDDLE_CLICK: {event: ScreenSpaceEventType.MIDDLE_CLICK},
     MOUSE_MOVE:   {event: ScreenSpaceEventType.MOUSE_MOVE},
     WHEEL:        {event: ScreenSpaceEventType.WHEEL},
-
+    MOUSE_ENTER: {event: ScreenSpaceEventType.MOUSE_MOVE},
+    MOUSE_LEAVE: {event: ScreenSpaceEventType.MOUSE_MOVE},
 
     // Touch events
     TAP:        {event: ScreenSpaceEventType.LEFT_DOWN, touch: true},
@@ -45,6 +46,12 @@ export const CESIUM_EVENTS = {
     PINCH_END:   {event: ScreenSpaceEventType.PINCH_END, touch: true},
 
 }
+
+export const EVENTS = Object.keys(CESIUM_EVENTS).reduce((acc, key) => {
+    acc[key] = key
+    return acc
+}, {})
+
 // Modifiers
 export const MODIFIERS = {
     CTRL:  KeyboardEventModifier.CTRL,

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-14
- * Last modified: 2025-05-14
+ * Created on: 2025-05-23
+ * Last modified: 2025-05-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,11 +22,9 @@
  *
  * @class CanvasEventManager
  */
-import {
-    DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, EVENTS, LGS_CONTEXT_MENU_HOOK, LONG_TAP_TIMEOUT,
-}                                                                     from '@Core/constants'
-import { ScreenSpaceEventHandler }                                    from 'cesium'
-import { CESIUM_EVENTS, EVENT_LOWEST, MODIFIER_SEPARATOR, MODIFIERS } from './cesiumEvents'
+import { DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, LGS_CONTEXT_MENU_HOOK, LONG_TAP_TIMEOUT } from '@Core/constants'
+import { ScreenSpaceEventHandler }                                                           from 'cesium'
+import { CESIUM_EVENTS, EVENT_LOWEST, EVENTS, MODIFIER_SEPARATOR, MODIFIERS }                from './cesiumEvents'
 
 export class CanvasEventManager {
     /**
@@ -73,19 +71,33 @@ export class CanvasEventManager {
      */
     #tapState = {
         lastTapTime: 0,
-        tapCount:    0,
+        tapCount:   0,
         isProcessing: false,
         longTapTimer: null,
         suppressTap: false,
-        pendingTap:  null,
+        pendingTap: null,
     }
 
     /**
-     * Tracks the last selected entity to handle animation resets.
+     * Tracks the last selected entity to handle animation resets and hover events.
      * @type {string|null}
      * @private
      */
     #lastSelectedEntity = null
+
+    /**
+     * Tracks the last click time for click-related events.
+     * @type {number}
+     * @private
+     */
+    #lastClickTime = 0
+
+    /**
+     * Timeout for click-related events.
+     * @type {number|null}
+     * @private
+     */
+    #clickTimeout = null
 
     /**
      * Tracks the last mouse position for keyboard events.
@@ -121,22 +133,17 @@ export class CanvasEventManager {
         this.#screenSpaceEventHandler = new ScreenSpaceEventHandler(viewer.scene.canvas)
         this.isTouchDevice = this.#isTouchDevice()
 
-        // We invalidate browser contextual menu
+        // Invalidate browser context menu
         document.addEventListener('contextmenu', (e) => {
             // No browser context menu on Map POI
             if (e.target.id === LGS_CONTEXT_MENU_HOOK) {
                 e.preventDefault()
             }
-
         }, {capture: false})
 
-
         this.#viewer.scene.canvas.setAttribute('tabindex', '0')
-
         this.#setupKeyboardEvents()
-
         this.#setupMousePositionTracking()
-
         CanvasEventManager.#instance = this
     }
 
@@ -209,10 +216,10 @@ export class CanvasEventManager {
                 this.#emit(eventName, {
                     key,
                     position,
-                    clientX:  position ? position.x : null,
-                    clientY:  position ? position.y : null,
-                    ctrlKey:  this.#modifierState.ctrl,
-                    altKey:   this.#modifierState.alt,
+                    clientX: position ? position.x : null,
+                    clientY: position ? position.y : null,
+                    ctrlKey: this.#modifierState.ctrl,
+                    altKey:  this.#modifierState.alt,
                     shiftKey: this.#modifierState.shift,
                 }, pickedEntityId)
             }
@@ -452,16 +459,13 @@ export class CanvasEventManager {
     /**
      * Sets up mouse event handlers for the specified event type.
      *
-     * @param {string} eventType - Event type (e.g., CLICK, DOUBLE_CLICK, RIGHT_CLICK).
+     * @param {string} eventType - Event type (e.g., CLICK, DOUBLE_CLICK, RIGHT_CLICK, MOUSE_ENTER, MOUSE_LEAVE).
      * @param {Object|null} modifier - Modifier from event name (e.g., { name: 'CTRL', value: Cesium.Modifier }).
      * @param {string[]} requiredModifiers - Modifiers required by options.modifiers (e.g., ['ctrl', 'shift']).
      * @returns {Function} The event handler function.
      * @private
      */
     #setupMouseEvents(eventType, modifier, requiredModifiers) {
-        let lastClickTime = 0
-        let clickTimeout = null
-
         return (event) => {
             if (eventType === EVENTS.RIGHT_CLICK && (this.isTouchDevice || event.pointerType === 'touch')) {
                 return
@@ -477,12 +481,24 @@ export class CanvasEventManager {
                 return
             }
 
-            const picked = this.#viewer.scene.pick(event.position)
+            const picked = this.#viewer.scene.pick(event.position ?? event.endPosition)
             const entityId = picked && picked.id ? picked.id : null
-
             const eventName = modifier ? `${modifier.name}${MODIFIER_SEPARATOR}${eventType}` : eventType
 
             if (!this.#handlers.has(eventName)) {
+                return
+            }
+
+            if (eventType === EVENTS.MOUSE_ENTER || eventType === EVENTS.MOUSE_LEAVE) {
+                if (entityId !== this.#lastSelectedEntity) {
+                    if (this.#lastSelectedEntity && eventType === EVENTS.MOUSE_LEAVE) {
+                        this.#emit(EVENTS.MOUSE_LEAVE, event, this.#lastSelectedEntity)
+                    }
+                    else if (entityId) {
+                        this.#emit(EVENTS.MOUSE_ENTER, event, entityId)
+                    }
+                    this.#lastSelectedEntity = entityId
+                }
                 return
             }
 
@@ -491,24 +507,24 @@ export class CanvasEventManager {
             }
 
             const now = Date.now()
-            const timeDiff = now - lastClickTime
-            lastClickTime = now
+            const timeDiff = now - this.#lastClickTime
+            this.#lastClickTime = now
 
             if (eventType === 'CLICK') {
-                clearTimeout(clickTimeout)
-                clickTimeout = setTimeout(() => {
+                clearTimeout(this.#clickTimeout)
+                this.#clickTimeout = setTimeout(() => {
                     if (timeDiff > DOUBLE_CLICK_TIMEOUT) {
                         this.#emit(eventName, event, entityId)
                     }
                 }, DOUBLE_CLICK_TIMEOUT + 50)
             }
             else if (eventType === EVENTS.DOUBLE_CLICK) {
-                clearTimeout(clickTimeout)
-                clickTimeout = null
+                clearTimeout(this.#clickTimeout)
+                this.#clickTimeout = null
                 this.#emit(eventName, event, entityId)
             }
             else if (eventType === EVENTS.RIGHT_CLICK) {
-                clearTimeout(clickTimeout)
+                clearTimeout(this.#clickTimeout)
                 this.#emit(eventName, event, entityId)
             }
             else if (eventType === EVENTS.MOUSE_DOWN || eventType === EVENTS.MOUSE_UP ||
@@ -551,10 +567,6 @@ export class CanvasEventManager {
         }
 
         eventName = eventName.toUpperCase()
-        // if (this.#hasCallback(eventName, callback)) {
-        //     return
-        // }
-
         const {modifier, eventType} = this.#parseEventName(eventName)
 
         if (!this.#events[eventType] && eventType !== 'KEY_DOWN' && eventType !== 'KEY_UP') {
@@ -605,9 +617,7 @@ export class CanvasEventManager {
                         )
                     }
                     else {
-                        this.#screenSpaceEventHandler.setInputAction(handler,
-                                                                     this.#events[eventType].event,
-                        )
+                        this.#screenSpaceEventHandler.setInputAction(handler, this.#events[eventType].event)
                     }
                 }
             }
@@ -729,7 +739,7 @@ export class CanvasEventManager {
 
         const [modifierPart, eventType] = eventName.split(MODIFIER_SEPARATOR, 2)
         return {
-            modifier:  {name: modifierPart, value: MODIFIERS[modifierPart]},
+            modifier: {name: modifierPart, value: MODIFIERS[modifierPart]},
             eventType: eventType || modifierPart,
         }
     }
@@ -1075,6 +1085,62 @@ export class CanvasEventManager {
     }
 
     /**
+     * Registers a listener for the MOUSE_ENTER event, triggered once when the mouse starts hovering over an entity.
+     *
+     * @param {Function} callback - The callback function to execute, receiving (event, entityId, options, userData).
+     * @param {Object|boolean} [options={}] - Listener options.
+     * @param {any} [userData] - User-defined data to pass to the callback.
+     * @throws {Error} If callback is not a function.
+     */
+    onMouseEnter(callback, options = {}, userData = null) {
+        if (typeof callback !== 'function') {
+            throw new Error('Callback must be a function')
+        }
+        this.on('MOUSE_ENTER', callback, options, userData)
+    }
+
+    /**
+     * Unregisters a listener for the MOUSE_ENTER event.
+     *
+     * @param {Function} callback - The callback function to remove.
+     * @throws {Error} If callback is not a function.
+     */
+    offMouseEnter(callback) {
+        if (typeof callback !== 'function') {
+            throw new Error('Callback must be a function')
+        }
+        this.off('MOUSE_ENTER', callback)
+    }
+
+    /**
+     * Registers a listener for the MOUSE_LEAVE event, triggered once when the mouse leaves an entity.
+     *
+     * @param {Function} callback - The callback function to execute, receiving (event, entityId, options, userData).
+     * @param {Object|boolean} [options={}] - Listener options.
+     * @param {any} [userData] - User-defined data to pass to the callback.
+     * @throws {Error} If callback is not a function.
+     */
+    onMouseLeave(callback, options = {}, userData = null) {
+        if (typeof callback !== 'function') {
+            throw new Error('Callback must be a function')
+        }
+        this.on('MOUSE_LEAVE', callback, options, userData)
+    }
+
+    /**
+     * Unregisters a listener for the MOUSE_LEAVE event.
+     *
+     * @param {Function} callback - The callback function to remove.
+     * @throws {Error} If callback is not a function.
+     */
+    offMouseLeave(callback) {
+        if (typeof callback !== 'function') {
+            throw new Error('Callback must be a function')
+        }
+        this.off('MOUSE_LEAVE', callback)
+    }
+
+    /**
      * Registers a listener for the WHEEL event.
      *
      * @param {Function} callback - The callback function to execute, receiving (event, entityId, options, userData).
@@ -1273,10 +1339,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the KEY_DOWN event.
      *
-     * @param {Function} callback - The callback function to execute, receiving ({ key, position, clientX, clientY,
-     *     ctrlKey, altKey, shiftKey }, entityId, options, userData).
-     * @param {Object|boolean} [options={}] - Listener options, including modifiers (e.g., ['ctrl', 'alt']) and keys
-     *     (e.g., ['s']).
+     * @param {Function} callback - The callback function to execute, receiving (event, entityId, options, userData).
+     * @param {Object|boolean} [options={}] - Listener options.
      * @param {any} [userData] - User-defined data to pass to the callback.
      * @throws {Error} If callback is not a function.
      */
@@ -1303,10 +1367,8 @@ export class CanvasEventManager {
     /**
      * Registers a listener for the KEY_UP event.
      *
-     * @param {Function} callback - The callback function to execute, receiving ({ key, position, clientX, clientY,
-     *     ctrlKey, altKey, shiftKey }, entityId, options, userData).
-     * @param {Object|boolean} [options={}] - Listener options, including modifiers (e.g., ['ctrl', 'alt']) and keys
-     *     (e.g., ['s']).
+     * @param {Function} callback - The callback function to execute, receiving (event, entityId, options, userData).
+     * @param {Object|boolean} [options={}] - Listener options.
      * @param {any} [userData] - User-defined data to pass to the callback.
      * @throws {Error} If callback is not a function.
      */

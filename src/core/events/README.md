@@ -13,31 +13,11 @@ at [contact@lgs1920.fr](mailto:contact@lgs1920.fr).
 
 ## Installation
 
-1. **Prerequisites**:
-   - Node.js (version 14 or higher)
+**Prerequisites**:
+
+- Node or Bun
    - CesiumJS (included as a dependency)
    - A modern web browser supporting WebGL
-
-2. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/LGS1920/studio.git
-   cd studio
-   ```
-
-3. **Install Dependencies**:
-   ```bash
-   npm install
-   ```
-
-4. **Run the Development Server**:
-   ```bash
-   npm start
-   ```
-
-5. **Build for Production**:
-   ```bash
-   npm run build
-   ```
 
 ## Usage
 
@@ -117,6 +97,70 @@ eventManager.onClick(
 );
 ```
 
+### General methods
+
+The `CanvasEventManager` class also supports the following methods:
+
+| Method Name                                                | Usage                                                                                                                                                                                                                               |
+|------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `addEventListener(eventName, callback, options, userData)` | Alias for `on`, registers an event listener for the specified event with support for priority, entity filtering, modifiers, keys, and user data.                                                                                    |
+| `constructor(viewer)`                                      | Creates or returns the singleton instance of `CanvasEventManager`, initializing the Cesium `ScreenSpaceEventHandler` for mouse, touch, and keyboard events on the provided Cesium viewer. Throws an error if the viewer is invalid. |
+| `destroy()`                                                | Cleans up resources, removes all event listeners, destroys the `ScreenSpaceEventHandler`, and resets the singleton instance.                                                                                                        |
+| `removeAllListeners()`                                     | Removes all registered event listeners across all events.                                                                                                                                                                           |
+| `removeAllListenersByEntity(entity)`                       | Removes all listeners associated with a specific entity ID or array of entity IDs.                                                                                                                                                  |
+| `removeEventListener(eventName, callback)`                 | Alias for `off`, unregisters an event listener with the same parameters and behavior.                                                                                                                                               |
+
+## Event Listener Methods (on/off)
+
+The `on` and `off` methods are aliases for the `addEventListener` and `removeEventListener` methods, respectively.
+They are provided for convenience and to avoid confusion with the `addEventListener` method's `eventName` parameter.
+
+| Method Name                                  | Usage                                                                                                                         |
+|----------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `onClick(callback, options, userData)`       | Registers a listener for the `CLICK` event, triggered on a single left mouse click.                                           |
+| `offClick(callback)`                         | Unregisters a listener for the `CLICK` event.                                                                                 |
+| `onDoubleClick(callback, options, userData)` | Registers a listener for the `DOUBLE_CLICK` event, triggered on a double left mouse click.                                    |
+| `offDoubleClick(callback)`                   | Unregisters a listener for the `DOUBLE_CLICK` event.                                                                          |
+| `onDoubleTap(callback, options, userData)`   | Registers a listener for the `DOUBLE_TAP` event, triggered on a double touch tap.                                             |
+| `offDoubleTap(callback)`                     | Unregisters a listener for the `DOUBLE_TAP` event.                                                                            |
+| `onKeyDown(callback, options, userData)`     | Registers a listener for the `KEY_DOWN` event, triggered when a key is pressed, with support for specific keys and modifiers. |
+| `offKeyDown(callback)`                       | Unregisters a listener for the `KEY_DOWN` event.                                                                              |
+| `onKeyUp(callback, options, userData)`       | Registers a listener for the `KEY_UP` event, triggered when a key is released, with support for specific keys and modifiers.  |
+| `offKeyUp(callback)`                         | Unregisters a listener for the `KEY_UP` event.                                                                                |
+| `onLongTap(callback, options, userData)`     | Registers a listener for the `LONG_TAP` event, triggered on a prolonged touch tap.                                            |
+| `offLongTap(callback)`                       | Unregisters a listener for the `LONG_TAP` event.                                                                              |
+| `onMiddleClick(callback, options, userData)` | Registers a listener for the `MIDDLE_CLICK` event, triggered on a single middle mouse click.                                  |
+| `offMiddleClick(callback)`                   | Unregisters a listener for the `MIDDLE_CLICK` event.                                                                          |
+| `onMiddleDown(callback, options, userData)`  | Registers a listener for the `MIDDLE_DOWN` event, triggered when the middle mouse button is pressed.                          |
+| `offMiddleDown(callback)`                    | Unregisters a listener for the `MIDDLE_DOWN` event.                                                                           |
+| `onMiddleUp(callback, options, userData)`    | Registers a listener for the `MIDDLE_UP` event, triggered when the middle mouse button is released.                           |
+| `offMiddleUp(callback)`                      | Unregisters a listener for the `MIDDLE_UP` event.                                                                             |
+| `onMouseDown(callback, options, userData)`   | Registers a listener for the `MOUSE_DOWN` event, triggered when the left mouse button is pressed.                             |
+| `offMouseDown(callback)`                     | Unregisters a listener for the `MOUSE_DOWN` event.                                                                            |
+| `onMouseEnter(callback, options, userData)`  | Registers a listener for the `MOUSE_ENTER` event, triggered once when the mouse starts hovering over an entity.               |
+| `offMouseEnter(callback)`                    | Unregisters a listener for the `MOUSE_ENTER` event.                                                                           |
+| `onMouseLeave(callback, options, userData)`  | Registers a listener for the `MOUSE_LEAVE` event, triggered once when the mouse leaves an entity.                             |
+| `offMouseLeave(callback)`                    | Unregisters a listener for the `MOUSE_LEAVE` event.                                                                           |
+| `onMouseMove(callback, options, userData)`   | Registers a listener for the `MOUSE_MOVE` event, triggered when the mouse moves over the canvas.                              |
+| `offMouseMove(callback)`                     | Unregisters a listener for the `MOUSE_MOVE` event.                                                                            |
+| `onMouseUp(callback, options, userData)`     | Registers a listener for the `MOUSE_UP` event, triggered when the left mouse button is released.                              |
+| `offMouseUp(callback)`                       | Unregisters a listener for the `MOUSE_UP` event.                                                                              |
+| `onPinchEnd(callback, options, userData)`    | Registers a listener for the `PINCH_END` event, triggered when a pinch gesture ends.                                          |
+| `offPinchEnd(callback)`                      | Unregisters a listener for the `PINCH_END` event.                                                                             |
+| `onPinchMove(callback, options, userData)`   | Registers a listener for the `PINCH_MOVE` event, triggered during a pinch gesture.                                            |
+| `offPinchMove(callback)`                     | Unregisters a listener for the `PINCH_MOVE` event.                                                                            |
+| `onPinchStart(callback, options, userData)`  | Registers a listener for the `PINCH_START` event, triggered when a pinch gesture begins.                                      |
+| `offPinchStart(callback)`                    | Unregisters a listener for the `PINCH_START` event.                                                                           |
+| `onRightClick(callback, options, userData)`  | Registers a listener for the `RIGHT_CLICK` event, triggered on a single right mouse click.                                    |
+| `offRightClick(callback)`                    | Unregisters a listener for the `RIGHT_CLICK` event.                                                                           |
+| `onRightDown(callback, options, userData)`   | Registers a listener for the `RIGHT_DOWN` event, triggered when the right mouse button is pressed.                            |
+| `offRightDown(callback)`                     | Unregisters a listener for the `RIGHT_DOWN` event.                                                                            |
+| `onRightUp(callback, options, userData)`     | Registers a listener for the `RIGHT_UP` event, triggered when the right mouse button is released.                             |
+| `offRightUp(callback)`                       | Unregisters a listener for the `RIGHT_UP` event.                                                                              |
+| `onTap(callback, options, userData)`         | Registers a listener for the `TAP` event, triggered on a single touch tap.                                                    |
+| `offTap(callback)`                           | Unregisters a listener for the `TAP` event.                                                                                   |
+| `onWheel(callback, options, userData)`       | Registers a listener for the `WHEEL` event, triggered on mouse wheel scroll.                                                  |
+| `offWheel(callback)`                         | Unregisters a listener for the `WHEEL` event.                                                                                 |
 ### Notes on Keyboard Events
 
 - **Modifier Keys**: Modifier keys (`Ctrl`, `Alt`, `Shift`) are not emitted as standalone `KEY_DOWN` events unless
