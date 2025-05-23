@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-19
- * Last modified: 2025-05-19
+ * Created on: 2025-05-23
+ * Last modified: 2025-05-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -44,18 +44,28 @@ export const MapPOIEditMenu = ({point}) => {
     const settings = useSnapshot(lgs.settings.ui.poi)
 
     const hide = async () => {
-        point = point.hide()
+        point = Object.assign(__.ui.poiManager.list.get(point.id), {
+            visible: false,
+        })
+        point.toggleVisibility()
     }
     const show = async () => {
-        point = point.show()
+        point = Object.assign(__.ui.poiManager.list.get(point.id), {
+            visible: true,
+        })
+        point.toggleVisibility()
     }
 
     const shrink = async () => {
-        point = point.shrink()
+        point = Object.assign(__.ui.poiManager.list.get(point.id), {
+            expanded: false,
+        })
     }
 
     const expand = async () => {
-        point = point.expand()
+        point = Object.assign(__.ui.poiManager.list.get(point.id), {
+            expanded: true,
+        })
     }
 
     const focus = async () => {
@@ -225,12 +235,12 @@ export const MapPOIEditMenu = ({point}) => {
                                     </SlMenuItem>
                                 }
 
-                                {point.type !== POI_STARTER_TYPE &&
+
                                     <SlMenuItem onClick={hide} small>
                                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMask)}></SlIcon>
                                         <span>Hide</span>
                                     </SlMenuItem>
-                                }
+
 
                                 <sl-divider/>
 
@@ -258,6 +268,7 @@ export const MapPOIEditMenu = ({point}) => {
 
                         {!point.visible &&
                             <SlMenuItem onClick={show} small>
+                                <FontAwesomeIcon slot="prefix" icon={point.icon}></FontAwesomeIcon>
                                 <span>{'Show'}</span>
                             </SlMenuItem>
                         }

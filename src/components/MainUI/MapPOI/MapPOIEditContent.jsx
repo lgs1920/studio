@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-22
- * Last modified: 2025-05-22
+ * Created on: 2025-05-23
+ * Last modified: 2025-05-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -46,18 +46,15 @@ export const MapPOIEditContent = ({poi}) => {
     const poiBgColor = useRef(null)
 
     const handleChangeAltitude = async event => {
-        const height = event.target.value * 1
-        point = Object.assign($pois.list.get(point.id), {
-            height: lgs.settings.unitSystem.current === IMPERIAL ? UnitUtils.convertFeetToMeters(height) : height,
-        })
-        // Object.assign($pois.filteredList.get(point.id), point)
-        $pois.filteredList.set(point.id, {
-            ...$pois.filteredList.get(point.id),
-            color:   point.color,
-            bgColor: point.bgColor,
-        })
-        await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
-        setSimulated(point.height === point.simulatedHeight)
+        if (window.isOK) {
+            const height = event.target.value * 1
+            point = Object.assign($pois.list.get(point.id), {
+                height: lgs.settings.unitSystem.current === IMPERIAL ? UnitUtils.convertFeetToMeters(height) : height,
+            })
+            console.log(pois.list.get(point.id))
+            await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
+            setSimulated(point.height === point.simulatedHeight)
+        }
     }
 
     const handleChangeColor = async event => {
@@ -77,7 +74,7 @@ export const MapPOIEditContent = ({poi}) => {
             color:   point.color,
             bgColor: point.bgColor,
         })
-        await __.ui.poiManager.persistToDatabase(point)
+        await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
 
         event.preventDefault()
         event.stopPropagation()
@@ -87,14 +84,17 @@ export const MapPOIEditContent = ({poi}) => {
         point = Object.assign($pois.list.get(point.id), {
             latitude: event.target.value * 1,
         })
-        await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
+        await __.ui.poiManager.persistToDatabase(point)
     }
 
     const handleChangeLongitude = async event => {
-        point = Object.assign($pois.list.get(point.id), {
-            longitude: event.target.value * 1,
-        })
-        await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
+        if (window.isOK) {
+
+            point = Object.assign($pois.list.get(point.id), {
+                longitude: event.target.value * 1,
+            })
+            await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
+        }
     }
 
     const handleChangeTitle = async event => {
@@ -102,7 +102,7 @@ export const MapPOIEditContent = ({poi}) => {
             point = Object.assign($pois.list.get(point.id), {
                 title: event.target.value,
             })
-            await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
+            await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
         }
     }
 
@@ -111,7 +111,7 @@ export const MapPOIEditContent = ({poi}) => {
             point = Object.assign($pois.list.get(point.id), {
                 description: event.target.value,
             })
-            await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(point.id))
+            await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
         }
     }
     /**
@@ -185,7 +185,7 @@ export const MapPOIEditContent = ({poi}) => {
                 <div>
                     <SlInput size="small" value={point.title}
                              onSlChange={handleChangeTitle}
-                             onInput={handleChangeTitle}
+                        //onInput={handleChangeTitle}
                              className="edit-title-map-poi-input">
                         <span slot="label" className="edit-title-map-poi">{'Title'}</span>
                     </SlInput>
@@ -195,7 +195,7 @@ export const MapPOIEditContent = ({poi}) => {
                 <div>
                     <SlTextarea size="small" value={point.description ?? ''}
                                 onSlChange={handleChangeDescription}
-                                onInput={handleChangeDescription}
+                        // onInput={handleChangeDescription}
                                 className="edit-title-map-poi-input">
                         <span slot="label" className="edit-title-map-poi">{'Description'}</span>
                     </SlTextarea>
@@ -208,12 +208,14 @@ export const MapPOIEditContent = ({poi}) => {
                     </SlTooltip>
                     <SlInput className={'map-poi-edit-item'} size="small" noSpinButtons
                              onSlChange={handleChangeLatitude}
+                        //onInput={handleChangeLatitude}
                              value={__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)}
-                             label={'Latitude'} readonly/>
+                             label={'Latitude'}/>
                     <SlInput className={'map-poi-edit-item'} size="small" noSpinButtons
                              onSlChange={handleChangeLongitude}
+                        // onInput={handleChangeLongitude}
                              value={__.convert(point.longitude).to(lgs.settings.coordinateSystem.current)}
-                             label={'Longitude'} readonly/>
+                             label={'Longitude'}/>
                     <SlInput
                         className={classNames('map-poi-edit-item map-poi', simulated ? 'map-poi-edit-warning-altitude' : '')}
                         size="small" type="number"

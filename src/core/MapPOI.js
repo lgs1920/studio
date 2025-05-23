@@ -8,7 +8,7 @@
  * email: contact@lgs1920.fr
  *
  * Created on: 2025-05-23
- * Last modified: 2025-05-22
+ * Last modified: 2025-05-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -37,7 +37,7 @@ export class MapPOI extends MapElement {
     /**
      * @type {string}
      */
-    category
+    category = POI_STANDARD_TYPE
 
     /**
      * @type {string}
@@ -121,6 +121,7 @@ export class MapPOI extends MapElement {
     formerType
 
 
+
     /**
      * Initializes a new instance of the MapPOI class.
      * If there is no id provided, a unique id will be automatically generated.
@@ -170,7 +171,7 @@ export class MapPOI extends MapElement {
     }
 
     set icon(icon) {
-        // we need it to avoid an error but icon iset by POI category
+        // we need it to avoid an error but icon is set by POI category
     }
 
     static deserialize = (object, json = false) => MapElement.deserialize(object, json)
@@ -332,7 +333,7 @@ export class MapPOI extends MapElement {
      */
     hide = () => {
         this.#update({visible: false})
-        this.utils.toggleVisibility(this)
+        this.toggleVisibility()
         return this
 
     }
@@ -343,8 +344,12 @@ export class MapPOI extends MapElement {
      */
     show = async () => {
         this.#update({visible: true})
-        this.utils.toggleVisibility(this)
+        this.toggleVisibility()
         return this
+    }
+
+    toggleVisibility = () => {
+        this.utils.toggleVisibility(this)
     }
 
     /**

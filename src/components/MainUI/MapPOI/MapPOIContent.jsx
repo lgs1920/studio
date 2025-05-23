@@ -17,11 +17,9 @@
 import { NameValueUnit }           from '@Components/DataDisplay/NameValueUnit'
 import { FontAwesomeIcon }         from '@Components/FontAwesomeIcon'
 import { POIS_EDITOR_DRAWER } from '@Core/constants'
-import { SlPopup }                 from '@shoelace-style/shoelace/dist/react'
 import { ELEVATION_UNITS }         from '@Utils/UnitUtils'
 import { snapdom }                 from '@zumer/snapdom'
 import classNames                  from 'classnames'
-import { default as html2canvas }  from 'html2canvas'
 import { memo, useEffect, useRef } from 'react'
 import './style.css'
 import { useSnapshot }             from 'valtio'
@@ -159,13 +157,22 @@ export const MapPOIContent = memo(({poi}) => {
             removePOIEventListeners(point)
             point.remove()
         }
-    }, [point.title, point.icon, point.expanded, point.color, point.bgColor]);
+    }, [
+                  point.title,
+                  point.icon,
+                  point.expanded,
+                  point.color,
+                  point.bgColor,
+                  point.height,
+                  point.longitude,
+                  point.latitude,
+              ])
 
     return (
         <div className={classNames(
-                 'poi-on-map-wrapper',
-                 (point?.showFlag || !point?.expanded) && !point?.over ? 'poi-shrinked' : '',
-             )}
+            'poi-on-map-wrapper',
+            (point?.showFlag || !point?.expanded) && !point?.over ? 'poi-shrinked' : '',
+        )}
              id={point.id}
              style={{
                  '--lgs-poi-background-color': point.bgColor ?? lgs.colors.poiDefaultBackground,
@@ -184,27 +191,27 @@ export const MapPOIContent = memo(({poi}) => {
                         <>
                             <h3> {point.title ?? 'Point Of Interest'}</h3>
                             {/* //   {point.scale >= 0 && ( */}
-                                <div className="poi-full-coordinates">
-                                    {point.height && point.height > 0 && point.height !== point.simulatedHeight && (
-                                        <NameValueUnit
-                                            className="poi-elevation"
-                                            text={'Altitude: '}
-                                            value={point.height.toFixed()}
-                                            format={'%d'}
-                                            units={ELEVATION_UNITS}
-                                        />
-                                    )}
-                                    {!point.height || point.height === point.simulatedHeight || point.height === 0 &&
-                                        <div>&nbsp;</div>}
-                                    <div className="poi-coordinates">
+                            <div className="poi-full-coordinates">
+                                {point.height && point.height > 0 && point.height !== point.simulatedHeight && (
+                                    <NameValueUnit
+                                        className="poi-elevation"
+                                        text={'Altitude: '}
+                                        value={point.height.toFixed()}
+                                        format={'%d'}
+                                        units={ELEVATION_UNITS}
+                                    />
+                                )}
+                                {!point.height || point.height === point.simulatedHeight || point.height === 0 &&
+                                    <div>&nbsp;</div>}
+                                <div className="poi-coordinates">
                                         <span>
                                           {__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)},
                                             &nbsp;
                                             {__.convert(point.longitude).to(lgs.settings.coordinateSystem.current)}
                                         </span>
 
-                                    </div>
                                 </div>
+                            </div>
                             {/* // )} */}
                         </>
                     }
@@ -213,11 +220,11 @@ export const MapPOIContent = memo(({poi}) => {
                     )}
                 </div>
 
-            {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
-                <div className="poi-icons">
-                    <FontAwesomeIcon icon={point.icon} className="poi-as-flag"/>
-                </div>
-            }
+                {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
+                    <div className="poi-icons">
+                        <FontAwesomeIcon icon={point.icon} className="poi-as-flag"/>
+                    </div>
+                }
             </div>
         </div>
     )
