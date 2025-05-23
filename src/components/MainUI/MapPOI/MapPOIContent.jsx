@@ -131,7 +131,7 @@ export const MapPOIContent = memo(({poi}) => {
                     snap.toCanvas().then(canvas => {
                         $point.image = {
                             src: canvas.toDataURL('image/png'),
-                            width:  canvas.width / scale,
+                            width: canvas.width / scale,   // TODO HDI
                             height: canvas.height / scale,
                         }
                         $point.pixelOffset = {
