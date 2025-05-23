@@ -127,14 +127,13 @@ export const MapPOIContent = memo(({poi}) => {
             }
             try {
                 const scale = 2
-                snapdom(_poiContent.current, {scale: scale, embedFonts: true}).then(snap => {
+                snapdom(_poiContent.current, {scale: scale}).then(snap => {
                     snap.toCanvas().then(canvas => {
                         $point.image = {
-                            src:    canvas.toDataURL('image/jpg'),
+                            src: canvas.toDataURL('image/png'),
                             width:  canvas.width / scale,
                             height: canvas.height / scale,
                         }
-
                         $point.pixelOffset = {
                             x: point.expanded ? -13 : 0, // equiv of --poi-delta-x defined in ./style.css
                             y: 0,
