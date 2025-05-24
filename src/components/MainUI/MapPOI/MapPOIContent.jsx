@@ -99,7 +99,6 @@ export const MapPOIContent = memo(({poi}) => {
         __.canvasEvents.onClick(toggleExpand, {entity: poi.id}, {expanded: poi.expanded})
         __.canvasEvents.onTap(toggleExpand, {entity: poi.id}, {expanded: poi.expanded})
 
-
         // Open editor on Double Click/double tap
         __.canvasEvents.onDoubleClick(handleEditor, {entity: poi.id, preventLowerPriority: true})
         __.canvasEvents.onDoubleTap(handleEditor, {entity: poi.id, preventLowerPriority: true})
