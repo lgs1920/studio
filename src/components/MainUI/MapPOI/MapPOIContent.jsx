@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-23
- * Last modified: 2025-05-23
+ * Created on: 2025-05-24
+ * Last modified: 2025-05-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,6 +20,7 @@ import { POIS_EDITOR_DRAWER } from '@Core/constants'
 import { ELEVATION_UNITS }         from '@Utils/UnitUtils'
 import { snapdom }                 from '@zumer/snapdom'
 import classNames                  from 'classnames'
+import { DateTime } from 'luxon'
 import { memo, useEffect, useRef } from 'react'
 import './style.css'
 import { useSnapshot }             from 'valtio'
@@ -127,12 +128,13 @@ export const MapPOIContent = memo(({poi}) => {
             }
             try {
                 const scale = 2
+                const ratio = window.devicePixelRatio || 1
                 snapdom(_poiContent.current, {scale: scale}).then(snap => {
                     snap.toCanvas().then(canvas => {
                         $point.image = {
                             src: canvas.toDataURL('image/png'),
-                            width: canvas.width / scale,   // TODO HDI
-                            height: canvas.height / scale,
+                            width:  canvas.width / scale / ratio,
+                            height: canvas.height / scale / ratio,
                         }
                         $point.pixelOffset = {
                             x: point.expanded ? -13 : 0, // equiv of --poi-delta-x defined in ./style.css
@@ -210,6 +212,12 @@ export const MapPOIContent = memo(({poi}) => {
                                         </span>
 
                                 </div>
+
+                                {point.time && (
+                                    <div className="poi-time">
+                                        {DateTime.fromISO(point.time).toLocaleString(DateTime.DATE_SIMPLE)} - {DateTime.fromISO(point.time).toLocaleString(DateTime.TIME_SIMPLE)}
+                                    </div>
+                                )}
                             </div>
                             {/* // )} */}
                         </>
