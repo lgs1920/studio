@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-19
- * Last modified: 2025-05-19
+ * Created on: 2025-05-24
+ * Last modified: 2025-05-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -394,7 +394,7 @@ export class Journey extends MapElement {
                             simulatedHeight: clampedHeight,
 
                             time:     feature.properties?.time ?? undefined,
-                            expanded: true,
+                            expanded: false,
                             visible:  true,
                         }
                         const poi = new MapPOI({...common, ...parameters})
@@ -433,12 +433,15 @@ export class Journey extends MapElement {
                             simulatedHeight: clampedStart,
 
                             time:     timeStart,
+                            distance: 0,
+
                             color:   lgs.settings.journey.pois.start.color,
                             bgColor: lgs.settings.journey.pois.start.bgColor,
                             expanded: false,
                             visible: true,
                         }
                         const startFlag = new MapPOI({...common, ...startParameters})
+                        console.log(startFlag)
                         await __.ui.poiManager.add(startFlag, false)
                         this.pois.push(startFlag.id)
                         this.tracks.get(parentSlug).flags.start = startFlag.id
@@ -466,7 +469,10 @@ export class Journey extends MapElement {
                             latitude:        stop[1],
                             height:          stop[2] ?? undefined,
                             simulatedHeight: clampedStop,
+
                             time:            timeStop,
+                            distance: 0,
+
                             icon:        POI_FLAG_STOP,
                             color:           lgs.settings.getJourney.pois.stop.color,
                             expanded:        false,
