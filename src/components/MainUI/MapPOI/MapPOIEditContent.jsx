@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-23
- * Last modified: 2025-05-23
+ * Created on: 2025-05-24
+ * Last modified: 2025-05-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,7 +22,7 @@ import {
     MapPOIEditMenu,
 }                                      from '@Components/MainUI/MapPOI/MapPOIEditMenu'
 import {
-    faCopy, faSquareQuestion,
+    faCopy, faSquareQuestion, faClock,
 }                                                                    from '@fortawesome/pro-regular-svg-icons'
 import {
     SlColorPicker, SlDivider, SlIconButton, SlInput, SlTextarea, SlTooltip,
@@ -33,6 +33,7 @@ import { ELEVATION_UNITS, foot, IMPERIAL, INTERNATIONAL, UnitUtils } from '@Util
 import Color                           from 'color'
 import classNames                                                    from 'classnames'
 import parse                                                         from 'html-react-parser'
+import { DateTime }                                                  from 'luxon'
 import { useEffect, useState, useRef } from 'react'
 import { useSnapshot }                                               from 'valtio/index'
 
@@ -130,6 +131,7 @@ export const MapPOIEditContent = ({poi}) => {
             })
     }
 
+
     useEffect(() => {
         if (point && pois.current) {
             setSimulated(point.height === undefined || point.height === point.simulatedHeight)
@@ -200,6 +202,13 @@ export const MapPOIEditContent = ({poi}) => {
                         <span slot="label" className="edit-title-map-poi">{'Description'}</span>
                     </SlTextarea>
                 </div>
+
+                {point.time && (
+                    <div className="poi-time">
+                        <FontAwesomeIcon icon={faClock}/>
+                        {DateTime.fromISO(point.time).toLocaleString(DateTime.DATE_FULL)} - {DateTime.fromISO(point.time).toLocaleString(DateTime.TIME_SIMPLE)}
+                    </div>
+                )}
 
                 <div className="map-poi-edit-row">
                     <SlTooltip content={'Copy Coordinates'}>
