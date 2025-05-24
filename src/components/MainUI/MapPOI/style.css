@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-23
- * Last modified: 2025-05-23
+ * Created on: 2025-05-24
+ * Last modified: 2025-05-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -344,6 +344,12 @@
     gap: var(--lgs-gutter-xs);
 }
 
+#map-poi-edit-filter-trigger {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
 .map-poi-edit-toggle-filter {
     display: flex;
     flex-direction: column;
@@ -359,19 +365,30 @@
     align-items: center;
 }
 
+.map-poi-filter-by-type {
+    display: flex;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+}
+
+
+.map-poi-filter-by-type sl-switch {
+    width: 50% !important;
+    margin-left: auto;
+}
+
 .map-poi-filter-by-name {
     display: flex;
     align-items: end;
-    gap: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-s);
 }
 
-/*.map-poi-filter-by-name sl-input::part()*/
-#map-poi-filter-alphabetic {
+.map-poi-filter-alphabetic {
     align-self: self-end;
 }
 
-.map-poi-edit-toggle-filter sl-divider {
-    margin-top: 0;
+.map-poi-clear-filter {
+    margin-left: auto;
 }
 
 #map-poi-edit-filter-trigger {
@@ -394,6 +411,10 @@
 
 .map-poi-category-selector-filter {
     width: 100%;
+}
+
+.map-poi-category-selector-filter + sl-divider {
+    --spacing: var(--lgs-gutter-s);
 }
 
 .map-poi-category-selector-filter::part(form-control-label) {

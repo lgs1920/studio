@@ -143,6 +143,8 @@ poi:
     exclude: false
     open: false
     active: false
+    global: true
+    journey: true
 
   categories:
     # POI

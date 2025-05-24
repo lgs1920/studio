@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-23
- * Last modified: 2025-05-22
+ * Created on: 2025-05-24
+ * Last modified: 2025-05-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -71,10 +71,18 @@ export const MapPOIList = memo(() => {
 
             let poisToShow = Array.from(pois.list)
 
-            // Apply filter by journey
-            if (theJourney.current) {
-                poisToShow = poisToShow.filter(([id, object]) => theJourney.current.pois.includes(id) || !object.parent)
-            }
+            // Apply filter by journey and global
+            poisToShow = poisToShow.filter(([id, poi]) => {
+                let include = false
+                if (settings.filter.journey && theJourney.current && theJourney.current.pois.includes(id)) {
+                    include = true
+                }
+                else if (settings.filter.global && !poi.parent) {
+                    include = true
+                }
+                return include
+            })
+
 
             // Apply filter byName
             poisToShow = Array.from(poisToShow)
@@ -112,6 +120,7 @@ export const MapPOIList = memo(() => {
                   pois.list.size, pois.current,
                   settings?.filter.byName, settings?.filter.alphabetic,
                   settings?.filter.exclude, settings?.filter.byCategories,
+                  settings?.filter.journey, settings?.filter.global,
                   // _poi.current?.title, _poi.current?.category,
                   // _poi.current?.color, _poi.current?.bgColor,
                   // _poi.current?.expanded,
@@ -191,8 +200,8 @@ export const MapPOIList = memo(() => {
                                 />
                                 <SlDetails className={classNames(
                                     `edit-map-poi-item`,
-                                    poi.visible ? undefined : 'map-poi-hidden',
-                                    poi.type === POI_STARTER_TYPE ? 'map-poi-starter' : undefined,
+                                    pois.list.get(id).visible ? undefined : 'map-poi-hidden',
+                                    pois.list.get(id).type === POI_STARTER_TYPE ? 'map-poi-starter' : undefined,
                                 )}
                                            id={`${prefix}${id}`}
                                            onSlAfterShow={selectPOI}
@@ -201,19 +210,20 @@ export const MapPOIList = memo(() => {
                                            style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.bgColor ?? lgs.colors.poiDefaultBackground, 'rgba', 0.2)}}>
                                     <div slot="summary">
                                     <span>
-                                        <FontAwesomeIcon icon={poi.visible ? poi.icon : faMask} style={{
-                                            '--fa-primary-color':   poi.color,
-                                            '--fa-secondary-color': poi.bgColor,
+                                        <FontAwesomeIcon
+                                            icon={pois.list.get(id).visible ? pois.list.get(id).icon : faMask} style={{
+                                            '--fa-primary-color':   pois.list.get(id).color,
+                                            '--fa-secondary-color': pois.list.get(id).bgColor,
                                             '--fa-primary-opacity':   1,
                                             '--fa-secondary-opacity': 1,
                                         }}/>
 
-                                        {poi.title}
+                                        {pois.list.get(id).title}
                                        </span>
                                         <span>
                         </span>
                                     </div>
-                                    <MapPOIEditContent poi={poi}/>
+                                    <MapPOIEditContent poi={pois.list.get(id)}/>
                                 </SlDetails>
                             </div>
                         }

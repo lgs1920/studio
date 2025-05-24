@@ -7,19 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-03-02
- * Last modified: 2025-03-02
+ * Created on: 2025-05-24
+ * Last modified: 2025-05-24
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
-import { MapPOICategorySelectorFilter } from '@Components/MainUI/MapPOI/MapPOICategorySelectorFilter'
-import { ToggleStateIcon }                                       from '@Components/ToggleStateIcon'
-import { faArrowDownAZ, faArrowDownZA, faFilter, faFilterSlash } from '@fortawesome/pro-regular-svg-icons'
-import { SlDivider, SlIconButton, SlInput, SlTooltip }           from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                 from '@Utils/FA2SL'
-import React, { useEffect }                                      from 'react'
-import { useSnapshot }                                           from 'valtio/index'
+import { MapPOICategorySelectorFilter }                                    from '@Components/MainUI/MapPOI/MapPOICategorySelectorFilter'
+import { ToggleStateIcon }                                                 from '@Components/ToggleStateIcon'
+import { faArrowDownAZ, faArrowDownZA, faFilter, faFilterSlash, faEraser } from '@fortawesome/pro-regular-svg-icons'
+import { SlButton, SlDivider, SlIconButton, SlInput, SlSwitch, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                           from '@Utils/FA2SL'
+import React, { useEffect }                                                from 'react'
+import { useSnapshot }                                                     from 'valtio/index'
 
 export const MapPOIEditFilter = () => {
 
@@ -52,13 +52,42 @@ export const MapPOIEditFilter = () => {
         lgs.settings.poi.filter.exclude = !lgs.settings.poi.filter.exclude
     }
 
+    const handleGlobal = () => {
+        lgs.settings.poi.filter.global = !lgs.settings.poi.filter.global
+        setTimeout(() => {
+            if (!lgs.settings.poi.filter.global && !lgs.settings.poi.filter.journey) {
+                lgs.settings.poi.filter.global = true
+            }
+        }, 0)
+    }
+
+    const handleJourney = () => {
+        lgs.settings.poi.filter.journey = !lgs.settings.poi.filter.journey
+        setTimeout(() => {
+            if (!lgs.settings.poi.filter.global && !lgs.settings.poi.filter.journey) {
+                lgs.settings.poi.filter.global = true
+            }
+        }, 0)
+    }
+
     const applyFilter = () => {
         if (!enoughPOIs()) {
             lgs.settings.poi.filter.active = false
             lgs.settings.poi.filter.open = false
             return
         }
-        lgs.settings.poi.filter.active = lgs.settings.poi.filter.byName !== '' || !lgs.settings.poi.filter.alphabetic || lgs.settings.poi.filter.byCategories.length > 0
+        lgs.settings.poi.filter.active = lgs.settings.poi.filter.byName !== ''
+            || !lgs.settings.poi.filter.alphabetic
+            || lgs.settings.poi.filter.byCategories.length > 0
+            || !lgs.settings.poi.filter.global || !lgs.settings.poi.filter.journey
+    }
+
+    const resetFilter = () => {
+        lgs.settings.poi.filter.byName = ''
+        lgs.settings.poi.filter.alphabetic = true
+        lgs.settings.poi.filter.byCategories = []
+        lgs.settings.poi.filter.global = true
+        lgs.settings.poi.filter.journey = true
     }
 
     useEffect(() => {
@@ -69,15 +98,21 @@ export const MapPOIEditFilter = () => {
     return (
         <div className="map-poi-edit-filter">
             <div className="map-poi-edit-toggle-filter">
-                    <header>
-                        {settings.filter.active && <span>{'Filters are active'}</span>}
-                        <SlTooltip content={settings.filter.open ? 'Hide Filters' : 'Show Filters'}>
-                            <SlIconButton id="map-poi-edit-filter-trigger" onClick={handleFilter}
-                                  library="fa" disabled={!enoughPOIs()}
-                                  name={FA2SL.set(settings.filter.open ? faFilterSlash : faFilter)}
-                                  className={settings.filter.active ? 'map-poi-filter-active' : 'map-poi-filter-inactive'}
-                            /> </SlTooltip>
-                    </header>
+                <header>
+                    {settings.filter.active && <span>{'Filters are active'}</span>}
+                    <SlTooltip content={settings.filter.open ? 'Hide Filters' : 'Show Filters'}>
+                        <div id="map-poi-edit-filter-trigger" onClick={handleFilter}
+                             className={settings.filter.active ? 'map-poi-filter-active' : 'map-poi-filter-inactive'}>
+                            {settings.filter.open ? 'Hide' : 'Show'}&nbsp;{'Filters'}
+                            <SlIconButton
+                                library="fa" disabled={!enoughPOIs()}
+                                name={FA2SL.set(settings.filter.open ? faFilterSlash : faFilter)}
+                                className={settings.filter.active ? 'map-poi-filter-active' : 'map-poi-filter-inactive'}
+                            />
+                        </div>
+
+                    </SlTooltip>
+                </header>
 
                 <SlDivider/>
             </div>
@@ -98,12 +133,29 @@ export const MapPOIEditFilter = () => {
                             />
                         </SlTooltip>
 
+                        {settings.filter.active &&
+                            <SlButton size="small" className="map-poi-clear-filter" onClick={resetFilter}>
+                                <SlIconButton size="small" library="fa" name={FA2SL.set(faEraser)}/>{'Reset Filters'}
+                            </SlButton>
+                        }
                     </div>
                     <MapPOICategorySelectorFilter handleExclusion={handleExclusion}
                                                   handleCategories={handleCategories}
                                                   onChange={applyFilter}
                     />
                     <SlDivider/>
+                    <div className="map-poi-filter-by-type">
+                        <SlSwitch size="small" align-right checked={settings.filter.global}
+                                  onSlChange={handleGlobal}>
+                            {'Display Global POIs'}
+                        </SlSwitch>
+                        {lgs.theJourney &&
+                            <SlSwitch size="small" align-right checked={settings.filter.journey}
+                                      onSlChange={handleJourney}>
+                                {'Display Journey POIs'}
+                            </SlSwitch>
+                        }
+                    </div>
                 </div>
             }
         </div>
