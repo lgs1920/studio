@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-22
- * Last modified: 2025-05-22
+ * Created on: 2025-05-24
+ * Last modified: 2025-05-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -127,49 +127,6 @@ export const MapPOIMonitor = () => {
     const removePOIEventListeners = poi => {
         __.canvasEvents.removeAllListenersByEntity(poi.id)
     }
-
-    // Effect to detect changes in the POI list
-    // useEffect(() => {
-    //
-    //     // Reference previous list for comparison
-    //     const previousList = _previousList.current
-    //
-    //     // Detect added POIs
-    //     for (const [id, poi] of currentList) {
-    //         if (!previousList.has(id)) {
-    //             // Add event listeners and draw new POI
-    //             addPOIEventListeners(poi)
-    //             poi.draw(false)
-    //         }
-    //     }
-    //
-    //     // Detect removed POIs
-    //     for (const [id, poi] of previousList) {
-    //         if (!currentList.has(id)) {
-    //             // Remove event listeners and remove POI
-    //             removePOIEventListeners(poi)
-    //             poi.remove()
-    //         }
-    //     }
-    //
-    //     // Detect changed POIs
-    //     for (const [id, poi] of currentList) {
-    //         const previous = previousList.get(id)
-    //         if (previous) {
-    //             // Compare attributes, excluding methods
-    //             const changedFields = updatedDiff(__.app.filterAttributes(previous), __.app.filterAttributes(poi))
-    //             if (!isEmpty(changedFields)) {
-    //                 // Log changes for debugging and redraw POI
-    //                 poi.draw(false)
-    //             }
-    //         }
-    //     }
-    //
-    //     // Update previous list state
-    //     _previousList.current = new Map(currentList)
-    //
-    // }, [currentList])
-
 
     return (
         <>
