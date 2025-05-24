@@ -441,7 +441,6 @@ export class Journey extends MapElement {
                             visible: true,
                         }
                         const startFlag = new MapPOI({...common, ...startParameters})
-                        console.log(startFlag)
                         await __.ui.poiManager.add(startFlag, false)
                         this.pois.push(startFlag.id)
                         this.tracks.get(parentSlug).flags.start = startFlag.id
