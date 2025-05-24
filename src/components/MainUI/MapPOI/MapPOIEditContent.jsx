@@ -162,7 +162,6 @@ export const MapPOIEditContent = ({poi}) => {
                                    value={point?.bgColor ?? lgs.colors.poiDefaultBackground}
                                    swatches={lgs.settings.getSwatches.list.join(';')}
                                    onSlChange={handleChangeColor}
-                        // onSlInput={handleChangeColor}
                                    disabled={!point?.visible}
                                    noFormatToggle
                                    ref={poiBgColor}
@@ -197,7 +196,6 @@ export const MapPOIEditContent = ({poi}) => {
                 <div>
                     <SlTextarea size="small" value={point.description ?? ''}
                                 onSlChange={handleChangeDescription}
-                        // onInput={handleChangeDescription}
                                 className="edit-title-map-poi-input">
                         <span slot="label" className="edit-title-map-poi">{'Description'}</span>
                     </SlTextarea>
@@ -217,12 +215,10 @@ export const MapPOIEditContent = ({poi}) => {
                     </SlTooltip>
                     <SlInput className={'map-poi-edit-item'} size="small" noSpinButtons
                              onSlChange={handleChangeLatitude}
-                        //onInput={handleChangeLatitude}
                              value={__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)}
                              label={'Latitude'}/>
                     <SlInput className={'map-poi-edit-item'} size="small" noSpinButtons
                              onSlChange={handleChangeLongitude}
-                        // onInput={handleChangeLongitude}
                              value={__.convert(point.longitude).to(lgs.settings.coordinateSystem.current)}
                              label={'Longitude'}/>
                     <SlInput

@@ -84,14 +84,20 @@ export const MapPOIContent = memo(({poi}) => {
         }
     }
 
+    const toggleExpand = (event, id, options, data) => {
+        Object.assign(__.ui.poiManager.list.get(id), {
+            expanded: !data?.expanded ?? false,
+        })
+    }
+
     /**
      * Adds event listeners for a MapPOI
      * @param {MapPOI} poi - MapPOI instance to add listeners for
      */
     const addPOIEventListeners = poi => {
         // Toggles POI size on click
-        __.canvasEvents.onClick(poi.toggleExpand, {entity: poi.id})
-        __.canvasEvents.onTap(poi.toggleExpand, {entity: poi.id})
+        __.canvasEvents.onClick(toggleExpand, {entity: poi.id}, {expanded: poi.expanded})
+        __.canvasEvents.onTap(toggleExpand, {entity: poi.id}, {expanded: poi.expanded})
 
 
         // Open editor on Double Click/double tap
