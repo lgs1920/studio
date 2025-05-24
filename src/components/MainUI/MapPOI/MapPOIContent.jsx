@@ -156,7 +156,7 @@ export const MapPOIContent = memo(({poi}) => {
 
         return () => {
             removePOIEventListeners(point)
-            point.remove()
+            // point.remove() //TODO remove DOM elements and ref
         }
     }, [
                   point.title,
