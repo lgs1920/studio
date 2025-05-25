@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneyLoaderUI.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import './style.css'
 import { faArrowRotateRight, faFileCirclePlus, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import {
@@ -61,8 +77,10 @@ export const JourneyLoaderUI = (props) => {
             }
         }
         const item = fileList.get(__.app.slugify(file.name))
-        item.journeyStatus = status
-        fileList.set(__.app.slugify(file.name), item)
+        if (item) {
+            item.journeyStatus = status
+            fileList.set(__.app.slugify(file.name), item)
+        }
     }
 
     /**
