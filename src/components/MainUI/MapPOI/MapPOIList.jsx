@@ -63,12 +63,13 @@ export const MapPOIList = memo(({globals = true}) => {
     }, [pois.list.size])
 
     useEffect(() => {
-        if (editor.journey) {
 
             theJourney.current = lgs.theJourney
 
             // Clear action once built
             if (drawers.action) {
+                //TODO rechercherrle tab goup et ouvrir le tab avec tab.show()
+
                 lgs.mainProxy.drawers.action = null
             }
 
@@ -125,7 +126,7 @@ export const MapPOIList = memo(({globals = true}) => {
                 $pois.filteredList.set(key, value)
                 $pois.bulkList.set(key, false)
             })
-        }
+
               }, [
                   pois.current, pois.size,
                   settings?.filter.byName, settings?.filter.alphabetic,

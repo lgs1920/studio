@@ -84,9 +84,6 @@ import {
 import {
     JourneyData,
 }                   from './JourneyData'
-import {
-    JourneyPOIs,
-}                   from './JourneyPOIs'
 
 export const JourneySettings = function JourneySettings() {
 
@@ -504,7 +501,7 @@ export const JourneySettings = function JourneySettings() {
                          * POIs Tab Panel
                          */}
                         <SlTabPanel name="pois">
-                            <MapPOIEditSettings globals={false}/>
+                            <MapPOIEditSettings globals/>
                             <MapPOIList globals={false}/>
                         </SlTabPanel>
 

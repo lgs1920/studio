@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-24
- * Last modified: 2025-05-24
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -70,7 +70,11 @@ export const MapPOIMonitor = () => {
             __.ui.drawerManager.close()
         }
         getPOI(entity)
-        __.ui.drawerManager.toggle(POIS_EDITOR_DRAWER, 'edit-current')
+        __.ui.drawerManager.toggle(POIS_EDITOR_DRAWER, {
+            action: 'edit-current',
+            entity: entity,
+            tab:    'pois',
+        })
         current = entity
     }
 

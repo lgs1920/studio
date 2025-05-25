@@ -216,7 +216,11 @@ export const MapPOIContextMenu = () => {
      * We open the POI Edit drawer and the current POI settings
      */
     const openEdit = () => {
-        __.ui.drawerManager.open(POIS_EDITOR_DRAWER, 'edit-current')
+        __.ui.drawerManager.open(POIS_EDITOR_DRAWER, {
+            action: 'edit-current',
+            entity: pois.current,
+            tab:    'pois',
+        })
         hideMenu()
     }
 
