@@ -18,9 +18,7 @@
 import { FontAwesomeIcon }                                        from '@Components/FontAwesomeIcon'
 import { MapPOIEditContent }                                      from '@Components/MainUI/MapPOI/MapPOIEditContent'
 import { ToggleStateIcon }                                        from '@Components/ToggleStateIcon'
-import {
-    POI_CATEGORY_ICONS, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER,
-}                                                                 from '@Core/constants'
+import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
 import { faMask, faSquare, faSquareCheck, faTriangleExclamation } from '@fortawesome/pro-regular-svg-icons'
 import { SlAlert, SlDetails, SlIcon }                             from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                  from '@Utils/FA2SL'
@@ -44,6 +42,8 @@ export const MapPOIList = memo(({globals = true}) => {
     const theJourney = useRef(lgs.theJourney)
 
     const _poi = useRef(pois.list.get(pois.current))
+
+    const onlyJourney = false // globals === true
 
     const handleCopyCoordinates = (poi) => {
         __.ui.poiManager.copyCoordinatesToClipboard(poi).then(() => {
@@ -75,7 +75,12 @@ export const MapPOIList = memo(({globals = true}) => {
             let poisToShow = Array.from(pois.list)
 
             // Apply filter by journey and global
-            if (globals) {
+            if (onlyJourney) {
+                poisToShow = poisToShow.filter(([id, poi]) =>
+                                                   settings.filter.journey && theJourney.current?.pois.includes(id),
+                )
+            }
+            else {
                 poisToShow = poisToShow.filter(([id, poi]) => {
                     let include = false
                     if (settings.filter.journey && theJourney.current && theJourney.current.pois.includes(id)) {
@@ -86,11 +91,6 @@ export const MapPOIList = memo(({globals = true}) => {
                     }
                     return include
                 })
-            }
-            else {
-                poisToShow = poisToShow.filter(([id, poi]) =>
-                                                   settings.filter.journey && theJourney.current?.pois.includes(id),
-                )
             }
 
 
@@ -127,12 +127,13 @@ export const MapPOIList = memo(({globals = true}) => {
             })
         }
               }, [
-                  pois.list.size, pois.current,
+                  pois.current, pois.size,
                   settings?.filter.byName, settings?.filter.alphabetic,
                   settings?.filter.exclude, settings?.filter.byCategories,
                   settings?.filter.journey, settings?.filter.global,
                   editor.journey?.slug,
                   Array.from(pois.list, ([, poi]) => poi.type).join(','),
+                  globals,
               ],
     )
 

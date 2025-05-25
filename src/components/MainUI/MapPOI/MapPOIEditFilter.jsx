@@ -27,6 +27,8 @@ export const MapPOIEditFilter = ({globals}) => {
     const store = lgs.mainProxy.components.pois
     const pois = useSnapshot(store)
 
+    const onlyJourney = false //!globals
+
     const handleFilter = () => {
         lgs.settings.poi.filter.open = !lgs.settings.poi.filter.open
     }
@@ -87,7 +89,7 @@ export const MapPOIEditFilter = ({globals}) => {
         lgs.settings.poi.filter.alphabetic = true
         lgs.settings.poi.filter.byCategories = []
         lgs.settings.poi.filter.global = true
-        lgs.settings.poi.filter.journey = true
+        lgs.settings.poi.filter.journey = filter
     }
 
     useEffect(() => {
@@ -144,7 +146,7 @@ export const MapPOIEditFilter = ({globals}) => {
                                                   onChange={applyFilter}
                     />
                     <SlDivider/>
-                    {globals &&
+                    {!onlyJourney &&
                     <div className="map-poi-filter-by-type">
                         <SlSwitch size="small" align-right checked={settings.filter.global}
                                   onSlChange={handleGlobal}>
