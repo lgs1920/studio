@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-23
- * Last modified: 2025-05-23
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -70,7 +70,7 @@ export const MapPOIContextMenu = () => {
     }
 
     const saveAsPOI = () => {
-        _current = Object.assign(__.ui.poiManager.list.get(pois.current), {
+        _current = Object.assign($pois.list.get(pois.current), {
             type: POI_STANDARD_TYPE,
             category: POI_STANDARD_TYPE,
         })
@@ -83,14 +83,14 @@ export const MapPOIContextMenu = () => {
     }
 
     const shrink = () => {
-        Object.assign(__.ui.poiManager.list.get(pois.current), {
+        Object.assign($pois.list.get(pois.current), {
             expanded: false,
         })
         hideMenu()
     }
 
     const expand = () => {
-        Object.assign(__.ui.poiManager.list.get(pois.current), {
+        Object.assign($pois.list.get(pois.current), {
             expanded: true,
         })
         hideMenu()
@@ -278,7 +278,7 @@ export const MapPOIContextMenu = () => {
                                 _current.type !== POI_FLAG_STOP &&
                                 <li onClick={remove}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}></SlIcon>
-                                    <span>{'Remove'}</span>{_current.type}
+                                    <span>{'Remove'}</span>
                                 </li>
                             }
 
