@@ -18,7 +18,9 @@
 import { FontAwesomeIcon }                                        from '@Components/FontAwesomeIcon'
 import { MapPOIEditContent }                                      from '@Components/MainUI/MapPOI/MapPOIEditContent'
 import { ToggleStateIcon }                                        from '@Components/ToggleStateIcon'
-import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER }     from '@Core/constants'
+import {
+    POI_CATEGORY_ICONS, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER,
+}                                                                 from '@Core/constants'
 import { faMask, faSquare, faSquareCheck, faTriangleExclamation } from '@fortawesome/pro-regular-svg-icons'
 import { SlAlert, SlDetails, SlIcon }                             from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                  from '@Utils/FA2SL'
@@ -62,6 +64,7 @@ export const MapPOIList = memo(({globals = true}) => {
 
     useEffect(() => {
         if (editor.journey) {
+
             theJourney.current = lgs.theJourney
 
             // Clear action once built
@@ -190,7 +193,6 @@ export const MapPOIList = memo(({globals = true}) => {
         }
     }
 
-
     return (
         <div id={'edit-map-poi-list'} ref={poiList}>
             {pois.filteredList.size > 0 &&
@@ -225,8 +227,7 @@ export const MapPOIList = memo(({globals = true}) => {
 
                                         {pois.list.get(id).title}
                                        </span>
-                                        <span>
-                        </span>
+                                        <span></span>
                                     </div>
                                     <MapPOIEditContent poi={pois.list.get(id)}/>
                                 </SlDetails>

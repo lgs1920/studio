@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-22
- * Last modified: 2025-05-21
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,16 +22,15 @@ import { useSnapshot }                           from 'valtio'
 
 export const MapPOICategorySelector = (point, props) => {
 
-    const $pois = lgs.mainProxy.components.pois
+    const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
+    let current = point.point
 
     const [category, setCategory] = useState($pois.categories.get(point.category ?? POI_STANDARD_TYPE))
-    const [icon, setIcon] = useState(Object.values(POI_CATEGORY_ICONS.get(category.slug))[0])
-
-    const current = pois.list.get(pois.current)
+    const [, setIcon] = useState(Object.values(POI_CATEGORY_ICONS.get(category.slug))[0])
 
     const handleCategory = async (event) => {
-        Object.assign(__.ui.poiManager.list.get(pois.current), {
+        current = Object.assign($pois.list.get(current.id), {
             category: event.target.value,
         })
         await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(pois.current))
