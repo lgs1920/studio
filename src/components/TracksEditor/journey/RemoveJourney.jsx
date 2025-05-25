@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -47,7 +47,7 @@ export const RemoveJourney = (props) => {
         }
         else {
             mainUI.removeJourneyDialog.active.set(props.name, true)
-            tooltipElement.hide()
+            tooltipElement.current.hide()
         }
     }
 

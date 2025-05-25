@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-22
- * Last modified: 2025-05-21
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -503,8 +503,11 @@ export class POIManager {
             return {id: id, success: false}
         }
 
-        // Remove the POI from the list and the database
+        // Remove the POI from the lists and the database
         this.list.delete(id)
+        lgs.stores.main.components.pois.list.delete(id)
+        lgs.stores.main.components.pois.filteredList.delete(id)
+
         await poi.remove(dbSync)
 
         // Show a success toast only if force = true and the POI is not STARTER

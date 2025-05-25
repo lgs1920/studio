@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -34,7 +34,9 @@ export const CameraAndTargetPanel = () => {
 
     useLayoutEffect(() => {
         window.addEventListener(APP_EVENT.WELCOME.HIDE, () => {
-            _panel.current.style.opacity = 1
+            if (_panel.current.style) {
+                _panel.current.style.opacity = 1
+            }
         })
     }, [])
     return (
