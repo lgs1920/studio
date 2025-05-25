@@ -14,16 +14,18 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { NameValueUnit }           from '@Components/DataDisplay/NameValueUnit'
-import { FontAwesomeIcon }         from '@Components/FontAwesomeIcon'
-import { POIS_EDITOR_DRAWER } from '@Core/constants'
-import { ELEVATION_UNITS }         from '@Utils/UnitUtils'
-import { snapdom }                 from '@zumer/snapdom'
-import classNames                  from 'classnames'
-import { DateTime } from 'luxon'
-import { memo, useEffect, useRef } from 'react'
+import { NameValueUnit }                             from '@Components/DataDisplay/NameValueUnit'
+import { FontAwesomeIcon }                           from '@Components/FontAwesomeIcon'
+import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
+import { ElevationServer }                           from '@Core/Elevation/ElevationServer'
+import { UIToast }                                   from '@Utils/UIToast'
+import { ELEVATION_UNITS }                           from '@Utils/UnitUtils'
+import { snapdom }                                   from '@zumer/snapdom'
+import classNames                                    from 'classnames'
+import { DateTime }                                  from 'luxon'
+import { memo, useEffect, useRef }                   from 'react'
 import './style.css'
-import { useSnapshot }             from 'valtio'
+import { useSnapshot }                               from 'valtio'
 
 export const MapPOIContent = memo(({poi}) => {
     const inner = useRef(null)
@@ -58,11 +60,25 @@ export const MapPOIContent = memo(({poi}) => {
      * @param entity
      */
     const handleEditor = (event, entity) => {
+        const thePOI = getPOI(entity)
+        if (thePOI.type) {
         if (__.ui.drawerManager.drawers.open && entity !== current) {
             __.ui.drawerManager.close()
         }
-        getPOI(entity)
-        __.ui.drawerManager.toggle(POIS_EDITOR_DRAWER, 'edit-current')
+
+            const drawer = thePOI.parent ? JOURNEY_EDITOR_DRAWER : POIS_EDITOR_DRAWER
+            __.ui.drawerManager.toggle(drawer, {
+                action: 'edit-current',
+                entity: entity,
+                tab:    'pois',
+            })
+        }
+        else {
+            UIToast.warning({
+                                caption: `You can not edit this POI.`,
+                                text:    `It is a temporary POI. Use ${'Save As POI'} in the context menu then you will be able to.`,
+                            })
+        }
         current = entity
     }
 
@@ -85,7 +101,7 @@ export const MapPOIContent = memo(({poi}) => {
     }
 
     const toggleExpand = (event, id, options, data) => {
-        Object.assign(__.ui.poiManager.list.get(id), {
+        Object.assign($pois.list.get(id), {
             expanded: !data?.expanded,
         })
     }
@@ -172,6 +188,7 @@ export const MapPOIContent = memo(({poi}) => {
                   point.height,
                   point.longitude,
                   point.latitude,
+                  point.type,
               ])
 
     return (
@@ -204,7 +221,7 @@ export const MapPOIContent = memo(({poi}) => {
                                         units={ELEVATION_UNITS}
                                     />
                                 ) : (
-                                     <div>&nbsp;</div> // Ligne vide
+                                    <div></div> // Ligne vide
                                 )}
 
                                 <div className="poi-coordinates">
