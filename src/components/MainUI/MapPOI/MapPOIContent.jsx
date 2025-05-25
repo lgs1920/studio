@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-24
- * Last modified: 2025-05-24
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -86,7 +86,7 @@ export const MapPOIContent = memo(({poi}) => {
 
     const toggleExpand = (event, id, options, data) => {
         Object.assign(__.ui.poiManager.list.get(id), {
-            expanded: !data?.expanded ?? false,
+            expanded: !data?.expanded,
         })
     }
 
