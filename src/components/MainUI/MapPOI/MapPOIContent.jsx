@@ -187,18 +187,15 @@ export const MapPOIContent = memo(({poi}) => {
              }}
         >
             <div className="poi-on-map" ref={_poiContent}>
-                <div className="poi-on-map-inner"
-                     ref={inner} id={`poi-inner-${point?.id}`}
-                >
+                <div className="poi-on-map-inner" ref={inner} id={`poi-inner-${point?.id}`}>
                     <div className="poi-on-map-triangle-down"/>
-
                     <div className="poi-on-map-inner-background"/>
                     {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
                         <>
                             <h3> {point.title ?? 'Point Of Interest'}</h3>
                             {/* //   {point.scale >= 0 && ( */}
                             <div className="poi-full-coordinates">
-                                {point.height && point.height > 0 && point.height !== point.simulatedHeight && (
+                                {point.height && point.height > 0 && point.height !== point.simulatedHeight ? (
                                     <NameValueUnit
                                         className="poi-elevation"
                                         text={'Altitude: '}
@@ -206,9 +203,10 @@ export const MapPOIContent = memo(({poi}) => {
                                         format={'%d'}
                                         units={ELEVATION_UNITS}
                                     />
+                                ) : (
+                                     <div>&nbsp;</div> // Ligne vide
                                 )}
-                                {!point.height || point.height === point.simulatedHeight || point.height === 0 &&
-                                    <div>&nbsp;</div>}
+
                                 <div className="poi-coordinates">
                                         <span>
                                           {__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)},

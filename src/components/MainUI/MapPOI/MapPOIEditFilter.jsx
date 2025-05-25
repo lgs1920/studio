@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-24
- * Last modified: 2025-05-24
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,7 +21,7 @@ import { FA2SL }                                                           from 
 import React, { useEffect }                                                from 'react'
 import { useSnapshot }                                                     from 'valtio/index'
 
-export const MapPOIEditFilter = () => {
+export const MapPOIEditFilter = ({globals}) => {
 
     const settings = useSnapshot(lgs.settings.poi)
     const store = lgs.mainProxy.components.pois
@@ -144,6 +144,7 @@ export const MapPOIEditFilter = () => {
                                                   onChange={applyFilter}
                     />
                     <SlDivider/>
+                    {globals &&
                     <div className="map-poi-filter-by-type">
                         <SlSwitch size="small" align-right checked={settings.filter.global}
                                   onSlChange={handleGlobal}>
@@ -156,6 +157,7 @@ export const MapPOIEditFilter = () => {
                             </SlSwitch>
                         }
                     </div>
+                    }
                 </div>
             }
         </div>

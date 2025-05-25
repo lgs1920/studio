@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-03-02
- * Last modified: 2025-03-02
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,7 +22,7 @@ import { SlDivider, SlSwitch }        from '@shoelace-style/shoelace/dist/react'
 import React, { useEffect, useState } from 'react'
 import { useSnapshot }                from 'valtio'
 
-export const MapPOIEditSettings = () => {
+export const MapPOIEditSettings = ({globals = true}) => {
 
     const store = lgs.mainProxy.components.pois
     const pois = useSnapshot(store)
@@ -53,7 +53,7 @@ export const MapPOIEditSettings = () => {
     return (
         <>
             <div id="map-poi-edit-settings">
-                <MapPOIEditFilter/>
+                <MapPOIEditFilter globals={globals}/>
                 <div className="map-poi-edit-row">
                     <div className="map-poi-bulk-actions">
                         <ToggleStateIcon initial={allSelected} className={'map-poi-bulk-indicator'}

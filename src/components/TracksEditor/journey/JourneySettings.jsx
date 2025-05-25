@@ -7,14 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-29
- * Last modified: 2025-04-29
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { FAButton } from '@Components/FAButton'
+import { MapPOIEditSettings } from '@Components/MainUI/MapPOI/MapPOIEditSettings'
+import { MapPOIList }         from '@Components/MainUI/MapPOI/MapPOIList'
 import {
     useConfirm,
 }                   from '@Components/Modals/ConfirmUI'
@@ -502,7 +504,8 @@ export const JourneySettings = function JourneySettings() {
                          * POIs Tab Panel
                          */}
                         <SlTabPanel name="pois">
-                            <JourneyPOIs/>
+                            <MapPOIEditSettings globals={false}/>
+                            <MapPOIList globals={false}/>
                         </SlTabPanel>
 
                         {/**

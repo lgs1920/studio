@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-24
- * Last modified: 2025-05-24
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,7 +27,7 @@ import classNames                                                 from 'classnam
 import { Fragment, memo, useEffect, useRef }                      from 'react'
 import { snapshot, useSnapshot }                                  from 'valtio/index'
 
-export const MapPOIList = memo(() => {
+export const MapPOIList = memo(({globals = true}) => {
 
     const poiList = useRef(null)
     const $pois = lgs.stores.main.components.pois
@@ -72,16 +72,23 @@ export const MapPOIList = memo(() => {
             let poisToShow = Array.from(pois.list)
 
             // Apply filter by journey and global
-            poisToShow = poisToShow.filter(([id, poi]) => {
-                let include = false
-                if (settings.filter.journey && theJourney.current && theJourney.current.pois.includes(id)) {
-                    include = true
-                }
-                else if (settings.filter.global && !poi.parent) {
-                    include = true
-                }
-                return include
-            })
+            if (globals) {
+                poisToShow = poisToShow.filter(([id, poi]) => {
+                    let include = false
+                    if (settings.filter.journey && theJourney.current && theJourney.current.pois.includes(id)) {
+                        include = true
+                    }
+                    else if (settings.filter.global && !poi.parent) {
+                        include = true
+                    }
+                    return include
+                })
+            }
+            else {
+                poisToShow = poisToShow.filter(([id, poi]) =>
+                                                   settings.filter.journey && theJourney.current?.pois.includes(id),
+                )
+            }
 
 
             // Apply filter byName
@@ -121,10 +128,8 @@ export const MapPOIList = memo(() => {
                   settings?.filter.byName, settings?.filter.alphabetic,
                   settings?.filter.exclude, settings?.filter.byCategories,
                   settings?.filter.journey, settings?.filter.global,
-                  // _poi.current?.title, _poi.current?.category,
-                  // _poi.current?.color, _poi.current?.bgColor,
-                  // _poi.current?.expanded,
                   editor.journey?.slug,
+                  Array.from(pois.list, ([, poi]) => poi.type).join(','),
               ],
     )
 
