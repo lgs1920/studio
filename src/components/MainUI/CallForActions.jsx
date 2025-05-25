@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: CallForActions.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { faRegularRouteCirclePlus } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { faGlobePointer }           from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon }         from '@shoelace-style/shoelace/dist/react'
@@ -13,7 +29,7 @@ export const CallForActions = (props) => {
         lgs.mainUIStore.journeyLoader.visible = true
     }
     const hide = () => {
-        cfa.current.style.opacity = 0
+        cfa.current.style.display = 'none'
     }
 
     useEffect(() => {
