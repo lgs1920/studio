@@ -437,11 +437,14 @@ export class POIManager {
         if (simulate) {
             try {
                 point.simulatedHeight = await this.getHeightFromTerrain({
-                                                                            longitude: json.geometry.coordinates[0],
-                                                                            latitude:  json.geometry.coordinates[1],
+                                                                            coordinates: {
+                                                                                longitude: json.geometry.coordinates[0],
+                                                                                latitude:  json.geometry.coordinates[1],
+                                                                            },
                                                                         })
             }
-            catch {
+            catch (error) {
+                console.log(error)
                 point.simulatedHeight = 0
             }
         }
