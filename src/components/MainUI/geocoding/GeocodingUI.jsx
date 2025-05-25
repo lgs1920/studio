@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-17
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -33,7 +33,7 @@ export const GeocodingUI = () => {
     const settings = useSnapshot(lgs.settings.ui.menu)
 
     const address = useRef(null)
-    const [poi, setPoi] = useState(null)
+    const [, setPoi] = useState(null)
     const [exactMatch, setExactMatch] = useState(false)
     const [coordinates, setCoordinates] = useState(false)
     const [ddCoordinates, setDdCoordinates] = useState(false)
