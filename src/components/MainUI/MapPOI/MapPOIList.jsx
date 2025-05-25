@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-24
- * Last modified: 2025-05-24
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -121,10 +121,8 @@ export const MapPOIList = memo(() => {
                   settings?.filter.byName, settings?.filter.alphabetic,
                   settings?.filter.exclude, settings?.filter.byCategories,
                   settings?.filter.journey, settings?.filter.global,
-                  // _poi.current?.title, _poi.current?.category,
-                  // _poi.current?.color, _poi.current?.bgColor,
-                  // _poi.current?.expanded,
                   editor.journey?.slug,
+                  Array.from(pois.list, ([, poi]) => poi.type).join(','),
               ],
     )
 
