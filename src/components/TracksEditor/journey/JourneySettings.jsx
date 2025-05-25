@@ -7,14 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-29
- * Last modified: 2025-04-29
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { FAButton } from '@Components/FAButton'
+import { MapPOIEditSettings } from '@Components/MainUI/MapPOI/MapPOIEditSettings'
+import { MapPOIList }         from '@Components/MainUI/MapPOI/MapPOIList'
 import {
     useConfirm,
 }                   from '@Components/Modals/ConfirmUI'
@@ -51,7 +53,7 @@ import {
 }                   from '@Editor/Utils'
 import {
     faArrowRotateRight, faCircleDot, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash,
-    faPaintbrushPencil, faRectangleList, faTelescope,
+    faPaintbrushPencil, faRectangleList,
 }                   from '@fortawesome/pro-regular-svg-icons'
 import {
     SlIcon, SlIconButton, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
@@ -444,7 +446,7 @@ export const JourneySettings = function JourneySettings() {
                             </SlTab>
                         }
                         <SlTab slot="nav" panel="pois" active={theJourneyEditor.tabs.journey.pois}>
-                            <SlIcon library="fa" name={FA2SL.set(faTelescope)}/>POIs
+                            <SlIcon library="fa" name={FA2SL.set(faLocationDot)}/>POIs
                         </SlTab>
 
                         {/**
@@ -502,7 +504,8 @@ export const JourneySettings = function JourneySettings() {
                          * POIs Tab Panel
                          */}
                         <SlTabPanel name="pois">
-                            <JourneyPOIs/>
+                            <MapPOIEditSettings globals={false}/>
+                            <MapPOIList globals={false}/>
                         </SlTabPanel>
 
                         {/**
