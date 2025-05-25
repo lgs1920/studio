@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-24
- * Last modified: 2025-05-24
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -387,7 +387,7 @@ export class Journey extends MapElement {
                             parent:   this.slug,
                             type:            POI_STANDARD_TYPE,
                             title:           feature.properties.name,
-                            Description: feature.properties.description ?? '',
+                            description: feature.properties.description ?? '',
                             longitude:       point[0],
                             latitude:        point[1],
                             height:          point[2] ?? undefined,
@@ -424,8 +424,8 @@ export class Journey extends MapElement {
                         const startParameters = {
                             parent:  parentSlug,
                             type:        POI_FLAG_START,
-                            title:       'Track start',
-                            Description: 'Track start',
+                            title:       'Start',
+                            description: 'Track start',
 
                             longitude:       start[0],
                             latitude:        start[1],
@@ -461,8 +461,8 @@ export class Journey extends MapElement {
                         const stopParameters = {
                             parent: parentSlug,
                             type:        POI_FLAG_STOP,
-                            title:       'Track stop',
-                            Description: 'Track stop',
+                            title:       'End',
+                            description: 'Track end',
 
                             longitude:       stop[0],
                             latitude:        stop[1],
