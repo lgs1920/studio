@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-23
- * Last modified: 2025-05-23
+ * Created on: 2025-06-07
+ * Last modified: 2025-06-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -577,7 +577,7 @@ export class CanvasEventManager {
             options = {once: options}
         }
         const entity = options?.entity ?? false
-        const priority = typeof options?.priority === 'number' ? options.priority : (entity === false ? EVENT_LOWEST : 0)
+        const priority = typeof options?.priority === ninth ? options.priority : (entity === false ? EVENT_LOWEST : 0)
         const showSelector = options?.showSelector !== false
         const preventLowerPriority = options?.preventLowerPriority ?? false
         const modifiers = Array.isArray(options?.modifiers) ? options.modifiers.map(mod => mod.toLowerCase()) : []
@@ -1086,6 +1086,7 @@ export class CanvasEventManager {
 
     /**
      * Registers a listener for the MOUSE_ENTER event, triggered once when the mouse starts hovering over an entity.
+     * Alias for onMouseOver.
      *
      * @param {Function} callback - The callback function to execute, receiving (event, entityId, options, userData).
      * @param {Object|boolean} [options={}] - Listener options.
@@ -1114,6 +1115,7 @@ export class CanvasEventManager {
 
     /**
      * Registers a listener for the MOUSE_LEAVE event, triggered once when the mouse leaves an entity.
+     * Alias for onMouseOut.
      *
      * @param {Function} callback - The callback function to execute, receiving (event, entityId, options, userData).
      * @param {Object|boolean} [options={}] - Listener options.
@@ -1134,6 +1136,64 @@ export class CanvasEventManager {
      * @throws {Error} If callback is not a function.
      */
     offMouseLeave(callback) {
+        if (typeof callback !== 'function') {
+            throw new Error('Callback must be a function')
+        }
+        this.off('MOUSE_LEAVE', callback)
+    }
+
+    /**
+     * Registers a listener for the MOUSE_OVER event, triggered once when the mouse starts hovering over an entity.
+     * Alias for onMouseEnter.
+     *
+     * @param {Function} callback - The callback function to execute, receiving (event, entityId, options, userData).
+     * @param {Object|boolean} [options={}] - Listener options.
+     * @param {any} [userData] - User-defined data to pass to the callback.
+     * @throws {Error} If callback is not a function.
+     */
+    onMouseOver(callback, options = {}, userData = null) {
+        if (typeof callback !== 'function') {
+            throw new Error('Callback must be a function')
+        }
+        this.on('MOUSE_ENTER', callback, options, userData)
+    }
+
+    /**
+     * Unregisters a listener for the MOUSE_OVER event.
+     *
+     * @param {Function} callback - The callback function to remove.
+     * @throws {Error} If callback is not a function.
+     */
+    offMouseOver(callback) {
+        if (typeof callback !== 'function') {
+            throw new Error('Callback must be a function')
+        }
+        this.off('MOUSE_ENTER', callback)
+    }
+
+    /**
+     * Registers a listener for the MOUSE_OUT event, triggered once when the mouse leaves an entity.
+     * Alias for onMouseLeave.
+     *
+     * @param {Function} callback - The callback function to execute, receiving (event, entityId, options, userData).
+     * @param {Object|boolean} [options={}] - Listener options.
+     * @param {any} [userData] - User-defined data to pass to the callback.
+     * @throws {Error} If callback is not a function.
+     */
+    onMouseOut(callback, options = {}, userData = null) {
+        if (typeof callback !== 'function') {
+            throw new Error('Callback must be a function')
+        }
+        this.on('MOUSE_LEAVE', callback, options, userData)
+    }
+
+    /**
+     * Unregisters a listener for the MOUSE_OUT event.
+     *
+     * @param {Function} callback - The callback function to remove.
+     * @throws {Error} If callback is not a function.
+     */
+    offMouseOut(callback) {
         if (typeof callback !== 'function') {
             throw new Error('Callback must be a function')
         }
