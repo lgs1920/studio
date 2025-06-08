@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-07
+ * Created on: 2025-06-08
  * Last modified: 2025-06-07
  *
  *
@@ -577,7 +577,7 @@ export class CanvasEventManager {
             options = {once: options}
         }
         const entity = options?.entity ?? false
-        const priority = typeof options?.priority === ninth ? options.priority : (entity === false ? EVENT_LOWEST : 0)
+        const priority = typeof options?.priority === 'number' ? options.priority : (entity === false ? EVENT_LOWEST : 0)
         const showSelector = options?.showSelector !== false
         const preventLowerPriority = options?.preventLowerPriority ?? false
         const modifiers = Array.isArray(options?.modifiers) ? options.modifiers.map(mod => mod.toLowerCase()) : []
