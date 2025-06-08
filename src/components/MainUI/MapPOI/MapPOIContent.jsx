@@ -17,7 +17,6 @@
 import { NameValueUnit }                             from '@Components/DataDisplay/NameValueUnit'
 import { FontAwesomeIcon }                           from '@Components/FontAwesomeIcon'
 import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
-import { ElevationServer }                           from '@Core/Elevation/ElevationServer'
 import { UIToast }                                   from '@Utils/UIToast'
 import { ELEVATION_UNITS }                           from '@Utils/UnitUtils'
 import { snapdom }                                   from '@zumer/snapdom'
@@ -27,6 +26,15 @@ import { memo, useEffect, useRef }                   from 'react'
 import './style.css'
 import { useSnapshot }                               from 'valtio'
 
+/**
+ * A React component that renders the content of a Point of Interest (POI) on the map.
+ * Handles POI display, interactions, and rendering to canvas.
+ *
+ * @component
+ * @param {Object} props - Component properties
+ * @param {Object} props.poi - POI identifier
+ * @returns {JSX.Element} Rendered POI content
+ */
 export const MapPOIContent = memo(({poi}) => {
     const inner = useRef(null)
     const $pois = lgs.stores.main.components.pois
@@ -39,8 +47,8 @@ export const MapPOIContent = memo(({poi}) => {
     /**
      * Get POI by id and set current poi.
      *
-     * @param id
-     * @return {*}
+     * @param {string} id - The POI identifier
+     * @return {Object} The current POI object
      */
     const getPOI = (id) => {
         const current = pois.list.get(id)
@@ -53,18 +61,18 @@ export const MapPOIContent = memo(({poi}) => {
      *
      * For the same poi, it toggles the editor pane.
      *
-     * When the editor is open on a poi  and the user double click on another one,
-     * the editor stays open but focuses on th new poi data.
+     * When the editor is open on a poi and the user double clicks on another one,
+     * the editor stays open but focuses on the new poi data.
      *
-     * @param event
-     * @param entity
+     * @param {Event} event - The event that triggered the handler
+     * @param {string} entity - The POI entity identifier
      */
     const handleEditor = (event, entity) => {
         const thePOI = getPOI(entity)
         if (thePOI.type) {
-        if (__.ui.drawerManager.drawers.open && entity !== current) {
-            __.ui.drawerManager.close()
-        }
+            if (__.ui.drawerManager.drawers.open && entity !== current) {
+                __.ui.drawerManager.close()
+            }
 
             const drawer = thePOI.parent ? JOURNEY_EDITOR_DRAWER : POIS_EDITOR_DRAWER
             __.ui.drawerManager.toggle(drawer, {
@@ -85,8 +93,8 @@ export const MapPOIContent = memo(({poi}) => {
     /**
      * Show context menu for the selected poi.
      *
-     * @param event
-     * @param entity
+     * @param {Event} event - The event that triggered the handler
+     * @param {string} entity - The POI entity identifier
      */
     const handleContextMenu = (event, entity) => {
         const poi = getPOI(entity)
@@ -100,40 +108,67 @@ export const MapPOIContent = memo(({poi}) => {
         }
     }
 
-    const toggleExpand = (event, id, options, data) => {
-        const poi = $pois.list.get(id)
-        if (data?.forced !== undefined) {
-            if (data.forced) {
-                if (poi.expanded !== true) {
-                    Object.assign(poi, {
-                        expanded:         true,
-                        previousExpanded: poi.expanded,
-                    })
-                }
-            }
-            else {
-                if (poi.previousExpanded !== undefined && poi.expanded !== poi.previousExpanded) {
-                    Object.assign(poi, {
-                        expanded:         poi.previousExpanded,
-                        previousExpanded: undefined,
-                    })
-                }
-            }
-        }
-        else {
-            Object.assign(poi, {expanded: !poi.expanded})
+    /**
+     * Handles click events on the POI.
+     * Toggles the expanded state of the POI.
+     *
+     * @param {Event} event - The click event
+     * @param {string} entity - The POI entity identifier
+     */
+    const handleClick = (event, entity) => {
+        const poi = getPOI(entity)
+        Object.assign($pois.list.get(entity), {
+            expanded: !poi.expanded,
+        })
+    }
+
+    /**
+     * Handles mouse over events on the POI.
+     * Expands the POI if it's not already expanded.
+     *
+     * @param {Event} event - The mouse over event
+     * @param {string} entity - The POI entity identifier
+     * @param {Object} options - Additional options
+     * @param {Object} data - Additional data
+     */
+    const handleMouseOver = (event, entity, options, data) => {
+        const poi = getPOI(entity)
+        if (!poi.expanded) {
+            Object.assign($pois.list.get(entity), {
+                expanded:            true,
+                isMouseOverExpanded: true,
+            })
         }
     }
 
     /**
-     * Adds event listeners for a MapPOI
-     * @param {MapPOI} poi - MapPOI instance to add listeners for
+     * Handles mouse out events on the POI.
+     * Collapses the POI if it was expanded due to mouse over.
+     *
+     * @param {Event} event - The mouse out event
+     * @param {string} entity - The POI entity identifier
+     * @param {Object} options - Additional options
+     * @param {Object} data - Additional data
+     */
+    const handleMouseOut = (event, entity, options, data) => {
+        const poi = getPOI(entity)
+        if (poi.expanded && poi.isMouseOverExpanded) {
+            Object.assign($pois.list.get(entity), {
+                expanded:            false,
+                isMouseOverExpanded: false,
+            })
+        }
+    }
+
+
+    /**
+     *
      */
     const addPOIEventListeners = poi => {
 
         // Toggles POI size on click
-        __.canvasEvents.onClick(toggleExpand, {entity: poi.id}, {expanded: poi.expanded})
-        __.canvasEvents.onTap(toggleExpand, {entity: poi.id}, {expanded: poi.expanded})
+        __.canvasEvents.onClick(handleClick, {entity: poi.id})
+        __.canvasEvents.onTap(handleClick, {entity: poi.id})
 
         // Open editor on Double Click/double tap
         __.canvasEvents.onDoubleClick(handleEditor, {entity: poi.id, preventLowerPriority: true})
@@ -143,8 +178,9 @@ export const MapPOIContent = memo(({poi}) => {
         __.canvasEvents.onRightClick(handleContextMenu, {entity: poi.id, preventLowerPriority: true})
         __.canvasEvents.onLongTap(handleContextMenu, {entity: poi.id, preventLowerPriority: true})
 
-        __.canvasEvents.onMouseOver(toggleExpand, {entity: poi.id, preventLowerPriority: true}, {forced: true})
-        __.canvasEvents.onMouseOut(toggleExpand, {entity: poi.id, preventLowerPriority: true}, {forced: false})
+        // TODO FIX
+        // __.canvasEvents.onMouseOver(handleMouseOver, {entity: poi.id, preventLowerPriority: true})
+        // __.canvasEvents.onMouseOut(handleMouseOut, {entity: poi.id, preventLowerPriority: true})
     }
 
     /**

@@ -61,7 +61,7 @@ export class MapPOI extends MapElement {
      * @type {boolean}
      */
     expanded = false
-    previousExpanded = undefined
+    isMouseOverExpanded = false
 
     /**
      * @type {number}
