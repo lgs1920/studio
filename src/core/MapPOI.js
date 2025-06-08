@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-24
- * Last modified: 2025-05-24
+ * Created on: 2025-06-08
+ * Last modified: 2025-06-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -61,6 +61,7 @@ export class MapPOI extends MapElement {
      * @type {boolean}
      */
     expanded = false
+    previousExpanded = undefined
 
     /**
      * @type {number}

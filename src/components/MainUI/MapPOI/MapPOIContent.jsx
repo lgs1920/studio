@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-25
- * Last modified: 2025-05-25
+ * Created on: 2025-06-08
+ * Last modified: 2025-06-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -101,9 +101,28 @@ export const MapPOIContent = memo(({poi}) => {
     }
 
     const toggleExpand = (event, id, options, data) => {
-        Object.assign($pois.list.get(id), {
-            expanded: !data?.expanded,
-        })
+        const poi = $pois.list.get(id)
+        if (data?.forced !== undefined) {
+            if (data.forced) {
+                if (poi.expanded !== true) {
+                    Object.assign(poi, {
+                        expanded:         true,
+                        previousExpanded: poi.expanded,
+                    })
+                }
+            }
+            else {
+                if (poi.previousExpanded !== undefined && poi.expanded !== poi.previousExpanded) {
+                    Object.assign(poi, {
+                        expanded:         poi.previousExpanded,
+                        previousExpanded: undefined,
+                    })
+                }
+            }
+        }
+        else {
+            Object.assign(poi, {expanded: !poi.expanded})
+        }
     }
 
     /**
@@ -111,6 +130,7 @@ export const MapPOIContent = memo(({poi}) => {
      * @param {MapPOI} poi - MapPOI instance to add listeners for
      */
     const addPOIEventListeners = poi => {
+
         // Toggles POI size on click
         __.canvasEvents.onClick(toggleExpand, {entity: poi.id}, {expanded: poi.expanded})
         __.canvasEvents.onTap(toggleExpand, {entity: poi.id}, {expanded: poi.expanded})
@@ -123,15 +143,8 @@ export const MapPOIContent = memo(({poi}) => {
         __.canvasEvents.onRightClick(handleContextMenu, {entity: poi.id, preventLowerPriority: true})
         __.canvasEvents.onLongTap(handleContextMenu, {entity: poi.id, preventLowerPriority: true})
 
-        // __.canvasEvents.onKeyDown(
-        //     (event, entityId, options, userData) => {
-        //         if (event.altKey) { // Exclure Shift, même si Ctrl+Alt sont requis
-        //             console.log('Alt+S (no Shift):', {entityId, userData})
-        //         }
-        //     },
-        //     {modifiers: ['alt'], keys: ['s'], entity: poi.id},
-        //     {action: 'save'},
-        // )
+        __.canvasEvents.onMouseOver(toggleExpand, {entity: poi.id, preventLowerPriority: true}, {forced: true})
+        __.canvasEvents.onMouseOut(toggleExpand, {entity: poi.id, preventLowerPriority: true}, {forced: false})
     }
 
     /**
