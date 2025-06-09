@@ -68,34 +68,53 @@ export const MapPOIContent = memo(({poi}) => {
      * @param {string} entity - The POI entity identifier
      */
     const handleEditor = (event, entity) => {
+        const current = pois.current
         const thePOI = getPOI(entity)
         if (thePOI.type) {
-            if (__.ui.drawerManager.drawers.open && entity !== current) {
+            if (__.ui.drawerManager.drawers.open && entity === current) {
                 __.ui.drawerManager.close()
             }
 
             const drawer = thePOI.parent ? JOURNEY_EDITOR_DRAWER : POIS_EDITOR_DRAWER
-
+            let same = true
+            const tab = 'pois'
             if (thePOI.parent) {
                 const newJourney = lgs.getJourneyByTrackSlug(thePOI.parent)
+
                 if (newJourney.slug !== lgs.theJourney.slug) {
                     // it is a different journey
                     newJourney.addToContext()
                     newJourney.addToEditor()
                 }
                 const newTrack = lgs.getTrackBySlug(thePOI.parent)
-                if (newTrack.slug !== lgs.theTrack.slug) {
+                same = newTrack.slug === lgs.theTrack.slug
+                if (!same) {
                     // It is a different track
                     newTrack.addToContext()
                     newTrack.addToEditor()
                 }
             }
 
-            __.ui.drawerManager.toggle(drawer, {
-                action: 'edit-current',
-                entity: entity,
-                tab:    'pois',
-            })
+            //  Clicking on a different journey or track always open the drawer
+            //  Clicking on the same toggles the drawer
+            if (same) {
+                __.ui.drawerManager.toggle(drawer, {
+                    action: 'edit-current',
+                    entity: entity,
+                    tab:    tab,
+                })
+            }
+            else {
+                __.ui.drawerManager.open(drawer, {
+                    action: 'edit-current',
+                    entity: entity,
+                    tab:    tab,
+                })
+            }
+
+            lgs.stores.journeyEditor.tabs.journey[tab] = true
+
+
         }
         else {
             UIToast.warning({
@@ -103,7 +122,6 @@ export const MapPOIContent = memo(({poi}) => {
                                 text:    `It is a temporary POI. Use ${'Save As POI'} in the context menu then you will be able to.`,
                             })
         }
-        current = entity
     }
 
     /**

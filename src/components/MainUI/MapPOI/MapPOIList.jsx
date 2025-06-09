@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-25
- * Last modified: 2025-05-25
+ * Created on: 2025-06-09
+ * Last modified: 2025-06-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -64,68 +64,67 @@ export const MapPOIList = memo(({globals = true}) => {
 
     useEffect(() => {
 
-            theJourney.current = lgs.theJourney
+        theJourney.current = lgs.theJourney
 
-            // Clear action once built
-            if (drawers.action) {
-                //TODO rechercherrle tab goup et ouvrir le tab avec tab.show()
+        // Clear action once built
+        if (drawers.action) {
+            //TODO rechercherrle tab goup et ouvrir le tab avec tab.show()
 
-                lgs.mainProxy.drawers.action = null
-            }
+            lgs.mainProxy.drawers.action = null
+        }
 
-            let poisToShow = Array.from(pois.list)
+        let poisToShow = Array.from(pois.list)
 
-            // Apply filter by journey and global
-            if (onlyJourney) {
-                poisToShow = poisToShow.filter(([id, poi]) =>
-                                                   settings.filter.journey && theJourney.current?.pois.includes(id),
-                )
+        // Apply filter by journey and global
+        if (onlyJourney) {
+            poisToShow = poisToShow.filter(([id, poi]) =>
+                                               settings.filter.journey && theJourney.current?.pois.includes(id),
+            )
+        }
+        else {
+            poisToShow = poisToShow.filter(([id, poi]) => {
+                let include = false
+                if (settings.filter.journey && theJourney.current && theJourney.current.pois.includes(id)) {
+                    include = true
+                }
+                else if (settings.filter.global && !poi.parent) {
+                    include = true
+                }
+                return include
+            })
+        }
+
+
+        // Apply filter byName
+        poisToShow = Array.from(poisToShow)
+            .filter(entry => entry[1]?.title?.toLowerCase().includes(settings.filter.byName.toLowerCase()))
+
+        // Alphabetic/reverse sorting
+        poisToShow = poisToShow.sort((a, b) => {
+            if (settings.filter.alphabetic) {
+                return a[1].title.localeCompare(b[1].title)
             }
             else {
-                poisToShow = poisToShow.filter(([id, poi]) => {
-                    let include = false
-                    if (settings.filter.journey && theJourney.current && theJourney.current.pois.includes(id)) {
-                        include = true
-                    }
-                    else if (settings.filter.global && !poi.parent) {
-                        include = true
-                    }
-                    return include
-                })
+                return b[1].title.localeCompare(a[1].title)
             }
+        })
 
-
-            // Apply filter byName
-            poisToShow = Array.from(poisToShow)
-                .filter(entry => entry[1]?.title?.toLowerCase().includes(settings.filter.byName.toLowerCase()))
-
-            // Alphabetic/reverse sorting
-            poisToShow = poisToShow.sort((a, b) => {
-                if (settings.filter.alphabetic) {
-                    return a[1].title.localeCompare(b[1].title)
-                }
-                else {
-                    return b[1].title.localeCompare(a[1].title)
-                }
-            })
-
-            // Apply Filter by category
-            if (settings.filter.byCategories.length > 0) {
-                if (settings.filter.exclude) { // We exclude the items in the list
-                    poisToShow = poisToShow.filter(([id, objet]) => !(settings.filter.byCategories.includes(objet.category)))
-                }
-                else {
-                    poisToShow = poisToShow.filter(([id, objet]) => settings.filter.byCategories.includes(objet.category))
-                }
+        // Apply Filter by category
+        if (settings.filter.byCategories.length > 0) {
+            if (settings.filter.exclude) { // We exclude the items in the list
+                poisToShow = poisToShow.filter(([id, objet]) => !(settings.filter.byCategories.includes(objet.category)))
             }
+            else {
+                poisToShow = poisToShow.filter(([id, objet]) => settings.filter.byCategories.includes(objet.category))
+            }
+        }
 
-
-            $pois.filteredList.clear()
-            $pois.bulkList.clear()
-            poisToShow.forEach(([key, value]) => {
-                $pois.filteredList.set(key, value)
-                $pois.bulkList.set(key, false)
-            })
+        $pois.filteredList.clear()
+        $pois.bulkList.clear()
+        poisToShow.forEach(([key, value]) => {
+            $pois.filteredList.set(key, value)
+            $pois.bulkList.set(key, false)
+        })
 
               }, [
                   pois.current, pois.size,
