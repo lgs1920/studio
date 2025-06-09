@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-08
- * Last modified: 2025-06-08
+ * Created on: 2025-06-09
+ * Last modified: 2025-06-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -75,6 +75,22 @@ export const MapPOIContent = memo(({poi}) => {
             }
 
             const drawer = thePOI.parent ? JOURNEY_EDITOR_DRAWER : POIS_EDITOR_DRAWER
+
+            if (thePOI.parent) {
+                const newJourney = lgs.getJourneyByTrackSlug(thePOI.parent)
+                if (newJourney.slug !== lgs.theJourney.slug) {
+                    // it is a different journey
+                    newJourney.addToContext()
+                    newJourney.addToEditor()
+                }
+                const newTrack = lgs.getTrackBySlug(thePOI.parent)
+                if (newTrack.slug !== lgs.theTrack.slug) {
+                    // It is a different track
+                    newTrack.addToContext()
+                    newTrack.addToEditor()
+                }
+            }
+
             __.ui.drawerManager.toggle(drawer, {
                 action: 'edit-current',
                 entity: entity,
