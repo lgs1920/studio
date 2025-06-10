@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-19
- * Last modified: 2025-05-19
+ * Created on: 2025-06-10
+ * Last modified: 2025-06-10
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 import { faArrowsFromLine, faArrowsToLine, faLocationDot, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
 import { faEye, faMask }                                               from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
+import { FontAwesomeIcon }       from '@Components/FontAwesomeIcon'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem }            from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                       from '@Utils/FA2SL'
 import { useEffect, useState }                                         from 'react'
@@ -33,11 +34,13 @@ import './style.css'
  * The component relies on the state of the application's POI data and uses the provided
  * UI functionalities to handle interactions with the POI and the map view.
  */
-export const MapPOIBulkActionsMenu = () => {
+export const MapPOIBulkActionsMenu = (globals) => {
 
     const $pois = lgs.mainProxy.components.pois
     const pois = useSnapshot($pois)
     const [disabled, setDisabled] = useState(false)
+    const drawers = useSnapshot(lgs.mainProxy.drawers)
+    const onlyJourney = drawers.open === JOURNEY_EDITOR_DRAWER
 
     const hide = async () => {
         $pois.bulkList.forEach((canHide, id) => {
@@ -96,14 +99,25 @@ export const MapPOIBulkActionsMenu = () => {
             let poi = 0
             results.forEach(result => {
                 if (result.success) {
-                    $pois.filteredList.delete(result.id)
+                    if (onlyJourney) {
+                        $pois.filtered.journey.delete(result.id)
+                    }
+                    else {
+                        $pois.filtered.global.delete(result.id)
+                    }
                 }
             })
         })
 
         // Change current id needed (false if the list is empty)
         if (needToChangeCurrent) {
-            $pois.current = $pois.filteredList.size > 0 ? $pois.filteredList.entries().next().value : false
+            if (onlyJourney) {
+                $pois.current = $pois.filtered.journey.size > 0 ? $pois.filtered.journey.entries().next().value : false
+            }
+            else {
+                $pois.current = $pois.filtered.global.size > 0 ? $pois.filtered.global.entries().next().value : false
+            }
+
         }
 
         $pois.bulkList.clear()

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-25
- * Last modified: 2025-05-25
+ * Created on: 2025-06-10
+ * Last modified: 2025-06-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -205,7 +205,8 @@ export const MapPOIContextMenu = () => {
             .then((result) => {
                 hideMenu()
                 if (result.success) {
-                    $pois.filteredList.delete(result.id)
+                    $pois.filtered.global.delete(result.id)
+                    $pois.filtered.journey.delete(result.id)
                     $pois.bulkList.delete(result.id)
                     $pois.current = false
                 }

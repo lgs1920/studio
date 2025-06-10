@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-25
- * Last modified: 2025-05-25
+ * Created on: 2025-06-10
+ * Last modified: 2025-06-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -509,8 +509,12 @@ export class POIManager {
         // Remove the POI from the lists and the database
         this.list.delete(id)
         lgs.stores.main.components.pois.list.delete(id)
-        lgs.stores.main.components.pois.filteredList.delete(id)
-
+        if (lgs.stores.main.components.pois.filtered.global.has(id)) {
+            lgs.stores.main.components.pois.filtered.global.delete(id)
+        }
+        if (lgs.stores.main.components.pois.filtered.journey.has(id)) {
+            lgs.stores.main.components.pois.filtered.journey.delete(id)
+        }
         await poi.remove(dbSync)
 
         // Show a success toast only if force = true and the POI is not STARTER

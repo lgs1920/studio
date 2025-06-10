@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-24
- * Last modified: 2025-05-24
+ * Created on: 2025-06-10
+ * Last modified: 2025-06-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -70,11 +70,20 @@ export const MapPOIEditContent = ({poi}) => {
             })
 
         }
-        $pois.filteredList.set(point.id, {
-            ...$pois.filteredList.get(point.id),
-            color:   point.color,
-            bgColor: point.bgColor,
-        })
+        if ($pois.filtered.global.has(point.id)) {
+            $pois.filtered.global.set(point.id, {
+                ...$pois.filtered.global.get(point.id),
+                color:   point.color,
+                bgColor: point.bgColor,
+            })
+        }
+        if ($pois.filtered.journey.has(point.id)) {
+            $pois.filtered.journey.set(point.id, {
+                ...$pois.filtered.journey.get(point.id),
+                color:   point.color,
+                bgColor: point.bgColor,
+            })
+        }
         await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
 
         event.preventDefault()

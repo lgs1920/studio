@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-25
- * Last modified: 2025-05-25
+ * Created on: 2025-06-10
+ * Last modified: 2025-06-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -437,11 +437,11 @@ export const JourneySettings = function JourneySettings() {
                         <SlTab slot="nav" panel="edit" active={theJourneyEditor.tabs.journey.edit}>
                             <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
                         </SlTab>
-                        {theJourneyEditor.journey.tracks.size === 1 &&
-                            <SlTab slot="nav" panel="points" active={theJourneyEditor.tabs.journey.points}>
-                                <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points
-                            </SlTab>
-                        }
+                        {/* {theJourneyEditor.journey.tracks.size === 1 && */}
+                        {/*     <SlTab slot="nav" panel="points" active={theJourneyEditor.tabs.journey.points}> */}
+                        {/*         <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points */}
+                        {/*     </SlTab> */}
+                        {/* } */}
                         <SlTab slot="nav" panel="pois" active={theJourneyEditor.tabs.journey.pois}>
                             <SlIcon library="fa" name={FA2SL.set(faLocationDot)}/>POIs
                         </SlTab>
@@ -501,8 +501,8 @@ export const JourneySettings = function JourneySettings() {
                          * POIs Tab Panel
                          */}
                         <SlTabPanel name="pois">
-                            <MapPOIEditSettings globals/>
-                            <MapPOIList globals={false}/>
+                            <MapPOIEditSettings/>
+                            <MapPOIList/>
                         </SlTabPanel>
 
                         {/**

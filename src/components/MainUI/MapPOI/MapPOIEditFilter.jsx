@@ -7,27 +7,29 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-25
- * Last modified: 2025-05-25
+ * Created on: 2025-06-10
+ * Last modified: 2025-06-10
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 import { MapPOICategorySelectorFilter }                                    from '@Components/MainUI/MapPOI/MapPOICategorySelectorFilter'
 import { ToggleStateIcon }                                                 from '@Components/ToggleStateIcon'
-import { faArrowDownAZ, faArrowDownZA, faFilter, faFilterSlash, faEraser } from '@fortawesome/pro-regular-svg-icons'
+import { JOURNEY_EDITOR_DRAWER }                                           from '@Core/constants'
+import { faArrowDownAZ, faArrowDownZA, faEraser, faFilter, faFilterSlash } from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDivider, SlIconButton, SlInput, SlSwitch, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                           from '@Utils/FA2SL'
 import React, { useEffect }                                                from 'react'
 import { useSnapshot }                                                     from 'valtio/index'
 
-export const MapPOIEditFilter = ({globals}) => {
+export const MapPOIEditFilter = () => {
 
     const settings = useSnapshot(lgs.settings.poi)
     const store = lgs.mainProxy.components.pois
     const pois = useSnapshot(store)
 
-    const onlyJourney = false //!globals
+    const drawers = useSnapshot(lgs.mainProxy.drawers)
+    const onlyJourney = drawers.open === JOURNEY_EDITOR_DRAWER
 
     const handleFilter = () => {
         lgs.settings.poi.filter.open = !lgs.settings.poi.filter.open
@@ -81,15 +83,20 @@ export const MapPOIEditFilter = ({globals}) => {
         lgs.settings.poi.filter.active = lgs.settings.poi.filter.byName !== ''
             || !lgs.settings.poi.filter.alphabetic
             || lgs.settings.poi.filter.byCategories.length > 0
-            || !lgs.settings.poi.filter.global || !lgs.settings.poi.filter.journey
+
+        if (!onlyJourney) {
+            lgs.settings.poi.filter.active = lgs.settings.poi.filter.active || !lgs.settings.poi.filter.global || lgs.settings.poi.filter.journey
+        }
     }
 
     const resetFilter = () => {
         lgs.settings.poi.filter.byName = ''
         lgs.settings.poi.filter.alphabetic = true
         lgs.settings.poi.filter.byCategories = []
-        lgs.settings.poi.filter.global = true
-        lgs.settings.poi.filter.journey = filter
+        if (!onlyJourney) {
+            lgs.settings.poi.filter.global = true
+            lgs.settings.poi.filter.journey = false
+        }
     }
 
     useEffect(() => {
@@ -146,20 +153,25 @@ export const MapPOIEditFilter = ({globals}) => {
                                                   onChange={applyFilter}
                     />
                     <SlDivider/>
-                    {!onlyJourney &&
+
                     <div className="map-poi-filter-by-type">
-                        <SlSwitch size="small" align-right checked={settings.filter.global}
-                                  onSlChange={handleGlobal}>
-                            {'Display Global POIs'}
-                        </SlSwitch>
-                        {lgs.theJourney &&
-                            <SlSwitch size="small" align-right checked={settings.filter.journey}
-                                      onSlChange={handleJourney}>
-                                {'Display Journey POIs'}
-                            </SlSwitch>
+                        {!onlyJourney &&
+                            <>
+                                <SlSwitch size="small" align-right checked={settings.filter.global}
+                                          onSlChange={handleGlobal}>
+                                    {'Display Global POIs'}
+                                </SlSwitch>
+
+                                {lgs.theJourney &&
+                                    <SlSwitch size="small" align-right checked={settings.filter.journey}
+                                              onSlChange={handleJourney}>
+                                        {'Display Journey POIs'}
+                                    </SlSwitch>
+                                }
+                            </>
                         }
                     </div>
-                    }
+
                 </div>
             }
         </div>
