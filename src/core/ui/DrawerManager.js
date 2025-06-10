@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-09
- * Last modified: 2025-06-09
+ * Created on: 2025-06-10
+ * Last modified: 2025-06-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -107,8 +107,8 @@ export class DrawerManager {
      */
     open = (id, options) => {
         this.drawers.open = id
-        this.drawers.action = options.action
-        if (options.tab) {
+        this.drawers.action = options?.action ?? ''
+        if (options?.tab) {
             this.openTab(options.tab)
         }
     }
