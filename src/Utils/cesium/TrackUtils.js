@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-29
- * Last modified: 2025-04-29
+ * Created on: 2025-06-10
+ * Last modified: 2025-06-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -113,10 +113,10 @@ export class TrackUtils {
             case DRAWING_FROM_DB:
             case ADD_JOURNEY:
                 await source.load(track.content,
-                            {
-                                clampToGround: true,
-                                name:          track.title,
-                            },
+                                  {
+                                      clampToGround: true,
+                                      name:          track.title,
+                                  },
                 )
             // No break, show must go on
             case REFRESH_DRAWING:
@@ -271,7 +271,6 @@ export class TrackUtils {
                                     })
         }
     }
-
 
 
     /**
@@ -483,7 +482,12 @@ export class TrackUtils {
             lgs.theTrack = lgs.theJourney.tracks.get(currentTrack)
         }
         else {
-            lgs.theTrack = lgs.theJourney.tracks.entries().next().value[1]
+            try {
+                lgs.theTrack = lgs.theJourney.tracks.entries().next()?.value[1] ?? null
+            }
+            catch () {
+                lgs.theTrack = null
+            }
         }
         // Add it to editor context
         lgs.theTrack.addToEditor()
