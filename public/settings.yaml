@@ -108,6 +108,7 @@ swatches:
     # 2 others are theme dependant
 
   distribution: 'sequence'
+  current: 0
 
 ########################################
 # Tracks and POIs
