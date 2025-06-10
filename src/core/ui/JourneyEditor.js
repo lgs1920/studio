@@ -1,14 +1,29 @@
-import { subscribe }                                                           from 'valtio'
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneyEditor.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-10
+ * Last modified: 2025-06-10
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { COLOR_SWATCHES_NONE, COLOR_SWATCHES_RANDOM, COLOR_SWATCHES_SEQUENCE } from '@Core/constants'
+import { subscribe }                                                           from 'valtio'
 
 
 export class JourneyEditor {
 
-    /** @param swatchIndex {integer} : color index */
-    swatchIndex=0
-
     /** @param swatchesLength {number} : length of color palette */
-    swatchesLength = lgs.settings.getSwatches.list.length
+    swatchesLength = lgs.settings.swatches.list.length
+    /** @param swatchIndex {integer} : color index */
+    swatchesIndex = lgs.settings.swatches?.current ?? 0
 
     constructor() {
         // Singleton
@@ -22,7 +37,7 @@ export class JourneyEditor {
         JourneyEditor.instance = this
     }
 
-    trackChanges= ()=> {
+    trackChanges = () => {
     }
 
     /**
@@ -32,20 +47,22 @@ export class JourneyEditor {
      *
      * @return color {string}
      */
-     newColor=(reset = false)=> {
+    newColor = (reset = false) => {
 
-         switch (lgs.settings.getSwatches.distribution) {
+        switch (lgs.settings.getSwatches.distribution) {
             case COLOR_SWATCHES_NONE:       // Always the first
-                this.swatchIndex =0
-                return lgs.settings.getSwatches.list[this.swatchIndex]
-             case COLOR_SWATCHES_SEQUENCE:      // Increment index each time
-                if (this.swatchIndex  ===  this.swatchesLength || reset ) {
-                    this.swatchIndex =0
+                this.swatchesIndex = 0
+                return lgs.settings.swatches.list[this.swatchesIndex]
+            case COLOR_SWATCHES_SEQUENCE:      // Increment index each time
+                this.swatchesIndex = lgs.settings.swatches.current++ ?? 0
+                if (this.swatchesIndex === this.swatchesLength || reset) {
+                    this.swatchesIndex = 0
                 }
-                 return lgs.settings.getSwatches.list[this.swatchIndex++]
+                lgs.settings.swatches.current = ++this.swatchesIndex
+                return lgs.settings.swatches.list[this.swatchesIndex]
             case COLOR_SWATCHES_RANDOM:      // Randomize
-                this.swatchIndex =Math.floor(Math.random() * this.swatchesLength)
-                return lgs.settings.getSwatches.list[this.swatchIndex]
+                this.swatchesIndex = Math.floor(Math.random() * this.swatchesLength)
+                return lgs.settings.swatches.list[this.swatchesIndex]
         }
     }
 
