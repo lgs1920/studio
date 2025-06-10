@@ -485,7 +485,7 @@ export class TrackUtils {
             try {
                 lgs.theTrack = lgs.theJourney.tracks.entries().next()?.value[1] ?? null
             }
-            catch () {
+            catch {
                 lgs.theTrack = null
             }
         }
