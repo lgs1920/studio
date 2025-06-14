@@ -41,7 +41,6 @@ const LAYERS_TYPE = [BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY]
  * @returns {JSX.Element} The CreditsBar component.
  */
 export const CreditsBar = () => {
-    console.log('CreditsBar rendered at', new Date().toLocaleString()) // Log on each render
 
     const providers = useSnapshot($providers)
 
@@ -56,7 +55,6 @@ export const CreditsBar = () => {
      */
     const Credit = memo(({type, provider}) => {
         const credits = () => {
-            console.log('Computing credits')
             const layer = __.layersAndTerrainManager.getEntityProxy(lgs.settings.layers[type])
             return `${type} : ${layer?.credits ?? provider.credits ?? `credits ${provider.name}`}`
         };
