@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-14
- * Last modified: 2025-05-14
+ * Created on: 2025-06-14
+ * Last modified: 2025-06-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -34,8 +34,8 @@ import {
     MENU_START_END,
     MENU_START_START, MOBILE_MAX, SCENE_MODE_2D, SECOND, START, TOP,
 } from '@Core/constants'
-import { JourneyToolbar } from '@Editor/JourneyToolbar'
-import { useEffect, useRef, useState } from 'react'
+import { JourneyToolbar }                    from '@Editor/JourneyToolbar'
+import { memo, useEffect, useRef, useState } from 'react'
 
 import './style.css'
 import { useMediaQuery }                    from 'react-responsive'
@@ -59,7 +59,7 @@ import { SupportUIButton }                  from './SupportUIButton'
 
 export const MainUI = () => {
 
-    const snap = useSnapshot(lgs.mainProxy)
+    const hidden = useSnapshot(lgs.stores.main.components.welcome).hidden
     const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
     const settings = useSnapshot(lgs.settings.ui.menu)
     const clickTimeout = useRef(null)
@@ -96,6 +96,13 @@ export const MainUI = () => {
         if (lgs.settings.scene.mode.value === SCENE_MODE_2D.value) {
             lgs.scene.morphTo2D(0)
         }
+
+        subscribe(lgs.mainProxy.drawers, arrangeDrawers)
+        subscribe(lgs.settings.ui.menu, arrangeDrawers)
+        window.addEventListener('resize', windowResized)
+
+        arrangeDrawers()
+
         // we need to manage some canvas events
         __.canvasEvents.addEventListener(EVENTS.DOUBLE_TAP, closeDrawer)
         __.canvasEvents.addEventListener(EVENTS.DOUBLE_CLICK, closeDrawer)
@@ -103,6 +110,8 @@ export const MainUI = () => {
         return () => {
             __.canvasEvents.removeEventListener(EVENTS.DOUBLE_TAP, closeDrawer)
             __.canvasEvents.removeEventListener(EVENTS.DOUBLE_CLICK, closeDrawer)
+            window.removeEventListener('resize', windowResized)
+
 
         }
 
@@ -194,11 +203,7 @@ export const MainUI = () => {
 
 
     }
-    subscribe(lgs.mainProxy.drawers, arrangeDrawers)
-    subscribe(lgs.settings.ui.menu, arrangeDrawers)
-    window.addEventListener('resize', windowResized)
 
-    arrangeDrawers()
 
     const SupportUIDialog = () => {
         return (<SupportUI/>)
@@ -208,7 +213,7 @@ export const MainUI = () => {
     return (
         <>
             <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
-                {snap.components.welcome.hidden &&
+                {hidden &&
                     <>
                         <div id={'primary-buttons-bar'} className={primaryEntrance}>
                             <SettingsButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
@@ -235,7 +240,7 @@ export const MainUI = () => {
 
                     </>
                 }
-                {snap.components.welcome.hidden && <CallForActions/>}
+                {hidden && <CallForActions/>}
 
                 <CameraTarget/>
                 <div id={'bottom-left-ui'}>
@@ -273,4 +278,3 @@ export const MainUI = () => {
         </>
     )
 }
-
