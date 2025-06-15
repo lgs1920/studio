@@ -14,33 +14,35 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { useSnapshot }                                     from 'valtio'
-import { FontAwesomeIcon }                                 from '@Components/FontAwesomeIcon'
+import { FontAwesomeIcon }                           from '@Components/FontAwesomeIcon'
 import {
     MapPOICategorySelector,
-}                                                          from '@Components/MainUI/MapPOI/MapPOICategorySelector'
+}                                                    from '@Components/MainUI/MapPOI/MapPOICategorySelector'
 import {
     MapPOIEditMenu,
-}                                                          from '@Components/MainUI/MapPOI/MapPOIEditMenu'
+}                                                    from '@Components/MainUI/MapPOI/MapPOIEditMenu'
 import {
-    faCopy, faSquareQuestion, faClock,
-}                                                          from '@fortawesome/pro-regular-svg-icons'
+    faClock, faCopy, faSquareQuestion,
+}                                                    from '@fortawesome/pro-regular-svg-icons'
 import {
     SlColorPicker, SlDivider, SlIconButton, SlInput, SlTextarea, SlTooltip,
-}                                                          from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                           from '@Utils/FA2SL'
-import { UIToast }                                         from '@Utils/UIToast'
+}                                                    from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                     from '@Utils/FA2SL'
+import { UIToast }                                   from '@Utils/UIToast'
 import { ELEVATION_UNITS, foot, IMPERIAL, INTERNATIONAL, UnitUtils } from '@Utils/UnitUtils'
-import classNames                                          from 'classnames'
-import parse                                               from 'html-react-parser'
-import { DateTime }                                        from 'luxon'
+import classNames                                    from 'classnames'
+import parse                                         from 'html-react-parser'
+import { DateTime }                                  from 'luxon'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSnapshot }                               from 'valtio'
 
 // Pre-calculated icon
 const ICON_COPY = FA2SL.set(faCopy)
+const ICON_HELP = FA2SL.set(faSquareQuestion)
+
 
 /**
- * A memoized React component for editing the content of a Point of Interest (POI).
+ * A React component for editing the content of a Point of Interest (POI).
  * @param {Object} props - Component props
  * @param {Object} props.poi - The POI object to edit
  * @returns {JSX.Element|null} The rendered edit content or null if no POI
@@ -71,7 +73,7 @@ export const MapPOIEditContent = (({poi}) => {
     const longitude = useMemo(() => __.convert(point?.longitude).to(settings.coordinateSystem.current), [point?.longitude, settings.coordinateSystem.current])
 
     // Memoized event handlers
-    const handleChangeAltitude = useCallback(async (event) => {
+    const handleChangeAltitude = async (event) => {
         if (window.isOK) {
             const height = event.target.value * 1
             const newPoint = {
@@ -82,9 +84,9 @@ export const MapPOIEditContent = (({poi}) => {
             await __.ui.poiManager.persistToDatabase(newPoint)
             setSimulated(newPoint.height === newPoint.simulatedHeight)
         }
-    }, [point.id, settings.unitSystem.current, $pois])
+    }
 
-    const handleChangeColor = useCallback(async (event, type) => {
+    const handleChangeColor = async (event, type) => {
         const value = event.target.value
         const newPoint = {
             ...$pois.list.get(point.id),
@@ -110,18 +112,18 @@ export const MapPOIEditContent = (({poi}) => {
 
         event.preventDefault()
         event.stopPropagation()
-    }, [point.id, $pois])
+    }
 
-    const handleChangeLatitude = useCallback(async (event) => {
+    const handleChangeLatitude = async (event) => {
         const newPoint = {
             ...$pois.list.get(point.id),
             latitude: event.target.value * 1,
         }
         $pois.list.set(point.id, newPoint)
         await __.ui.poiManager.persistToDatabase(newPoint)
-    }, [point.id, $pois])
+    }
 
-    const handleChangeLongitude = useCallback(async (event) => {
+    const handleChangeLongitude = async (event) => {
         if (window.isOK) {
             const newPoint = {
                 ...$pois.list.get(point.id),
@@ -130,9 +132,9 @@ export const MapPOIEditContent = (({poi}) => {
             $pois.list.set(point.id, newPoint)
             await __.ui.poiManager.persistToDatabase(newPoint)
         }
-    }, [point.id, $pois])
+    }
 
-    const handleChangeTitle = useCallback(async (event) => {
+    const handleChangeTitle = async (event) => {
         if (window.isOK) {
             const newPoint = {
                 ...$pois.list.get(point.id),
@@ -141,7 +143,7 @@ export const MapPOIEditContent = (({poi}) => {
             $pois.list.set(point.id, newPoint)
             await __.ui.poiManager.persistToDatabase(newPoint)
         }
-    }, [point.id, $pois])
+    }
 
     const handleChangeDescription = useCallback(async (event) => {
         if (window.isOK) {
@@ -177,30 +179,32 @@ export const MapPOIEditContent = (({poi}) => {
 
     // Memoized altitude input
     const altitudeInput = useMemo(() => (
-        <SlInput
-            className={classNames('map-poi-edit-item map-poi', simulated ? 'map-poi-edit-warning-altitude' : '')}
+        <div className="map-poi-edit-row-coordinates">
+
+            <div className="map-poi-edit-item">
+                {simulated ? ('Simulated alt.') : ('Altitude')}
+            </div>
+
+
+            <SlInput
+                className={classNames('map-poi-edit-item', 'map-poi', simulated ? 'map-poi-edit-warning-altitude' : '')}
             size="small"
             type="number"
             onSlChange={handleChangeAltitude}
             onSlInput={handleChangeAltitude}
             value={Math.round(altitude).toString()}
         >
-            <div slot="label">
-                {simulated ? (
-                    <>
-                        Simulated alt.{' '}
-                        <SlTooltip content="Enter the actual altitude to end the simulation.">
-                            <span>
-                                <FontAwesomeIcon icon={faSquareQuestion}/>
-                            </span>
-                        </SlTooltip>
-                    </>
-                ) : (
-                     <>Altitude</>
-                 )}
-            </div>
             <span slot="suffix">{parse(ELEVATION_UNITS[settings.unitSystem.current] + ' ')}</span>
         </SlInput>
+            <SlTooltip content={'Enter the actual altitude to end the simulation.'}>
+                <SlIconButton
+                    className="edit-poi-copy-coordinates"
+                    library="fa"
+                    name={ICON_HELP}
+                />
+            </SlTooltip>
+        </div>
+
     ), [simulated, altitude, handleChangeAltitude, settings.unitSystem.current])
 
     return (
@@ -264,15 +268,8 @@ export const MapPOIEditContent = (({poi}) => {
                     </div>
                 )}
 
-                <div className="map-poi-edit-row">
-                    <SlTooltip content="Copy Coordinates">
-                        <SlIconButton
-                            className="edit-poi-copy-coordinates"
-                            onClick={handleCopy}
-                            library="fa"
-                            name={ICON_COPY}
-                        />
-                    </SlTooltip>
+                <div className="map-poi-edit-row-coordinates">
+
                     <SlInput
                         className="map-poi-edit-item"
                         size="small"
@@ -289,8 +286,16 @@ export const MapPOIEditContent = (({poi}) => {
                         value={longitude}
                         label="Longitude"
                     />
-                    {altitudeInput}
+                    <SlTooltip content="Copy Coordinates">
+                        <SlIconButton
+                            className="edit-poi-copy-coordinates"
+                            onClick={handleCopy}
+                            library="fa"
+                            name={ICON_COPY}
+                        />
+                    </SlTooltip>
                 </div>
+                {altitudeInput}
             </div>
         </>
     )
