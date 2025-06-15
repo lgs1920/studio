@@ -7,83 +7,96 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-10
- * Last modified: 2025-06-10
+ * Created on: 2025-06-15
+ * Last modified: 2025-06-15
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { MapPOIBulkActionsMenu }      from '@Components/MainUI/MapPOI/MapPOIBulkActionsMenu'
-import { MapPOIEditFilter }           from '@Components/MainUI/MapPOI/MapPOIEditFilter'
-import { ToggleStateIcon }            from '@Components/ToggleStateIcon'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { useSnapshot }                                     from 'valtio'
+import { MapPOIBulkActionsMenu }                           from '@Components/MainUI/MapPOI/MapPOIBulkActionsMenu'
+import { MapPOIEditFilter }                                from '@Components/MainUI/MapPOI/MapPOIEditFilter'
+import { ToggleStateIcon }                                 from '@Components/ToggleStateIcon'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
-import { faSquare, faSquareCheck }    from '@fortawesome/pro-regular-svg-icons'
-import { SlDivider, SlSwitch }        from '@shoelace-style/shoelace/dist/react'
-import React, { useEffect, useState } from 'react'
-import { useSnapshot }                from 'valtio'
+import { faSquare, faSquareCheck }                         from '@fortawesome/pro-regular-svg-icons'
+import { SlDivider, SlSwitch }                             from '@shoelace-style/shoelace/dist/react'
 
-export const MapPOIEditSettings = ({globals = true}) => {
+// Pre-defined icons to avoid repeated references
+const ICONS = {
+    true:  faSquareCheck,
+    false: faSquare,
+}
 
+/**
+ * A memoized React component for editing POI settings, including bulk actions and filters.
+ * @param {Object} props - Component props
+ * @param {boolean} [props.globals=true] - Whether to show global POI settings
+ * @returns {JSX.Element} The rendered settings component
+ */
+export const MapPOIEditSettings = memo(({globals = true}) => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
     const drawers = useSnapshot(lgs.mainProxy.drawers)
-    const onlyJourney = drawers.open === JOURNEY_EDITOR_DRAWER
+
+    // Memoized onlyJourney calculation
+    const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
+
     const [allSelected, setAllSelected] = useState(false)
 
-    const switchValue = (event) => {
+    // Memoized switchValue function
+    const switchValue = useCallback((event) => {
         if (window.isOK(event)) {
             return event.target.checked
         }
-    }
+        return false
+    }, [])
 
-    const changeAll = (state) => {
+    // Memoized changeAll function
+    const changeAll = useCallback((state) => {
         $pois.bulkList.clear()
-        if (onlyJourney) {
-            $pois.filtered.journey.forEach((value, id) => {
-                $pois.bulkList.set(id, state)
-            })
-        }
-        else {
-            $pois.filtered.global.forEach((value, id) => {
-                $pois.bulkList.set(id, state)
-            })
-        }
+        const targetList = onlyJourney ? $pois.filtered.journey : $pois.filtered.global
+        targetList.forEach((_, id) => {
+            $pois.bulkList.set(id, state)
+        })
+    }, [onlyJourney, $pois.bulkList, $pois.filtered.journey, $pois.filtered.global])
 
-    }
+    // Memoized focusOnEdit handler
+    const handleFocusOnEdit = useCallback((event) => {
+        lgs.settings.ui.poi.focusOnEdit = switchValue(event)
+    }, [switchValue])
 
-
-    /**
-     * Check if the global selection i son(all on) or off (at least one off)
-     */
+    // Optimize useEffect to check bulkList stability
     useEffect(() => {
-        setAllSelected(Array.from($pois.bulkList.values()).every((value) => value === true))
-    }, [$pois.bulkList.values()])
+        const allTrue = Array.from($pois.bulkList.entries()).every(([_, value]) => value === true)
+        setAllSelected(allTrue)
+    }, [pois.bulkList])
 
     return (
-        <>
-            <div id="map-poi-edit-settings">
-                <MapPOIEditFilter/>
-                <div className="map-poi-edit-row">
-                    <div className="map-poi-bulk-actions">
-                        <ToggleStateIcon initial={allSelected} className={'map-poi-bulk-indicator'}
-                                         icons={{true: faSquareCheck, false: faSquare}}
-                                         id={'map-poi-bulk-action-global'}
-                                         onChange={changeAll}
-                        />
-                        <MapPOIBulkActionsMenu/>
-                    </div>
-                    <SlSwitch size="small" align-right checked={lgs.settings.ui.poi.focusOnEdit}
-                              onSlChange={
-                                  (event) => {
-                                      lgs.settings.ui.poi.focusOnEdit = switchValue(event)
-                                  }
-                              }>
-                        {'Focus on POI'}
-                    </SlSwitch>
+        <div id="map-poi-edit-settings">
+            <MapPOIEditFilter/>
+            <div className="map-poi-edit-row">
+                <div className="map-poi-bulk-actions">
+                    <ToggleStateIcon
+                        initial={allSelected}
+                        className="map-poi-bulk-indicator"
+                        icons={ICONS}
+                        id="map-poi-bulk-action-global"
+                        onChange={changeAll}
+                    />
+                    <MapPOIBulkActionsMenu/>
                 </div>
-                <SlDivider/>
+                <SlSwitch
+                    size="small"
+                    align-right
+                    checked={lgs.settings.ui.poi.focusOnEdit}
+                    onSlChange={handleFocusOnEdit}
+                >
+                    Focus on POI
+                </SlSwitch>
             </div>
-        </>
+            <SlDivider/>
+        </div>
     )
-}
+})

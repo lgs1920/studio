@@ -7,257 +7,291 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-10
- * Last modified: 2025-06-10
+ * Created on: 2025-06-15
+ * Last modified: 2025-06-15
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { FontAwesomeIcon }             from '@Components/FontAwesomeIcon'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { useSnapshot }                                     from 'valtio'
+import { FontAwesomeIcon }                                 from '@Components/FontAwesomeIcon'
 import {
     MapPOICategorySelector,
-}                                      from '@Components/MainUI/MapPOI/MapPOICategorySelector'
+}                                                          from '@Components/MainUI/MapPOI/MapPOICategorySelector'
 import {
     MapPOIEditMenu,
-}                                      from '@Components/MainUI/MapPOI/MapPOIEditMenu'
+}                                                          from '@Components/MainUI/MapPOI/MapPOIEditMenu'
 import {
     faCopy, faSquareQuestion, faClock,
-}                                                                    from '@fortawesome/pro-regular-svg-icons'
+}                                                          from '@fortawesome/pro-regular-svg-icons'
 import {
     SlColorPicker, SlDivider, SlIconButton, SlInput, SlTextarea, SlTooltip,
-}                                                                    from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                     from '@Utils/FA2SL'
-import { UIToast }                                                   from '@Utils/UIToast'
+}                                                          from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                           from '@Utils/FA2SL'
+import { UIToast }                                         from '@Utils/UIToast'
 import { ELEVATION_UNITS, foot, IMPERIAL, INTERNATIONAL, UnitUtils } from '@Utils/UnitUtils'
-import Color                           from 'color'
-import classNames                                                    from 'classnames'
-import parse                                                         from 'html-react-parser'
-import { DateTime }                                                  from 'luxon'
-import { useEffect, useState, useRef } from 'react'
-import { useSnapshot }                                               from 'valtio/index'
+import classNames                                          from 'classnames'
+import parse                                               from 'html-react-parser'
+import { DateTime }                                        from 'luxon'
 
-export const MapPOIEditContent = ({poi}) => {
+// Pre-calculated icon
+const ICON_COPY = FA2SL.set(faCopy)
 
+/**
+ * A memoized React component for editing the content of a Point of Interest (POI).
+ * @param {Object} props - Component props
+ * @param {Object} props.poi - The POI object to edit
+ * @returns {JSX.Element|null} The rendered edit content or null if no POI
+ */
+export const MapPOIEditContent = (({poi}) => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
-    let point = pois.list.get(poi.id)
-    const [simulated, setSimulated] = useState(false)
-    const poiColor = useRef(null)
-    const poiBgColor = useRef(null)
+    const settings = lgs.settings
 
-    const handleChangeAltitude = async event => {
+    // Stabilize point based on poi.id
+    const point = useMemo(() => pois.list.get(poi.id), [poi.id, pois.list])
+
+    const [simulated, setSimulated] = useState(point?.height === undefined || point?.height === point?.simulatedHeight)
+
+    // Memoized altitude calculation
+    const altitude = useMemo(() => {
+        const height = point?.height || point?.simulatedHeight
+        return settings.unitSystem.current === INTERNATIONAL
+               ? height
+               : __.convert(height).to(foot)
+    }, [point?.height, point?.simulatedHeight, settings.unitSystem.current])
+
+    // Memoized swatches
+    const swatches = useMemo(() => settings.getSwatches.list.join(';'), [settings.getSwatches.list])
+
+    // Memoized coordinate conversions
+    const latitude = useMemo(() => __.convert(point?.latitude).to(settings.coordinateSystem.current), [point?.latitude, settings.coordinateSystem.current])
+    const longitude = useMemo(() => __.convert(point?.longitude).to(settings.coordinateSystem.current), [point?.longitude, settings.coordinateSystem.current])
+
+    // Memoized event handlers
+    const handleChangeAltitude = useCallback(async (event) => {
         if (window.isOK) {
             const height = event.target.value * 1
-            point = Object.assign($pois.list.get(point.id), {
-                height: lgs.settings.unitSystem.current === IMPERIAL ? UnitUtils.convertFeetToMeters(height) : height,
-            })
-            console.log(pois.list.get(point.id))
-            await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
-            setSimulated(point.height === point.simulatedHeight)
+            const newPoint = {
+                ...$pois.list.get(point.id),
+                height: settings.unitSystem.current === IMPERIAL ? UnitUtils.convertFeetToMeters(height) : height,
+            }
+            $pois.list.set(point.id, newPoint)
+            await __.ui.poiManager.persistToDatabase(newPoint)
+            setSimulated(newPoint.height === newPoint.simulatedHeight)
         }
-    }
+    }, [point.id, settings.unitSystem.current, $pois])
 
-    const handleChangeColor = async event => {
-        if (event.target === poiColor.current) {
-            point = Object.assign($pois.list.get(point.id), {
-                color: event.target.value,
-            })
+    const handleChangeColor = useCallback(async (event, type) => {
+        const value = event.target.value
+        const newPoint = {
+            ...$pois.list.get(point.id),
+            [type]: value,
         }
-        if (event.target === poiBgColor.current) {
-            point = Object.assign($pois.list.get(point.id), {
-                bgColor: event.target.value,
-            })
+        $pois.list.set(point.id, newPoint)
 
-        }
         if ($pois.filtered.global.has(point.id)) {
             $pois.filtered.global.set(point.id, {
                 ...$pois.filtered.global.get(point.id),
-                color:   point.color,
-                bgColor: point.bgColor,
+                color:   newPoint.color,
+                bgColor: newPoint.bgColor,
             })
         }
         if ($pois.filtered.journey.has(point.id)) {
             $pois.filtered.journey.set(point.id, {
                 ...$pois.filtered.journey.get(point.id),
-                color:   point.color,
-                bgColor: point.bgColor,
+                color:   newPoint.color,
+                bgColor: newPoint.bgColor,
             })
         }
-        await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
+        await __.ui.poiManager.persistToDatabase(newPoint)
 
         event.preventDefault()
         event.stopPropagation()
-    }
+    }, [point.id, $pois])
 
-    const handleChangeLatitude = async event => {
-        point = Object.assign($pois.list.get(point.id), {
+    const handleChangeLatitude = useCallback(async (event) => {
+        const newPoint = {
+            ...$pois.list.get(point.id),
             latitude: event.target.value * 1,
-        })
-        await __.ui.poiManager.persistToDatabase(point)
-    }
+        }
+        $pois.list.set(point.id, newPoint)
+        await __.ui.poiManager.persistToDatabase(newPoint)
+    }, [point.id, $pois])
 
-    const handleChangeLongitude = async event => {
+    const handleChangeLongitude = useCallback(async (event) => {
         if (window.isOK) {
-
-            point = Object.assign($pois.list.get(point.id), {
+            const newPoint = {
+                ...$pois.list.get(point.id),
                 longitude: event.target.value * 1,
-            })
-            await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
+            }
+            $pois.list.set(point.id, newPoint)
+            await __.ui.poiManager.persistToDatabase(newPoint)
         }
-    }
+    }, [point.id, $pois])
 
-    const handleChangeTitle = async event => {
+    const handleChangeTitle = useCallback(async (event) => {
         if (window.isOK) {
-            point = Object.assign($pois.list.get(point.id), {
+            const newPoint = {
+                ...$pois.list.get(point.id),
                 title: event.target.value,
-            })
-            await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
+            }
+            $pois.list.set(point.id, newPoint)
+            await __.ui.poiManager.persistToDatabase(newPoint)
         }
-    }
+    }, [point.id, $pois])
 
-    const handleChangeDescription = async event => {
+    const handleChangeDescription = useCallback(async (event) => {
         if (window.isOK) {
-            point = Object.assign($pois.list.get(point.id), {
+            const newPoint = {
+                ...$pois.list.get(point.id),
                 description: event.target.value,
-            })
-            await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
+            }
+            $pois.list.set(point.id, newPoint)
+            await __.ui.poiManager.persistToDatabase(newPoint)
         }
-    }
-    /**
-     * Copies the coordinates (latitude,longitude of the currently selected point of interest (POI) to the clipboard.
-     *
-     * Postconditions:
-     * - The context menu is hidden.
-     */
-    const handleCopy = () => {
-        __.ui.poiManager.copyCoordinatesToClipboard(point)
-            .then(() => {
-                UIToast.success({
-                                    caption: `${point.title}`,
-                                    text:    'Coordinates copied to the clipboard <br/>under the form: latitude, longitude',
-                                })
-            })
-    }
+    }, [point.id, $pois])
 
+    const handleCopy = useCallback(() => {
+        __.ui.poiManager.copyCoordinatesToClipboard(point).then(() => {
+            UIToast.success({
+                                caption: `${point.title}`,
+                                text:    'Coordinates copied to the clipboard <br/>under the form: latitude, longitude',
+                            })
+        })
+    }, [point])
 
+    // Optimize useEffect
     useEffect(() => {
         if (point && pois.current) {
             setSimulated(point.height === undefined || point.height === point.simulatedHeight)
         }
-
-    }, [point])
+    }, [point?.height, point?.simulatedHeight, pois.current])
 
     // Bail if point does not exist
     if (!point) {
-        return false
+        return null
     }
 
-    const altitude = lgs.settings.unitSystem.current === INTERNATIONAL
-                     ? point?.height || point?.simulatedHeight
-                     : __.convert(point?.height || point?.simulatedHeight).to(foot)
-
+    // Memoized altitude input
+    const altitudeInput = useMemo(() => (
+        <SlInput
+            className={classNames('map-poi-edit-item map-poi', simulated ? 'map-poi-edit-warning-altitude' : '')}
+            size="small"
+            type="number"
+            onSlChange={handleChangeAltitude}
+            onSlInput={handleChangeAltitude}
+            value={Math.round(altitude).toString()}
+        >
+            <div slot="label">
+                {simulated ? (
+                    <>
+                        Simulated alt.{' '}
+                        <SlTooltip content="Enter the actual altitude to end the simulation.">
+                            <span>
+                                <FontAwesomeIcon icon={faSquareQuestion}/>
+                            </span>
+                        </SlTooltip>
+                    </>
+                ) : (
+                     <>Altitude</>
+                 )}
+            </div>
+            <span slot="suffix">{parse(ELEVATION_UNITS[settings.unitSystem.current] + ' ')}</span>
+        </SlInput>
+    ), [simulated, altitude, handleChangeAltitude, settings.unitSystem.current])
 
     return (
-
         <>
             <SlDivider/>
             <div className="edit-map-poi-wrapper" id={`edit-map-poi-content-${point.id}`}>
-
-                <div className={'map-poi-color-actions'}>
-                    <SlTooltip content={'Background Color'}>
-                    <SlColorPicker size={'small'}
-                                   label={'Color'}
-                                   value={point?.bgColor ?? lgs.colors.poiDefaultBackground}
-                                   swatches={lgs.settings.getSwatches.list.join(';')}
-                                   onSlChange={handleChangeColor}
-                                   disabled={!point?.visible}
-                                   noFormatToggle
-                                   ref={poiBgColor}
-                    />
+                <div className="map-poi-color-actions">
+                    <SlTooltip content="Background Color">
+                        <SlColorPicker
+                            size="small"
+                            label="Color"
+                            value={point?.bgColor ?? lgs.colors.poiDefaultBackground}
+                            swatches={swatches}
+                            onSlChange={(e) => handleChangeColor(e, 'bgColor')}
+                            disabled={!point?.visible}
+                            noFormatToggle
+                        />
                     </SlTooltip>
-                    <SlTooltip content={'Foreground Color'}>
-                        <SlColorPicker size={'small'}
-                                       label={'Color'}
-                                       value={point?.color ?? lgs.colors.poiDefault}
-                                       swatches={lgs.settings.getSwatches.list.join(';')}
-                                       onSlChange={handleChangeColor}
-                                       onSlInput={handleChangeColor}
-                                       disabled={!point?.visible}
-                                       noFormatToggle
-                                       ref={poiColor}
-
+                    <SlTooltip content="Foreground Color">
+                        <SlColorPicker
+                            size="small"
+                            label="Color"
+                            value={point?.color ?? lgs.colors.poiDefault}
+                            swatches={swatches}
+                            onSlChange={(e) => handleChangeColor(e, 'color')}
+                            disabled={!point?.visible}
+                            noFormatToggle
                         />
                     </SlTooltip>
                     <MapPOIEditMenu point={point}/>
                 </div>
 
                 <div>
-                    <SlInput size="small" value={point.title}
-                             onSlChange={handleChangeTitle}
-                        //onInput={handleChangeTitle}
-                             className="edit-title-map-poi-input">
-                        <span slot="label" className="edit-title-map-poi">{'Title'}</span>
+                    <SlInput
+                        size="small"
+                        value={point.title}
+                        onSlChange={handleChangeTitle}
+                        className="edit-title-map-poi-input"
+                    >
+                        <span slot="label" className="edit-title-map-poi">Title</span>
                     </SlInput>
                 </div>
                 <MapPOICategorySelector point={point}/>
 
                 <div>
-                    <SlTextarea size="small" value={point.description ?? ''}
-                                onSlChange={handleChangeDescription}
-                                className="edit-title-map-poi-input">
-                        <span slot="label" className="edit-title-map-poi">{'Description'}</span>
+                    <SlTextarea
+                        size="small"
+                        value={point.description ?? ''}
+                        onSlChange={handleChangeDescription}
+                        className="edit-title-map-poi-input"
+                    >
+                        <span slot="label" className="edit-title-map-poi">Description</span>
                     </SlTextarea>
                 </div>
 
                 {point.time && (
                     <div className="poi-time">
                         <FontAwesomeIcon icon={faClock}/>
-                        {DateTime.fromISO(point.time).toLocaleString(DateTime.DATE_FULL)} - {DateTime.fromISO(point.time).toLocaleString(DateTime.TIME_SIMPLE)}
+                        {DateTime.fromISO(point.time).toLocaleString(DateTime.DATE_FULL)} -{' '}
+                        {DateTime.fromISO(point.time).toLocaleString(DateTime.TIME_SIMPLE)}
                     </div>
                 )}
 
                 <div className="map-poi-edit-row">
-                    <SlTooltip content={'Copy Coordinates'}>
-                        <SlIconButton className="edit-poi-copy-coordinates" onClick={handleCopy}
-                                      library="fa" name={FA2SL.set(faCopy)}/>
+                    <SlTooltip content="Copy Coordinates">
+                        <SlIconButton
+                            className="edit-poi-copy-coordinates"
+                            onClick={handleCopy}
+                            library="fa"
+                            name={ICON_COPY}
+                        />
                     </SlTooltip>
-                    <SlInput className={'map-poi-edit-item'} size="small" noSpinButtons
-                             onSlChange={handleChangeLatitude}
-                             value={__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)}
-                             label={'Latitude'}/>
-                    <SlInput className={'map-poi-edit-item'} size="small" noSpinButtons
-                             onSlChange={handleChangeLongitude}
-                             value={__.convert(point.longitude).to(lgs.settings.coordinateSystem.current)}
-                             label={'Longitude'}/>
                     <SlInput
-                        className={classNames('map-poi-edit-item map-poi', simulated ? 'map-poi-edit-warning-altitude' : '')}
-                        size="small" type="number"
-                        onSlChange={handleChangeAltitude}
-                        onSlInput={handleChangeAltitude}
-                        value={Math.round(altitude).toString()}
-                    >
-                        <div slot={'label'}>
-                            {simulated ?
-                             <>
-                                 {'Simulated alt. '}
-                                 <SlTooltip content={'Enter the actual altitude to end the simulation.'}>
-                                             <span>
-                                             <FontAwesomeIcon icon={faSquareQuestion}/>
-                                             </span>
-                                 </SlTooltip>
-                             </>
-                                       : <>{'Altitude'}</>
-                            }
-                        </div>
-
-                        <span slot="suffix">{parse(ELEVATION_UNITS[lgs.settings.unitSystem.current] + '&nbsp;')}</span>
-                    </SlInput>
+                        className="map-poi-edit-item"
+                        size="small"
+                        noSpinButtons
+                        onSlChange={handleChangeLatitude}
+                        value={latitude}
+                        label="Latitude"
+                    />
+                    <SlInput
+                        className="map-poi-edit-item"
+                        size="small"
+                        noSpinButtons
+                        onSlChange={handleChangeLongitude}
+                        value={longitude}
+                        label="Longitude"
+                    />
+                    {altitudeInput}
                 </div>
-
             </div>
         </>
-
-
     )
-}
+})

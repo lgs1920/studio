@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-28
+ * Created on: 2025-06-15
+ * Last modified: 2025-06-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,18 +27,18 @@ export class Utils {
      * We change its key to rerender the list component
      */
     static renderJourneysList = () => {
-        lgs.mainProxy.components.journeyEditor.keys.journey.list++
+        lgs.stores.main.components.journeyEditor.keys.journey.list++
     }
 
     static renderTracksList = () => {
-        lgs.mainProxy.components.journeyEditor.keys.track.list++
+        lgs.stores.main.components.journeyEditor.keys.track.list++
     }
     static renderJourneySettings = () => {
-        lgs.mainProxy.components.journeyEditor.keys.journey.settings++
+        lgs.stores.main.components.journeyEditor.keys.journey.settings++
     }
 
     static renderTrackSettings = () => {
-        lgs.mainProxy.components.journeyEditor.keys.track.settings++
+        lgs.stores.main.components.journeyEditor.keys.track.settings++
     }
 
     static initJourneyEdition = async (event = undefined) => {
@@ -165,7 +165,7 @@ export class Utils {
     }
 
     settings = () => {
-        lgs.mainProxy.components.journeyEditor.keys.journey.settings++
+        lgs.stores.main.components.journeyEditor.keys.journey.settings++
     }
 
 
