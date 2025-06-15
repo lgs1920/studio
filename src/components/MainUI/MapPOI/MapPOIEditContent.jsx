@@ -196,7 +196,7 @@ export const MapPOIEditContent = (({poi}) => {
         >
             <span slot="suffix">{parse(ELEVATION_UNITS[settings.unitSystem.current] + ' ')}</span>
         </SlInput>
-            <SlTooltip content={'Enter the actual altitude to end the simulation.'}>
+            <SlTooltip content={'Enter the actual altitude to end the simulation.'} className={'tooltip-help'}>
                 <SlIconButton
                     className="edit-poi-copy-coordinates"
                     library="fa"

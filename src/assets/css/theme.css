@@ -578,6 +578,10 @@ sl-tooltip::part(body)::first-letter {
     text-transform: capitalize;
 }
 
+sl-tooltip.tooltip-help ::part(base) {
+    cursor: help !important;
+}
+
 
 /*******************************************************************************
  * Dialogs / Modals
