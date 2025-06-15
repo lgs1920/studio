@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-10
- * Last modified: 2025-06-10
+ * Created on: 2025-06-15
+ * Last modified: 2025-06-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -417,17 +417,17 @@ export const JourneySettings = function JourneySettings() {
         serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.FILE_CONTENT))
     }
     serverList = serverList.concat(Array.from(ElevationServer.SERVERS.values()))
-    lgs.mainProxy.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+    lgs.stores.main.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
 
     useEffect(() => {
         return (() => {
-            lgs.mainProxy.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+            lgs.stores.main.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
         })
-    }, [lgs.mainProxy.components.mainUI.removeJourneyDialog.active])
+    }, [lgs.stores.main.components.mainUI.removeJourneyDialog.active])
 
     return (<>
         {theJourneyEditor.journey &&
-            <div id="journey-settings" key={lgs.mainProxy.components.journeyEditor.keys.journey.settings}>
+            <div id="journey-settings" key={lgs.stores.main.components.journeyEditor.keys.journey.settings}>
                 <div className={'settings-panel'} id={'editor-journey-settings-panel'}>
                     <SlTabGroup className={'menu-panel'}>
                         <SlTab slot="nav" panel="data" id="tab-journey-data"
