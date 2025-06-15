@@ -14,8 +14,8 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { memo, useCallback, useMemo }           from 'react'
-import { useSnapshot }                          from 'valtio'
+import { memo, useCallback, useEffect, useMemo } from 'react'
+import { useSnapshot }                           from 'valtio'
 import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { MapPOIEditContent }                    from '@Components/MainUI/MapPOI/MapPOIEditContent'
 import { ToggleStateIcon } from '@Components/ToggleStateIcon'
@@ -65,18 +65,18 @@ export const MapPOIListItem = memo(({id, poi}) => {
     }, [stablePoi])
 
     // Memoized select POI handler
-    const selectPOI = useCallback(
-        async (event) => {
+    const selectPOI = async (event) => {
             if (window.isOK(event)) {
                 let current = $pois.list.get(id)
                 let forceFocus = false
 
-                if ($pois.current === false) {
+                if (pois.current === false) {
                     $pois.current = id
                     forceFocus = true
                 }
 
                 if (pois.current !== id || forceFocus) {
+                    $pois.current = id
                     current = {
                         ...current,
                         animated: false,
@@ -121,9 +121,7 @@ export const MapPOIListItem = memo(({id, poi}) => {
                     item.focus()
                 }
             }
-        },
-        [id, pois.current, drawers.open, $pois],
-    )
+    }
 
     // Memoized styles
     const styles = useMemo(
@@ -146,6 +144,7 @@ export const MapPOIListItem = memo(({id, poi}) => {
             }),
         [stablePoi.visible, stablePoi.type],
     )
+
 
     return (
         <div className="edit-map-poi-item-wrapper">
