@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-15
- * Last modified: 2025-06-15
+ * Created on: 2025-06-16
+ * Last modified: 2025-06-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -80,7 +80,7 @@ const filterAndSortPois = (poisList, onlyJourney, theJourney, settings) => {
  * A memoized React component for displaying a list of Points of Interest (POIs).
  * @returns {JSX.Element} The rendered POI list
  */
-export const MapPOIList = memo(() => {
+export const MapPOIList = memo(({context}) => {
     const poiList = useRef(null)
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
@@ -94,7 +94,7 @@ export const MapPOIList = memo(() => {
     const journeyPois = useMemo(() => lgs.theJourney?.pois || [], [lgs.theJourney])
 
     // Memoized categories for dependency stability
-    const categoriesKey = useMemo(() => settings.filter.byCategories.join(','), [settings.filter.byCategories])
+    const categoriesKey = useMemo(() => settings.categories.join(','), [settings.categories])
 
     // Memoized filtered and sorted POIs
     const filteredPois = useMemo(
@@ -143,7 +143,7 @@ export const MapPOIList = memo(() => {
         const targetList = onlyJourney ? pois.filtered.journey : pois.filtered.global
         if (targetList.size > 0) {
             return Array.from(targetList.entries()).map(([id, poi]) => (
-                <MapPOIListItem key={`edit-map-poi-${id}`} id={id} poi={poi}/>
+                <MapPOIListItem key={`edit-map-poi-${id}`} id={id} poi={poi} context={context}/>
             ))
         }
         return (
