@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-25
- * Last modified: 2025-05-25
+ * Created on: 2025-06-16
+ * Last modified: 2025-06-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -71,7 +71,6 @@ export class Journey extends MapElement {
             this.camera = options.camera ?? null
 
 
-
         }
 
     }
@@ -130,7 +129,6 @@ export class Journey extends MapElement {
     }
 
 
-
     /**
      * Get all journeys from DB
      *
@@ -163,7 +161,7 @@ export class Journey extends MapElement {
     static deserialize = (props) => {
         props.instance = new Journey()
         let instance = super.deserialize(props)
-        
+
         // Transform Tracks from object to class
         instance.tracks.forEach((track, slug) => {
             const object = new Track(track.title, track)
@@ -384,7 +382,7 @@ export class Journey extends MapElement {
                                                                                               },
                                                                                           })
                         const parameters = {
-                            parent:   this.slug,
+                            parent:      this.slug,
                             type:            POI_STANDARD_TYPE,
                             title:           feature.properties.name,
                             description: feature.properties.description ?? '',
@@ -422,7 +420,7 @@ export class Journey extends MapElement {
                                                                                              },
                                                                                          })
                         const startParameters = {
-                            parent:  parentSlug,
+                            parent: parentSlug,
                             type:        POI_FLAG_START,
                             title:       'Start',
                             description: 'Track start',
@@ -469,13 +467,14 @@ export class Journey extends MapElement {
                             height:          stop[2] ?? undefined,
                             simulatedHeight: clampedStop,
 
-                            time:            timeStop,
+                            time: timeStop,
                             distance: 0,
 
-                            icon:        POI_FLAG_STOP,
-                            color:           lgs.settings.getJourney.pois.stop.color,
-                            expanded:        false,
-                            visible: true,
+                            icon:     POI_FLAG_STOP,
+                            color:    lgs.settings.journey.pois.stop.color,
+                            bgColor:  lgs.settings.journey.pois.stop.bgColor,
+                            expanded: false,
+                            visible:  true,
                         }
 
                         const stopFlag = new MapPOI({...common, ...stopParameters})
