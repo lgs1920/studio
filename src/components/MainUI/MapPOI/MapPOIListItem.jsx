@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-15
- * Last modified: 2025-06-15
+ * Created on: 2025-06-16
+ * Last modified: 2025-06-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,7 +38,7 @@ const ICONS = {
  * @param {Object} props.poi - The POI object
  * @returns {JSX.Element} The rendered POI list item
  */
-export const MapPOIListItem = memo(({id, poi}) => {
+export const MapPOIListItem = memo(({id, poi, context}) => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
     const drawers = useSnapshot(lgs.mainProxy.drawers)
@@ -170,7 +170,7 @@ export const MapPOIListItem = memo(({id, poi}) => {
                     </span>
                     <span></span>
                 </div>
-                <MapPOIEditContent poi={stablePoi}/>
+                <MapPOIEditContent context={context} poi={stablePoi}/>
             </SlDetails>
         </div>
     )
