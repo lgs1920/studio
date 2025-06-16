@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-14
- * Last modified: 2025-06-14
+ * Created on: 2025-06-16
+ * Last modified: 2025-06-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -53,7 +53,7 @@ export const RotateButton = memo(({tooltip = 'top'}) => {
             if (rotate.running) {
                 await __.ui.cameraManager.stopRotate()
                 if (poi && poi.animated !== false) {
-                    poi.animated = false
+                    $poi.animated = false
                 }
             }
             else {
