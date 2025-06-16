@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-15
- * Last modified: 2025-06-15
+ * Created on: 2025-06-16
+ * Last modified: 2025-06-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -196,13 +196,16 @@ export const MapPOIEditContent = (({poi}) => {
         >
             <span slot="suffix">{parse(ELEVATION_UNITS[settings.unitSystem.current] + ' ')}</span>
         </SlInput>
-            <SlTooltip content={'Enter the actual altitude to end the simulation.'} className={'tooltip-help'}>
+            {simulated &&
+                <SlTooltip content={'Enter the actual altitude to replace the simulated value.'}
+                           className={'tooltip-help'}>
                 <SlIconButton
                     className="edit-poi-copy-coordinates"
                     library="fa"
                     name={ICON_HELP}
                 />
             </SlTooltip>
+            }
         </div>
 
     ), [simulated, altitude, handleChangeAltitude, settings.unitSystem.current])
