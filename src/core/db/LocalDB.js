@@ -7,20 +7,12 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-19
- * Last modified: 2025-05-19
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
-
-/**
- * Dependencies
- */
-import { openDB, unwrap } from 'idb'
-import { DateTime }       from 'luxon'
-
-let millis = 1000
 
 export class LocalDB {
 
@@ -29,9 +21,14 @@ export class LocalDB {
     #stores = 'mystore'
     #name = 'mydb'
     #deletingKeys = new Set()
-    #writingKeys = new Set()
+    #writingKeys = new Map() // Use Map instead of Set
     #transients = 'transients'
     #content
+    /**
+     * Smart cache with invalidation
+     */
+    #memoryCache = new Map()
+    #cacheMaxSize = 1000
 
     constructor({
                     name = this.#name,
@@ -50,7 +47,7 @@ export class LocalDB {
         this.#name = name
         this.#version = version
         this.#deletingKeys = new Set()
-        this.#writingKeys = new Set()
+        this.#writingKeys = new Map()
 
         let tables = this.#stores
         this.#db = openDB(this.#name, version, {
@@ -66,9 +63,9 @@ export class LocalDB {
     }
 
     /**
-     * Return the transient store name
+     * Returns the transient store name
      *
-     * @return {*|null}
+     * @returns {string|null} The transient store name or null if not available
      */
     get transientStore() {
         if (this.#stores.includes(this.#transients)) {
@@ -78,16 +75,33 @@ export class LocalDB {
     }
 
     /**
-     * Retrieves a key’s value from the specified store.
+     * Retrieves a key's value from the specified store.
      * @param {string} key - The key to retrieve.
      * @param {string} store - The store name.
      * @param {boolean} [full=false] - Whether to return the full value (including metadata).
      * @returns {Promise<any>} The value associated with the key, or `null` if not found.
      * @throws {Error} If the operation fails.
      */
-    get = async (key, store, full = false) => {
+    /**
+     * Alias for put method - maintains compatibility with existing API
+     */
+    set = async (key, value, store, ttl = null) => {
+        return await this.put(key, value, store, ttl)
+    }
+
+    async get(key, store, full = false) {
+        const cacheKey = `${store}:${key}`
+
+        // Check memory cache first
+        if (this.#memoryCache.has(cacheKey)) {
+            const cached = this.#memoryCache.get(cacheKey)
+            if (cached.timestamp > Date.now() - 60000) { // Cache for 1 minute
+                return full ? cached.value : cached.value.data
+            }
+        }
+
+        // Retrieve from IndexedDB (use existing logic)
         const callId = Math.random().toString(36).slice(2, 8)
-        const startTime = performance.now()
 
         try {
             if (!key || typeof key !== 'string') {
@@ -97,15 +111,23 @@ export class LocalDB {
                 throw new Error(`Invalid store: "${store}" is not a valid store.`)
             }
 
-            return await this.#withTransaction(store, 'readonly', async storeObj => {
-                const value = await storeObj.get(key)
-
-                if (!value) {
+            const value = await this.#withTransaction(store, 'readonly', async storeObj => {
+                const result = await storeObj.get(key)
+                if (!result) {
                     return null
                 }
-
-                return full ? value : value.data // Adjust based on your value structure
+                return full ? result : result.data
             })
+
+            // Cache the result
+            if (value && this.#memoryCache.size < this.#cacheMaxSize) {
+                this.#memoryCache.set(cacheKey, {
+                    value:     full ? value : {data: value},
+                    timestamp: Date.now(),
+                })
+            }
+
+            return value
         }
         catch (error) {
             console.error(`[${callId}][${store}] Failed to get key "${key}":`, error)
@@ -123,35 +145,35 @@ export class LocalDB {
      * @throws {Error} If the operation fails.
      */
     put = async (key, value, store, ttl = null) => {
-        const callId = Math.random().toString(36).slice(2, 8)
-        const startTime = performance.now()
         const cacheKey = `${store}:${key}`
 
+        // If already being written, wait for completion
         if (this.#writingKeys.has(cacheKey)) {
-            return
+            await this.#writingKeys.get(cacheKey)
+            // Then continue normally with our write
         }
-        this.#writingKeys.add(cacheKey)
 
+        // Create a promise for this write operation
+        let resolveWrite
+        const writePromise = new Promise(resolve => {
+            resolveWrite = resolve
+        })
+        this.#writingKeys.set(cacheKey, writePromise)
+        
         try {
-            if (!key || typeof key !== 'string') {
-                throw new Error('Invalid key: Key must be a non-empty string.')
-            }
-            if (!store || !this.#stores.includes(store)) {
-                throw new Error(`Invalid store: "${store}" is not a valid store.`)
-            }
-
-            return await this.#withTransaction(store, 'readwrite', async storeObj => {
+            // Perform the write operation
+            await this.#withTransaction(store, 'readwrite', async storeObj => {
                 const content = {data: value, _ct_: Date.now(), _mt_: Date.now()}
                 if (ttl) {
                     content._ttl_ = ttl * 1000
                 }
-
                 await storeObj.put(content, key)
             })
-        }
-        catch (error) {
-            console.error(`[${callId}][${store}] Failed to put key "${key}":`, error)
-            throw error
+
+            // Invalidate memory cache
+            this.#memoryCache.delete(cacheKey)
+
+            resolveWrite() // Signal that the write is complete
         }
         finally {
             this.#writingKeys.delete(cacheKey)
@@ -159,8 +181,9 @@ export class LocalDB {
     }
 
     /**
-     * Add the object ttl if required
-     * @param ttl
+     * Adds TTL to the content object if required
+     * @param {Object} content - The content object to modify
+     * @param {number} ttl - Time-to-live in milliseconds
      */
     setTTL = (content, ttl) => {
         if (ttl > 0) {
@@ -179,37 +202,41 @@ export class LocalDB {
      * @param {string} mode - Transaction mode ('readonly' or 'readwrite').
      * @param {Function} operation - Async function to execute within the transaction.
      * @param {Object} [options] - Additional options.
-     * @param {number} [options.commitDelay=100] - Delay after transaction commit (ms).
-     * @param {number} [options.retryDelay=50] - Delay between retries (ms).
-     * @param {number} [options.maxRetries=2] - Maximum verification retries.
+     * @param {number} [options.commitDelay=0] - Delay after transaction commit (ms).
+     * @param {number} [options.retryDelay=10] - Delay between retries (ms).
+     * @param {number} [options.maxRetries=3] - Maximum verification retries.
      * @returns {Promise<any>} The result of the operation.
      * @throws {Error} If the transaction fails.
      * @private
      */
-    async #withTransaction(store, mode, operation, {commitDelay = 100, retryDelay = 50, maxRetries = 2} = {}) {
+    async #withTransaction(store, mode, operation, options = {}) {
+        const {
+                  commitDelay = 0, // Reduce default delay
+                  retryDelay  = 10,
+                  maxRetries  = 3,
+              } = options
+        
         const db = await this.#getDB()
-        if (!db.objectStoreNames.contains(store)) {
-            throw new Error(`Store "${store}" does not exist in the database.`)
-        }
 
-        const tx = db.transaction(store, mode)
-        let result
-        try {
-            result = await operation(tx.objectStore(store))
-            await tx.done
-            if (mode === 'readwrite') {
-                await new Promise(resolve => setTimeout(resolve, commitDelay))
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const tx = db.transaction(store, mode)
+                const result = await operation(tx.objectStore(store))
+                await tx.done
+
+                return result
             }
-            return result
-        }
-        catch (error) {
-            console.error(`Transaction failed for store "${store}":`, error)
-            throw error
+            catch (error) {
+                if (attempt === maxRetries) {
+                    throw error
+                }
+                await new Promise(resolve => setTimeout(resolve, retryDelay * attempt))
+            }
         }
     }
 
     /**
-     * Updates a key’s value in the specified store.
+     * Updates a key's value in the specified store.
      * @param {string} key - The key to update.
      * @param {any} value - The new value.
      * @param {string} store - The store name.
@@ -233,7 +260,7 @@ export class LocalDB {
      * Deletes a key from the specified store.
      * @param {string} key - The key to delete.
      * @param {string} store - The store name.
-     * @returns {Promise<boolean>} `true` if deleted, `false` if the key didn’t exist or was already being deleted.
+     * @returns {Promise<boolean>} `true` if deleted, `false` if the key didn't exist or was already being deleted.
      * @throws {Error} If the operation fails.
      */
     delete = async (key, store) => {
@@ -271,7 +298,6 @@ export class LocalDB {
                     const verifyStore = verifyTx.objectStore(store)
                     existsAfter = await verifyStore.get(key)
                     await verifyTx.done
-
 
                     if (!existsAfter) {
                         break
@@ -324,17 +350,22 @@ export class LocalDB {
     }
 
     /**
-     * Remove a store
+     * Removes a store from the database
      *
-     * @param store
+     * @param {string} store - The store name to remove
+     * @returns {Promise<void>}
      */
     deleteStore = async (store) => {
         (await this.#db).deleteObjectStore(store)
     }
 
+    /**
+     * Removes all stores from the database
+     *
+     * @returns {Promise<void>}
+     */
     deleteAllStores = async () => {
         (await this.#stores).forEach(store => this.deleteStore(store))
-
     }
 
     /**
@@ -362,6 +393,11 @@ export class LocalDB {
         }
     }
 
+    /**
+     * Deletes the entire database
+     *
+     * @returns {Promise<number>} Returns 0 on error, 1 on success, 2 if blocked
+     */
     deleteDB = async () => {
         return new Promise(async (resolve, reject) => {
             // Close transactions
@@ -372,7 +408,7 @@ export class LocalDB {
             }
             idb.close()
 
-            //Delete database
+            // Delete database
             const request = window.indexedDB.deleteDatabase(this.#name)
             request.onerror = () => {
                 resolve(0)
@@ -381,13 +417,11 @@ export class LocalDB {
                 resolve(1)
             }
             request.onblocked = () => {
-                console.error(`Error while deleting database ${this.#name}:blocked`)
+                console.error(`Error while deleting database ${this.#name}: blocked`)
                 resolve(2)
             }
         })
-
     }
-
 
     /**
      * Retrieves all keys in the specified store.
@@ -415,10 +449,78 @@ export class LocalDB {
         }
     }
 
+    /**
+     * Checks if a key exists in the store
+     *
+     * @param {string} key - The key to check
+     * @returns {Promise<boolean>} True if the key exists, false otherwise
+     */
     hasKey = async (key) => {
         const keys = await this.keys()
         return this.keys.includes(key)
     }
 
+    /**
+     * Diagnoses the database state and returns diagnostic information
+     *
+     * @returns {Promise<Object>} Diagnostic information about the database
+     */
+    async diagnose() {
+        try {
+            const db = await this.#getDB()
+            const result = {
+                name:       this.#name,
+                version:    this.#version,
+                stores:     {},
+                cacheState: {
+                    writing:  this.#writingKeys.size,
+                    deleting: this.#deletingKeys.size,
+                    memory:   this.#memoryCache?.size || 0,
+                },
+            }
 
+            for (const store of this.#stores) {
+                try {
+                    const tx = db.transaction(store, 'readonly')
+                    const keys = await tx.objectStore(store).getAllKeys()
+                    result.stores[store] = {
+                        count: keys.length,
+                        keys:  keys.slice(0, 10), // First 10 for debugging
+                    }
+                    await tx.done
+                }
+                catch (storeError) {
+                    result.stores[store] = {error: storeError.message}
+                }
+            }
+
+            return result
+        }
+        catch (error) {
+            return {error: error.message}
+        }
+    }
+
+    /**
+     * Clears the memory cache
+     *
+     * @returns {void}
+     */
+    clearMemoryCache() {
+        this.#memoryCache.clear()
+        console.log('Memory cache cleared')
+    }
+
+    /**
+     * Retrieves cache statistics
+     *
+     * @returns {Object} Cache statistics including size, max size, and sample entries
+     */
+    getCacheStats() {
+        return {
+            size:    this.#memoryCache.size,
+            maxSize: this.#cacheMaxSize,
+            entries: Array.from(this.#memoryCache.keys()).slice(0, 10),
+        }
+    }
 }
