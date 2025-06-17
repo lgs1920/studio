@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-09
- * Last modified: 2025-06-09
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -254,6 +254,12 @@ export class LGS1920Context {
      * @returns {*} The journey object associated with the processed slug, or undefined if not found.
      */
     getJourneyByTrackSlug = (slug) => {
+        const parts = slug.split('#')
+        if (parts.length === 2) {
+            // UC : journey POIs = parent = journey slug
+            return this.getJourneyBySlug(slug)
+        }
+        // UC : tracks POIs
         const journeySlug = slug.split('#').slice(1, 3).join('#')
         return this.getJourneyBySlug(journeySlug)
     }
