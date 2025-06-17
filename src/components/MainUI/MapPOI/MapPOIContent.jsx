@@ -262,7 +262,6 @@ export const MapPOIContent = ({poi}) => {
             }
         }
 
-        console.log(point.categoryIcon())
         renderToCanvas()
         addPOIEventListeners(point)
         return () => {
