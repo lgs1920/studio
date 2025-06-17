@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-17
- * Last modified: 2025-06-17
+ * Created on: 2025-06-18
+ * Last modified: 2025-06-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -77,28 +77,31 @@ export const MapPOIContent = ({poi}) => {
             }
 
             const drawer = thePOI.parent ? JOURNEY_EDITOR_DRAWER : POIS_EDITOR_DRAWER
-            let same = true
+            let sameJourney = true
+            let sameTrack = true
             const tab = 'pois'
             if (thePOI.parent) {
                 const newJourney = lgs.getJourneyByTrackSlug(thePOI.parent)
-
-                if (newJourney.slug !== lgs.theJourney.slug) {
+                sameJourney = newJourney && newJourney.slug === lgs.theJourney.slug
+                if (!sameJourney) {
                     // it is a different journey
                     newJourney.addToContext()
                     newJourney.addToEditor()
                 }
-                const newTrack = lgs.getTrackBySlug(thePOI.parent)
-                same = newTrack.slug === lgs.theTrack.slug
-                if (!same) {
-                    // It is a different track
-                    newTrack.addToContext()
-                    newTrack.addToEditor()
+                else {
+                    const newTrack = lgs.getTrackBySlug(thePOI.parent)
+                    sameTrack = newTrack && newTrack.slug === lgs.theTrack.slug
+                    if (newTrack && !sameTrack) {
+                        // It is a different track
+                        newTrack.addToContext()
+                        newTrack.addToEditor()
+                    }
                 }
             }
 
             //  Clicking on a different journey or track always open the drawer
             //  Clicking on the same toggles the drawer
-            if (same) {
+            if (!sameJourney) {
                 __.ui.drawerManager.toggle(drawer, {
                     action: 'edit-current',
                     entity: entity,
