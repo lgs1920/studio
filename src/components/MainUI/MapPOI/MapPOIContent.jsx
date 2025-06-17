@@ -7,22 +7,23 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-09
- * Last modified: 2025-06-09
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { NameValueUnit }                             from '@Components/DataDisplay/NameValueUnit'
-import { FontAwesomeIcon }                           from '@Components/FontAwesomeIcon'
-import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
+import { FontAwesomeIcon }                                       from '@Components/FontAwesomeIcon'
+import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER, POIS_STORE } from '@Core/constants'
+import { MapPOI }                                                from '@Core/MapPOI'
 import { UIToast }                                   from '@Utils/UIToast'
 import { ELEVATION_UNITS }                           from '@Utils/UnitUtils'
 import { snapdom }                                   from '@zumer/snapdom'
 import classNames                                    from 'classnames'
 import { DateTime }                                  from 'luxon'
-import { memo, useEffect, useRef }                   from 'react'
+import { useEffect, useRef }                                     from 'react'
 import './style.css'
 import { useSnapshot }                               from 'valtio'
 
@@ -35,14 +36,14 @@ import { useSnapshot }                               from 'valtio'
  * @param {Object} props.poi - POI identifier
  * @returns {JSX.Element} Rendered POI content
  */
-export const MapPOIContent = memo(({poi}) => {
+export const MapPOIContent = ({poi}) => {
     const inner = useRef(null)
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
     const $point = $pois.list.get(poi)
     const point = useSnapshot($point)
     const _poiContent = useRef(null)
-    let current = null
+    const _mapPoiInstance = useRef(null) // Nouvelle référence stable
 
     /**
      * Get POI by id and set current poi.
@@ -111,10 +112,7 @@ export const MapPOIContent = memo(({poi}) => {
                     tab:    tab,
                 })
             }
-
             lgs.stores.journeyEditor.tabs.journey[tab] = true
-
-
         }
         else {
             UIToast.warning({
@@ -230,37 +228,45 @@ export const MapPOIContent = memo(({poi}) => {
             if (!_poiContent.current) {
                 return
             }
+
             try {
                 const scale = 2
                 const ratio = window.devicePixelRatio || 1
                 snapdom(_poiContent.current, {scale: scale}).then(snap => {
-                    snap.toCanvas().then(canvas => {
-                        $point.image = {
-                            src: canvas.toDataURL('image/png'),
-                            width:  canvas.width / scale / ratio,
-                            height: canvas.height / scale / ratio,
-                        }
-                        $point.pixelOffset = {
-                            x: point.expanded ? -13 : 0, // equiv of --poi-delta-x defined in ./style.css
-                            y: 0,
-                        }
-                        point.draw()
+                    snap.toCanvas().then(async canvas => {
+                        const thePOI = new MapPOI($point)
+                        thePOI.update({
+                                          image:          {
+                                              src:    canvas.toDataURL('image/png'),
+                                              width:  canvas.width / scale / ratio,
+                                              height: canvas.height / scale / ratio,
+                                          }, pixelOffset: {
+                                x: point.expanded ? -13 : 0, // equiv of --poi-delta-x defined in ./style.css
+                                y: 0,
+                            },
+                                      },
+                        )
+                        // force draw here instead of this.draw()due to proxy async
+                        await thePOI.utils.draw(thePOI)
                         lgs.scene.requestRender()
+                        // same for db persisting
+                        await lgs.db.lgs1920.put(thePOI.id, MapPOI.serialize({
+                                                                                 ...thePOI,
+                                                                                 __class: MapPOI,
+                                                                             }), POIS_STORE)
                     })
                 })
             }
             catch (error) {
                 console.error('Error occurred during the conversion POI', error)
             }
-
         }
+
         renderToCanvas()
         addPOIEventListeners(point)
 
-
         return () => {
             removePOIEventListeners(point)
-            // point.remove() //TODO remove DOM elements and ref
         }
     }, [
                   point.title,
@@ -274,23 +280,25 @@ export const MapPOIContent = memo(({poi}) => {
                   point.type,
               ])
 
+
     return (
         <div className={classNames(
             'poi-on-map-wrapper',
-            (point?.showFlag || !point?.expanded) && !point?.over ? 'poi-shrinked' : '',
+            !point?.expanded && !point?.over ? 'poi-shrinked' : '',
         )}
              id={point.id}
              style={{
                  '--lgs-poi-background-color': point.bgColor ?? lgs.colors.poiDefaultBackground,
                  '--lgs-poi-border-color':     point.color ?? lgs.colors.poiDefault,
                  '--lgs-poi-color':            point.color ?? lgs.colors.poiDefault,
+                 'top': '500px', 'left': '500px',
              }}
         >
             <div className="poi-on-map" ref={_poiContent}>
                 <div className="poi-on-map-inner" ref={inner} id={`poi-inner-${point?.id}`}>
                     <div className="poi-on-map-triangle-down"/>
                     <div className="poi-on-map-inner-background"/>
-                    {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
+                    {(point.expanded || (!point.expanded && point.over)) &&
                         <>
                             <h3> {point.title ?? 'Point Of Interest'}</h3>
                             {/* //   {point.scale >= 0 && ( */}
@@ -325,12 +333,12 @@ export const MapPOIContent = memo(({poi}) => {
                             {/* // )} */}
                         </>
                     }
-                    {(point.showFlag || (!point.expanded && !point.over)) && (
+                    {!point.expanded && !point.over && (
                         <FontAwesomeIcon icon={point.icon} className="poi-as-flag"/>
                     )}
                 </div>
 
-                {(point.expanded || (!point.expanded && point.over)) && !point.showFlag &&
+                {(point.expanded || (!point.expanded && point.over)) &&
                     <div className="poi-icons">
                         <FontAwesomeIcon icon={point.icon} className="poi-as-flag"/>
                     </div>
@@ -338,4 +346,4 @@ export const MapPOIContent = memo(({poi}) => {
             </div>
         </div>
     )
-})
+}
