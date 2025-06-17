@@ -46,7 +46,7 @@ export const MapPOI = memo(({point}) => {
                     className={classNames(
                         'poi-on-map-wrapper',
                         'lgs-slide-in-from-top-bounced',
-                        thePOI?.expanded && !thePOI?.over ? 'poi-shrinked' : '',
+                        thePOI?.expanded ? 'poi-shrinked' : '',
                     )}
                     ref={_poi}
                     id={thePOI.id}

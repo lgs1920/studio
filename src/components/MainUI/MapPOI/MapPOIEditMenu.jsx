@@ -49,39 +49,39 @@ export const MapPOIEditMenu = memo(({point}) => {
     const settings = useSnapshot(lgs.settings.ui.poi)
 
     // Stabilize point to avoid unnecessary re-renders
-    const stablePoint = useMemo(() => point, [point.id])
+    const thePOI = useMemo(() => point, [point.id])
 
     // Memoized event handlers
     const hide = useCallback(async () => {
-        const poi = $pois.list.get(stablePoint.id)
-        $pois.list.set(stablePoint.id, {...poi, visible: false})
+        const poi = $pois.list.get(thePOI.id)
+        $pois.list.set(thePOI.id, {...poi, visible: false})
         poi.toggleVisibility()
-    }, [stablePoint.id, $pois])
+    }, [thePOI.id, $pois])
 
     const show = useCallback(async () => {
-        const poi = $pois.list.get(stablePoint.id)
-        $pois.list.set(stablePoint.id, {...poi, visible: true})
+        const poi = $pois.list.get(thePOI.id)
+        $pois.list.set(thePOI.id, {...poi, visible: true})
         poi.toggleVisibility()
-    }, [stablePoint.id, $pois])
+    }, [thePOI.id, $pois])
 
     const shrink = useCallback(async () => {
-        const poi = $pois.list.get(stablePoint.id)
-        $pois.list.set(stablePoint.id, {...poi, expanded: false})
-    }, [stablePoint.id, $pois])
+        const poi = $pois.list.get(thePOI.id)
+        $pois.list.set(thePOI.id, {...poi, expanded: false})
+    }, [thePOI.id, $pois])
 
     const expand = useCallback(async () => {
-        const poi = $pois.list.get(stablePoint.id)
-        $pois.list.set(stablePoint.id, {...poi, expanded: true})
-    }, [stablePoint.id, $pois])
+        const poi = $pois.list.get(thePOI.id)
+        $pois.list.set(thePOI.id, {...poi, expanded: true})
+    }, [thePOI.id, $pois])
 
     const focus = useCallback(async () => {
-        $pois.current = stablePoint.id
+        $pois.current = thePOI.id
         const camera = lgs.mainProxy.components.camera
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
         }
-        __.ui.sceneManager.focus(stablePoint, {
-            target:     stablePoint,
+        __.ui.sceneManager.focus(thePOI, {
+            target: thePOI,
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
@@ -91,11 +91,11 @@ export const MapPOIEditMenu = memo(({point}) => {
             panoramic:  false,
             flyingTime: 0,
         })
-    }, [stablePoint, $pois])
+    }, [thePOI, $pois])
 
     const rotationAround = useCallback(async () => {
-        $pois.current = stablePoint.id
-        const current = pois.list.get(stablePoint.id)
+        $pois.current = thePOI.id
+        const current = pois.list.get(thePOI.id)
         const camera = lgs.mainProxy.components.camera
         if (__.ui.cameraManager.isRotating()) {
             await stopRotation()
@@ -113,14 +113,14 @@ export const MapPOIEditMenu = memo(({point}) => {
             panoramic:  false,
             flyingTime: 0,
         })
-        $pois.list.set(stablePoint.id, {...$pois.list.get(stablePoint.id), animated: true})
-    }, [stablePoint.id, pois.list, $pois])
+        $pois.list.set(thePOI.id, {...$pois.list.get(thePOI.id), animated: true})
+    }, [thePOI.id, pois.list, $pois])
 
     const setAsStarter = useCallback(async () => {
-        const {former, starter} = await __.ui.poiManager.setStarter(stablePoint)
+        const {former, starter} = await __.ui.poiManager.setStarter(thePOI)
         if (starter) {
             UIToast.success({
-                                caption: `${stablePoint.title}`,
+                                caption: `${thePOI.title}`,
                                 text:    'Set as new starter POI.',
                             })
             $pois.list.set(former.id, former)
@@ -128,11 +128,11 @@ export const MapPOIEditMenu = memo(({point}) => {
         }
         else {
             UIToast.warning({
-                                caption: `${stablePoint.title}`,
+                                caption: `${thePOI.title}`,
                                 text:    'Change failed.',
                             })
         }
-    }, [stablePoint, $pois])
+    }, [thePOI, $pois])
 
     const panoramic = useCallback(async () => {
         if (__.ui.cameraManager.isRotating()) {
@@ -143,15 +143,15 @@ export const MapPOIEditMenu = memo(({point}) => {
 
     const stopRotation = useCallback(async () => {
         await __.ui.cameraManager.stopRotate()
-        const poi = $pois.list.get(stablePoint.id)
-        $pois.list.set(stablePoint.id, {...poi, animated: false})
-    }, [stablePoint.id, $pois])
+        const poi = $pois.list.get(thePOI.id)
+        $pois.list.set(thePOI.id, {...poi, animated: false})
+    }, [thePOI.id, $pois])
 
     const remove = useCallback(async () => {
         if (__.ui.cameraManager.isRotating()) {
             await stopRotation()
         }
-        __.ui.poiManager.remove({id: stablePoint.id}).then((result) => {
+        __.ui.poiManager.remove({id: thePOI.id}).then((result) => {
             if (result.success) {
                 pois.filtered.global.delete(result.id)
                 pois.filtered.journey.delete(result.id)
@@ -159,12 +159,12 @@ export const MapPOIEditMenu = memo(({point}) => {
                 $pois.current = false
             }
         })
-    }, [stablePoint.id, pois, $pois])
+    }, [thePOI.id, pois, $pois])
 
     // Memoized menu items to avoid re-rendering
     const menuItems = useMemo(() => {
         const items = []
-        if (stablePoint.visible) {
+        if (thePOI.visible) {
             if (!settings.focusOnEdit) {
                 items.push(
                     <SlMenuItem key="focus" onClick={focus} small>
@@ -173,7 +173,7 @@ export const MapPOIEditMenu = memo(({point}) => {
                     </SlMenuItem>,
                 )
             }
-            if (stablePoint.type !== POI_STARTER_TYPE) {
+            if (thePOI.type !== POI_STARTER_TYPE) {
                 items.push(
                     <SlMenuItem key="setAsStarter" onClick={setAsStarter} small>
                         <SlIcon slot="prefix" library="fa" name={ICON_FLAG}/>
@@ -181,7 +181,7 @@ export const MapPOIEditMenu = memo(({point}) => {
                     </SlMenuItem>,
                 )
             }
-            if (stablePoint.type !== POI_STARTER_TYPE && stablePoint.type !== POI_FLAG_START && stablePoint.type !== POI_FLAG_STOP) {
+            if (thePOI.type !== POI_STARTER_TYPE && thePOI.type !== POI_FLAG_START && thePOI.type !== POI_FLAG_STOP) {
                 items.push(
                     <SlMenuItem key="remove" onClick={remove} small>
                         <SlIcon slot="prefix" library="fa" name={ICON_TRASH}/>
@@ -189,15 +189,15 @@ export const MapPOIEditMenu = memo(({point}) => {
                     </SlMenuItem>,
                 )
             }
-            if (stablePoint.expanded) {
+            if (thePOI.expanded) {
                 items.push(
                     <SlMenuItem key="shrink" onClick={shrink} small>
-                        <FontAwesomeIcon slot="prefix" icon={stablePoint.icon}/>
+                        <FontAwesomeIcon slot="prefix" icon={thePOI.categoryIcon()}/>
                         <span>Reduce</span>
                     </SlMenuItem>,
                 )
             }
-            if (!stablePoint.expanded) {
+            if (!thePOI.expanded) {
                 items.push(
                     <SlMenuItem key="expand" onClick={expand} small>
                         <SlIcon slot="prefix" library="fa" name={ICON_ARROWS}/>
@@ -212,7 +212,7 @@ export const MapPOIEditMenu = memo(({point}) => {
                 </SlMenuItem>,
                 <sl-divider key="divider"/>,
             )
-            if (!pois.list.get(stablePoint.id)?.animated) {
+            if (!pois.list.get(thePOI.id)?.animated) {
                 items.push(
                     <SlMenuItem key="rotationAround" onClick={rotationAround}>
                         <SlIcon slot="prefix" library="fa" name={ICON_ROTATE}/>
@@ -224,7 +224,7 @@ export const MapPOIEditMenu = memo(({point}) => {
                     </SlMenuItem>,
                 )
             }
-            if (stablePoint.id === pois.current && pois.list.get(stablePoint.id)?.animated) {
+            if (thePOI.id === pois.current && pois.list.get(thePOI.id)?.animated) {
                 items.push(
                     <SlMenuItem key="stopRotation" onClick={stopRotation} loading>
                         <SlIcon slot="prefix" library="fa" name={ICON_STOP}/>
@@ -236,15 +236,15 @@ export const MapPOIEditMenu = memo(({point}) => {
         else {
             items.push(
                 <SlMenuItem key="show" onClick={show} small>
-                    <FontAwesomeIcon slot="prefix" icon={stablePoint.icon}/>
+                    <FontAwesomeIcon slot="prefix" icon={thePOI.icon}/>
                     <span>Show</span>
                 </SlMenuItem>,
             )
         }
         return items
-    }, [stablePoint, settings.focusOnEdit, pois.list, pois.current, hide, show, shrink, expand, focus, setAsStarter, remove, rotationAround, panoramic, stopRotation])
+    }, [thePOI, settings.focusOnEdit, pois.list, pois.current, hide, show, shrink, expand, focus, setAsStarter, remove, rotationAround, panoramic, stopRotation])
 
-    if (!stablePoint || stablePoint.type === POI_STARTER_TYPE) {
+    if (!thePOI || thePOI.type === POI_STARTER_TYPE) {
         return null
     }
 

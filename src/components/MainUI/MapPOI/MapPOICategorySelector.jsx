@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-25
- * Last modified: 2025-05-25
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -34,9 +34,8 @@ export const MapPOICategorySelector = (point, props) => {
             category: event.target.value,
         })
         await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(pois.current))
-
-        setIcon(Object.values(POI_CATEGORY_ICONS.get(event.target.value))[0])
-        setCategory($pois.categories.get(event.target.value))
+        setCategory($pois.categories.get(current.category))
+        setIcon(current.categoryIcon())
     }
 
 
@@ -47,7 +46,7 @@ export const MapPOICategorySelector = (point, props) => {
                           className="map-poi-category-selector"
                           onSlChange={handleCategory}>
 
-                    <FontAwesomeIcon slot="prefix" icon={current.icon} style={{
+                    <FontAwesomeIcon slot="prefix" icon={current.categoryIcon()} style={{
                         '--fa-secondary-color': current.bgColor,
                         '--fa-secondary-opacity': 1,
                         '--fa-primary-color':   current.color,
@@ -64,7 +63,7 @@ export const MapPOICategorySelector = (point, props) => {
                                                                                   '--fa-primary-color':   current.color,
 
                                                                                   '--fa-primary-opacity': 1,
-                                                                                  // 'color':current.color
+                                                                                  'color': current.color,
                                                                               }}/>
                                                              {category.title}
                                                          </SlOption>,

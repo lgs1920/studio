@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-10
- * Last modified: 2025-06-10
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -296,7 +296,7 @@ export const MapPOIContextMenu = () => {
 
                             {_current.expanded &&
                                 <li onClick={shrink}>
-                                    <FontAwesomeIcon slot="prefix" icon={_current.icon}></FontAwesomeIcon>
+                                    <FontAwesomeIcon slot="prefix" icon={_current.categoryIcon()}></FontAwesomeIcon>
                                     <span>{'Reduce'}</span>
                                 </li>
                             }

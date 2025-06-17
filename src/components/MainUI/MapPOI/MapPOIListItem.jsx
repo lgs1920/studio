@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-16
- * Last modified: 2025-06-16
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -44,7 +44,7 @@ export const MapPOIListItem = memo(({id, poi, context}) => {
     const drawers = useSnapshot(lgs.mainProxy.drawers)
 
     // Stabilize poi object
-    const stablePoi = useMemo(() => pois.list.get(id) || poi, [id, poi, pois.list])
+    const thePOI = useMemo(() => pois.list.get(id) || poi, [id, poi, pois.list])
 
     // Memoized bulk list handler
     const handleBulkList = useCallback(
@@ -56,13 +56,13 @@ export const MapPOIListItem = memo(({id, poi, context}) => {
 
     // Memoized copy coordinates handler
     const handleCopyCoordinates = useCallback(() => {
-        __.ui.poiManager.copyCoordinatesToClipboard(stablePoi).then(() => {
+        __.ui.poiManager.copyCoordinatesToClipboard(thePOI).then(() => {
             UIToast.success({
-                                caption: `${stablePoi.name}`,
+                                caption: `${thePOI.name}`,
                                 text:    'Coordinates copied to the clipboard <br/>under the form: latitude, longitude',
                             })
         })
-    }, [stablePoi])
+    }, [thePOI])
 
     // Memoized select POI handler
     const selectPOI = async (event) => {
@@ -126,23 +126,23 @@ export const MapPOIListItem = memo(({id, poi, context}) => {
     // Memoized styles
     const styles = useMemo(
         () => ({
-            '--map-poi-bg-header':    __.ui.ui.hexToRGBA(stablePoi.bgColor ?? lgs.colors.poiDefaultBackground, 'rgba', 0.2),
-            '--fa-primary-color':     stablePoi.color,
-            '--fa-secondary-color':   stablePoi.bgColor,
+            '--map-poi-bg-header':  __.ui.ui.hexToRGBA(thePOI.bgColor ?? lgs.colors.poiDefaultBackground, 'rgba', 0.2),
+            '--fa-primary-color':   thePOI.color,
+            '--fa-secondary-color': thePOI.bgColor,
             '--fa-primary-opacity':   1,
             '--fa-secondary-opacity': 1,
         }),
-        [stablePoi.bgColor, stablePoi.color],
+        [thePOI.bgColor, thePOI.color],
     )
 
     // Memoized classes
     const classes = useMemo(
         () =>
             classNames('edit-map-poi-item', {
-                'map-poi-hidden':  !stablePoi.visible,
-                'map-poi-starter': stablePoi.type === POI_STARTER_TYPE,
+                'map-poi-hidden':  !thePOI.visible,
+                'map-poi-starter': thePOI.type === POI_STARTER_TYPE,
             }),
-        [stablePoi.visible, stablePoi.type],
+        [thePOI.visible, thePOI.type],
     )
 
 
@@ -165,12 +165,12 @@ export const MapPOIListItem = memo(({id, poi, context}) => {
             >
                 <div slot="summary">
                     <span>
-                        <FontAwesomeIcon icon={stablePoi.visible ? stablePoi.icon : faMask} style={styles}/>
-                        {stablePoi.title}
+                        <FontAwesomeIcon icon={thePOI.visible ? thePOI.categoryIcon() : faMask} style={styles}/>
+                        {thePOI.title}
                     </span>
                     <span></span>
                 </div>
-                <MapPOIEditContent context={context} poi={stablePoi}/>
+                <MapPOIEditContent context={context} poi={thePOI}/>
             </SlDetails>
         </div>
     )

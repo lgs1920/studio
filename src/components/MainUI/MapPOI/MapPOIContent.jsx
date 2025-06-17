@@ -262,15 +262,15 @@ export const MapPOIContent = ({poi}) => {
             }
         }
 
+        console.log(point.categoryIcon())
         renderToCanvas()
         addPOIEventListeners(point)
-
         return () => {
             removePOIEventListeners(point)
         }
     }, [
                   point.title,
-                  point.icon,
+                  point.category,
                   point.expanded,
                   point.color,
                   point.bgColor,
@@ -284,24 +284,23 @@ export const MapPOIContent = ({poi}) => {
     return (
         <div className={classNames(
             'poi-on-map-wrapper',
-            !point?.expanded && !point?.over ? 'poi-shrinked' : '',
+            !point?.expanded ? 'poi-shrinked' : '',
         )}
              id={point.id}
              style={{
                  '--lgs-poi-background-color': point.bgColor ?? lgs.colors.poiDefaultBackground,
                  '--lgs-poi-border-color':     point.color ?? lgs.colors.poiDefault,
                  '--lgs-poi-color':            point.color ?? lgs.colors.poiDefault,
-                 'top': '500px', 'left': '500px',
              }}
         >
             <div className="poi-on-map" ref={_poiContent}>
                 <div className="poi-on-map-inner" ref={inner} id={`poi-inner-${point?.id}`}>
                     <div className="poi-on-map-triangle-down"/>
                     <div className="poi-on-map-inner-background"/>
-                    {(point.expanded || (!point.expanded && point.over)) &&
+                    {point.expanded &&
                         <>
                             <h3> {point.title ?? 'Point Of Interest'}</h3>
-                            {/* //   {point.scale >= 0 && ( */}
+
                             <div className="poi-full-coordinates">
                                 {point.height && point.height > 0 && point.height !== point.simulatedHeight ? (
                                     <NameValueUnit
@@ -333,14 +332,16 @@ export const MapPOIContent = ({poi}) => {
                             {/* // )} */}
                         </>
                     }
-                    {!point.expanded && !point.over && (
-                        <FontAwesomeIcon icon={point.icon} className="poi-as-flag"/>
-                    )}
+                    {!point.expanded &&
+                        <FontAwesomeIcon key={point.category} icon={point.categoryIcon(point.category)}
+                                         className="poi-as-flag"/>
+                    }
                 </div>
 
-                {(point.expanded || (!point.expanded && point.over)) &&
+                {point.expanded &&
                     <div className="poi-icons">
-                        <FontAwesomeIcon icon={point.icon} className="poi-as-flag"/>
+                        <FontAwesomeIcon key={point.category} icon={point.categoryIcon(point.category)}
+                                         className="poi-as-flag"/>
                     </div>
                 }
             </div>

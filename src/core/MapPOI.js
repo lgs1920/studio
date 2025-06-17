@@ -68,6 +68,8 @@ export class MapPOI extends MapElement {
      */
     height
 
+    icon = null
+
     /**
      * @type {string}
      */
@@ -167,13 +169,10 @@ export class MapPOI extends MapElement {
      *
      * @return {string} The icon corresponding to the category or the standard type.
      */
-    get icon() {
-        return Object.values(POI_CATEGORY_ICONS.get(this.category ?? POI_STANDARD_TYPE))[0]
+    categoryIcon = (category = this.category) => {
+        return Object.values(POI_CATEGORY_ICONS.get(category ?? POI_STANDARD_TYPE))[0]
     }
 
-    set icon(icon) {
-        // we need it to avoid an error but icon is set by POI category
-    }
 
     static deserialize = (object, json = false) => MapElement.deserialize(object, json)
 

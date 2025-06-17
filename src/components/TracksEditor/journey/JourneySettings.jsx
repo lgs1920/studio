@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-15
- * Last modified: 2025-06-15
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -502,7 +502,7 @@ export const JourneySettings = function JourneySettings() {
                          */}
                         <SlTabPanel name="pois">
                             <MapPOIEditSettings/>
-                            <MapPOIList/>
+                            <MapPOIList context={'journey-panel'}/>
                         </SlTabPanel>
 
                         {/**
