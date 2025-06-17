@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-26
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -46,7 +46,7 @@ export const MapPOI = memo(({point}) => {
                     className={classNames(
                         'poi-on-map-wrapper',
                         'lgs-slide-in-from-top-bounced',
-                        (thePOI?.showFlag || !thePOI?.expanded) && !thePOI?.over ? 'poi-shrinked' : '',
+                        thePOI?.expanded && !thePOI?.over ? 'poi-shrinked' : '',
                     )}
                     ref={_poi}
                     id={thePOI.id}
