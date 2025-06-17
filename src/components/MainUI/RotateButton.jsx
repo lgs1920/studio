@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-16
- * Last modified: 2025-06-16
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -35,7 +35,8 @@ export const RotateButton = memo(({tooltip = 'top'}) => {
     // Targeted snapshots to minimize re-renders
     const {rotate} = useSnapshot(lgs.stores.main.components.mainUI)
     const {target, position} = useSnapshot(lgs.stores.main.components.camera)
-    const {list, current} = useSnapshot(lgs.stores.main.components.pois)
+    const $pois = lgs.stores.main.components.pois
+    const {list, current} = useSnapshot($pois)
 
     // Memoized scene target check
     const isPOITarget = useMemo(() => {
@@ -53,7 +54,7 @@ export const RotateButton = memo(({tooltip = 'top'}) => {
             if (rotate.running) {
                 await __.ui.cameraManager.stopRotate()
                 if (poi && poi.animated !== false) {
-                    $poi.animated = false
+                    Object.assign($pois.list.get(poi.id), {animated: false})
                 }
             }
             else {
@@ -68,7 +69,7 @@ export const RotateButton = memo(({tooltip = 'top'}) => {
                     target:     FOCUS_TARGET,
                 })
                 if (poi && poi.animated !== true) {
-                    poi.animated = true
+                    Object.assign($pois.list.get(poi.id), {animated: true})
                 }
             }
         }
