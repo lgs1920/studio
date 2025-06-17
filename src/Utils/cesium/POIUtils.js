@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-23
- * Last modified: 2025-05-23
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -352,7 +352,6 @@ export class POIUtils {
      * @param {number} [scaler.minScale] - The minimum scale value allowed for the point.
      * @returns {Object} An object containing the following properties:
      *   - {number} scale: The calculated scale for the point based on its distance.
-     *   - {boolean} showFlag: Indicates if a flag should be shown for the point based on its scale.
      *   - {boolean} tooFar: Indicates whether the point is beyond the minimum scale threshold.
      *   - {number} cameraDistance: The distance of the point from the camera.
      */
@@ -367,7 +366,6 @@ export class POIUtils {
         const flagVisible = !tooFar && scale <= scaler.minScaleFlag
         return {
             scale:          scale,
-            showFlag:       flagVisible,
             tooFar:         tooFar,
             cameraDistance: distance,
         }
