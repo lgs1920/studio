@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-08
- * Last modified: 2025-06-08
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -87,11 +87,6 @@ export class MapPOI extends MapElement {
      * @type {string[null]}
      */
     parent = null
-
-    /**
-     * @type {boolean}
-     */
-    showFlag = false
 
     /** @type {POIUtils} **/
     utils = POIUtils
@@ -214,7 +209,7 @@ export class MapPOI extends MapElement {
         }
 
         // Define a set of keys that trigger a redraw when modified
-        const keys = new Set(['bgcolor', 'category', 'color', 'showFlag', 'category', 'expanded', 'type'])
+        const keys = new Set(['bgcolor', 'category', 'color', 'expanded', 'type', 'image'])
         // Additional keys to check when the item is expanded
         const keysWhenExpanded = new Set(['title', 'description', 'height'])
 
@@ -243,13 +238,7 @@ export class MapPOI extends MapElement {
 
         // If redraw is needed, call the draw method
         if (shouldRedraw) {
-            this.draw(dbSync).then(async () => {
-                                       // Optionally persist changes to database
-                                       if (dbSync) {
-                                           await this.persistToDatabase()
-                                       }
-                                   },
-            )
+            this.draw(dbSync)
         }
 
 
@@ -384,9 +373,7 @@ export class MapPOI extends MapElement {
      * @returns {Promise<Object>} A promise that resolves to the created entity
      */
     draw = async (dbSync = true) => {
-        //this.image = __.ui.poiManager.createContent(this)
         const entity = await this.utils.draw(this)
-
         if (dbSync) {
             this.persistToDatabase()
         }
