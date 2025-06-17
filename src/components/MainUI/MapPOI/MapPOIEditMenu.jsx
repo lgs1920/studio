@@ -78,7 +78,7 @@ export const MapPOIEditMenu = memo(({point}) => {
         })
     }
 
-    const focus = useCallback(async () => {
+    const focus = async () => {
         $pois.current = point.id
         const camera = lgs.mainProxy.components.camera
         if (__.ui.cameraManager.isRotating()) {
@@ -95,9 +95,9 @@ export const MapPOIEditMenu = memo(({point}) => {
             panoramic:  false,
             flyingTime: 0,
         })
-    }, [point, $pois])
+    }
 
-    const rotationAround = useCallback(async () => {
+    const rotationAround = async () => {
         $pois.current = point.id
         const current = pois.list.get(point.id)
         const camera = lgs.mainProxy.components.camera
@@ -118,9 +118,9 @@ export const MapPOIEditMenu = memo(({point}) => {
             flyingTime: 0,
         })
         $pois.list.set(point.id, {...$pois.list.get(point.id), animated: true})
-    }, [point.id, pois.list, $pois])
+    }
 
-    const setAsStarter = useCallback(async () => {
+    const setAsStarter = async () => {
         const {former, starter} = await __.ui.poiManager.setStarter(point)
         if (starter) {
             UIToast.success({
@@ -136,22 +136,22 @@ export const MapPOIEditMenu = memo(({point}) => {
                                 text:    'Change failed.',
                             })
         }
-    }, [point, $pois])
+    }
 
-    const panoramic = useCallback(async () => {
+    const panoramic = async () => {
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
         }
         __.ui.cameraManager.panoramic()
-    }, [])
+    }
 
-    const stopRotation = useCallback(async () => {
+    const stopRotation = async () => {
         await __.ui.cameraManager.stopRotate()
         const poi = $pois.list.get(point.id)
         $pois.list.set(point.id, {...poi, animated: false})
-    }, [point.id, $pois])
+    }
 
-    const remove = useCallback(async () => {
+    const remove = async () => {
         if (__.ui.cameraManager.isRotating()) {
             await stopRotation()
         }
@@ -163,7 +163,7 @@ export const MapPOIEditMenu = memo(({point}) => {
                 $pois.current = false
             }
         })
-    }, [point.id, pois, $pois])
+    }
 
     // Memoized menu items to avoid re-rendering
     const menuItems = useMemo(() => {
