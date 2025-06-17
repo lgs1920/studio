@@ -14,6 +14,14 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+/**
+ * Dependencies
+ */
+import { openDB, unwrap } from 'idb'
+import { DateTime }       from 'luxon'
+
+let millis = 1000
+
 export class LocalDB {
 
     #db = null
