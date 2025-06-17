@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-15
- * Last modified: 2025-06-15
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -189,7 +189,7 @@ export const MapPOIEditMenu = memo(({point}) => {
                     </SlMenuItem>,
                 )
             }
-            if (stablePoint.expanded && !stablePoint.showFlag) {
+            if (stablePoint.expanded) {
                 items.push(
                     <SlMenuItem key="shrink" onClick={shrink} small>
                         <FontAwesomeIcon slot="prefix" icon={stablePoint.icon}/>
