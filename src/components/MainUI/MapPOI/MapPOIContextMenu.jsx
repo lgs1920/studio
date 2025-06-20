@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-17
- * Last modified: 2025-06-17
+ * Created on: 2025-06-20
+ * Last modified: 2025-06-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,7 +21,8 @@ import {
     SECOND,
 } from '@Core/constants'
 import {
-    faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama, faTrashCan,
+    faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama,
+    faTrashCan,
 }                          from '@fortawesome/pro-regular-svg-icons'
 import {
     faMask,
@@ -296,7 +297,7 @@ export const MapPOIContextMenu = () => {
 
                             {_current.expanded &&
                                 <li onClick={shrink}>
-                                    <FontAwesomeIcon slot="prefix" icon={_current.categoryIcon()}></FontAwesomeIcon>
+                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsToLine)}></SlIcon>
                                     <span>{'Reduce'}</span>
                                 </li>
                             }

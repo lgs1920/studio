@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-17
- * Last modified: 2025-06-17
+ * Created on: 2025-06-20
+ * Last modified: 2025-06-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,7 +19,8 @@ import { useSnapshot }                from 'valtio'
 import { FontAwesomeIcon }            from '@Components/FontAwesomeIcon'
 import { POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants'
 import {
-    faArrowRotateRight, faArrowsFromLine, faCrosshairsSimple, faFlag, faLocationDot, faPanorama, faTrashCan, faXmark,
+    faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCrosshairsSimple, faFlag, faLocationDot, faPanorama,
+    faTrashCan, faXmark,
 }                                     from '@fortawesome/pro-regular-svg-icons'
 import { faMask }                     from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
@@ -31,7 +32,9 @@ import './style.css'
 const ICON_CROSSHAIRS = FA2SL.set(faCrosshairsSimple)
 const ICON_FLAG = FA2SL.set(faFlag)
 const ICON_TRASH = FA2SL.set(faTrashCan)
-const ICON_ARROWS = FA2SL.set(faArrowsFromLine)
+const ICON_EXPAND = FA2SL.set(faArrowsFromLine)
+const ICON_REDUCE = FA2SL.set(faArrowsToLine)
+
 const ICON_MASK = FA2SL.set(faMask)
 const ICON_ROTATE = FA2SL.set(faArrowRotateRight)
 const ICON_PANORAMA = FA2SL.set(faPanorama)
@@ -196,7 +199,7 @@ export const MapPOIEditMenu = memo(({point}) => {
             if (point.expanded) {
                 items.push(
                     <SlMenuItem key="shrink" onClick={shrink} small>
-                        <FontAwesomeIcon slot="prefix" icon={point.categoryIcon()}/>
+                        <SlIcon slot="prefix" library="fa" name={ICON_REDUCE}/>
                         <span>Reduce</span>
                     </SlMenuItem>,
                 )
@@ -204,7 +207,7 @@ export const MapPOIEditMenu = memo(({point}) => {
             if (!point.expanded) {
                 items.push(
                     <SlMenuItem key="expand" onClick={expand} small>
-                        <SlIcon slot="prefix" library="fa" name={ICON_ARROWS}/>
+                        <SlIcon slot="prefix" library="fa" name={ICON_EXPAND}/>
                         <span>Expand</span>
                     </SlMenuItem>,
                 )
@@ -248,7 +251,7 @@ export const MapPOIEditMenu = memo(({point}) => {
         return items
     }, [point])
 
-    if (!point || point.type === POI_STARTER_TYPE) {
+    if (!point/*  || point.type === POI_STARTER_TYPE */) {
         return null
     }
 

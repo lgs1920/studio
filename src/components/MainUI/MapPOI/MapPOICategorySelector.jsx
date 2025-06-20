@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-17
- * Last modified: 2025-06-17
+ * Created on: 2025-06-20
+ * Last modified: 2025-06-20
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { MapPOIContent }   from '@Components/MainUI/MapPOI/MapPOIContent'
 import { POI_CATEGORY_ICONS, POI_STANDARD_TYPE } from '@Core/constants'
 import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { SlOption, SlSelect }                    from '@shoelace-style/shoelace/dist/react'
@@ -46,24 +47,24 @@ export const MapPOICategorySelector = (point, props) => {
                           className="map-poi-category-selector"
                           onSlChange={handleCategory}>
 
-                    <FontAwesomeIcon slot="prefix" icon={current.categoryIcon()} style={{
-                        '--fa-secondary-color': current.bgColor,
-                        '--fa-secondary-opacity': 1,
-                        '--fa-primary-color':   current.color,
-                        '--fa-primary-opacity':   1,
-                    }} className={'square-button'}/>
+                    <MapPOIContent slot="prefix" category={current.category}
+                                   style={{
+                                       '--fa-secondary-opacity':     1,
+                                       '--fa-primary-opacity':       1,
+                                       '--lgs-poi-background-color': current.bgColor ?? lgs.colors.poiDefaultBackground,
+                                       '--lgs-poi-border-color':     current.color ?? lgs.colors.poiDefault,
+                                       '--lgs-poi-color':            current.color ?? lgs.colors.poiDefault,
+                                   }}/>
 
                     {Array.from(pois.categories).map(([slug, category]) =>
                                                          <SlOption key={slug} value={slug}>
-                                                             <FontAwesomeIcon slot="prefix"
-                                                                              icon={Object.values(POI_CATEGORY_ICONS.get(slug))[0]}
-                                                                              style={{
-                                                                                  '--fa-secondary-color': current.bgColor,
-                                                                                  '--fa-secondary-opacity': 1,
-                                                                                  '--fa-primary-color':   current.color,
-
-                                                                                  '--fa-primary-opacity': 1,
-                                                                                  'color': current.color,
+                                                             <MapPOIContent category={slug}
+                                                                            style={{
+                                                                                '--fa-secondary-opacity':     1,
+                                                                                '--fa-primary-opacity':       1,
+                                                                                '--lgs-poi-background-color': current.bgColor ?? lgs.colors.poiDefaultBackground,
+                                                                                '--lgs-poi-border-color':     current.color ?? lgs.colors.poiDefault,
+                                                                                '--lgs-poi-color':            current.color ?? lgs.colors.poiDefault,
                                                                               }}/>
                                                              {category.title}
                                                          </SlOption>,

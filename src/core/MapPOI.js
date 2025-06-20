@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-17
- * Last modified: 2025-06-17
+ * Created on: 2025-06-20
+ * Last modified: 2025-06-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -164,15 +164,14 @@ export class MapPOI extends MapElement {
         }
     }
 
+    static categoryIcon = (category) => Object.values(POI_CATEGORY_ICONS.get(category ?? POI_STANDARD_TYPE))[0]
+
     /**
      * Retrieves the icon associated with the current category or a standard type if no category is specified.
      *
      * @return {string} The icon corresponding to the category or the standard type.
      */
-    categoryIcon = (category = this.category) => {
-        return Object.values(POI_CATEGORY_ICONS.get(category ?? POI_STANDARD_TYPE))[0]
-    }
-
+    categoryIcon = (category = this.category) => Object.values(POI_CATEGORY_ICONS.get(category ?? POI_STANDARD_TYPE))[0]
 
     static deserialize = (object, json = false) => MapElement.deserialize(object, json)
 

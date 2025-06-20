@@ -7,25 +7,25 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-18
- * Last modified: 2025-06-18
+ * Created on: 2025-06-20
+ * Last modified: 2025-06-20
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { NameValueUnit }                             from '@Components/DataDisplay/NameValueUnit'
+import { NameValueUnit }   from '@Components/DataDisplay/NameValueUnit'
 import { FontAwesomeIcon }                                       from '@Components/FontAwesomeIcon'
 import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER, POIS_STORE } from '@Core/constants'
 import { MapPOI }                                                from '@Core/MapPOI'
-import { UIToast }                                   from '@Utils/UIToast'
-import { ELEVATION_UNITS }                           from '@Utils/UnitUtils'
-import { snapdom }                                   from '@zumer/snapdom'
-import classNames                                    from 'classnames'
-import { DateTime }                                  from 'luxon'
+import { UIToast }         from '@Utils/UIToast'
+import { ELEVATION_UNITS } from '@Utils/UnitUtils'
+import { snapdom }         from '@zumer/snapdom'
+import classNames          from 'classnames'
+import { DateTime }        from 'luxon'
 import { useEffect, useRef }                                     from 'react'
 import './style.css'
-import { useSnapshot }                               from 'valtio'
+import { useSnapshot }     from 'valtio'
 
 /**
  * A React component that renders the content of a Point of Interest (POI) on the map.
@@ -33,45 +33,66 @@ import { useSnapshot }                               from 'valtio'
  *
  * @component
  * @param {Object} props - Component properties
- * @param {Object} props.poi - POI identifier
- * @returns {JSX.Element} Rendered POI content
+ * @param {string} props.poi - POI identifier used to lookup POI data from the store
+ * @param {boolean} [props.useInMenu=false] - Whether the component is being used within a menu context.
+ *                                           When true, disables canvas rendering and event listeners
+ *                                           to optimize performance for menu/list usage
+ * @returns {JSX.Element} Rendered POI content with interactive elements
+ *
+ * @example
+ * // Basic usage with default settings (for map display)
+ * <MapPOIContent poi="poi-123" />
+ *
+ * @example
+ * // Usage in a menu/list context (optimized rendering)
+ * <MapPOIContent poi="poi-456" useInMenu={true} />
+ *
  */
-export const MapPOIContent = ({poi}) => {
+export const MapPOIContent = ({poi, useInMenu = false, category = null, style, slot}) => {
+    // Component refs for DOM manipulation and canvas rendering
     const inner = useRef(null)
-    const $pois = lgs.stores.main.components.pois
-    const pois = useSnapshot($pois)
-    const $point = $pois.list.get(poi)
-    const point = useSnapshot($point)
     const _poiContent = useRef(null)
-    const _mapPoiInstance = useRef(null) // Nouvelle référence stable
+
+    if (category) {
+        useInMenu = true
+    }
+
+    // Store references and reactive state - only when category is not defined
+    const $pois = !category ? lgs.stores.main.components.pois : null
+    const pois = !category ? useSnapshot($pois) : null
+    const $point = !category ? $pois.list.get(poi) : null
+    const point = !category ? useSnapshot($point) : null
 
     /**
-     * Get POI by id and set current poi.
-     *
-     * @param {string} id - The POI identifier
-     * @return {Object} The current POI object
+     * Retrieves POI by ID and sets it as the current POI in the store.
+     * Only used when category is not defined.
      */
     const getPOI = (id) => {
+        if (category) {
+            return null
+        }
         const current = pois.list.get(id)
         $pois.current = id
         return current
     }
 
     /**
-     * Toggle editor Handler
+     * Toggles the editor drawer for POI editing.
      *
-     * For the same poi, it toggles the editor pane.
-     *
-     * When the editor is open on a poi and the user double clicks on another one,
-     * the editor stays open but focuses on the new poi data.
+     * Behavior:
+     * - For the same POI: toggles the editor pane open/closed
+     * - For different POI: keeps editor open but switches to new POI data
+     * - Handles journey/track context switching when POI belongs to different journey/track
      *
      * @param {Event} event - The event that triggered the handler
-     * @param {string} entity - The POI entity identifier
+     * @param {string} entity - The POI identifier
      */
     const handleEditor = (event, entity) => {
         const current = pois.current
         const thePOI = getPOI(entity)
+
         if (thePOI.type) {
+            // Toggle drawer if clicking on same POI while drawer is open
             if (__.ui.drawerManager.drawers.open && entity === current) {
                 __.ui.drawerManager.close()
             }
@@ -80,11 +101,14 @@ export const MapPOIContent = ({poi}) => {
             let sameJourney = true
             let sameTrack = true
             const tab = 'pois'
+
+            // Handle journey/track context switching for POIs with parent
             if (thePOI.parent) {
                 const newJourney = lgs.getJourneyByTrackSlug(thePOI.parent)
                 sameJourney = newJourney && newJourney.slug === lgs.theJourney.slug
+
                 if (!sameJourney) {
-                    // it is a different journey
+                    // Switch to different journey
                     newJourney.addToContext()
                     newJourney.addToEditor()
                 }
@@ -92,15 +116,14 @@ export const MapPOIContent = ({poi}) => {
                     const newTrack = lgs.getTrackBySlug(thePOI.parent)
                     sameTrack = newTrack && newTrack.slug === lgs.theTrack.slug
                     if (newTrack && !sameTrack) {
-                        // It is a different track
+                        // Switch to different track within same journey
                         newTrack.addToContext()
                         newTrack.addToEditor()
                     }
                 }
             }
 
-            //  Clicking on a different journey or track always open the drawer
-            //  Clicking on the same toggles the drawer
+            // Open drawer based on context change
             if (!sameJourney) {
                 __.ui.drawerManager.toggle(drawer, {
                     action: 'edit-current',
@@ -118,6 +141,7 @@ export const MapPOIContent = ({poi}) => {
             lgs.stores.journeyEditor.tabs.journey[tab] = true
         }
         else {
+            // Show warning for temporary POIs that cannot be edited
             UIToast.warning({
                                 caption: `You can not edit this POI.`,
                                 text:    `It is a temporary POI. Use ${'Save As POI'} in the context menu then you will be able to.`,
@@ -126,13 +150,16 @@ export const MapPOIContent = ({poi}) => {
     }
 
     /**
-     * Show context menu for the selected poi.
+     * Displays the context menu for the selected POI.
+     * Only shows menu if camera is not rotating or if POI is current selection.
      *
-     * @param {Event} event - The event that triggered the handler
+     * @param {Event} event - The event that triggered the handler (right-click/long-tap)
      * @param {string} entity - The POI entity identifier
      */
     const handleContextMenu = (event, entity) => {
         const poi = getPOI(entity)
+
+        // Check if context menu should be shown based on camera state
         if (poi && !__.ui.cameraManager.isRotating()
             || (__.ui.cameraManager.isRotating()
                 &&
@@ -145,7 +172,7 @@ export const MapPOIContent = ({poi}) => {
 
     /**
      * Handles click events on the POI.
-     * Toggles the expanded state of the POI.
+     * Toggles the expanded state of the POI between compact and detailed view.
      *
      * @param {Event} event - The click event
      * @param {string} entity - The POI entity identifier
@@ -159,34 +186,35 @@ export const MapPOIContent = ({poi}) => {
 
     /**
      * Handles mouse over events on the POI.
-     * Expands the POI if it's not already expanded.
+     * Expands the POI to show detailed information if not already expanded.
      *
      * @param {Event} event - The mouse over event
      * @param {string} entity - The POI entity identifier
-     * @param {Object} options - Additional options
-     * @param {Object} data - Additional data
+     * @param {Object} options - Additional event options
+     * @param {Object} data - Additional event data
      */
     const handleMouseOver = (event, entity, options, data) => {
         const poi = getPOI(entity)
         if (!poi.expanded) {
             Object.assign($pois.list.get(entity), {
                 expanded:            true,
-                isMouseOverExpanded: true,
+                isMouseOverExpanded: true, // Flag to track expansion source
             })
         }
     }
 
     /**
      * Handles mouse out events on the POI.
-     * Collapses the POI if it was expanded due to mouse over.
+     * Collapses the POI if it was expanded due to mouse over (not manual expansion).
      *
      * @param {Event} event - The mouse out event
      * @param {string} entity - The POI entity identifier
-     * @param {Object} options - Additional options
-     * @param {Object} data - Additional data
+     * @param {Object} options - Additional event options
+     * @param {Object} data - Additional event data
      */
     const handleMouseOut = (event, entity, options, data) => {
         const poi = getPOI(entity)
+        // Only collapse if expansion was caused by mouse over
         if (poi.expanded && poi.isMouseOverExpanded) {
             Object.assign($pois.list.get(entity), {
                 expanded:            false,
@@ -195,38 +223,48 @@ export const MapPOIContent = ({poi}) => {
         }
     }
 
-
     /**
+     * Registers event listeners for POI interactions.
+     * Sets up click, double-click, context menu, and mouse over/out handlers.
      *
+     * @param {Object} poi - POI object containing id and other properties
      */
     const addPOIEventListeners = poi => {
-
-        // Toggles POI size on click
+        // Toggle POI size on single click/tap
         __.canvasEvents.onClick(handleClick, {entity: poi.id})
         __.canvasEvents.onTap(handleClick, {entity: poi.id})
 
-        // Open editor on Double Click/double tap
+        // Open editor on double click/double tap
         __.canvasEvents.onDoubleClick(handleEditor, {entity: poi.id, preventLowerPriority: true})
         __.canvasEvents.onDoubleTap(handleEditor, {entity: poi.id, preventLowerPriority: true})
 
-        // Open contextual menu on Right Click/long tap
+        // Open contextual menu on right click/long tap
         __.canvasEvents.onRightClick(handleContextMenu, {entity: poi.id, preventLowerPriority: true})
         __.canvasEvents.onLongTap(handleContextMenu, {entity: poi.id, preventLowerPriority: true})
 
-        // TODO FIX
+        // TODO: Fix mouse over/out events
         // __.canvasEvents.onMouseOver(handleMouseOver, {entity: poi.id, preventLowerPriority: true})
         // __.canvasEvents.onMouseOut(handleMouseOut, {entity: poi.id, preventLowerPriority: true})
     }
 
     /**
-     * Removes event listeners for a MapPOI
-     * @param {MapPOI} poi - MapPOI instance to remove listeners for
+     * Removes all event listeners for a POI.
+     * Used in cleanup to prevent memory leaks and orphaned event handlers.
+     *
+     * @param {Object} poi - POI object containing id for listener removal
      */
     const removePOIEventListeners = poi => {
         __.canvasEvents.removeAllListenersByEntity(poi.id)
     }
 
+    /**
+     * Effect hook - only runs when category is not defined
+     */
     useEffect(() => {
+        if (useInMenu || category) {
+            return
+        }
+
         const renderToCanvas = async () => {
             if (!_poiContent.current) {
                 return
@@ -235,24 +273,26 @@ export const MapPOIContent = ({poi}) => {
             try {
                 const scale = 2
                 const ratio = window.devicePixelRatio || 1
+
                 snapdom(_poiContent.current, {scale: scale}).then(snap => {
                     snap.toCanvas().then(async canvas => {
                         const thePOI = new MapPOI($point)
+
                         thePOI.update({
-                                          image:          {
+                                          image:       {
                                               src:    canvas.toDataURL('image/png'),
                                               width:  canvas.width / scale / ratio,
                                               height: canvas.height / scale / ratio,
-                                          }, pixelOffset: {
-                                x: point.expanded ? -13 : 0, // equiv of --poi-delta-x defined in ./style.css
-                                y: 0,
-                            },
-                                      },
-                        )
-                        // force draw here instead of this.draw()due to proxy async
+                                          },
+                                          pixelOffset: {
+                                              x: point.expanded ? -13 : 0,
+                                              y: 0,
+                                          },
+                                      })
+
                         await thePOI.utils.draw(thePOI)
                         lgs.scene.requestRender()
-                        // same for db persisting
+
                         await lgs.db.lgs1920.put(thePOI.id, MapPOI.serialize({
                                                                                  ...thePOI,
                                                                                  __class: MapPOI,
@@ -261,48 +301,75 @@ export const MapPOIContent = ({poi}) => {
                 })
             }
             catch (error) {
-                console.error('Error occurred during the conversion POI', error)
+                console.error('Error occurred during POI canvas conversion:', error)
             }
         }
 
         renderToCanvas()
         addPOIEventListeners(point)
+
         return () => {
             removePOIEventListeners(point)
         }
     }, [
-                  point.title,
-                  point.category,
-                  point.expanded,
-                  point.color,
-                  point.bgColor,
-                  point.height,
-                  point.longitude,
-                  point.latitude,
-                  point.type,
+                  category ? null : point?.title,
+                  category ? null : point?.category,
+                  category ? null : point?.expanded,
+                  category ? null : point?.color,
+                  category ? null : point?.bgColor,
+                  category ? null : point?.height,
+                  category ? null : point?.longitude,
+                  category ? null : point?.latitude,
+                  category ? null : point?.type,
+                  category,
               ])
 
+    // When category is defined, render only the icon
+    if (category) {
+        return (
+            <div className={classNames(
+                'poi-icon-wrapper',
+                'poi-shrinked',
+                'used-in-menu',
+            )} {...(slot && {slot: slot})}>
+                <div className="poi-card" ref={_poiContent}>
+                    <div className="poi-card-inner" ref={inner} style={style}>
+                        <div className="poi-card-inner-background"/>
+                        <FontAwesomeIcon
+                            key={category}
+                            icon={MapPOI.categoryIcon(category)}
+                            className="poi-as-flag"
+                            style={style}
+                        />
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
+    // Original rendering logic when category is not defined
     return (
         <div className={classNames(
-            'poi-on-map-wrapper',
-            !point?.expanded ? 'poi-shrinked' : '',
+            'poi-icon-wrapper',
+            (!point?.expanded || useInMenu) ? 'poi-shrinked' : '',
+            useInMenu ? 'used-in-menu' : '',
         )}
-             id={point.id}
              style={{
                  '--lgs-poi-background-color': point.bgColor ?? lgs.colors.poiDefaultBackground,
                  '--lgs-poi-border-color':     point.color ?? lgs.colors.poiDefault,
                  '--lgs-poi-color':            point.color ?? lgs.colors.poiDefault,
              }}
         >
-            <div className="poi-on-map" ref={_poiContent}>
-                <div className="poi-on-map-inner" ref={inner} id={`poi-inner-${point?.id}`}>
-                    <div className="poi-on-map-triangle-down"/>
-                    <div className="poi-on-map-inner-background"/>
-                    {point.expanded &&
-                        <>
-                            <h3> {point.title ?? 'Point Of Interest'}</h3>
+            <div className="poi-card" ref={_poiContent}>
+                <div className="poi-card-inner" ref={inner} id={`poi-inner-${point?.id}`}>
+                    {!useInMenu &&
+                        <div className="poi-card-triangle-down"/>
+                    }
+                    <div className="poi-card-inner-background"/>
 
+                    {point.expanded && !useInMenu ? (
+                        <>
+                            <h3>{point.title ?? 'Point Of Interest'}</h3>
                             <div className="poi-full-coordinates">
                                 {point.height && point.height > 0 && point.height !== point.simulatedHeight ? (
                                     <NameValueUnit
@@ -312,38 +379,35 @@ export const MapPOIContent = ({poi}) => {
                                         format={'%d'}
                                         units={ELEVATION_UNITS}
                                     />
-                                ) : (
-                                    <div></div> // Ligne vide
-                                )}
+                                ) : null}
 
                                 <div className="poi-coordinates">
-                                        <span>
-                                          {__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)},
-                                            &nbsp;
-                                            {__.convert(point.longitude).to(lgs.settings.coordinateSystem.current)}
-                                        </span>
-
+                                    <span>
+                                      {__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)},{' '}
+                                        {__.convert(point.longitude).to(lgs.settings.coordinateSystem.current)}
+                                    </span>
                                 </div>
 
                                 {point.time && (
                                     <div className="poi-time">
-                                        {DateTime.fromISO(point.time).toLocaleString(DateTime.DATE_SIMPLE)} - {DateTime.fromISO(point.time).toLocaleString(DateTime.TIME_SIMPLE)}
+                                        {DateTime.fromISO(point.time).toLocaleString(DateTime.DATE_SIMPLE)} -{' '}
+                                        {DateTime.fromISO(point.time).toLocaleString(DateTime.TIME_SIMPLE)}
                                     </div>
                                 )}
                             </div>
-                            {/* // )} */}
                         </>
-                    }
-                    {!point.expanded &&
-                        <FontAwesomeIcon key={point.category} icon={point.categoryIcon(point.category)}
-                                         className="poi-as-flag"/>
-                    }
+                    ) : (
+                         <FontAwesomeIcon
+                             key={point.category}
+                             icon={point.categoryIcon(point.category)}
+                             className="poi-as-flag"
+                         />
+                     )}
                 </div>
 
-                {point.expanded &&
-                    <div className="poi-icons">
-                        <FontAwesomeIcon key={point.category} icon={point.categoryIcon(point.category)}
-                                         className="poi-as-flag"/>
+                {point.expanded && !useInMenu &&
+                    <div className="poi-menu-icons">
+                        <MapPOIContent poi={point.id} useInMenu={true}/>
                     </div>
                 }
             </div>

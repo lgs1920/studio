@@ -7,23 +7,25 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-17
- * Last modified: 2025-06-17
+ * Created on: 2025-06-20
+ * Last modified: 2025-06-20
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { MapPOIContent }                        from '@Components/MainUI/MapPOI/MapPOIContent'
+import { MapPOIEditMenu }                       from '@Components/MainUI/MapPOI/MapPOIEditMenu'
 import { memo, useCallback, useEffect, useMemo } from 'react'
-import { useSnapshot }                           from 'valtio'
-import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
+import { snapshot, useSnapshot }                from 'valtio'
+import { FontAwesomeIcon }                      from '@Components/FontAwesomeIcon'
 import { MapPOIEditContent }                    from '@Components/MainUI/MapPOI/MapPOIEditContent'
-import { ToggleStateIcon } from '@Components/ToggleStateIcon'
+import { ToggleStateIcon }                      from '@Components/ToggleStateIcon'
 import { POIS_EDITOR_DRAWER, POI_STARTER_TYPE } from '@Core/constants'
 import { faMask, faSquare, faSquareCheck }      from '@fortawesome/pro-regular-svg-icons'
 import { SlDetails }                            from '@shoelace-style/shoelace/dist/react'
-import { UIToast } from '@Utils/UIToast'
-import classNames from 'classnames'
+import { UIToast }                              from '@Utils/UIToast'
+import classNames                               from 'classnames'
 
 // Pre-defined icons
 const ICONS = {
@@ -46,6 +48,7 @@ export const MapPOIListItem = memo(({id, poi, context}) => {
     // Stabilize poi object
     const thePOI = useMemo(() => pois.list.get(id) || poi, [id, poi, pois.list])
 
+    console.log(thePOI.title)
     // Memoized bulk list handler
     const handleBulkList = useCallback(
         (state) => {
@@ -65,63 +68,63 @@ export const MapPOIListItem = memo(({id, poi, context}) => {
     }, [thePOI])
 
     // Memoized select POI handler
-    const selectPOI = async (event) => {
-            if (window.isOK(event)) {
-                let current = $pois.list.get(id)
-                let forceFocus = false
+    const selectPOI = useCallback(async (event) => {
+        if (window.isOK(event)) {
+            let current = $pois.list.get(id)
+            let forceFocus = false
 
-                if (pois.current === false) {
-                    $pois.current = id
-                    forceFocus = true
+            if (pois.current === false) {
+                $pois.current = id
+                forceFocus = true
+            }
+
+            if (pois.current !== id || forceFocus) {
+                $pois.current = id
+                current = {
+                    ...current,
+                    animated: false,
+                }
+                $pois.list.set(id, current)
+
+                if (drawers.open === POIS_EDITOR_DRAWER) {
+                    current = $pois.filtered.global.get(id)
+                }
+                else {
+                    current = $pois.filtered.journey.get(id)
                 }
 
-                if (pois.current !== id || forceFocus) {
-                    $pois.current = id
-                    current = {
-                        ...current,
-                        animated: false,
+                if (lgs.settings.ui.poi.focusOnEdit && drawers.open === POIS_EDITOR_DRAWER && __.ui.drawerManager.over) {
+                    const camera = lgs.mainProxy.components.camera
+                    if (__.ui.cameraManager.isRotating()) {
+                        await __.ui.cameraManager.stopRotate()
+                        current.stopAnimation?.()
                     }
-                    $pois.list.set(id, current)
-
-                    if (drawers.open === POIS_EDITOR_DRAWER) {
-                        current = $pois.filtered.global.get(id)
+                    __.ui.sceneManager.focus(current, {
+                        target:     current,
+                        heading:    camera.position.heading,
+                        pitch:      camera.position.pitch,
+                        roll:       camera.position.roll,
+                        range:      5000,
+                        infinite:   false,
+                        rpm:        lgs.settings.ui.poi.rpm,
+                        rotations:  1,
+                        rotate:     lgs.settings.ui.poi.rotate,
+                        panoramic:  false,
+                        flyingTime: 0,
+                    })
+                    if (lgs.settings.ui.poi.rotate) {
+                        current.startAnimation?.()
                     }
-                    else {
-                        current = $pois.filtered.journey.get(id)
-                    }
-
-                    if (lgs.settings.ui.poi.focusOnEdit && drawers.open === POIS_EDITOR_DRAWER && __.ui.drawerManager.over) {
-                        const camera = lgs.mainProxy.components.camera
-                        if (__.ui.cameraManager.isRotating()) {
-                            await __.ui.cameraManager.stopRotate()
-                            current.stopAnimation?.()
-                        }
-                        __.ui.sceneManager.focus(current, {
-                            target:     current,
-                            heading:    camera.position.heading,
-                            pitch:      camera.position.pitch,
-                            roll:       camera.position.roll,
-                            range:      5000,
-                            infinite:   false,
-                            rpm:        lgs.settings.ui.poi.rpm,
-                            rotations:  1,
-                            rotate:     lgs.settings.ui.poi.rotate,
-                            panoramic:  false,
-                            flyingTime: 0,
-                        })
-                        if (lgs.settings.ui.poi.rotate) {
-                            current.startAnimation?.()
-                        }
-                    }
-                }
-
-                const item = document.getElementById(`edit-map-poi-${id}`)
-                if (item) {
-                    item.scrollIntoView({behavior: 'smooth', block: 'start'})
-                    item.focus()
                 }
             }
-    }
+
+            const item = document.getElementById(`edit-map-poi-${id}`)
+            if (item) {
+                item.scrollIntoView({behavior: 'smooth', block: 'start'})
+                item.focus()
+            }
+        }
+    }, [id])
 
     // Memoized styles
     const styles = useMemo(
@@ -164,10 +167,10 @@ export const MapPOIListItem = memo(({id, poi, context}) => {
                 style={styles}
             >
                 <div slot="summary">
-                    <span>
-                        <FontAwesomeIcon icon={thePOI.visible ? thePOI.categoryIcon() : faMask} style={styles}/>
+                    <div>
+                        <MapPOIContent poi={thePOI.id} useInMenu={true}/>
                         {thePOI.title}
-                    </span>
+                    </div>
                     <span></span>
                 </div>
                 <MapPOIEditContent context={context} poi={thePOI}/>
