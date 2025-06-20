@@ -107,9 +107,7 @@
 
 .poi-card-inner {
     display: flex;
-    align-content: center;
     flex-wrap: wrap;
-    justify-content: center;
     width: var(--poi-expanded-dimension);
     margin-bottom: var(--triangle-size);
     margin-left: calc(1 * var(--poi-menu-icons-column-width));
@@ -120,6 +118,7 @@
 
 .poi-shrinked .poi-card-inner {
     position: absolute;
+    justify-content: center;
     width: var(--dimension);
     height: var(--dimension);
     margin: 0;

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-17
- * Last modified: 2025-06-17
+ * Created on: 2025-06-20
+ * Last modified: 2025-06-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -201,7 +201,7 @@ export class POIUtils {
             width:           width,
             height:          height,
             scale:           1,
-            scaleByDistance: new NearFarScalar(10000.0, 1.0, 50000.0, 0.5),
+            scaleByDistance: new NearFarScalar(10000.0, 1.0, 50000.0, 0),
             pixelOffset:     poi.pixelOffset ? new Cartesian2(poi.pixelOffset.x, poi.pixelOffset.y) : new Cartesian2(0, 0),
             horizontalOrigin: HorizontalOrigin.CENTER,
             verticalOrigin:  VerticalOrigin.BOTTOM,
