@@ -45,7 +45,7 @@
     "@turf/nearest-point-on-line": "^7.2.0",
     "@turf/point-to-line-distance": "^7.2.0",
     "@turf/transform-rotate": "^7.2.0",
-    "@zumer/snapdom": "^1.3.0",
+    "@zumer/snapdom": "^1.7.1",
     "argparse": "^2.0.1",
     "axios": "^1.10.0",
     "babel-plugin-module-resolver": "^5.0.2",
@@ -110,7 +110,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "typescript": "^5.8.3",
     "vite": "6.3.5",
-    "vitest": "^3.2.3",
+    "vitest": "^3.2.4",
     "@testing-library/react": "^16.3.0",
     "jsdom": "^26.1.0"
   },
