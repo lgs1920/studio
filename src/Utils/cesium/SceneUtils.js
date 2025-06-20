@@ -15,15 +15,16 @@
  ******************************************************************************/
 
 import {
-    ADD_JOURNEY, CURRENT_JOURNEY, DRAWING, DRAWING_FROM_DB, FOCUS_LAST, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D,
-    SCENE_MODE_COLUMBUS, UPDATE_JOURNEY_SILENTLY,
-}                                                                                                  from '@Core/constants'
+    ADD_JOURNEY, CURRENT_JOURNEY, DRAWING, DRAWING_FROM_DB, FOCUS_LAST, HIGH_TERRAIN_PRECISION, LOW_TERRAIN_PRECISION,
+    REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, UPDATE_JOURNEY_SILENTLY,
+}                    from '@Core/constants'
+import { MapTarget } from '@Core/MapTarget'
+import bbox          from '@turf/bbox'
+import centroid      from '@turf/centroid'
 import {
-    MapTarget,
-}                                                                                                  from '@Core/MapTarget'
-import bbox                                                                                        from '@turf/bbox'
-import centroid                                                                                    from '@turf/centroid'
-import { Cartesian2, Cartesian3, Color, EasingFunction, Math as M, Matrix4, Rectangle, SceneMode } from 'cesium'
+    Cartesian2, Cartesian3, Cartographic, Color, EasingFunction, Math as M, Matrix4, Rectangle, sampleTerrain,
+    sampleTerrainMostDetailed, SceneMode,
+}                    from 'cesium'
 
 export class SceneUtils {
 
@@ -118,14 +119,101 @@ export class SceneUtils {
         }
     }
 
-    static getPixelsCoordinates = point => {
-        const result = new Cartesian2()
-        lgs.scene.cartesianToCanvasCoordinates(
-            Cartesian3.fromDegrees(point.longitude, point.latitude,
-                                   __.ui.sceneManager.noRelief() ? 0 : (point.simulatedHeight ?? point.height)), result)
+    /**
+     * Get points altitude from Cesium Terrain
+     *
+     * @param coordinates {Array|object}    {longitude,latitude}
+     * @param precision                     LOW_TERRAIN_PRECISION or HIGH_TERRAIN_PRECISION (default)
+     * @param level                         Zoom level, only used with low precision
+     *
+     * @return {Array|number} altitude
+     */
+    static getHeightFromTerrain = async ({coordinates, precision = HIGH_TERRAIN_PRECISION, level = 11}) => {
+        const positions = []
+        let multi = true
+        if (!Array.isArray(coordinates)) {
+            multi = false
+            coordinates = [coordinates]
+        }
 
-        return new Cartesian2(Math.round(result.x), Math.round(result.y))
+        const cartographics = []
+        coordinates.forEach(point => cartographics.push(Cartographic.fromDegrees(point.longitude, point.latitude,
+                                                                                 __.ui.sceneManager.noRelief() ? 0 : (point.simulatedHeight ?? point.height))))
+        //TODO apply only if altitude is missing for some coordinates
+        const altitude = []
+        let results
+        switch (precision) {
+            case HIGH_TERRAIN_PRECISION:
+                results = await sampleTerrainMostDetailed(lgs.viewer.terrainProvider, cartographics)
+                break
+            case LOW_TERRAIN_PRECISION:
+                results = await sampleTerrain(lgs.viewer.terrainProvider, precision, cartographics)
+                break
+        }
+        // Get altitudes
+        results.forEach(coordinate => {
+            altitude.push(coordinate.height)
+        })
+
+        // Returns values in the same format as input
+        return multi ? altitude : altitude[0]
+
     }
+
+
+    /**
+     * Computes the canvas coordinates (X, Y) for a given longitude, latitude, and height.
+     * If `clampToGround` is true, the height is adjusted using the terrain provider.
+     *
+     * @param point
+     * @param {boolean} clampToGround - If true, clamps the position to the ground using terrain data.
+     *
+     * @returns {Promise<{x: number, y: number, visible: boolean}>}
+     */
+    static degreesToPixelsCoordinates = async (point, clampToGround = true) => {
+        // TODO add precision and level
+
+        // simulatedHeight : height from Terrain.
+        let simulatedHeight
+        if (clampToGround && !__.ui.sceneManager.noRelief()) {
+            simulatedHeight = await SceneUtils.getHeightFromTerrain({coordinates: point})
+        }
+        else {
+            simulatedHeight = point.simulatedHeight
+        }
+
+        const cartographic = Cartographic.fromDegrees(point.longitude, point.latitude,
+                                                      __.ui.sceneManager.noRelief() ? 0 : (simulatedHeight ?? point.height))
+        const cartesian = Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, simulatedHeight ?? cartographic.height)
+        if (!cartesian) {
+            return {visible: false}
+        }
+
+
+        // Get Pixels
+        const pixels = new Cartesian2()
+        lgs.scene.cartesianToCanvasCoordinates(cartesian, pixels)
+        if (!pixels) {
+            return {visible: false}
+        }
+
+        // Check if it's OK with terrain
+        const pickRay = lgs.scene.camera.getPickRay(pixels)
+        const pickedPosition = lgs.scene.globe.pick(pickRay, lgs.scene)
+        if (!pickedPosition) {
+            return {visible: false}
+        }
+
+
+        // Return the final canvas coordinates, height and visibility
+        return {
+            x:       Math.round(pixels.x),
+            y:       Math.round(pixels.y),
+            height: __.ui.sceneManager.noRelief() ? 0 : (simulatedHeight ?? cartographic.height),
+            visible: true,
+        }
+    }
+
 
     static drawBbox = (bbox, id) => {
         id = `BBox#${id}`

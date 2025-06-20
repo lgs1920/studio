@@ -1,17 +1,33 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: TrackUtils.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-10
+ * Last modified: 2025-06-10
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import {
-    ADD_JOURNEY, APP_KEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DRAWING, DRAWING_FROM_DB,
-    DRAWING_FROM_UI, FOCUS_ON_FEATURE, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
-}                                                  from '@Core/constants'
-import { Journey }                                 from '@Core/Journey'
-import { default as centroid }                     from '@turf/centroid'
-import { SceneUtils }                              from '@Utils/cesium/SceneUtils'
+    ADD_JOURNEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DRAWING, DRAWING_FROM_DB, DRAWING_FROM_UI,
+    FOCUS_ON_FEATURE, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
+}                                                      from '@Core/constants'
+import { Journey }                                     from '@Core/Journey'
+import { default as centroid }                         from '@turf/centroid'
+import { SceneUtils }                                  from '@Utils/cesium/SceneUtils'
 import {
     Cartesian3, Cartographic, Color as CColor, CustomDataSource, GeoJsonDataSource, Math as M,
     PolylineOutlineMaterialProperty, Rectangle, sampleTerrainMostDetailed,
-}                                                  from 'cesium'
-import Color                                       from 'color'
-import { UIToast }                                 from '../UIToast.js'
-import { FLAG_START, POI_FLAG, POI_STD, POIUtils } from './POIUtils'
+}                                                      from 'cesium'
+import Color                                           from 'color'
+import { UIToast }                                     from '../UIToast.js'
+import { POI_FLAG, POI_FLAG_START, POI_STD, POIUtils } from './POIUtils'
 
 export const SUPPORTED_EXTENSIONS = ['geojson', 'json', 'kml', 'gpx' /* TODO 'kmz'*/]
 export const FEATURE                  = 'Feature',
@@ -54,15 +70,6 @@ export class TrackUtils {
     })
 
     /**
-     * We need to create a common data source for some elements that are not related to tracks nor journeys
-     */
-    static createCommonMapObjectsStore = async () => {
-        if (lgs.viewer.dataSources.getByName(APP_KEY, true).length === 0) {
-            await lgs.viewer.dataSources.add(new CustomDataSource(APP_KEY))
-        }
-    }
-
-    /**
      * Prepare all the Datasources for the tacks and POIs drawings for aJourney
      *
      * For Each Track we create a GeoJson Data source, named with the track slug
@@ -75,13 +82,14 @@ export class TrackUtils {
 
         const dataSources = []
 
-        // Manage Tracks
+        // We create first a GeoJson Data Source for the tracks
         journey.tracks.forEach(track => {
             dataSources.push(
                 lgs.viewer.dataSources.add(new GeoJsonDataSource(track.slug)))
         })
 
-        // Manage POIs
+        // Then a Custom we'll use for POIs or al other entities related to
+        // the journey
         dataSources.push(
             lgs.viewer.dataSources.add(new CustomDataSource(journey.slug)))
 
@@ -105,10 +113,10 @@ export class TrackUtils {
             case DRAWING_FROM_DB:
             case ADD_JOURNEY:
                 await source.load(track.content,
-                            {
-                                clampToGround: true,
-                                name:          track.title,
-                            },
+                                  {
+                                      clampToGround: true,
+                                      name:          track.title,
+                                  },
                 )
             // No break, show must go on
             case REFRESH_DRAWING:
@@ -128,6 +136,7 @@ export class TrackUtils {
                 break
         }
         source.show = forcedToHide ? false : track.visible
+
         lgs.viewer.scene.requestRender()
     }
 
@@ -262,7 +271,6 @@ export class TrackUtils {
                                     })
         }
     }
-
 
 
     /**
@@ -457,7 +465,6 @@ export class TrackUtils {
         })
         await Promise.all(items)
 
-        await TrackUtils.createCommonMapObjectsStore()
         __.ui.cameraManager.settings = lgs.theJourney.cameraOrigin
 
     }
@@ -475,7 +482,12 @@ export class TrackUtils {
             lgs.theTrack = lgs.theJourney.tracks.get(currentTrack)
         }
         else {
-            lgs.theTrack = lgs.theJourney.tracks.entries().next().value[1]
+            try {
+                lgs.theTrack = lgs.theJourney.tracks.entries().next()?.value[1] ?? null
+            }
+            catch {
+                lgs.theTrack = null
+            }
         }
         // Add it to editor context
         lgs.theTrack.addToEditor()
@@ -568,7 +580,7 @@ export class TrackUtils {
             const current = TrackUtils.getTrackFromEntityId(journey, entity.id)
             if (entity.id.startsWith(POI_FLAG) && entity.id.endsWith(type) && current.slug === track.slug) {
                 entity.show = POIUtils.setPOIVisibility(
-                    track.flags[entity.id.endsWith(FLAG_START) ? 'start' : 'stop'], visibility,
+                    track.flags[entity.id.endsWith(POI_FLAG_START) ? 'start' : 'stop'], visibility,
                 )
             }
         })
@@ -589,15 +601,7 @@ export class TrackUtils {
         TrackUtils.getDataSourcesByName(journey.slug).forEach(dataSource => {
             // For flags, we need to manage entities.
             if (dataSource.name === journey.slug) {
-                dataSource.entities.values.forEach(entity => {
-                    // Filter flags
-                    if (entity.id.startsWith(POI_FLAG)) {
-                        const track = TrackUtils.getTrackFromEntityId(journey, entity.id)
-                        entity.show = POIUtils.setPOIVisibility(
-                            track.flags[entity.id.endsWith(FLAG_START) ? 'start' : 'stop'], visibility,
-                        )
-                    }
-                })
+                dataSource.show = visibility
             }
             else {
                 // We set the datasource with all entities.
@@ -641,9 +645,6 @@ export class TrackUtils {
         TrackUtils.getDataSourcesByName(track.slug).forEach(dataSource => {
             dataSource.show = visibility ? journey.tracks.get(dataSource.name).visible : false
         })
-        // Update the associated flags
-        TrackUtils.updateFlagsVisibility(journey, track, 'start', visibility)
-        TrackUtils.updateFlagsVisibility(journey, track, 'stop', visibility)
 
     }
 
@@ -689,7 +690,8 @@ export class TrackUtils {
                 // if (journey.extension === 'json' && typeof journey.content === 'string') {
                 //     journey.content = JSON.parse(journey.content)
                 // }
-                let theJourney = new Journey(journey.name, journey.extension, {
+
+                let theJourney = await Journey.create(journey.name, journey.extension, {
                     content:     journey.content,
                     allowRename: false,
                 })
@@ -711,7 +713,7 @@ export class TrackUtils {
 
                     TrackUtils.setProfileVisibility(lgs.theJourney)
 
-                    await theJourney.saveToDB()
+                    await theJourney.persistToDatabase()
                     await theJourney.saveOriginDataToDB()
 
                     mainStore.canViewJourneyData = true
@@ -720,8 +722,6 @@ export class TrackUtils {
                     await __.ui.cameraManager.stopRotate()
 
                     __.ui.profiler.draw()
-                    await TrackUtils.createCommonMapObjectsStore()
-
 
                     return JOURNEY_OK
                 }
@@ -744,4 +744,13 @@ export class TrackUtils {
             return JOURNEY_KO
         }
     }
+
+    static removeAllTracks = (slug) => {
+        const dataSources = TrackUtils.getDataSourcesByName(slug)
+        dataSources.forEach(dataSource => {
+            lgs.viewer.dataSources.remove(dataSource)
+        })
+        lgs.scene.requestRender()
+    }
 }
+

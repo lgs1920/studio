@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: MapLayer.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-16
+ * Last modified: 2025-06-16
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { BASE_ENTITY, OVERLAY_ENTITY, URL_AUTHENT_KEY }             from '@Core/constants'
 import {
     ImageryLayer, NeverTileDiscardPolicy, OpenStreetMapImageryProvider, UrlTemplateImageryProvider,
@@ -84,7 +100,10 @@ export const MapLayer = (props) => {
     const Imagery = (props) => {
 
         const applySettings = layer => {
-            const settings = lgs.settings.layers.colorSettings[theLayer.id] ?? DEFAULT_LAYERS_COLOR_SETTINGS
+            let settings = DEFAULT_LAYERS_COLOR_SETTINGS
+            if (lgs.settings.layers?.colorSettings !== null) {
+                settings = lgs.settings.layers?.colorSettings[theLayer.id]
+            }
             layer.brightness = settings?.brightness ?? DEFAULT_LAYERS_COLOR_SETTINGS.brightness
             layer.contrast = settings?.contrast ?? DEFAULT_LAYERS_COLOR_SETTINGS.contrast
             layer.hue = settings?.hue ?? DEFAULT_LAYERS_COLOR_SETTINGS.hue

@@ -28,7 +28,6 @@ export const TrackStyleSettings = function TrackSettings() {
      */
     const setColor = (async event => {
         editorStore.track.color = event.target.value
-        editorStore.track.marker.foregroundColor = event.target.value
         await Utils.updateTrack(event.type === 'sl-input' ? DRAW_WITHOUT_SAVE : DRAW_THEN_SAVE)
         __.ui.profiler.updateColor()
         __.ui.wanderer.updateColor()

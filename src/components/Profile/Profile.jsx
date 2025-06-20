@@ -96,11 +96,13 @@ export const Profile = function Profile() {
     const resizeProfile=event => {
             const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
             const container = document.getElementById(`profile-${CHART_ELEVATION_VS_DISTANCE}`)
+        if (container) {
             const dimensions = container.getBoundingClientRect()
             if (dimensions.width > 0) {
                 mainStore.components.profile.width = dimensions.width
                 mainStore.components.profile.height = dimensions.height
             }
+        }
     }
 
     return (<>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-19
+ * Created on: 2025-06-10
+ * Last modified: 2025-06-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -92,7 +92,7 @@ export const ResetProfile = () => {
                 <SlSwitch align-right size="small" checked={snap.reset.lgs1920}
                           onSlChange={(event) => change(event, 'lgs1920')}>
                     Your journeys
-                    <span slot="help-text">{'Remove my journeys, POIs...'}</span>
+                    <span slot="help-text">{'Remove my journeys, pois..'}</span>
                 </SlSwitch>
 
 

@@ -1,7 +1,25 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: MainUI.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-14
+ * Last modified: 2025-06-14
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { Compass } from '@Components/cesium/CompassUI/Compass'
 import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
+import { ContextMenuHook } from '@Components/MainUI/ContextMenuHook'
 import { GeocodingButton }                  from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }       from '@Components/MainUI/geocoding/GeocodingUI'
+import { MapPOIMonitor } from '@Components/MainUI/MapPOI/MapPOIMonitor'
 import { TrackEditorButton } from '@Components/MainUI/TrackEditorButton'
 import { MapPOICluster }     from '@Components/MainUI/MapPOI/MapPOICluster'
 import { MapPOIContextMenu }                from '@Components/MainUI/MapPOI/MapPOIContextMenu'
@@ -10,13 +28,14 @@ import { Profile }                          from '@Components/Profile/Profile'
 import { ProfileButton }                    from '@Components/Profile/ProfileButton'
 import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
 import {
-    BOTTOM, DESKTOP_MIN, DOUBLE_CLICK_DELAY, DOUBLE_TAP_DELAY, END, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END,
+    BOTTOM, DESKTOP_MIN, END, EVENTS, MENU_BOTTOM_END,
+    MENU_BOTTOM_START, MENU_END_END,
     MENU_END_START,
     MENU_START_END,
-    MENU_START_START, MOBILE_MAX, POINTER, POIS_EDITOR_DRAWER, SCENE_MODE_2D, SECOND, START, TOP,
-}                                      from '@Core/constants'
-import { JourneyToolbar } from '@Editor/JourneyToolbar'
-import { useEffect, useRef, useState } from 'react'
+    MENU_START_START, MOBILE_MAX, SCENE_MODE_2D, SECOND, START, TOP,
+} from '@Core/constants'
+import { JourneyToolbar }                    from '@Editor/JourneyToolbar'
+import { memo, useEffect, useRef, useState } from 'react'
 
 import './style.css'
 import { useMediaQuery }                    from 'react-responsive'
@@ -40,7 +59,7 @@ import { SupportUIButton }                  from './SupportUIButton'
 
 export const MainUI = () => {
 
-    const snap = useSnapshot(lgs.mainProxy)
+    const hidden = useSnapshot(lgs.stores.main.components.welcome).hidden
     const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
     const settings = useSnapshot(lgs.settings.ui.menu)
     const clickTimeout = useRef(null)
@@ -62,27 +81,7 @@ export const MainUI = () => {
         }, 0.3 * SECOND)
     }
 
-    /**
-     * Trap Double click
-     *
-     * @param event
-     */
-    const handleDoubleTap = () => {
-        if (!clickTimeout.current) {
-            const timeout = setTimeout(() => {
-                clickTimeout.current = null
-            }, DOUBLE_CLICK_DELAY)
-            clickTimeout.current = timeout
-        }
-        else {
-            // We're in the delay, it is a double click or tap
-            clearTimeout(clickTimeout.current)
-            clickTimeout.current = null
-            closeDrawer()
-        }
-    }
-
-    const closeDrawer = () => {
+    const closeDrawer = (event) => {
         __.ui.drawerManager.close()
     }
 
@@ -97,13 +96,22 @@ export const MainUI = () => {
         if (lgs.settings.scene.mode.value === SCENE_MODE_2D.value) {
             lgs.scene.morphTo2D(0)
         }
+
+        subscribe(lgs.mainProxy.drawers, arrangeDrawers)
+        subscribe(lgs.settings.ui.menu, arrangeDrawers)
+        window.addEventListener('resize', windowResized)
+
+        arrangeDrawers()
+
         // we need to manage some canvas events
-        __.canvasEvents.addEventListener(POINTER.LEFT_DOWN, handleDoubleTap)
-        __.canvasEvents.addEventListener(POINTER.LEFT_DOUBLE_CLICK, closeDrawer)
+        __.canvasEvents.addEventListener(EVENTS.DOUBLE_TAP, closeDrawer)
+        __.canvasEvents.addEventListener(EVENTS.DOUBLE_CLICK, closeDrawer)
 
         return () => {
-            __.canvasEvents.removeEventListener(POINTER.LEFT_DOWN, handleDoubleTap)
-            __.canvasEvents.addEventListener(POINTER.LEFT_DOUBLE_CLICK, closeDrawer)
+            __.canvasEvents.removeEventListener(EVENTS.DOUBLE_TAP, closeDrawer)
+            __.canvasEvents.removeEventListener(EVENTS.DOUBLE_CLICK, closeDrawer)
+            window.removeEventListener('resize', windowResized)
+
 
         }
 
@@ -195,11 +203,7 @@ export const MainUI = () => {
 
 
     }
-    subscribe(lgs.mainProxy.drawers, arrangeDrawers)
-    subscribe(lgs.settings.ui.menu, arrangeDrawers)
-    window.addEventListener('resize', windowResized)
 
-    arrangeDrawers()
 
     const SupportUIDialog = () => {
         return (<SupportUI/>)
@@ -209,7 +213,7 @@ export const MainUI = () => {
     return (
         <>
             <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
-                {snap.components.welcome.hidden &&
+                {hidden &&
                     <>
                         <div id={'primary-buttons-bar'} className={primaryEntrance}>
                             <SettingsButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
@@ -236,7 +240,7 @@ export const MainUI = () => {
 
                     </>
                 }
-                {snap.components.welcome.hidden && <CallForActions/>}
+                {hidden && <CallForActions/>}
 
                 <CameraTarget/>
                 <div id={'bottom-left-ui'}>
@@ -261,16 +265,16 @@ export const MainUI = () => {
                 <MapPOIEditPanel/>
 
             </div>
-            <MapPOICluster/>
+            {/* <MapPOICluster/> */}
 
             <SupportUIDialog/>
             <JourneyLoaderUI multiple/>
             <MapPOIContextMenu/>
+            <MapPOIMonitor/>
+            <ContextMenuHook/>
 
             {journeyToolbar.show && journeyToolbar.usage && <JourneyToolbar/>}
-
 
         </>
     )
 }
-

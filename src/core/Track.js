@@ -1,14 +1,31 @@
-import { CURRENT_TRACK, DRAWING_FROM_UI, FOCUS_ON_FEATURE, REFRESH_DRAWING }  from '@Core/constants'
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Track.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-04-28
+ * Last modified: 2025-04-28
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
+import { CURRENT_TRACK, DRAWING_FROM_UI, FOCUS_ON_FEATURE }                   from '@Core/constants'
 import { MapElement }                                                         from '@Core/MapElement'
-import { POI }                                                                from '@Core/POI'
 import { ProfileTrackMarker }                                                 from '@Core/ProfileTrackMarker'
 import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
 import { Mobility }                                                           from '@Utils/Mobility'
 import { DateTime }                                                           from 'luxon'
+import { v4 as uuid }                                                         from 'uuid'
 
 
 export class Track extends MapElement {
 
+    id
     /** @type {string} */
     title       // Track title
     /** @type {Journey |undefined} */
@@ -23,7 +40,7 @@ export class Track extends MapElement {
     hasAltitude
     /** @type {[]} */
     content     // GEo JSON
-    /** @type {{start:POI|undefined,stop:POI|undefined}} */
+    /** @type {{start:MapPOI|undefined,stop:MapPOI|undefined}} */
     flags = {start: undefined, stop: undefined}
     /** @type {ProfileTrackMarker | null} */
     marker = null
@@ -34,6 +51,7 @@ export class Track extends MapElement {
 
     constructor(title, options = {}) {
         super()
+        this.id = options.id ?? uuid()
         this.title = title
         this.parent = options.parent
         this.slug = options.slug
@@ -51,6 +69,7 @@ export class Track extends MapElement {
         this.content = options.content
         this.flags = options.flags ?? {start: undefined, stop: undefined}
         this.marker = options.marker ?? null
+        this.pois = options.pois ?? []
 
         this.metrics = options.metrics ?? {}
     }
@@ -58,12 +77,6 @@ export class Track extends MapElement {
     static deserialize(props) {
         props.instance = new Track()
         let instance = super.deserialize(props)
-
-        // Transform Flags from object to class
-        instance.flags.start = new POI(instance.flags.start)
-        instance.flags.stop = new POI(instance.flags.stop)
-        instance.marker = new ProfileTrackMarker(instance.marker)
-
         return instance
     }
 
@@ -76,6 +89,10 @@ export class Track extends MapElement {
             }
         }
         return false
+    }
+
+    static getBySlug(slug) {
+
     }
 
     static unproxify = (object) => {
@@ -363,28 +380,7 @@ export class Track extends MapElement {
      * @return {Promise<void>}
      */
     draw = async ({action = DRAWING_FROM_UI, mode = FOCUS_ON_FEATURE, forcedToHide = false}) => {
-        TrackUtils.draw(this, {action: action, mode: mode, forcedToHide: forcedToHide}).then(() => {
-            // Let's draw flags for the first time.
-                if (this.flags.start) {
-                    if (action === REFRESH_DRAWING) {
-                        this.flags.start.drawn = false
-                    }
-                    this.flags.start.draw(!forcedToHide)
-                }
-                if (this.flags.stop) {
-                    if (action === REFRESH_DRAWING) {
-                        this.flags.stop.drawn = false
-                    }
-                    this.flags.stop.draw(!forcedToHide)
-                }
-
-                if (this.marker) {
-                    if (action === REFRESH_DRAWING) {
-                        this.marker.drawn = false
-                    }
-                    this.marker.draw(forcedToHide)
-                }
-        })
+        await TrackUtils.draw(this, {action: action, mode: mode, forcedToHide: forcedToHide})
 
         // Focus on the parent Journey
         if (mode === FOCUS_ON_FEATURE) {
@@ -401,7 +397,7 @@ export class Track extends MapElement {
     }
 
     addToEditor = () => {
-        lgs.theJourneyEditorProxy.track = this
+        lgs.stores.journeyEditor.track = this
     }
 
     addToContext = (setToCurrent = true) => {

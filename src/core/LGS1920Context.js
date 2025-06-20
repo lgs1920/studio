@@ -1,7 +1,24 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: LGS1920Context.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import {
     APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, JOURNEYS_STORE, ORIGIN_STORE, platforms,
     POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE,
 }                            from '@Core/constants'
+import { StoresManager }     from '@Core/stores/StoresManager'
 import { AppToolsManager }   from '@Core/ui/AppToolsManager'
 import { DeviceManager }     from '@Core/ui/DeviceManager'
 import { Geocoder }          from '@Core/ui/Geocoder'
@@ -53,6 +70,8 @@ export class LGS1920Context {
 
         this.journeyEditorStore = this.#mainProxy.components.journeyEditor
         this.mainUIStore = this.#mainProxy.components.mainUI
+
+        this.stores = new StoresManager()// TODO change all stores
 
         // Get the first as current theJourney
         if (this.journeys.size) {
@@ -144,13 +163,13 @@ export class LGS1920Context {
             lgs1920:  new LocalDB({
                                       name:             `${APP_KEY}${dbPrefix}`,
                                       stores:           [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE],
-                                      manageTransients: true,
+                                      manageTransients: false,
                                       version:          4, // integer
                                   }),
             settings: new LocalDB({
                                       name:    `settings-${APP_KEY}${dbPrefix}`,
                                       stores:  [SETTINGS_STORE],
-                                      manageTransients: true,
+                                      manageTransients: false,
                                       version: 1, // integer
                                   }),
             vault:    new LocalDB({
@@ -229,6 +248,23 @@ export class LGS1920Context {
     }
 
     /**
+     * Retrieves a journey object based on the provided track slug.
+     *
+     * @param {string} slug - The track slug used to identify and retrieve the journey.
+     * @returns {*} The journey object associated with the processed slug, or undefined if not found.
+     */
+    getJourneyByTrackSlug = (slug) => {
+        const parts = slug.split('#')
+        if (parts.length === 2) {
+            // UC : journey POIs = parent = journey slug
+            return this.getJourneyBySlug(slug)
+        }
+        // UC : tracks POIs
+        const journeySlug = slug.split('#').slice(1, 3).join('#')
+        return this.getJourneyBySlug(journeySlug)
+    }
+
+    /**
      * Save or replace journey in context
      *
      * @param journey
@@ -278,7 +314,8 @@ export class LGS1920Context {
         this.theJourneyEditorProxy = proxy(theJourneyEditor)
     }
 
-    initManagers = () => {
+    initManagers = async () => {
+
         __.ui.profiler = new Profiler(this)
         __.ui.editor = {
             journey: new JourneyEditor(),
@@ -289,11 +326,15 @@ export class LGS1920Context {
         __.ui.drawerManager = new DrawerManager()
         __.ui.sceneManager = new SceneManager()
         __.ui.menuManager = new MenuManager()
+
+        // Init POI management
         __.ui.poiManager = new POIManager()
+
         __.ui.geocoder = new Geocoder()
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()
+
 
     }
 

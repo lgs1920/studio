@@ -1,38 +1,41 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Journey.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-16
+ * Last modified: 2025-06-16
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import {
     CURRENT_JOURNEY, DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, GEOJSON, GPX, JOURNEYS_STORE, JSON_, KML, KMZ,
-    NO_FOCUS, ORIGIN_STORE, REFRESH_DRAWING, SIMULATE_ALTITUDE, TRACK_SLUG, UPDATE_JOURNEY_SILENTLY,
-}                                      from '@Core/constants'
-import {
-    gpx, kml,
-}                                      from '@tmcw/togeojson'
-import {
-    getGeom,
-}                                      from '@turf/invariant'
-import {
-    FLAG_START, FLAG_STOP, JUST_ICON, POI_FLAG, POI_MARKER, POI_STD,
-}                                      from '@Utils/cesium/POIUtils'
+    NO_FOCUS, ORIGIN_STORE, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, REFRESH_DRAWING, SIMULATE_ALTITUDE,
+    TRACK_SLUG, UPDATE_JOURNEY_SILENTLY,
+}                   from '@Core/constants'
+import { MapPOI }   from '@Core/MapPOI'
+import { gpx, kml } from '@tmcw/togeojson'
+import { getGeom }  from '@turf/invariant'
+
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                                      from '@Utils/cesium/TrackUtils'
-import {
-    UIToast,
-}                                      from '@Utils/UIToast'
-import {
-    ElevationServer,
-}                                      from './Elevation/ElevationServer'
-import {
-    MapElement,
-}                                      from './MapElement'
-import { POI, POI_VERTICAL_ALIGN_TOP } from './POI'
-
-import { ProfileTrackMarker } from './ProfileTrackMarker'
-import { Track }              from './Track'
+}                          from '@Utils/cesium/TrackUtils'
+import { UIToast }         from '@Utils/UIToast'
+import { ElevationServer } from './Elevation/ElevationServer'
+import { MapElement }      from './MapElement'
+import { Track }           from './Track'
 
 
 export class Journey extends MapElement {
 
     tracks = new Map()          // List of tracks
-    pois = new Map()            // List of pois
+    pois = []            // List of pois
     poisOnLimits = true               // Add POIs start/stop on journey limits or on each track
     type                                       // File type  GPX,KML,GEOJSON  //TODO KMZ
 
@@ -59,7 +62,7 @@ export class Journey extends MapElement {
 
             // If options property exists, we get them, else
             // we set the value to a default.
-            this.slug = options.slug ?? __.app.setSlug({ content : [title,type]})
+            this.slug = options.slug ?? __.app.setSlug({content: [title, type]})
             this.visible = options.visible ?? true
             this.POIsVisible = options.POIsVisible ?? true
 
@@ -68,6 +71,42 @@ export class Journey extends MapElement {
             this.camera = options.camera ?? null
 
 
+        }
+
+    }
+
+    /**
+     * Creates and initializes a new Journey instance with the specified parameters.
+     *
+     * @param {string} title - The title of the journey.
+     * @param {string} type - The type of the journey.
+     * @param {Object} options - Additional options for initializing the journey.
+     * @return {Promise<Journey>} A promise that resolves to the created and initialized Journey instance.
+     */
+    static async create(title, type, options) {
+        const journey = new Journey(title, type, options)
+        await journey.initializeJourney(options)
+        return journey
+    }
+
+    /**
+     * Asynchronously initializes the journey by executing a series of tasks in sequence.
+     *
+     * The method performs the following steps:
+     * 1. Fetches points of interest (POIs) data from a GeoJSON file.
+     * 2. Saves the fetched data to the database.
+     * 3. Prepares the visual drawing or configuration for the initialized journey.
+     *
+     * If any step fails, an error is caught and logged to the console.
+     *
+     * This method is designed to be called at the start of the journey initialization process.
+     *
+     * @async
+     * @function
+     * @throws Will log an error to the console if any of the asynchronous operations fail.
+     */
+    initializeJourney = async (options) => {
+        try {
             // Transform content to GeoJson
             this.getGeoJson(options.content ?? '')
 
@@ -76,27 +115,18 @@ export class Journey extends MapElement {
 
             this.globalSettings()
 
-
             // Get Metrics
             this.metrics = options.metrics ?? {}
 
-            // Get all POIs
-            this.getPOIsFromGeoJson()
-
-            // Finally saveToDB
-            ;(async () => await this.saveToDB())()
-
-
-            const prepare = async () => {
-                await this.prepareDrawing()
-            }
-            prepare()
-
+            this.prepareDrawing().then(async () => {
+                await this.getPOIsFromGeoJson()
+                await this.persistToDatabase()
+            })
         }
-
+        catch (error) {
+            console.error('Failed to initialize journey:', error)
+        }
     }
-
-
 
 
     /**
@@ -120,7 +150,8 @@ export class Journey extends MapElement {
                 )
             })
             return await Promise.all(journeyPromises)
-        } catch (error) {
+        }
+        catch (error) {
             console.error('Error when trying to get journeys from browser database :', error)
             return []
         }
@@ -131,25 +162,11 @@ export class Journey extends MapElement {
         props.instance = new Journey()
         let instance = super.deserialize(props)
 
-        // Transform POIs from object to class
-        instance.pois.forEach((poi, slug) => {
-            instance.pois.set(slug, new POI(poi))
-        })
-
         // Transform Tracks from object to class
         instance.tracks.forEach((track, slug) => {
             const object = new Track(track.title, track)
-            object.flags.start = new POI(object.flags.start)
-            object.flags.stop = new POI(object.flags.stop)
-            object.marker = new ProfileTrackMarker(object.marker)
-            if (props.reset) {
-                object.flags.start.drawn  = false
-                object.flags.stop.drawn  = false
-                object.marker.drawn  = false
-            }
             instance.tracks.set(slug, new Track(track.title, object))
         })
-
         return instance
 
     }
@@ -226,12 +243,13 @@ export class Journey extends MapElement {
                     this.geoJson = JSON.parse(content)
             }
 
-        } catch (error) {
+        }
+        catch (error) {
             console.error(error)
             // Error => we notify
             UIToast.error({
-                caption: `An error occurs during loading <strong>${this.title}<strong>!`, text: error,
-            })
+                              caption: `An error occurs during loading <strong>${this.title}<strong>!`, text: error,
+                          })
             this.geoJson = undefined
         }
     }
@@ -252,28 +270,28 @@ export class Journey extends MapElement {
                 const title = feature.properties.name
 
                 const slug = this.#setTrackSlug({
-                                                    content:[
+                                                    content: [
                                                         this.slug,
-                                                        feature.properties.name
-                                                        ]
-                })
-                const track = keepContext?this.tracks.get(slug):null
+                                                        feature.properties.name,
+                                                    ],
+                                                })
+                const track = keepContext ? this.tracks.get(slug) : null
+
                 if ([FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING].includes(geometry.type)) {
                     // Let's define some tracks parameters
                     const parameters = {
-                        parent: this.slug,
-                        name: keepContext?track.name:slug,
-                        slug: slug,
-                        hasTime: this.#hasTime(feature.properties),
+                        parent:      this.slug,
+                        name:        keepContext ? track.name : slug,
+                        slug:        slug,
+                        hasTime:     this.#hasTime(feature.properties),
                         hasAltitude: this.#hasAltitude(geometry),
-                        description: keepContext?track.description:feature.properties.desc ?? '',
-                        segments: geometry.coordinates.length,
-                        visible: keepContext?track.visible:true,
-                        color :  keepContext?track.color: __.ui.editor.journey.newColor(),
-                        thickness: keepContext ? track.thickness : lgs.settings.getJourney.thickness,
-                        flags: keepContext?track.flags: {start: undefined, stop: undefined},
-                        content: feature,
-                        marker:keepContext?track.marker:null
+                        description: keepContext ? track.description : feature.properties.desc ?? '',
+                        segments:    geometry.coordinates.length,
+                        visible:     keepContext ? track.visible : true,
+                        color:       keepContext ? track.color : __.ui.editor.journey.newColor(),
+                        thickness:   keepContext ? track.thickness : lgs.settings.getJourney.thickness,
+                        flags:       keepContext ? track.flags : {start: undefined, stop: undefined},
+                        content:     feature,
                     }
                     this.tracks.set(slug, new Track(title, parameters))
                 }
@@ -288,7 +306,7 @@ export class Journey extends MapElement {
      * @return {number}
      */
     getTrackIndex = slug => {
-         return Array.from(this.tracks.keys()).indexOf(slug)
+        return Array.from(this.tracks.keys()).indexOf(slug)
     }
 
 
@@ -324,17 +342,17 @@ export class Journey extends MapElement {
      * Populate this.pois
      *
      */
-    getPOIsFromGeoJson = () => {
+    getPOIsFromGeoJson = async () => {
         if (this.geoJson.type === FEATURE_COLLECTION) {
-            const flags = []
             // Extracts all POIs from FEATURE_POINT data and adds
             // POI on track limits
-            this.geoJson.features.forEach((feature, index) => {
+
+            for (const feature of this.geoJson.features) {
+                const index = this.geoJson.features.indexOf(feature)
                 const geometry = getGeom(feature)
-                const theSlug = this.#setTrackSlug({content:[this.slug,feature.properties.name]})
 
                 const common = {
-                    description: feature.properties.desc, size: lgs.POI_DEFAULT_SIZE, visible: true,
+                    description: feature.properties.desc, visible: true,
                 }
 
                 // We need to change coordinates array if it is a line string
@@ -356,52 +374,74 @@ export class Journey extends MapElement {
                     case FEATURE_POINT: {
                         // Create a POI
                         const point = geometry.coordinates
+                        const clampedHeight = await __.ui.poiManager.getHeightFromTerrain({
+                                                                                              coordinates: {
+                                                                                                  longitude: point[0],
+                                                                                                  latitude:  point[1],
+                                                                                                  height:    point[2] ?? 0,
+                                                                                              },
+                                                                                          })
                         const parameters = {
-                            parent: this.slug,
-                            usage: POI_STD,
-                            name: feature.properties.name,
-                            slug: this.#setPOISlug({content:index}),
-                            coordinates: [point[0], point[1]],
-                            altitude: point[2] ?? undefined,
-                            time: feature.properties?.time ?? undefined,
-                            type: JUST_ICON,
-                            icon: feature.properties?.sym ?? feature.properties?.type,
-                            foregroundColor: lgs.settings.getJourney.pois.color,
+                            parent:      this.slug,
+                            type:            POI_STANDARD_TYPE,
+                            title:           feature.properties.name,
+                            description: feature.properties.description ?? '',
+                            longitude:       point[0],
+                            latitude:        point[1],
+                            height:          point[2] ?? undefined,
+                            simulatedHeight: clampedHeight,
+
+                            time:     feature.properties?.time ?? undefined,
+                            expanded: false,
+                            visible:  true,
                         }
-                        this.pois.set(parameters.slug, new POI({...common, ...parameters}))
+                        const poi = new MapPOI({...common, ...parameters})
+                        await __.ui.poiManager.add(poi, false)
+                        this.pois.push(poi.id)
+
                         break
                     }
                     case FEATURE_LINE_STRING :
                     case FEATURE_MULTILINE_STRING: {
                         const parentSlug = this.#setTrackSlug({
-                            content:[
-                                this.slug,
-                                feature.properties.name
-                            ]
-                        })
+                                                                  content: [
+                                                                      this.slug,
+                                                                      feature.properties.name,
+                                                                  ],
+                                                              })
                         // Create Track Start Flag
                         const start = coordinates[0][0]
                         const timeStart = this.#hasTime(feature.properties) ? times[0][0] : undefined
+                        const clampedStart = await __.ui.poiManager.getHeightFromTerrain({
+                                                                                             coordinates: {
+                                                                                                 longitude: start[0],
+                                                                                                 latitude:  start[1],
+                                                                                                 height:    start[2] ?? 0,
+                                                                                             },
+                                                                                         })
                         const startParameters = {
-                            parent: this.slug,
-                            usage:POI_FLAG,
-                            name: 'Track start',
-                            slug: this.#setPOISlug({
-                                                       suffix:  FLAG_START,
-                                                       content: theSlug,
-                                                       prefix:  POI_FLAG,
-                                                   }),
-                            coordinates: [start[0], start[1]],
-                            altitude: start[2] ?? undefined,
-                            time: timeStart,
-                            type: JUST_ICON,
-                            icon: FLAG_START,
-                            verticalOrigin: POI_VERTICAL_ALIGN_TOP,
-                            foregroundColor: lgs.settings.getJourney.pois.start.color,
+                            parent: parentSlug,
+                            type:        POI_FLAG_START,
+                            title:       'Start',
+                            description: 'Track start',
+
+                            longitude:       start[0],
+                            latitude:        start[1],
+                            height:          start[2] ?? undefined,
+                            simulatedHeight: clampedStart,
+
+                            time:     timeStart,
+                            distance: 0,
+
+                            color:   lgs.settings.journey.pois.start.color,
+                            bgColor: lgs.settings.journey.pois.start.bgColor,
+                            expanded: false,
+                            visible: true,
                         }
-                        const startFlag = new POI({...common, ...startParameters})
-                        this.tracks.get(parentSlug).flags.start = startFlag
-                        flags.push(startFlag)
+                        const startFlag = new MapPOI({...common, ...startParameters})
+                        await __.ui.poiManager.add(startFlag, false)
+                        this.pois.push(startFlag.id)
+                        this.tracks.get(parentSlug).flags.start = startFlag.id
 
                         // Create Track Stop Flag
                         const length = coordinates.length - 1
@@ -409,51 +449,59 @@ export class Journey extends MapElement {
                         const stop = coordinates[length][last]
 
                         const timeStop = this.#hasTime(feature.properties) ? times[length][last] : undefined
+                        const clampedStop = await __.ui.poiManager.getHeightFromTerrain({
+                                                                                            coordinates: {
+                                                                                                longitude: stop[0],
+                                                                                                latitude:  stop[1],
+                                                                                                height:    stop[2] ?? 0,
+                                                                                            },
+                                                                                        })
                         const stopParameters = {
-                            parent: this.slug,
-                            usage:POI_FLAG,
-                            name: 'Track stop',
-                            slug: this.#setPOISlug({
-                                                       suffix:FLAG_STOP,
-                                                       content:theSlug,
-                                                       prefix:POI_FLAG
-                                                   }
-                            , ),
-                            coordinates: [stop[0], stop[1]],
-                            altitude: stop[2] ?? undefined,
-                            time: timeStop,
-                            type: JUST_ICON,
-                            icon: FLAG_STOP,
-                            verticalOrigin: POI_VERTICAL_ALIGN_TOP,
-                            foregroundColor: lgs.settings.getJourney.pois.stop.color,
-                        }
-                        const stopFlag = new POI({...common, ...stopParameters})
-                        this.tracks.get(parentSlug).flags.stop = stopFlag
-                        flags.push(stopFlag)
+                            parent: parentSlug,
+                            type:        POI_FLAG_STOP,
+                            title:       'End',
+                            description: 'Track end',
 
-                        // Create marker flag
-                        this.tracks.get(parentSlug).marker = new ProfileTrackMarker(
-                            {
-                                color:this.tracks.get(parentSlug).marker?.color??this.tracks.get(parentSlug).color,
-                                border:{color:'transparent'},
-                                parent:this.slug,
-                                slug:this.#setPOISlug({content:`${theSlug}`,prefix: POI_MARKER}),
-                                visible: false,
-                            })
+                            longitude:       stop[0],
+                            latitude:        stop[1],
+                            height:          stop[2] ?? undefined,
+                            simulatedHeight: clampedStop,
+
+                            time: timeStop,
+                            distance: 0,
+
+                            icon:     POI_FLAG_STOP,
+                            color:    lgs.settings.journey.pois.stop.color,
+                            bgColor:  lgs.settings.journey.pois.stop.bgColor,
+                            expanded: false,
+                            visible:  true,
+                        }
+
+                        const stopFlag = new MapPOI({...common, ...stopParameters})
+                        await __.ui.poiManager.add(stopFlag, false)
+                        this.pois.push(stopFlag.id)
+                        this.tracks.get(parentSlug).flags.stop = stopFlag.id
                     }
                         break
                 }
 
-            })
+            }
 
             // If we need to have Flags  on limits only (ie first on first track, last of last track)
             // we adapt the visibility for the flagged POIs
             if (this.poisOnLimits) {
-                flags.forEach((poi, index) => {
-                    const track = poi.slug.split('#').slice(1,-1).join('#')
-                    this.tracks.get(track).flags[(poi.slug.endsWith(FLAG_START)) ? 'start' : 'stop'].visible = (index === 0 || index === (flags.length - 1))
+                Array.from(this.tracks.values()).forEach((track, index) => {
+                    Object.assign(__.ui.poiManager.list.get(track.flags.start), {
+                        visible: index === 0,
+                    })
+                    Object.assign(__.ui.poiManager.list.get(track.flags.stop), {
+                        visible: index === this.tracks.size - 1,
+                    })
+
                 })
             }
+
+
         }
     }
 
@@ -466,11 +514,11 @@ export class Journey extends MapElement {
      *
      * @return {string}
      */
-    #setPOISlug = ({suffix='', content='', prefix= POI_STD}) => {
+    #setPOISlug = ({suffix = '', content = '', prefix = POI_STD}) => {
         if (typeof content === 'number') {
-            content=content.toString()
+            content = content.toString()
         }
-        return __.app.setSlug({suffix : suffix, content : content, prefix : prefix})
+        return __.app.setSlug({suffix: suffix, content: content, prefix: prefix})
     }
 
     /**
@@ -483,7 +531,7 @@ export class Journey extends MapElement {
      * @return {string}
      */
     #setTrackSlug = ({suffix = '', content = '', prefix = TRACK_SLUG}) => {
-        return __.app.setSlug({suffix : suffix, content : content, prefix : prefix})
+        return __.app.setSlug({suffix: suffix, content: content, prefix: prefix})
     }
 
     /**
@@ -491,7 +539,7 @@ export class Journey extends MapElement {
      *
      * @return {Promise<void>}
      */
-    saveToDB = async () => {
+    persistToDatabase = async () => {
         await lgs.db.lgs1920.put(this.slug, Journey.unproxify(this), JOURNEYS_STORE)
     }
 
@@ -546,12 +594,8 @@ export class Journey extends MapElement {
             // If journey is not visible, we force tracks to be hidden, whatever their visibility
             // else we use their status.
             promises.push(track.draw({
-                action: action, mode: NO_FOCUS, forcedToHide: !this.visible,
-            }))
-        })
-        // Draw POIs
-        this.pois.forEach(poi => {
-            promises.push(poi.draw(this.POIsVisible))
+                                         action: action, mode: NO_FOCUS, forcedToHide: !this.visible,
+                                     }))
         })
 
         await Promise.all(promises)
@@ -565,7 +609,7 @@ export class Journey extends MapElement {
                               ])
         UIToast.success({
                             caption: `${this.title}`, text: texts.get(action),
-        })
+                        })
 
         if (mode === FOCUS_ON_FEATURE && action !== DRAWING_FROM_DB && action !== UPDATE_JOURNEY_SILENTLY) {
             this.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})
@@ -574,8 +618,8 @@ export class Journey extends MapElement {
 
     }
 
-    focus = (props={}) => {
-        props.journey=this
+    focus = (props = {}) => {
+        props.journey = this
         props.target = this
         __.ui.sceneManager.focusOnJourney(props)
     }
@@ -684,8 +728,38 @@ export class Journey extends MapElement {
      *
      * @return {boolean}
      */
-    hasOneTrack = ()=> {
+    hasOneTrack = () => {
         return this.tracks.size === 1
+    }
+
+    remove = async () => {
+        // Remove from context
+        lgs.journeys.delete(this.slug)
+        // Remove tracks
+        TrackUtils.removeAllTracks(this.slug)
+
+
+        // Remove POIs bound to the track
+        this.tracks.forEach(track => {
+            const poisToRemove = Array.from(__.ui.poiManager.list.values())
+                .filter(poi => poi.parent === track.slug)
+                .map(poi => poi.id)
+            poisToRemove.forEach(poiId => {
+                __.ui.poiManager.remove({id: poiId, force: true})
+            })
+        })
+
+        // Remove POIs bound to the journey
+        const poisToRemove = Array.from(__.ui.poiManager.list.values())
+            .filter(poi => poi.parent === this.slug)
+            .map(poi => poi.id)
+        poisToRemove.forEach(poiId => {
+            __.ui.poiManager.remove({id: poiId, force: true})
+        })
+
+
+        // Remove journey in DB
+        await this.removeFromDB()
     }
 
 }

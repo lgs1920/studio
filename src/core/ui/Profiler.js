@@ -77,7 +77,7 @@ export class Profiler {
                 data.options.push({
                                       color:   track.color,
                                       name:    track.title,
-                                      marker:  track.marker.foregroundColor,
+                                      //  marker:  track.marker.foregroundColor,
                                       dataset: track.slug,
                                   })
 
@@ -279,7 +279,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.getUnitSyst
 
         lgs.mainProxy.components.profile.key++
         if (lgs.settings.getProfile.marker.track.show) {
-            await lgs.theTrack?.marker.draw()
+            //  await lgs.theTrack?.marker.draw()
         }
         this.resetZoom()
     }

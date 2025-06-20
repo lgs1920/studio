@@ -1,8 +1,25 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Viewer.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-05-08
+ * Last modified: 2025-05-08
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import '@shoelace-style/shoelace/dist/themes/light.css'
 import { CanvasEventManager } from '@Core/events/CanvasEventManager'
-import { LayersUtils }                                                           from '@Utils/cesium/LayersUtils'
-import { SceneUtils }                                                           from '@Utils/cesium/SceneUtils'
-import { ImageryLayerCollection, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
+import { LayersUtils }        from '@Utils/cesium/LayersUtils'
+import { SceneUtils }                                                                                  from '@Utils/cesium/SceneUtils'
+import { ImageryLayerCollection, ScreenSpaceEventType, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
+import { useEffect }                                                                                   from 'react'
 
 export function Viewer() {
 
@@ -39,7 +56,9 @@ export function Viewer() {
             infoBox:              false,
             sceneModePicker:      false,
             showRenderLoopErrors: true,
+            resolutionScale: 2,
             mapProjection:        new WebMercatorProjection(), // TODO is it a problem in 3D ?
+            //selectionIndicator: false,
             //*************************************
             // Avoid consuming Cesium Ion Sessions
             // DO NOT CHANGE the 2 following lines
@@ -48,16 +67,21 @@ export function Viewer() {
             baseLayerPicker: false,
         })
     }
+
     // Change scene mode
     lgs.viewer.scene.sceneMode = SceneUtils.modeFromLGSToGIS(lgs.settings.scene.mode)
 
     // Add some globe parameters
     lgs.scene.globe.enableLighting = false
     lgs.scene.globe.depthTestAgainstTerrain = true
-    lgs.scene.requestRenderMode = true
-    lgs.scene.maximumRenderTimeChange = 10
+
+    //lgs.scene.maximumRenderTimeChange = 0.2
     //lgs.scene.debugShowFramesPerSecond=true
+
     lgs.scene.shadows = true
+    lgs.scene.requestRenderMode = true
+
+    lgs.viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK)
 
 
     //Layers
@@ -68,7 +92,7 @@ export function Viewer() {
     lgs.camera.changed.addEventListener(raiseCameraUpdateEvent)
 
     // Manage events
-    __.canvasEvents = new CanvasEventManager()
+    __.canvasEvents = new CanvasEventManager(lgs.viewer)
 
 
     return (<></>)

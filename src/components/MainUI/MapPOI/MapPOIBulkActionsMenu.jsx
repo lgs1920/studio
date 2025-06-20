@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-03-02
- * Last modified: 2025-03-02
+ * Created on: 2025-06-10
+ * Last modified: 2025-06-10
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 import { faArrowsFromLine, faArrowsToLine, faLocationDot, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
 import { faEye, faMask }                                               from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
+import { FontAwesomeIcon }       from '@Components/FontAwesomeIcon'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem }            from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                       from '@Utils/FA2SL'
 import { useEffect, useState }                                         from 'react'
@@ -33,45 +34,51 @@ import './style.css'
  * The component relies on the state of the application's POI data and uses the provided
  * UI functionalities to handle interactions with the POI and the map view.
  */
-export const MapPOIBulkActionsMenu = () => {
+export const MapPOIBulkActionsMenu = (globals) => {
 
-    const store = lgs.mainProxy.components.pois
-    const pois = useSnapshot(store)
+    const $pois = lgs.mainProxy.components.pois
+    const pois = useSnapshot($pois)
     const [disabled, setDisabled] = useState(false)
+    const drawers = useSnapshot(lgs.mainProxy.drawers)
+    const onlyJourney = drawers.open === JOURNEY_EDITOR_DRAWER
 
     const hide = async () => {
-        store.bulkList.forEach((state, id) => {
-            if (state) {
-                __.ui.poiManager.hide(id).then()
+        $pois.bulkList.forEach((canHide, id) => {
+            if (canHide) {
+                const poi = pois.list.get(id)
+                poi.hide()
             }
         })
     }
     const show = async () => {
-        store.bulkList.forEach((state, id) => {
-            if (state) {
-                __.ui.poiManager.show(id).then()
+        $pois.bulkList.forEach((canShow, id) => {
+            if (canShow) {
+                const poi = pois.list.get(id)
+                poi.show()
             }
         })
     }
 
     const shrink = async () => {
-        store.bulkList.forEach((state, id) => {
-            if (state) {
-                __.ui.poiManager.shrink(id).then()
+        $pois.bulkList.forEach((canReduce, id) => {
+            if (canReduce) {
+                const poi = pois.list.get(id)
+                poi.shrink()
             }
         })
     }
 
     const expand = async () => {
-        store.bulkList.forEach((state, id) => {
-            if (state) {
-                __.ui.poiManager.expand(id).then()
+        $pois.bulkList.forEach((canExpand, id) => {
+            if (canExpand) {
+                const poi = pois.list.get(id)
+                poi.expand()
             }
         })
     }
 
     /**
-     * Removes the selected Poinst of Interest and associated UI elements.
+     * Removes the selected Points of Interest and associated UI elements.
      *
      * Postcondition:
      * - Camera rotation is stopped if it was active.
@@ -81,33 +88,44 @@ export const MapPOIBulkActionsMenu = () => {
             await __.ui.cameraManager.stopRotate()
         }
         // Check if current is in list
-        const needToChangeCurrent = store.bulkList.has(pois.current.id)
+        const needToChangeCurrent = $pois.bulkList.has(pois.current)
         const actions = []
-        store.bulkList.forEach(async (state, id) => {
-            if (state) {
-                actions.push(__.ui.poiManager.remove(id, true))
+        $pois.bulkList.forEach(async (canRemove, id) => {
+            if (canRemove) {
+                actions.push(__.ui.poiManager.remove({id: id}))
             }
         })
         Promise.all(actions).then(results => {
             let poi = 0
             results.forEach(result => {
                 if (result.success) {
-                    store.filteredList.delete(result.id)
+                    if (onlyJourney) {
+                        $pois.filtered.journey.delete(result.id)
+                    }
+                    else {
+                        $pois.filtered.global.delete(result.id)
+                    }
                 }
             })
         })
 
         // Change current id needed (false if the list is empty)
         if (needToChangeCurrent) {
-            store.current = store.filteredList.size > 0 ? store.filteredList.entries().next().value : false
+            if (onlyJourney) {
+                $pois.current = $pois.filtered.journey.size > 0 ? $pois.filtered.journey.entries().next().value : false
+            }
+            else {
+                $pois.current = $pois.filtered.global.size > 0 ? $pois.filtered.global.entries().next().value : false
+            }
+
         }
 
-        store.bulkList.clear()
+        $pois.bulkList.clear()
     }
 
     useEffect(() => {
         setDisabled(Array.from(pois.bulkList.values()).every((value) => value === false))
-    }, [store.bulkList.values()])
+    }, [$pois.bulkList.values()])
 
     return (
         <SlDropdown disabled={disabled}>

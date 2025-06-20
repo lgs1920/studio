@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Utils.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-15
+ * Last modified: 2025-06-15
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import {
     DRAW_THEN_SAVE, DRAW_WITHOUT_SAVE, DRAWING_FROM_UI, JUST_SAVE, NO_FOCUS, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY,
 }                     from '@Core/constants'
@@ -11,18 +27,18 @@ export class Utils {
      * We change its key to rerender the list component
      */
     static renderJourneysList = () => {
-        lgs.mainProxy.components.journeyEditor.keys.journey.list++
+        lgs.stores.main.components.journeyEditor.keys.journey.list++
     }
 
     static renderTracksList = () => {
-        lgs.mainProxy.components.journeyEditor.keys.track.list++
+        lgs.stores.main.components.journeyEditor.keys.track.list++
     }
     static renderJourneySettings = () => {
-        lgs.mainProxy.components.journeyEditor.keys.journey.settings++
+        lgs.stores.main.components.journeyEditor.keys.journey.settings++
     }
 
     static renderTrackSettings = () => {
-        lgs.mainProxy.components.journeyEditor.keys.track.settings++
+        lgs.stores.main.components.journeyEditor.keys.track.settings++
     }
 
     static initJourneyEdition = async (event = undefined) => {
@@ -61,7 +77,6 @@ export class Utils {
 
         // Profile management
         TrackUtils.setProfileVisibility(editorStore.journey)
-        lgs.theTrack.marker.toggleVisibility()
 
         // Update Profile to show the correct Journey
         __.ui.profiler.draw()
@@ -95,7 +110,7 @@ export class Utils {
             // Save information
             TrackUtils.saveCurrentTrackToDB(event.target.value).then(async () => {
                 if (editorStore.journey.visible) {
-                    editorStore.journey.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})
+                    editorStore.journey.focus({rotate: lgs.settings.ui.camera.start.rotate.journey})
                 }
                 await TrackUtils.saveCurrentPOIToDB(null)
 
@@ -115,7 +130,7 @@ export class Utils {
             await track.draw({action: REFRESH_DRAWING, mode: NO_FOCUS})
         }
         if (action === DRAW_THEN_SAVE || action === JUST_SAVE) {
-            await journey.saveToDB()
+            await journey.persistToDatabase()
         }
 
         await track.extractMetrics()
@@ -135,8 +150,8 @@ export class Utils {
         const journey = Journey.deserialize({object: Journey.unproxify(lgs.theJourneyEditorProxy.journey)})
         await journey.extractMetrics()
         lgs.saveJourneyInContext(journey)
-        // saveToDB toDB
-        await journey.saveToDB()
+
+        await journey.persistToDatabase()
 
         TrackUtils.setProfileVisibility(journey)
 
@@ -150,7 +165,7 @@ export class Utils {
     }
 
     settings = () => {
-        lgs.mainProxy.components.journeyEditor.keys.journey.settings++
+        lgs.stores.main.components.journeyEditor.keys.journey.settings++
     }
 
 

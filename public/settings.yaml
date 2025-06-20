@@ -51,6 +51,7 @@ starter:
   longitude: 5.70291
   latitude: 45.33524
   height: 1920
+  simulatedHeight: 1924 # pseudo height for cesium
   title: La Grande Sure
   bgColor: "#7FFF00"  # chartreuse (127,255,0)
   color: "#ffffff"
@@ -107,6 +108,7 @@ swatches:
     # 2 others are theme dependant
 
   distribution: 'sequence'
+  current: 0
 
 ########################################
 # Tracks and POIs
@@ -116,20 +118,21 @@ journey:
   ## POIs
   pois:
     # Default POI
-    color: '#f2c55c'      # Color
-    border: '#ffffff99'   # Border
-    size: 13              # Size (pixels)
-    sizePin: 10           # TODO
+    color: ''      # Color
+    bgColor: '#ffffff99'   # Border
     ## Wanderer mode
     wanderer:
       color: '#1689CCff'
       border: '#FFF'
     ## Start POI
     start:
-      color: '#DC143Cff'
+      color: '#DC143C'
+      bgColor: '#f2c55c'
     ## Stop POI
     stop:
-      color: '#228B22ff'
+      color: '#228B22'
+      bgColor: '#f2c55c'
+
 ########################################
 # Global pois
 ########################################
@@ -141,6 +144,8 @@ poi:
     exclude: false
     open: false
     active: false
+    global: true
+    journey: false
 
   categories:
     # POI

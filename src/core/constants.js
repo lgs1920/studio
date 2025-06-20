@@ -7,19 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-03-02
- * Last modified: 2025-03-02
+ * Created on: 2025-06-10
+ * Last modified: 2025-06-10
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { CESIUM_EVENTS as $CESIUM_EVENTS } from '@Core/events/cesiumEvents'
 import {
-    faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faEarthEurope, faFlagSwallowtail, faFort,
-    faHouseBlank, faLock, faMap, faMountains, faPlaceOfWorship, faRoad, faSquareParking, faTablePicnic, faTelescope,
-    faUnlock, faUser,
-} from '@fortawesome/duotone-regular-svg-icons'
-
+    faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faEarthEurope, faFlagPennant, faFlagSwallowtail,
+    faFort, faHouseBlank, faLock, faMap, faMountains, faPlaceOfWorship, faRoad, faSquareParking, faTablePicnic,
+    faTelescope, faUnlock, faUser,
+}                                          from '@fortawesome/duotone-regular-svg-icons'
 
 export const SLOGAN = 'Replay Your Adventures!'
 /*******************************************************************************
@@ -97,6 +97,8 @@ export const FLAG_STOP_TYPE = 'stop'
 export const POI_TRACK_TYPE = 'track'
 export const POI_STANDARD_TYPE = 'poi'
 export const POI_TMP_TYPE = undefined
+export const POI_FLAG_START = 'start'
+export const POI_FLAG_STOP = 'stop'
 
 
 export const UPDATE_JOURNEY_THEN_DRAW = 11
@@ -117,7 +119,7 @@ export const SETTING_EXCLUSIONS = [
     'layers.base', 'layers.terrain', 'layers.overlay',
     'layers.filter', 'layers.colorSettings',
     'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
-    'ui.camera', 'ui.welcome',
+    'ui.camera', 'ui.welcome', 'swatches.current',
     'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
     'ui.compass.mode',
 ].sort((a, b) => {
@@ -174,6 +176,9 @@ export const LOCKED_ACCESS = 'locked'
 export const TERRAIN_FROM_CESIUM = 'cesium'
 export const TERRAIN_FROM_CESIUM_ELLIPSOID = 'ellipsoid'
 export const TERRAIN_FROM_URL = 'url'
+export const LOW_TERRAIN_PRECISION = 1
+export const HIGH_TERRAIN_PRECISION = 2
+
 
 export const ACCESS_ICONS = {
     [FREEMIUM_ACCESS]:       {
@@ -211,34 +216,31 @@ export const UNLOCKED = 'unlocked'
  * UI Click/Touch events
  ******************************************************************************/
 
-export const DOUBLE_CLICK_DELAY = 300 // milliseconds
-export const DOUBLE_TAP_DELAY = 300     // milliseconds
-export const POINTER = {
-    LEFT_DOWN:         0,
-    LEFT_UP:           1,
-    LEFT_CLICK:        2,
-    LEFT_DOUBLE_CLICK: 3,
-    RIGHT_DOWN:        5,
-    RIGHT_UP:          6,
-    RIGHT_CLICK:       7,
-    MIDDLE_DOWN:       10,
-    MIDDLE_UP:         11,
-    MIDDLE_CLICK:      12,
-    MOUSE_MOVE:        15,
-    WHEEL:             16,
-    PINCH_START:       17,
-    PINCH_END:         18,
-    PINCH_MOVE:        19,
-}
-export const BUTTONS = {
-    LEFT:   0,
-    MIDDLE: 1,
-    RIGHT:  2,
-}
-export const KEYBOARD = {
-    SHIFT: 0,
-    CTRL:  1,
-    ALT:   2,
+
+export const DOUBLE_CLICK_TIMEOUT = 300     // milliseconds
+export const DOUBLE_TAP_TIMEOUT = 300       // milliseconds
+export const LONG_TAP_TIMEOUT = 700         // milliseconds
+export const CESIUM_EVENTS = $CESIUM_EVENTS
+
+export const EVENTS = {
+    DOWN:         'DOWN',
+    UP:           'UP',
+    CLICK:        'CLICK',
+    TAP:          'TAP',
+    DOUBLE_TAP:   'DOUBLE_TAP',
+    LONG_TAP:     'LONG_TAP',
+    DOUBLE_CLICK: 'DOUBLE_CLICK',
+    RIGHT_DOWN:   'RIGHT_DOWN',
+    RIGHT_UP:     'RIGHT_UP',
+    RIGHT_CLICK:  'RIGHT_CLICK',
+    MIDDLE_DOWN:  'MIDDLE_DOWN',
+    MIDDLE_UP:    'MIDDLE_UP',
+    MIDDLE_CLICK: 'MIDDLE_CLICK',
+    MOUSE_MOVE:   'MOUSE_MOVE',
+    WHEEL:        'WHEEL',
+    PINCH_START:  'PINCH_START',
+    PINCH_END:    'PINCH_END',
+    PINCH_MOVE:   'PINCH_MOVE',
 }
 
 /*******************************************************************************
@@ -251,8 +253,6 @@ export const APP_EVENT = {
         HIDE: 'app/welcome/hide',
     },
 }
-
-
 
 
 /** Scene Mode **/
@@ -322,10 +322,35 @@ export const FOCUS_STARTER = 'starter'
 export const FOCUS_LAST = 'last'
 export const FOCUS_CENTROID = 'center'
 
-let faSummit
-/** POI Categories **/
+/**
+ * Mapping of Points of Interest (POI) categories to their associated icons.
+ * Each entry in the map associates a POI category name or type with a visual representation,
+ * which can be either a FontAwesome icon object or a custom SVG file path.
+ * This variable provides a convenient way to retrieve icons for various types of POIs.
+ *
+ * Key-Value Structure:
+ * - The key represents the POI category or identifier (e.g., 'shelter', POI_STANDARD_TYPE).
+ * - The value is an object or array containing the icon representation:
+ *   - FontAwesome icon objects use `{faIconName}` format.
+ *   - Custom SVG file paths are represented as strings within an array (e.g., ['icon.svg']).
+ *
+ * Use Cases:
+ * - Assigning graphical indicators to different POI types on a map application.
+ * - Enhancing user interfaces by visually differentiating POI categories.
+ *
+ * Example POI Categories (Keys in the Map):
+ * - 'shelter': Refers to a shelter icon.
+ * - 'castle': Refers to a castle icon.
+ * - 'viewpoint': Refers to a viewpoint telescope icon.
+ *
+ * Example Icon Types (Values in the Map):
+ * - FontAwesome Icons: Represented as `{faIconName}` objects.
+ * - Custom SVGs: File paths for custom icons, represented as strings in arrays.
+ */
 export const POI_CATEGORY_ICONS = new Map([
                                               [POI_STANDARD_TYPE, {faFlagSwallowtail}],
+                                              [POI_FLAG_START, {faFlagPennant}],
+                                              [POI_FLAG_STOP, {faFlagPennant}],
                                               ['shelter', {faHouseBlank}],
                                               ['refuge', ['house-bed.svg']],
                                               ['building', {faBuildings}],
@@ -342,7 +367,40 @@ export const POI_CATEGORY_ICONS = new Map([
                                               ['picnic-area', {faTablePicnic}],
                                           ])
 
+
+/**
+ * A constant object representing different sizes for Points of Interest (POI).
+ *
+ * Each key in the object corresponds to a specific type of POI size, with
+ * associated dimensions provided as width and height properties.
+ *
+ * Properties:
+ * - expanded: Represents the dimensions for an expanded POI. Contains width and height.
+ * - reduced: Represents the dimensions for a reduced POI. Contains width and height.
+ * - arrow: Represents the dimensions for a POI arrow. Contains width and height.
+ */
+export const POI_SIZES = {
+    'expanded': {width: 130, height: 60},
+    'reduced': {width: 32, height: 32},
+    'arrow':    {width: 6, height: 6},
+}
+
+// POI Origins
+export const POI_VERTICAL_ALIGN_BOTTOM = -1, // Both are defined
+             POI_VERTICAL_ALIGN_CENTER = 0   // for cesium engine
+
+export const ADD_POI_EVENT    = 'poi/add',
+             REMOVE_POI_EVENT = 'poi/remove',
+             UPDATE_POI_EVENT = 'poi/update'
+
+
 /** Compass **/
 export const NO_COMPASS = 0,
 COMPASS_FULL            = 1,
 COMPASS_LIGHT           = 2
+
+/*******************************************************************************
+ * Context Menu
+ ******************************************************************************/
+
+export const LGS_CONTEXT_MENU_HOOK = 'lgs-context-menu-hook'

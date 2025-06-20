@@ -7,14 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-06-17
+ * Last modified: 2025-06-17
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { FAButton } from '@Components/FAButton'
+import { MapPOIEditSettings } from '@Components/MainUI/MapPOI/MapPOIEditSettings'
+import { MapPOIList }         from '@Components/MainUI/MapPOI/MapPOIList'
 import {
     useConfirm,
 }                   from '@Components/Modals/ConfirmUI'
@@ -51,7 +53,7 @@ import {
 }                   from '@Editor/Utils'
 import {
     faArrowRotateRight, faCircleDot, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash,
-    faPaintbrushPencil, faRectangleList, faTelescope,
+    faPaintbrushPencil, faRectangleList,
 }                   from '@fortawesome/pro-regular-svg-icons'
 import {
     SlIcon, SlIconButton, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
@@ -82,18 +84,15 @@ import {
 import {
     JourneyData,
 }                   from './JourneyData'
-import {
-    JourneyPOIs,
-}                   from './JourneyPOIs'
 
 export const JourneySettings = function JourneySettings() {
 
-    const $theJourneyEditor = lgs.theJourneyEditorProxy
+    const $theJourneyEditor = lgs.stores.journeyEditor
     const theJourneyEditor = useSnapshot($theJourneyEditor)
     const former = $theJourneyEditor.journey.elevationServer
     const editorStore = useSnapshot(lgs.theJourneyEditorProxy)
 
-    const $rotate = lgs.mainProxy.components.mainUI.rotate
+    const $rotate = lgs.stores.main.components.mainUI.rotate
     const rotate = useSnapshot($rotate)
 
     const autoRotate = useSnapshot(lgs.settings.ui.camera.start.rotate)
@@ -298,10 +297,10 @@ export const JourneySettings = function JourneySettings() {
 
                     // Now we need to rebuild the data
                     theJourney.getTracksFromGeoJson(true)
-                    theJourney.getPOIsFromGeoJson()
+                    await theJourney.getPOIsFromGeoJson()
                     await theJourney.extractMetrics()
                     theJourney.addToContext()
-                    await theJourney.saveToDB()
+                    await theJourney.persistToDatabase()
 
                     // Then we redraw the journey
                     await Utils.updateJourney(SIMULATE_ALTITUDE)
@@ -418,17 +417,17 @@ export const JourneySettings = function JourneySettings() {
         serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.FILE_CONTENT))
     }
     serverList = serverList.concat(Array.from(ElevationServer.SERVERS.values()))
-    lgs.mainProxy.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+    lgs.stores.main.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
 
     useEffect(() => {
         return (() => {
-            lgs.mainProxy.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+            lgs.stores.main.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
         })
-    }, [lgs.mainProxy.components.mainUI.removeJourneyDialog.active])
+    }, [lgs.stores.main.components.mainUI.removeJourneyDialog.active])
 
     return (<>
         {theJourneyEditor.journey &&
-            <div id="journey-settings" key={lgs.mainProxy.components.journeyEditor.keys.journey.settings}>
+            <div id="journey-settings" key={lgs.stores.main.components.journeyEditor.keys.journey.settings}>
                 <div className={'settings-panel'} id={'editor-journey-settings-panel'}>
                     <SlTabGroup className={'menu-panel'}>
                         <SlTab slot="nav" panel="data" id="tab-journey-data"
@@ -438,13 +437,13 @@ export const JourneySettings = function JourneySettings() {
                         <SlTab slot="nav" panel="edit" active={theJourneyEditor.tabs.journey.edit}>
                             <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
                         </SlTab>
-                        {theJourneyEditor.journey.tracks.size === 1 &&
-                            <SlTab slot="nav" panel="points" active={theJourneyEditor.tabs.journey.points}>
-                                <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points
-                            </SlTab>
-                        }
+                        {/* {theJourneyEditor.journey.tracks.size === 1 && */}
+                        {/*     <SlTab slot="nav" panel="points" active={theJourneyEditor.tabs.journey.points}> */}
+                        {/*         <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points */}
+                        {/*     </SlTab> */}
+                        {/* } */}
                         <SlTab slot="nav" panel="pois" active={theJourneyEditor.tabs.journey.pois}>
-                            <SlIcon library="fa" name={FA2SL.set(faTelescope)}/>POIs
+                            <SlIcon library="fa" name={FA2SL.set(faLocationDot)}/>POIs
                         </SlTab>
 
                         {/**
@@ -502,7 +501,8 @@ export const JourneySettings = function JourneySettings() {
                          * POIs Tab Panel
                          */}
                         <SlTabPanel name="pois">
-                            <JourneyPOIs/>
+                            <MapPOIEditSettings/>
+                            <MapPOIList context={'journey-panel'}/>
                         </SlTabPanel>
 
                         {/**
@@ -555,7 +555,8 @@ export const JourneySettings = function JourneySettings() {
                                 </SlTooltip>
                             }
 
-                        {theJourneyEditor.journey.tracks.size === 1 && <TrackFlagsSettings tooltip="left"/>}
+                        {theJourneyEditor.journey.tracks.size === 1 && theJourneyEditor.journey.visible &&
+                            <TrackFlagsSettings tooltip="left"/>}
 
                         <div>
                         <SlTooltip hoist content={'Export'} placement="left">

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-04-29
+ * Last modified: 2025-04-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -39,8 +39,8 @@ import { TrackStyleSettings } from './TrackStyleSettings'
 
 export const TrackSettings = function TrackSettings() {
 
-    const editorStore = lgs.theJourneyEditorProxy
-    const editorSnapshot = useSnapshot(editorStore)
+    const $journeyEditor = lgs.stores.journeyEditor
+    const journeyEditor = useSnapshot($journeyEditor)
 
     /**
      * Change the track description
@@ -49,7 +49,7 @@ export const TrackSettings = function TrackSettings() {
      *
      */
     const setDescription = (async event => {
-        editorStore.track.description = event.target.value
+        $journeyEditor.track.description = event.target.value
         await Utils.updateTrack(JUST_SAVE)
     })
 
@@ -63,15 +63,15 @@ export const TrackSettings = function TrackSettings() {
         // Title is empty, we force the former value
         if (title === '') {
             const field = document.getElementById('track-title')
-            field.value = editorStore.track.title
+            field.value = $journeyEditor.track.title
             return
         }
         // Let's check if the next title has not been already used for another track.
         const titles = []
-        editorStore.journey.tracks.forEach(track => {
+        $journeyEditor.journey.tracks.forEach(track => {
             titles.push(track)
         })
-        editorStore.track.title = __.app.singleTitle(title, titles)
+        $journeyEditor.track.title = __.app.singleTitle(title, titles)
 
         await Utils.updateTrack(JUST_SAVE)
 
@@ -85,35 +85,37 @@ export const TrackSettings = function TrackSettings() {
      * @param {CustomEvent} event
      */
     const setTrackVisibility = async visibility => {
-        //saveToDB state
-        editorStore.track.visible = visibility
-        TrackUtils.updateTrackVisibility(editorStore.journey, editorStore.track, visibility)
+        $journeyEditor.track.visible = visibility
+        TrackUtils.updateTrackVisibility($journeyEditor.journey, $journeyEditor.track, visibility)
+
+        await __.ui.poiManager.setVisibilityByParent($journeyEditor.track.slug, visibility)
+
         await Utils.updateTrack(JUST_SAVE)
 
         Utils.renderTracksList()
         __.ui.profiler.updateTrackVisibility()
     }
 
-    const textVisibilityTrack = sprintf('%s Track', editorSnapshot.track.visible ? 'Hide' : 'Show')
+    const textVisibilityTrack = sprintf('%s Track', journeyEditor.track.visible ? 'Hide' : 'Show')
 
     return (<>
-            {editorSnapshot.track && editorSnapshot.journey.tracks.size > 1 && <>
+            {journeyEditor.track && journeyEditor.journey.tracks.size > 1 && <>
                 <div className={'settings-panel'} id={'editor-track-settings-panel'}
                      key={lgs.mainProxy.components.journeyEditor.keys.journey.track}>
-                    {editorSnapshot.track.visible && <SlTabGroup id={'track-menu-panel'} className={'menu-panel'}>
+                    {journeyEditor.track.visible && <SlTabGroup id={'track-menu-panel'} className={'menu-panel'}>
                         <SlTab slot="nav"
                                panel="data" id="tab-tracks-data"
-                               active={editorSnapshot.tabs.track.data}>
+                               active={journeyEditor.tabs.track.data}>
                             <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>Data
                         </SlTab>
                         <SlTab slot="nav"
                                panel="edit"
-                               active={editorSnapshot.tabs.track.edit}>
+                               active={journeyEditor.tabs.track.edit}>
                             <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
                         </SlTab>
                         <SlTab slot="nav"
                                panel="points"
-                               active={editorSnapshot.tabs.track.points}>
+                               active={journeyEditor.tabs.track.points}>
                             <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points
                         </SlTab>
 
@@ -128,11 +130,11 @@ export const TrackSettings = function TrackSettings() {
                          */}
                         <SlTabPanel name="edit">
                             <div id={'track-text-description'}>
-                                {editorSnapshot.journey.tracks.size > 1 && <>
+                                {journeyEditor.journey.tracks.size > 1 && <>
                                     {/* Change visible name (title) */}
                                     <SlTooltip hoist content={'Title'}>
                                         <SlInput id="track-title"
-                                                 value={editorSnapshot.track.title}
+                                                 value={journeyEditor.track.title}
                                                  onSlChange={setTitle}
                                         />
                                     </SlTooltip>
@@ -141,7 +143,7 @@ export const TrackSettings = function TrackSettings() {
                                         <SlTextarea row={2}
                                                     size={'small'}
                                                     id="track-description"
-                                                    value={parse(editorSnapshot.track.description)}
+                                                    value={parse(journeyEditor.track.description)}
                                                     onSlChange={setDescription}
                                                     placeholder={'Track description'}
                                         />
@@ -163,11 +165,13 @@ export const TrackSettings = function TrackSettings() {
                     </SlTabGroup>}
 
                     <div id="track-visibility" className={'editor-vertical-menu'}>
-                        {editorStore.journey.tracks.size > 1 &&
+                        {$journeyEditor.journey.tracks.size > 1 &&
                             <SlTooltip hoist content={textVisibilityTrack}>
-                                <ToggleStateIcon onChange={setTrackVisibility} initial={editorSnapshot.track.visible}/>
+                                <ToggleStateIcon onChange={setTrackVisibility} initial={journeyEditor.track.visible}/>
                         </SlTooltip>}
+                        {journeyEditor.track.visible &&
                         <TrackFlagsSettings tooltip="left"/>
+                        }
                     </div>
                 </div>
             </>}

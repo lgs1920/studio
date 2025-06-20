@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: RemoveJourney.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-05-25
+ * Last modified: 2025-05-25
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { Utils }                                              from '@Editor/Utils'
 import { faTrashCan }                                         from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlIconButton, SlPopup, SlTooltip } from '@shoelace-style/shoelace/dist/react'
@@ -42,35 +58,32 @@ export const RemoveJourney = (props) => {
 
         hideRemoveDialog()
 
-        const mainStore = lgs.mainProxy
-        const journey = editorStore.journey.slug
-        const removed = lgs.getJourneyBySlug(journey)
+        const $store = lgs.mainProxy
+        const $pois = $store.components.pois.list
+
+        const journey = lgs.getJourneyBySlug(editorStore.journey.slug)
         // get Journey index
-        const index = mainStore.components.journeyEditor.list.findIndex((list) => list === journey)
+        const index = $store.components.journeyEditor.list.findIndex((list) => list === journey.slug)
 
         /**
          * Do some cleaning
          */
         if (index >= 0) {
-            // In store
-            mainStore.components.journeyEditor.list.splice(index, 1)
-            // In context
-            lgs.journeys.delete(editorStore.journey.slug)
+            // clean journey store
+            $store.components.journeyEditor.list.splice(index, 1)
 
-            const dataSources = TrackUtils.getDataSourcesByName(editorStore.journey.slug)
-            dataSources.forEach(dataSource => {
-                lgs.viewer.dataSources.remove(dataSource)
-            })
+            // Remove the journey and it's children
+            journey.remove()
+
+            //TODO add a REMOVE_JOURNEY event
+
+            // Stop wanderer
+            __.ui.wanderer.stop()
         }
 
-        // Stop wanderer
-        __.ui.wanderer.stop()
-
-        // Remove journey in DB
-        await editorStore.journey.removeFromDB()
         // Let's inform the user
         UIToast.success({
-                            caption: removed.title,
+                            caption: journey.title,
                             text:    `Removed successfully!`,
                         })
 
@@ -80,9 +93,9 @@ export const RemoveJourney = (props) => {
          * Otherwise we close the editing.
          */
         let text = ''
-        if (mainStore.components.journeyEditor.list.length >= 1) {
+        if ($store.components.journeyEditor.list.length >= 1) {
             // New current is the first.
-            lgs.theJourney = lgs.getJourneyBySlug(mainStore.components.journeyEditor.list[0])
+            lgs.theJourney = lgs.getJourneyBySlug($store.components.journeyEditor.list[0])
             lgs.theJourney.focus({rotate: lgs.settings.ui.camera.start.rotate.journey})
             lgs.theTrack = lgs.theJourney.tracks.values().next().value
             lgs.theTrack.addToEditor()
@@ -93,10 +106,10 @@ export const RemoveJourney = (props) => {
         else {
             lgs.cleanContext()
             text = ''
-            mainStore.canViewJourneyData = false
+            $store.canViewJourneyData = false
             __.ui.drawerManager.close()
-            mainStore.components.profile.show = false
-            mainStore.canViewProfile = false
+            $store.components.profile.show = false
+            $store.canViewProfile = false
 
             // Let's inform the user
             UIToast.warning({

@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: CameraManager.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-05-22
+ * Last modified: 2025-05-22
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { CURRENT_CAMERA, CURRENT_STORE, FOCUS_STARTER, JOURNEYS_STORE, MILLIS, MINUTE } from '@Core/constants'
 
 import { CameraUtils } from '@Utils/cesium/CameraUtils.js'
@@ -333,7 +349,7 @@ export class CameraManager {
 
         const rotateCamera = async (startTime, currentTime) => {
             if (this.isRotating()) {
-                if (infinite || totalRotation < totalTurns) {
+                if (lgs.camera && infinite || totalRotation < totalTurns) {
                     lgs.camera.rotateRight(angleRotation)
                     totalRotation += Math.abs(angleRotation)
                     this.move.animation = requestAnimationFrame((time) => rotateCamera(time))

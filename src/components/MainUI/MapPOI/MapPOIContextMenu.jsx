@@ -7,29 +7,43 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-03-02
- * Last modified: 2025-02-28
+ * Created on: 2025-06-20
+ * Last modified: 2025-06-20
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
-import {
-    faArrowRotateRight, faArrowsFromLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama, faTrashCan,
-}                                                                                from '@fortawesome/pro-regular-svg-icons'
-import { faMask }                                                                from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import {
-    SlIcon, SlPopup,
-}                                                                                from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                                 from '@Utils/FA2SL'
-import { UIToast }                                                               from '@Utils/UIToast'
-import React, { useRef }                                                         from 'react'
-import Timeout                                                                   from 'smart-timeout'
-import { snapshot, useSnapshot }                                                 from 'valtio'
+    LGS_CONTEXT_MENU_HOOK, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE,
+    POIS_EDITOR_DRAWER,
+    SECOND,
+} from '@Core/constants'
+import {
+    faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCopy, faFlag, faLocationDot, faLocationPen, faPanorama,
+    faTrashCan,
+}                          from '@fortawesome/pro-regular-svg-icons'
+import {
+    faMask,
+}                          from '@fortawesome/pro-solid-svg-icons'
+import {
+    SlDivider, SlIcon, SlPopup,
+}                          from '@shoelace-style/shoelace/dist/react'
+import {
+    FA2SL,
+}                          from '@Utils/FA2SL'
+import {
+    UIToast,
+}                          from '@Utils/UIToast'
+import React, {
+    useEffect, useRef,
+}                          from 'react'
+import Timeout             from 'smart-timeout'
+import {
+    snapshot, useSnapshot,
+}                          from 'valtio'
 import './style.css'
-import { SlDivider } from '@shoelace-style/shoelace/dist/react'
 
 /**
  * Represents the context menu for interacting with Points of Interest (POI) on the map.
@@ -44,39 +58,43 @@ import { SlDivider } from '@shoelace-style/shoelace/dist/react'
 export const MapPOIContextMenu = () => {
 
     const anchor = useRef(null)
-    const store = lgs.mainProxy.components.pois
-    const pois = useSnapshot(store)
+    const $pois = lgs.stores.main.components.pois
+    const pois = useSnapshot($pois)
+    let _current = pois.list.get(pois.current)
 
     /**
      * Hides the menu in the application by resuming the context timer and updating visibility settings.
      */
     const hideMenu = () => {
-        Timeout.resume(store.context.timer)
-        store.context.visible = false
+        Timeout.clear(pois.context.timer)
+        $pois.context.visible = false
     }
 
     const saveAsPOI = () => {
-        Object.assign(__.ui.poiManager.list.get(pois.current.id), {
+        _current = Object.assign($pois.list.get(pois.current), {
             type: POI_STANDARD_TYPE,
             category: POI_STANDARD_TYPE,
         })
-        __.ui.poiManager.saveInDB(__.ui.poiManager.list.get(pois.current.id))
-            .then(() => hideMenu())
+        hideMenu()
     }
 
     const hide = () => {
-        __.ui.poiManager.hide(pois.current.id)
-            .then(() => hideMenu())
+        _current.hide()
+        hideMenu()
     }
 
     const shrink = () => {
-        __.ui.poiManager.shrink(pois.current.id)
-            .then(() => hideMenu())
+        Object.assign($pois.list.get(pois.current), {
+            expanded: false,
+        })
+        hideMenu()
     }
 
     const expand = () => {
-        __.ui.poiManager.expand(pois.current.id)
-            .then(() => hideMenu())
+        Object.assign($pois.list.get(pois.current), {
+            expanded: true,
+        })
+        hideMenu()
     }
 
     /**
@@ -93,46 +111,46 @@ export const MapPOIContextMenu = () => {
         const camera = snapshot(lgs.mainProxy.components.camera)
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
-            store.current = __.ui.poiManager.stopAnimation(pois.current.id)
+            _current.stopAnimation().id
         }
         else {
-            __.ui.sceneManager.focus(store.current, {
-                target: pois.current,
+            __.ui.sceneManager.focus(_current, {
+                target: _current,
                 heading:    camera.position.heading,
                 pitch:      camera.position.pitch,
                 roll:       camera.position.roll,
-                range: camera.position.range,
+                range:  camera.position.range,
                 infinite:   true,
                 rotate:     true,
-                rpm: lgs.settings.ui.poi.rpm,
+                rpm:    lgs.settings.ui.poi.rpm,
                 panoramic:  false,
                 flyingTime: 0,    // no move, no time ! We're on target
             })
         }
         hideMenu()
-        store.current = __.ui.poiManager.startAnimation(pois.current.id)
+        _current = _current.startAnimation()
     }
 
     const stopRotation = async () => {
+        hideMenu()
         await __.ui.cameraManager.stopRotate()
-        Object.assign(__.ui.poiManager.list.get(pois.current.id), {
+        Object.assign(__.ui.poiManager.list.get(pois.current), {
             animated: false,
         })
-        store.current = __.ui.poiManager.stopAnimation(pois.current.id)
-        hideMenu()
+        _current = _current.stopAnimation()
     }
 
     const setAsStarter = async () => {
-        const {former, starter} = await __.ui.poiManager.setStarter(pois.current)
+        const {former, starter} = await __.ui.poiManager.setStarter(_current)
         if (starter) {
             UIToast.success({
-                                caption: `${pois.current.title}`,
+                                caption: `${current.title}`,
                                 text:    'Set as new starter POI.',
                             })
         }
         else {
             UIToast.warning({
-                                caption: `${pois.current.title}`,
+                                caption: `${current.title}`,
                                 text:    'Change failed.',
                             })
         }
@@ -149,7 +167,7 @@ export const MapPOIContextMenu = () => {
     const panoramic = async () => {
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
-            store.current = __.ui.poiManager.stopAnimation(pois.current.id)
+            //__.ui.poiManager.stopAnimation(pois.current.id)
         }
         __.ui.cameraManager.panoramic()
         hideMenu()
@@ -162,10 +180,10 @@ export const MapPOIContextMenu = () => {
      * - The context menu is hidden.
      */
     const copy = () => {
-        __.ui.poiManager.copyCoordinatesToClipboard(pois.current)
+        __.ui.poiManager.copyCoordinatesToClipboard(_current)
             .then(() => {
                 UIToast.success({
-                                    caption: `${pois.current.title}`,
+                                    caption: `${_current.title}`,
                                     text:    'Coordinates copied to the clipboard <br/>under the form: latitude, longitude',
                                 })
             })
@@ -184,13 +202,14 @@ export const MapPOIContextMenu = () => {
             await __.ui.cameraManager.stopRotate()
         }
 
-        __.ui.poiManager.remove(pois.current.id, true)
+        __.ui.poiManager.remove({id: pois.current})
             .then((result) => {
                 hideMenu()
                 if (result.success) {
-                    store.filteredList.delete(result.id)
-                    store.bulkList.delete(result.id)
-                    store.current = false
+                    $pois.filtered.global.delete(result.id)
+                    $pois.filtered.journey.delete(result.id)
+                    $pois.bulkList.delete(result.id)
+                    $pois.current = false
                 }
             })
     }
@@ -199,27 +218,47 @@ export const MapPOIContextMenu = () => {
      * We open the POI Edit drawer and the current POI settings
      */
     const openEdit = () => {
-        __.ui.drawerManager.open(POIS_EDITOR_DRAWER, 'edit-current')
+        __.ui.drawerManager.open(POIS_EDITOR_DRAWER, {
+            action: 'edit-current',
+            entity: pois.current,
+            tab:    'pois',
+        })
         hideMenu()
     }
 
+    useEffect(() => {
+                  Timeout.set(
+                      pois.context.timer,
+                      hideMenu,
+                      SECOND,
+                  )
+                  return () => {
+                      Timeout.clear(pois.context.timer)
+                  }
+              }
+        , [pois.context.visible, _current])
+
     return (
         <>
-            {pois.current &&
+            {pois.current && _current &&
                 <SlPopup placement="right-start"
                          hover-bridge flip
                          ref={anchor}
-                         anchor={pois.current.id}
+                         anchor={LGS_CONTEXT_MENU_HOOK}
                          active={pois.context.visible}
                 >
                     <div className="lgs-context-menu poi-on-map-menu lgs-card on-map"
-                         onPointerLeave={() => Timeout.restart(lgs.mainProxy.components.pois.context.timer)}
-                         onPointerEnter={() => Timeout.pause(lgs.mainProxy.components.pois.context.timer)}
+                         onPointerLeave={() => {
+                             Timeout.restart(pois.context.timer)
+                         }}
+                         onPointerEnter={() => {
+                             Timeout.pause(pois.context.timer)
+                         }}
                     >
-                        {!pois.current.expanded &&
+                        {!_current.expanded &&
                             <>
                                 <div className="context-menu-title-when-reduced">
-                                    {pois.current.title ?? 'Point Of Interest'}
+                                    {_current.title ?? 'Point Of Interest'}
                                     <SlDivider/>
                                 </div>
 
@@ -228,74 +267,76 @@ export const MapPOIContextMenu = () => {
                         <ul>
 
 
-                            {pois.current.type === undefined &&
+                            {_current.type === undefined &&
                                 <li onClick={saveAsPOI}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationDot)}></SlIcon>
-                                    <span>Save as POI</span>
+                                    <span>{'Save as POI'}</span>
                                 </li>
                             }
-                            {pois.current.type !== POI_STARTER_TYPE &&
+                            {_current.type !== POI_STARTER_TYPE &&
                                 <li onClick={setAsStarter}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFlag)}></SlIcon>
-                                    <span>Set as Starter</span>
+                                    <span>{'Set as Starter'}</span>
                                 </li>
                             }
-                            {pois.current.type !== POI_STARTER_TYPE &&
+                            {_current.type !== POI_STARTER_TYPE &&
+                                _current.type !== POI_FLAG_START &&
+                                _current.type !== POI_FLAG_STOP &&
                                 <li onClick={remove}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}></SlIcon>
-                                    <span>Remove</span>
+                                    <span>{'Remove'}</span>
                                 </li>
                             }
 
-                            {pois.current.type !== POI_TMP_TYPE &&
-                            <li onClick={openEdit}>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationPen)}></SlIcon>
-                                <span>Edit</span>
-                            </li>
+                            {_current.type !== POI_TMP_TYPE &&
+                                <li onClick={openEdit}>
+                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faLocationPen)}></SlIcon>
+                                    <span>{'Edit'}</span>
+                                </li>
                             }
 
-                            {pois.current.expanded && !pois.current.showFlag &&
+                            {_current.expanded &&
                                 <li onClick={shrink}>
-                                    <FontAwesomeIcon slot="prefix" icon={pois.current.icon}></FontAwesomeIcon>
-                                    <span>Reduce</span>
+                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsToLine)}></SlIcon>
+                                    <span>{'Reduce'}</span>
                                 </li>
                             }
 
-                            {!pois.current.expanded &&
+                            {!_current.expanded &&
                                 <li onClick={expand}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsFromLine)}></SlIcon>
-                                    <span>Expand</span>
+                                    <span>{'Expand'}</span>
                                 </li>
                             }
 
-                            {pois.current.type !== POI_STARTER_TYPE &&
+                            {_current.type !== POI_STARTER_TYPE &&
                                 <li onClick={hide}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMask)}></SlIcon>
-                                    <span>Hide</span>
+                                    <span>{'Hide'}</span>
                                 </li>
                             }
                             <SlDivider/>
                             <li onClick={copy}>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCopy)}></SlIcon>
-                                <span>Copy Coords</span>
+                                <span>{'Copy Coords'}</span>
                             </li>
-                            {!pois.current.animated && !__.ui.cameraManager.isRotating() &&
+                            {!_current.animated && !__.ui.cameraManager.isRotating() &&
                                 <>
                                     <li onClick={rotationAround}>
                                         <SlIcon slot="prefix" library="fa"
                                                 name={FA2SL.set(faArrowRotateRight)}></SlIcon>
-                                        <span>Rotate Around</span>
+                                        <span>{'Rotate Around'}</span>
                                     </li>
                                     <li onClick={panoramic}>
                                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPanorama)}></SlIcon>
-                                        <span>Panoramic</span>
+                                        <span>{'Panoramic'}</span>
                                     </li>
                                 </>
                             }
-                            {(pois.current.animated || __.ui.cameraManager.isRotating()) &&
+                            {(_current.animated || __.ui.cameraManager.isRotating()) &&
                                 <li onClick={stopRotation}>
                                     <FontAwesomeIcon icon={faArrowRotateRight} className="fa-spin"/>
-                                    <span>Stop</span>
+                                    <span>{'Stop'}</span>
                                 </li>
                             }
                         </ul>

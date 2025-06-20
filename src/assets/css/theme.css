@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-28
- * Last modified: 2025-02-28
+ * Created on: 2025-06-20
+ * Last modified: 2025-06-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -578,6 +578,10 @@ sl-tooltip::part(body)::first-letter {
     text-transform: capitalize;
 }
 
+sl-tooltip.tooltip-help ::part(base) {
+    cursor: help !important;
+}
+
 
 /*******************************************************************************
  * Dialogs / Modals
@@ -643,7 +647,7 @@ sl-details::part(content) {
     flex-direction: column;
 }
 
-sl-details svg {
+sl-details::part(content) svg {
     margin-right: var(--lgs-gutter-s);
 }
 
@@ -672,11 +676,20 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
 /*******************************************************************************
  * Context menu
  ******************************************************************************/
+#lgs-context-menu-hook { /* id defined in LGS_CONTEXT_MENU_HOOK */
+    position: absolute;
+    top: -1000px;
+    left: -1000px;
+translate(- 50 %, - 10 px);
+    width: 10px;
+    height: 50px;
+}
+
 .lgs-context-menu {
     display: flex;
     flex-direction: column;
     margin: 0;
-    padding: 0;
+    padding: var(--lgs-gutter-xs) 0;
 }
 
 :root {
@@ -736,9 +749,12 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
 }
 
 sl-divider {
-    --spacing: var(--lgs-gutter-s);
+    --spacing: var(--lgs-gutter-xs);
 }
 
+sl-input [slot="suffix"] {
+    margin: 0 var(--lgs-gutter-xs);
+}
 /*******************************************************************************
  * Ranges
  ******************************************************************************/
@@ -972,4 +988,46 @@ h3 {
 [readonly] {
     user-select: none;
     pointer-events: none;
+}
+
+/*******************************************************************************
+ * Cesium Selection indicator
+ ******************************************************************************/
+
+.cesium-selection-wrapper {
+    position: absolute;
+    visibility: hidden;
+    width: var(--lgs-dimension);
+
+    height: var(--lgs-dimension);
+    transition: opacity 0.5s ease-in;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.cesium-selection-wrapper.cesium-selection-wrapper-visible {
+    visibility: visible;
+    animation: scaleSelector 1s ease-in-out;
+    opacity: 1;
+}
+
+@keyframes scaleSelector {
+    0% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.cesium-selection-wrapper-one {
+    fill: var(--lgs-card-on-map-bg-color);
+    stroke: var(--lgs-card-on-map-border-color);
+}
+
+.cesium-selection-wrapper-two {
+    fill: chartreuse;
+    stroke: chartreuse
 }

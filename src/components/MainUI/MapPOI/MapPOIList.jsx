@@ -7,203 +7,156 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-03-02
- * Last modified: 2025-03-02
+ * Created on: 2025-06-16
+ * Last modified: 2025-06-16
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { memo, useEffect, useMemo, useRef } from 'react'
+import { useSnapshot }                      from 'valtio'
+import { MapPOIListItem }                   from '@Components/MainUI/MapPOI/MapPOIListItem'
+import { JOURNEY_EDITOR_DRAWER }            from '@Core/constants'
+import { faTriangleExclamation }            from '@fortawesome/pro-regular-svg-icons'
+import { SlAlert, SlIcon }                  from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                            from '@Utils/FA2SL'
 
-import { FontAwesomeIcon }                                        from '@Components/FontAwesomeIcon'
-import { MapPOIEditContent }                                      from '@Components/MainUI/MapPOI/MapPOIEditContent'
-import { ToggleStateIcon }                                                 from '@Components/ToggleStateIcon'
-import { CURRENT_POI, POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
-import { faMask, faSquare, faSquareCheck, faTriangleExclamation }          from '@fortawesome/pro-regular-svg-icons'
-import { SlAlert, SlDetails, SlIcon }                             from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                  from '@Utils/FA2SL'
-import { UIToast }                                                from '@Utils/UIToast'
-import classNames                                                 from 'classnames'
-import { Fragment, useEffect, useRef }                            from 'react'
-import { snapshot, useSnapshot }                                  from 'valtio/index'
+// Pre-calculated icon
+const ICON_WARNING = FA2SL.set(faTriangleExclamation)
 
-export const MapPOIList = () => {
+/**
+ * Filters and sorts POIs based on settings and journey context.
+ * @param {Map} poisList - The map of POIs
+ * @param {boolean} onlyJourney - Whether to filter only journey-related POIs
+ * @param {Object} theJourney - The current journey object
+ * @param {Object} settings - The POI filter settings
+ * @returns {Array} The filtered and sorted array of POI entries
+ */
+const filterAndSortPois = (poisList, onlyJourney, theJourney, settings) => {
+    return Array.from(poisList.entries())
+        .filter(([id, poi]) => {
+            // Validate POI data
+            if (!poi || typeof poi.title !== 'string') {
+                return false
+            }
 
-    const poiList = useRef(null)
-    const store = lgs.mainProxy.components.pois
-    const pois = useSnapshot(store)
-    const settings = useSnapshot(lgs.settings.poi)
+            // Apply journey and global filters
+            if (onlyJourney) {
+                return poi.parent && theJourney?.pois?.includes(id)
+            }
+            let include = false
+            if (settings.filter.journey && theJourney?.pois?.includes(id)) {
+                include = true
+            }
+            else if (settings.filter.global && !poi.parent) {
+                include = true
+            }
+            if (!include) {
+                return false
+            }
 
-    const prefix = 'edit-map-poi-'
-    const bulkPrefix = 'bulk-map-poi-'
-    const drawers = useSnapshot(lgs.mainProxy.drawers)
-    const poiSetting = useSnapshot(lgs.settings.ui.poi)
-    const handleCopyCoordinates = (poi) => {
-        __.ui.poiManager.copyCoordinatesToClipboard(poi).then(() => {
-            UIToast.success({
-                                caption: `${poi.name}`,
-                                text:    'Coordinates copied to the clipboard <br/>under the form: latitude, longitude',
-                            })
+            // Apply name filter
+            if (!poi.title.toLowerCase().includes(settings.filter.byName.toLowerCase())) {
+                return false
+            }
+
+            // Apply category filter
+            if (settings.filter.byCategories.length > 0) {
+                const inCategory = settings.filter.byCategories.includes(poi.category)
+                return settings.filter.exclude ? !inCategory : inCategory
+            }
+
+            return true
         })
-    }
-    useEffect(() => {
-        __.ui.ui.initDetailsGroup(poiList.current)
-        store.list.forEach((poi, id) => {
-            store.bulkList.set(id, false)
+        .sort(([, a], [, b]) => {
+            return settings.filter.alphabetic
+                   ? a.title.localeCompare(b.title)
+                   : b.title.localeCompare(a.title)
         })
-    }, [])
-
-    useEffect(() => {
-                  // Clear action once built
-                  if (drawers.action) {
-                      lgs.mainProxy.drawers.action = null
-                  }
-
-                  // Apply filter byName
-        let poisToShow = Array.from(store.list)
-                      .filter(entry => entry[1].title.toLowerCase().includes(settings.filter.byName.toLowerCase()))
-
-                  // Alphabetic/reverse sorting
-        poisToShow = poisToShow.sort((a, b) => {
-                      if (settings.filter.alphabetic) {
-                          return a[1].title.localeCompare(b[1].title)
-                      }
-                      else {
-                          return b[1].title.localeCompare(a[1].title)
-                      }
-                  })
-
-                  // Apply Filter by category
-                  if (settings.filter.byCategories.length > 0) {
-                      if (settings.filter.exclude) { // We exclude the items in the list
-                          poisToShow = poisToShow.filter(([id, objet]) => !(settings.filter.byCategories.includes(objet.category)))
-                      }
-                      else {
-                          poisToShow = poisToShow.filter(([id, objet]) => settings.filter.byCategories.includes(objet.category))
-                      }
-                  }
-
-        poisToShow.forEach(([key, value]) => {
-                      store.filteredList.set(key, value)
-                      store.bulkList.set(key, false)
-                  })
-              }, [
-                  pois.list.size, pois?.current?.id,
-                  settings?.filter.byName, settings?.filter.alphabetic,
-                  settings?.filter.exclude, settings?.filter.byCategories,
-        pois?.current?.title, pois?.current?.category,
-              ],
-    )
-
-
-    const handleBulkList = (state, event) => {
-        const id = event.target.id.split(bulkPrefix).pop()
-        store.bulkList.set(id, state)
-    }
-
-    const selectPOI = async (event) => {
-        if (window.isOK(event)) {
-            const id = event.target.id.split(prefix).pop()
-            let forceFocus = false
-            // We define the current if there is not
-            if (store.current === false) {
-                store.current = store.list.get(id)
-                forceFocus = true
-            }
-            // If defined and it is not the same, or we are in force mode, we focus on it
-            if ((store.current && store.current.id !== id) || forceFocus) {
-                // Stop animation before changing
-                store.current.animated = false
-                if (drawers.open === POIS_EDITOR_DRAWER) {
-                    store.current = store.filteredList.get(id)
-                }
-
-                if (poiSetting.focusOnEdit && drawers.open === POIS_EDITOR_DRAWER && __.ui.drawerManager.over) {
-                    const camera = snapshot(lgs.mainProxy.components.camera)
-                    if (__.ui.cameraManager.isRotating()) {
-                        await __.ui.cameraManager.stopRotate()
-                        __.ui.poiManager.stopAnimation(store.current.id)
-                    }
-                    __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
-                        target: lgs.mainProxy.components.pois.current,
-                        heading:    camera.position.heading,
-                        pitch:      camera.position.pitch,
-                        roll:       camera.position.roll,
-                        range:      5000,
-                        infinite:   false,
-                        rpm: lgs.settings.ui.poi.rpm,
-                        rotations:  1,
-                        rotate:     lgs.settings.ui.poi.rotate,
-                        panoramic:  false,
-                        flyingTime: 0,    // no move, no time ! We're on target
-                    })
-                    if (lgs.settings.ui.poi.rotate) {
-                        await __.ui.poiManager.startAnimation(store.current.id)
-                    }
-                }
-            }
-
-
-            // We force it in the view
-            const item = document.getElementById(`${prefix}${id}`)
-            item.scrollIntoView({behavior: 'instant', block: 'center'})
-            item.focus()
-        }
-    }
-
-    return (
-        <div id={'edit-map-poi-list'} ref={poiList}>
-            {pois.filteredList.size > 0 &&
-                Array.from(pois.filteredList.entries()).map(([id, poi]) => (
-                <Fragment key={`${prefix}${id}`}>
-                    {poi.type !== POI_TMP_TYPE &&
-                        <div className="edit-map-poi-item-wrapper">
-                            <ToggleStateIcon initial={pois.bulkList.get(id)} className={'map-poi-bulk-indicator'}
-                                             icons={{true: faSquareCheck, false: faSquare}}
-                                             onChange={handleBulkList}
-                                             id={`${bulkPrefix}${id}`}
-                            />
-                            <SlDetails className={classNames(
-                                `edit-map-poi-item`,
-                                poi.visible ? undefined : 'map-poi-hidden',
-                                poi.type === POI_STARTER_TYPE ? 'map-poi-starter' : undefined,
-                            )}
-                                       id={`${prefix}${id}`}
-                                       onSlAfterShow={selectPOI}
-                                       open={pois?.current?.id === id /*&& drawers.action !== null*/}
-                                       small
-                                       style={{'--map-poi-bg-header': __.ui.ui.hexToRGBA(poi.bgColor ?? lgs.colors.poiDefaultBackground, 'rgba', 0.2)}}>
-                                <div slot="summary">
-                                    <span>
-                                        <FontAwesomeIcon icon={poi.visible ? poi.icon : faMask} style={{
-                                            '--fa-primary-color':   poi.color,
-                                            '--fa-secondary-color': poi.bgColor,
-                                            '--fa-primary-opacity':   1,
-                                            '--fa-secondary-opacity': 1,
-                                       }}/>
-
-                                        {poi.title}
-                                       </span>
-                                    <span>
-                        </span>
-                                </div>
-                                <MapPOIEditContent poi={poi}/>
-                            </SlDetails>
-                        </div>
-                    }
-                </Fragment>
-            ))
-            }
-
-            {pois.filteredList.size === 0 &&
-                <SlAlert variant="warning" open>
-                    <SlIcon slot="icon" library="fa" name={FA2SL.set(faTriangleExclamation)}/>
-                    {'There are no results matching your filter criteria.'}
-                </SlAlert>
-            }
-
-
-        </div>
-    )
 }
 
+/**
+ * A memoized React component for displaying a list of Points of Interest (POIs).
+ * @returns {JSX.Element} The rendered POI list
+ */
+export const MapPOIList = memo(({context}) => {
+    const poiList = useRef(null)
+    const $pois = lgs.stores.main.components.pois
+    const pois = useSnapshot($pois)
+    const settings = useSnapshot(lgs.settings.poi)
+    const drawers = useSnapshot(lgs.stores.main.drawers)
+
+    // Memoized onlyJourney calculation
+    const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
+
+    // Memoized journey POIs for dependency stability
+    const journeyPois = useMemo(() => lgs.theJourney?.pois || [], [lgs.theJourney])
+
+    // Memoized categories for dependency stability
+    const categoriesKey = useMemo(() => settings.categories.join(','), [settings.categories])
+
+    // Memoized filtered and sorted POIs
+    const filteredPois = useMemo(
+        () => filterAndSortPois(pois.list, onlyJourney, {pois: journeyPois}, settings),
+        [
+            pois.list,
+            onlyJourney,
+            journeyPois,
+            settings.filter.journey,
+            settings.filter.global,
+            settings.filter.byName,
+            settings.filter.alphabetic,
+            categoriesKey,
+            settings.filter.exclude,
+        ],
+    )
+
+    // Initialize and update lists
+    useEffect(() => {
+        // Initialize details group only once
+        if (poiList.current) {
+            __.ui.ui.initDetailsGroup(poiList.current)
+        }
+
+        // Clear and update lists
+        if (drawers.action) {
+            lgs.mainProxy.drawers.action = null
+        }
+
+        $pois.bulkList.clear()
+        const targetList = onlyJourney ? $pois.filtered.journey : $pois.filtered.global
+        targetList.clear()
+
+        const bulkUpdates = new Map()
+        filteredPois.forEach(([id, poi]) => {
+            targetList.set(id, poi)
+            bulkUpdates.set(id, false)
+        })
+
+        // Batch update bulkList
+        Object.assign($pois.bulkList, bulkUpdates)
+    }, [filteredPois, onlyJourney, $pois.bulkList, $pois.filtered.journey, $pois.filtered.global, drawers.action])
+
+    // Memoized list items and alert
+    const content = useMemo(() => {
+        const targetList = onlyJourney ? pois.filtered.journey : pois.filtered.global
+        if (targetList.size > 0) {
+            return Array.from(targetList.entries()).map(([id, poi]) => (
+                <MapPOIListItem key={`edit-map-poi-${id}`} id={id} poi={poi} context={context}/>
+            ))
+        }
+        return (
+            <SlAlert variant="warning" open>
+                <SlIcon slot="icon" library="fa" name={ICON_WARNING}/>
+                There are no results matching your filter criteria.
+            </SlAlert>
+        )
+    }, [onlyJourney, pois.filtered.global, pois.filtered.journey])
+
+    return (
+        <div id="edit-map-poi-list" ref={poiList}>
+            {content}
+        </div>
+    )
+})

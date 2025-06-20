@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: SceneManager.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-05-17
+ * Last modified: 2025-05-16
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import {
     NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
 }                                  from '@Core/constants'
@@ -16,7 +32,7 @@ export class SceneManager {
             return SceneManager.instance
         }
 
-        this.proxy = SceneUtils
+        this.utils = SceneUtils
         SceneManager.instance = this
 
     }
@@ -156,12 +172,12 @@ export class SceneManager {
         return lgs.mainProxy.components.mainUI.rotate.running
     }
 
-    getJourneyCentroid = async journey => await this.proxy.getJourneyCentroid(journey)
+    getJourneyCentroid = async journey => await this.utils.getJourneyCentroid(journey)
 
     focus = (point, options) => {
         this.#focusTarget = options.target ?? null
 
-        this.proxy.focus(point, {
+        this.utils.focus(point, {
             ...options,
             initializer: options.initializer ?? this.focusPreProcessing,
             callback:    options.callback ?? this.focusPostProcessing,
@@ -170,11 +186,15 @@ export class SceneManager {
 
     focusOnJourney = async (options) => {
         this.#focusTarget = options.target ?? null
-        await this.proxy.focusOnJourney({
+        await this.utils.focusOnJourney({
                                             ...options,
                                             initializer: options.initializer ?? this.focusPreProcessing,
                                             callback:    options.callback ?? this.focusPostProcessing,
                                         })
+    }
+
+    get target() {
+        return this.#focusTarget
     }
 
     /**
@@ -182,5 +202,36 @@ export class SceneManager {
      *
      * @param event
      */
-    propagateEventToCanvas = (event) => this.proxy.propagateEventToCanvas(event)
+    propagateEventToCanvas = (event) => this.utils.propagateEventToCanvas(event)
+
+    /**
+     * Get points altitude from Cesium Terrain
+     *
+     * @param coordinates {Array|object}    {longitude,latitude}
+     * @param precision                     LOW_TERRAIN_PRECISION or HIGH_TERRAIN_PRECISION (default)
+     * @param level                         Zoom level, only used with low precision
+     *
+     * @return {Array|number} altitude
+     */
+    getHeightFromTerrain = async ({coordinates, precision = HIGH_TERRAIN_PRECISION, level = 11}) => {
+        return await this.utils.getHeightFromTerrain({
+                                                         coordinates: coordinates,
+                                                         precision:   precision,
+                                                         level:       level,
+                                                     })
+    }
+
+
+    /**
+     * Computes the canvas coordinates (X, Y) for a given longitude, latitude, and height.
+     * If `clampToGround` is true, the height is adjusted using the terrain provider.
+     *
+     * @param point
+     * @param {boolean} clampToGround - If true, clamps the position to the ground using terrain data.
+     *
+     * @returns {Promise<{x: number, y: number, visible: boolean}>}
+     */
+    degreesToPixelsCoordinates = async (point, clampToGround = true) => {
+        return await this.utils.degreesToPixelsCoordinates(point, clampToGround)
+    }
 }

@@ -7,119 +7,131 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-28
- * Last modified: 2025-02-28
+ * Created on: 2025-06-20
+ * Last modified: 2025-06-20
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { FontAwesomeIcon }               from '@Components/FontAwesomeIcon'
-import { CURRENT_POI, POI_STARTER_TYPE } from '@Core/constants'
+import { memo, useCallback, useMemo } from 'react'
+import { useSnapshot }                from 'valtio'
+import { FontAwesomeIcon }            from '@Components/FontAwesomeIcon'
+import { POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants'
 import {
-    faArrowRotateRight, faArrowsFromLine, faCrosshairsSimple, faFlag, faLocationDot, faPanorama, faTrashCan, faXmark,
-}                                        from '@fortawesome/pro-regular-svg-icons'
-import { faEye, faMask }                                    from '@fortawesome/pro-solid-svg-icons'
+    faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCrosshairsSimple, faFlag, faLocationDot, faPanorama,
+    faTrashCan, faXmark,
+}                                     from '@fortawesome/pro-regular-svg-icons'
+import { faMask }                     from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                            from '@Utils/FA2SL'
-import { UIToast }                                          from '@Utils/UIToast'
-import { useLayoutEffect } from 'react'
-import { snapshot, useSnapshot }                            from 'valtio'
+import { FA2SL }                      from '@Utils/FA2SL'
+import { UIToast }                    from '@Utils/UIToast'
 import './style.css'
 
-/**
- * Represents the context menu for interacting with Points of Interest (POI) on the map.
- *
- * This component provides a menu that appears when interacting with a POI on the map.
- * It includes various actions for managing POIs, including rotation, panoramic view,
- * copying coordinates, and removing a POI, among others.
- *
- * The component relies on the state of the application's POI data and uses the provided
- * UI functionalities to handle interactions with the POI and the map view.
- */
-export const MapPOIEditMenu = ({point}) => {
+// Pre-calculated icon names to avoid recalculation
+const ICON_CROSSHAIRS = FA2SL.set(faCrosshairsSimple)
+const ICON_FLAG = FA2SL.set(faFlag)
+const ICON_TRASH = FA2SL.set(faTrashCan)
+const ICON_EXPAND = FA2SL.set(faArrowsFromLine)
+const ICON_REDUCE = FA2SL.set(faArrowsToLine)
 
-    const pois = lgs.mainProxy.components.pois
+const ICON_MASK = FA2SL.set(faMask)
+const ICON_ROTATE = FA2SL.set(faArrowRotateRight)
+const ICON_PANORAMA = FA2SL.set(faPanorama)
+const ICON_STOP = FA2SL.set(faXmark)
+
+/**
+ * A memoized React component for interacting with Points of Interest (POI) on the map.
+ * @param {Object} props - Component props
+ * @param {Object} props.point - The POI object to interact with
+ * @returns {JSX.Element|null} The rendered dropdown menu or null if no point
+ */
+export const MapPOIEditMenu = memo(({point}) => {
+    const $pois = lgs.stores.main.components.pois
+    const pois = useSnapshot($pois)
     const settings = useSnapshot(lgs.settings.ui.poi)
 
+    // Stabilize point to avoid unnecessary re-renders
+    //  const point = useMemo(() => point, [point.id])
+
     const hide = async () => {
-        pois.current = await __.ui.poiManager.hide(point.id)
+        point = Object.assign(__.ui.poiManager.list.get(pois.current), {
+            visible: false,
+        })
+        point.utils.toggleVisibility(point)
+
     }
+
     const show = async () => {
-        pois.current = await __.ui.poiManager.show(point.id)
+        point = Object.assign(__.ui.poiManager.list.get(pois.current), {
+            visible: true,
+        })
+        point.utils.toggleVisibility(point)
     }
 
     const shrink = async () => {
-        pois.current = await __.ui.poiManager.shrink(point.id)
+        point = Object.assign(__.ui.poiManager.list.get(pois.current), {
+            expanded: false,
+        })
     }
 
     const expand = async () => {
-        pois.current = await __.ui.poiManager.expand(point.id)
+        point = Object.assign(__.ui.poiManager.list.get(pois.current), {
+            expanded: true,
+        })
     }
 
     const focus = async () => {
-        const camera = snapshot(lgs.mainProxy.components.camera)
+        $pois.current = point.id
+        const camera = lgs.mainProxy.components.camera
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
         }
-        __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
-            target: lgs.mainProxy.components.pois.current,
+        __.ui.sceneManager.focus(point, {
+            target: point,
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
-            range: camera.position.range,
+            range:      camera.position.range,
             infinite:   true,
             rotate:     false,
             panoramic:  false,
-            flyingTime: 0,    // no move, no time ! We're on target
+            flyingTime: 0,
         })
     }
 
-    /**
-     * Handles the rotation behavior of the camera based on the current state.
-     * If the camera is currently rotating, it stops the rotation. Otherwise, it focuses
-     * on the specified point of interest (POI).
-     *
-     * Postconditions:
-     * - Camera rotation is stopped if it was active.
-     * - The context menu is hidden.
-     */
     const rotationAround = async () => {
-
-        const camera = snapshot(lgs.mainProxy.components.camera)
+        $pois.current = point.id
+        const current = pois.list.get(point.id)
+        const camera = lgs.mainProxy.components.camera
         if (__.ui.cameraManager.isRotating()) {
-            await __.ui.cameraManager.stopRotate()
-            pois.current = await __.ui.poiManager.stopAnimation(point.id)
+            await stopRotation()
         }
-        __.ui.sceneManager.focus(lgs.mainProxy.components.pois.current, {
-            target: lgs.mainProxy.components.pois.current,
+        __.ui.sceneManager.focus(current, {
+            target:     current,
             heading:    camera.position.heading,
             pitch:      camera.position.pitch,
             roll:       camera.position.roll,
-            range: camera.position.range,
-            infinite: true,
-            rpm: lgs.settings.ui.poi.rpm,
+            range:      camera.position.range,
+            infinite:   true,
+            rpm:        lgs.settings.ui.poi.rpm,
             rotations: 1,
-            rotate:   true,
+            rotate:     true,
             panoramic:  false,
-            flyingTime: 0,    // no move, no time ! We're on target
+            flyingTime: 0,
         })
-        pois.current = await __.ui.poiManager.startAnimation(point.id)
-
+        $pois.list.set(point.id, {...$pois.list.get(point.id), animated: true})
     }
 
     const setAsStarter = async () => {
-
         const {former, starter} = await __.ui.poiManager.setStarter(point)
-
         if (starter) {
             UIToast.success({
                                 caption: `${point.title}`,
                                 text:    'Set as new starter POI.',
                             })
-
-            pois.list.set(former.id, former)
-            pois.list.set(starter.id, starter)
+            $pois.list.set(former.id, former)
+            $pois.list.set(starter.id, starter)
         }
         else {
             UIToast.warning({
@@ -129,130 +141,126 @@ export const MapPOIEditMenu = ({point}) => {
         }
     }
 
-    /**
-     * Toggles panoramic mode for the camera manager. Stops camera rotation if it is currently rotating,
-     * then activates the panoramic view. Also hides the menu upon activation.
-     *
-     * Postconditions:
-     * - The context menu is hidden.
-     */
     const panoramic = async () => {
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
         }
         __.ui.cameraManager.panoramic()
-        //    pois.current = await __.ui.poiManager.startAnimation(snap.current.id)
-
     }
 
     const stopRotation = async () => {
         await __.ui.cameraManager.stopRotate()
-        pois.current = await __.ui.poiManager.stopAnimation(point.id)
+        const poi = $pois.list.get(point.id)
+        $pois.list.set(point.id, {...poi, animated: false})
     }
 
-    /**
-     * Removes the current Point of Interest (POI) and associated UI elements.
-     *
-     * Postconditions:
-     * - Camera rotation is stopped if it was active.
-     * - The context menu is hidden.
-     */
     const remove = async () => {
         if (__.ui.cameraManager.isRotating()) {
-            await __.ui.cameraManager.stopRotate()
+            await stopRotation()
         }
-
-        __.ui.poiManager.remove(point.id, true)
-            .then((result) => {
-                if (result.success) {
-                    pois.filteredList.delete(result.id)
-                    pois.bulkList.delete(result.id)
-                    pois.current = false
-                }
-            })
+        __.ui.poiManager.remove({id: point.id}).then((result) => {
+            if (result.success) {
+                pois.filtered.global.delete(result.id)
+                pois.filtered.journey.delete(result.id)
+                pois.bulkList.delete(result.id)
+                $pois.current = false
+            }
+        })
     }
 
-    useLayoutEffect(() => {
-        // we need this to redraw each time point changes
+    // Memoized menu items to avoid re-rendering
+    const menuItems = useMemo(() => {
+        const items = []
+        if (point.visible) {
+            if (!settings.focusOnEdit) {
+                items.push(
+                    <SlMenuItem key="focus" onClick={focus} small>
+                        <SlIcon slot="prefix" library="fa" name={ICON_CROSSHAIRS}/>
+                        <span>Focus</span>
+                    </SlMenuItem>,
+                )
+            }
+            if (point.type !== POI_STARTER_TYPE) {
+                items.push(
+                    <SlMenuItem key="setAsStarter" onClick={setAsStarter} small>
+                        <SlIcon slot="prefix" library="fa" name={ICON_FLAG}/>
+                        <span>Set as Starter</span>
+                    </SlMenuItem>,
+                )
+            }
+            if (point.type !== POI_STARTER_TYPE && point.type !== POI_FLAG_START && point.type !== POI_FLAG_STOP) {
+                items.push(
+                    <SlMenuItem key="remove" onClick={remove} small>
+                        <SlIcon slot="prefix" library="fa" name={ICON_TRASH}/>
+                        <span>Remove</span>
+                    </SlMenuItem>,
+                )
+            }
+            if (point.expanded) {
+                items.push(
+                    <SlMenuItem key="shrink" onClick={shrink} small>
+                        <SlIcon slot="prefix" library="fa" name={ICON_REDUCE}/>
+                        <span>Reduce</span>
+                    </SlMenuItem>,
+                )
+            }
+            if (!point.expanded) {
+                items.push(
+                    <SlMenuItem key="expand" onClick={expand} small>
+                        <SlIcon slot="prefix" library="fa" name={ICON_EXPAND}/>
+                        <span>Expand</span>
+                    </SlMenuItem>,
+                )
+            }
+            items.push(
+                <SlMenuItem key="hide" onClick={hide} small>
+                    <SlIcon slot="prefix" library="fa" name={ICON_MASK}/>
+                    <span>Hide</span>
+                </SlMenuItem>,
+                <sl-divider key="divider"/>,
+            )
+            if (!pois.list.get(point.id)?.animated) {
+                items.push(
+                    <SlMenuItem key="rotationAround" onClick={rotationAround}>
+                        <SlIcon slot="prefix" library="fa" name={ICON_ROTATE}/>
+                        <span>Rotate Around</span>
+                    </SlMenuItem>,
+                    <SlMenuItem key="panoramic" onClick={panoramic}>
+                        <SlIcon slot="prefix" library="fa" name={ICON_PANORAMA}/>
+                        <span>Panoramic</span>
+                    </SlMenuItem>,
+                )
+            }
+            if (point.id === pois.current && pois.list.get(point.id)?.animated) {
+                items.push(
+                    <SlMenuItem key="stopRotation" onClick={stopRotation} loading>
+                        <SlIcon slot="prefix" library="fa" name={ICON_STOP}/>
+                        <span>Stop Rotation</span>
+                    </SlMenuItem>,
+                )
+            }
+        }
+        else {
+            items.push(
+                <SlMenuItem key="show" onClick={show} small>
+                    <FontAwesomeIcon slot="prefix" icon={point.icon}/>
+                    <span>Show</span>
+                </SlMenuItem>,
+            )
+        }
+        return items
     }, [point])
 
-    return (    
-        <>
-            {(point || point.type === POI_STARTER_TYPE) &&
-                <SlDropdown className={'edit-poi-menu'}>
-                    <SlButton slot="trigger" caret size="small">
-                        <FontAwesomeIcon slot="prefix" icon={faLocationDot}/>&nbsp;{'Select an action'}
-                    </SlButton>
+    if (!point/*  || point.type === POI_STARTER_TYPE */) {
+        return null
+    }
 
-                    <SlMenu>
-                        {!settings.focusOnEdit &&
-                            <SlMenuItem onClick={focus} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
-                                <span>Focus</span>
-                            </SlMenuItem>
-                        }
-                        {point.type !== POI_STARTER_TYPE &&
-                            <SlMenuItem onClick={setAsStarter} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFlag)}></SlIcon>
-                                <span>Set as Starter</span>
-                            </SlMenuItem>
-                        }
-                        {point.type !== POI_STARTER_TYPE &&
-                            <SlMenuItem onClick={remove} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}></SlIcon>
-                                <span>Remove</span>
-                            </SlMenuItem>
-                        }
-
-                        {point.expanded && !point.showFlag && point.visible &&
-                            <SlMenuItem onClick={shrink} small>
-                                <FontAwesomeIcon slot="prefix" icon={point.icon}></FontAwesomeIcon>
-                                <span>Reduce</span>
-                            </SlMenuItem>
-                        }
-
-                        {!point.expanded && point.visible &&
-                            <SlMenuItem onClick={expand} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsFromLine)}></SlIcon>
-                                <span>Expand</span>
-                            </SlMenuItem>
-                        }
-
-                        {point.type !== POI_STARTER_TYPE && point.visible &&
-                            <SlMenuItem onClick={hide} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMask)}></SlIcon>
-                                <span>Hide</span>
-                            </SlMenuItem>
-                        }
-                        {point.type !== POI_STARTER_TYPE && !point.visible &&
-                            <SlMenuItem onClick={show} small>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faEye)}></SlIcon>
-                                <span>Show</span>
-                            </SlMenuItem>
-                        }
-                        <sl-divider/>
-
-                        {!point.animated &&
-                            <>
-                                <SlMenuItem onClick={rotationAround}>
-                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowRotateRight)}></SlIcon>
-                                    <span>Rotate Around</span>
-                                </SlMenuItem>
-                                <SlMenuItem onClick={panoramic}>
-                                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faPanorama)}></SlIcon>
-                                    <span>Panoramic</span>
-                                </SlMenuItem>
-                            </>
-                        }
-                        {(point.animated || __.ui.cameraManager.isRotating()) &&
-                            <SlMenuItem onClick={stopRotation} loading>
-                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
-                                <span>Stop</span>
-                            </SlMenuItem>
-                        }
-                    </SlMenu>
-                </SlDropdown>
-            }
-        </>
+    return (
+        <SlDropdown className="edit-poi-menu">
+            <SlButton slot="trigger" caret size="small">
+                <FontAwesomeIcon slot="prefix" icon={faLocationDot}/> Select an action
+            </SlButton>
+            <SlMenu>{menuItems}</SlMenu>
+        </SlDropdown>
     )
-}
+})

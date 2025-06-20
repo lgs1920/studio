@@ -7,81 +7,136 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-06-14
+ * Last modified: 2025-06-14
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { ToggleStateIcon }                   from '@Components/ToggleStateIcon'
-import { JUST_SAVE }                         from '@Core/constants'
-import { faLocationPin, faLocationPinSlash } from '@fortawesome/pro-solid-svg-icons'
-import { SlTooltip }                         from '@shoelace-style/shoelace/dist/react'
-import { TrackUtils }                        from '@Utils/cesium/TrackUtils'
-import { useSnapshot }                       from 'valtio'
-import { Utils }                             from '../Utils'
+import { ToggleStateIcon }          from '@Components/ToggleStateIcon'
+import { POI_CATEGORY_ICONS, POI_FLAG_START, POI_FLAG_STOP } from '@Core/constants'
+import { SlTooltip }                from '@shoelace-style/shoelace/dist/react'
+import { TrackUtils }               from '@Utils/cesium/TrackUtils'
+import { memo, useEffect, useMemo } from 'react'
+import { sprintf }                  from 'sprintf-js'
+import { useSnapshot }              from 'valtio'
 
-export const TrackFlagsSettings = (props) => {
+// Static icons defined outside the component to avoid recalculation
+const START_ICON = Object.values(POI_CATEGORY_ICONS.get(POI_FLAG_START))[0]
+const STOP_ICON = Object.values(POI_CATEGORY_ICONS.get(POI_FLAG_STOP))[0]
 
-    const editorStore = lgs.theJourneyEditorProxy
+/**
+ * A memoized React component for toggling the visibility of start and stop flags in a journey track.
+ * @param {Object} props - Component props
+ * @param {string} props.tooltip - Tooltip placement (e.g., 'top', 'bottom')
+ * @returns {JSX.Element} The rendered component
+ */
+export const TrackFlagsSettings = memo(({tooltip}) => {
+    // Reactive snapshots limited to necessary properties
+    const {track} = useSnapshot(lgs.stores.journeyEditor)
+    const list = useSnapshot(lgs.stores.main.components.pois.list)
 
-    // If we're editing a single track journey, we need
-    // to know the track
-    if (editorStore.track === null || editorStore.track === undefined) {
-        (async () => await TrackUtils.setTheTrack(false))()
-    }
-    const editorSnapshot = useSnapshot(editorStore)
+    // Initialize track if undefined
+    useEffect(() => {
+        if (!track) {
+            TrackUtils.setTheTrack(false)
+        }
+    }, [track])
+
+    // Derive POIs directly from snapshots
+    const startPOI = track?.flags?.start ? list.get(track.flags.start) : null
+    const stopPOI = track?.flags?.stop ? list.get(track.flags.stop) : null
+
+    // Memoized tooltip text for start flag
+    const textVisibilityStartFlag = useMemo(() => {
+        return startPOI
+               ? sprintf('%s Start Flag', startPOI.visible ? 'Hide' : 'Show')
+               : 'Start Flag'
+    }, [startPOI?.visible])
+
+    // Memoized tooltip text for stop flag
+    const textVisibilityStopFlag = useMemo(() => {
+        return stopPOI
+               ? sprintf('%s Stop Flag', stopPOI.visible ? 'Hide' : 'Show')
+               : 'Stop Flag'
+    }, [stopPOI?.visible])
+
+    // Memoized styles to avoid recalculation
+    const startStyle = useMemo(() => ({
+        color: startPOI?.bgColor ?? lgs.settings.journey.pois.start.color,
+    }), [startPOI?.bgColor])
+
+    const stopStyle = useMemo(() => ({
+        color: stopPOI?.bgColor ?? lgs.settings.journey.pois.stop.color,
+    }), [stopPOI?.bgColor])
 
     /**
-     * Change Start flag visibility
-     *
-     * @param visibility
-     *
+     * Toggles the visibility of the start flag and persists the change to the database.
+     * @param {boolean} visibility - The new visibility state
+     * @returns {Promise<void>}
      */
-    const setStartFlagVisibility = async visibility => {
-        editorStore.track.flags.start.visible = visibility
-        TrackUtils.updateFlagsVisibility(editorStore.journey, editorStore.track, 'start', visibility)
-        await Utils.updateTrack(JUST_SAVE)
+    const setStartFlagVisibility = async (visibility) => {
+        if (!track?.flags?.start) {
+            return
+        }
+        const poi = __.ui.poiManager.list.get(track.flags.start)
+        if (poi && poi.visible !== visibility) {
+            try {
+                poi.visible = visibility
+                await poi.persistToDatabase()
+            }
+            catch (error) {
+                console.error('Failed to persist start POI:', error)
+            }
+        }
     }
 
     /**
-     *
-     * Change Stop flag visibility
-     *
-     * @param visibility
-     *
+     * Toggles the visibility of the stop flag and persists the change to the database.
+     * @param {boolean} visibility - The new visibility state
+     * @returns {Promise<void>}
      */
-    const setStopFlagVisibility = async visibility => {
-        editorStore.track.flags.stop.visible = visibility
-        TrackUtils.updateFlagsVisibility(editorStore.journey, editorStore.track, 'stop', visibility)
-        await Utils.updateTrack(JUST_SAVE)
+    const setStopFlagVisibility = async (visibility) => {
+        if (!track?.flags?.stop) {
+            return
+        }
+        const poi = __.ui.poiManager.list.get(track.flags.stop)
+        if (poi && poi.visible !== visibility) {
+            try {
+                poi.visible = visibility
+                await poi.persistToDatabase()
+            }
+            catch (error) {
+                console.error('Failed to persist stop POI:', error)
+            }
+        }
     }
-
-    const textVisibilityStartFlag = sprintf('%s Flag', editorStore.track?.flags?.start?.visible ? 'Hide' : 'Show')
-    const textVisibilityStopFlag = sprintf('%s Flag', editorStore.track?.flags?.stop?.visible ? 'Hide' : 'Show')
 
     return (
         <div>
-            <SlTooltip hoist content={textVisibilityStartFlag} placement={props.tooltip}>
-                <ToggleStateIcon onChange={setStartFlagVisibility}
-                                 id={'start-visibility'}
-                                 icons={{
-                                     shown: faLocationPin, hidden: faLocationPinSlash,
-                                 }}
-                                 style={{color: lgs.settings.getJourney.pois.start.color}}
-                                 initial={editorSnapshot?.track.flags.start.visible}/>
-            </SlTooltip>
-            <SlTooltip hoist content={textVisibilityStopFlag} placement={props.tooltip}>
-                <ToggleStateIcon onChange={setStopFlagVisibility}
-                                 id={'stop-visibility'}
-                                 icons={{
-                                     shown: faLocationPin, hidden: faLocationPinSlash,
-                                 }}
-                                 style={{color: lgs.settings.getJourney.pois.stop.color}}
-                                 initial={editorSnapshot?.track.flags.stop.visible}/>
-            </SlTooltip>
+            {startPOI && (
+                <SlTooltip hoist content={textVisibilityStartFlag} placement={tooltip}>
+                    <ToggleStateIcon
+                        onChange={setStartFlagVisibility}
+                        className="flag-visibility"
+                        icons={{shown: START_ICON, hidden: START_ICON}}
+                        style={startStyle}
+                        initial={startPOI.visible}
+                    />
+                </SlTooltip>
+            )}
+            {stopPOI && (
+                <SlTooltip hoist content={textVisibilityStopFlag} placement={tooltip}>
+                    <ToggleStateIcon
+                        onChange={setStopFlagVisibility}
+                        className="flag-visibility"
+                        icons={{shown: STOP_ICON, hidden: STOP_ICON}}
+                        style={stopStyle}
+                        initial={stopPOI.visible}
+                    />
+                </SlTooltip>
+            )}
         </div>
     )
-
-}
+})
