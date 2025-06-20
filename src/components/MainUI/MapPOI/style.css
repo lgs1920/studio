@@ -66,7 +66,6 @@
     display: flex;
     flex-direction: column;
     width: calc(var(--poi-expanded-dimension) + var(--poi-menu-icons-column-width));
-    height: var(--dimension);
     pointer-events: none;
     opacity: 1;
 }
