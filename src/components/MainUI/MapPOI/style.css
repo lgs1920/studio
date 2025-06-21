@@ -8,7 +8,7 @@
  * email: contact@lgs1920.fr
  *
  * Created on: 2025-06-21
- * Last modified: 2025-06-20
+ * Last modified: 2025-06-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -117,6 +117,7 @@
 
 .poi-shrinked .poi-card-inner {
     position: absolute;
+    align-items: center;
     justify-content: center;
     width: var(--dimension);
     height: var(--dimension);
