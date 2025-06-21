@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-20
+ * Created on: 2025-06-21
  * Last modified: 2025-06-20
  *
  *
@@ -151,7 +151,7 @@
     margin: 0;
 }
 
-.poi-card-inner svg {
+.poi-card-inner svg, .poi-card-inner sl-icon::part(svg) {
     align-self: center;
     max-width: var(--dimension) !important;
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-14
- * Last modified: 2025-05-14
+ * Created on: 2025-06-21
+ * Last modified: 2025-06-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -29,6 +29,7 @@ import { EventEmitter }     from '../assets/libs/EventEmitter/EventEmitter'
 import { FA2SL }            from './FA2SL'
 
 export class AppUtils {
+    static uiInit = false
     /**
      * Split a slug using '#'
      *

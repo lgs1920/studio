@@ -7,25 +7,26 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-20
- * Last modified: 2025-06-20
+ * Created on: 2025-06-21
+ * Last modified: 2025-06-21
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { NameValueUnit }   from '@Components/DataDisplay/NameValueUnit'
+import { NameValueUnit }     from '@Components/DataDisplay/NameValueUnit'
 import { FontAwesomeIcon }                                       from '@Components/FontAwesomeIcon'
 import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER, POIS_STORE } from '@Core/constants'
 import { MapPOI }                                                from '@Core/MapPOI'
-import { UIToast }         from '@Utils/UIToast'
-import { ELEVATION_UNITS } from '@Utils/UnitUtils'
-import { snapdom }         from '@zumer/snapdom'
-import classNames          from 'classnames'
-import { DateTime }        from 'luxon'
+import * as poiRenderManager from '@Utils/testUtils'
+import { UIToast }           from '@Utils/UIToast'
+import { ELEVATION_UNITS }   from '@Utils/UnitUtils'
+import { snapdom }           from '@zumer/snapdom'
+import classNames            from 'classnames'
+import { DateTime }          from 'luxon'
 import { useEffect, useRef }                                     from 'react'
 import './style.css'
-import { useSnapshot }     from 'valtio'
+import { useSnapshot }       from 'valtio'
 
 /**
  * A React component that renders the content of a Point of Interest (POI) on the map.
@@ -52,6 +53,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
     // Component refs for DOM manipulation and canvas rendering
     const inner = useRef(null)
     const _poiContent = useRef(null)
+    const _icon = useRef(null)
 
     if (category) {
         useInMenu = true
@@ -258,30 +260,30 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
     }
 
     /**
-     * Effect hook - only runs when category is not defined
+     * Effect hook to handle canvas rendering and event listeners
+     * Only runs when category is not defined
      */
     useEffect(() => {
         if (useInMenu || category) {
             return
         }
 
-        const renderToCanvas = async () => {
-            if (!_poiContent.current) {
-                return
-            }
-
+        /**
+         * Renders the POI content to a canvas and updates the MapPOI
+         */
+        const renderToCanvas = () => {
             try {
                 const scale = 2
                 const ratio = window.devicePixelRatio || 1
 
-                snapdom(_poiContent.current, {scale: scale}).then(snap => {
+                snapdom(_poiContent.current, {scale, fast: false}).then(snap => {
                     snap.toCanvas().then(async canvas => {
                         const thePOI = new MapPOI($point)
 
                         thePOI.update({
-                                          image:       {
-                                              src:    canvas.toDataURL('image/png'),
-                                              width:  canvas.width / scale / ratio,
+                                          image: {
+                                              src:   canvas.toDataURL(),
+                                              width: canvas.width / scale / ratio,
                                               height: canvas.height / scale / ratio,
                                           },
                                           pixelOffset: {
@@ -293,22 +295,32 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                         await thePOI.utils.draw(thePOI)
                         lgs.scene.requestRender()
 
-                        await lgs.db.lgs1920.put(thePOI.id, MapPOI.serialize({
-                                                                                 ...thePOI,
-                                                                                 __class: MapPOI,
-                                                                             }), POIS_STORE)
+                        await lgs.db.lgs1920.put(
+                            thePOI.id,
+                            MapPOI.serialize({
+                                                 ...thePOI,
+                                                 __class: MapPOI,
+                                             }),
+                            POIS_STORE,
+                        )
                     })
                 })
             }
             catch (error) {
-                console.error('Error occurred during POI canvas conversion:', error)
+                console.error('Error in renderToCanvas:', error)
+                throw error // Rethrow for retry in PoiRenderManager
             }
         }
 
-        renderToCanvas()
+        // Add render function to manager
+        __.ui.poiRenderManager.add(renderToCanvas)
+
+        // Add event listeners
         addPOIEventListeners(point)
 
+        // Cleanup: Remove render function and event listeners
         return () => {
+            __.ui.poiRenderManager.remove(renderToCanvas)
             removePOIEventListeners(point)
         }
     }, [
@@ -324,6 +336,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                   category,
               ])
 
+
     // When category is defined, render only the icon
     if (category) {
         return (
@@ -336,6 +349,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                     <div className="poi-card-inner" ref={inner} style={style}>
                         <div className="poi-card-inner-background"/>
                         <FontAwesomeIcon
+                            ref={_icon}
                             key={category}
                             icon={MapPOI.categoryIcon(category)}
                             className="poi-as-flag"
@@ -401,6 +415,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                              key={point.category}
                              icon={point.categoryIcon(point.category)}
                              className="poi-as-flag"
+                             ref={_icon}
                          />
                      )}
                 </div>
