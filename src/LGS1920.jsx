@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-23
- * Last modified: 2025-05-23
+ * Created on: 2025-06-21
+ * Last modified: 2025-06-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -199,6 +199,8 @@ export function LGS1920() {
                               console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
                               console.log(`Connected to backend ${lgs.versions.backend}.`)
 
+                              // UI init
+                              __.app.uiInit = true
                           })()
 
 
