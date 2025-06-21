@@ -293,34 +293,30 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                                       })
 
                         await thePOI.utils.draw(thePOI)
-                        lgs.scene.requestRender()
 
-                        await lgs.db.lgs1920.put(
-                            thePOI.id,
-                            MapPOI.serialize({
-                                                 ...thePOI,
-                                                 __class: MapPOI,
-                                             }),
-                            POIS_STORE,
-                        )
                     })
                 })
             }
             catch (error) {
                 console.error('Error in renderToCanvas:', error)
-                throw error // Rethrow for retry in PoiRenderManager
             }
         }
-
-        // Add render function to manager
-        __.ui.poiRenderManager.add(renderToCanvas)
+        // The app UI has been initialized
+        if (__.app.uiInit) {
+            requestAnimationFrame(renderToCanvas)
+        }
+        else {
+            setTimeout(() => {
+                renderToCanvas()
+            }, 100)
+        }
 
         // Add event listeners
         addPOIEventListeners(point)
 
         // Cleanup: Remove render function and event listeners
         return () => {
-            __.ui.poiRenderManager.remove(renderToCanvas)
+            // __.ui.poiRenderManager.remove(renderToCanvas)
             removePOIEventListeners(point)
         }
     }, [

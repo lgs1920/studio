@@ -364,6 +364,7 @@ export class AppUtils {
             return {alive: false}
         }
     }
+
     /**
      * Start Backend server
      *

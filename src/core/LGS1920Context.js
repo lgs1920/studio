@@ -24,7 +24,6 @@ import { DeviceManager }     from '@Core/ui/DeviceManager'
 import { Geocoder }          from '@Core/ui/Geocoder'
 import { MenuManager }       from '@Core/ui/MenuManager'
 import { POIManager }        from '@Core/ui/POIManager'
-import { POIRenderManager }  from '@Core/ui/POIRenderManager'
 import { AppUtils }          from '@Utils/AppUtils'
 import { MouseUtils }        from '@Utils/cesium/MouseUtils'
 import { CSSUtils }          from '@Utils/CSSUtils'
@@ -330,7 +329,6 @@ export class LGS1920Context {
 
         // Init POI management
         __.ui.poiManager = new POIManager()
-        __.ui.poiRenderManager = new POIRenderManager()
         __.ui.geocoder = new Geocoder()
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
