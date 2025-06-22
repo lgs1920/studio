@@ -396,6 +396,8 @@
 #map-poi-edit-filter-trigger {
     display: flex;
     align-items: center;
+    margin: 0 0 var(--lgs-gutter-xs) auto;
+    padding: 0;
     cursor: pointer;
 }
 
@@ -444,10 +446,6 @@
     margin-left: auto;
 }
 
-#map-poi-edit-filter-trigger {
-    margin: 0 0 0 auto;
-    padding: 0;
-}
 
 .map-poi-filter-active {
     color: var(--lgs-success-color)

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-10
- * Last modified: 2025-06-10
+ * Created on: 2025-06-22
+ * Last modified: 2025-06-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -108,17 +108,17 @@ export const MapPOIEditFilter = () => {
         <div className="map-poi-edit-filter">
             <div className="map-poi-edit-toggle-filter">
                 <header>
-                    {settings.filter.active && <span>{'Filters are active'}</span>}
+                    {settings.filter.active && <span
+                        className={settings.filter.active ? 'map-poi-filter-active' : 'map-poi-filter-inactive'}>{'Filters are active'}</span>}
                     <SlTooltip content={settings.filter.open ? 'Hide Filters' : 'Show Filters'}>
-                        <div id="map-poi-edit-filter-trigger" onClick={handleFilter}
-                             className={settings.filter.active ? 'map-poi-filter-active' : 'map-poi-filter-inactive'}>
-                            {settings.filter.open ? 'Hide' : 'Show'}&nbsp;{'Filters'}
-                            <SlIconButton
+                        <SlButton id="map-poi-edit-filter-trigger" onClick={handleFilter} size="small">
+                            <SlIconButton size="small"
                                 library="fa" disabled={!enoughPOIs()}
                                 name={FA2SL.set(settings.filter.open ? faFilterSlash : faFilter)}
-                                className={settings.filter.active ? 'map-poi-filter-active' : 'map-poi-filter-inactive'}
                             />
-                        </div>
+                            {settings.filter.open ? 'Hide' : 'Show'}&nbsp;{'Filters'}
+
+                        </SlButton>
 
                     </SlTooltip>
                 </header>
