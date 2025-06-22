@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-21
- * Last modified: 2025-06-21
+ * Created on: 2025-06-22
+ * Last modified: 2025-06-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -106,6 +106,7 @@
 
 .poi-card-inner {
     display: flex;
+    flex-direction: column;
     flex-wrap: wrap;
     width: var(--poi-expanded-dimension);
     margin-bottom: var(--triangle-size);
@@ -161,6 +162,7 @@
     font-size: calc(1.1 * var(--lgs-font-size));
     font-weight: 500;
     line-height: 1;
+    display: flex;
     max-width: 100%;
     margin: 0;
     text-wrap: wrap;
