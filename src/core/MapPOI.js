@@ -263,21 +263,30 @@ export class MapPOI extends MapElement {
         this.simulatedHeight = simulatedHeight
     }
 
-    update(updates, persistToDatabase = false) {
-        // Get the current data from the ProxyMap
+    /**
+     * Updates the POI instance and the pois list (if required)
+     *
+     * @param {Object} updates - The properties to update
+     * @param {boolean} [persistToDatabase=false] - Whether to persist changes to the database
+     * @returns {Promise<POI>} The updated POI instance
+     */
+    update = async (updates, persistToDatabase = false) => {
+        
+        // Merge current ProxyMap data and updates into `this`
         const current = lgs.stores.main.components.pois.list.get(this.id)
-        // Merge updates with current data
-        const updated = {...current, ...updates}
+        Object.assign(this, current, updates)
 
-        lgs.stores.main.components.pois.list.set(this.id, updated)
-        Object.assign(this, updated)
+        // Sync the ProxyMap with the updated `this`
+        lgs.stores.main.components.pois.list.set(this.id, {...this})
 
-        // Persist to database if required (lazy mode)
+        // Persist to database if required
         if (persistToDatabase) {
-            this.persistToDatabase()
+            await this.persistToDatabase()
         }
+
         return this
     }
+
     /**
      * Updates this POI's type
      * @param {string} [type] - New POI type (defaults to standard)
