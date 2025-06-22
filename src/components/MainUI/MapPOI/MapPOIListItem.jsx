@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-20
- * Last modified: 2025-06-20
+ * Created on: 2025-06-22
+ * Last modified: 2025-06-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -49,7 +49,7 @@ export const MapPOIListItem = memo(({id, poi, context}) => {
 
     const drawerOpen = useSnapshot(lgs.stores.main.drawers).open
 
-    console.log(poi.title)
+    console.log(poi.height)
     // Memoized bulk list handler
     const handleBulkList = useCallback(
         (state) => {

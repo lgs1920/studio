@@ -7,26 +7,25 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-21
- * Last modified: 2025-06-21
+ * Created on: 2025-06-22
+ * Last modified: 2025-06-22
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { NameValueUnit }     from '@Components/DataDisplay/NameValueUnit'
-import { FontAwesomeIcon }                                       from '@Components/FontAwesomeIcon'
-import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER, POIS_STORE } from '@Core/constants'
-import { MapPOI }                                                from '@Core/MapPOI'
-import * as poiRenderManager from '@Utils/testUtils'
-import { UIToast }           from '@Utils/UIToast'
-import { ELEVATION_UNITS }   from '@Utils/UnitUtils'
-import { snapdom }           from '@zumer/snapdom'
-import classNames            from 'classnames'
-import { DateTime }          from 'luxon'
-import { useEffect, useRef }                                     from 'react'
+import { NameValueUnit }                             from '@Components/DataDisplay/NameValueUnit'
+import { FontAwesomeIcon }                           from '@Components/FontAwesomeIcon'
+import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
+import { MapPOI }                                    from '@Core/MapPOI'
+import { UIToast }                                   from '@Utils/UIToast'
+import { ELEVATION_UNITS }                           from '@Utils/UnitUtils'
+import { snapdom }                                   from '@zumer/snapdom'
+import classNames                                    from 'classnames'
+import { DateTime }                                  from 'luxon'
+import { useEffect, useRef }                         from 'react'
 import './style.css'
-import { useSnapshot }       from 'valtio'
+import { useSnapshot }                               from 'valtio'
 
 /**
  * A React component that renders the content of a Point of Interest (POI) on the map.
@@ -181,7 +180,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
      */
     const handleClick = (event, entity) => {
         const poi = getPOI(entity)
-        Object.assign($pois.list.get(entity), {
+        __.ui.poiManager.updatePOI(entity, {
             expanded: !poi.expanded,
         })
     }
@@ -198,7 +197,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
     const handleMouseOver = (event, entity, options, data) => {
         const poi = getPOI(entity)
         if (!poi.expanded) {
-            Object.assign($pois.list.get(entity), {
+            __.ui.poiManager.updatePOI(entity, {
                 expanded:            true,
                 isMouseOverExpanded: true, // Flag to track expansion source
             })
@@ -218,7 +217,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
         const poi = getPOI(entity)
         // Only collapse if expansion was caused by mouse over
         if (poi.expanded && poi.isMouseOverExpanded) {
-            Object.assign($pois.list.get(entity), {
+            __.ui.poiManager.updatePOI(entity, {
                 expanded:            false,
                 isMouseOverExpanded: false,
             })
@@ -280,18 +279,15 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                     snap.toCanvas().then(async canvas => {
                         const thePOI = new MapPOI($point)
 
-                        thePOI.update({
-                                          image: {
-                                              src:   canvas.toDataURL(),
-                                              width: canvas.width / scale / ratio,
-                                              height: canvas.height / scale / ratio,
-                                          },
-                                          pixelOffset: {
-                                              x: point.expanded ? -13 : 0,
-                                              y: 0,
-                                          },
-                                      })
-
+                        thePOI.image = {
+                            src:    canvas.toDataURL(),
+                            width:  canvas.width / scale / ratio,
+                            height: canvas.height / scale / ratio,
+                        }
+                        thePOI.pixelOffset = {
+                            x: point.expanded ? -13 : 0,
+                            y: 0,
+                        }
                         await thePOI.utils.draw(thePOI)
 
                     })

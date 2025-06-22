@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-17
- * Last modified: 2025-06-17
+ * Created on: 2025-06-22
+ * Last modified: 2025-06-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -100,11 +100,9 @@ export const MapPOIEditContent = ({poi}) => {
     const handleChangeAltitude = async (event) => {
         if (window.isOK) {
             const height = event.target.value * 1
-            point = Object.assign($pois.list.get(point.id), {
+            point = await __.ui.poiManager.updatePOI(point.id, {
                 height: settings.unitSystem.current === IMPERIAL ? UnitUtils.convertFeetToMeters(height) : height,
             })
-
-            await __.ui.poiManager.persistToDatabase(point)
             setSimulated(point.height === point.simulatedHeight)
         }
     }
@@ -116,32 +114,23 @@ export const MapPOIEditContent = ({poi}) => {
      * @param {Event} event - The color picker change event
      */
     const handleChangeColor = async event => {
+        if (!window.isOK) {
+            return
+        }
+
+        let updateData = {}
+
         if (event.target === poiColor.current) {
-            point = Object.assign($pois.list.get(point.id), {
-                color: event.target.value,
-            })
+            updateData.color = event.target.value
         }
         if (event.target === poiBgColor.current) {
-            point = Object.assign($pois.list.get(point.id), {
-                bgColor: event.target.value,
-            })
+            updateData.bgColor = event.target.value
         }
-        // Update filtered collections if POI exists in them
-        if ($pois.filtered.global.has(point.id)) {
-            $pois.filtered.global.set(point.id, {
-                ...$pois.filtered.global.get(point.id),
-                color:   point.color,
-                bgColor: point.bgColor,
-            })
+
+        // updatePOI fait TOUT le travail automatiquement
+        if (Object.keys(updateData).length > 0) {
+            point = await __.ui.poiManager.updatePOI(point.id, updateData);
         }
-        if ($pois.filtered.journey.has(point.id)) {
-            $pois.filtered.journey.set(point.id, {
-                ...$pois.filtered.journey.get(point.id),
-                color:   point.color,
-                bgColor: point.bgColor,
-            })
-        }
-        await __.ui.poiManager.persistToDatabase(point)
 
         event.preventDefault()
         event.stopPropagation()
@@ -154,10 +143,9 @@ export const MapPOIEditContent = ({poi}) => {
      * @param {Event} event - The input change event
      */
     const handleChangeLatitude = async event => {
-        point = Object.assign($pois.list.get(point.id), {
+        await __.ui.poiManager.updatePOI(point.id, {
             latitude: event.target.value * 1,
         })
-        await __.ui.poiManager.persistToDatabase(point)
     }
 
     /**
@@ -168,10 +156,9 @@ export const MapPOIEditContent = ({poi}) => {
      */
     const handleChangeLongitude = async event => {
         if (window.isOK) {
-            point = Object.assign($pois.list.get(point.id), {
+            await __.ui.poiManager.updatePOI(point.id, {
                 longitude: event.target.value * 1,
             })
-            await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
         }
     }
 
@@ -183,10 +170,9 @@ export const MapPOIEditContent = ({poi}) => {
      */
     const handleChangeTitle = async event => {
         if (window.isOK) {
-            point = Object.assign($pois.list.get(point.id), {
+            await __.ui.poiManager.updatePOI(point.id, {
                 title: event.target.value,
             })
-            await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
         }
     }
 
@@ -198,10 +184,9 @@ export const MapPOIEditContent = ({poi}) => {
      */
     const handleChangeDescription = async event => {
         if (window.isOK) {
-            point = Object.assign($pois.list.get(point.id), {
+            await __.ui.poiManager.updatePOI(point.id, {
                 description: event.target.value,
             })
-            await __.ui.poiManager.persistToDatabase(pois.list.get(point.id))
         }
     }
 

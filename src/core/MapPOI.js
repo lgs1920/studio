@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-20
- * Last modified: 2025-06-20
+ * Created on: 2025-06-22
+ * Last modified: 2025-06-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -263,36 +263,19 @@ export class MapPOI extends MapElement {
         this.simulatedHeight = simulatedHeight
     }
 
+    update(updates, persistToDatabase = false) {
+        // Get the current data from the ProxyMap
+        const current = lgs.stores.main.components.pois.list.get(this.id)
+        // Merge updates with current data
+        const updated = {...current, ...updates}
 
-    /**
-     * Updates this POI with new properties and persists to database
-     * @private
-     * @param {Object} updates - Properties to update
-     * @returns {Promise<MapPOI>} Updated POI
-     */
-    #update = (updates) => {
-        // Private method for internal updates
-        // Appliquer les mises à jour à l'objet local
-        Object.assign(this, updates)
+        lgs.stores.main.components.pois.list.set(this.id, updated)
+        Object.assign(this, updated)
 
-        const $pois = lgs.stores.main.components.pois
-        $pois.list.set(this.id, {...this})
-        this.persistToDatabase()
-        return this
-    };
-
-    update(updates) {
-        const $pois = lgs.stores.main.components.pois
-        // Update the instance in $pois.list (ProxyMap handles reactivity)
-        const poiInList = $pois.list.get(this.id)
-        if (poiInList) {
-            Object.assign(poiInList, updates)
+        // Persist to database if required (lazy mode)
+        if (persistToDatabase) {
+            this.persistToDatabase()
         }
-
-        // Update this instance
-        Object.assign(this, updates)
-        // Persist to database
-        this.persistToDatabase()
         return this
     }
     /**
@@ -301,7 +284,7 @@ export class MapPOI extends MapElement {
      * @returns {Promise<MapPOI>} Updated POI
      */
     saveAsPOI = async (type = POI_STANDARD_TYPE) => {
-        return this.#update({type})
+        return this.update({type}, true)
     }
 
     /**
@@ -309,7 +292,7 @@ export class MapPOI extends MapElement {
      * @returns {Promise<MapPOI>} Updated POI
      */
     shrink = () => {
-        return this.#update({expanded: false})
+        return this.update({expanded: false}, true)
     }
 
     /**
@@ -317,7 +300,7 @@ export class MapPOI extends MapElement {
      * @returns {Promise<MapPOI>} Updated POI
      */
     expand = () => {
-        return this.#update({expanded: true})
+        return this.update({expanded: true}, true)
     }
 
     /**
@@ -325,7 +308,7 @@ export class MapPOI extends MapElement {
      * @returns {Promise<MapPOI>} Updated POI
      */
     hide = () => {
-        this.#update({visible: false})
+        this.update({visible: false}, true)
         this.toggleVisibility()
         return this
 
@@ -336,7 +319,7 @@ export class MapPOI extends MapElement {
      * @returns {Promise<MapPOI>} Updated POI
      */
     show = async () => {
-        this.#update({visible: true})
+        this.update({visible: true}, true)
         this.toggleVisibility()
         return this
     }
@@ -351,7 +334,7 @@ export class MapPOI extends MapElement {
      */
     startAnimation = () => {
         // Implementation to start POI animation
-        this.#update({animated: true})
+        this.update({animated: true}, true)
         return this
     }
 
@@ -361,7 +344,7 @@ export class MapPOI extends MapElement {
      */
     stopAnimation = () => {
         // Implementation to stop POI animation
-        this.#update({animated: false})
+        this.update({animated: false}, true)
         return this
     }
     /**
