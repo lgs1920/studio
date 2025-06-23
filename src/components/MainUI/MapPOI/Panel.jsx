@@ -7,21 +7,23 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-17
- * Last modified: 2025-06-17
+ * Created on: 2025-06-23
+ * Last modified: 2025-06-23
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { MapPOIEditFilter }       from '@Components/MainUI/MapPOI/MapPOIEditFilter'
+import { MapPOIEditToggleFilter } from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
 import { memo, useCallback, useEffect, useMemo } from 'react'
 import { useSnapshot }                           from 'valtio'
 import { SlDrawer }                              from '@shoelace-style/shoelace/dist/react'
-import { MapPOIEditSettings } from '@Components/MainUI/MapPOI/MapPOIEditSettings'
+import { MapPOIEditSettings }     from '@Components/MainUI/MapPOI/MapPOIEditSettings'
 import { MapPOIList }                            from '@Components/MainUI/MapPOI/MapPOIList'
 import { DrawerFooter }                          from '../../DrawerFooter'
-import { POIS_EDITOR_DRAWER } from '@Core/constants'
-import { proxyMap } from 'valtio/utils'
+import { POIS_EDITOR_DRAWER }     from '@Core/constants'
+import { proxyMap }               from 'valtio/utils'
 import './style.css'
 
 /**
@@ -91,6 +93,8 @@ export const Panel = memo(() => {
             placement={menu.drawer}
             label="Points Of Interest"
         >
+            <MapPOIEditToggleFilter/>
+            <MapPOIEditFilter/>
             <MapPOIEditSettings/>
             <MapPOIList context={'poi-panel'}/>
             <DrawerFooter/>

@@ -70,66 +70,56 @@ const filterAndSortPois = (poisList, onlyJourney, settings) => {
         console.warn('poisList is not a valid Map or iterable:', poisList)
         return []
     }
+    const {filter: {journey, global, byName, byCategories, exclude}} = settings
+    const {theJourney} = lgs
 
     return Array.from(poisList.entries())
         .filter(([id, poi]) => {
-            // Validate POI data structure and required fields
+            // Validate POI data structure
             if (!poi || typeof poi.title !== 'string') {
                 console.warn(`Invalid POI data for id ${id}:`, poi)
                 return false
             }
 
-            // Apply journey-specific filtering logic
-            if (onlyJourney) {
-                // Exclude POIs without parent or not in current journey's POI list
-                if (!poi.parent || !lgs.theJourney?.pois?.includes(id)) {
-                    return false
-                }
-            }
-
-            // Apply global vs journey filtering based on settings
-            let include = false
-            if (settings.filter.journey && lgs.theJourney?.pois?.includes(id)) {
-                include = true
-            }
-            else if (settings.filter.global && !poi.parent) {
-                include = true
-            }
-            if (!include) {
+            // Journey-specific filtering
+            if (onlyJourney && (!poi.parent || !theJourney?.pois?.includes(id))) {
                 return false
             }
 
-            // Apply case-insensitive name filtering
-            if (settings.filter.byName && !poi.title.toLowerCase().includes(settings.filter.byName.toLowerCase())) {
+            // Global vs journey filtering
+            if (!(journey && theJourney?.pois?.includes(id) || global && !poi.parent)) {
                 return false
             }
 
-            // Apply category-based filtering with include/exclude logic
-            if (settings.filter.byCategories?.length > 0) {
-                const inCategory = settings.filter.byCategories.includes(poi.category)
-                return settings.filter.exclude ? !inCategory : inCategory
+            // Case-insensitive name filtering
+            if (byName && !poi.title.toLowerCase().includes(byName.toLowerCase())) {
+                return false
+            }
+
+            // Category-based filtering
+            if (byCategories?.length) {
+                const inCategory = byCategories.includes(poi.category)
+                return exclude ? !inCategory : inCategory
             }
 
             return true
         })
         .sort(([, a], [, b]) => {
-            // Sort alphabetically based on settings preference
-            return settings.filter.alphabetic
-                   ? a.title.localeCompare(b.title)
-                   : b.title.localeCompare(a.title)
+            // Sort alphabetically based on settings
+            const {alphabetic} = settings.filter
+            return alphabetic ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title)
         })
         .map(([id, poi]) => {
+            // Handle Valtio proxy snapshots
             try {
-                // Safely handle Valtio proxy snapshots
-                // Only snapshot if poi is a Valtio proxy (has toJSON method)
                 const isProxy = poi && typeof poi === 'object' && 'toJSON' in poi
                 return [id, isProxy ? snapshot(poi) : poi]
             }
             catch (error) {
                 console.error(`Error snapshotting POI with id ${id}:`, error)
-                return [id, poi] // Fallback to raw poi if snapshot fails
+                return [id, poi]
             }
-        })
+        });
 }
 
 /**
@@ -177,7 +167,15 @@ export const MapPOIList = memo(({context}) => {
     // Memoized computation: filter and sort POIs based on current settings
     const filteredPois = useMemo(
         () => filterAndSortPois(pois.list, onlyJourney, settings),
-        [pois.list, onlyJourney, settings.filter.byName, settings.filter.byCategories, settings.filter.alphabetic, settings.filter.journey, settings.filter.global],
+        [
+            pois.list, onlyJourney,
+            settings.filter.byName,
+            settings.filter.byCategories,
+            settings.filter.alphabetic,
+            settings.filter.journey,
+            settings.filter.global,
+            settings.filter.exclude,
+        ],
     )
 
     // Effect: Initialize UI components and update store state
@@ -208,7 +206,7 @@ export const MapPOIList = memo(({context}) => {
 
         // Apply bulk updates to store
         Object.assign($pois.bulkList, bulkUpdates)
-    }, [filteredPois, onlyJourney, $pois])
+    }, [filteredPois, onlyJourney, $pois.bulkList])
 
     // Memoized content: render POI items or empty state message
     const content = useMemo(() => {

@@ -14,6 +14,7 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { MapPOIEditToggleFilter } from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSnapshot }                                     from 'valtio'
 import { MapPOIBulkActionsMenu }                           from '@Components/MainUI/MapPOI/MapPOIBulkActionsMenu'
@@ -88,7 +89,6 @@ export const MapPOIEditSettings = memo(({globals = true}) => {
 
     return (
         <div id="map-poi-edit-settings">
-            <MapPOIEditFilter/>
             <div className="map-poi-edit-row">
                 <div className="map-poi-bulk-actions">
                     <ToggleStateIcon
@@ -106,9 +106,11 @@ export const MapPOIEditSettings = memo(({globals = true}) => {
                     checked={lgs.settings.ui.poi.focusOnEdit}
                     onSlChange={handleFocusOnEdit}
                 >
-                    Focus on POI
+                    {'Focus on POI'}
                 </SlSwitch>
             </div>
+            {/*     <MapPOIEditSettings/> */}
+
             <SlDivider/>
         </div>
     );
