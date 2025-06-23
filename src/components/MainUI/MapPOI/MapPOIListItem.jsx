@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-22
- * Last modified: 2025-06-22
+ * Created on: 2025-06-23
+ * Last modified: 2025-06-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -44,12 +44,9 @@ export const MapPOIListItem = memo(({id, poi, context}) => {
     const $pois = lgs.stores.main.components.pois
     const current = useSnapshot($pois, {sync: true}).current
     const {bulkList} = useSnapshot($pois, {sync: true})
-    const isBulkSelected = bulkList?.[id] ?? false
-
 
     const drawerOpen = useSnapshot(lgs.stores.main.drawers).open
 
-    console.log(poi.height)
     // Memoized bulk list handler
     const handleBulkList = useCallback(
         (state) => {
@@ -153,7 +150,7 @@ export const MapPOIListItem = memo(({id, poi, context}) => {
     return (
         <div className="edit-map-poi-item-wrapper">
             <ToggleStateIcon
-                initial={isBulkSelected}
+                initial={bulkList.get(id) ?? false}
                 className="map-poi-bulk-indicator"
                 icons={ICONS}
                 onChange={handleBulkList}

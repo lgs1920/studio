@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-22
- * Last modified: 2025-06-22
+ * Created on: 2025-06-23
+ * Last modified: 2025-06-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -116,7 +116,7 @@ export const MapPOIEditFilter = () => {
                                 library="fa" disabled={!enoughPOIs()}
                                 name={FA2SL.set(settings.filter.open ? faFilterSlash : faFilter)}
                             />
-                            {settings.filter.open ? 'Hide' : 'Show'}&nbsp;{'Filters'}
+                            {settings.filter.open ? 'Hide' : 'Show'}{'Filters'}
 
                         </SlButton>
 

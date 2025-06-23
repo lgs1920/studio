@@ -7,21 +7,23 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-10
- * Last modified: 2025-06-10
+ * Created on: 2025-06-23
+ * Last modified: 2025-06-23
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
-import { faArrowsFromLine, faArrowsToLine, faLocationDot, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
+import {
+    faArrowsFromLine, faArrowsToLine, faFilter, faFilterSlash, faLocationDot, faTrashCan,
+}                                                                         from '@fortawesome/pro-regular-svg-icons'
 import { faEye, faMask }                                               from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon }       from '@Components/FontAwesomeIcon'
-import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem }            from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                       from '@Utils/FA2SL'
-import { useEffect, useState }                                         from 'react'
-import { useSnapshot }                                                 from 'valtio'
+import { FontAwesomeIcon }                                                from '@Components/FontAwesomeIcon'
+import { SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                          from '@Utils/FA2SL'
+import React, { useEffect, useState }                                     from 'react'
+import { useSnapshot }                                                    from 'valtio'
 import './style.css'
 
 /**
@@ -49,6 +51,8 @@ export const MapPOIBulkActionsMenu = (globals) => {
                 poi.hide()
             }
         })
+        $pois.bulkList.clear()
+
     }
     const show = async () => {
         $pois.bulkList.forEach((canShow, id) => {
@@ -57,6 +61,7 @@ export const MapPOIBulkActionsMenu = (globals) => {
                 poi.show()
             }
         })
+        $pois.bulkList.clear()
     }
 
     const shrink = async () => {
@@ -66,6 +71,7 @@ export const MapPOIBulkActionsMenu = (globals) => {
                 poi.shrink()
             }
         })
+        $pois.bulkList.clear()
     }
 
     const expand = async () => {
@@ -75,6 +81,7 @@ export const MapPOIBulkActionsMenu = (globals) => {
                 poi.expand()
             }
         })
+        $pois.bulkList.clear()
     }
 
     /**
@@ -109,7 +116,7 @@ export const MapPOIBulkActionsMenu = (globals) => {
             })
         })
 
-        // Change current id needed (false if the list is empty)
+        // Change current if needed (false if the list is empty)
         if (needToChangeCurrent) {
             if (onlyJourney) {
                 $pois.current = $pois.filtered.journey.size > 0 ? $pois.filtered.journey.entries().next().value : false
@@ -130,7 +137,10 @@ export const MapPOIBulkActionsMenu = (globals) => {
     return (
         <SlDropdown disabled={disabled}>
             <SlButton slot="trigger" size="small" caret>
-                <FontAwesomeIcon slot="prefix" icon={faLocationDot}/>&nbsp;{'Select a bulk action'}
+                <SlIconButton size="small" slot="prefix"
+                              library="fa"
+                              name={FA2SL.set(faLocationDot)}
+                />{'Select an action'}
             </SlButton>
 
             <SlMenu small>
