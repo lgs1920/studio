@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-22
- * Last modified: 2025-06-22
+ * Created on: 2025-06-24
+ * Last modified: 2025-06-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -259,7 +259,37 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
     }
 
     /**
-     * Effect hook to handle canvas rendering and event listeners
+     * Renders the POI content to a canvas and updates the MapPOI
+     */
+    const renderToCanvas = () => {
+        try {
+            const scale = 2
+            const ratio = window.devicePixelRatio || 1
+
+            snapdom(_poiContent.current, {scale, fast: true}).then(snap => {
+                snap.toCanvas().then(async canvas => {
+                    const thePOI = new MapPOI($point)
+
+                    thePOI.image = {
+                        src:    canvas.toDataURL(),
+                        width:  canvas.width / scale / ratio,
+                        height: canvas.height / scale / ratio,
+                    }
+                    thePOI.pixelOffset = {
+                        x: point.expanded ? -13 : 0,
+                        y: 0,
+                    }
+                    await thePOI.utils.draw(thePOI)
+                })
+            })
+        }
+        catch (error) {
+            console.error('Error in renderToCanvas:', error)
+        }
+    }
+
+    /**
+     * Effect hook to handle canvas rendering and event listeners using MutationObserver
      * Only runs when category is not defined
      */
     useEffect(() => {
@@ -267,52 +297,28 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
             return
         }
 
-        /**
-         * Renders the POI content to a canvas and updates the MapPOI
-         */
-        const renderToCanvas = () => {
-            try {
-                const scale = 2
-                const ratio = window.devicePixelRatio || 1
+        requestAnimationFrame(renderToCanvas)
 
-                snapdom(_poiContent.current, {scale, fast: false}).then(snap => {
-                    snap.toCanvas().then(async canvas => {
-                        const thePOI = new MapPOI($point)
-
-                        thePOI.image = {
-                            src:    canvas.toDataURL(),
-                            width:  canvas.width / scale / ratio,
-                            height: canvas.height / scale / ratio,
-                        }
-                        thePOI.pixelOffset = {
-                            x: point.expanded ? -13 : 0,
-                            y: 0,
-                        }
-                        await thePOI.utils.draw(thePOI)
-
-                    })
-                })
-            }
-            catch (error) {
-                console.error('Error in renderToCanvas:', error)
-            }
-        }
-        // The app UI has been initialized
-        if (__.app.uiInit) {
+        // Set up MutationObserver to monitor changes to _poiContent
+        const observer = new MutationObserver(() => {
             requestAnimationFrame(renderToCanvas)
-        }
-        else {
-            setTimeout(() => {
-                renderToCanvas()
-            }, 100)
+        });
+
+        if (_poiContent.current) {
+            observer.observe(_poiContent.current, {
+                childList:     true,
+                attributes:    true,
+                characterData: true,
+                subtree:       true,
+            })
         }
 
         // Add event listeners
         addPOIEventListeners(point)
 
-        // Cleanup: Remove render function and event listeners
+        // Cleanup: Disconnect observer and remove event listeners
         return () => {
-            // __.ui.poiRenderManager.remove(renderToCanvas)
+            observer.disconnect()
             removePOIEventListeners(point)
         }
     }, [
@@ -326,8 +332,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                   category ? null : point?.latitude,
                   category ? null : point?.type,
                   category,
-              ])
-
+              ]); // Dependencies minimized to avoid unnecessary re-runs
 
     // When category is defined, render only the icon
     if (category) {
