@@ -7,27 +7,28 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-15
- * Last modified: 2025-06-15
+ * Created on: 2025-06-23
+ * Last modified: 2025-06-23
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { MapPOIEditToggleFilter } from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSnapshot }                                     from 'valtio'
 import { MapPOIBulkActionsMenu }                           from '@Components/MainUI/MapPOI/MapPOIBulkActionsMenu'
 import { MapPOIEditFilter }                                from '@Components/MainUI/MapPOI/MapPOIEditFilter'
 import { ToggleStateIcon }                                 from '@Components/ToggleStateIcon'
-import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
+import { JOURNEY_EDITOR_DRAWER }                           from '@Core/constants'
 import { faSquare, faSquareCheck }                         from '@fortawesome/pro-regular-svg-icons'
 import { SlDivider, SlSwitch }                             from '@shoelace-style/shoelace/dist/react'
 
 // Pre-defined icons to avoid repeated references
 const ICONS = {
-    true:  faSquareCheck,
+    true: faSquareCheck,
     false: faSquare,
-}
+};
 
 /**
  * A memoized React component for editing POI settings, including bulk actions and filters.
@@ -47,35 +48,47 @@ export const MapPOIEditSettings = memo(({globals = true}) => {
 
     // Memoized switchValue function
     const switchValue = useCallback((event) => {
-        if (window.isOK(event)) {
-            return event.target.checked
-        }
-        return false
-    }, [])
+        return event.target.checked ?? false
+    }, []);
 
-    // Memoized changeAll function
-    const changeAll = useCallback((state) => {
-        $pois.bulkList.clear()
-        const targetList = onlyJourney ? $pois.filtered.journey : $pois.filtered.global
-        targetList.forEach((_, id) => {
-            $pois.bulkList.set(id, state)
-        })
-    }, [onlyJourney, $pois.bulkList, $pois.filtered.journey, $pois.filtered.global])
+    // Memoized changeAll function to toggle all POIs in bulkList
+    const changeAll = useCallback(
+        (state) => {
+            $pois.bulkList.clear()
+            const targetList = onlyJourney ? $pois.filtered.journey : $pois.filtered.global
+            if (targetList.size === 0) {
+                return
+            } // Early return if list is empty
+            targetList.forEach(poi => {
+                $pois.bulkList.set(poi.id, state)
+            })
+            console.log(targetList)
+        },
+        [onlyJourney, $pois.bulkList, $pois.filtered.journey, $pois.filtered.global]
+    );
 
     // Memoized focusOnEdit handler
-    const handleFocusOnEdit = useCallback((event) => {
-        lgs.settings.ui.poi.focusOnEdit = switchValue(event)
-    }, [switchValue])
+    const handleFocusOnEdit = useCallback(
+        (event) => {
+            lgs.settings.ui.poi.focusOnEdit = switchValue(event)
+        },
+        [switchValue],
+    )
 
-    // Optimize useEffect to check bulkList stability
+    // Update allSelected based on bulkList state
     useEffect(() => {
-        const allTrue = Array.from($pois.bulkList.entries()).every(([_, value]) => value === true)
-        setAllSelected(allTrue)
-    }, [pois.bulkList])
+        const list = Array.from($pois.bulkList.values())
+        if (list.length === 0) {
+            setAllSelected(false) // No items selected if bulkList is empty
+            return
+        }
+
+        setAllSelected(list.every(value => value === true))
+
+    }, [pois.bulkList]);
 
     return (
         <div id="map-poi-edit-settings">
-            <MapPOIEditFilter/>
             <div className="map-poi-edit-row">
                 <div className="map-poi-bulk-actions">
                     <ToggleStateIcon
@@ -93,10 +106,12 @@ export const MapPOIEditSettings = memo(({globals = true}) => {
                     checked={lgs.settings.ui.poi.focusOnEdit}
                     onSlChange={handleFocusOnEdit}
                 >
-                    Focus on POI
+                    {'Focus on POI'}
                 </SlSwitch>
             </div>
+            {/*     <MapPOIEditSettings/> */}
+
             <SlDivider/>
         </div>
-    )
-})
+    );
+});

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-17
- * Last modified: 2025-06-17
+ * Created on: 2025-06-21
+ * Last modified: 2025-06-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -329,7 +329,6 @@ export class LGS1920Context {
 
         // Init POI management
         __.ui.poiManager = new POIManager()
-
         __.ui.geocoder = new Geocoder()
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui

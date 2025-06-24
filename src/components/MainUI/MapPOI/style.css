@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-20
- * Last modified: 2025-06-20
+ * Created on: 2025-06-23
+ * Last modified: 2025-06-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -66,7 +66,6 @@
     display: flex;
     flex-direction: column;
     width: calc(var(--poi-expanded-dimension) + var(--poi-menu-icons-column-width));
-    height: var(--dimension);
     pointer-events: none;
     opacity: 1;
 }
@@ -107,6 +106,7 @@
 
 .poi-card-inner {
     display: flex;
+    flex-direction: column;
     flex-wrap: wrap;
     width: var(--poi-expanded-dimension);
     margin-bottom: var(--triangle-size);
@@ -118,6 +118,7 @@
 
 .poi-shrinked .poi-card-inner {
     position: absolute;
+    align-items: center;
     justify-content: center;
     width: var(--dimension);
     height: var(--dimension);
@@ -152,7 +153,7 @@
     margin: 0;
 }
 
-.poi-card-inner svg {
+.poi-card-inner svg, .poi-card-inner sl-icon::part(svg) {
     align-self: center;
     max-width: var(--dimension) !important;
 }
@@ -161,6 +162,7 @@
     font-size: calc(1.1 * var(--lgs-font-size));
     font-weight: 500;
     line-height: 1;
+    display: flex;
     max-width: 100%;
     margin: 0;
     text-wrap: wrap;
@@ -302,6 +304,7 @@
 
 .map-poi-edit-row {
     display: flex;
+    align-content: center;
     align-items: center;
     justify-content: space-around;
     margin-top: var(--lgs-gutter-xs);
@@ -394,26 +397,17 @@
 #map-poi-edit-filter-trigger {
     display: flex;
     align-items: center;
+    margin: 0 0 0 auto;
+    padding: 0;
     cursor: pointer;
 }
 
 .map-poi-edit-toggle-filter {
     display: flex;
+    align-items: center;
     flex-direction: column;
     justify-content: flex-end;
-}
-
-.map-poi-edit-toggle-filter sl-divider {
-    margin-top: 0;
-}
-
-.map-poi-edit-toggle-filter ::part(base) {
-    height: unset;
-}
-
-.map-poi-edit-toggle-filter header {
-    display: flex;
-    align-items: center;
+    margin: 0 0 var(--lgs-gutter-xs) auto;
 }
 
 .map-poi-filter-by-type {
@@ -442,10 +436,6 @@
     margin-left: auto;
 }
 
-#map-poi-edit-filter-trigger {
-    margin: 0 0 0 auto;
-    padding: 0;
-}
 
 .map-poi-filter-active {
     color: var(--lgs-success-color)

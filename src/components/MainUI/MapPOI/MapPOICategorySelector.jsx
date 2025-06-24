@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-20
- * Last modified: 2025-06-20
+ * Created on: 2025-06-22
+ * Last modified: 2025-06-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,22 +21,14 @@ import { SlOption, SlSelect }                    from '@shoelace-style/shoelace/
 import { useState }                              from 'react'
 import { useSnapshot }                           from 'valtio'
 
-export const MapPOICategorySelector = (point, props) => {
-
+export const MapPOICategorySelector = ({point: current, props}) => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
-    let current = point.point
-
-    const [category, setCategory] = useState($pois.categories.get(point.category ?? POI_STANDARD_TYPE))
-    const [, setIcon] = useState(Object.values(POI_CATEGORY_ICONS.get(category.slug))[0])
 
     const handleCategory = async (event) => {
-        current = Object.assign($pois.list.get(current.id), {
+        current = __.ui.poiManager.updatePOI(pois.current, {
             category: event.target.value,
         })
-        await __.ui.poiManager.persistToDatabase(__.ui.poiManager.list.get(pois.current))
-        setCategory($pois.categories.get(current.category))
-        setIcon(current.categoryIcon())
     }
 
 

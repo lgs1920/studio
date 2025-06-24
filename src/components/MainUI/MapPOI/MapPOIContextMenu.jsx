@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-20
- * Last modified: 2025-06-20
+ * Created on: 2025-06-22
+ * Last modified: 2025-06-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -71,7 +71,7 @@ export const MapPOIContextMenu = () => {
     }
 
     const saveAsPOI = () => {
-        _current = Object.assign($pois.list.get(pois.current), {
+        _current = __.ui.poiManager.updatePOI(pois.current, {
             type: POI_STANDARD_TYPE,
             category: POI_STANDARD_TYPE,
         })
@@ -84,17 +84,15 @@ export const MapPOIContextMenu = () => {
     }
 
     const shrink = () => {
-        Object.assign($pois.list.get(pois.current), {
+        __.ui.poiManager.updatePOI(pois.current, {
             expanded: false,
-        })
-        hideMenu()
+        }).then(() => hideMenu())
     }
 
     const expand = () => {
-        Object.assign($pois.list.get(pois.current), {
+        __.ui.poiManager.updatePOI(pois.current, {
             expanded: true,
-        })
-        hideMenu()
+        }).then(() => hideMenu())
     }
 
     /**
@@ -107,8 +105,9 @@ export const MapPOIContextMenu = () => {
      * - The context menu is hidden.
      */
     const rotationAround = async () => {
-
+        _current = pois.list.get(pois.current)
         const camera = snapshot(lgs.mainProxy.components.camera)
+
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
             _current.stopAnimation().id
@@ -133,10 +132,12 @@ export const MapPOIContextMenu = () => {
 
     const stopRotation = async () => {
         hideMenu()
+
         await __.ui.cameraManager.stopRotate()
-        Object.assign(__.ui.poiManager.list.get(pois.current), {
+        __.ui.poiManager.updatePOI(pois.current, {
             animated: false,
-        })
+        }).then(() => hideMenu())
+
         _current = _current.stopAnimation()
     }
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-20
- * Last modified: 2025-06-20
+ * Created on: 2025-06-22
+ * Last modified: 2025-06-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -55,7 +55,7 @@ export const MapPOIEditMenu = memo(({point}) => {
     //  const point = useMemo(() => point, [point.id])
 
     const hide = async () => {
-        point = Object.assign(__.ui.poiManager.list.get(pois.current), {
+        point = await __.ui.poiManager.updatePOI(pois.current, {
             visible: false,
         })
         point.utils.toggleVisibility(point)
@@ -63,20 +63,20 @@ export const MapPOIEditMenu = memo(({point}) => {
     }
 
     const show = async () => {
-        point = Object.assign(__.ui.poiManager.list.get(pois.current), {
+        point = await __.ui.poiManager.updatePOI(pois.current, {
             visible: true,
         })
         point.utils.toggleVisibility(point)
     }
 
     const shrink = async () => {
-        point = Object.assign(__.ui.poiManager.list.get(pois.current), {
+        point = await __.ui.poiManager.updatePOI(pois.current, {
             expanded: false,
         })
     }
 
     const expand = async () => {
-        point = Object.assign(__.ui.poiManager.list.get(pois.current), {
+        point = await __.ui.poiManager.updatePOI(pois.current, {
             expanded: true,
         })
     }

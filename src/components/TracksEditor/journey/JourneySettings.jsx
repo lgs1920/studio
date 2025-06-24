@@ -7,15 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-17
- * Last modified: 2025-06-17
+ * Created on: 2025-06-23
+ * Last modified: 2025-06-23
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { FAButton } from '@Components/FAButton'
+import { MapPOIEditFilter } from '@Components/MainUI/MapPOI/MapPOIEditFilter'
 import { MapPOIEditSettings } from '@Components/MainUI/MapPOI/MapPOIEditSettings'
+import { MapPOIEditToggleFilter } from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
 import { MapPOIList }         from '@Components/MainUI/MapPOI/MapPOIList'
 import {
     useConfirm,
@@ -25,7 +27,8 @@ import {
 }                   from '@Components/ToggleStateIcon'
 import {
     CURRENT_JOURNEY,
-    ORIGIN_STORE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE, UPDATE_JOURNEY_SILENTLY,
+    ORIGIN_STORE, POI_STANDARD_TYPE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE,
+    UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
 import {
     ElevationServer,
@@ -98,6 +101,8 @@ export const JourneySettings = function JourneySettings() {
     const autoRotate = useSnapshot(lgs.settings.ui.camera.start.rotate)
     let rotationAllowed = false
     const manualRotate = useRef(null)
+
+    const POIS = 'pois'
 
     /**
      * Change journey description
@@ -425,11 +430,21 @@ export const JourneySettings = function JourneySettings() {
         })
     }, [lgs.stores.main.components.mainUI.removeJourneyDialog.active])
 
+    const toggleFilter = (event) => {
+        if (event.detail.name === POIS) {
+            lgs.stores.journeyEditor.showPOIsFilter = event.type === 'sl-tab-show'
+        }
+        else {
+            lgs.stores.journeyEditor.showPOIsFilter = false
+        }
+
+    }
+
     return (<>
         {theJourneyEditor.journey &&
             <div id="journey-settings" key={lgs.stores.main.components.journeyEditor.keys.journey.settings}>
                 <div className={'settings-panel'} id={'editor-journey-settings-panel'}>
-                    <SlTabGroup className={'menu-panel'}>
+                    <SlTabGroup className={'menu-panel'} onSlTabShow={toggleFilter} onSlTabHide={toggleFilter}>
                         <SlTab slot="nav" panel="data" id="tab-journey-data"
                                active={theJourneyEditor.tabs.journey.data}>
                             <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>Data
@@ -442,9 +457,11 @@ export const JourneySettings = function JourneySettings() {
                         {/*         <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points */}
                         {/*     </SlTab> */}
                         {/* } */}
-                        <SlTab slot="nav" panel="pois" active={theJourneyEditor.tabs.journey.pois}>
+                        <SlTab slot="nav" panel={POIS} active={theJourneyEditor.tabs.journey.pois}>
                             <SlIcon library="fa" name={FA2SL.set(faLocationDot)}/>POIs
                         </SlTab>
+
+                        <MapPOIEditToggleFilter slot="nav" visible={theJourneyEditor.tabs.journey.pois}/>
 
                         {/**
                          * Data Tab Panel
@@ -500,7 +517,8 @@ export const JourneySettings = function JourneySettings() {
                         {/**
                          * POIs Tab Panel
                          */}
-                        <SlTabPanel name="pois">
+                        <SlTabPanel name={POIS}>
+                            <MapPOIEditFilter/>
                             <MapPOIEditSettings/>
                             <MapPOIList context={'journey-panel'}/>
                         </SlTabPanel>

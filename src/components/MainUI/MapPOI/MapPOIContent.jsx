@@ -7,25 +7,25 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-20
- * Last modified: 2025-06-20
+ * Created on: 2025-06-24
+ * Last modified: 2025-06-24
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { NameValueUnit }   from '@Components/DataDisplay/NameValueUnit'
-import { FontAwesomeIcon }                                       from '@Components/FontAwesomeIcon'
-import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER, POIS_STORE } from '@Core/constants'
-import { MapPOI }                                                from '@Core/MapPOI'
-import { UIToast }         from '@Utils/UIToast'
-import { ELEVATION_UNITS } from '@Utils/UnitUtils'
-import { snapdom }         from '@zumer/snapdom'
-import classNames          from 'classnames'
-import { DateTime }        from 'luxon'
-import { useEffect, useRef }                                     from 'react'
+import { NameValueUnit }                             from '@Components/DataDisplay/NameValueUnit'
+import { FontAwesomeIcon }                           from '@Components/FontAwesomeIcon'
+import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
+import { MapPOI }                                    from '@Core/MapPOI'
+import { UIToast }                                   from '@Utils/UIToast'
+import { ELEVATION_UNITS }                           from '@Utils/UnitUtils'
+import { snapdom }                                   from '@zumer/snapdom'
+import classNames                                    from 'classnames'
+import { DateTime }                                  from 'luxon'
+import { useEffect, useRef }                         from 'react'
 import './style.css'
-import { useSnapshot }     from 'valtio'
+import { useSnapshot }                               from 'valtio'
 
 /**
  * A React component that renders the content of a Point of Interest (POI) on the map.
@@ -52,6 +52,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
     // Component refs for DOM manipulation and canvas rendering
     const inner = useRef(null)
     const _poiContent = useRef(null)
+    const _icon = useRef(null)
 
     if (category) {
         useInMenu = true
@@ -179,7 +180,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
      */
     const handleClick = (event, entity) => {
         const poi = getPOI(entity)
-        Object.assign($pois.list.get(entity), {
+        __.ui.poiManager.updatePOI(entity, {
             expanded: !poi.expanded,
         })
     }
@@ -196,7 +197,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
     const handleMouseOver = (event, entity, options, data) => {
         const poi = getPOI(entity)
         if (!poi.expanded) {
-            Object.assign($pois.list.get(entity), {
+            __.ui.poiManager.updatePOI(entity, {
                 expanded:            true,
                 isMouseOverExpanded: true, // Flag to track expansion source
             })
@@ -216,7 +217,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
         const poi = getPOI(entity)
         // Only collapse if expansion was caused by mouse over
         if (poi.expanded && poi.isMouseOverExpanded) {
-            Object.assign($pois.list.get(entity), {
+            __.ui.poiManager.updatePOI(entity, {
                 expanded:            false,
                 isMouseOverExpanded: false,
             })
@@ -258,57 +259,66 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
     }
 
     /**
-     * Effect hook - only runs when category is not defined
+     * Renders the POI content to a canvas and updates the MapPOI
+     */
+    const renderToCanvas = () => {
+        try {
+            const scale = 2
+            const ratio = window.devicePixelRatio || 1
+
+            snapdom(_poiContent.current, {scale, fast: true}).then(snap => {
+                snap.toCanvas().then(async canvas => {
+                    const thePOI = new MapPOI($point)
+
+                    thePOI.image = {
+                        src:    canvas.toDataURL(),
+                        width:  canvas.width / scale / ratio,
+                        height: canvas.height / scale / ratio,
+                    }
+                    thePOI.pixelOffset = {
+                        x: point.expanded ? -13 : 0,
+                        y: 0,
+                    }
+                    await thePOI.utils.draw(thePOI)
+                })
+            })
+        }
+        catch (error) {
+            console.error('Error in renderToCanvas:', error)
+        }
+    }
+
+    /**
+     * Effect hook to handle canvas rendering and event listeners using MutationObserver
+     * Only runs when category is not defined
      */
     useEffect(() => {
         if (useInMenu || category) {
             return
         }
 
-        const renderToCanvas = async () => {
-            if (!_poiContent.current) {
-                return
-            }
+        requestAnimationFrame(renderToCanvas)
 
-            try {
-                const scale = 2
-                const ratio = window.devicePixelRatio || 1
+        // Set up MutationObserver to monitor changes to _poiContent
+        const observer = new MutationObserver(() => {
+            requestAnimationFrame(renderToCanvas)
+        });
 
-                snapdom(_poiContent.current, {scale: scale}).then(snap => {
-                    snap.toCanvas().then(async canvas => {
-                        const thePOI = new MapPOI($point)
-
-                        thePOI.update({
-                                          image:       {
-                                              src:    canvas.toDataURL('image/png'),
-                                              width:  canvas.width / scale / ratio,
-                                              height: canvas.height / scale / ratio,
-                                          },
-                                          pixelOffset: {
-                                              x: point.expanded ? -13 : 0,
-                                              y: 0,
-                                          },
-                                      })
-
-                        await thePOI.utils.draw(thePOI)
-                        lgs.scene.requestRender()
-
-                        await lgs.db.lgs1920.put(thePOI.id, MapPOI.serialize({
-                                                                                 ...thePOI,
-                                                                                 __class: MapPOI,
-                                                                             }), POIS_STORE)
-                    })
-                })
-            }
-            catch (error) {
-                console.error('Error occurred during POI canvas conversion:', error)
-            }
+        if (_poiContent.current) {
+            observer.observe(_poiContent.current, {
+                childList:     true,
+                attributes:    true,
+                characterData: true,
+                subtree:       true,
+            })
         }
 
-        renderToCanvas()
+        // Add event listeners
         addPOIEventListeners(point)
 
+        // Cleanup: Disconnect observer and remove event listeners
         return () => {
+            observer.disconnect()
             removePOIEventListeners(point)
         }
     }, [
@@ -322,7 +332,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                   category ? null : point?.latitude,
                   category ? null : point?.type,
                   category,
-              ])
+              ]); // Dependencies minimized to avoid unnecessary re-runs
 
     // When category is defined, render only the icon
     if (category) {
@@ -336,6 +346,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                     <div className="poi-card-inner" ref={inner} style={style}>
                         <div className="poi-card-inner-background"/>
                         <FontAwesomeIcon
+                            ref={_icon}
                             key={category}
                             icon={MapPOI.categoryIcon(category)}
                             className="poi-as-flag"
@@ -401,6 +412,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                              key={point.category}
                              icon={point.categoryIcon(point.category)}
                              className="poi-as-flag"
+                             ref={_icon}
                          />
                      )}
                 </div>
