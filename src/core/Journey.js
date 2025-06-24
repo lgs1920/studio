@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-16
- * Last modified: 2025-06-16
+ * Created on: 2025-06-24
+ * Last modified: 2025-06-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -50,6 +50,9 @@ export class Journey extends MapElement {
 
     hasElevation = false
     hasTime = false
+
+    tracksLoaded = false
+    poisLoaded = false
 
     constructor(title, type, options) {
         super(CURRENT_JOURNEY)
@@ -296,6 +299,7 @@ export class Journey extends MapElement {
                     this.tracks.set(slug, new Track(title, parameters))
                 }
             })
+            this.tracksLoaded = true
         }
     }
 
@@ -484,6 +488,8 @@ export class Journey extends MapElement {
                     }
                         break
                 }
+
+                this.poisLoaded = true
 
             }
 

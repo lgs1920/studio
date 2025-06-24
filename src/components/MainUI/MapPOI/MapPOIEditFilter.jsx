@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-23
- * Last modified: 2025-06-23
+ * Created on: 2025-06-24
+ * Last modified: 2025-06-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -76,6 +76,10 @@ export const MapPOIEditFilter = () => {
     if (!onlyJourney) {
       lgs.settings.poi.filter.global = true
       lgs.settings.poi.filter.journey = false
+    }
+    else {
+      lgs.settings.poi.filter.global = false
+      lgs.settings.poi.filter.journey = true
     }
   }, [onlyJourney])
 

@@ -49,6 +49,7 @@ import { useSnapshot }                               from 'valtio'
  *
  */
 export const MapPOIContent = ({poi, useInMenu = false, category = null, style, slot}) => {
+
     // Component refs for DOM manipulation and canvas rendering
     const inner = useRef(null)
     const _poiContent = useRef(null)
@@ -61,8 +62,8 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
     // Store references and reactive state - only when category is not defined
     const $pois = !category ? lgs.stores.main.components.pois : null
     const pois = !category ? useSnapshot($pois) : null
-    const $point = !category ? $pois.list.get(poi) : null
-    const point = !category ? useSnapshot($point) : null
+    const $point = !category ? $pois?.list?.get(poi) : null
+    const point = !category && $point ? useSnapshot($point) : null
 
     /**
      * Retrieves POI by ID and sets it as the current POI in the store.

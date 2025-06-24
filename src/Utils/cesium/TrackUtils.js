@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-10
- * Last modified: 2025-06-10
+ * Created on: 2025-06-24
+ * Last modified: 2025-06-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -698,7 +698,6 @@ export class TrackUtils {
                 // Check if the track already exists in context
                 // If not we manage and show it.
                 if (lgs.getJourneyBySlug(theJourney.slug)?.slug === undefined) {
-
                     theJourney.globalSettings()
 
                     // Need stats
