@@ -95,10 +95,6 @@ sl-tab sl-icon {
     margin-left: 0
 }
 
-#editor-journey-settings-panel .editor-vertical-menu {
-    justify-content: space-between;
-}
-
 
 #journey-text-description {
     gap: var(--lgs-gutter-xs);
