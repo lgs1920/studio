@@ -7,25 +7,24 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-23
- * Last modified: 2025-06-23
+ * Created on: 2025-06-25
+ * Last modified: 2025-06-25
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { MapPOIContent }                        from '@Components/MainUI/MapPOI/MapPOIContent'
-import { MapPOIEditMenu }                       from '@Components/MainUI/MapPOI/MapPOIEditMenu'
-import { memo, useCallback, useEffect, useMemo } from 'react'
-import { snapshot, useSnapshot }                from 'valtio'
 import { FontAwesomeIcon }                      from '@Components/FontAwesomeIcon'
+import { MapPOIContent }                        from '@Components/MainUI/MapPOI/MapPOIContent'
 import { MapPOIEditContent }                    from '@Components/MainUI/MapPOI/MapPOIEditContent'
 import { ToggleStateIcon }                      from '@Components/ToggleStateIcon'
-import { POIS_EDITOR_DRAWER, POI_STARTER_TYPE } from '@Core/constants'
+import { POI_STARTER_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
 import { faMask, faSquare, faSquareCheck }      from '@fortawesome/pro-regular-svg-icons'
 import { SlDetails }                            from '@shoelace-style/shoelace/dist/react'
 import { UIToast }                              from '@Utils/UIToast'
 import classNames                               from 'classnames'
+import { memo, useCallback, useMemo }           from 'react'
+import { useSnapshot }                          from 'valtio'
 
 // Pre-defined icons
 const ICONS = {
@@ -133,19 +132,17 @@ export const MapPOIListItem = memo(({id, poi, context}) => {
             '--fa-primary-opacity':   1,
             '--fa-secondary-opacity': 1,
         }),
-        [poi.bgColor, poi.color],
+        [poi.bgColor, poi.color, poi.visible],
     )
 
     // Memoized classes
     const classes = useMemo(
         () =>
             classNames('edit-map-poi-item', {
-                'map-poi-hidden':  !poi.visible,
                 'map-poi-starter': poi.type === POI_STARTER_TYPE,
             }),
         [poi.visible, poi.type],
     )
-
 
     return (
         <div className="edit-map-poi-item-wrapper">

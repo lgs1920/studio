@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-24
- * Last modified: 2025-06-24
+ * Created on: 2025-06-25
+ * Last modified: 2025-06-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -26,6 +26,7 @@ import { DateTime }                                  from 'luxon'
 import { useEffect, useRef }                         from 'react'
 import './style.css'
 import { useSnapshot }                               from 'valtio'
+import { faMask } from '@fortawesome/pro-solid-svg-icons'
 
 /**
  * A React component that renders the content of a Point of Interest (POI) on the map.
@@ -49,6 +50,7 @@ import { useSnapshot }                               from 'valtio'
  *
  */
 export const MapPOIContent = ({poi, useInMenu = false, category = null, style, slot}) => {
+
 
     // Component refs for DOM manipulation and canvas rendering
     const inner = useRef(null)
@@ -263,6 +265,9 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
      * Renders the POI content to a canvas and updates the MapPOI
      */
     const renderToCanvas = () => {
+        if (!$point.visible && !useInMenu) {
+            return
+        }
         try {
             const scale = 2
             const ratio = window.devicePixelRatio || 1
@@ -332,7 +337,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                   category ? null : point?.longitude,
                   category ? null : point?.latitude,
                   category ? null : point?.type,
-                  category,
+        category, point?.visible,
               ]); // Dependencies minimized to avoid unnecessary re-runs
 
     // When category is defined, render only the icon
@@ -343,7 +348,8 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                 'poi-shrinked',
                 'used-in-menu',
             )} {...(slot && {slot: slot})}>
-                <div className="poi-card" ref={_poiContent}>
+
+            <div className="poi-card" ref={_poiContent}>
                     <div className="poi-card-inner" ref={inner} style={style}>
                         <div className="poi-card-inner-background"/>
                         <FontAwesomeIcon
@@ -355,6 +361,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                         />
                     </div>
                 </div>
+
             </div>
         )
     }
@@ -372,6 +379,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                  '--lgs-poi-color':            point.color ?? lgs.colors.poiDefault,
              }}
         >
+
             <div className="poi-card" ref={_poiContent}>
                 <div className="poi-card-inner" ref={inner} id={`poi-inner-${point?.id}`}>
                     {!useInMenu &&
@@ -411,7 +419,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                     ) : (
                          <FontAwesomeIcon
                              key={point.category}
-                             icon={point.categoryIcon(point.category)}
+                             icon={point?.visible ? point.categoryIcon(point.category) : faMask}
                              className="poi-as-flag"
                              ref={_icon}
                          />
@@ -424,6 +432,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                     </div>
                 }
             </div>
+
         </div>
     )
 }
