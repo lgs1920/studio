@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-22
- * Last modified: 2025-06-22
+ * Created on: 2025-06-25
+ * Last modified: 2025-06-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -310,12 +310,11 @@ export const MapPOIContextMenu = () => {
                                 </li>
                             }
 
-                            {_current.type !== POI_STARTER_TYPE &&
                                 <li onClick={hide}>
                                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faMask)}></SlIcon>
                                     <span>{'Hide'}</span>
                                 </li>
-                            }
+
                             <SlDivider/>
                             <li onClick={copy}>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCopy)}></SlIcon>
