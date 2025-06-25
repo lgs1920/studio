@@ -38,54 +38,70 @@ const filterAndSortPois = (poisList, onlyJourney = false, settings) => {
     const {filter: {journey, global, byName, byCategories, exclude, alphabetic}} = settings
     const {theJourney} = lgs
 
-    // Return empty array if journey not loaded and onlyJourney is true
+    // If onlyJourney is true, force journey filter to true to include journey POIs
+    const effectiveJourney = onlyJourney || journey
+
+    // Check if onlyJourney is true but journey is not loaded
+    // Prevents processing without valid journey data when onlyJourney is required
     if (onlyJourney && !(theJourney && theJourney.poisLoaded === true)) {
         return []
     }
 
+    // Initialize result array to store filtered [id, poi] pairs
     const result = []
+    // Iterate over poisList entries (id, poi pairs)
     for (const [id, poi] of (poisList?.entries?.() || [])) {
-
-        // Skip invalid POIs
+        // Validate POI
+        // Ensures only valid POIs are processed to avoid errors
         if (!poi || typeof poi.title !== 'string') {
             continue
         }
 
-        // Journey filter: only include POIs with parent matching journey
+        // Apply journey parent filter
+        // Skips POIs not associated with the current journey when required
         if ((onlyJourney && !poi.parent) || (poi.parent && !poi.parent.includes(theJourney?.slug))) {
             continue
         }
 
-
-        // Journey/global filter
-        const isInJourney = journey && theJourney?.pois.includes(id)
+        // Apply journey/global filter
+        // effectiveJourney ensures journey is true when onlyJourney is true
+        const isInJourney = effectiveJourney && theJourney?.pois.includes(id)
         const isGlobal = global && !poi.parent
-
         if (!(isInJourney || isGlobal)) {
             continue
         }
-        // Name filter
+
+        // Apply name filter
+        // Skips POIs whose titles don’t match the search term
         if (byName && !poi.title.toLowerCase().includes(byName.toLowerCase())) {
             continue
         }
 
-        // Category filter
+        // Apply category filter
+        // If byCategories array exists and has length, filter by category
         if (byCategories?.length) {
+            // Non-categorized POIs are included when excluding categories
             if (!poi.category) {
                 if (exclude) {
                     result.push([id, poi])
                 }
                 continue
             }
+            // Check if POI’s category is in byCategories
+            // If exclude is true, skip POIs in byCategories
+            // If exclude is false, skip POIs not in byCategories
             const inCategory = byCategories.includes(poi.category)
             if (exclude ? inCategory : !inCategory) {
                 continue
             }
         }
 
+        // If all filters pass, add POI to result
         result.push([id, poi])
     }
 
+    // Sort result by POI title
+    // Sort alphabetically if alphabetic is true, otherwise reverse
     return result.sort(([, a], [, b]) => {
         return alphabetic ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title)
     })
