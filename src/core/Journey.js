@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-24
- * Last modified: 2025-06-24
+ * Created on: 2025-06-25
+ * Last modified: 2025-06-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -488,10 +488,8 @@ export class Journey extends MapElement {
                     }
                         break
                 }
-
-                this.poisLoaded = true
-
             }
+            this.poisLoaded = true
 
             // If we need to have Flags  on limits only (ie first on first track, last of last track)
             // we adapt the visibility for the flagged POIs

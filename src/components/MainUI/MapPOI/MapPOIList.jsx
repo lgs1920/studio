@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-24
- * Last modified: 2025-06-24
+ * Created on: 2025-06-25
+ * Last modified: 2025-06-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,7 +20,7 @@ import { faTriangleExclamation }            from '@fortawesome/pro-regular-svg-i
 import { SlAlert, SlIcon }                  from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                            from '@Utils/FA2SL'
 import { memo, useEffect, useMemo, useRef } from 'react'
-import { snapshot, useSnapshot }            from 'valtio'
+import { useSnapshot } from 'valtio'
 
 // Pre-calculated warning icon for alert messages
 const ICON_WARNING = FA2SL.set(faTriangleExclamation)
@@ -34,41 +34,36 @@ const ICON_WARNING = FA2SL.set(faTriangleExclamation)
  *     alphabetic: true } }] - Configuration object for filtering and sorting POIs.
  * @returns {Array<[string, Object]>} Filtered and sorted array of [id, poi] entries.
  */
-const filterAndSortPois = (poisList, onlyJourney = false, settings = {
-    filter: {
-        journey:      true,
-        global:       true,
-        byName:       '',
-        byCategories: [],
-        exclude:      false,
-        alphabetic:   true,
-    },
-}) => {
+const filterAndSortPois = (poisList, onlyJourney = false, settings) => {
     const {filter: {journey, global, byName, byCategories, exclude, alphabetic}} = settings
     const {theJourney} = lgs
 
     // Return empty array if journey not loaded and onlyJourney is true
-    if (onlyJourney && !theJourney?.poisLoaded) {
+    if (onlyJourney && !(theJourney && theJourney.poisLoaded === true)) {
         return []
     }
 
     const result = []
     for (const [id, poi] of (poisList?.entries?.() || [])) {
+
         // Skip invalid POIs
         if (!poi || typeof poi.title !== 'string') {
             continue
         }
 
         // Journey filter: only include POIs with parent matching journey
-        if (onlyJourney && (!poi.parent || !poi.parent.includes(theJourney?.slug))) {
+        if ((onlyJourney && !poi.parent) || (poi.parent && !poi.parent.includes(theJourney?.slug))) {
             continue
         }
+
 
         // Journey/global filter
-        if (!(journey && Array.isArray(theJourney?.pois) && theJourney.pois.includes(id) || global && !poi.parent)) {
+        const isInJourney = journey && theJourney?.pois.includes(id)
+        const isGlobal = global && !poi.parent
+
+        if (!(isInJourney || isGlobal)) {
             continue
         }
-
         // Name filter
         if (byName && !poi.title.toLowerCase().includes(byName.toLowerCase())) {
             continue
@@ -115,7 +110,6 @@ export const MapPOIList = memo(({context}) => {
 
     // Memoized computation: determine if we're in journey-only mode
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
-
     // Memoized computation: filter and sort POIs
     const filteredPois = useMemo(() => {
         return filterAndSortPois(pois.list, onlyJourney, settings)
@@ -145,14 +139,22 @@ export const MapPOIList = memo(({context}) => {
         // Reset bulk selection
         $pois.bulkList.clear()
 
-        // Update filtered list in store
-        const targetList = onlyJourney ? $pois.filtered.journey : $pois.filtered.global
-        targetList.clear()
         const bulkUpdates = new Map()
-        filteredPois.forEach(([id, poi]) => {
-            targetList.set(id, poi)
-            bulkUpdates.set(id, false)
-        })
+        if (onlyJourney) {
+            //   $pois.filtered.journey.clear()
+            filteredPois.forEach(([id, poi]) => {
+                $pois.filtered.journey.set(id, poi)
+                bulkUpdates.set(id, false)
+            })
+        }
+        else {
+            //  $pois.filtered.global.clear()
+            filteredPois.forEach(([id, poi]) => {
+                $pois.filtered.global.set(id, poi)
+                bulkUpdates.set(id, false)
+            })
+        }
+
         Object.assign($pois.bulkList, bulkUpdates)
     }, [lgs.theJourney?.slug, filteredPois, onlyJourney, $pois.bulkList, $pois.filtered.journey, $pois.filtered.global, drawers.action])
 
@@ -181,5 +183,5 @@ export const MapPOIList = memo(({context}) => {
         <div id="edit-map-poi-list" ref={poiList}>
             {content}
         </div>
-    );
-});
+    )
+})
