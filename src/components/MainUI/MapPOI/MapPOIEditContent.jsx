@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-22
- * Last modified: 2025-06-22
+ * Created on: 2025-06-25
+ * Last modified: 2025-06-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -170,9 +170,10 @@ export const MapPOIEditContent = ({poi}) => {
      */
     const handleChangeTitle = async event => {
         if (window.isOK) {
-            await __.ui.poiManager.updatePOI(point.id, {
+            point = await __.ui.poiManager.updatePOI(point.id, {
                 title: event.target.value,
             })
+            $pois.current = point.id
         }
     }
 

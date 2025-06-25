@@ -181,7 +181,6 @@ export const MapPOIList = memo(({context}) => {
                 <MapPOIListItem
                     key={id}
                     id={id}
-                    poi={poiData}
                     context={context}
                 />
             ))

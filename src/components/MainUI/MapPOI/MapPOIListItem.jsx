@@ -36,14 +36,13 @@ const ICONS = {
  * A memoized React component for displaying a single Point of Interest (POI) item in a list.
  * @param {Object} props - Component props
  * @param {string} props.id - The unique ID of the POI
- * @param {Object} props.poi - The POI object
  * @returns {JSX.Element} The rendered POI list item
  */
-export const MapPOIListItem = memo(({id, poi, context}) => {
+export const MapPOIListItem = memo(({id, context}) => {
     const $pois = lgs.stores.main.components.pois
     const current = useSnapshot($pois, {sync: true}).current
     const {bulkList} = useSnapshot($pois, {sync: true})
-
+    const poi = useSnapshot($pois.list).get(id)
     const drawerOpen = useSnapshot(lgs.stores.main.drawers).open
 
     // Memoized bulk list handler
@@ -58,7 +57,7 @@ export const MapPOIListItem = memo(({id, poi, context}) => {
     const handleCopyCoordinates = useCallback(() => {
         __.ui.poiManager.copyCoordinatesToClipboard(poi).then(() => {
             UIToast.success({
-                                caption: `${poi.name}`,
+                                caption: `${poi.title}`,
                                 text:    'Coordinates copied to the clipboard <br/>under the form: latitude, longitude',
                             })
         })
