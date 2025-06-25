@@ -163,9 +163,8 @@ export const MapPOIListItem = memo(({id, context}) => {
                 <div slot="summary">
                     <div>
                         <MapPOIContent poi={poi.id} useInMenu={true}/>
-                        {poi.title}
+                        <span>{poi.title}</span>
                     </div>
-                    <span></span>
                 </div>
                 <MapPOIEditContent context={context} poi={poi}/>
             </SlDetails>
