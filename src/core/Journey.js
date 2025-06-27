@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-25
- * Last modified: 2025-06-25
+ * Created on: 2025-06-27
+ * Last modified: 2025-06-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -343,8 +343,6 @@ export class Journey extends MapElement {
     /**
      * Extract pois from GeoJson
      *
-     * Populate this.pois
-     *
      */
     getPOIsFromGeoJson = async () => {
         if (this.geoJson.type === FEATURE_COLLECTION) {
@@ -401,8 +399,6 @@ export class Journey extends MapElement {
                         }
                         const poi = new MapPOI({...common, ...parameters})
                         await __.ui.poiManager.add(poi, false)
-                        this.pois.push(poi.id)
-
                         break
                     }
                     case FEATURE_LINE_STRING :
@@ -444,7 +440,6 @@ export class Journey extends MapElement {
                         }
                         const startFlag = new MapPOI({...common, ...startParameters})
                         await __.ui.poiManager.add(startFlag, false)
-                        this.pois.push(startFlag.id)
                         this.tracks.get(parentSlug).flags.start = startFlag.id
 
                         // Create Track Stop Flag
@@ -483,7 +478,6 @@ export class Journey extends MapElement {
 
                         const stopFlag = new MapPOI({...common, ...stopParameters})
                         await __.ui.poiManager.add(stopFlag, false)
-                        this.pois.push(stopFlag.id)
                         this.tracks.get(parentSlug).flags.stop = stopFlag.id
                     }
                         break

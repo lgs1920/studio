@@ -7,23 +7,23 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-23
- * Last modified: 2025-06-23
+ * Created on: 2025-06-27
+ * Last modified: 2025-06-26
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { MapPOIEditFilter }       from '@Components/MainUI/MapPOI/MapPOIEditFilter'
-import { MapPOIEditToggleFilter } from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
+import { MapPOIEditFilter }                      from '@Components/MainUI/MapPOI/MapPOIEditFilter'
+import { MapPOIEditSettings }                    from '@Components/MainUI/MapPOI/MapPOIEditSettings'
+import { MapPOIEditToggleFilter }                from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
+import { MapPOIList }                            from '@Components/MainUI/MapPOI/MapPOIList'
+import { POIS_EDITOR_DRAWER }                    from '@Core/constants'
+import { SlDrawer }                              from '@shoelace-style/shoelace/dist/react'
 import { memo, useCallback, useEffect, useMemo } from 'react'
 import { useSnapshot }                           from 'valtio'
-import { SlDrawer }                              from '@shoelace-style/shoelace/dist/react'
-import { MapPOIEditSettings }     from '@Components/MainUI/MapPOI/MapPOIEditSettings'
-import { MapPOIList }                            from '@Components/MainUI/MapPOI/MapPOIList'
+import { proxyMap }                              from 'valtio/utils'
 import { DrawerFooter }                          from '../../DrawerFooter'
-import { POIS_EDITOR_DRAWER }     from '@Core/constants'
-import { proxyMap }               from 'valtio/utils'
 import './style.css'
 
 /**
@@ -31,8 +31,8 @@ import './style.css'
  * @returns {JSX.Element} The rendered drawer panel
  */
 export const Panel = memo(() => {
-    const mainStore = lgs.mainProxy
-    const mainSnap = useSnapshot(mainStore, {sync: true})
+    const $main = lgs.stores.main
+    const main = useSnapshot($main, {sync: true})
     const menu = useSnapshot(lgs.editorSettingsProxy.menu, {sync: true})
 
     // Memoized closePOIsEditor handler
@@ -79,13 +79,13 @@ export const Panel = memo(() => {
 
     // Update categories in store only when they change
     useEffect(() => {
-        mainStore.components.pois.categories = new proxyMap([...categories.entries()])
-    }, [categories, mainStore.components.pois])
+        $main.components.pois.categories = new proxyMap([...categories.entries()])
+    }, [categories, $main.components.pois])
 
     return (
         <SlDrawer
             id={POIS_EDITOR_DRAWER}
-            open={mainSnap.drawers.open === POIS_EDITOR_DRAWER}
+            open={main.drawers.open === POIS_EDITOR_DRAWER}
             onSlRequestClose={handleRequestClose}
             onSlAfterHide={closePOIsEditor}
             contained
@@ -93,11 +93,15 @@ export const Panel = memo(() => {
             placement={menu.drawer}
             label="Points Of Interest"
         >
-            <MapPOIEditToggleFilter/>
-            <MapPOIEditFilter/>
-            <MapPOIEditSettings/>
-            <MapPOIList context={'poi-panel'}/>
-            <DrawerFooter/>
+            {main.drawers.open === POIS_EDITOR_DRAWER &&
+                <>
+                    <MapPOIEditToggleFilter/>
+                    <MapPOIEditFilter/>
+                    <MapPOIEditSettings/>
+                    <MapPOIList/>
+                    <DrawerFooter/>
+                </>
+            }
         </SlDrawer>
     )
 })

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-28
- * Last modified: 2025-02-28
+ * Created on: 2025-06-27
+ * Last modified: 2025-06-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -124,6 +124,16 @@ export class AppToolsManager {
             || rect.left < 0
             || rect.bottom > (container.innerHeight || document.documentElement.clientHeight)
             || rect.right > (container.innerWidth || document.documentElement.clientWidth))
+    }
+
+    debounce = (func, wait = 300) => {
+        let timeout
+        return (...args) => {
+            clearTimeout(timeout)
+            timeout = setTimeout(() => {
+                func.apply(this, args)
+            }, wait)
+        }
     }
 
 }

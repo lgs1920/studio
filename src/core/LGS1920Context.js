@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-21
- * Last modified: 2025-06-21
+ * Created on: 2025-06-27
+ * Last modified: 2025-06-27
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import {
-    APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, JOURNEYS_STORE, ORIGIN_STORE, platforms,
-    POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE,
+    APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEYS_STORE, ORIGIN_STORE,
+    platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE,
 }                            from '@Core/constants'
 import { StoresManager }     from '@Core/stores/StoresManager'
 import { AppToolsManager }   from '@Core/ui/AppToolsManager'
@@ -254,6 +254,9 @@ export class LGS1920Context {
      * @returns {*} The journey object associated with the processed slug, or undefined if not found.
      */
     getJourneyByTrackSlug = (slug) => {
+        if (slug === GLOBAL_PARENT) {
+            return {slug: GLOBAL_PARENT}
+        }
         const parts = slug.split('#')
         if (parts.length === 2) {
             // UC : journey POIs = parent = journey slug

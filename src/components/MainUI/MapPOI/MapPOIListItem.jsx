@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-25
- * Last modified: 2025-06-25
+ * Created on: 2025-06-27
+ * Last modified: 2025-06-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,10 +23,10 @@ import { faMask, faSquare, faSquareCheck }      from '@fortawesome/pro-regular-s
 import { SlDetails }                            from '@shoelace-style/shoelace/dist/react'
 import { UIToast }                              from '@Utils/UIToast'
 import classNames                               from 'classnames'
-import { memo, useCallback, useMemo }           from 'react'
+import { memo, useCallback, useMemo, useRef } from 'react'
 import { useSnapshot }                          from 'valtio'
 
-// Pre-defined icons
+// Pre-defined icons - calculate once
 const ICONS = {
     true:  faSquareCheck,
     false: faSquare,
@@ -36,112 +36,144 @@ const ICONS = {
  * A memoized React component for displaying a single Point of Interest (POI) item in a list.
  * @param {Object} props - Component props
  * @param {string} props.id - The unique ID of the POI
+ * @param {string} props.context - The context identifier
  * @returns {JSX.Element} The rendered POI list item
  */
-export const MapPOIListItem = memo(({id, context}) => {
+export const MapPOIListItem = memo(({id}) => {
     const $pois = lgs.stores.main.components.pois
-    const current = useSnapshot($pois, {sync: true}).current
-    const {bulkList} = useSnapshot($pois, {sync: true})
-    const poi = useSnapshot($pois.list).get(id)
-    const drawerOpen = useSnapshot(lgs.stores.main.drawers).open
+    // Pre-calculate default colors to avoid repeated access
+    const DEFAULT_POI_BG = lgs.colors.poiDefaultBackground
 
-    // Memoized bulk list handler
+    // Fix: Get the current value from the store snapshot, not directly from the primitive
+    const pois = useSnapshot($pois, {sync: true})
+    const current = pois.current  // Access current from the snapshot
+    const {bulkList} = pois
+
+    // Get the specific POI data
+    const poi = useMemo(() => pois.list.get(id), [pois.list, id])
+    // Get drawer state
+    const drawerOpen = useSnapshot(lgs.stores.main.drawers, {sync: true}).open
+
+    // Cache refs to avoid recreation
+    const bulkStateRef = useRef(bulkList.get(id) ?? false)
+
+    // Memoize bulk list handler with stable dependency
     const handleBulkList = useCallback(
         (state) => {
             $pois.bulkList.set(id, state)
+            bulkStateRef.current = state
         },
-        [id, bulkList],
+        [id, $pois.bulkList],
     )
 
-    // Memoized copy coordinates handler
+    // Memoize copy coordinates handler
     const handleCopyCoordinates = useCallback(() => {
         __.ui.poiManager.copyCoordinatesToClipboard(poi).then(() => {
             UIToast.success({
-                                caption: `${poi.title}`,
+                                caption: poi.title,
                                 text:    'Coordinates copied to the clipboard <br/>under the form: latitude, longitude',
                             })
         })
-    }, [poi])
+    }, [id, poi]) // Only depend on stable identifiers
 
-    // Memoized select POI handler
+    // Optimize the select POI handler with better dependency management
     const selectPOI = useCallback(async (event) => {
-        if (window.isOK(event)) {
-            let thePOI = $pois.list.get(id)
-            let forceFocus = false
+        if (!window.isOK(event)) {
+            return
+        }
 
-            if (current === false) {
-                $pois.current = id
-                forceFocus = true
+        let thePOI = $pois.list.get(id)
+        const needsNewSelection = current === false || current !== id
+
+        if (needsNewSelection) {
+            $pois.current = id
+
+            // Update POI animation state
+            thePOI = {
+                ...thePOI,
+                animated: false,
             }
+            $pois.list.set(id, thePOI)
 
-            if (current !== id || forceFocus) {
-                $pois.current = id
-                thePOI = {
-                    ...thePOI,
-                    animated: false,
-                }
-                $pois.list.set(id, thePOI)
+            // Get appropriate filtered POI based on drawer state
+            const filteredPOI = drawerOpen === POIS_EDITOR_DRAWER
+                                ? $pois.filtered.global.get(id)
+                                : $pois.filtered.journey.get(id)
 
-                if (drawerOpen === POIS_EDITOR_DRAWER) {
-                    thePOI = $pois.filtered.global.get(id)
-                }
-                else {
-                    thePOI = $pois.filtered.journey.get(id)
+            // Handle focus and animation if needed
+            if (lgs.settings.ui.poi.focusOnEdit && drawerOpen === POIS_EDITOR_DRAWER && __.ui.drawerManager.over) {
+                const camera = lgs.mainProxy.components.camera
+
+                if (__.ui.cameraManager.isRotating()) {
+                    await __.ui.cameraManager.stopRotate()
+                    filteredPOI?.stopAnimation?.()
                 }
 
-                if (lgs.settings.ui.poi.focusOnEdit && drawerOpen === POIS_EDITOR_DRAWER && __.ui.drawerManager.over) {
-                    const camera = lgs.mainProxy.components.camera
-                    if (__.ui.cameraManager.isRotating()) {
-                        await __.ui.cameraManager.stopRotate()
-                        thePOI.stopAnimation?.()
-                    }
-                    __.ui.sceneManager.focus(thePOI, {
-                        target: thePOI,
-                        heading:    camera.position.heading,
-                        pitch:      camera.position.pitch,
-                        roll:       camera.position.roll,
-                        range:      5000,
-                        infinite:   false,
-                        rpm:        lgs.settings.ui.poi.rpm,
-                        rotations:  1,
-                        rotate:     lgs.settings.ui.poi.rotate,
-                        panoramic:  false,
-                        flyingTime: 0,
-                    })
-                    if (lgs.settings.ui.poi.rotate) {
-                        thePOI.startAnimation?.()
-                    }
-                }
-            }
+                __.ui.sceneManager.focus(filteredPOI, {
+                    target:     filteredPOI,
+                    heading:    camera.position.heading,
+                    pitch:      camera.position.pitch,
+                    roll:       camera.position.roll,
+                    range:      5000,
+                    infinite:   false,
+                    rpm:        lgs.settings.ui.poi.rpm,
+                    rotations:  1,
+                    rotate:     lgs.settings.ui.poi.rotate,
+                    panoramic:  false,
+                    flyingTime: 0,
+                })
 
-            const item = document.getElementById(`edit-map-poi-${id}`)
-            if (item) {
-                item.scrollIntoView({behavior: 'smooth', block: 'start'})
-                item.focus()
+                if (lgs.settings.ui.poi.rotate) {
+                    filteredPOI?.startAnimation?.()
+                }
             }
         }
-    }, [id])
 
-    // Memoized styles
-    const styles = useMemo(
-        () => ({
-            '--map-poi-bg-header':  __.ui.ui.hexToRGBA(poi.bgColor ?? lgs.colors.poiDefaultBackground, 'rgba', 0.2),
-            '--fa-primary-color':   poi.color,
-            '--fa-secondary-color': poi.bgColor,
+        // Scroll to item - optimize DOM query
+        const item = document.getElementById(`edit-map-poi-${id}`)
+        if (item) {
+            item.scrollIntoView({behavior: 'smooth', block: 'start'})
+            item.focus()
+        }
+    }, [id, current, drawerOpen, $pois])
+
+    // Memoize styles with better performance
+    const styles = useMemo(() => {
+        if (!poi) {
+            return {}
+        }
+
+        const bgColor = poi.bgColor ?? DEFAULT_POI_BG
+        return {
+            '--map-poi-bg-header':    __.ui.ui.hexToRGBA(bgColor, 'rgba', 0.2),
+            '--fa-primary-color':     poi.color,
+            '--fa-secondary-color':   bgColor,
             '--fa-primary-opacity':   1,
             '--fa-secondary-opacity': 1,
-        }),
-        [poi.bgColor, poi.color, poi.visible],
+        }
+    }, [poi?.bgColor, poi?.color])
+
+    // Memoize classes with fewer dependencies
+    const classes = useMemo(() => {
+        if (!poi) {
+            return 'edit-map-poi-item'
+        }
+
+        return classNames('edit-map-poi-item', {
+            'map-poi-starter': poi.type === POI_STARTER_TYPE,
+        })
+    }, [poi?.type])
+
+    // Memoize bulk state to avoid unnecessary re-renders
+    const bulkState = useMemo(() =>
+                                  bulkList.get(id) ?? false,
+                              [bulkList, id]
     )
 
-    // Memoized classes
-    const classes = useMemo(
-        () =>
-            classNames('edit-map-poi-item', {
-                'map-poi-starter': poi.type === POI_STARTER_TYPE,
-            }),
-        [poi.visible, poi.type],
-    )
+    // Early return if POI doesn't exist
+    if (!poi) {
+        return null
+    }
 
     return (
         <div className="edit-map-poi-item-wrapper">
@@ -166,8 +198,13 @@ export const MapPOIListItem = memo(({id, context}) => {
                         <span>{poi.title}</span>
                     </div>
                 </div>
-                <MapPOIEditContent context={context} poi={poi}/>
+                {current === id && <MapPOIEditContent poi={poi}/>}
             </SlDetails>
         </div>
     )
+}, (prevProps, nextProps) => {
+    // Custom comparison function for better memoization
+    return prevProps.id === nextProps.id && prevProps.context === nextProps.context
 })
+
+MapPOIListItem.displayName = 'MapPOIListItem'

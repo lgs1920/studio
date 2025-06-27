@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-23
- * Last modified: 2025-06-23
+ * Created on: 2025-06-27
+ * Last modified: 2025-06-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -26,8 +26,8 @@ import {
     ToggleStateIcon,
 }                   from '@Components/ToggleStateIcon'
 import {
-    CURRENT_JOURNEY,
-    ORIGIN_STORE, POI_STANDARD_TYPE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE,
+    CURRENT_JOURNEY, JOURNEY_EDITOR_DRAWER,
+    ORIGIN_STORE, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE,
     UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
 import {
@@ -73,8 +73,8 @@ import {
 import classNames   from 'classnames'
 import parse        from 'html-react-parser'
 import React, {
-    useEffect, useRef, useState,
-}                   from 'react'
+    useEffect, useMemo, useRef, useState,
+} from 'react'
 import {
     sprintf,
 }                   from 'sprintf-js'
@@ -94,7 +94,8 @@ export const JourneySettings = function JourneySettings() {
     const theJourneyEditor = useSnapshot($theJourneyEditor)
     const former = $theJourneyEditor.journey.elevationServer
     const editorStore = useSnapshot(lgs.theJourneyEditorProxy)
-
+    const $main = lgs.stores.main
+    const main = useSnapshot($main, {sync: true})
     const $rotate = lgs.stores.main.components.mainUI.rotate
     const rotate = useSnapshot($rotate)
 
@@ -407,22 +408,35 @@ export const JourneySettings = function JourneySettings() {
     const textVisibilityJourney = sprintf('%s Journey', theJourneyEditor.journey.visible ? 'Hide' : 'Show')
     const textVisibilityPOIs = sprintf('%s POIs', theJourneyEditor.journey.allPOIs ? 'Hide' : 'Show')
 
-    let serverList = []
+    // Memoize serverList based on journey elevation properties
+    const serverList = useMemo(() => {
+        const list = []
 
-    if (!theJourneyEditor.journey.hasElevation) {
-        if (theJourneyEditor.journey?.elevationServer === ElevationServer.NONE) {
-            serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.NONE))
+        if (!theJourneyEditor.journey.hasElevation) {
+            if (theJourneyEditor.journey?.elevationServer === ElevationServer.NONE) {
+                list.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.NONE))
+            }
+            else {
+                list.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.CLEAR))
+            }
         }
         else {
-            serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.CLEAR))
+            list.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.CLEAR))
+            list.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.FILE_CONTENT))
         }
-    }
-    else {
-        serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.CLEAR))
-        serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.FILE_CONTENT))
-    }
-    serverList = serverList.concat(Array.from(ElevationServer.SERVERS.values()))
-    lgs.stores.main.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+
+        return list.concat(Array.from(ElevationServer.SERVERS.values()))
+    }, [theJourneyEditor.journey.hasElevation, theJourneyEditor.journey.elevationServer]);
+
+    // Handle removeJourneyDialog.active state
+    useEffect(() => {
+        lgs.stores.main.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+
+        // Cleanup (already present in original code)
+        return () => {
+            lgs.stores.main.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+        }
+    }, []) // Empty dependency array ensures this runs only on mount/unmount
 
     useEffect(() => {
         return (() => {
@@ -441,7 +455,8 @@ export const JourneySettings = function JourneySettings() {
     }
 
     return (<>
-        {theJourneyEditor.journey &&
+        {theJourneyEditor.journey && main.drawers.open === JOURNEY_EDITOR_DRAWER &&
+
             <div id="journey-settings" key={lgs.stores.main.components.journeyEditor.keys.journey.settings}>
                 <div className={'settings-panel'} id={'editor-journey-settings-panel'}>
                     <SlTabGroup className={'menu-panel'} onSlTabShow={toggleFilter} onSlTabHide={toggleFilter}>
@@ -520,7 +535,7 @@ export const JourneySettings = function JourneySettings() {
                         <SlTabPanel name={POIS}>
                             <MapPOIEditFilter/>
                             <MapPOIEditSettings/>
-                            <MapPOIList context={'journey-panel'}/>
+                            <MapPOIList/>
                         </SlTabPanel>
 
                         {/**

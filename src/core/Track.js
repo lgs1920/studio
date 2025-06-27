@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-28
- * Last modified: 2025-04-28
+ * Created on: 2025-06-27
+ * Last modified: 2025-06-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -69,7 +69,6 @@ export class Track extends MapElement {
         this.content = options.content
         this.flags = options.flags ?? {start: undefined, stop: undefined}
         this.marker = options.marker ?? null
-        this.pois = options.pois ?? []
 
         this.metrics = options.metrics ?? {}
     }
