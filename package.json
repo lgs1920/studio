@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@awesome.me/kit-eb5c406148": "^1.0.87",
-    "@eslint/migrate-config": "^1.5.1",
+    "@eslint/migrate-config": "^1.5.2",
     "@fortawesome/duotone-light-svg-icons": "^6.7.2",
     "@fortawesome/duotone-regular-svg-icons": "^6.7.2",
     "@fortawesome/duotone-thin-svg-icons": "^6.7.2",
@@ -54,7 +54,7 @@
     "classnames": "^2.5.1",
     "color": "^5.0.0",
     "deep-object-diff": "^1.1.9",
-    "dotenv": "^16.5.0",
+    "dotenv": "^16.6.0",
     "easy-file-picker": "^1.1.0",
     "echarts": "^5.6.0",
     "echarts-for-react": "^3.0.2",
