@@ -8,7 +8,7 @@
  * email: contact@lgs1920.fr
  *
  * Created on: 2025-06-27
- * Last modified: 2025-06-26
+ * Last modified: 2025-06-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -83,25 +83,28 @@ export const Panel = memo(() => {
     }, [categories, $main.components.pois])
 
     return (
-        <SlDrawer
-            id={POIS_EDITOR_DRAWER}
-            open={main.drawers.open === POIS_EDITOR_DRAWER}
-            onSlRequestClose={handleRequestClose}
-            onSlAfterHide={closePOIsEditor}
-            contained
-            className="lgs-theme"
-            placement={menu.drawer}
-            label="Points Of Interest"
-        >
-            {main.drawers.open === POIS_EDITOR_DRAWER &&
-                <>
-                    <MapPOIEditToggleFilter/>
-                    <MapPOIEditFilter/>
-                    <MapPOIEditSettings/>
-                    <MapPOIList/>
-                    <DrawerFooter/>
-                </>
-            }
-        </SlDrawer>
+        <div className="drawer-wrapper">
+
+            <SlDrawer
+                id={POIS_EDITOR_DRAWER}
+                open={main.drawers.open === POIS_EDITOR_DRAWER}
+                onSlRequestClose={handleRequestClose}
+                onSlAfterHide={closePOIsEditor}
+                contained
+                className="lgs-theme"
+                placement={menu.drawer}
+            >
+                <span slot="label">{'Points Of Interest'}</span>
+                {main.drawers.open === POIS_EDITOR_DRAWER &&
+                    <>
+                        <MapPOIEditToggleFilter/>
+                        <MapPOIEditFilter/>
+                        <MapPOIEditSettings/>
+                        <MapPOIList/>
+                        <DrawerFooter/>
+                    </>
+                }
+            </SlDrawer>
+        </div>
     )
 })

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-15
- * Last modified: 2025-06-15
+ * Created on: 2025-06-27
+ * Last modified: 2025-06-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -123,8 +123,8 @@ export const TracksEditor = memo(() => {
                 contained
                 className="lgs-theme"
                 placement={drawerPlacement}
-                label="Edit your Journey"
             >
+                <span slot="label">{'Edit the Journey'}</span>
                 <ToolbarHeader
                     show={toolbarShow}
                     usage={toolbarUsage}
