@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-10
- * Last modified: 2025-06-10
+ * Created on: 2025-06-27
+ * Last modified: 2025-06-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,6 +23,7 @@
  * - Handling the opening and closing of drawers
  * - Tracking mouse interactions with drawer elements
  * - Supporting tabbed content within drawers
+ * - Dispatching custom events when drawers are closed
  *
  * @class DrawerManager
  */
@@ -33,20 +34,19 @@ export class DrawerManager {
      * @property {string|null} open - ID of the currently open drawer, or null if no drawer is open
      * @property {string|null} action - Current action being performed in the drawer
      */
-    drawers = null
+    drawers = null;
 
     /**
      * Indicates whether the mouse is currently over a drawer element
      * @type {boolean}
      */
-    over = false
+    over = false;
 
     /**
      * Creates a new instance of DrawerManager or returns the existing instance if one exists.
      * Implements the singleton pattern to ensure only one instance of DrawerManager exists.
      */
     constructor() {
-        // Singleton implementation
         if (DrawerManager.instance) {
             return DrawerManager.instance
         }
@@ -63,7 +63,7 @@ export class DrawerManager {
      */
     isCurrent = (id) => {
         return this.drawers.open === id
-    }
+    };
 
     /**
      * Determines if a drawer can be opened.
@@ -74,7 +74,7 @@ export class DrawerManager {
      */
     canOpen = (id) => {
         return !this.isCurrent(id)
-    }
+    };
 
     /**
      * Toggles the state of a drawer.
@@ -94,7 +94,7 @@ export class DrawerManager {
         else {
             this.close()
         }
-    }
+    };
 
     /**
      * Opens a specified drawer.
@@ -111,7 +111,7 @@ export class DrawerManager {
         if (options?.tab) {
             this.openTab(options.tab)
         }
-    }
+    };
 
     /**
      * Closes the currently open drawer.
@@ -120,7 +120,7 @@ export class DrawerManager {
     close = () => {
         document.activeElement?.blur() // Remove focus on children
         this.drawers.open = null
-    }
+    };
 
     /**
      * Checks if an event's target is a drawer element.
@@ -135,7 +135,7 @@ export class DrawerManager {
             return false
         }
         return true
-    }
+    };
 
     /**
      * Handles mouse leave events on drawer elements.
@@ -145,7 +145,7 @@ export class DrawerManager {
      */
     mouseLeave = (event) => {
         this.over = false
-    }
+    };
 
     /**
      * Handles mouse enter events on drawer elements.
@@ -155,19 +155,28 @@ export class DrawerManager {
      */
     mouseEnter = (event) => {
         this.over = true
-    }
+    };
 
     /**
-     * Attaches mouse enter and leave event listeners to all drawer elements.
-     * Used to track when the mouse is over drawer elements.
+     * Attaches mouse enter, leave, and open event listeners to all drawer elements.
+     * Dispatches a custom 'drawer-open' event when a drawer is open.
      */
     attachEvents = () => {
-        // We detect if we're over a drawer or not
-        document.querySelectorAll('sl-drawer').forEach(drawer => {
+        document.querySelectorAll('sl-drawer').forEach((drawer) => {
             drawer.addEventListener('mouseleave', this.mouseLeave)
             drawer.addEventListener('mouseenter', this.mouseEnter)
+            drawer.addEventListener('sl-after-show', () => {
+                const event = new CustomEvent('drawer-open', {
+                    detail:   {drawerId: drawer.id},
+                    bubbles:  true,
+                    composed: true,
+                })
+
+                drawer.dispatchEvent(event)
+            })
+            console.log(drawer)
         })
-    }
+    };
 
     /**
      * Cleans up the drawer manager state.
@@ -175,14 +184,10 @@ export class DrawerManager {
      */
     clean = () => {
         this.drawers.action = null
-    }
+    };
 
     /**
      * Handles opening a specific tab within a set of tab groups associated with the currently open drawer.
-     *
-     * This function searches for tab groups within the currently open drawer. For each tab group found,
-     * it identifies the tab matching the specified `tabName` and displays it. If no matching tab is
-     * found within a tab group, that group is skipped.
      *
      * @param {string} tabName - The name of the tab panel to open within each applicable tab group.
      */
@@ -194,5 +199,5 @@ export class DrawerManager {
                 tabGroup.show(tabName)
             }
         }
-    }
+    };
 }
