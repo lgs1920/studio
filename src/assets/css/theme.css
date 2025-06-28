@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-24
- * Last modified: 2025-06-24
+ * Created on: 2025-06-28
+ * Last modified: 2025-06-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -589,6 +589,10 @@ sl-tooltip.tooltip-help ::part(base) {
 
 sl-dialog {
     --header-spacing: var(--body-spacing) var(--body-spacing) 0 var(--body-spacing)
+}
+
+sl-dialog::part(base) {
+    z-index: calc(var(--lgs-ui-layer-zindex) + 1)
 }
 
 sl-dialog [slot="label"] {
