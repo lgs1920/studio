@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-23
- * Last modified: 2025-06-23
+ * Created on: 2025-06-28
+ * Last modified: 2025-06-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,13 +24,5 @@ export const theJourneyEditor = {
     },
     allPOIs: true,
     longTask: false,
-    tabs: {
-        journey: {
-            data: false, edit: false, pois: false, points: false,
-        },
-        track: {
-            data: true, edit: false, points: false,
-        },
-    },
     showPOIsFilter: false,
 }

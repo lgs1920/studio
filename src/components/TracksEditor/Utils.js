@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-15
- * Last modified: 2025-06-15
+ * Created on: 2025-06-28
+ * Last modified: 2025-06-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -57,13 +57,10 @@ export class Utils {
 
         editorStore.journey.addToContext()
         // Force Tab to Data
-        editorStore.tabs.journey.data = true
 
         // Force Track and POI in editor
         editorStore.track = Array.from(editorStore.journey.tracks.values())[0]
         editorStore.track.addToContext()
-        // Force tab to data
-        editorStore.tabs.track.data = true
         editorStore.track.addToEditor()
 
         editorStore.poi = null
@@ -90,6 +87,7 @@ export class Utils {
             await TrackUtils.saveCurrentTrackToDB(null)
             await TrackUtils.saveCurrentPOIToDB(null)
         })
+
     }
 
     static initTrackEdition = async (event) => {
@@ -97,8 +95,6 @@ export class Utils {
             const editorStore = lgs.theJourneyEditorProxy
             editorStore.track = lgs.getTrackBySlug(event.target.value)
             editorStore.track.addToContext()
-            // Force tab to data
-            editorStore.tabs.track.data = true
 
             // Force POI in editor
             editorStore.poi = null
