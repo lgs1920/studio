@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-14
- * Last modified: 2025-06-14
+ * Created on: 2025-06-28
+ * Last modified: 2025-06-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -61,23 +61,24 @@ export const MainUI = () => {
 
     const hidden = useSnapshot(lgs.stores.main.components.welcome).hidden
     const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
+    const formerDevice = useRef(isMobile)
     const settings = useSnapshot(lgs.settings.ui.menu)
     const clickTimeout = useRef(null)
-
+    const resizeTimer = useRef(null) // Utiliser useRef pour persister le timer
     const journeyToolbar = useSnapshot(lgs.settings.ui.journeyToolbar)
 
-    let resizeTimer
     const windowResized = () => {
-        clearTimeout(resizeTimer)
-        resizeTimer = setTimeout(() => {
-            if (!isMobile && window.innerWidth <= MOBILE_MAX) {
+        clearTimeout(resizeTimer.current)
+        resizeTimer.current = setTimeout(() => {
+            if (!isMobile && formerDevice.current === isMobile) {
                 __.ui.menuManager.reset()
                 arrangeDrawers()
             }
-            if (isMobile && window.innerWidth >= DESKTOP_MIN) {
+            if (isMobile && formerDevice.current === isMobile) {
                 __.ui.menuManager.reset()
                 arrangeDrawers()
             }
+            formerDevice.current = isMobile
         }, 0.3 * SECOND)
     }
 
@@ -111,8 +112,6 @@ export const MainUI = () => {
             __.canvasEvents.removeEventListener(EVENTS.DOUBLE_TAP, closeDrawer)
             __.canvasEvents.removeEventListener(EVENTS.DOUBLE_CLICK, closeDrawer)
             window.removeEventListener('resize', windowResized)
-
-
         }
 
     }, [])
