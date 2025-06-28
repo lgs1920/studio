@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-27
- * Last modified: 2025-06-27
+ * Created on: 2025-06-28
+ * Last modified: 2025-06-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -98,6 +98,7 @@ export const JourneySettings = function JourneySettings() {
     const main = useSnapshot($main, {sync: true})
     const $rotate = lgs.stores.main.components.mainUI.rotate
     const rotate = useSnapshot($rotate)
+    const tabgroup = useRef(null)
 
     const autoRotate = useSnapshot(lgs.settings.ui.camera.start.rotate)
     let rotationAllowed = false
@@ -444,35 +445,47 @@ export const JourneySettings = function JourneySettings() {
         })
     }, [lgs.stores.main.components.mainUI.removeJourneyDialog.active])
 
-    const toggleFilter = (event) => {
+    const initTab = (event) => {
+
+        __.ui.drawerManager.tab = event.detail.name
         if (event.detail.name === POIS) {
+            // We show the settings only when pois tab is open
             lgs.stores.journeyEditor.showPOIsFilter = event.type === 'sl-tab-show'
         }
         else {
             lgs.stores.journeyEditor.showPOIsFilter = false
         }
-
     }
+
+    const isTabActive = (tab) => {
+        return __.ui.drawerManager.tabActive(tab)
+    }
+
+    const DATA_PANEL = 'tab-data'
+    const EDIT_PANEL = 'tab-edit'
+    const POINTS_PANEL = 'tab-points'
+    const POIS_PANEL = `tab-${POIS}`
 
     return (<>
         {theJourneyEditor.journey && main.drawers.open === JOURNEY_EDITOR_DRAWER &&
 
             <div id="journey-settings" key={lgs.stores.main.components.journeyEditor.keys.journey.settings}>
                 <div className={'settings-panel'} id={'editor-journey-settings-panel'}>
-                    <SlTabGroup className={'menu-panel'} onSlTabShow={toggleFilter} onSlTabHide={toggleFilter}>
-                        <SlTab slot="nav" panel="data" id="tab-journey-data"
-                               active={theJourneyEditor.tabs.journey.data}>
+                    <SlTabGroup className={'menu-panel'} ref={tabgroup}
+                                onSlTabShow={initTab} onSlTabHide={initTab}>
+                        <SlTab slot="nav" panel={DATA_PANEL} id="tab-journey-data"
+                               active={isTabActive(DATA_PANEL)}>
                             <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>Data
                         </SlTab>
-                        <SlTab slot="nav" panel="edit" active={theJourneyEditor.tabs.journey.edit}>
+                        <SlTab slot="nav" panel={EDIT_PANEL} active={isTabActive(EDIT_PANEL)}>
                             <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
                         </SlTab>
                         {/* {theJourneyEditor.journey.tracks.size === 1 && */}
-                        {/*     <SlTab slot="nav" panel="points" active={theJourneyEditor.tabs.journey.points}> */}
+                        {/*     <SlTab slot="nav" panel="POINTS_PANEL" active={isTabEactive(POINTS_PANEL)}> */}
                         {/*         <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points */}
                         {/*     </SlTab> */}
                         {/* } */}
-                        <SlTab slot="nav" panel={POIS} active={theJourneyEditor.tabs.journey.pois}>
+                        <SlTab slot="nav" panel={POIS_PANEL} active={isTabActive(POIS_PANEL)}>
                             <SlIcon library="fa" name={FA2SL.set(faLocationDot)}/>POIs
                         </SlTab>
 
@@ -481,7 +494,7 @@ export const JourneySettings = function JourneySettings() {
                         {/**
                          * Data Tab Panel
                          */}
-                        <SlTabPanel name="data">
+                        <SlTabPanel name={DATA_PANEL}>
                             {/* Add DEM instance selection if we do not have height initially (ie in the journey file) */}
                             <div className={'select-elevation-source'}>
                                 <SelectElevationSource
@@ -501,7 +514,7 @@ export const JourneySettings = function JourneySettings() {
                         {/**
                          * Edit  Tab Panel
                          */}
-                        <SlTabPanel name="edit">
+                        <SlTabPanel name={EDIT_PANEL}>
                             <div id={'journey-text-description'}>
                                 {/* Change visible name (title) */}
                                 <SlTooltip content={'Title'}>
@@ -532,7 +545,7 @@ export const JourneySettings = function JourneySettings() {
                         {/**
                          * POIs Tab Panel
                          */}
-                        <SlTabPanel name={POIS}>
+                        <SlTabPanel name={POIS_PANEL}>
                             <MapPOIEditFilter/>
                             <MapPOIEditSettings/>
                             <MapPOIList/>
@@ -541,7 +554,7 @@ export const JourneySettings = function JourneySettings() {
                         {/**
                          * Points Tab Panel
                          */}
-                        <SlTabPanel name="points">
+                        <SlTabPanel name={POINTS_PANEL}>
                             <TrackPoints/>
                         </SlTabPanel>
                     </SlTabGroup>
