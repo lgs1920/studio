@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-27
- * Last modified: 2025-06-27
+ * Created on: 2025-06-28
+ * Last modified: 2025-06-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -36,8 +36,8 @@ import { editorSettings }    from './stores/editorSettings'
 import { main }              from './stores/main'
 import { theJourneyEditor }  from './stores/theJourneyEditor'
 import { CameraManager }     from './ui/CameraManager'
-import { DrawerManager }     from './ui/DrawerManager'
 import { JourneyEditor }     from './ui/JourneyEditor'
+import { PanelManager }      from './ui/panels/PanelManager'
 import { Profiler }          from './ui/Profiler'
 import { SceneManager }      from './ui/SceneManager'
 import { Wanderer }          from './ui/Wanderer'
@@ -326,7 +326,7 @@ export class LGS1920Context {
 
         __.ui.wanderer = new Wanderer()
         __.ui.cameraManager = new CameraManager()
-        __.ui.drawerManager = new DrawerManager()
+        __.ui.drawerManager = new PanelManager()
         __.ui.sceneManager = new SceneManager()
         __.ui.menuManager = new MenuManager()
 
