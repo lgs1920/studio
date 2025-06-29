@@ -380,7 +380,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
         >
 
             <div className="poi-card" ref={_poiContent}>
-                <div className="poi-card-inner" ref={inner} id={`poi-inner-${point?.id}`}>
+                <div className="poi-card-inner" ref={inner}>
                     {!useInMenu &&
                         <div className="poi-card-triangle-down"/>
                     }
