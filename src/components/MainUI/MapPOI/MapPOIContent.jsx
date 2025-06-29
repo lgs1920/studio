@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-25
- * Last modified: 2025-06-25
+ * Created on: 2025-06-29
+ * Last modified: 2025-06-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -104,7 +104,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
             const drawer = thePOI.parent ? JOURNEY_EDITOR_DRAWER : POIS_EDITOR_DRAWER
             let sameJourney = true
             let sameTrack = true
-            const tab = 'pois'
+            const tab = 'tab-pois'
 
             // Handle journey/track context switching for POIs with parent
             if (thePOI.parent) {
@@ -142,7 +142,6 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                     tab:    tab,
                 })
             }
-            lgs.stores.journeyEditor.tabs.journey[tab] = true
         }
         else {
             // Show warning for temporary POIs that cannot be edited
@@ -272,7 +271,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
             const scale = 2
             const ratio = window.devicePixelRatio || 1
 
-            snapdom(_poiContent.current, {scale, fast: true}).then(snap => {
+            snapdom(_poiContent.current, {scale: scale}).then(snap => {
                 snap.toCanvas().then(async canvas => {
                     const thePOI = new MapPOI($point)
 
