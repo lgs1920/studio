@@ -15,83 +15,162 @@
  ******************************************************************************/
 
 import { Compass } from '@Components/cesium/CompassUI/Compass'
-import { FullScreenButton }                 from '@Components/FullScreenButton/FullScreenButton'
+import { FullScreenButton }                     from '@Components/FullScreenButton/FullScreenButton'
 import { ContextMenuHook } from '@Components/MainUI/ContextMenuHook'
-import { GeocodingButton }                  from '@Components/MainUI/geocoding/GeocodingButton'
-import { GeocodingUI }       from '@Components/MainUI/geocoding/GeocodingUI'
+import { GeocodingButton }                      from '@Components/MainUI/geocoding/GeocodingButton'
+import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'
 import { MapPOIMonitor } from '@Components/MainUI/MapPOI/MapPOIMonitor'
 import { TrackEditorButton } from '@Components/MainUI/TrackEditorButton'
-import { MapPOICluster }     from '@Components/MainUI/MapPOI/MapPOICluster'
-import { MapPOIContextMenu }                from '@Components/MainUI/MapPOI/MapPOIContextMenu'
-import { RotateButton }                     from '@Components/MainUI/RotateButton'
-import { Profile }                          from '@Components/Profile/Profile'
-import { ProfileButton }                    from '@Components/Profile/ProfileButton'
-import { TracksEditor }                     from '@Components/TracksEditor/TracksEditor'
+import { MapPOIContextMenu }                    from '@Components/MainUI/MapPOI/MapPOIContextMenu'
+import { RotateButton }                         from '@Components/MainUI/RotateButton'
+import { Profile }                              from '@Components/Profile/Profile'
+import { ProfileButton }                        from '@Components/Profile/ProfileButton'
+import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import {
     BOTTOM, DESKTOP_MIN, END, EVENTS, MENU_BOTTOM_END,
-    MENU_BOTTOM_START, MENU_END_END,
-    MENU_END_START,
-    MENU_START_END,
-    MENU_START_START, MOBILE_MAX, SCENE_MODE_2D, SECOND, START, TOP,
+    MENU_BOTTOM_START, MENU_END_END, MENU_END_START,
+    MENU_START_END, MENU_START_START, MOBILE_MAX, SCENE_MODE_2D, SECOND, START, TOP,
 } from '@Core/constants'
-import { JourneyToolbar }                    from '@Editor/JourneyToolbar'
-import { memo, useEffect, useRef, useState } from 'react'
-
-import './style.css'
-import { useMediaQuery }                    from 'react-responsive'
-import { subscribe, useSnapshot }           from 'valtio'
-import { CameraAndTargetPanel }             from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
-import { JourneyLoaderUI }                  from '../FileLoader/JourneyLoaderUI'
-import { Panel as InformationPanel }        from '../InformationPanel/Panel'
+import { JourneyToolbar }                       from '@Editor/JourneyToolbar'
+import { memo, useCallback, useEffect, useRef } from 'react'
+import { useMediaQuery }                        from 'react-responsive'
+import { subscribe, useSnapshot }               from 'valtio'
+import { CameraAndTargetPanel }                 from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
+import { JourneyLoaderUI }                      from '../FileLoader/JourneyLoaderUI'
+import { Panel as InformationPanel }            from '../InformationPanel/Panel'
 import { PanelButton as InformationButton } from '../InformationPanel/PanelButton'
-import { Panel as LayersPanel }             from '../Settings/layers/Panel'
-import { PanelButton as LayersButton }      from '../Settings/layers/PanelButton'
-import { Panel as SettingsPanel }           from '../Settings/Panel'
-import { PanelButton as SettingsButton }    from '../Settings/PanelButton'
-import { CallForActions }                   from './CallForActions'
-import { CameraTarget }                     from './CameraTarget'
-import { CreditsBar }                       from './credits/CreditsBar'
-import { Panel as MapPOIEditPanel }         from './MapPOI/Panel'
-import { PanelButton as POIEditButton }     from './MapPOI/PanelButton'
-import { SceneModeSelector }                from './SceneModeSelector'
-import { SupportUI }                        from './SupportUI'
-import { SupportUIButton }                  from './SupportUIButton'
+import { Panel as LayersPanel }                 from '../Settings/layers/Panel'
+import { PanelButton as LayersButton }          from '../Settings/layers/PanelButton'
+import { Panel as SettingsPanel }               from '../Settings/Panel'
+import { PanelButton as SettingsButton }        from '../Settings/PanelButton'
+import { CallForActions }                       from './CallForActions'
+import { CameraTarget }                         from './CameraTarget'
+import { CreditsBar }                           from './credits/CreditsBar'
+import { Panel as MapPOIEditPanel }             from './MapPOI/Panel'
+import { PanelButton as POIEditButton }         from './MapPOI/PanelButton'
+import { SceneModeSelector }                    from './SceneModeSelector'
+import { SupportUI }                            from './SupportUI'
+import { SupportUIButton }                      from './SupportUIButton'
+import './style.css'
 
-export const MainUI = () => {
+const PRIMARY_ENTRANCE = 'lgs-slide-in-from-left'
+const SECONDARY_ENTRANCE = 'lgs-slide-in-from-right'
 
-    const hidden = useSnapshot(lgs.stores.ui.welcome).hidden
+export const MainUI = memo(() => {
+    const {hidden} = useSnapshot(lgs.stores.ui.welcome)
     const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
     const formerDevice = useRef(isMobile)
-    const settings = useSnapshot(lgs.settings.ui.menu)
-    const clickTimeout = useRef(null)
-    const resizeTimer = useRef(null) // Utiliser useRef pour persister le timer
-    const journeyToolbar = useSnapshot(lgs.settings.ui.journeyToolbar)
+    const {drawers, toolBar} = useSnapshot(lgs.settings.ui.menu)
+    const {show, usage} = useSnapshot(lgs.settings.ui.journeyToolbar)
+    const resizeTimer = useRef(null)
 
-    const windowResized = () => {
-        clearTimeout(resizeTimer.current)
-        resizeTimer.current = setTimeout(() => {
-            if (!isMobile && formerDevice.current === isMobile) {
-                __.ui.menuManager.reset()
-                arrangeDrawers()
-            }
-            if (isMobile && formerDevice.current === isMobile) {
-                __.ui.menuManager.reset()
-                arrangeDrawers()
-            }
+    const windowResized = useCallback(__.tools.debounce(() => {
+        if (formerDevice.current !== isMobile) {
+            __.ui.menuManager.reset()
+            arrangeDrawers()
             formerDevice.current = isMobile
-        }, 0.3 * SECOND)
-    }
+        }
+    }, 0.3 * SECOND), [isMobile])
 
-    const closeDrawer = (event) => {
+    const closeDrawer = useCallback(() => {
         __.ui.drawerManager.close()
-    }
+    }, [])
 
-    const handleKeyDown = (event) => {
+    const handleKeyDown = useCallback((event) => {
         if (event.key === 'Escape') {
             closeDrawer()
         }
-    }
+    }, [closeDrawer])
 
+    const arrangeDrawers = useCallback(() => {
+        const placement = sprintf('%s-%s',
+                                  isMobile ? (drawers.fromBottom ? BOTTOM : TOP) : (drawers.fromStart ? START : END),
+                                  toolBar.fromStart ? START : END,
+        )
+
+        const isDrawerOpen = lgs.stores.ui.drawers.open !== null
+        const verticalOffsetLeft = isDrawerOpen ? __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-left') : '0.1px'
+        const verticalOffsetRight = isDrawerOpen ? __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-right') : '0.1px'
+        const horizontalOffsetLeft = isDrawerOpen ? __.ui.css.getCSSVariable('--lgs-horizontal-panel-offset-left') : '0.1px'
+        const width = isDrawerOpen
+                      ? `calc(${__.ui.css.getCSSVariable('--lgs-vertical-panel-width')} + ${__.ui.css.getCSSVariable('--right')})`
+                      : '0.1px'
+
+        const cssConfig = {
+            [MENU_START_START]:  {
+                '--primary-buttons-bar-left':          width,
+                '--primary-buttons-bar-right':         'auto',
+                '--secondary-buttons-bar-left':        'auto',
+                '--secondary-buttons-bar-margin-left': 'auto',
+                '--secondary-buttons-bar-right':       0,
+                '--lgs-horizontal-panel-left':         'var(--lgs-horizontal-panel-offset-left)',
+                '--lgs-horizontal-panel-width':        `calc(var(--lgs-inner-width) - ${horizontalOffsetLeft})`,
+            },
+            [MENU_START_END]:    {
+                '--primary-buttons-bar-left':          'auto',
+                '--primary-buttons-bar-right':         0,
+                '--secondary-buttons-bar-left':        width,
+                '--secondary-buttons-bar-margin-left': 0,
+                '--secondary-buttons-bar-right':       'auto',
+                '--lgs-horizontal-panel-left':         horizontalOffsetLeft,
+                '--lgs-horizontal-panel-width':        `calc(var(--lgs-inner-width) - calc(var(--left) + ${width}))`,
+                primaryEntrance:                       SECONDARY_ENTRANCE,
+                secondaryEntrance:                     PRIMARY_ENTRANCE,
+            },
+            [MENU_END_START]:    {
+                '--primary-buttons-bar-left':          0,
+                '--primary-buttons-bar-right':         'auto',
+                '--secondary-buttons-bar-left':        'auto',
+                '--secondary-buttons-bar-margin-left': 'auto',
+                '--secondary-buttons-bar-right':       width,
+                '--lgs-horizontal-panel-left':         0,
+                '--lgs-horizontal-panel-width':        `calc(var(--lgs-inner-width) - calc(var(--left) + ${width}))`,
+            },
+            [MENU_END_END]:      {
+                '--primary-buttons-bar-left':          'auto',
+                '--primary-buttons-bar-right':         width,
+                '--secondary-buttons-bar-left':        0,
+                '--secondary-buttons-bar-margin-left': 0,
+                '--secondary-buttons-bar-right':       'auto',
+                '--lgs-horizontal-panel-left':         0,
+                '--lgs-horizontal-panel-width':        `calc(var(--lgs-inner-width) - calc(var(--left) + ${width}))`,
+                primaryEntrance:                       SECONDARY_ENTRANCE,
+                secondaryEntrance:                     PRIMARY_ENTRANCE,
+            },
+            [MENU_BOTTOM_START]: {
+                '--primary-buttons-bar-left':          0,
+                '--primary-buttons-bar-right':         'auto',
+                '--secondary-buttons-bar-left':        'auto',
+                '--secondary-buttons-bar-margin-left': 'auto',
+                '--secondary-buttons-bar-right':       0,
+                '--lgs-horizontal-panel-left':         0,
+                '--lgs-horizontal-panel-width':        'calc(var(--lgs-inner-width) - var(--left))',
+            },
+            [MENU_BOTTOM_END]:   {
+                '--primary-buttons-bar-left':          'auto',
+                '--primary-buttons-bar-right':         0,
+                '--secondary-buttons-bar-left':        0,
+                '--secondary-buttons-bar-margin-left': 0,
+                '--secondary-buttons-bar-right':       'auto',
+                '--lgs-horizontal-panel-left':         0,
+                '--lgs-horizontal-panel-width':        'calc(var(--lgs-inner-width) - var(--left))',
+                primaryEntrance:                       SECONDARY_ENTRANCE,
+                secondaryEntrance:                     PRIMARY_ENTRANCE,
+            },
+        }
+
+        const config = cssConfig[placement] || {}
+        Object.entries(config).forEach(([key, value]) => {
+            if (key !== 'primaryEntrance' && key !== 'secondaryEntrance') {
+                __.ui.css.setCSSVariable(key, value)
+            }
+        })
+
+        return {
+            primaryEntrance:   config.primaryEntrance || PRIMARY_ENTRANCE,
+            secondaryEntrance: config.secondaryEntrance || SECONDARY_ENTRANCE,
+        }
+    }, [isMobile, drawers.fromBottom, drawers.fromStart, toolBar.fromStart])
 
     useEffect(() => {
         if (lgs.settings.scene.mode.value === SCENE_MODE_2D.value) {
@@ -104,7 +183,6 @@ export const MainUI = () => {
 
         arrangeDrawers()
 
-        // we need to manage some canvas events
         __.canvasEvents.addEventListener(EVENTS.DOUBLE_TAP, closeDrawer)
         __.canvasEvents.addEventListener(EVENTS.DOUBLE_CLICK, closeDrawer)
 
@@ -113,148 +191,49 @@ export const MainUI = () => {
             __.canvasEvents.removeEventListener(EVENTS.DOUBLE_CLICK, closeDrawer)
             window.removeEventListener('resize', windowResized)
         }
+    }, [arrangeDrawers, closeDrawer, windowResized])
 
-    }, [])
-
-    // We need to interact with  Drawers
-    let primaryEntrance = 'lgs-slide-in-from-left'
-    let secondaryEntrance = 'lgs-slide-in-from-right'
-    const arrangeDrawers = () => {
-        const placement = sprintf('%s-%s',
-                                  isMobile ? (lgs.settings.ui.menu.drawers.fromBottom ? BOTTOM : TOP)
-                                           : lgs.settings.ui.menu.drawers.fromStart ? START : END,
-                                  lgs.settings.ui.menu.toolBar.fromStart ? START : END)
-
-
-        const verticalOffsetLeft = (lgs.stores.ui.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-left')
-        const verticalOffsetRight = (lgs.stores.ui.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-right')
-        const horizontalOffsetLeft = (lgs.stores.ui.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-horizontal-panel-offset-left')
-
-        const width = (lgs.stores.ui.drawers.open === null)
-                      ? '0.1px'
-                      : `calc( ${__.ui.css.getCSSVariable('--lgs-vertical-panel-width')} + ${__.ui.css.getCSSVariable('--right')}`
-        switch (placement) {
-            case MENU_START_START:
-                __.ui.css.setCSSVariable('--primary-buttons-bar-left', width)
-                __.ui.css.setCSSVariable('--primary-buttons-bar-right', 'auto')
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'auto')
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-margin-left', 'auto')
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 0)
-                __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', 'var(--lgs-horizontal-panel-offset-left)')
-                __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - ${horizontalOffsetLeft})`)
-                break
-            case MENU_START_END:
-                primaryEntrance = 'lgs-slide-in-from-right'
-                secondaryEntrance = 'lgs-slide-in-from-left'
-                __.ui.css.setCSSVariable('--primary-buttons-bar-left', 'auto')
-                __.ui.css.setCSSVariable('--primary-buttons-bar-right', 0)
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', width)
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-margin-left', 0)
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 'auto')
-                __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', horizontalOffsetLeft)
-                __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) + ${width}))`)
-                break
-            case MENU_END_START:
-                __.ui.css.setCSSVariable('--primary-buttons-bar-left', 0)
-                __.ui.css.setCSSVariable('--primary-buttons-bar-right', 'auto')
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'auto')
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-margin-left', 'auto')
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', width)
-                __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', 0)
-                __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) + ${width}))`)
-                break
-            case MENU_END_END:
-                primaryEntrance = 'lgs-slide-in-from-right'
-                secondaryEntrance = 'lgs-slide-in-from-left'
-                __.ui.css.setCSSVariable('--primary-buttons-bar-left', 'auto')
-                __.ui.css.setCSSVariable('--primary-buttons-bar-right', width)
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 0)
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-margin-left', 0)
-
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 'auto')
-                __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', 0)
-                __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) + ${width}))`)
-                break
-
-            case MENU_BOTTOM_START:
-                __.ui.css.setCSSVariable('--primary-buttons-bar-left', 0)
-                __.ui.css.setCSSVariable('--primary-buttons-bar-right', 'auto')
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 'auto')
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-margin-left', 'auto')
-
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 0)
-                __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', 0)
-                __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) ))`)
-                break
-            case MENU_BOTTOM_END:
-                primaryEntrance = 'lgs-slide-in-from-right'
-                secondaryEntrance = 'lgs-slide-in-from-left'
-                __.ui.css.setCSSVariable('--primary-buttons-bar-left', 'auto')
-                __.ui.css.setCSSVariable('--primary-buttons-bar-right', 0)
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-left', 0)
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-margin-left', 0)
-
-                __.ui.css.setCSSVariable('--secondary-buttons-bar-right', 'auto')
-                __.ui.css.setCSSVariable('--lgs-horizontal-panel-left', 0)
-                __.ui.css.setCSSVariable('--lgs-horizontal-panel-width', `calc( var(--lgs-inner-width) - calc(var(--left) ))`)
-                break
-        }
-
-
-    }
-
-
-    const SupportUIDialog = () => {
-        return (<SupportUI/>)
-    }
-
+    const tooltipDir = toolBar.fromStart ? 'right' : 'left'
+    const {primaryEntrance, secondaryEntrance} = arrangeDrawers()
 
     return (
         <>
             <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
-                {hidden &&
+                {hidden && (
                     <>
-                        <div id={'primary-buttons-bar'} className={primaryEntrance}>
-                            <SettingsButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
-                            <LayersButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
-                            <POIEditButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
-                            <TrackEditorButton tooltip={'top'}/>
-                            <ProfileButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
-
-                            <InformationButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
-                            <SupportUIButton tooltip={settings.toolBar.fromStart ? 'right' : 'left'}/>
+                        <div id="primary-buttons-bar" className={primaryEntrance}>
+                            <SettingsButton tooltip={tooltipDir}/>
+                            <LayersButton tooltip={tooltipDir}/>
+                            <POIEditButton tooltip={tooltipDir}/>
+                            <TrackEditorButton tooltip="top"/>
+                            <ProfileButton tooltip={tooltipDir}/>
+                            <InformationButton tooltip={tooltipDir}/>
+                            <SupportUIButton tooltip={tooltipDir}/>
                         </div>
-                        <div id={'secondary-buttons-bar'} className={secondaryEntrance}>
+                        <div id="secondary-buttons-bar" className={secondaryEntrance}>
                             <Compass sensitivity={100}/>
                             <div id="secondary-buttons-bar-content">
-                                <SceneModeSelector tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
-                                <GeocodingButton tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
-                                <RotateButton tooltip={settings.toolBar.fromStart ? 'left' : 'right'}/>
+                                <SceneModeSelector tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                <RotateButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <FullScreenButton/>
                                 <GeocodingUI/>
-
                             </div>
-
                         </div>
-
+                        <CallForActions/>
                     </>
-                }
-                {hidden && <CallForActions/>}
-
+                )}
                 <CameraTarget/>
-                <div id={'bottom-left-ui'}>
-                    {
-                        lgs.platform !== 'production' &&
-                        <div id="used-platform"
-                             className={'lgs-card on-map'}> {lgs.platform}-{lgs.versions.studio}
+                <div id="bottom-left-ui">
+                    {lgs.platform !== 'production' && (
+                        <div id="used-platform" className="lgs-card on-map">
+                            {lgs.platform}-{lgs.versions.studio}
                         </div>
-                    }
+                    )}
                 </div>
-
-                <div id={'bottom-right-ui'}>
+                <div id="bottom-right-ui">
                     <CreditsBar/>
                 </div>
-
                 <CameraAndTargetPanel/>
                 <Profile/>
                 <InformationPanel/>
@@ -262,18 +241,13 @@ export const MainUI = () => {
                 <LayersPanel/>
                 <TracksEditor/>
                 <MapPOIEditPanel/>
-
             </div>
-            {/* <MapPOICluster/> */}
-
-            <SupportUIDialog/>
+            <SupportUI/>
             <JourneyLoaderUI multiple/>
             <MapPOIContextMenu/>
             <MapPOIMonitor/>
             <ContextMenuHook/>
-
-            {journeyToolbar.show && journeyToolbar.usage && <JourneyToolbar/>}
-
+            {show && usage && <JourneyToolbar/>}
         </>
     )
-}
+})

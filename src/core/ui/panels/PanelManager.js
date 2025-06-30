@@ -22,6 +22,16 @@
  * @class PanelManager
  * @singleton
  */
+
+/**
+ * Manages the state and interactions of drawers within the application.
+ * Now uses the separated UI store to avoid conflicts with snapdom.
+ *
+ * @class PanelManager
+ * @singleton
+ */
+import { ui } from '/src/core/stores/ui.js'
+
 export class PanelManager {
     /**
      * Indicates whether the mouse is currently over a drawer element.
@@ -56,7 +66,7 @@ export class PanelManager {
      * @returns {Object} The drawers state object
      */
     get drawers() {
-        return lgs.stores.ui.drawers
+        return ui.drawers
     }
 
     /**
@@ -64,7 +74,7 @@ export class PanelManager {
      * @param {Object} value - The new drawers state
      */
     set drawers(value) {
-        Object.assign(lgs.stores.ui.drawers, value)
+        Object.assign(ui.drawers, value)
     }
 
     /**
@@ -137,8 +147,8 @@ export class PanelManager {
      */
     open = (id, options) => {
         // Use the UI store instead of main proxy
-        lgs.stores.ui.drawers.open = id
-        lgs.stores.ui.drawers.action = options?.action ?? ''
+        ui.drawers.open = id
+        ui.drawers.action = options?.action ?? ''
         
         // Handle tab activation if specified or previously set
         if (options?.tab) {
@@ -156,7 +166,7 @@ export class PanelManager {
     close = () => {
         // Remove focus from any active elements within the drawer
         document.activeElement?.blur()
-        lgs.stores.ui.drawers.open = null
+        ui.drawers.open = null
     }
 
     /**
@@ -230,7 +240,7 @@ export class PanelManager {
      * Resets the drawer manager's action state.
      */
     clean = () => {
-        lgs.stores.ui.drawers.action = null
+        ui.drawers.action = null
     }
 
     /**
@@ -284,7 +294,7 @@ export class PanelManager {
      * @param {string|null} id - The drawer ID to open, or null to close
      */
     setOpen(id) {
-        lgs.stores.ui.drawers.open = id
+        ui.drawers.open = id
     }
 
     /**
