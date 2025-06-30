@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Panel.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { DrawerFooter }           from '@Components/DrawerFooter'
 import { LAYERS_DRAWER }          from '@Core/constants'
 import { faCircleInfo }           from '@fortawesome/pro-regular-svg-icons'
@@ -10,7 +26,7 @@ import { InfoLayerModal }         from './InfoLayerModal'
 import { LayersAndTerrains }      from './LayersAndTerrains'
 
 export const Panel = () => {
-    const drawers = useSnapshot(lgs.mainProxy.drawers)
+    const drawers = useSnapshot(lgs.stores.ui.drawers)
     const openInfoModal = () => lgs.editorSettingsProxy.layer.infoDialog = true
 
     const closePanel = (event) => {

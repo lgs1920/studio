@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-29
- * Last modified: 2025-06-29
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -260,6 +260,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
         __.canvasEvents.removeAllListenersByEntity(poi.id)
     }
 
+
     /**
      * Renders the POI content to a canvas and updates the MapPOI
      */
@@ -267,30 +268,36 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
         if (!$point.visible && !useInMenu) {
             return
         }
-        try {
-            const scale = 2
-            const ratio = window.devicePixelRatio || 1
 
-            snapdom(_poiContent.current, {scale: scale}).then(snap => {
-                snap.toCanvas().then(async canvas => {
-                    const thePOI = new MapPOI($point)
+        // Double requestAnimationFrame pour s'assurer que le DOM est stable
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                try {
+                    const scale = 2
+                    const ratio = window.devicePixelRatio || 1
 
-                    thePOI.image = {
-                        src:    canvas.toDataURL(),
-                        width:  canvas.width / scale / ratio,
-                        height: canvas.height / scale / ratio,
-                    }
-                    thePOI.pixelOffset = {
-                        x: point.expanded ? -13 : 0,
-                        y: 0,
-                    }
-                    await thePOI.utils.draw(thePOI)
-                })
+                    snapdom(_poiContent.current, {scale: scale}).then(snap => {
+                        snap.toCanvas().then(async canvas => {
+                            const thePOI = new MapPOI($point)
+
+                            thePOI.image = {
+                                src:    canvas.toDataURL(),
+                                width:  canvas.width / scale / ratio,
+                                height: canvas.height / scale / ratio,
+                            }
+                            thePOI.pixelOffset = {
+                                x: point.expanded ? -13 : 0,
+                                y: 0,
+                            }
+                            await thePOI.utils.draw(thePOI)
+                        })
+                    })
+                }
+                catch (error) {
+                    console.error('Error in renderToCanvas:', error)
+                }
             })
-        }
-        catch (error) {
-            console.error('Error in renderToCanvas:', error)
-        }
+        })
     }
 
     /**
@@ -302,11 +309,12 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
             return
         }
 
-        requestAnimationFrame(renderToCanvas)
+        // Ne pas appeler renderToCanvas immédiatement
+        // requestAnimationFrame(renderToCanvas)
 
         // Set up MutationObserver to monitor changes to _poiContent
         const observer = new MutationObserver(() => {
-            requestAnimationFrame(renderToCanvas)
+            renderToCanvas() // Le délai est maintenant dans renderToCanvas
         });
 
         if (_poiContent.current) {
@@ -320,6 +328,9 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
 
         // Add event listeners
         addPOIEventListeners(point)
+
+        // Premier rendu avec délai
+        renderToCanvas()
 
         // Cleanup: Disconnect observer and remove event listeners
         return () => {
@@ -337,7 +348,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                   category ? null : point?.latitude,
                   category ? null : point?.type,
         category, point?.visible,
-              ]); // Dependencies minimized to avoid unnecessary re-runs
+              ])
 
     // When category is defined, render only the icon
     if (category) {

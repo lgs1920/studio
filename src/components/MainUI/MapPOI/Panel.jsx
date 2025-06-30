@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-27
- * Last modified: 2025-06-27
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -34,7 +34,8 @@ export const Panel = memo(() => {
     const $main = lgs.stores.main
     const main = useSnapshot($main, {sync: true})
     const menu = useSnapshot(lgs.editorSettingsProxy.menu, {sync: true})
-
+    const mainStore = lgs.mainProxy
+    const mainSnap = useSnapshot(mainStore)
     // Memoized closePOIsEditor handler
     const closePOIsEditor = useCallback((event) => {
         if (window.isOK(event)) {
@@ -42,7 +43,7 @@ export const Panel = memo(() => {
                 __.ui.drawerManager.close()
             }
             // Avoid global resize event unless necessary
-            // window.dispatchEvent(new Event('resize'))
+            window.dispatchEvent(new Event('resize'))
         }
     }, [])
 
@@ -87,16 +88,16 @@ export const Panel = memo(() => {
 
             <SlDrawer
                 id={POIS_EDITOR_DRAWER}
-                open={main.drawers.open === POIS_EDITOR_DRAWER}
+                open={lgs.stores.ui.drawers.open === POIS_EDITOR_DRAWER}
                 onSlRequestClose={handleRequestClose}
                 onSlAfterHide={closePOIsEditor}
                 contained
                 className="lgs-theme"
                 placement={menu.drawer}
             >
-                <span slot="label">{'Points Of Interest'}</span>
-                {main.drawers.open === POIS_EDITOR_DRAWER &&
-                    <>
+
+                {lgs.stores.ui.drawers.open === POIS_EDITOR_DRAWER &&
+                    <><span slot="label">{'Points Of Interest'}</span>
                         <MapPOIEditToggleFilter/>
                         <MapPOIEditFilter/>
                         <MapPOIEditSettings/>
@@ -106,5 +107,6 @@ export const Panel = memo(() => {
                 }
             </SlDrawer>
         </div>
+
     )
 })

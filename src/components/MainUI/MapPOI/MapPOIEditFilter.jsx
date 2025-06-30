@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-24
- * Last modified: 2025-06-24
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -34,7 +34,7 @@ export const MapPOIEditFilter = () => {
   const settings = useSnapshot(lgs.settings.poi, {sync: true})
   const store = lgs.mainProxy.components.pois
   const pois = useSnapshot(store)
-  const drawers = useSnapshot(lgs.mainProxy.drawers)
+    const drawers = useSnapshot(lgs.stores.ui.drawers)
   // Determine if only journey-specific POIs should be shown
   const onlyJourney = drawers.open === JOURNEY_EDITOR_DRAWER
 

@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneyLoaderButton.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import './style.css'
 import { faRegularRouteCirclePlus }                             from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { FAButton }                                             from '@Components/FAButton'
@@ -10,7 +26,7 @@ import React                                                    from 'react'
 export const JourneyLoaderButton = (props) => {
 
 
-    const journeyLoaderStore=lgs.mainProxy.components.mainUI.journeyLoader
+    const journeyLoaderStore = lgs.stores.ui.mainUI.journeyLoader
 
     const toggleVisibilityLoader = () => {
         journeyLoaderStore.visible = !journeyLoaderStore.visible

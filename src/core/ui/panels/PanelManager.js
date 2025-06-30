@@ -7,36 +7,22 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-28
- * Last modified: 2025-06-28
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+
 /**
  * Manages the state and interactions of drawers within the application.
- * This class is implemented as a singleton to ensure a consistent state across the application.
- *
- * The DrawerManager is responsible for:
- * - Managing which drawer is currently open
- * - Handling the opening and closing of drawers
- * - Tracking mouse interactions with drawer elements
- * - Supporting tabbed content within drawers
- * - Dispatching custom events when drawers are opened
+ * Now uses the separated UI store to avoid conflicts with snapdom.
  *
  * @class PanelManager
  * @singleton
  */
 export class PanelManager {
-    /**
-     * The state of drawers in the application.
-     * @type {Object}
-     * @property {string|null} open - The ID of the currently open drawer, or null if no drawer is open
-     * @property {string|null} action - The current action being performed in the drawer
-     */
-    drawers = null
-
     /**
      * Indicates whether the mouse is currently over a drawer element.
      * @type {boolean}
@@ -51,7 +37,7 @@ export class PanelManager {
     #tabs = new Map()
 
     /**
-     * Creates a new instance of DrawerManager or returns the existing instance.
+     * Creates a new instance of PanelManager or returns the existing instance.
      * Implements the singleton pattern to ensure only one instance exists.
      *
      * @constructor
@@ -62,9 +48,23 @@ export class PanelManager {
             return PanelManager.instance
         }
 
-        // Initialize drawers from the main proxy
-        this.drawers = lgs.mainProxy.drawers
         PanelManager.instance = this
+    }
+
+    /**
+     * Gets the drawers state from the UI store.
+     * @returns {Object} The drawers state object
+     */
+    get drawers() {
+        return lgs.stores.ui.drawers
+    }
+
+    /**
+     * Sets the drawers state in the UI store.
+     * @param {Object} value - The new drawers state
+     */
+    set drawers(value) {
+        Object.assign(lgs.stores.ui.drawers, value)
     }
 
     /**
@@ -136,10 +136,10 @@ export class PanelManager {
      * @param {string} [options.tab] - The tab to activate when opening the drawer
      */
     open = (id, options) => {
-        // Set the drawer as open and configure the action
-        this.drawers.open = id
-        this.drawers.action = options?.action ?? ''
-
+        // Use the UI store instead of main proxy
+        lgs.stores.ui.drawers.open = id
+        lgs.stores.ui.drawers.action = options?.action ?? ''
+        
         // Handle tab activation if specified or previously set
         if (options?.tab) {
             this.openTab(options.tab)
@@ -156,7 +156,7 @@ export class PanelManager {
     close = () => {
         // Remove focus from any active elements within the drawer
         document.activeElement?.blur()
-        this.drawers.open = null
+        lgs.stores.ui.drawers.open = null
     }
 
     /**
@@ -209,7 +209,7 @@ export class PanelManager {
             drawer.addEventListener('sl-after-show', () => {
                 // Dispatch a custom event when the drawer is shown
                 const event = new CustomEvent('drawer-open', {
-                    detail:  {drawerId: drawer.id},
+                    detail: {drawerId: drawer.id},
                     bubbles: true,
                     composed: true,
                 })
@@ -221,7 +221,6 @@ export class PanelManager {
             tabgroups.forEach(tabgroup => {
                 tabgroup.addEventListener('sl-tab-show', (event) => {
                     this.tab = event.detail.name
-                    console.log('Tab switched to:', event.detail.name)
                 })
             })
         })
@@ -231,7 +230,7 @@ export class PanelManager {
      * Resets the drawer manager's action state.
      */
     clean = () => {
-        this.drawers.action = null
+        lgs.stores.ui.drawers.action = null
     }
 
     /**
@@ -278,5 +277,21 @@ export class PanelManager {
         // Check if the tabName exists in the tabs Map for the current drawer
         return this.#tabs.has(this.drawers.open) &&
             this.#tabs.get(this.drawers.open) === tabName
+    }
+
+    /**
+     * Sets the open drawer ID
+     * @param {string|null} id - The drawer ID to open, or null to close
+     */
+    setOpen(id) {
+        lgs.stores.ui.drawers.open = id
+    }
+
+    /**
+     * Sets the drawer action
+     * @param {string|null} action - The action to set
+     */
+    setAction(action) {
+        lgs.stores.ui.drawers.action = action
     }
 }

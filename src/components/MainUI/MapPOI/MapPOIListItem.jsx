@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-27
- * Last modified: 2025-06-27
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -52,7 +52,7 @@ export const MapPOIListItem = memo(({id}) => {
     // Get the specific POI data
     const poi = useMemo(() => pois.list.get(id), [pois.list, id])
     // Get drawer state
-    const drawerOpen = useSnapshot(lgs.stores.main.drawers, {sync: true}).open
+    const drawerOpen = useSnapshot(lgs.stores.ui.drawers, {sync: true}).open
 
     // Cache refs to avoid recreation
     const bulkStateRef = useRef(bulkList.get(id) ?? false)

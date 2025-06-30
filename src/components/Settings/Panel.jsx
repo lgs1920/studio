@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -28,7 +28,7 @@ import { ProfileTools }                                               from './ap
 import { Style }                                                      from './application/style/Style'
 
 export const Panel = () => {
-    const drawers = useSnapshot(lgs.mainProxy.drawers)
+    const drawers = useSnapshot(lgs.stores.ui.drawers)
     const openInfoModal = () => lgs.editorSettingsProxy.layer.infoDialog = true
 
     const closePanel = (event) => {

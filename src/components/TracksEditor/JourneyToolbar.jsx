@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneyToolbar.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { FAButton }                                            from '@Components/FAButton'
 import { ToggleStateIcon }                                                              from '@Components/ToggleStateIcon'
 import { APP_EVENT, CURRENT_JOURNEY, REFRESH_DRAWING, SECOND, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
@@ -32,11 +48,11 @@ export const JourneyToolbar = (props) => {
     const $journeyEditor = lgs.mainProxy.components.journeyEditor
     const journeyEditor = useSnapshot($journeyEditor)
 
-    const $rotate = lgs.mainProxy.components.mainUI.rotate
+    const $rotate = lgs.stores.ui.mainUI.rotate
     const rotate = useSnapshot($rotate)
 
     const animationFrame = useRef(null)
-    const journeyLoaderStore = lgs.mainProxy.components.mainUI.journeyLoader
+    const journeyLoaderStore = lgs.stores.ui.mainUI.journeyLoader
     let dragging
     const $editorStore = lgs.theJourneyEditorProxy
     const editorStore = useSnapshot($editorStore)

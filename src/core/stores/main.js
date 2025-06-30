@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-10
- * Last modified: 2025-06-10
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,29 +17,15 @@
 import { proxyMap } from 'valtio/utils'
 
 export const main = {
-    components:      {
-
-        mainUI: {
-            show:          false,
-            journeyLoader: {visible: false},
-            support:       {visible: false},
-
-            journeyMenu:         {timeout: 0, active: false},
-            removeJourneyDialog: {active: proxyMap()},
-            rotate:        {
-                clockwise: false,
-                running:   false,
-                target: false,
-                rpm: 4,
-            },
-        },
+    components: {
+        // mainUI, welcome, informationPanel moved to lgs.stores.ui.informationPanel
 
         fileLoader: {
             accepted: 0,
             error:    '',
             dragging: {
                 active: null,
-                files:  [],
+                files: [],
             },
             fileList: new proxyMap(),
             empty:    true,
@@ -47,8 +33,8 @@ export const main = {
 
         camera: {
             position: {},
-            target:   {},
-            event:    false,
+            target: {},
+            event:  false,
             targetIcon: {},
         },
 
@@ -59,39 +45,40 @@ export const main = {
                     list: 0,
                     settings: 0,
                 },
-                track:   {
+                track: {
                     list: 5000,
                     settings: 0,
                 },
             },
         },
 
-        pois:          {
-            list:   new proxyMap(),
+        pois: {
+            list:     new proxyMap(),
             categories: new proxyMap(),
             current: false,
             context: {
                 visible: false,
-                timer:   'context-timer',
+                timer: 'context-timer',
             },
             editor: {
                 visible: false,
                 active: false,
             },
-            bulkList:     new proxyMap(),
+            bulkList: new proxyMap(),
             filtered: {
-                global:  new proxyMap(),
+                global: new proxyMap(),
                 journey: new proxyMap(),
             },
             visibleList: new proxyMap(),
         },
-        profile:       {
+
+        profile: {
             visible: false,
-            show:   false,
-            key:    0,
-            width:  '100%',
+            show:  false,
+            key:   0,
+            width: '100%',
             height: '100%',
-            zoom:   false,
+            zoom:  false,
         },
 
         settings: {
@@ -99,57 +86,39 @@ export const main = {
         },
 
         layers: {
-            base:    null,
+            base: null,
             overlay: null,
         },
 
         wanderer: {
-            run:     false,
-            pause:   false,
+            run:   false,
+            pause: false,
             forward: true,
             duration: undefined,
-            loop:    false,
-        },
-
-        informationPanel: {
-            tab: null,
-        },
-
-        welcome: {
-            modal: false,
-            flag:  false,
+            loop:  false,
         },
 
         geocoder: {
             list:   proxyMap(),
             dialog: {
-                visible:     false,
-                loading:     false,
-                noResults:   false,
+                visible:   false,
+                loading:   false,
+                noResults: false,
                 moreResults: false,
                 submitDisabled: true,
-                showMore:    false,
+                showMore:  false,
             },
         },
+    },
 
+    // drawers moved to lgs.stores.ui.informationPanel
+    // modals moved to lgs.stores.ui.informationPanel (except altitudeChoice which is kept here for now)
 
-    },
-    drawers:         {
-        open: null,
-        over: false,
-        action: null,
-    },
-    modals:          {
-        altitudeChoice: {
-            show: false,
-            model: 'terrain',
-        },
-    },
-    theJourney:      null,
+    theJourney:     null,
     readyForTheShow: false,
-    fullSize:        false,
+    fullSize:       false,
     canViewJourneyData: false,
-    canViewProfile:  false,
-    theLayer:        null,
+    canViewProfile: false,
+    theLayer:       null,
     theLayerOverlay: null,
 }

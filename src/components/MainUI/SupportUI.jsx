@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: SupportUI.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { faXmark }                    from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { default as ReactMarkdown }   from 'react-markdown'
@@ -7,7 +23,7 @@ import { FA2SL } from '@Utils/FA2SL'
 
 
 export const SupportUI = () => {
-    const setSupport = lgs.mainProxy.components.mainUI.support
+    const setSupport = lgs.stores.ui.mainUI.support
     const getSupport = useSnapshot(setSupport)
     return (
         <>

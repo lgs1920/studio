@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: TrackEditorButton.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { faRegularRouteCirclePlus }                         from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { JOURNEY_EDITOR_DRAWER, REMOVE_JOURNEY_IN_TOOLBAR } from '@Core/constants'
 import { faRoute } from '@fortawesome/pro-regular-svg-icons'
@@ -8,10 +24,10 @@ import { useSnapshot }                                      from 'valtio'
 
 export const TrackEditorButton = (props) => {
 
-    const mainUI = lgs.mainProxy.components.mainUI
+    const mainUI = lgs.stores.ui.mainUI
     const snap = useSnapshot(lgs.mainProxy)
     const settings = useSnapshot(lgs.settings.ui.menu)
-    const journeyLoaderStore = lgs.mainProxy.components.mainUI.journeyLoader
+    const journeyLoaderStore = lgs.stores.ui.mainUI.journeyLoader
 
     const openEditorOrLoader = () => {
         if (lgs.theJourney === null) {

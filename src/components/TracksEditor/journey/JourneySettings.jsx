@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-28
- * Last modified: 2025-06-28
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -96,7 +96,7 @@ export const JourneySettings = function JourneySettings() {
     const editorStore = useSnapshot(lgs.theJourneyEditorProxy)
     const $main = lgs.stores.main
     const main = useSnapshot($main, {sync: true})
-    const $rotate = lgs.stores.main.components.mainUI.rotate
+    const $rotate = lgs.stores.ui.mainUI.rotate
     const rotate = useSnapshot($rotate)
     const tabgroup = useRef(null)
 
@@ -431,19 +431,19 @@ export const JourneySettings = function JourneySettings() {
 
     // Handle removeJourneyDialog.active state
     useEffect(() => {
-        lgs.stores.main.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+        lgs.stores.ui.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
 
         // Cleanup (already present in original code)
         return () => {
-            lgs.stores.main.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+            lgs.stores.ui.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
         }
     }, []) // Empty dependency array ensures this runs only on mount/unmount
 
     useEffect(() => {
         return (() => {
-            lgs.stores.main.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+            lgs.stores.ui.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
         })
-    }, [lgs.stores.main.components.mainUI.removeJourneyDialog.active])
+    }, [lgs.stores.ui.mainUI.removeJourneyDialog.active])
 
     const initTab = (event) => {
 
@@ -467,7 +467,7 @@ export const JourneySettings = function JourneySettings() {
     const POIS_PANEL = `tab-${POIS}`
 
     return (<>
-        {theJourneyEditor.journey && main.drawers.open === JOURNEY_EDITOR_DRAWER &&
+        {theJourneyEditor.journey && lgs.stores.ui.drawers.open === JOURNEY_EDITOR_DRAWER &&
 
             <div id="journey-settings" key={lgs.stores.main.components.journeyEditor.keys.journey.settings}>
                 <div className={'settings-panel'} id={'editor-journey-settings-panel'}>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-28
- * Last modified: 2025-06-28
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -59,7 +59,7 @@ import { SupportUIButton }                  from './SupportUIButton'
 
 export const MainUI = () => {
 
-    const hidden = useSnapshot(lgs.stores.main.components.welcome).hidden
+    const hidden = useSnapshot(lgs.stores.ui.welcome).hidden
     const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
     const formerDevice = useRef(isMobile)
     const settings = useSnapshot(lgs.settings.ui.menu)
@@ -98,7 +98,7 @@ export const MainUI = () => {
             lgs.scene.morphTo2D(0)
         }
 
-        subscribe(lgs.mainProxy.drawers, arrangeDrawers)
+        subscribe(lgs.stores.ui.drawers, arrangeDrawers)
         subscribe(lgs.settings.ui.menu, arrangeDrawers)
         window.addEventListener('resize', windowResized)
 
@@ -126,11 +126,11 @@ export const MainUI = () => {
                                   lgs.settings.ui.menu.toolBar.fromStart ? START : END)
 
 
-        const verticalOffsetLeft = (lgs.mainProxy.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-left')
-        const verticalOffsetRight = (lgs.mainProxy.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-right')
-        const horizontalOffsetLeft = (lgs.mainProxy.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-horizontal-panel-offset-left')
+        const verticalOffsetLeft = (lgs.stores.ui.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-left')
+        const verticalOffsetRight = (lgs.stores.ui.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-vertical-panel-offset-right')
+        const horizontalOffsetLeft = (lgs.stores.ui.drawers.open === null) ? '0.1px' : __.ui.css.getCSSVariable('--lgs-horizontal-panel-offset-left')
 
-        const width = (lgs.mainProxy.drawers.open === null)
+        const width = (lgs.stores.ui.drawers.open === null)
                       ? '0.1px'
                       : `calc( ${__.ui.css.getCSSVariable('--lgs-vertical-panel-width')} + ${__.ui.css.getCSSVariable('--right')}`
         switch (placement) {

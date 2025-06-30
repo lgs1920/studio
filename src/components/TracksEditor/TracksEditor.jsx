@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-27
- * Last modified: 2025-06-27
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -78,7 +78,9 @@ const JourneyContent = memo(({journeyVisible}) => (
 
 export const TracksEditor = memo(() => {
     // Select necessary state properties with safe defaults
-    const {canViewJourneyData, drawers: {open: drawerOpen}} = useSnapshot(lgs.mainProxy)
+    const {canViewJourneyData} = useSnapshot(lgs.stores.main)
+    const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
+
     const editorSnap = useSnapshot(lgs.theJourneyEditorProxy)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const {show: toolbarShow, usage: toolbarUsage} = useSnapshot(lgs.settings.ui.journeyToolbar)

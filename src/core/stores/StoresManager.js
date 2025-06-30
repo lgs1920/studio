@@ -7,21 +7,23 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-26
- * Last modified: 2025-02-26
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { proxy }            from 'valtio'
-import { editorSettings }   from './editorSettings'
-import { main }             from './main'
-import { theJourneyEditor } from './theJourneyEditor'
+import { editorSettings }   from './editorSettings.js'
+import { main }             from './main.js'
+import { theJourneyEditor } from './theJourneyEditor.js'
+import { ui }               from './ui.js'
 
 /**
  * StoresManager provides centralized access to application stores:
  * - main: core application state
+ * - ui: user interface state (drawers, modals, etc.)
  * - journeyEditor: editor-specific state
  * - editorSettings: user preferences and settings
  *
@@ -33,6 +35,9 @@ export class StoresManager {
 
     /** @type {Object} Main application state store */
     #main
+
+    /** @type {Object} UI state store */
+    #ui
 
     /** @type {Object} Journey editor state store */
     #journeyEditor
@@ -53,6 +58,7 @@ export class StoresManager {
         }
 
         this.#main = proxy(main)
+        this.#ui = proxy(ui)
         this.#journeyEditor = proxy(theJourneyEditor)
         this.#editorSettings = proxy(editorSettings)
 
@@ -65,6 +71,14 @@ export class StoresManager {
      */
     get main() {
         return this.#main
+    }
+
+    /**
+     * Gets the UI state store
+     * @returns {Object} UI store (drawers, modals, mainUI, etc.)
+     */
+    get ui() {
+        return this.#ui
     }
 
     /**
@@ -82,5 +96,4 @@ export class StoresManager {
     get editorSettings() {
         return this.#editorSettings
     }
-
 }

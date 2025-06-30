@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-25
- * Last modified: 2025-05-25
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,9 +24,8 @@ import React, { useEffect, useRef }                           from 'react'
 import { useSnapshot }                                        from 'valtio'
 
 export const RemoveJourney = (props) => {
-
+    const mainUI = lgs.stores.ui.mainUI
     const editorStore = lgs.theJourneyEditorProxy
-    const mainUI = lgs.mainProxy.components.mainUI
     const snap = useSnapshot(mainUI)
 
     const removeButton = useRef(null)

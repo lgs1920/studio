@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-27
- * Last modified: 2025-06-27
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -123,7 +123,7 @@ export const MapPOIList = memo(() => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
     const settings = useSnapshot(lgs.settings.poi)
-    const drawers = useSnapshot(lgs.stores.main.drawers)
+    const drawers = useSnapshot(lgs.stores.ui.drawers)
 
     // Memoized computation: determine if we're in journey-only mode
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
@@ -150,7 +150,7 @@ export const MapPOIList = memo(() => {
 
         // Clear drawer action
         if (drawers.action) {
-            lgs.mainProxy.drawers.action = null
+            lgs.stores.ui.drawers.action = null
         }
     }, [])
 

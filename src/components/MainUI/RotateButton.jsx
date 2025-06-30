@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-17
- * Last modified: 2025-06-17
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -33,7 +33,7 @@ const FOCUS_TARGET = 'target'
  */
 export const RotateButton = memo(({tooltip = 'top'}) => {
     // Targeted snapshots to minimize re-renders
-    const {rotate} = useSnapshot(lgs.stores.main.components.mainUI)
+    const {rotate} = useSnapshot(lgs.stores.ui.mainUI)
     const {target, position} = useSnapshot(lgs.stores.main.components.camera)
     const $pois = lgs.stores.main.components.pois
     const {list, current} = useSnapshot($pois)

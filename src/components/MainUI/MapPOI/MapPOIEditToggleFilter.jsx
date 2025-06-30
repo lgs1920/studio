@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-27
- * Last modified: 2025-06-27
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -28,7 +28,7 @@ export const MapPOIEditToggleFilter = memo(({slot, active}) => {
     const settings = useSnapshot(lgs.settings.poi)
     const {showPOIsFilter} = useSnapshot(lgs.stores.journeyEditor)
     const {list} = useSnapshot(lgs.stores.main.components.pois)
-    const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.main)
+    const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
 
     // Memoize the filter toggle handler
     const handleFilter = useCallback(() => {

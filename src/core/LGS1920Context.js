@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-28
- * Last modified: 2025-06-28
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -51,7 +51,8 @@ export class LGS1920Context {
     #editorSettingsProxy
     /** @type {Proxy} */
     #cameraProxy
-
+    /** @type {Proxy} */
+    #ui
     eventHandler = new MouseEventHandler()
     #viewer
 
@@ -69,7 +70,6 @@ export class LGS1920Context {
         this.#editorSettingsProxy = proxy(editorSettings)
 
         this.journeyEditorStore = this.#mainProxy.components.journeyEditor
-        this.mainUIStore = this.#mainProxy.components.mainUI
 
         this.stores = new StoresManager()// TODO change all stores
 
