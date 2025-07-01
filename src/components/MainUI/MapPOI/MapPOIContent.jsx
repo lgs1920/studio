@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-07-01
+ * Last modified: 2025-07-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,6 +18,7 @@ import { NameValueUnit }                             from '@Components/DataDispl
 import { FontAwesomeIcon }                           from '@Components/FontAwesomeIcon'
 import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
 import { MapPOI }                                    from '@Core/MapPOI'
+import { Utils } from '@Editor/Utils'
 import { UIToast }                                   from '@Utils/UIToast'
 import { ELEVATION_UNITS }                           from '@Utils/UnitUtils'
 import { snapdom }                                   from '@zumer/snapdom'
@@ -91,7 +92,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
      * @param {Event} event - The event that triggered the handler
      * @param {string} entity - The POI identifier
      */
-    const handleEditor = (event, entity) => {
+    const handleEditor = async (event, entity) => {
         const current = pois.current
         const thePOI = getPOI(entity)
 
@@ -113,8 +114,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
 
                 if (!sameJourney) {
                     // Switch to different journey
-                    newJourney.addToContext()
-                    newJourney.addToEditor()
+                    await Utils.updateJourneyEditor(newJourney.slug, {focus: false})
                 }
                 else {
                     const newTrack = lgs.getTrackBySlug(thePOI.parent)
@@ -129,7 +129,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
 
             // Open drawer based on context change
             if (!sameJourney) {
-                __.ui.drawerManager.toggle(drawer, {
+                __.ui.drawerManager.open(drawer, {
                     action: 'edit-current',
                     entity: entity,
                     tab:    tab,
