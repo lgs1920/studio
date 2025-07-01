@@ -309,7 +309,10 @@
 
 #info-layer-modal {
     position: relative;
-    z-index: 250000
+}
+
+#info-layer-modal::part(body) {
+    height: 50vh;
 }
 
 #filter-alert-content {
