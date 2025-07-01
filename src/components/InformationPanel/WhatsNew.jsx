@@ -1,3 +1,20 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: WhatsNew.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-07-01
+ * Last modified: 2025-07-01
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
+import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { ChangelogManager }         from '@Core/ui/ChangelogManager'
 import { SlDetails, SlDivider }     from '@shoelace-style/shoelace/dist/react'
 import { DateTime }                 from 'luxon'
@@ -60,6 +77,7 @@ export const WhatsNew = () => {
 
     return (
             <div className={'whats-new-list'} ref={newsList}>
+                <LGSScrollbars>
                 {snap.data.map(file => (
                     <SlDetails small open={file.open}
                                key={file.name}
@@ -72,6 +90,7 @@ export const WhatsNew = () => {
                     </SlDetails>
 
                 ))}
+                </LGSScrollbars>
             </div>
 
     )
