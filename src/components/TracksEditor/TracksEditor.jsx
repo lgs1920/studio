@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-07-01
+ * Last modified: 2025-07-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -47,7 +47,7 @@ const ToolbarHeader = memo(({show, usage, onToggle}) => {
 
 // Memoized sub-component for journey content
 const JourneyContent = memo(({journeyVisible}) => (
-    <>
+    <div className="journey-content-wrapper">
         <div className="selector-wrapper">
             <JourneySelector
                 onChange={Utils.initJourneyEdition}
@@ -62,7 +62,6 @@ const JourneyContent = memo(({journeyVisible}) => (
         <JourneySettings/>
         {journeyVisible && (
             <>
-                <SlDivider/>
                 <div className="selector-wrapper">
                     <TrackSelector
                         onChange={Utils.initTrackEdition}
@@ -73,7 +72,7 @@ const JourneyContent = memo(({journeyVisible}) => (
                 <TrackSettings/>
             </>
         )}
-    </>
+    </div>
 ))
 
 export const TracksEditor = memo(() => {

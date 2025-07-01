@@ -410,6 +410,13 @@ sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-panel::part(ba
     gap: var(--lgs-gutter-s);
 }
 
+.panel-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-bottom: var(--lgs-gutter-s);
+}
+
 .credits-pane-footer {
     flex-direction: row !important;
 }

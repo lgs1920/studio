@@ -7,18 +7,27 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-07-01
+ * Last modified: 2025-07-01
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { FAButton } from '@Components/FAButton'
-import { MapPOIEditFilter } from '@Components/MainUI/MapPOI/MapPOIEditFilter'
-import { MapPOIEditSettings } from '@Components/MainUI/MapPOI/MapPOIEditSettings'
-import { MapPOIEditToggleFilter } from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
-import { MapPOIList }         from '@Components/MainUI/MapPOI/MapPOIList'
+import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
+import {
+    MapPOIEditFilter,
+}                        from '@Components/MainUI/MapPOI/MapPOIEditFilter'
+import {
+    MapPOIEditSettings,
+}                        from '@Components/MainUI/MapPOI/MapPOIEditSettings'
+import {
+    MapPOIEditToggleFilter,
+}                        from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
+import {
+    MapPOIList,
+}                        from '@Components/MainUI/MapPOI/MapPOIList'
 import {
     useConfirm,
 }                   from '@Components/Modals/ConfirmUI'
@@ -26,10 +35,9 @@ import {
     ToggleStateIcon,
 }                   from '@Components/ToggleStateIcon'
 import {
-    CURRENT_JOURNEY, JOURNEY_EDITOR_DRAWER,
-    ORIGIN_STORE, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE,
+    CURRENT_JOURNEY, JOURNEY_EDITOR_DRAWER, ORIGIN_STORE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE,
     UPDATE_JOURNEY_SILENTLY,
-} from '@Core/constants'
+}                        from '@Core/constants'
 import {
     ElevationServer,
 }                   from '@Core/Elevation/ElevationServer'
@@ -55,8 +63,8 @@ import {
     Utils,
 }                   from '@Editor/Utils'
 import {
-    faArrowRotateRight, faCircleDot, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash,
-    faPaintbrushPencil, faRectangleList,
+    faArrowRotateRight, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil,
+    faRectangleList,
 }                   from '@fortawesome/pro-regular-svg-icons'
 import {
     SlIcon, SlIconButton, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
@@ -73,8 +81,8 @@ import {
 import classNames   from 'classnames'
 import parse        from 'html-react-parser'
 import React, {
-    useEffect, useMemo, useRef, useState,
-} from 'react'
+    useEffect, useMemo, useRef,
+}                        from 'react'
 import {
     sprintf,
 }                   from 'sprintf-js'
@@ -427,7 +435,7 @@ export const JourneySettings = function JourneySettings() {
         }
 
         return list.concat(Array.from(ElevationServer.SERVERS.values()))
-    }, [theJourneyEditor.journey.hasElevation, theJourneyEditor.journey.elevationServer]);
+    }, [theJourneyEditor.journey.hasElevation, theJourneyEditor.journey.elevationServer])
 
     // Handle removeJourneyDialog.active state
     useEffect(() => {
@@ -468,7 +476,6 @@ export const JourneySettings = function JourneySettings() {
 
     return (<>
         {theJourneyEditor.journey && lgs.stores.ui.drawers.open === JOURNEY_EDITOR_DRAWER &&
-
             <div id="journey-settings" key={lgs.stores.main.components.journeyEditor.keys.journey.settings}>
                 <div className={'settings-panel'} id={'editor-journey-settings-panel'}>
                     <SlTabGroup className={'menu-panel'} ref={tabgroup}
@@ -542,13 +549,15 @@ export const JourneySettings = function JourneySettings() {
 
                             </div>
                         </SlTabPanel>
-                        {/**
-                         * POIs Tab Panel
-                         */}
+
                         <SlTabPanel name={POIS_PANEL}>
-                            <MapPOIEditFilter/>
-                            <MapPOIEditSettings/>
-                            <MapPOIList/>
+                            <div className="panel-wrapper">
+                                <LGSScrollbars>
+                                    <MapPOIEditFilter/>
+                                    <MapPOIEditSettings/>
+                                    <MapPOIList/>
+                                </LGSScrollbars>
+                            </div>
                         </SlTabPanel>
 
                         {/**
@@ -591,30 +600,29 @@ export const JourneySettings = function JourneySettings() {
                             </SlTooltip>
                         </div>
                         {theJourneyEditor.journey.pois.size > 1 &&
-                                <SlTooltip hoist content={textVisibilityPOIs} placement="left">
-                                    <ToggleStateIcon
-                                        onChange={setAllPOIsVisibility}
-                                        initial={theJourneyEditor.journey.POIsVisible}
-                                        icons={{
-                                            shown: faLocationDot, hidden: faLocationDotSlash,
-                                        }}/>
-                                </SlTooltip>
-                            }
+                            <SlTooltip hoist content={textVisibilityPOIs} placement="left">
+                                <ToggleStateIcon
+                                    onChange={setAllPOIsVisibility}
+                                    initial={theJourneyEditor.journey.POIsVisible}
+                                    icons={{
+                                        shown: faLocationDot, hidden: faLocationDotSlash,
+                                    }}/>
+                            </SlTooltip>
+                        }
 
                         {theJourneyEditor.journey.tracks.size === 1 && theJourneyEditor.journey.visible &&
                             <TrackFlagsSettings tooltip="left"/>}
 
                         <div>
-                        <SlTooltip hoist content={'Export'} placement="left">
+                            <SlTooltip hoist content={'Export'} placement="left">
                                 <SlIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>
-                        </SlTooltip>
-                        <RemoveJourney tooltip="left-start" name={REMOVE_JOURNEY_IN_EDIT}/>
+                            </SlTooltip>
+                            <RemoveJourney tooltip="left-start" name={REMOVE_JOURNEY_IN_EDIT}/>
 
                         </div>
                     </div>
                 </div>
                 <ConfirmExportJourneyDialog/>
-
             </div>}
     </>)
 }
