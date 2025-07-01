@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-28
- * Last modified: 2025-06-28
+ * Created on: 2025-07-01
+ * Last modified: 2025-07-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -49,6 +49,7 @@ export class Utils {
     static updateJourneyEditor = async (journeySlug, {
         rotate = lgs.settings.ui.camera.start.rotate.journey,
         action = DRAWING_FROM_UI,
+        focus = true,
     }) => {
         const editorStore = lgs.theJourneyEditorProxy
         editorStore.journey = lgs.getJourneyBySlug(journeySlug)
@@ -56,6 +57,7 @@ export class Utils {
 
 
         editorStore.journey.addToContext()
+        editorStore.journey.addToEditor()
         // Force Tab to Data
 
         // Force Track and POI in editor
@@ -79,8 +81,8 @@ export class Utils {
         __.ui.profiler.draw()
 
         // Save information
-        TrackUtils.saveCurrentJourneyToDB(event.target.value).then(async () => {
-            if (editorStore.journey.visible) {
+        TrackUtils.saveCurrentJourneyToDB(lgs.theJourney).then(async () => {
+            if (editorStore.journey.visible && focus) {
                 lgs.theJourney.focus({action: action, rotate: rotate})
             }
 
