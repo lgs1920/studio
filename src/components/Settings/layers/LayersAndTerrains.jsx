@@ -202,12 +202,9 @@ export const LayersAndTerrains = () => {
                     </div>
 
                     <SlTabPanel name="tab-bases">
-                        <LGSScrollbars>
                             <SelectEntity
                                 key={`${BASE_ENTITY}-${layers.filter.byName}-${layers.filter.byUsage}-${layers.filter.alphabetic}`}
                                 list={buildList(BASE_ENTITY).sort(sortByProvider)}/>
-                        </LGSScrollbars>
-
                     </SlTabPanel>
 
                     <SlTabPanel name="tab-overlays">
