@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-07-01
+ * Last modified: 2025-07-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,7 +23,7 @@ import { SlDrawer }                              from '@shoelace-style/shoelace/
 import { memo, useCallback, useEffect, useMemo } from 'react'
 import { useSnapshot }                           from 'valtio'
 import { proxyMap }                              from 'valtio/utils'
-import { DrawerFooter }                          from '../../DrawerFooter'
+import DrawerFooter from '../../DrawerFooter'
 import './style.css'
 
 /**
