@@ -76,9 +76,10 @@ export const WhatsNew = () => {
     const snap = useSnapshot(state)
 
     return (
-            <div className={'whats-new-list'} ref={newsList}>
                 <LGSScrollbars>
-                {snap.data.map(file => (
+                    <div className={'whats-new-list'} ref={newsList}>
+
+                        {snap.data.map(file => (
                     <SlDetails small open={file.open}
                                key={file.name}
                                className={'lgs-theme'}
@@ -90,8 +91,9 @@ export const WhatsNew = () => {
                     </SlDetails>
 
                 ))}
+                    </div>
                 </LGSScrollbars>
-            </div>
+
 
     )
 }
