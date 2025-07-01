@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-07-01
+ * Last modified: 2025-07-01
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { DrawerFooter }           from '@Components/DrawerFooter'
+import DrawerFooter from '@Components/DrawerFooter'
 import { LAYERS_DRAWER }          from '@Core/constants'
 import { faCircleInfo }           from '@fortawesome/pro-regular-svg-icons'
 import { SlDrawer, SlIconButton } from '@shoelace-style/shoelace/dist/react'

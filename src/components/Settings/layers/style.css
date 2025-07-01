@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-07-01
+ * Last modified: 2025-07-01
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 :root {
     --entity-thumbnail-button-dimension: 20px;
     --layer-list-itel-height: 40px
@@ -5,6 +21,7 @@
 
 #layers-and-terrains-settings {
     position: relative;
+    height: 100%;
 }
 
 #layers-and-terrains-settings sl-tab-panel::part(base) {
@@ -16,16 +33,17 @@
 }
 
 .layer-entities-wrapper {
-    gap: var(--lgs-gutter-s);
-    width: 100%;
-    flex-wrap: wrap;
     display: grid;
+    flex-wrap: wrap;
+    width: 100%;
+
+    margin-bottom: 1px; /** fix */
+    gap: var(--lgs-gutter-s);
     grid-template-columns: repeat(4, 1fr);
 }
 
 .by-list.layer-entities-wrapper {
     display: flex;
-    flex-direction: column;
     gap: var(--lgs-gutter-xs);
 }
 
@@ -276,10 +294,9 @@
 
 #filter-entities {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     gap: var(--lgs-gutter-s);
-    margin-top: var(--lgs-gutter-s);
 }
 
 #filter-by-name {
@@ -313,7 +330,7 @@
 #layer-settings {
     display: flex;
     flex-direction: column;
-    margin-top: var(--lgs-gutter-s);
+    margin: var(--lgs-gutter-xs) 0;
     --lgs-animation-duration-on: 0.6s;
 
 }

@@ -7,14 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2025-07-01
+ * Last modified: 2025-07-01
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { faRegularSlidersSlash }                                                             from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import {
+    LGSScrollbars,
+} from '@Components/MainUI/LGSScrollbars'
 import { ALL, BASE_ENTITY, FREE_ANONYMOUS_ACCESS, OVERLAY_ENTITY, TERRAIN_ENTITY, UNLOCKED } from '@Core/constants'
 import {
     faArrowDownAZ, faArrowDownBigSmall, faArrowDownWideShort, faArrowDownZA, faFilter, faFilterSlash, faGrid2, faList,
@@ -150,7 +153,8 @@ export const LayersAndTerrains = () => {
     return (
         <>
             <div id="layers-and-terrains-settings">
-
+                <FilterEntities/>
+                <LayerSettings visible={canViewSettings}/>
                 <SlTabGroup>
                     <SlTab slot="nav" panel="tab-bases"
                            onClick={() => editor.layer.selectedType = BASE_ENTITY}>{'Bases'}</SlTab>
@@ -158,6 +162,7 @@ export const LayersAndTerrains = () => {
                            onClick={() => editor.layer.selectedType = OVERLAY_ENTITY}>{'Overlays'}</SlTab>
                     <SlTab slot="nav" panel="tab-terrains"
                            onClick={() => editor.layer.selectedType = TERRAIN_ENTITY}>{'Terrains'}</SlTab>
+
                     <div slot="nav" id={'layers-and-terrains-filter'}>
 
                         <SlTooltip hoist content={layersSnap.filter.thumbnail ? 'Display List' : 'Display Thumbnails'}>
@@ -195,22 +200,23 @@ export const LayersAndTerrains = () => {
                                           className={layersSnap.filter.active ? 'layer-filter-active' : 'layer-filter-inactive'}/>
                         </SlTooltip>
                     </div>
-                    <FilterEntities/>
-                    <LayerSettings visible={canViewSettings}/>
-                    <SlTabPanel name="tab-bases">
 
+                    <SlTabPanel name="tab-bases">
+                        <LGSScrollbars>
                             <SelectEntity
                                 key={`${BASE_ENTITY}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}-${layersSnap.filter.alphabetic}`}
                                 list={buildList(BASE_ENTITY).sort(sortByProvider)}/>
-
+                        </LGSScrollbars>
 
                     </SlTabPanel>
 
                     <SlTabPanel name="tab-overlays">
                         {snap.layer.refreshList &&
+                            <>
                             <SelectEntity
                                 key={`${OVERLAY_ENTITY}-${layersSnap.filter.byName}-${layersSnap.filter.byUsage}-${layersSnap.filter.alphabetic}`}
                                 list={buildList(OVERLAY_ENTITY).sort(sortByProvider)}/>
+                            </>
                         }
                     </SlTabPanel>
                     <SlTabPanel name="tab-terrains">
