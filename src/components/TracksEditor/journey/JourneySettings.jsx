@@ -14,10 +14,7 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import React, { Fragment, useEffect, useMemo, useRef } from 'react'
-import {
-    debounce,
-}                                                      from 'lodash'
+import { Fragment, useEffect, useMemo, useRef } from 'react'
 import {
     useSnapshot,
 }                                                      from 'valtio'
@@ -286,7 +283,7 @@ export const JourneySettings = () => {
         }
     }
 
-    const setTitle = debounce(async event => {
+    const setTitle = __.tools.debounce(async event => {
         const title = event.target.value
         if (!title) {
             _title.current.value = journeyEditorStore.journey.title
@@ -304,7 +301,7 @@ export const JourneySettings = () => {
         Utils.renderJourneysList()
     }, 300)
 
-    const setDescription = debounce(async event => {
+    const setDescription = __.tools.debounce(async event => {
         const description = event.target.value
         if (!description) {
             _description.current.value = journeyEditorStore.journey.description

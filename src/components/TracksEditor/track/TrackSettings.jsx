@@ -97,22 +97,27 @@ export const TrackSettings = () => {
     const DATA_PANEL = 'tab-data'
     const EDIT_PANEL = 'tab-edit'
     const POINTS_PANEL = 'tab-points'
-
+    const POIS_PANEL = 'tab-pois'
     return (<>
             {journeyEditor.track && journeyEditor.journey.tracks.size > 1 &&
                 <>
-                    {(journeyEditor.tab === DATA_PANEL || journeyEditor.tab === EDIT_PANEL) &&
+                    {(journeyEditor.activeTab === DATA_PANEL || journeyEditor.activeTab === EDIT_PANEL) &&
                         <div className="selector-wrapper">
                             <TrackSelector onChange={Utils.initTrackEdition} label={'Select one of the tracks:'}/>
-                            <div className="editor-vertical-menu"/>
+                            <div className="editor-vertical-menu">
+                                <SlTooltip hoist content={textVisibilityTrack}>
+                                    <ToggleStateIcon onChange={setTrackVisibility}
+                                                     initial={journeyEditor.track.visible}/>
+                                </SlTooltip>
+                            </div>
                         </div>
                     }
                 <div className={'settings-panel'} id={'editor-track-settings-panel'}
                      key={lgs.mainProxy.components.journeyEditor.keys.journey.track}>
                     {journeyEditor.track.visible &&
                         <>
-                            {journeyEditor.tab === DATA_PANEL && <TrackData/>}
-                            {journeyEditor.tab === EDIT_PANEL &&
+                            {journeyEditor.activeTab === DATA_PANEL && <TrackData/>}
+                            {journeyEditor.activeTab === EDIT_PANEL &&
                                 <div id={'track-text-description'}>
                                     {journeyEditor.journey.tracks.size > 1 && <>
                                         {/* Change visible name (title) */}
@@ -142,18 +147,14 @@ export const TrackSettings = () => {
                             {journeyEditor.tab === POINTS_PANEL && <TrackPoints/>}
 
 
-                            <div id="track-visibility" className={'editor-vertical-menu'}>
-                                {$journeyEditor.journey.tracks.size > 1 &&
-                                    <SlTooltip hoist content={textVisibilityTrack}>
-                                        <ToggleStateIcon onChange={setTrackVisibility}
-                                                         initial={journeyEditor.track.visible}/>
-                                    </SlTooltip>}
-                                {journeyEditor.track.visible &&
-                                    <TrackFlagsSettings tooltip="left"/>
-                                }
-                            </div>
                         </>
                     }
+                    <div id="track-visibility" className={'editor-vertical-menu'}>
+
+                        {journeyEditor.activeTab !== POIS_PANEL && $journeyEditor.journey.tracks.size > 1 && journeyEditor.track.visible &&
+                            <TrackFlagsSettings tooltip="left"/>
+                        }
+                    </div>
                 </div>
                 </>
             }
