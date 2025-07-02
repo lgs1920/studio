@@ -178,7 +178,7 @@ export const JourneyToolbar = (props) => {
 
         // Configure InteractionHandler for dragging
         const dragHandler = new DragHandler({
-                                                grabber:  grabberElement,
+                                                grabber: toolbar,
                                                 parent:   toolbar,
                                                 callback: (toolbarData) => {
                                                     $journeyToolbar.x = toolbarData.x
