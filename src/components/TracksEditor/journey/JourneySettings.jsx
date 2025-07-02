@@ -384,12 +384,17 @@ export const JourneySettings = () => {
     const textVisibilityJourney = sprintf('%s Journey', journey.visible ? 'Hide' : 'Show')
     const textVisibilityPOIs = sprintf('%s POIs', journey.allPOIs ? 'Hide' : 'Show')
 
+
+    const shouldRender = journey && open === JOURNEY_EDITOR_DRAWER
+
     useEffect(() => {
+        if (!journeyEditorStore.activeTab) {
+            journeyEditorStore.activeTab = DATA
+            __.ui.drawerManager.tab = DATA
+        }
         lgs.stores.ui.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
         return () => lgs.stores.ui.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
     }, [])
-
-    const shouldRender = journey && open === JOURNEY_EDITOR_DRAWER
 
     return (
         <Fragment>
