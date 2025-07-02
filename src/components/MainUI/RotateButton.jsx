@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-07-02
+ * Last modified: 2025-07-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,70 +16,77 @@
 
 import { NONE, POI_STANDARD_TYPE } from '@Core/constants'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                      from '@Utils/FA2SL.js'
+import { FA2SL }       from '@Utils/FA2SL.js'
 import { faArrowRotateRight } from '@fortawesome/pro-regular-svg-icons'
 import { memo, useCallback, useMemo } from 'react'
-import { useSnapshot }                from 'valtio'
+import { useSnapshot } from 'valtio'
 
-// Static icon name to avoid recalculation
+/** @constant {string} ICON_NAME - Memoized FontAwesome icon name for rotation */
 const ICON_NAME = FA2SL.set(faArrowRotateRight)
+/** @constant {string} FOCUS_TARGET - Target identifier for camera focus */
 const FOCUS_TARGET = 'target'
+/** @constant {string} TOOLTIP_STOP - Tooltip text when rotation is active */
+const TOOLTIP_STOP = 'Stop Map Rotation'
+/** @constant {string} TOOLTIP_START - Tooltip text when rotation is inactive */
+const TOOLTIP_START = 'Start Map Rotation'
 
 /**
  * A memoized React component for toggling map rotation around a target.
  * @param {Object} props - Component props
- * @param {string} [props.tooltip='top'] - Tooltip placement (e.g., 'top', 'bottom')
- * @returns {JSX.Element} The rendered component
+ * @param {string} [props.tooltip='top'] - Tooltip placement (e.g., 'top', 'bottom', 'left', 'right')
+ * @returns {JSX.Element} The rendered RotateButton component
  */
 export const RotateButton = memo(({tooltip = 'top'}) => {
     // Targeted snapshots to minimize re-renders
     const {rotate} = useSnapshot(lgs.stores.ui.mainUI)
     const {target, position} = useSnapshot(lgs.stores.main.components.camera)
-    const $pois = lgs.stores.main.components.pois
-    const {list, current} = useSnapshot($pois)
+    const {current} = useSnapshot(lgs.stores.main.components.pois)
+    const sceneTarget = __.ui.sceneManager.target
 
-    // Memoized scene target check
+    /**
+     * Memoized check for whether the scene target is a POI.
+     * @type {boolean}
+     */
     const isPOITarget = useMemo(() => {
-        return __.ui.sceneManager.target?.element === POI_STANDARD_TYPE
-    }, [__.ui.sceneManager.target])
+        return sceneTarget?.element === POI_STANDARD_TYPE
+    }, [sceneTarget?.element])
 
     /**
      * Toggles map rotation and updates POI animation state if applicable.
+     * @async
+     * @function
      * @returns {Promise<void>}
      */
     const handleRotation = useCallback(async () => {
-        const poi = isPOITarget && current ? list.get(current) : null
+        const poi = isPOITarget && current ? lgs.stores.main.components.pois.list.get(current) : null
 
         try {
             if (rotate.running) {
                 await __.ui.cameraManager.stopRotate()
-                if (poi && poi.animated !== false) {
-                    Object.assign($pois.list.get(poi.id), {animated: false})
+                if (poi && poi.animated) {
+                    poi.animated = false
                 }
+                return
             }
-            else {
-                await __.ui.sceneManager.focus(target, {
-                    heading:    position.heading,
-                    pitch:      position.pitch,
-                    roll:       position.roll,
-                    range:      position.range,
-                    infinite:   true,
-                    rotate:     true,
-                    flyingTime: 0,
-                    target:     FOCUS_TARGET,
-                })
-                if (poi && poi.animated !== true) {
-                    Object.assign($pois.list.get(poi.id), {animated: true})
-                }
+
+            await __.ui.sceneManager.focus(target, {
+                ...position,
+                infinite:   true,
+                rotate:     true,
+                flyingTime: 0,
+                target:     FOCUS_TARGET,
+            })
+            if (poi && !poi.animated) {
+                poi.animated = true
             }
         }
         catch (error) {
-            console.error('Failed to toggle map rotation:', error)
+            console.error('Failed to toggle map rotation:', {error, target, rotate: rotate.running})
         }
-    }, [rotate.running, target, position, current, isPOITarget, list])
+    }, [rotate.running, target, position, current, isPOITarget])
 
     return (
-        <SlTooltip hoist placement={tooltip} content={rotate.running ? 'Stop Map Rotation' : 'Start Map Rotation'}>
+        <SlTooltip hoist placement={tooltip} content={rotate.running ? TOOLTIP_STOP : TOOLTIP_START}>
             <SlButton
                 size="small"
                 className="square-button"

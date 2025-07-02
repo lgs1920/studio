@@ -103,6 +103,11 @@ import {
     JourneyData,
 }                                                      from './JourneyData'
 
+/**
+ * Available panel tabs for the journey settings interface
+ * @type {Object}
+ * @readonly
+ */
 const PANELS = {
     DATA: 'tab-data',
     EDIT: 'tab-edit',
@@ -112,6 +117,15 @@ const PANELS = {
 
 const {DATA, EDIT, POINTS, POIS} = PANELS
 
+/**
+ * Data tab panel component for displaying journey data and elevation settings
+ * @param {Object} props - Component properties
+ * @param {Object} props.journey - Journey object containing tracks and settings
+ * @param {boolean} props.isProcessing - Whether elevation processing is in progress
+ * @param {Array} props.serverList - List of available elevation servers
+ * @param {Function} props.onElevationChange - Callback for elevation server change
+ * @returns {JSX.Element} Data tab panel component
+ */
 const DataTabPanel = ({journey, isProcessing, serverList, onElevationChange}) => (
     <SlTabPanel name={DATA}>
         <div className="select-elevation-source">
@@ -123,6 +137,14 @@ const DataTabPanel = ({journey, isProcessing, serverList, onElevationChange}) =>
     </SlTabPanel>
 )
 
+/**
+ * Edit tab panel component for journey title and description editing
+ * @param {Object} props - Component properties
+ * @param {Object} props.journey - Journey object with title and description
+ * @param {Function} props.onTitleChange - Callback for title changes
+ * @param {Function} props.onDescriptionChange - Callback for description changes
+ * @returns {JSX.Element} Edit tab panel component
+ */
 const EditTabPanel = ({journey, onTitleChange, onDescriptionChange}) => (
     <SlTabPanel name={EDIT}>
         <div id="journey-text-description">
@@ -146,6 +168,10 @@ const EditTabPanel = ({journey, onTitleChange, onDescriptionChange}) => (
     </SlTabPanel>
 )
 
+/**
+ * POIs tab panel component for managing Points of Interest
+ * @returns {JSX.Element} POIs tab panel component
+ */
 const PoisTabPanel = () => (
     <SlTabPanel name={POIS}>
         <div className="panel-wrapper">
@@ -158,25 +184,53 @@ const PoisTabPanel = () => (
     </SlTabPanel>
 )
 
+/**
+ * Points tab panel component for managing track points
+ * @returns {JSX.Element} Points tab panel component
+ */
 const PointsTabPanel = () => (
     <SlTabPanel name={POINTS}>
         <TrackPoints/>
     </SlTabPanel>
 )
 
+/**
+ * Main journey settings component providing comprehensive journey editing interface
+ * Features include:
+ * - Journey data management and elevation processing
+ * - Title and description editing
+ * - POI (Points of Interest) management
+ * - Track points editing
+ * - Journey visibility controls
+ * - Camera rotation and focus controls
+ * - Journey export functionality
+ *
+ * @component
+ * @returns {JSX.Element} Journey settings interface
+ */
 export const JourneySettings = () => {
     const journeyEditorStore = lgs.stores.journeyEditor
     const {journey, isProcessing, activeTab} = useSnapshot(journeyEditorStore)
     const {running, target} = useSnapshot(lgs.stores.ui.mainUI.rotate)
     const {journey: autoRotateJourney} = useSnapshot(lgs.settings.ui.camera.start.rotate)
     const {open} = useSnapshot(lgs.stores.ui.drawers)
+
+    /** @type {React.RefObject} Reference to tab group component */
     const _tabGroup = useRef(null)
+    /** @type {React.RefObject} Reference to title input component */
     const _title = useRef(null)
+    /** @type {React.RefObject} Reference to description textarea component */
     const _description = useRef(null)
+    /** @type {React.RefObject} Reference to manual rotate button */
     const _manualRotate = useRef(null)
+
     let allowRotation = false
     const previousElevationServer = journeyEditorStore.journey.elevationServer
 
+    /**
+     * Memoized list of available elevation servers based on journey state
+     * @returns {Array} List of elevation server objects
+     */
     const serverList = useMemo(() => {
         const list = []
         const {hasElevation, elevationServer} = journey
@@ -192,6 +246,11 @@ export const JourneySettings = () => {
         return list.concat(Array.from(ElevationServer.SERVERS.values()))
     }, [journey.hasElevation, journey.elevationServer])
 
+    /**
+     * Handles errors during elevation processing
+     * @param {Error|Object} error - The error object or message
+     * @param {string} message - User-friendly error message
+     */
     const handleError = (error, message) => {
         journeyEditorStore.isProcessing = false
         journeyEditorStore.journey.elevationServer = previousElevationServer
@@ -203,6 +262,12 @@ export const JourneySettings = () => {
                       })
     }
 
+    /**
+     * Prepares coordinate data for elevation processing
+     * @param {Object} journeyData - Journey GeoJSON data
+     * @param {Object} originData - Original coordinate data
+     * @returns {Object} Object containing prepared coordinates and origins arrays
+     */
     const prepareCoordinates = (journeyData, originData) => {
         const coordinates = []
         const origins = []
@@ -223,6 +288,12 @@ export const JourneySettings = () => {
         return {coordinates, origins}
     }
 
+    /**
+     * Updates journey with new elevation data
+     * @param {Array} coordinates - Array of coordinates with elevation data
+     * @param {Object} journeyData - Journey data to update
+     * @async
+     */
     const updateJourneyWithElevation = async (coordinates, journeyData) => {
         const updatedJourney = Journey.deserialize({object: Journey.unproxify(journeyData)})
         let counter = 0
@@ -258,6 +329,11 @@ export const JourneySettings = () => {
         __.ui.profiler.draw()
     }
 
+    /**
+     * Computes elevation data for journey using selected elevation server
+     * @param {Event} event - Change event from elevation server selector
+     * @async
+     */
     const computeElevation = async event => {
         const newServer = event.target.value
         journeyEditorStore.journey.elevationServer = newServer
@@ -283,6 +359,10 @@ export const JourneySettings = () => {
         }
     }
 
+    /**
+     * Sets journey title with debouncing to prevent excessive updates
+     * @type {Function}
+     */
     const setTitle = __.tools.debounce(async event => {
         const title = event.target.value
         if (!title) {
@@ -301,6 +381,10 @@ export const JourneySettings = () => {
         Utils.renderJourneysList()
     }, 300)
 
+    /**
+     * Sets journey description with debouncing to prevent excessive updates
+     * @type {Function}
+     */
     const setDescription = __.tools.debounce(async event => {
         const description = event.target.value
         if (!description) {
@@ -311,6 +395,11 @@ export const JourneySettings = () => {
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
     }, 300)
 
+    /**
+     * Sets journey visibility and updates UI accordingly
+     * @param {boolean} visibility - Whether journey should be visible
+     * @async
+     */
     const setJourneyVisibility = async visibility => {
         if (running) {
             await __.ui.cameraManager.stopRotate()
@@ -321,6 +410,11 @@ export const JourneySettings = () => {
         Utils.renderJourneySettings()
     }
 
+    /**
+     * Sets visibility for all POIs in the journey
+     * @param {boolean} visibility - Whether POIs should be visible
+     * @async
+     */
     const setAllPOIsVisibility = async visibility => {
         journeyEditorStore.journey.POIsVisible = visibility
         TrackUtils.updatePOIsVisibility(lgs.theJourney, visibility)
@@ -328,17 +422,29 @@ export const JourneySettings = () => {
         Utils.renderJourneySettings()
     }
 
+    /**
+     * Stops camera rotation if currently running
+     * @async
+     */
     const stopRotate = async () => {
         if (running) {
             await __.ui.cameraManager.stopRotate()
         }
     }
 
+    /**
+     * Forces camera rotation toggle and focuses on journey
+     * @async
+     */
     const forceRotate = async () => {
         allowRotation = !allowRotation
         await focusOnJourney()
     }
 
+    /**
+     * Conditionally rotates camera based on settings and current state
+     * @async
+     */
     const maybeRotate = async () => {
         if (running) {
             allowRotation = false
@@ -351,6 +457,10 @@ export const JourneySettings = () => {
         await focusOnJourney()
     }
 
+    /**
+     * Focuses camera on the current journey with optional rotation
+     * @async
+     */
     const focusOnJourney = async () => {
         if (running && target.instanceOf(CURRENT_JOURNEY)) {
             return
@@ -363,33 +473,61 @@ export const JourneySettings = () => {
                              })
     }
 
+    /**
+     * Placeholder message component for export functionality
+     * @returns {JSX.Element} Message component
+     */
     const Message = () => <>{`'Not Yet. Sorry.'`}</>
+
+    /** Confirmation dialog hook for journey export */
     const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export <strong>${journey.title}</strong> ?`, Message)
 
+    /**
+     * Handles journey export functionality (currently placeholder)
+     * @async
+     */
     const exportJourney = async () => {
         const confirmed = await confirmExportJourney()
         if (confirmed) {
-            // TODO
+            // TODO: Implement export functionality
         }
     }
 
+    /**
+     * Initializes tab state when tab is changed
+     * @param {Event} event - Tab change event
+     */
     const initTab = event => {
         __.ui.drawerManager.tab = event.detail.name
         journeyEditorStore.activeTab = event.detail.name
         journeyEditorStore.showPOIsFilter = event.detail.name === POIS && event.type === 'sl-tab-show'
     }
 
+    /**
+     * Checks if a specific tab is currently active
+     * @param {string} tab - Tab identifier
+     * @returns {boolean} Whether the tab is active
+     */
     const isTabActive = tab => __.ui.drawerManager.tabActive(tab)
 
+    // Dynamic text for visibility toggle buttons
     const textVisibilityJourney = sprintf('%s Journey', journey.visible ? 'Hide' : 'Show')
     const textVisibilityPOIs = sprintf('%s POIs', journey.allPOIs ? 'Hide' : 'Show')
 
+    // Component should only render when journey exists and drawer is open
+    const shouldRender = journey && open === JOURNEY_EDITOR_DRAWER
+
+    /**
+     * Component initialization and cleanup effect
+     */
     useEffect(() => {
+        if (!journeyEditorStore.activeTab) {
+            journeyEditorStore.activeTab = DATA
+            __.ui.drawerManager.tab = DATA
+        }
         lgs.stores.ui.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
         return () => lgs.stores.ui.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
     }, [])
-
-    const shouldRender = journey && open === JOURNEY_EDITOR_DRAWER
 
     return (
         <Fragment>
@@ -469,4 +607,3 @@ export const JourneySettings = () => {
         </Fragment>
     )
 }
-
