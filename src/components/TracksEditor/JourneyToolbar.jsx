@@ -7,32 +7,36 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-07-02
+ * Last modified: 2025-07-02
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { FAButton }                                            from '@Components/FAButton'
-import { ToggleStateIcon }                                                              from '@Components/ToggleStateIcon'
-import { APP_EVENT, CURRENT_JOURNEY, REFRESH_DRAWING, SECOND, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
-import { DragHandler }                                                                  from '@Core/ui/DragHandler'
-import { JourneySelector }                                     from '@Editor/journey/JourneySelector'
-import { Utils }                                               from '@Editor/Utils'
+import { FAButton }                                                             from '@Components/FAButton'
 import {
-    faArrowRotateRight,
-    faCrosshairsSimple,
-    faGripDotsVertical,
-    faSquarePlus,
-    faXmark,
-}                                                              from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon, SlIconButton, SlTooltip }                     from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                               from '@Utils/FA2SL'
-import classNames                                              from 'classnames'
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { sprintf }                                             from 'sprintf-js'
-import { useSnapshot }                                         from 'valtio'
+    ToggleStateIcon,
+}                                                                               from '@Components/ToggleStateIcon'
+import { APP_EVENT, CURRENT_JOURNEY, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
+import {
+    DragHandler,
+}                                                                               from '@Core/ui/DragHandler'
+import {
+    JourneySelector,
+}                                                                               from '@Editor/journey/JourneySelector'
+import { Utils }                                                                from '@Editor/Utils'
+import {
+    faArrowRotateRight, faCrosshairsSimple, faGripDotsVertical, faLocationDot, faSquarePlus, faXmark,
+}                                                                               from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlButton,
+    SlIcon, SlIconButton, SlSpinner, SlTooltip,
+}                                                                               from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                                from '@Utils/FA2SL'
+import React, { useLayoutEffect, useMemo, useRef, useState }                    from 'react'
+import { sprintf }                                                              from 'sprintf-js'
+import { useSnapshot }                                                          from 'valtio'
 
 /**
  * A toolbar component for managing journey-related actions, such as selecting journeys, toggling visibility, focusing,
@@ -89,6 +93,14 @@ export const JourneyToolbar = (props) => {
     }
 
     /**
+     * Memoized condition for rendering FAButton vs SlSpinner.
+     * @type {boolean}
+     */
+    const showButton = () => {
+        return rotate.running && autoRotate.journey && !rotate.target
+    }
+
+    /**
      * Sets the visibility of the current journey and updates related settings.
      * @param {boolean} visibility - Whether the journey should be visible
      */
@@ -115,7 +127,7 @@ export const JourneyToolbar = (props) => {
      */
     const maybeRotate = async (event) => {
         event.stopPropagation()
-        if ($rotate.running) {
+        if (rotate.running) {
             rotationAllowed = false
             stopRotate()
             if ($rotate.target.element && $rotate.target.element === lgs.theJourney.element) {
@@ -233,14 +245,16 @@ export const JourneyToolbar = (props) => {
                                         }
                                         placement="top"
                                     >
-                                        <FAButton
-                                            onClick={forceRotate}
+                                        <SlButton
+                                            size="small"
                                             ref={manualRotate}
-                                            icon={faArrowRotateRight}
-                                            className={classNames({
-                                                                      'fa-spin': rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY),
-                                                                  })}
-                                        />
+
+                                            onClick={forceRotate}
+                                            loading={rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)}
+                                        >
+                                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
+                                        </SlButton>
+
                                     </SlTooltip>
                                 }
 
@@ -253,22 +267,14 @@ export const JourneyToolbar = (props) => {
                                     }
                                     placement="top"
                                 >
-                                    <FAButton
+                                    <SlButton
+                                        size="small"
                                         onClick={maybeRotate}
-                                        icon={
-                                            rotate.running &&
-                                            autoRotate.journey &&
-                                            rotate.target?.instanceOf(CURRENT_JOURNEY)
-                                            ? faArrowRotateRight
-                                            : faCrosshairsSimple
-                                        }
-                                        className={classNames({
-                                                                  'fa-spin':
-                                                                      rotate.running &&
-                                                                      autoRotate.journey &&
-                                                                      rotate.target?.instanceOf(CURRENT_JOURNEY),
-                                                              })}
-                                    />
+                                        loading={rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)}
+                                    >
+                                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
+                                    </SlButton>
+
                                 </SlTooltip>
                             </>
                         }

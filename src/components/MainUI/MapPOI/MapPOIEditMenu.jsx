@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-27
- * Last modified: 2025-06-27
+ * Created on: 2025-07-02
+ * Last modified: 2025-07-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -234,7 +234,7 @@ export const MapPOIEditMenu = memo(({point}) => {
             if (point.id === pois.current && pois.list.get(point.id)?.animated) {
                 items.push(
                     <SlMenuItem key="stopRotation" onClick={stopRotation} loading>
-                        <SlIcon slot="prefix" library="fa" name={ICON_STOP}/>
+                        {/* <SlIcon slot="prefix" library="fa" name={ICON_STOP}/> */}
                         <span>{'Stop Rotation'}</span>
                     </SlMenuItem>,
                 )

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-25
- * Last modified: 2025-06-25
+ * Created on: 2025-07-02
+ * Last modified: 2025-07-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -28,7 +28,7 @@ import {
     faMask,
 }                          from '@fortawesome/pro-solid-svg-icons'
 import {
-    SlDivider, SlIcon, SlPopup,
+    SlDivider, SlIcon, SlPopup, SlSpinner,
 }                          from '@shoelace-style/shoelace/dist/react'
 import {
     FA2SL,
@@ -335,7 +335,7 @@ export const MapPOIContextMenu = () => {
                             }
                             {(_current.animated || __.ui.cameraManager.isRotating()) &&
                                 <li onClick={stopRotation}>
-                                    <FontAwesomeIcon icon={faArrowRotateRight} className="fa-spin"/>
+                                    <SlSpinner/>
                                     <span>{'Stop'}</span>
                                 </li>
                             }

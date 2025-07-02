@@ -89,7 +89,7 @@ export const RotateButton = memo(({tooltip = 'top'}) => {
         <SlTooltip hoist placement={tooltip} content={rotate.running ? TOOLTIP_STOP : TOOLTIP_START}>
             <SlButton
                 size="small"
-                className="square-button"
+                className="square-button rotation-button"
                 id="launch-rotation"
                 onClick={handleRotation}
                 loading={rotate.running}
