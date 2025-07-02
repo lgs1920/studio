@@ -7,27 +7,29 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-01
- * Last modified: 2025-07-01
+ * Created on: 2025-07-02
+ * Last modified: 2025-07-02
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { FAButton } from '@Components/FAButton'
-import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
+import {
+    LGSScrollbars,
+} from '@Components/MainUI/LGSScrollbars'
 import {
     MapPOIEditFilter,
-}                        from '@Components/MainUI/MapPOI/MapPOIEditFilter'
+} from '@Components/MainUI/MapPOI/MapPOIEditFilter'
 import {
     MapPOIEditSettings,
-}                        from '@Components/MainUI/MapPOI/MapPOIEditSettings'
+} from '@Components/MainUI/MapPOI/MapPOIEditSettings'
 import {
     MapPOIEditToggleFilter,
-}                        from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
+} from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
 import {
     MapPOIList,
-}                        from '@Components/MainUI/MapPOI/MapPOIList'
+} from '@Components/MainUI/MapPOI/MapPOIList'
 import {
     useConfirm,
 }                   from '@Components/Modals/ConfirmUI'
@@ -37,7 +39,7 @@ import {
 import {
     CURRENT_JOURNEY, JOURNEY_EDITOR_DRAWER, ORIGIN_STORE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE,
     UPDATE_JOURNEY_SILENTLY,
-}                        from '@Core/constants'
+} from '@Core/constants'
 import {
     ElevationServer,
 }                   from '@Core/Elevation/ElevationServer'
@@ -82,7 +84,7 @@ import classNames   from 'classnames'
 import parse        from 'html-react-parser'
 import React, {
     useEffect, useMemo, useRef,
-}                        from 'react'
+} from 'react'
 import {
     sprintf,
 }                   from 'sprintf-js'
@@ -551,13 +553,17 @@ export const JourneySettings = function JourneySettings() {
                         </SlTabPanel>
 
                         <SlTabPanel name={POIS_PANEL}>
+
                             <div className="panel-wrapper">
+
+                                <MapPOIEditFilter/>
+                                <MapPOIEditSettings/>
                                 <LGSScrollbars>
-                                    <MapPOIEditFilter/>
-                                    <MapPOIEditSettings/>
                                     <MapPOIList/>
                                 </LGSScrollbars>
                             </div>
+
+
                         </SlTabPanel>
 
                         {/**
