@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-01
- * Last modified: 2025-07-01
+ * Created on: 2025-07-02
+ * Last modified: 2025-07-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -53,9 +53,8 @@ export class Utils {
     }) => {
         const editorStore = lgs.theJourneyEditorProxy
         editorStore.journey = lgs.getJourneyBySlug(journeySlug)
+
         lgs.saveJourneyInContext(editorStore.journey)
-
-
         editorStore.journey.addToContext()
         editorStore.journey.addToEditor()
         // Force Tab to Data
@@ -85,7 +84,7 @@ export class Utils {
             if (editorStore.journey.visible && focus) {
                 lgs.theJourney.focus({action: action, rotate: rotate})
             }
-
+            await TrackUtils.saveCurrentJourneyToDB(lgs.theJourney)
             await TrackUtils.saveCurrentTrackToDB(null)
             await TrackUtils.saveCurrentPOIToDB(null)
         })
