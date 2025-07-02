@@ -7,28 +7,21 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-04-29
- * Last modified: 2025-04-29
+ * Created on: 2025-07-02
+ * Last modified: 2025-07-02
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { ToggleStateIcon } from '@Components/ToggleStateIcon'
-import { JUST_SAVE }       from '@Core/constants'
-import {
-    faRectangleList,
-}                          from '@fortawesome/pro-regular-svg-icons'
-import {
-    faCircleDot, faPaintbrushPencil,
-}                          from '@fortawesome/pro-solid-svg-icons'
-import {
-    SlIcon, SlInput, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                          from '@shoelace-style/shoelace/dist/react'
+import { ToggleStateIcon }                from '@Components/ToggleStateIcon'
+import { JUST_SAVE }                      from '@Core/constants'
+import { TrackSelector }                  from '@Editor/track/TrackSelector'
+import { SlInput, SlTextarea, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 
 import { TrackUtils }         from '@Utils/cesium/TrackUtils'
-import { FA2SL }              from '@Utils/FA2SL'
 import parse                  from 'html-react-parser'
+import { memo }                           from 'react'
 import { useSnapshot }        from 'valtio'
 import { Utils }              from '../Utils'
 import { TrackData }          from './TrackData'
@@ -37,7 +30,7 @@ import { TrackPoints }        from './TrackPoints'
 import { TrackStyleSettings } from './TrackStyleSettings'
 
 
-export const TrackSettings = function TrackSettings() {
+export const TrackSettings = () => {
 
     const $journeyEditor = lgs.stores.journeyEditor
     const journeyEditor = useSnapshot($journeyEditor)
@@ -97,85 +90,73 @@ export const TrackSettings = function TrackSettings() {
     }
 
     const textVisibilityTrack = sprintf('%s Track', journeyEditor.track.visible ? 'Hide' : 'Show')
+    const isTabActive = (tab) => {
+        return __.ui.drawerManager.tabActive(tab)
+    }
+
+    const DATA_PANEL = 'tab-data'
+    const EDIT_PANEL = 'tab-edit'
+    const POINTS_PANEL = 'tab-points'
 
     return (<>
-            {journeyEditor.track && journeyEditor.journey.tracks.size > 1 && <>
+            {journeyEditor.track && journeyEditor.journey.tracks.size > 1 &&
+                <>
+                    {(journeyEditor.tab === DATA_PANEL || journeyEditor.tab === EDIT_PANEL) &&
+                        <div className="selector-wrapper">
+                            <TrackSelector onChange={Utils.initTrackEdition} label={'Select one of the tracks:'}/>
+                            <div className="editor-vertical-menu"/>
+                        </div>
+                    }
                 <div className={'settings-panel'} id={'editor-track-settings-panel'}
                      key={lgs.mainProxy.components.journeyEditor.keys.journey.track}>
-                    {journeyEditor.track.visible && <SlTabGroup id={'track-menu-panel'} className={'menu-panel'}>
-                        <SlTab slot="nav"
-                               panel="data" id="tab-tracks-data"
-                               active={journeyEditor.tabs.track.data}>
-                            <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>Data
-                        </SlTab>
-                        <SlTab slot="nav"
-                               panel="edit"
-                               active={journeyEditor.tabs.track.edit}>
-                            <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
-                        </SlTab>
-                        <SlTab slot="nav"
-                               panel="points"
-                               active={journeyEditor.tabs.track.points}>
-                            <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points
-                        </SlTab>
+                    {journeyEditor.track.visible &&
+                        <>
+                            {journeyEditor.tab === DATA_PANEL && <TrackData/>}
+                            {journeyEditor.tab === EDIT_PANEL &&
+                                <div id={'track-text-description'}>
+                                    {journeyEditor.journey.tracks.size > 1 && <>
+                                        {/* Change visible name (title) */}
+                                        <SlTooltip hoist content={'Title'}>
+                                            <SlInput id="track-title"
+                                                     value={journeyEditor.track.title}
+                                                     onSlChange={setTitle}
+                                            />
+                                        </SlTooltip>
+                                        {/* Change description */}
+                                        <SlTooltip hoist content={'Description'}>
+                                            <SlTextarea row={2}
+                                                        size={'small'}
+                                                        id="track-description"
+                                                        value={parse(journeyEditor.track.description)}
+                                                        onSlChange={setDescription}
+                                                        placeholder={'Track description'}
+                                            />
+                                        </SlTooltip>
+
+                                    </>}
+                                    {/* Track style */}
+                                    <TrackStyleSettings/>
+                                </div>
+                            }
+
+                            {journeyEditor.tab === POINTS_PANEL && <TrackPoints/>}
 
 
-                        {/**
-                         * Data Tab Panel
-                         */}
-                        <SlTabPanel name="data"><TrackData/></SlTabPanel>
-
-                        {/**
-                         * Edit Tab Panel
-                         */}
-                        <SlTabPanel name="edit">
-                            <div id={'track-text-description'}>
-                                {journeyEditor.journey.tracks.size > 1 && <>
-                                    {/* Change visible name (title) */}
-                                    <SlTooltip hoist content={'Title'}>
-                                        <SlInput id="track-title"
-                                                 value={journeyEditor.track.title}
-                                                 onSlChange={setTitle}
-                                        />
-                                    </SlTooltip>
-                                    {/* Change description */}
-                                    <SlTooltip hoist content={'Description'}>
-                                        <SlTextarea row={2}
-                                                    size={'small'}
-                                                    id="track-description"
-                                                    value={parse(journeyEditor.track.description)}
-                                                    onSlChange={setDescription}
-                                                    placeholder={'Track description'}
-                                        />
-                                    </SlTooltip>
-
-                                </>}
-                                {/* Track style */}
-                                <TrackStyleSettings/>
+                            <div id="track-visibility" className={'editor-vertical-menu'}>
+                                {$journeyEditor.journey.tracks.size > 1 &&
+                                    <SlTooltip hoist content={textVisibilityTrack}>
+                                        <ToggleStateIcon onChange={setTrackVisibility}
+                                                         initial={journeyEditor.track.visible}/>
+                                    </SlTooltip>}
+                                {journeyEditor.track.visible &&
+                                    <TrackFlagsSettings tooltip="left"/>
+                                }
                             </div>
-                        </SlTabPanel>
-
-                        {/**
-                         * Points Tab Panel
-                         */}
-                        <SlTabPanel name="points">
-                            <TrackPoints/>
-                        </SlTabPanel>
-
-                    </SlTabGroup>}
-
-                    <div id="track-visibility" className={'editor-vertical-menu'}>
-                        {$journeyEditor.journey.tracks.size > 1 &&
-                            <SlTooltip hoist content={textVisibilityTrack}>
-                                <ToggleStateIcon onChange={setTrackVisibility} initial={journeyEditor.track.visible}/>
-                        </SlTooltip>}
-                        {journeyEditor.track.visible &&
-                        <TrackFlagsSettings tooltip="left"/>
-                        }
-                    </div>
+                        </>
+                    }
                 </div>
-            </>}
+                </>
+            }
         </>
-
     )
 }

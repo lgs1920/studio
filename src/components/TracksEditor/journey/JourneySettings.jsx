@@ -458,6 +458,7 @@ export const JourneySettings = function JourneySettings() {
     const initTab = (event) => {
 
         __.ui.drawerManager.tab = event.detail.name
+        $theJourneyEditor.tab = event.detail.name
         if (event.detail.name === POIS) {
             // We show the settings only when pois tab is open
             lgs.stores.journeyEditor.showPOIsFilter = event.type === 'sl-tab-show'

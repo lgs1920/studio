@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-01
- * Last modified: 2025-07-01
+ * Created on: 2025-07-02
+ * Last modified: 2025-07-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -60,18 +60,7 @@ const JourneyContent = memo(({journeyVisible}) => (
             />
         </div>
         <JourneySettings/>
-        {journeyVisible && (
-            <>
-                <div className="selector-wrapper">
-                    <TrackSelector
-                        onChange={Utils.initTrackEdition}
-                        label={'Select one of the tracks:'}
-                    />
-                    <div className="editor-vertical-menu"/>
-                </div>
-                <TrackSettings/>
-            </>
-        )}
+        <TrackSettings/>
     </div>
 ))
 
