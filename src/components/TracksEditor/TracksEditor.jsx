@@ -69,18 +69,18 @@ export const TracksEditor = memo(() => {
     const {canViewJourneyData} = useSnapshot(lgs.stores.main)
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
 
-    const editorSnap = useSnapshot(lgs.theJourneyEditorProxy)
+    const editor = useSnapshot(lgs.theJourneyEditorProxy)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const {show: toolbarShow, usage: toolbarUsage} = useSnapshot(lgs.settings.ui.journeyToolbar)
     const hasJourneys = lgs.journeys.size > 0
 
     // Safely access journey.visible with a fallback
-    const journeyVisible = editorSnap.journey?.visible ?? false
+    const journeyVisible = editor.journey?.visible ?? false
 
     // Memoized event handlers
     const toggleToolbar = useCallback(() => {
         lgs.settings.ui.journeyToolbar.show = !toolbarShow
-    }, [toolbarShow])
+    }, [])
 
     const handleRequestClose = useCallback((event) => {
         if (event.detail.source === 'overlay') {
