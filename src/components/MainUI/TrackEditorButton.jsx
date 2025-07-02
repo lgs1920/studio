@@ -30,7 +30,6 @@ import { useSnapshot }                           from 'valtio'
 export const TrackEditorButton = memo(() => {
     // Granular snapshots to minimize re-renders
     const {toolBar} = useSnapshot(lgs.settings.ui.menu)
-    const {journeys} = useSnapshot(lgs.stores.main)
     // Derive boolean to avoid reactivity to nested theJourney properties
     const hasJourney = useSnapshot(lgs.stores.main).theJourney !== null
 
@@ -43,10 +42,10 @@ export const TrackEditorButton = memo(() => {
      * @type {string}
      */
     const iconName = useMemo(() => {
-        // Fallback to 0 if journeys is undefined or null
-        const journeyCount = journeys?.size ?? 0
+        // Fallback to 0 if lgs.journeys is undefined or null
+        const journeyCount = lgs.journeys?.size ?? 0
         return FA2SL.set(journeyCount ? faRoute : faRegularRouteCirclePlus)
-    }, [journeys?.size])
+    }, [lgs.journeys?.size])
 
     /**
      * Memoized tooltip placement based on toolbar settings.
