@@ -141,7 +141,7 @@ export class DragHandler {
         this.parent.style.transform = ''
 
         const finalRect = this.parent.getBoundingClientRect()
-        if (this.callback) {
+        if (this.callback && this.hasMoved) {
             this.callback({
                               x:      finalRect.left,
                               y:      finalRect.top,
