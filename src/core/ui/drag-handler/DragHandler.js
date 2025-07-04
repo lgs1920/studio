@@ -337,10 +337,12 @@ export class DragHandler {
         }
         this.grabber.addEventListener('mousedown', this.handleStart, {passive: false})
         this.grabber.addEventListener('touchstart', this.handleStart, {passive: false})
-        this.grabber.addEventListener('click', this.#handleClick, {passive: false})
+        this.grabber.addEventListener('click', this.#handleClick.bind(this)
+            , {passive: false})
 
         if (this.container === window) {
-            window.addEventListener('resize', this.#handleResize)
+            window.addEventListener('resize', this.#handleResize.bind(this),
+            )
         }
         else {
             this.resizeObserver = new ResizeObserver(() => this.#handleResize())
@@ -358,17 +360,17 @@ export class DragHandler {
         if (this.grabber) {
             this.grabber.removeEventListener('mousedown', this.handleStart)
             this.grabber.removeEventListener('touchstart', this.handleStart)
-            this.grabber.removeEventListener('click', this.#handleClick)
+            this.grabber.removeEventListener('click', this.#handleClick.bind(this))
             this.grabber.style.cursor = '' // Reset cursor
         }
         document.removeEventListener('mousemove', this.handleMove)
         document.removeEventListener('touchmove', this.handleMove)
         document.removeEventListener('mouseup', this.handleEnd)
         document.removeEventListener('touchend', this.handleEnd)
-        document.removeEventListener('click', this.#handleDocumentClick)
+        document.removeEventListener('click', this.#handleDocumentClick.bind(this))
         this.#removeOverlay() // Ensure overlay is removed
         if (this.container === window) {
-            window.removeEventListener('resize', this.#handleResize)
+            window.removeEventListener('resize', this.#handleResize.bind(this))
         }
         else if (this.resizeObserver) {
             this.resizeObserver.disconnect()
