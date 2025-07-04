@@ -21,7 +21,7 @@ import {
 import { APP_EVENT, CURRENT_JOURNEY, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
 import {
     DragHandler,
-}                                                                               from '@Core/ui/DragHandler'
+} from '@Core/ui/drag-handler/DragHandler'
 import {
     JourneySelector,
 }                                                                               from '@Editor/journey/JourneySelector'
@@ -178,7 +178,7 @@ export const JourneyToolbar = (props) => {
 
         // Configure InteractionHandler for dragging
         const dragHandler = new DragHandler({
-                                                grabber: grabberElement,
+                                                grabber: toolbar,
                                                 parent:   toolbar,
                                                 callback: (toolbarData) => {
                                                     $journeyToolbar.x = toolbarData.x
@@ -203,6 +203,7 @@ export const JourneyToolbar = (props) => {
             //    window.removeEventListener("app/welcome/hide", setToolbarOpacity)
         }
     }, [
+                        $journeyToolbar.show,
                         $journeyToolbar.x,
                         $journeyToolbar.y,
                         journeyToolbar.opacity,
@@ -213,7 +214,7 @@ export const JourneyToolbar = (props) => {
 
     return (
         <>
-            {journeyEditor.list.length > 0 &&
+            {journeyEditor.list.length > 0 && journeyToolbar.show &&
                 <div
                     className="journey-toolbar lgs-card on-map"
                     ref={_journeyToolbar}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-02
- * Last modified: 2025-07-02
+ * Created on: 2025-07-04
+ * Last modified: 2025-07-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -79,8 +79,8 @@ export const TracksEditor = memo(() => {
 
     // Memoized event handlers
     const toggleToolbar = useCallback(() => {
-        lgs.settings.ui.journeyToolbar.show = !toolbarShow
-    }, [])
+        lgs.settings.ui.journeyToolbar.show = !lgs.settings.ui.journeyToolbar.show
+    }, [lgs.settings.ui.journeyToolbar.show])
 
     const handleRequestClose = useCallback((event) => {
         if (event.detail.source === 'overlay') {
