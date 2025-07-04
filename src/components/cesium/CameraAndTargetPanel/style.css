@@ -1,12 +1,29 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-07-04
+ * Last modified: 2025-07-04
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 .camera-position {
     display: flex;
     gap: var(--lgs-gutter-s);
 }
 
 .camera-data-panel {
-    flex-direction: row;
     align-items: center;
+    flex-direction: row;
     flex-wrap: wrap;
+    pointer-events: auto;
 }
 
 .camera-data-panel > sl-icon:first-child {
