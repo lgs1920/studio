@@ -674,14 +674,21 @@ sl-details {
     --sl-spacing-medium: var(--lgs-gutter-xs);
 }
 
+sl-details::part(header) {
+    padding: var(--lgs-gutter-s)
+}
+
+sl-details [slot="summary"] > svg,
+sl-details [slot="summary"] > span > svg:first-child {
+    margin-right: var(--lgs-gutter-xs);
+}
+
+
 sl-details::part(base) {
     padding: 0;
     --spacing: 0;
 }
 
-sl-details::part(header) {
-    padding: var(--lgs-gutter-s)
-}
 
 sl-details::part(content) {
     margin-top: calc(-1 * var(--lgs-gutter-s));
