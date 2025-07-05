@@ -56,15 +56,18 @@ export class DragHandler {
         this.startLeft = 0
         this.startTop = 0
         this.isInitialPositionInvalid = !parent.style.left || !parent.style.top
-        this.movementThreshold = 'ontouchstart' in window ? 3 : 5 // Lower threshold for touch devices
-        this.hasMoved = false
-        this.wasDragging = false
-        this.overlay = null
+        this.movementThreshold = 5 // Pixels to detect drag vs click
+        this.hasMoved = false // Tracks if movement exceeded threshold
+        this.wasDragging = false // Tracks if drag occurred for click suppression
+        this.overlay = null // Overlay div for cursor during drag
 
         this.handleBefore = this.handleBefore.bind(this)
         this.handleStart = this.handleStart.bind(this)
         this.handleMove = this.handleMove.bind(this)
         this.handleEnd = this.handleEnd.bind(this)
+
+        // Set initial cursor style
+        this.grabber.style.cursor = 'grab'
 
         this.#ensureWithinBounds()
         this.isInitialPositionInvalid = false
@@ -152,8 +155,8 @@ export class DragHandler {
                         y:      finalRect.top,
                         width:  finalRect.width,
                         height: finalRect.height,
-                    },
-                },
+                    }
+                }
             }))
         }
     }
@@ -181,7 +184,6 @@ export class DragHandler {
         this.overlay.style.cursor = 'grabbing'
         this.overlay.style.zIndex = '9999'
         this.overlay.style.background = 'transparent'
-        this.overlay.style.pointerEvents = 'auto'
         this.parent.appendChild(this.overlay)
     }
 
@@ -201,7 +203,6 @@ export class DragHandler {
      * @param {Event} event - The pointerdown or touchstart event
      */
     handleBefore(event) {
-        event.preventDefault()
         const parentRect = this.parent.getBoundingClientRect()
         this.parent.dispatchEvent(new CustomEvent(DragHandler.BEFORE_DRAG, {
             detail: {
@@ -210,8 +211,8 @@ export class DragHandler {
                     y:      parentRect.top,
                     width:  parentRect.width,
                     height: parentRect.height,
-                },
-            },
+                }
+            }
         }))
         this.handleStart(event)
     }
@@ -230,13 +231,9 @@ export class DragHandler {
         this.startY = clientY
         this.startLeft = parseFloat(this.parent.style.left) || 0
         this.startTop = parseFloat(this.parent.style.top) || 0
-
-        // Apply inline styles for grabber
-        this.grabber.style.touchAction = 'none'
-        this.grabber.style.userSelect = 'none'
-        this.grabber.style.webkitUserSelect = 'none'
-        this.grabber.style.webkitTouchCallout = 'none'
         this.grabber.style.cursor = 'grab'
+
+        this.grabber.style.touchAction = 'none'
 
         document.addEventListener('pointermove', this.handleMove, {passive: false})
         document.addEventListener('touchmove', this.handleMove, {passive: false})
@@ -250,9 +247,8 @@ export class DragHandler {
      * @param {Event} event - The pointermove or touchmove event
      */
     handleMove(event) {
-        const isTouch = event.type === 'touchmove'
-        const clientX = isTouch ? event.touches[0].clientX : event.clientX
-        const clientY = isTouch ? event.touches[0].clientY : event.clientY
+        const clientX = event.type === 'touchmove' ? event.touches[0].clientX : event.clientX
+        const clientY = event.type === 'touchmove' ? event.touches[0].clientY : event.clientY
         const deltaX = Math.abs(clientX - this.startX)
         const deltaY = Math.abs(clientY - this.startY)
 
@@ -261,12 +257,7 @@ export class DragHandler {
             this.hasMoved = true
             this.wasDragging = true
             this.#createOverlay()
-
-            // Apply inline styles for body during drag
-            document.body.style.userSelect = 'none'
-            document.body.style.webkitUserSelect = 'none'
-            document.body.style.touchAction = 'none'
-            document.body.style.overscrollBehavior = 'none'
+            document.body.classList.add('no-select')
 
             const parentRect = this.parent.getBoundingClientRect()
             this.parent.dispatchEvent(new CustomEvent(DragHandler.DRAG_START, {
@@ -276,8 +267,8 @@ export class DragHandler {
                         y:      parentRect.top,
                         width:  parentRect.width,
                         height: parentRect.height,
-                    },
-                },
+                    }
+                }
             }))
         }
 
@@ -309,8 +300,8 @@ export class DragHandler {
                     y:      updatedParentRect.top,
                     width:  updatedParentRect.width,
                     height: updatedParentRect.height,
-                },
-            },
+                }
+            }
         }))
     }
 
@@ -332,17 +323,12 @@ export class DragHandler {
             document.addEventListener('click', this.#handleDocumentClick, {capture: true, once: true})
             setTimeout(() => {
                 this.wasDragging = false
-            }, 100)
+            }, 300)
             this.dragging = false
             this.hasMoved = false
             this.grabber.style.cursor = 'grab'
-
-            // Remove inline styles from body
-            document.body.style.userSelect = ''
-            document.body.style.webkitUserSelect = ''
-            document.body.style.touchAction = ''
-            document.body.style.overscrollBehavior = ''
-
+            document.body.classList.remove('no-select')
+            this.grabber.style.touchAction = ''
             this.#ensureWithinBounds()
 
             this.parent.dispatchEvent(new CustomEvent(DragHandler.DRAG_STOP, {
@@ -352,21 +338,16 @@ export class DragHandler {
                         y:      parentRect.top,
                         width:  parentRect.width,
                         height: parentRect.height,
-                    },
-                },
+                    }
+                }
             }))
         }
         else {
             this.dragging = false
             this.hasMoved = false
             this.grabber.style.cursor = 'grab'
+            this.grabber.style.touchAction = ''
         }
-
-        // Remove inline styles from grabber
-        this.grabber.style.touchAction = ''
-        this.grabber.style.userSelect = ''
-        this.grabber.style.webkitUserSelect = ''
-        this.grabber.style.webkitTouchCallout = ''
 
         this.parent.dispatchEvent(new CustomEvent(DragHandler.AFTER_DRAG, {
             detail: {
@@ -375,8 +356,8 @@ export class DragHandler {
                     y:      parentRect.top,
                     width:  parentRect.width,
                     height: parentRect.height,
-                },
-            },
+                }
+            }
         }))
     }
 
@@ -426,9 +407,6 @@ export class DragHandler {
 
         if (this.container === window) {
             window.addEventListener('resize', this.#handleResize.bind(this))
-            if (window.visualViewport) {
-                window.visualViewport.addEventListener('resize', this.#handleResize.bind(this))
-            }
         }
         else {
             this.resizeObserver = new ResizeObserver(() => this.#handleResize())
@@ -449,25 +427,15 @@ export class DragHandler {
             this.grabber.removeEventListener('click', this.#handleClick.bind(this))
             this.grabber.style.cursor = ''
             this.grabber.style.touchAction = ''
-            this.grabber.style.userSelect = ''
-            this.grabber.style.webkitUserSelect = ''
-            this.grabber.style.webkitTouchCallout = ''
         }
         document.removeEventListener('pointermove', this.handleMove)
         document.removeEventListener('touchmove', this.handleMove)
         document.removeEventListener('pointerup', this.handleEnd)
         document.removeEventListener('touchend', this.handleEnd)
         document.removeEventListener('click', this.#handleDocumentClick.bind(this))
-        document.body.style.userSelect = ''
-        document.body.style.webkitUserSelect = ''
-        document.body.style.touchAction = ''
-        document.body.style.overscrollBehavior = ''
         this.#removeOverlay()
         if (this.container === window) {
             window.removeEventListener('resize', this.#handleResize.bind(this))
-            if (window.visualViewport) {
-                window.visualViewport.removeEventListener('resize', this.#handleResize.bind(this))
-            }
         }
         else if (this.resizeObserver) {
             this.resizeObserver.disconnect()
