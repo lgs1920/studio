@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-04
- * Last modified: 2025-07-04
+ * Created on: 2025-07-05
+ * Last modified: 2025-07-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -41,8 +41,10 @@ export const JourneyToolbar = (props) => {
     const $journeyToolbar = lgs.settings.ui.journeyToolbar
     const journeyToolbar = useSnapshot($journeyToolbar)
     const _journeyToolbar = useRef(null)
+    const _journeySelector = useRef(null)
 
     const toolbarMoved = useRef(false)
+    const selectStates = useRef(new Map()) // Store initial disabled states of SlSelect elements
 
     const $journeyEditor = lgs.mainProxy.components.journeyEditor
     const journeyEditor = useSnapshot($journeyEditor)
@@ -190,6 +192,33 @@ export const JourneyToolbar = (props) => {
         requestAnimationFrame(positionToolbar)
     }, [$journeyToolbar.show, journeyEditor.list.length]) // Dependencies to wait for toolbar visibility
 
+
+    /**
+     * Handles the start of a drag interaction, disabling SlSelect elements.
+     * @param {Event} event - The dragstart event
+     */
+
+    const handleDragStart = (event) => {
+        toolbarMoved.current = true
+        _journeySelector.current.disabled = true
+    }
+
+    /**
+     * Handles drag movement, updating toolbar position.
+     * @param {Event} event - The drag event
+     */
+    const handleDrag = (event) => {
+        $journeyToolbar.x = event.detail.value.x
+        $journeyToolbar.y = event.detail.value.y // Fixed typo (was .x)
+    }
+
+    const handleDragStop = (event) => {
+        toolbarMoved.current = false
+        _journeySelector.current.disabled = false
+
+    }
+
+
     useEffect(() => {
         const toolbar = _journeyToolbar.current
         const grabberElement = grabber.current
@@ -204,12 +233,12 @@ export const JourneyToolbar = (props) => {
                                                 grabber:   toolbar,
                                                 parent:    toolbar,
                                                 container: lgs.canvas,
-                                                callback:  (toolbarData) => {
-                                                    toolbarMoved.current = true
-                                                    $journeyToolbar.x = toolbarData.x
-                                                    $journeyToolbar.y = toolbarData.y
-                                                },
+
                                             })
+
+        toolbar.addEventListener(DragHandler.DRAG_START, handleDragStart)
+        toolbar.addEventListener(DragHandler.DRAG, handleDrag)
+        toolbar.addEventListener(DragHandler.DRAG_STOP, handleDragStop)
 
         // Attach dragging events
         dragHandler.attachEvents()
@@ -225,6 +254,9 @@ export const JourneyToolbar = (props) => {
         // Cleanup: detach events when the component unmounts or conditions change
         return () => {
             dragHandler.destroy()
+            toolbar.removeEventListener(DragHandler.DRAG_START, handleDragStart)
+            toolbar.removeEventListener(DragHandler.DRAG, handleDrag)
+            toolbar.removeEventListener(DragHandler.DRAG_STOP, handleDragStop)
             //    window.removeEventListener("app/welcome/hide", setToolbarOpacity)
         }
     }, [
@@ -253,7 +285,8 @@ export const JourneyToolbar = (props) => {
                         <SlIcon ref={grabber} className="grabber" library="fa" name={FA2SL.set(faGripDotsVertical)}/>
                     </SlTooltip>
 
-                    <JourneySelector onChange={newJourneySelection} single="true" size="small" style="card"/>
+                    <JourneySelector onChange={newJourneySelection}
+                                     single="true" size="small" style="card" ref={_journeySelector}/>
 
                     <SlTooltip hoist content={'Add a journey'} placement="top">
                         <SlIconButton library="fa" onClick={journeyLoader} name={FA2SL.set(faSquarePlus)}/>
