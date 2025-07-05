@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-14
- * Last modified: 2025-06-14
+ * Created on: 2025-07-05
+ * Last modified: 2025-07-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,7 +38,7 @@ const ICON_SQUARE = FA2SL.set(faSquare)
  * @param {string} [props.style] - Style variant ('card' for card-like display)
  * @returns {JSX.Element|null} The rendered component or null if no journeys
  */
-export const JourneySelector = memo(({label, size = 'medium', onChange, single, style}) => {
+export const JourneySelector = memo(({label, size = 'medium', onChange, single, style, ref}) => {
     // Granular snapshots to minimize re-renders
     const {list, keys} = useSnapshot(lgs.stores.main.components.journeyEditor)
     const journeySnapshot = useSnapshot(lgs.stores.journeyEditor.journey)
@@ -75,6 +75,7 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
         }
     }, [onChange])
 
+
     if (journeys.length === 0) {
         return null
     }
@@ -91,6 +92,7 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
                     onSlChange={handleChange}
                     key={keys.journey.list}
                     className={classNames('journey-selector', {masked: !journeySnapshot.visible})}
+                    ref={ref}
                 >
                     <SlIcon
                         library="fa"
