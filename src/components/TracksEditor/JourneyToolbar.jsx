@@ -15,21 +15,26 @@
  ******************************************************************************/
 
 import { FAButton }                                                             from '@Components/FAButton'
-import { ToggleStateIcon }                                                      from '@Components/ToggleStateIcon'
-import { APP_EVENT, CURRENT_JOURNEY, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
-import { DragHandler }                                                          from '@Core/ui/drag-handler/DragHandler'
-import { JourneySelector }                                                      from '@Editor/journey/JourneySelector'
-import { Utils }                                                                from '@Editor/Utils'
+import { ToggleStateIcon }                                                                  from '@Components/ToggleStateIcon'
+import { APP_EVENT, CURRENT_JOURNEY, MOBILE_MAX, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
+import {
+    DragHandler,
+}                                                                                           from '@Core/ui/drag-handler/DragHandler'
+import {
+    JourneySelector,
+}                                                                                           from '@Editor/journey/JourneySelector'
+import { Utils }                                                                            from '@Editor/Utils'
 import {
     faCrosshairsSimple, faGripDotsVertical, faSquarePlus, faXmark,
-}                                                                               from '@fortawesome/pro-regular-svg-icons'
+}                                                                                           from '@fortawesome/pro-regular-svg-icons'
 import {
     SlButton, SlIcon, SlIconButton, SlTooltip,
-}                                                                               from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                                from '@Utils/FA2SL'
-import React, { useEffect, useRef, useState }                                   from 'react'
-import { sprintf }                                                              from 'sprintf-js'
-import { useSnapshot }                                                          from 'valtio'
+}                                                                                           from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                                            from '@Utils/FA2SL'
+import React, { useEffect, useRef, useState }                                               from 'react'
+import { useMediaQuery }                                                                    from 'react-responsive'
+import { sprintf }                                                                          from 'sprintf-js'
+import { useSnapshot }                                                                      from 'valtio'
 
 /**
  * A toolbar component for managing journey-related actions, such as selecting journeys, toggling visibility, focusing,
@@ -44,7 +49,6 @@ export const JourneyToolbar = (props) => {
     const _journeySelector = useRef(null)
 
     const toolbarMoved = useRef(false)
-    const selectStates = useRef(new Map()) // Store initial disabled states of SlSelect elements
 
     const $journeyEditor = lgs.mainProxy.components.journeyEditor
     const journeyEditor = useSnapshot($journeyEditor)
@@ -52,9 +56,7 @@ export const JourneyToolbar = (props) => {
     const $rotate = lgs.stores.ui.mainUI.rotate
     const rotate = useSnapshot($rotate)
 
-    const animationFrame = useRef(null)
     const journeyLoaderStore = lgs.stores.ui.mainUI.journeyLoader
-    let dragging
     const $editorStore = lgs.theJourneyEditorProxy
     const editorStore = useSnapshot($editorStore)
 
@@ -235,7 +237,6 @@ export const JourneyToolbar = (props) => {
                                                 container: lgs.canvas,
 
                                             })
-
         toolbar.addEventListener(DragHandler.DRAG_START, handleDragStart)
         toolbar.addEventListener(DragHandler.DRAG, handleDrag)
         toolbar.addEventListener(DragHandler.DRAG_STOP, handleDragStop)
