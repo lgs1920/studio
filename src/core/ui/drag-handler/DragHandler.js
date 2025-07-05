@@ -56,18 +56,15 @@ export class DragHandler {
         this.startLeft = 0
         this.startTop = 0
         this.isInitialPositionInvalid = !parent.style.left || !parent.style.top
-        this.movementThreshold = 5 // Pixels to detect drag vs click
-        this.hasMoved = false // Tracks if movement exceeded threshold
-        this.wasDragging = false // Tracks if drag occurred for click suppression
-        this.overlay = null // Overlay div for cursor during drag
+        this.movementThreshold = 'ontouchstart' in window ? 3 : 5 // Lower threshold for touch devices
+        this.hasMoved = false
+        this.wasDragging = false
+        this.overlay = null
 
         this.handleBefore = this.handleBefore.bind(this)
         this.handleStart = this.handleStart.bind(this)
         this.handleMove = this.handleMove.bind(this)
         this.handleEnd = this.handleEnd.bind(this)
-
-        // Set initial cursor style
-        this.grabber.style.cursor = 'grab'
 
         this.#ensureWithinBounds()
         this.isInitialPositionInvalid = false
@@ -84,8 +81,8 @@ export class DragHandler {
             return {
                 left:   0,
                 top:    0,
-                right: window.innerWidth,
-                bottom: window.innerHeight,
+                right:  window.innerWidth,
+                bottom: window.visualViewport ? window.visualViewport.height : window.innerHeight,
             }
         }
         const rect = this.container.getBoundingClientRect()
@@ -182,8 +179,9 @@ export class DragHandler {
         this.overlay.style.width = `${parentRect.width}px`
         this.overlay.style.height = `${parentRect.height}px`
         this.overlay.style.cursor = 'grabbing'
-        this.overlay.style.zIndex = '9999' // High z-index to cover children
-        this.overlay.style.background = 'transparent' // Invisible
+        this.overlay.style.zIndex = '9999'
+        this.overlay.style.background = 'transparent'
+        this.overlay.style.pointerEvents = 'auto'
         this.parent.appendChild(this.overlay)
     }
 
@@ -199,10 +197,11 @@ export class DragHandler {
     }
 
     /**
-     * Handles the pointerdown event, dispatching beforeDrag
-     * @param {Event} event - The pointerdown event
+     * Handles the pointerdown or touchstart event, dispatching beforeDrag
+     * @param {Event} event - The pointerdown or touchstart event
      */
     handleBefore(event) {
+        event.preventDefault()
         const parentRect = this.parent.getBoundingClientRect()
         this.parent.dispatchEvent(new CustomEvent(DragHandler.BEFORE_DRAG, {
             detail: {
@@ -214,37 +213,46 @@ export class DragHandler {
                 },
             },
         }))
-        this.handleStart(event) // Proceed to handleStart
+        this.handleStart(event)
     }
 
     /**
      * Handles the start of a drag interaction (called after beforeDrag)
-     * @param {Event} event - The pointerdown event
+     * @param {Event} event - The pointerdown or touchstart event
      */
     handleStart(event) {
         this.dragging = false
         this.hasMoved = false
         this.wasDragging = false
-        const clientX = event.clientX
-        const clientY = event.clientY
+        const clientX = event.type === 'touchstart' ? event.touches[0].clientX : event.clientX
+        const clientY = event.type === 'touchstart' ? event.touches[0].clientY : event.clientY
         this.startX = clientX
         this.startY = clientY
         this.startLeft = parseFloat(this.parent.style.left) || 0
         this.startTop = parseFloat(this.parent.style.top) || 0
-        this.grabber.style.cursor = 'grab' // Ensure cursor is grab at start
+
+        // Apply inline styles for grabber
+        this.grabber.style.touchAction = 'none'
+        this.grabber.style.userSelect = 'none'
+        this.grabber.style.webkitUserSelect = 'none'
+        this.grabber.style.webkitTouchCallout = 'none'
+        this.grabber.style.cursor = 'grab'
 
         document.addEventListener('pointermove', this.handleMove, {passive: false})
+        document.addEventListener('touchmove', this.handleMove, {passive: false})
         document.addEventListener('pointerup', this.handleEnd, {passive: false})
+        document.addEventListener('touchend', this.handleEnd, {passive: false})
     }
 
     /**
-     * Handles drag movement (pointermove)
+     * Handles drag movement (pointermove or touchmove)
      * Creates overlay and updates position if movement threshold is exceeded
-     * @param {Event} event - The pointermove event
+     * @param {Event} event - The pointermove or touchmove event
      */
     handleMove(event) {
-        const clientX = event.clientX
-        const clientY = event.clientY
+        const isTouch = event.type === 'touchmove'
+        const clientX = isTouch ? event.touches[0].clientX : event.clientX
+        const clientY = isTouch ? event.touches[0].clientY : event.clientY
         const deltaX = Math.abs(clientX - this.startX)
         const deltaY = Math.abs(clientY - this.startY)
 
@@ -252,8 +260,13 @@ export class DragHandler {
             this.dragging = true
             this.hasMoved = true
             this.wasDragging = true
-            this.#createOverlay() // Create overlay for cursor
-            document.body.classList.add('no-select')
+            this.#createOverlay()
+
+            // Apply inline styles for body during drag
+            document.body.style.userSelect = 'none'
+            document.body.style.webkitUserSelect = 'none'
+            document.body.style.touchAction = 'none'
+            document.body.style.overscrollBehavior = 'none'
 
             const parentRect = this.parent.getBoundingClientRect()
             this.parent.dispatchEvent(new CustomEvent(DragHandler.DRAG_START, {
@@ -282,7 +295,6 @@ export class DragHandler {
         this.parent.style.left = `${newX}px`
         this.parent.style.top = `${newY}px`
 
-        // Update overlay size
         if (this.overlay) {
             const updatedRect = this.parent.getBoundingClientRect()
             this.overlay.style.width = `${updatedRect.width}px`
@@ -303,28 +315,34 @@ export class DragHandler {
     }
 
     /**
-     * Handles the end of a drag (pointerup), dispatching dragstop and afterDrag
-     * @param {Event} event - The pointerup event
+     * Handles the end of a drag (pointerup or touchend), dispatching dragstop and afterDrag
+     * @param {Event} event - The pointerup or touchend event
      */
     handleEnd(event) {
         document.removeEventListener('pointermove', this.handleMove)
+        document.removeEventListener('touchmove', this.handleMove)
         document.removeEventListener('pointerup', this.handleEnd)
-        this.#removeOverlay() // Remove overlay
+        document.removeEventListener('touchend', this.handleEnd)
+        this.#removeOverlay()
 
         const parentRect = this.parent.getBoundingClientRect()
         if (this.hasMoved) {
             event.preventDefault()
             event.stopPropagation()
-            // Add document-level click handler to block clicks after drag
             document.addEventListener('click', this.#handleDocumentClick, {capture: true, once: true})
-            // Timeout to ensure synthetic clicks are blocked on mobile
             setTimeout(() => {
-                this.wasDragging = false // Reset after timeout
-            }, 300)
+                this.wasDragging = false
+            }, 100)
             this.dragging = false
             this.hasMoved = false
-            this.grabber.style.cursor = 'grab' // Revert cursor
-            document.body.classList.remove('no-select')
+            this.grabber.style.cursor = 'grab'
+
+            // Remove inline styles from body
+            document.body.style.userSelect = ''
+            document.body.style.webkitUserSelect = ''
+            document.body.style.touchAction = ''
+            document.body.style.overscrollBehavior = ''
+
             this.#ensureWithinBounds()
 
             this.parent.dispatchEvent(new CustomEvent(DragHandler.DRAG_STOP, {
@@ -341,8 +359,14 @@ export class DragHandler {
         else {
             this.dragging = false
             this.hasMoved = false
-            this.grabber.style.cursor = 'grab' // Ensure cursor is grab
+            this.grabber.style.cursor = 'grab'
         }
+
+        // Remove inline styles from grabber
+        this.grabber.style.touchAction = ''
+        this.grabber.style.userSelect = ''
+        this.grabber.style.webkitUserSelect = ''
+        this.grabber.style.webkitTouchCallout = ''
 
         this.parent.dispatchEvent(new CustomEvent(DragHandler.AFTER_DRAG, {
             detail: {
@@ -397,10 +421,14 @@ export class DragHandler {
             return
         }
         this.grabber.addEventListener('pointerdown', this.handleBefore, {passive: false})
+        this.grabber.addEventListener('touchstart', this.handleBefore, {passive: false})
         this.grabber.addEventListener('click', this.#handleClick.bind(this), {passive: false})
 
         if (this.container === window) {
             window.addEventListener('resize', this.#handleResize.bind(this))
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', this.#handleResize.bind(this))
+            }
         }
         else {
             this.resizeObserver = new ResizeObserver(() => this.#handleResize())
@@ -417,15 +445,29 @@ export class DragHandler {
     destroy() {
         if (this.grabber) {
             this.grabber.removeEventListener('pointerdown', this.handleBefore)
+            this.grabber.removeEventListener('touchstart', this.handleBefore)
             this.grabber.removeEventListener('click', this.#handleClick.bind(this))
-            this.grabber.style.cursor = '' // Reset cursor
+            this.grabber.style.cursor = ''
+            this.grabber.style.touchAction = ''
+            this.grabber.style.userSelect = ''
+            this.grabber.style.webkitUserSelect = ''
+            this.grabber.style.webkitTouchCallout = ''
         }
         document.removeEventListener('pointermove', this.handleMove)
+        document.removeEventListener('touchmove', this.handleMove)
         document.removeEventListener('pointerup', this.handleEnd)
+        document.removeEventListener('touchend', this.handleEnd)
         document.removeEventListener('click', this.#handleDocumentClick.bind(this))
-        this.#removeOverlay() // Ensure overlay is removed
+        document.body.style.userSelect = ''
+        document.body.style.webkitUserSelect = ''
+        document.body.style.touchAction = ''
+        document.body.style.overscrollBehavior = ''
+        this.#removeOverlay()
         if (this.container === window) {
             window.removeEventListener('resize', this.#handleResize.bind(this))
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', this.#handleResize.bind(this))
+            }
         }
         else if (this.resizeObserver) {
             this.resizeObserver.disconnect()
