@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-07-05
+ * Last modified: 2025-07-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -26,7 +26,8 @@ export const CallForActions = (props) => {
 
     const loadJourney = () => {
         hide()
-        lgs.stores.ui.journeyLoader.visible = true
+        lgs.stores.ui.mainUI.journeyLoader.visible = true
+
     }
     const hide = () => {
         cfa.current.style.display = 'none'
