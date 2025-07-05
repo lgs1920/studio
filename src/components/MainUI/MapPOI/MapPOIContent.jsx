@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-01
- * Last modified: 2025-07-01
+ * Created on: 2025-07-05
+ * Last modified: 2025-07-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,7 +18,8 @@ import { NameValueUnit }                             from '@Components/DataDispl
 import { FontAwesomeIcon }                           from '@Components/FontAwesomeIcon'
 import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
 import { MapPOI }                                    from '@Core/MapPOI'
-import { Utils } from '@Editor/Utils'
+import { Utils }  from '@Editor/Utils'
+import { faMask } from '@fortawesome/pro-solid-svg-icons'
 import { UIToast }                                   from '@Utils/UIToast'
 import { ELEVATION_UNITS }                           from '@Utils/UnitUtils'
 import { snapdom }                                   from '@zumer/snapdom'
@@ -27,7 +28,6 @@ import { DateTime }                                  from 'luxon'
 import { useEffect, useRef }                         from 'react'
 import './style.css'
 import { useSnapshot }                               from 'valtio'
-import { faMask } from '@fortawesome/pro-solid-svg-icons'
 
 /**
  * A React component that renders the content of a Point of Interest (POI) on the map.
@@ -57,6 +57,9 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
     const inner = useRef(null)
     const _poiContent = useRef(null)
     const _icon = useRef(null)
+    const unitSystem = useSnapshot(lgs.settings.unitSystem)
+    const coordinateSystem = useSnapshot(lgs.settings.coordinateSystem)
+
 
     if (category) {
         useInMenu = true
@@ -315,7 +318,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
         // Set up MutationObserver to monitor changes to _poiContent
         const observer = new MutationObserver(() => {
             renderToCanvas() // Le délai est maintenant dans renderToCanvas
-        });
+        })
 
         if (_poiContent.current) {
             observer.observe(_poiContent.current, {
@@ -347,7 +350,8 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                   category ? null : point?.longitude,
                   category ? null : point?.latitude,
                   category ? null : point?.type,
-        category, point?.visible,
+                  category, point?.visible,
+                  unitSystem, coordinateSystem,
               ])
 
     // When category is defined, render only the icon
@@ -359,7 +363,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                 'used-in-menu',
             )} {...(slot && {slot: slot})}>
 
-            <div className="poi-card" ref={_poiContent}>
+                <div className="poi-card" ref={_poiContent}>
                     <div className="poi-card-inner" ref={inner} style={style}>
                         <div className="poi-card-inner-background"/>
                         <FontAwesomeIcon
