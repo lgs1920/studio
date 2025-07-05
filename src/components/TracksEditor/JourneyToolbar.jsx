@@ -217,7 +217,6 @@ export const JourneyToolbar = (props) => {
     const handleDragStop = (event) => {
         toolbarMoved.current = false
         _journeySelector.current.disabled = false
-
     }
 
 
