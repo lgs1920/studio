@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-15
- * Last modified: 2025-06-15
+ * Created on: 2025-07-06
+ * Last modified: 2025-07-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -71,7 +71,7 @@ export const MapPOICategorySelectorFilter = memo(({onChange, handleCategories, h
                     checked={settings.filter.exclude}
                     onSlChange={handleExclusion}
                 >
-                    Exclude
+                    {'Exclude'}&nbsp;
                 </SlSwitch>
             )}
         </div>
