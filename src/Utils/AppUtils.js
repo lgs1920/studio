@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-21
- * Last modified: 2025-06-21
+ * Created on: 2025-07-06
+ * Last modified: 2025-07-06
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import {
-    BUILD, CONFIGURATION, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, LGS_CONTEXT_MENU_HOOK, MILLIS, platforms,
-    SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE,
+    BUILD, CONFIGURATION, COUNTRIES, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, LGS_CONTEXT_MENU_HOOK, MILLIS,
+    platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE,
 }                           from '@Core/constants'
 import { ElevationServer }  from '@Core/Elevation/ElevationServer'
 import { Settings }         from '@Core/settings/Settings'
@@ -166,6 +166,19 @@ export class AppUtils {
         lgs.configuration = {...appConfig, ...settings}
         lgs.savedConfiguration = {...appConfig, ...settings}
 
+        // Read countries
+        __.countries = await fetch(COUNTRIES, {cache: 'no-store'})
+            .then(res => res.text())
+            .then(text => {
+                      const countries = new Map()
+                      YAML.parse(text).map(country => {
+                          countries.set(country.code, country)
+                      })
+                      return countries
+                  },
+            )
+
+        // Read servers
         lgs.servers = await fetch(SERVERS, {cache: 'no-store'}).then(
             res => res.json(),
         )
