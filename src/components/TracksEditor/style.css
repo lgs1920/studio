@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-02
- * Last modified: 2025-07-02
+ * Created on: 2025-07-06
+ * Last modified: 2025-07-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -105,12 +105,12 @@ sl-tab sl-icon {
 }
 
 .journey-title {
+    overflow: hidden;
+    width: 100%;
     min-width: 10rem;
     max-width: min(30rem, 100%);
-    font-weight: 700;
     max-height: var(--lgs-line-dimension);
     white-space: nowrap;
-    overflow: hidden;
     text-overflow: ellipsis;
 }
 
@@ -118,6 +118,7 @@ sl-tab sl-icon {
     width: 1.2rem;
     margin-right: var(--lgs-gutter-s);;
 }
+
 
 #journey-settings {
     flex-grow: 1;
