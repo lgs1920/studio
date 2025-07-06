@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-02
- * Last modified: 2025-07-02
+ * Created on: 2025-07-06
+ * Last modified: 2025-07-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -68,9 +68,6 @@ import {
 import {
     TrackData,
 }                                                      from '@Editor/track/TrackData'
-import {
-    TrackFlagsSettings,
-}                                                      from '@Editor/track/TrackFlagsSettings'
 import {
     TrackPoints,
 }                                                      from '@Editor/track/TrackPoints'
@@ -592,7 +589,6 @@ export const JourneySettings = () => {
                                     />
                                 </SlTooltip>
                             )}
-                            {journey.tracks.size === 1 && journey.visible && <TrackFlagsSettings tooltip="left"/>}
                             <div>
                                 <SlTooltip hoist content="Export" placement="left">
                                     <SlIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-02
- * Last modified: 2025-07-02
+ * Created on: 2025-07-06
+ * Last modified: 2025-07-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,7 +23,6 @@ import parse                              from 'html-react-parser'
 import { useSnapshot }                    from 'valtio'
 import { Utils }                          from '../Utils'
 import { TrackData }                      from './TrackData'
-import { TrackFlagsSettings }             from './TrackFlagsSettings'
 import { TrackPoints }                    from './TrackPoints'
 import { TrackStyleSettings }             from './TrackStyleSettings'
 
@@ -162,14 +161,10 @@ export const TrackSettings = () => {
                                                 <TrackStyleSettings/>
                                             </div>
                                         }
-
                                         {journeyEditor.activeTab === POINTS_PANEL && <TrackPoints/>}
                                     </>
                                 }
                                 <div id="track-visibility" className={'editor-vertical-menu'}>
-                                    {journeyEditor.activeTab !== POIS_PANEL && $journeyEditor.journey.tracks.size > 1 && journeyEditor.track.visible &&
-                                        <TrackFlagsSettings tooltip="left"/>
-                                    }
                                 </div>
                             </div>
                         </>
