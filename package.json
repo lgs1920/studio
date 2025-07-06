@@ -13,7 +13,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@awesome.me/kit-eb5c406148": "^1.0.87",
+    "@awesome.me/kit-eb5c406148": "^1.0.90",
     "@eslint/migrate-config": "^1.5.2",
     "@fortawesome/duotone-light-svg-icons": "^6.7.2",
     "@fortawesome/duotone-regular-svg-icons": "^6.7.2",
