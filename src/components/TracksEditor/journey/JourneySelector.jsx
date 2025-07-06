@@ -14,14 +14,14 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { FontAwesomeIcon }  from '@Components/FontAwesomeIcon'
+import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { memo, useCallback, useRef, useEffect, useMemo } from 'react'
-import { useSnapshot }                                   from 'valtio'
+import { useSnapshot }     from 'valtio'
 import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                         from '@Utils/FA2SL'
-import { faChevronDown }                                 from '@fortawesome/pro-regular-svg-icons'
+import { FA2SL }           from '@Utils/FA2SL'
+import { faChevronDown }   from '@fortawesome/pro-regular-svg-icons'
 import { faMask, faSquare } from '@fortawesome/pro-solid-svg-icons'
-import classNames                                        from 'classnames'
+import classNames          from 'classnames'
 
 // Static icon names to avoid recalculation
 const ICON_CHEVRON_DOWN = faChevronDown
@@ -44,6 +44,9 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
     const {list, keys} = useSnapshot(lgs.stores.main.components.journeyEditor)
     const theJourney = useSnapshot(lgs.stores.journeyEditor.journey)
 
+    // Snapshot the editor store to be reactive to track changes
+    const editorStore = useSnapshot(lgs.theJourneyEditorProxy)
+
     // Memoized sorted journeys
     const journeys = useMemo(() => {
         const journeyList = Array.from(list, slug => lgs.getJourneyBySlug(slug)).filter(Boolean)
@@ -52,15 +55,15 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
                : journeyList
     }, [list])
 
-    // Memoized prefix color function
-    const getPrefixColor = (journey = theJourney) => {
-        return journey.tracks.size === 1 ? journey.tracks.values().next().value.color : 'black'
-    }
-
-    // Memoized styles for icons
-    const selectIconStyle = useMemo(() => ({
-        color: theJourney.visible && theJourney.tracks.size === 1 ? theJourney.trackscolor : 'black',
-    }), [theJourney.visible, theJourney.tracks.size, theJourney.trackscolor])
+    // Derive track colors for reactivity - use both theJourney.tracks and editorStore.track
+    const trackColors = useMemo(() => {
+        // For single track, use the editor store to be reactive to color changes
+        if (theJourney.tracks.size === 1 && editorStore.track) {
+            return editorStore.track.color
+        }
+        // For multiple tracks, use the journey tracks
+        return Array.from(theJourney.tracks.values()).map(track => track.color).join('-')
+    }, [theJourney.tracks, editorStore.track?.color])
 
     // Handle selection change
     const handleChange = useCallback(event => {
@@ -73,7 +76,7 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
 
     /**
      * Determines the icon based on the number of tracks in the journey.
-     * @param {Object} [journey=theJourney] - The journey object
+     * @param {Object} [journey] - The journey object
      * @return {string|Object} The icon to use
      */
     const icon = (journey = theJourney) => {
@@ -82,25 +85,32 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
 
     /**
      * Computes the icon style based on journey visibility and track colors.
-     * @param {Object} [journey=theJourney] - The journey object
+     * @param {Object} [journey] - The journey object
      * @return {Object} The style object for the icon
      */
-    const getIconStyle = useMemo(() => {
-        return (journey = theJourney) => {
-            if (journey.tracks.size === 1) {
-                return {color: journey.visible ? journey.tracks.values().next().value.color : 'var(--lgs-disabled-color)'}
-            }
-            else {
-                const [[, first], [, second]] = journey.tracks
-                return {
-                    '--fa-primary-color':     first.color,
-                    '--fa-secondary-color':   second.color,
-                    '--fa-primary-opacity':   1,
-                    '--fa-secondary-opacity': 1,
-                }
+    const getIconStyle = useCallback((journey = theJourney) => {
+        if (!journey.tracks.size) {
+            return {color: 'var(--lgs-disabled-color)'}
+        }
+        if (journey.tracks.size === 1) {
+            // For single track, use the editor store color to be reactive
+            const trackColor = (journey === theJourney && editorStore.track)
+                               ? editorStore.track.color
+                               : journey.tracks.values().next().value?.color
+            return {
+                color: journey.visible
+                       ? trackColor || 'var(--lgs-disabled-color)'
+                       : 'var(--lgs-disabled-color)',
             }
         }
-    }, [theJourney])
+        const [[, first], [, second]] = journey.tracks
+        return {
+            '--fa-primary-color':     first?.color || 'black',
+            '--fa-secondary-color':   second?.color || 'black',
+            '--fa-primary-opacity':   1,
+            '--fa-secondary-opacity': 1,
+        }
+    }, [theJourney, editorStore.track?.color])
 
     if (journeys.length === 0) {
         return null
@@ -145,15 +155,13 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
             {journeys.length === 1 && single && (
                 <div
                     className={classNames(
-                        'journey-title',
-                        {'lgs-one-line-card': isStyledCard, masked: !theJourney.visible},
+                        'journey-title', 'lgs-one-line-card',
+                        {masked: !theJourney.visible},
                     )}
                 >
-                    <SlIcon
+                    <FontAwesomeIcon
                         className="journey-title-prefix"
-                        disabled={!theJourney.visible}
-                        library="fa"
-                        name={theJourney.visible ? ICON_SQUARE : ICON_MASK}
+                        icon={theJourney.visible ? icon() : ICON_MASK}
                         slot="prefix"
                         style={getIconStyle()}
                     />
