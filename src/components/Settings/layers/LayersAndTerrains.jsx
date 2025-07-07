@@ -103,9 +103,9 @@ export const LayersAndTerrains = () => {
                                   : layer.usage?.type !== FREE_ANONYMOUS_ACCESS && layer.usage?.unlocked !== true
                     }
 
-                    // Apply filter by country
+                    // Apply filter by countries
                     if (layers.filter.byCountries.length > 0) {
-                        byCountries = layers.filter.byCountries.includes(layer.country)
+                        byCountries = layer.countries.some(country => layers.filter.byCountries.includes(country))
                     }
                 }
 

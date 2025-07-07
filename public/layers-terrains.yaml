@@ -66,7 +66,7 @@ providers:
         image: ign-cadastral.png      # Thumbnail filename
         doc: 'https://data.geopf.fr'  # Layer documentation
         type: overlay                 # Layer type (base/overlay/terrains)
-        country: FR
+        countries: [ FR ]
         ## Usage management
         usage: # Usage
           type: free                  # free/fremium/premium/account
@@ -97,7 +97,7 @@ providers:
         tileMatrixSetID: PM
         doc: 'https://data.geopf.fr'
         type: base
-        country: FR
+        countries: [ FR,DE,LU ]
 
       ## IGN Legacy
       - name: Map IGN
@@ -126,7 +126,7 @@ providers:
         usage:
           type: free #mium
           doc: ''
-        country: FR
+        countries: [ FR ]
 
         tile: wmts-legacy
         url: https://data.geopf.fr/private/wmts
@@ -146,7 +146,7 @@ providers:
         usage:
           type: free
           doc: ''
-        country: FR
+        countries: [ FR ]
 
         tile: wmts
         url: https://data.geopf.fr/wmts
@@ -165,7 +165,7 @@ providers:
         usage:
           type: free
           doc: ''
-        country: FR
+        countries: [ FR ]
 
         tile: wmts
         url: 'https://data.geopf.fr/wmts'
@@ -183,7 +183,7 @@ providers:
         usage:
           type: free
           doc: ''
-        country: FR
+        countries: [ FR ]
 
         tile: wmts
         url: 'https://data.geopf.fr/wmts'
@@ -202,7 +202,7 @@ providers:
         usage:
           type: free
           doc: ''
-        country: FR
+        countries: [ FR ]
 
         tile: wmts
         url: 'https://data.geopf.fr/wmts'
@@ -220,7 +220,7 @@ providers:
         usage:
           type: free
           doc: ''
-        country: FR
+        countries: [ FR ]
 
         tile: wmts
         url: 'https://data.geopf.fr/wmts'
@@ -265,7 +265,7 @@ providers:
         usage:
           type: free
           doc: ''
-        country: CH
+        countries: [ CH ]
 
         tile: swisstopo
         url: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.landeskarte-farbe-10/default/current/3857/{z}/{x}/{y}.png
@@ -280,7 +280,7 @@ providers:
         usage:
           type: free
           doc: ''
-        country: CH
+        countries: [ CH ]
 
         tile: swisstopo
         url: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg

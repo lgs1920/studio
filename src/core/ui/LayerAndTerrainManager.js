@@ -86,17 +86,22 @@ export class LayersAndTerrainManager {
         this.#overlay = lgs.settings.getLayers.overlay
         this.#provider = this.#base?.split('-')[0] ?? null
 
-        // Map providers and layers in a single pass, adding country field
+        // Map providers and layers in a single pass, adding countries field
         lgs.settings.layers.providers.forEach(provider => {
             this.#providers.set(provider.id, provider)
             provider.layers.forEach(layer => {
-                // Add country field with 'WORLD' as default
-                const enhancedLayer = {...layer, provider: provider.id, country: layer.country ?? ''}
+                const enhancedLayer = {...layer, provider: provider.id, countries: layer.countries ?? []}
                 this.#bases.set(layer.id, enhancedLayer)
                 // Collect unique country names
-                this.#countries.add(enhancedLayer.country)
+                if (Array.isArray(enhancedLayer.countries)) {
+                    enhancedLayer.countries.forEach(country => {
+                        if (typeof country === 'string' && country.trim() !== '') {
+                            this.#countries.add(country.trim())
+                        }
+                    })
+                }
             })
-        })
+        });
 
         // Set singleton instance
         LayersAndTerrainManager.instance = this
