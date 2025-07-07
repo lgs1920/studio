@@ -7,25 +7,24 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-22
- * Last modified: 2025-06-22
+ * Created on: 2025-07-02
+ * Last modified: 2025-07-02
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { memo, useCallback, useMemo } from 'react'
-import { useSnapshot }                from 'valtio'
-import { FontAwesomeIcon }            from '@Components/FontAwesomeIcon'
 import { POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants'
 import {
     faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCrosshairsSimple, faFlag, faLocationDot, faPanorama,
     faTrashCan, faXmark,
-}                                     from '@fortawesome/pro-regular-svg-icons'
-import { faMask }                     from '@fortawesome/pro-solid-svg-icons'
-import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                      from '@Utils/FA2SL'
-import { UIToast }                    from '@Utils/UIToast'
+}                                                          from '@fortawesome/pro-regular-svg-icons'
+import { faMask }                                                         from '@fortawesome/pro-solid-svg-icons'
+import { SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                          from '@Utils/FA2SL'
+import { UIToast }                                         from '@Utils/UIToast'
+import React, { memo, useMemo }                            from 'react'
+import { useSnapshot }                                     from 'valtio'
 import './style.css'
 
 // Pre-calculated icon names to avoid recalculation
@@ -52,10 +51,10 @@ export const MapPOIEditMenu = memo(({point}) => {
     const settings = useSnapshot(lgs.settings.ui.poi)
 
     // Stabilize point to avoid unnecessary re-renders
-    //  const point = useMemo(() => point, [point.id])
+    //point = useMemo(() => point, [point.id])
 
     const hide = async () => {
-        point = await __.ui.poiManager.updatePOI(pois.current, {
+        point = await __.ui.poiManager.updatePOI(point.id, {
             visible: false,
         })
         point.utils.toggleVisibility(point)
@@ -63,20 +62,20 @@ export const MapPOIEditMenu = memo(({point}) => {
     }
 
     const show = async () => {
-        point = await __.ui.poiManager.updatePOI(pois.current, {
+        point = await __.ui.poiManager.updatePOI(point.id, {
             visible: true,
         })
         point.utils.toggleVisibility(point)
     }
 
     const shrink = async () => {
-        point = await __.ui.poiManager.updatePOI(pois.current, {
+        point = await __.ui.poiManager.updatePOI(point.id, {
             expanded: false,
         })
     }
 
     const expand = async () => {
-        point = await __.ui.poiManager.updatePOI(pois.current, {
+        point = await __.ui.poiManager.updatePOI(point.id, {
             expanded: true,
         })
     }
@@ -151,7 +150,9 @@ export const MapPOIEditMenu = memo(({point}) => {
     const stopRotation = async () => {
         await __.ui.cameraManager.stopRotate()
         const poi = $pois.list.get(point.id)
-        $pois.list.set(point.id, {...poi, animated: false})
+        await __.ui.poiManager.updatePOI(point.id, {
+            ...poi, animated: false,
+        })
     }
 
     const remove = async () => {
@@ -160,9 +161,9 @@ export const MapPOIEditMenu = memo(({point}) => {
         }
         __.ui.poiManager.remove({id: point.id}).then((result) => {
             if (result.success) {
-                pois.filtered.global.delete(result.id)
-                pois.filtered.journey.delete(result.id)
-                pois.bulkList.delete(result.id)
+                $pois.filtered.global.delete(result.id)
+                $pois.filtered.journey.delete(result.id)
+                $pois.bulkList.delete(result.id)
                 $pois.current = false
             }
         })
@@ -172,19 +173,18 @@ export const MapPOIEditMenu = memo(({point}) => {
     const menuItems = useMemo(() => {
         const items = []
         if (point.visible) {
-            if (!settings.focusOnEdit) {
-                items.push(
-                    <SlMenuItem key="focus" onClick={focus} small>
-                        <SlIcon slot="prefix" library="fa" name={ICON_CROSSHAIRS}/>
-                        <span>Focus</span>
-                    </SlMenuItem>,
-                )
-            }
+            items.push(
+                <SlMenuItem key="focus" onClick={focus} small>
+                    <SlIcon slot="prefix" library="fa" name={ICON_CROSSHAIRS}/>
+                    <span>{'Focus'}</span>
+                </SlMenuItem>,
+            )
+
             if (point.type !== POI_STARTER_TYPE) {
                 items.push(
                     <SlMenuItem key="setAsStarter" onClick={setAsStarter} small>
                         <SlIcon slot="prefix" library="fa" name={ICON_FLAG}/>
-                        <span>Set as Starter</span>
+                        <span>{'Set as Starter'}</span>
                     </SlMenuItem>,
                 )
             }
@@ -192,7 +192,7 @@ export const MapPOIEditMenu = memo(({point}) => {
                 items.push(
                     <SlMenuItem key="remove" onClick={remove} small>
                         <SlIcon slot="prefix" library="fa" name={ICON_TRASH}/>
-                        <span>Remove</span>
+                        <span>{'Remove'}</span>
                     </SlMenuItem>,
                 )
             }
@@ -200,7 +200,7 @@ export const MapPOIEditMenu = memo(({point}) => {
                 items.push(
                     <SlMenuItem key="shrink" onClick={shrink} small>
                         <SlIcon slot="prefix" library="fa" name={ICON_REDUCE}/>
-                        <span>Reduce</span>
+                        <span>{'Reduce'}</span>
                     </SlMenuItem>,
                 )
             }
@@ -208,14 +208,14 @@ export const MapPOIEditMenu = memo(({point}) => {
                 items.push(
                     <SlMenuItem key="expand" onClick={expand} small>
                         <SlIcon slot="prefix" library="fa" name={ICON_EXPAND}/>
-                        <span>Expand</span>
+                        <span>{'Expand'}</span>
                     </SlMenuItem>,
                 )
             }
             items.push(
                 <SlMenuItem key="hide" onClick={hide} small>
                     <SlIcon slot="prefix" library="fa" name={ICON_MASK}/>
-                    <span>Hide</span>
+                    <span>{'Hide'}</span>
                 </SlMenuItem>,
                 <sl-divider key="divider"/>,
             )
@@ -223,30 +223,22 @@ export const MapPOIEditMenu = memo(({point}) => {
                 items.push(
                     <SlMenuItem key="rotationAround" onClick={rotationAround}>
                         <SlIcon slot="prefix" library="fa" name={ICON_ROTATE}/>
-                        <span>Rotate Around</span>
+                        <span>{'Rotate Around'}</span>
                     </SlMenuItem>,
                     <SlMenuItem key="panoramic" onClick={panoramic}>
                         <SlIcon slot="prefix" library="fa" name={ICON_PANORAMA}/>
-                        <span>Panoramic</span>
+                        <span>{'Panoramic'}</span>
                     </SlMenuItem>,
                 )
             }
             if (point.id === pois.current && pois.list.get(point.id)?.animated) {
                 items.push(
                     <SlMenuItem key="stopRotation" onClick={stopRotation} loading>
-                        <SlIcon slot="prefix" library="fa" name={ICON_STOP}/>
-                        <span>Stop Rotation</span>
+                        {/* <SlIcon slot="prefix" library="fa" name={ICON_STOP}/> */}
+                        <span>{'Stop Rotation'}</span>
                     </SlMenuItem>,
                 )
             }
-        }
-        else {
-            items.push(
-                <SlMenuItem key="show" onClick={show} small>
-                    <FontAwesomeIcon slot="prefix" icon={point.icon}/>
-                    <span>Show</span>
-                </SlMenuItem>,
-            )
         }
         return items
     }, [point])
@@ -256,11 +248,25 @@ export const MapPOIEditMenu = memo(({point}) => {
     }
 
     return (
-        <SlDropdown className="edit-poi-menu">
-            <SlButton slot="trigger" caret size="small">
-                <FontAwesomeIcon slot="prefix" icon={faLocationDot}/> Select an action
-            </SlButton>
-            <SlMenu>{menuItems}</SlMenu>
-        </SlDropdown>
+        <>
+            {point.visible ? (
+                <SlDropdown className="edit-poi-menu">
+                    <SlButton slot="trigger" caret size="small">
+                        <SlIconButton size="small" slot="prefix"
+                                      library="fa"
+                                      name={FA2SL.set(faLocationDot)}
+                        />{'Select an action'}
+                    </SlButton>
+                    <SlMenu>{menuItems}</SlMenu>
+                </SlDropdown>
+            ) : (
+                 <SlButton onClick={show} size="small">
+                     <SlIconButton size="small" slot="prefix"
+                                   library="fa"
+                                   name={FA2SL.set(faLocationDot)}
+                     />{'Show'}
+                 </SlButton>
+             )}
+        </>
     )
 })

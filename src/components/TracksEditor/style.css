@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-24
- * Last modified: 2025-06-24
+ * Created on: 2025-07-06
+ * Last modified: 2025-07-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -41,11 +41,18 @@
 #journey-editor-drawer .selector-wrapper {
     display: flex;
     align-items: self-end;
+    margin-bottom: var(--lgs-gutter-s);
     gap: var(--lgs-gutter-s);
 }
 
 #journey-editor-drawer .selector-wrapper sl-select, #journey-editor-drawer .selector-wrapper .journey-title {
     flex-grow: 1;
+}
+
+.journey-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 sl-tab sl-icon {
@@ -67,10 +74,6 @@ sl-tab sl-icon {
     width: 100%;
 }
 
-#editor-journey-settings-panel {
-    display: flex;
-    gap: var(--lgs-gutter-s);
-}
 
 #journey-text-description {
     display: flex;
@@ -102,12 +105,12 @@ sl-tab sl-icon {
 }
 
 .journey-title {
+    overflow: hidden;
+    width: 100%;
     min-width: 10rem;
     max-width: min(30rem, 100%);
-    font-weight: 700;
     max-height: var(--lgs-line-dimension);
     white-space: nowrap;
-    overflow: hidden;
     text-overflow: ellipsis;
 }
 
@@ -117,11 +120,17 @@ sl-tab sl-icon {
 }
 
 
+#journey-settings {
+    flex-grow: 1;
+}
+
 .settings-panel {
     display: flex;
-    width: 100%;
-    gap: var(--lgs-gutter-s);
     justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    gap: var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-s);
 }
 
 #track-text-description {

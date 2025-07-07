@@ -7,26 +7,27 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-14
- * Last modified: 2025-06-14
+ * Created on: 2025-07-06
+ * Last modified: 2025-07-06
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { memo, useCallback, useRef, useEffect, useMemo } from 'react'
-import { useSnapshot }                                   from 'valtio'
+import { useSnapshot }     from 'valtio'
 import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                         from '@Utils/FA2SL'
-import { faChevronDown }                                 from '@fortawesome/pro-regular-svg-icons'
-import { faRoute, faMask, faSquare }                     from '@fortawesome/pro-solid-svg-icons'
-import classNames                                        from 'classnames'
+import { FA2SL }           from '@Utils/FA2SL'
+import { faChevronDown }   from '@fortawesome/pro-regular-svg-icons'
+import { faMask, faSquare } from '@fortawesome/pro-solid-svg-icons'
+import classNames          from 'classnames'
 
 // Static icon names to avoid recalculation
-const ICON_CHEVRON_DOWN = FA2SL.set(faChevronDown)
-const ICON_ROUTE = FA2SL.set(faRoute)
-const ICON_MASK = FA2SL.set(faMask)
-const ICON_SQUARE = FA2SL.set(faSquare)
+const ICON_CHEVRON_DOWN = faChevronDown
+const ICON_MULTI = 'multi-tracks.svg'
+const ICON_MASK = faMask
+const ICON_SQUARE = faSquare
 
 /**
  * A memoized React component for selecting or displaying a journey.
@@ -38,11 +39,13 @@ const ICON_SQUARE = FA2SL.set(faSquare)
  * @param {string} [props.style] - Style variant ('card' for card-like display)
  * @returns {JSX.Element|null} The rendered component or null if no journeys
  */
-export const JourneySelector = memo(({label, size = 'medium', onChange, single, style}) => {
+export const JourneySelector = memo(({label, size = 'medium', onChange, single, style, ref}) => {
     // Granular snapshots to minimize re-renders
     const {list, keys} = useSnapshot(lgs.stores.main.components.journeyEditor)
-    const journeySnapshot = useSnapshot(lgs.stores.journeyEditor.journey)
-    const trackSnapshot = useSnapshot(lgs.stores.journeyEditor.track)
+    const theJourney = useSnapshot(lgs.stores.journeyEditor.journey)
+
+    // Snapshot the editor store to be reactive to track changes
+    const editorStore = useSnapshot(lgs.theJourneyEditorProxy)
 
     // Memoized sorted journeys
     const journeys = useMemo(() => {
@@ -52,19 +55,15 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
                : journeyList
     }, [list])
 
-    // Memoized prefix color function
-    const getPrefixColor = useCallback(journey => {
-        return journey.tracks.size === 1 ? journey.tracks.values().next().value.color : 'black'
-    }, [])
-
-    // Memoized styles for icons
-    const selectIconStyle = useMemo(() => ({
-        color: journeySnapshot.visible && journeySnapshot.tracks.size === 1 ? trackSnapshot.color : 'black',
-    }), [journeySnapshot.visible, journeySnapshot.tracks.size, trackSnapshot.color])
-
-    const singleIconStyle = useMemo(() => ({
-        color: journeySnapshot.visible ? trackSnapshot.color : 'var(--lgs-disabled-color)',
-    }), [journeySnapshot.visible, trackSnapshot.color])
+    // Derive track colors for reactivity - use both theJourney.tracks and editorStore.track
+    const trackColors = useMemo(() => {
+        // For single track, use the editor store to be reactive to color changes
+        if (theJourney.tracks.size === 1 && editorStore.track) {
+            return editorStore.track.color
+        }
+        // For multiple tracks, use the journey tracks
+        return Array.from(theJourney.tracks.values()).map(track => track.color).join('-')
+    }, [theJourney.tracks, editorStore.track?.color])
 
     // Handle selection change
     const handleChange = useCallback(event => {
@@ -74,6 +73,44 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
             onChange(event)
         }
     }, [onChange])
+
+    /**
+     * Determines the icon based on the number of tracks in the journey.
+     * @param {Object} [journey] - The journey object
+     * @return {string|Object} The icon to use
+     */
+    const icon = (journey = theJourney) => {
+        return journey.tracks.size === 1 ? ICON_SQUARE : ICON_MULTI
+    }
+
+    /**
+     * Computes the icon style based on journey visibility and track colors.
+     * @param {Object} [journey] - The journey object
+     * @return {Object} The style object for the icon
+     */
+    const getIconStyle = useCallback((journey = theJourney) => {
+        if (!journey.tracks.size) {
+            return {color: 'var(--lgs-disabled-color)'}
+        }
+        if (journey.tracks.size === 1) {
+            // For single track, use the editor store color to be reactive
+            const trackColor = (journey === theJourney && editorStore.track)
+                               ? editorStore.track.color
+                               : journey.tracks.values().next().value?.color
+            return {
+                color: journey.visible
+                       ? trackColor || 'var(--lgs-disabled-color)'
+                       : 'var(--lgs-disabled-color)',
+            }
+        }
+        const [[, first], [, second]] = journey.tracks
+        return {
+            '--fa-primary-color':     first?.color || 'black',
+            '--fa-secondary-color':   second?.color || 'black',
+            '--fa-primary-opacity':   1,
+            '--fa-secondary-opacity': 1,
+        }
+    }, [theJourney, editorStore.track?.color])
 
     if (journeys.length === 0) {
         return null
@@ -87,30 +124,28 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
                 <SlSelect
                     label={label}
                     size={size}
-                    value={journeySnapshot.slug || ''}
+                    value={theJourney.slug || ''}
                     onSlChange={handleChange}
                     key={keys.journey.list}
-                    className={classNames('journey-selector', {masked: !journeySnapshot.visible})}
+                    className={classNames('journey-selector', {masked: !theJourney.visible})}
+                    ref={ref}
                 >
-                    <SlIcon
-                        library="fa"
-                        name={journeySnapshot.visible ? ICON_ROUTE : ICON_MASK}
+                    <FontAwesomeIcon
+                        icon={theJourney.visible ? icon() : ICON_MASK}
                         slot="prefix"
-                        style={selectIconStyle}
-                        disabled={!journeySnapshot.visible}
+                        style={getIconStyle()}
                     />
-                    <SlIcon library="fa" name={ICON_CHEVRON_DOWN} slot="expand-icon"/>
+                    <SlIcon library="fa" name={FA2SL.set(ICON_CHEVRON_DOWN)} slot="expand-icon"/>
                     {journeys.map(journey => (
                         <SlOption
                             key={journey.slug}
                             value={journey.slug}
                             className={classNames('journey-title', {masked: !journey.visible})}
                         >
-                            <SlIcon
-                                library="fa"
-                                name={journey.visible ? ICON_SQUARE : ICON_MASK}
+                            <FontAwesomeIcon
+                                icon={journey.visible ? icon(journey) : ICON_MASK}
                                 slot="prefix"
-                                style={{color: getPrefixColor(journey)}}
+                                style={getIconStyle(journey)}
                             />
                             {journey.title}
                         </SlOption>
@@ -120,19 +155,17 @@ export const JourneySelector = memo(({label, size = 'medium', onChange, single, 
             {journeys.length === 1 && single && (
                 <div
                     className={classNames(
-                        'journey-title',
-                        {'lgs-one-line-card': isStyledCard, masked: !journeySnapshot.visible},
+                        'journey-title', 'lgs-one-line-card',
+                        {masked: !theJourney.visible},
                     )}
                 >
-                    <SlIcon
+                    <FontAwesomeIcon
                         className="journey-title-prefix"
-                        disabled={!journeySnapshot.visible}
-                        library="fa"
-                        name={journeySnapshot.visible ? ICON_ROUTE : ICON_MASK}
+                        icon={theJourney.visible ? icon() : ICON_MASK}
                         slot="prefix"
-                        style={singleIconStyle}
+                        style={getIconStyle()}
                     />
-                    {journeySnapshot.title}
+                    {theJourney.title}
                 </div>
             )}
         </>

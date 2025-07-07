@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-07-04
+ * Last modified: 2025-07-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -47,7 +47,7 @@ export const UnitsSystemSettings = (props) => {
                 <SlRadioGroup value={us.current} align-right
                               size={'small'} onSlChange={handleDistanceUnits}
                 >
-                    <label slot="label"><FontAwesomeIcon icon={faRulerCombined}/>{'Distances/Elevations:'}</label>
+                    <label slot="label">{'Distances/Elevations:'}</label>
                     <SlRadioButton value={INTERNATIONAL}>{'Metric'}</SlRadioButton>
                     <SlRadioButton value={IMPERIAL}>{'Impérial'}</SlRadioButton>
                 </SlRadioGroup>
@@ -57,7 +57,7 @@ export const UnitsSystemSettings = (props) => {
                 <SlRadioGroup value={cs.current} align-right
                               size={'small'} onSlChange={handleCoordinateUnits}
                 >
-                    <label slot="label"><FontAwesomeIcon icon={faGlobe}/>{'Coordinates:'}</label>
+                    <label slot="label">{'Coordinates:'}</label>
                     <SlRadioButton value={DD}>{'Digital Degrees'}</SlRadioButton>
                     <SlRadioButton value={DMS}>{'Degrees Minutes Seconds'}</SlRadioButton>
                 </SlRadioGroup>

@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-22
- * Last modified: 2025-06-22
+ * Created on: 2025-06-27
+ * Last modified: 2025-06-27
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import {
-    ADD_POI_EVENT, FLAG_START_TYPE, FLAG_STOP_TYPE, HIGH_TERRAIN_PRECISION, POI_STANDARD_TYPE, POI_STARTER_TYPE,
-    POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE, REMOVE_POI_EVENT,
+    ADD_POI_EVENT, FLAG_START_TYPE, FLAG_STOP_TYPE, GLOBAL_PARENT, HIGH_TERRAIN_PRECISION, POI_STANDARD_TYPE,
+    POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE, REMOVE_POI_EVENT,
 }                     from '@Core/constants'
 import { MapPOI }     from '@Core/MapPOI'
 import { Export }     from '@Core/ui/Export'
@@ -47,13 +47,17 @@ export class POIManager {
     #pendingWrites = new Map() // Debounce database writes
     #updateTimeout = 300 // ms for debouncing
 
+    #journeyIndex = new Map()
+
     constructor() {
         // Singleton pattern implementation
         if (POIManager.instance) {
             return POIManager.instance
         }
-        POIManager.instance = this
         this.setupSubscriptions()
+
+        POIManager.instance = this
+
     }
 
     /**
@@ -62,6 +66,14 @@ export class POIManager {
      */
     get list() {
         return lgs.stores.main.components.pois.list
+    }
+
+    get allIndexes() {
+        return this.#journeyIndex
+    }
+
+    index = (slug) => {
+        return this.#journeyIndex.get(slug)
     }
 
     /**
@@ -175,14 +187,21 @@ export class POIManager {
             lgs.stores.main.components.pois.list,
             (ops) => {
                 ops.forEach(([op, path, value, prevValue]) => {
-                    if (op === 'set' && prevValue === undefined) {
-                        // New POI added
-                        this.#handlePOIAdded(path[0], value)
+                    if (op === 'set') {
+                        if (prevValue === undefined) {
+                            // new POI added
+                            this.#handlePOIAdded(value.id, value)
+                        }
+                        else {
+                            // POI updated
+                            this.#handlePOIUpdated(value.id, value, prevValue)
+                        }
                     }
-                    else if (op === 'delete') {
-                        // POI removed
-                        this.#handlePOIRemoved(path[0], prevValue)
+
+                    if (op === 'delete') {
+                        this.#handlePOIRemoved(value.id, prevValue)
                     }
+
                 })
             },
         )
@@ -239,6 +258,7 @@ export class POIManager {
      * @private
      */
     #handlePOIAdded(id, poi) {
+        this.addToJourneyIndex(id, poi)
         window.dispatchEvent(new CustomEvent(ADD_POI_EVENT, {
             detail:  {poi},
             bubbles: true,
@@ -258,11 +278,39 @@ export class POIManager {
             clearTimeout(existingTimeout)
             this.#pendingWrites.delete(id)
         }
+        this.removeFromJourneyIndex()
 
         window.dispatchEvent(new CustomEvent(REMOVE_POI_EVENT, {
             detail:  {poi},
             bubbles: true,
         }))
+    }
+
+    #handlePOIUpdated(id, newPOI, oldPOI) {
+        const oldParent = oldPOI?.parent ?? GLOBAL_PARENT
+        const newParent = newPOI?.parent ?? GLOBAL_PARENT
+
+        if (oldParent !== newParent) {
+            // Clear any pending writes for this POI
+            const existingTimeout = this.#pendingWrites.get(id)
+            if (existingTimeout) {
+                clearTimeout(existingTimeout)
+                this.#pendingWrites.delete(id)
+            }
+
+            const oldSet = this.#journeyIndex.get(oldParent)
+            if (oldSet) {
+                oldSet.delete(id)
+                if (oldSet.size === 0) {
+                    this.#journeyIndex.delete(oldParent)
+                }
+            }
+
+            if (!this.#journeyIndex.has(newParent)) {
+                this.#journeyIndex.set(newParent, new Set())
+            }
+            this.#journeyIndex.get(newParent).add(id)
+        }
     }
 
     /**
@@ -419,7 +467,7 @@ export class POIManager {
             UIToast.warning({
                                 caption: sprintf(`The POI "%s" can not be deleted !`, poi.title),
                                 text:    'It is the starter POI.',
-                            });
+                            })
             return {id: id, success: false}
         }
 
@@ -448,11 +496,11 @@ export class POIManager {
             UIToast.success({
                                 caption: sprintf(`The POI "%s" has been deleted !`, poi.title),
                                 text:    '',
-                            });
+                            })
         }
 
         return {id: id, success: true}
-    };
+    }
 
     /**
      * Determines if two points are closer than a specified threshold.
@@ -584,7 +632,7 @@ export class POIManager {
             // Configure the new starter POI with appropriate type and styling
             await this.updatePOI(current.id, {
                 formerType: current.type ?? POI_STANDARD_TYPE,
-                type: POI_STARTER_TYPE,
+                type:  POI_STARTER_TYPE,
                 color: lgs.settings.starter.color,
             }, {immediate: true})
 
@@ -726,10 +774,38 @@ export class POIManager {
     }
 
     /**
-     * Opens the POI editor
-     * @param {MapPOI} poi - POI to edit
+     * Adds a POI ID to its single associated parent in the index.
+     * If the parent is null or undefined, it falls back to "__global__".
+     *
+     * @param {string} id - POI identifier
+     * @param {object} poi - POI data object
      */
-    openEditor = (poi) => {
-        // Implementation placeholder
+    addToJourneyIndex(id, poi) {
+        const journey = lgs.getJourneyByTrackSlug(poi?.parent ?? GLOBAL_PARENT)
+        if (!this.#journeyIndex.has(journey.slug)) {
+            this.#journeyIndex.set(journey.slug, new Set())
+        }
+        this.#journeyIndex.get(journey.slug).add(id)
     }
+
+    /**
+     * Removes a POI ID from its single parent entry in the index.
+     * Cleans up the parent set if it's empty afterward.
+     *
+     * @param {string} id - POI identifier
+     * @param {object} poi - POI data object
+     */
+    removeFromJourneyIndex(id, poi) {
+        const journey = lgs.getJourneyByTrackSlug(poi?.parent ?? GLOBAL_PARENT)
+
+        const set = this.#journeyIndex.get(journey.slug)
+        if (set) {
+            set.delete(id)
+            if (set.size === 0) {
+                this.#journeyIndex.delete(journey.slug)
+            }
+        }
+    }
+
+
 }

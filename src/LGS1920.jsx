@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-21
- * Last modified: 2025-06-21
+ * Created on: 2025-06-28
+ * Last modified: 2025-06-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -66,7 +66,7 @@ export function LGS1920() {
 
     if (isMobile) {
         document.body.classList.add('mobile')
-        lgs.editorSettingsProxy.menu.drawer = BOTTOM
+        //  lgs.editorSettingsProxy.menu.drawer = BOTTOM
     }
     else {
         document.body.classList.remove('mobile')

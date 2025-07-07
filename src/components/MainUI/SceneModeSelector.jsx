@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: SceneModeSelector.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { SCENE_MODES }                 from '@Core/constants'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
@@ -7,7 +23,7 @@ import { useSnapshot }                 from 'valtio/index'
 
 export const SceneModeSelector = (props) => {
     const settings = useSnapshot(lgs.settings.scene)
-    const mainUI = useSnapshot(lgs.mainProxy.components.mainUI)
+    const mainUI = useSnapshot(lgs.stores.ui.mainUI)
     const buttonGroup = useRef(null)
     const placement = props.tooltip ?? 'right'
     const [waitingMode, setWaitingMode] = useState(false)

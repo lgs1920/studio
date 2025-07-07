@@ -1,4 +1,20 @@
-import { DrawerFooter }                            from '@Components/DrawerFooter'
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Panel.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-07-01
+ * Last modified: 2025-07-01
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
+import DrawerFooter from '@Components/DrawerFooter'
 import { INFO_DRAWER }                             from '@Core/constants'
 import { SlDrawer, SlTab, SlTabGroup, SlTabPanel } from '@shoelace-style/shoelace/dist/react'
 import React, { useEffect, useRef }                from 'react'
@@ -9,7 +25,7 @@ import { CreditsPanel } from './CreditsPanel'
 import { WhatsNew }     from './WhatsNew'
 
 export const Panel = () => {
-    const snap = useSnapshot(lgs.mainProxy.drawers)
+    const snap = useSnapshot(lgs.stores.ui.drawers)
     const drawerRef = useRef(null)
 
     const closePanel = (event) => {

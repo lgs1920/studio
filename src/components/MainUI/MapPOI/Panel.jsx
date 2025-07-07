@@ -7,23 +7,23 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-23
- * Last modified: 2025-06-23
+ * Created on: 2025-07-01
+ * Last modified: 2025-07-01
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { MapPOIEditFilter }       from '@Components/MainUI/MapPOI/MapPOIEditFilter'
-import { MapPOIEditToggleFilter } from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
+import { MapPOIEditFilter }                      from '@Components/MainUI/MapPOI/MapPOIEditFilter'
+import { MapPOIEditSettings }                    from '@Components/MainUI/MapPOI/MapPOIEditSettings'
+import { MapPOIEditToggleFilter }                from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
+import { MapPOIList }                            from '@Components/MainUI/MapPOI/MapPOIList'
+import { POIS_EDITOR_DRAWER }                    from '@Core/constants'
+import { SlDrawer }                              from '@shoelace-style/shoelace/dist/react'
 import { memo, useCallback, useEffect, useMemo } from 'react'
 import { useSnapshot }                           from 'valtio'
-import { SlDrawer }                              from '@shoelace-style/shoelace/dist/react'
-import { MapPOIEditSettings }     from '@Components/MainUI/MapPOI/MapPOIEditSettings'
-import { MapPOIList }                            from '@Components/MainUI/MapPOI/MapPOIList'
-import { DrawerFooter }                          from '../../DrawerFooter'
-import { POIS_EDITOR_DRAWER }     from '@Core/constants'
-import { proxyMap }               from 'valtio/utils'
+import { proxyMap }                              from 'valtio/utils'
+import DrawerFooter from '../../DrawerFooter'
 import './style.css'
 
 /**
@@ -31,10 +31,11 @@ import './style.css'
  * @returns {JSX.Element} The rendered drawer panel
  */
 export const Panel = memo(() => {
-    const mainStore = lgs.mainProxy
-    const mainSnap = useSnapshot(mainStore, {sync: true})
+    const $main = lgs.stores.main
+    const main = useSnapshot($main, {sync: true})
     const menu = useSnapshot(lgs.editorSettingsProxy.menu, {sync: true})
-
+    const mainStore = lgs.mainProxy
+    const mainSnap = useSnapshot(mainStore)
     // Memoized closePOIsEditor handler
     const closePOIsEditor = useCallback((event) => {
         if (window.isOK(event)) {
@@ -42,7 +43,7 @@ export const Panel = memo(() => {
                 __.ui.drawerManager.close()
             }
             // Avoid global resize event unless necessary
-            // window.dispatchEvent(new Event('resize'))
+            window.dispatchEvent(new Event('resize'))
         }
     }, [])
 
@@ -79,25 +80,33 @@ export const Panel = memo(() => {
 
     // Update categories in store only when they change
     useEffect(() => {
-        mainStore.components.pois.categories = new proxyMap([...categories.entries()])
-    }, [categories, mainStore.components.pois])
+        $main.components.pois.categories = new proxyMap([...categories.entries()])
+    }, [categories, $main.components.pois])
 
     return (
-        <SlDrawer
-            id={POIS_EDITOR_DRAWER}
-            open={mainSnap.drawers.open === POIS_EDITOR_DRAWER}
-            onSlRequestClose={handleRequestClose}
-            onSlAfterHide={closePOIsEditor}
-            contained
-            className="lgs-theme"
-            placement={menu.drawer}
-            label="Points Of Interest"
-        >
-            <MapPOIEditToggleFilter/>
-            <MapPOIEditFilter/>
-            <MapPOIEditSettings/>
-            <MapPOIList context={'poi-panel'}/>
-            <DrawerFooter/>
-        </SlDrawer>
+        <div className="drawer-wrapper">
+
+            <SlDrawer
+                id={POIS_EDITOR_DRAWER}
+                open={lgs.stores.ui.drawers.open === POIS_EDITOR_DRAWER}
+                onSlRequestClose={handleRequestClose}
+                onSlAfterHide={closePOIsEditor}
+                contained
+                className="lgs-theme"
+                placement={menu.drawer}
+            >
+
+                {lgs.stores.ui.drawers.open === POIS_EDITOR_DRAWER &&
+                    <><span slot="label">{'Points Of Interest'}</span>
+                        <MapPOIEditToggleFilter/>
+                        <MapPOIEditFilter/>
+                        <MapPOIEditSettings/>
+                        <MapPOIList/>
+                        <DrawerFooter/>
+                    </>
+                }
+            </SlDrawer>
+        </div>
+
     )
 })

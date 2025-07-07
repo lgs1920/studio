@@ -1,6 +1,0 @@
-### GET request to example server
-https://nominatim.openstreetmap.org/search?limit=10&format=geojson&email=contact%40lgs1920.fr&dedupe=0&
-    polygon_geojson=true&q=saint+sauveur&
-    exclude_place_ids=89363249%2C84698249%2C89163972%2C77283052%2C109456618%2C81189640%2C268030898%2C78800746%2C84924430%2C262533097
-
-###

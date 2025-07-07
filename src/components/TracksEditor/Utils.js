@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-15
- * Last modified: 2025-06-15
+ * Created on: 2025-07-02
+ * Last modified: 2025-07-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -49,21 +49,19 @@ export class Utils {
     static updateJourneyEditor = async (journeySlug, {
         rotate = lgs.settings.ui.camera.start.rotate.journey,
         action = DRAWING_FROM_UI,
+        focus = true,
     }) => {
         const editorStore = lgs.theJourneyEditorProxy
         editorStore.journey = lgs.getJourneyBySlug(journeySlug)
+
         lgs.saveJourneyInContext(editorStore.journey)
-
-
         editorStore.journey.addToContext()
+        editorStore.journey.addToEditor()
         // Force Tab to Data
-        editorStore.tabs.journey.data = true
 
         // Force Track and POI in editor
         editorStore.track = Array.from(editorStore.journey.tracks.values())[0]
         editorStore.track.addToContext()
-        // Force tab to data
-        editorStore.tabs.track.data = true
         editorStore.track.addToEditor()
 
         editorStore.poi = null
@@ -82,14 +80,15 @@ export class Utils {
         __.ui.profiler.draw()
 
         // Save information
-        TrackUtils.saveCurrentJourneyToDB(event.target.value).then(async () => {
-            if (editorStore.journey.visible) {
+        TrackUtils.saveCurrentJourneyToDB(lgs.theJourney).then(async () => {
+            if (editorStore.journey.visible && focus) {
                 lgs.theJourney.focus({action: action, rotate: rotate})
             }
-
+            await TrackUtils.saveCurrentJourneyToDB(lgs.theJourney)
             await TrackUtils.saveCurrentTrackToDB(null)
             await TrackUtils.saveCurrentPOIToDB(null)
         })
+
     }
 
     static initTrackEdition = async (event) => {
@@ -97,8 +96,6 @@ export class Utils {
             const editorStore = lgs.theJourneyEditorProxy
             editorStore.track = lgs.getTrackBySlug(event.target.value)
             editorStore.track.addToContext()
-            // Force tab to data
-            editorStore.tabs.track.data = true
 
             // Force POI in editor
             editorStore.poi = null

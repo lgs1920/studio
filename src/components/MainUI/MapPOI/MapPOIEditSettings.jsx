@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-23
- * Last modified: 2025-06-23
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -39,7 +39,7 @@ const ICONS = {
 export const MapPOIEditSettings = memo(({globals = true}) => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
-    const drawers = useSnapshot(lgs.mainProxy.drawers)
+    const drawers = useSnapshot(lgs.stores.ui.drawers)
 
     // Memoized onlyJourney calculation
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-15
- * Last modified: 2025-06-15
+ * Created on: 2025-07-04
+ * Last modified: 2025-07-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -47,7 +47,7 @@ const ToolbarHeader = memo(({show, usage, onToggle}) => {
 
 // Memoized sub-component for journey content
 const JourneyContent = memo(({journeyVisible}) => (
-    <>
+    <div className="journey-content-wrapper">
         <div className="selector-wrapper">
             <JourneySelector
                 onChange={Utils.initJourneyEdition}
@@ -60,37 +60,27 @@ const JourneyContent = memo(({journeyVisible}) => (
             />
         </div>
         <JourneySettings/>
-        {journeyVisible && (
-            <>
-                <SlDivider/>
-                <div className="selector-wrapper">
-                    <TrackSelector
-                        onChange={Utils.initTrackEdition}
-                        label={'Select one of the tracks:'}
-                    />
-                    <div className="editor-vertical-menu"/>
-                </div>
-                <TrackSettings/>
-            </>
-        )}
-    </>
+        <TrackSettings/>
+    </div>
 ))
 
 export const TracksEditor = memo(() => {
     // Select necessary state properties with safe defaults
-    const {canViewJourneyData, drawers: {open: drawerOpen}} = useSnapshot(lgs.mainProxy)
-    const editorSnap = useSnapshot(lgs.theJourneyEditorProxy)
+    const {canViewJourneyData} = useSnapshot(lgs.stores.main)
+    const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
+
+    const editor = useSnapshot(lgs.theJourneyEditorProxy)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const {show: toolbarShow, usage: toolbarUsage} = useSnapshot(lgs.settings.ui.journeyToolbar)
     const hasJourneys = lgs.journeys.size > 0
 
     // Safely access journey.visible with a fallback
-    const journeyVisible = editorSnap.journey?.visible ?? false
+    const journeyVisible = editor.journey?.visible ?? false
 
     // Memoized event handlers
     const toggleToolbar = useCallback(() => {
-        lgs.settings.ui.journeyToolbar.show = !toolbarShow
-    }, [toolbarShow])
+        lgs.settings.ui.journeyToolbar.show = !lgs.settings.ui.journeyToolbar.show
+    }, [lgs.settings.ui.journeyToolbar.show])
 
     const handleRequestClose = useCallback((event) => {
         if (event.detail.source === 'overlay') {
@@ -123,8 +113,8 @@ export const TracksEditor = memo(() => {
                 contained
                 className="lgs-theme"
                 placement={drawerPlacement}
-                label="Edit your Journey"
             >
+                <span slot="label">{'Edit the Journey'}</span>
                 <ToolbarHeader
                     show={toolbarShow}
                     usage={toolbarUsage}

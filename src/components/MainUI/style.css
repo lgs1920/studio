@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-07-02
+ * Last modified: 2025-07-02
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 html {
     --sl-scroll-lock-gutter: unset !important;
 }
@@ -162,6 +178,12 @@ html {
     max-width: min(20rem, 100%);
 }
 
+.journey-toolbar sl-button::part(base) {
+
+    border: none;
+    background: transparent;
+}
+
 #close-journey-toolbar {
     font-size: var(--lgs-font-size);
     height: 1.2rem;
@@ -321,15 +343,3 @@ html {
     display: flex;
 }
 
-/*******************************************************************************
- * Map Rotation
- */
-:root {
-    --map-rotation-speed: 60s
-}
-
-#launch-rotation::part(spinner) {
-    --indicator-color: var(--lgs-warning-color);
-    --track-width: 4px;
-    --speed: var(--map-rotation-speed)
-}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-25
- * Last modified: 2025-05-25
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -42,7 +42,7 @@ import { DragNDropFile }              from './DragNDropFile'
  */
 export const JourneyLoaderUI = (props) => {
 
-    const journeyLoaderStore=lgs.mainProxy.components.mainUI.journeyLoader
+    const journeyLoaderStore = lgs.stores.ui.mainUI.journeyLoader
     const journeyLoaderSnap= useSnapshot(journeyLoaderStore)
 
     const setState = lgs.mainProxy.components.fileLoader

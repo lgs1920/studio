@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-23
- * Last modified: 2025-05-23
+ * Created on: 2025-07-05
+ * Last modified: 2025-07-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -37,7 +37,7 @@ export const CESIUM_EVENTS = {
     // Touch events
     TAP:        {event: ScreenSpaceEventType.LEFT_DOWN, touch: true},
     DOUBLE_TAP: {event: ScreenSpaceEventType.LEFT_DOWN, touch: true},
-    LONG_TAP:   {event: null, touch: true},
+    LONG_TAP: {event: ScreenSpaceEventType.LEFT_DOWN, touch: true},
 
 
     // Mobile specific

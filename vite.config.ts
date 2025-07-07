@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-01
- * Last modified: 2025-05-01
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -87,9 +87,14 @@ export default defineConfig({
                 replacement: Bun.fileURLToPath(new URL('./src/components', import.meta.url))
             },
             {
+                find: '@Stores',
+                replacement: Bun.fileURLToPath(new URL('./src/core/stores', import.meta.url))
+            },
+            {
                 find: '@Core',
                 replacement: Bun.fileURLToPath(new URL('./src/core', import.meta.url))
             },
+
         ]
     }
 })

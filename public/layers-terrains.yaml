@@ -16,6 +16,7 @@ filter:
   thumbnail: true
   provider: true
   alphabetic: true
+  byCountries: [ ]
 
 ## Providers List
 providers:
@@ -51,8 +52,8 @@ providers:
 
   ## IGN Provider
   - id: ign                           # Provider ID
-    name: IGN (France)                # Provider name
-    credits: 'Credits IGN (France)'     # Credits added to logo
+    name: IGN (France)                    # Provider name
+    credits: 'Credits IGN (France)'       # Credits added to logo
     # Logo
     logo: https://design-system.ign.fr/img/styleguide/sg_logos/Logo_IGN_svg/IGN_logo-simplifie_Q.svg
     url: 'https://ign.fr'             # Provider Url
@@ -65,7 +66,7 @@ providers:
         image: ign-cadastral.png      # Thumbnail filename
         doc: 'https://data.geopf.fr'  # Layer documentation
         type: overlay                 # Layer type (base/overlay/terrains)
-
+        countries: [ FR ]
         ## Usage management
         usage: # Usage
           type: free                  # free/fremium/premium/account
@@ -96,6 +97,7 @@ providers:
         tileMatrixSetID: PM
         doc: 'https://data.geopf.fr'
         type: base
+        countries: [ FR,DE,LU ]
 
       ## IGN Legacy
       - name: Map IGN
@@ -124,6 +126,7 @@ providers:
         usage:
           type: free #mium
           doc: ''
+        countries: [ FR ]
 
         tile: wmts-legacy
         url: https://data.geopf.fr/private/wmts
@@ -143,6 +146,7 @@ providers:
         usage:
           type: free
           doc: ''
+        countries: [ FR ]
 
         tile: wmts
         url: https://data.geopf.fr/wmts
@@ -161,6 +165,7 @@ providers:
         usage:
           type: free
           doc: ''
+        countries: [ FR ]
 
         tile: wmts
         url: 'https://data.geopf.fr/wmts'
@@ -178,6 +183,7 @@ providers:
         usage:
           type: free
           doc: ''
+        countries: [ FR ]
 
         tile: wmts
         url: 'https://data.geopf.fr/wmts'
@@ -196,6 +202,7 @@ providers:
         usage:
           type: free
           doc: ''
+        countries: [ FR ]
 
         tile: wmts
         url: 'https://data.geopf.fr/wmts'
@@ -213,6 +220,7 @@ providers:
         usage:
           type: free
           doc: ''
+        countries: [ FR ]
 
         tile: wmts
         url: 'https://data.geopf.fr/wmts'
@@ -257,6 +265,7 @@ providers:
         usage:
           type: free
           doc: ''
+        countries: [ CH ]
 
         tile: swisstopo
         url: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.landeskarte-farbe-10/default/current/3857/{z}/{x}/{y}.png
@@ -271,6 +280,7 @@ providers:
         usage:
           type: free
           doc: ''
+        countries: [ CH ]
 
         tile: swisstopo
         url: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg

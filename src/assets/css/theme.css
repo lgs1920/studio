@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-24
- * Last modified: 2025-06-24
+ * Created on: 2025-07-04
+ * Last modified: 2025-07-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -203,10 +203,6 @@ sl-button::part(label) {
     padding-left: 0;
 }
 
-sl-button::part(spinner) {
-    font-size: var(--lgs-font-size-l);
-}
-
 .buttons-bar {
     display: flex;
     justify-content: flex-end;
@@ -298,6 +294,38 @@ sl-icon.is-duotone svg[part="svg"] {
     fill: red;
 }
 
+/*******************************************************************************
+ * Spinner
+ ******************************************************************************/
+:root {
+    --map-rotation-speed: 60s
+}
+
+sl-button::part(spinner) {
+    font-size: var(--lgs-font-size-l);
+}
+
+sl-menu-item::part(spinner) {
+    font-size: var(--lgs-font-size-m);
+}
+
+sl-menu-item::part(spinner)::part(base) {
+    margin-right: 2px
+}
+
+::part(spinner) {
+    --indicator-color: var(--lgs-information-color);
+    --track-color: var(--lgs-information-border-color);
+    --track-width: 3px;
+    --speed: var(--map-rotation-speed);
+}
+
+.on-map sl-spinner, .on-map ::part(spinner) {
+    --indicator-color: var(--lgs-light-color);
+    --track-color: var(--lgs-light-color-25);
+    --track-width: 2px;
+    --speed: var(--map-rotation-speed);
+}
 
 /*******************************************************************************
  * Main CFA
@@ -373,13 +401,13 @@ sl-tab-panel {
     overflow-y: hidden;
 }
 
-sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-group::part(base),
-sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-group::part(body),
-sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-panel::part(base),
-sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-panel::part(body),
-sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-panel, sl-tab-group {
-    max-height: 100%;
+sl-drawer sl-tab-group::part(base),
+sl-drawer sl-tab-group::part(body),
+sl-drawer sl-tab-panel::part(base),
+sl-drawer sl-tab-panel::part(body),
+sl-drawer sl-tab-panel, sl-tab-group {
     height: 100%;
+    max-height: 100%;
 }
 
 sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-panel::part(base) {
@@ -410,6 +438,16 @@ sl-drawer:not([placement="bottom"]):not([placement="top"]) sl-tab-panel::part(ba
     gap: var(--lgs-gutter-s);
 }
 
+.panel-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-bottom: var(--lgs-gutter-s);
+}
+
+.credits-pane-footer {
+    flex-direction: row !important;
+}
 
 /*******************************************************************************
  * Cards
@@ -545,9 +583,9 @@ sl-card[variant="primary"]::part(base) {
 
 .lgs-scrollbars .thumb-horizontal, .lgs-scrollbars .thumb-vertical {
     cursor: pointer;
+    border: 1px solid var(--lgs-light-color-50);;
     border-radius: inherit;
-    background-color: var(--thumb-color);
-    opacity: 0.3;
+    background-color: var(--lgs-dark-color-50);
 }
 
 .on-map .lgs-scrollbars .track-horizontal, .on-map .lgs-scrollbars .track-vertical {
@@ -591,6 +629,10 @@ sl-dialog {
     --header-spacing: var(--body-spacing) var(--body-spacing) 0 var(--body-spacing)
 }
 
+sl-dialog::part(base) {
+    z-index: calc(var(--lgs-ui-layer-zindex) + 1)
+}
+
 sl-dialog [slot="label"] {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -632,14 +674,21 @@ sl-details {
     --sl-spacing-medium: var(--lgs-gutter-xs);
 }
 
+sl-details::part(header) {
+    padding: var(--lgs-gutter-s)
+}
+
+sl-details [slot="summary"] > svg,
+sl-details [slot="summary"] > span > svg:first-child {
+    margin-right: var(--lgs-gutter-xs);
+}
+
+
 sl-details::part(base) {
     padding: 0;
     --spacing: 0;
 }
 
-sl-details::part(header) {
-    padding: var(--lgs-gutter-s)
-}
 
 sl-details::part(content) {
     margin-top: calc(-1 * var(--lgs-gutter-s));
@@ -722,7 +771,7 @@ translate(- 50 %, - 10 px);
     --color: var(--lgs-card-on-map-border-color);
 }
 
-.lgs-context-menu sl-icon, .lgs-context-menu svg {
+.lgs-context-menu sl-icon, .lgs-context-menu svg, .lgs-context-menu sl-spinner {
     margin-right: var(--lgs-gutter-s);
 }
 

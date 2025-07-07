@@ -1,57 +1,78 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: TrackSelector.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-07-06
+ * Last modified: 2025-07-06
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { faChevronDown, faEye, faEyeSlash } from '@fortawesome/pro-regular-svg-icons'
-import { faRoute, faSquare }                from '@fortawesome/pro-solid-svg-icons'
+import { faRoute, faSquare, faMask }             from '@fortawesome/pro-solid-svg-icons'
+import { SlIcon, SlOption, SlSelect }            from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                 from '@Utils/FA2SL'
+import { useSnapshot }                           from 'valtio'
+import { useEffect, useMemo, useCallback, memo } from 'react'
 
-import { SlIcon, SlOption, SlSelect } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                      from '@Utils/FA2SL'
-import { useSnapshot }                from 'valtio'
+export const TrackSelector = memo(({label, onChange}) => {
+    const $journeyEditor = lgs.mainProxy.components.journeyEditor
+    const journeyEditorSnapshot = useSnapshot($journeyEditor)
+    const $editor = lgs.theJourneyEditorProxy
+    const editor = useSnapshot($editor)
+    const {tracks} = $editor.journey
 
-export const TrackSelector = (props) => {
+    useEffect(() => {
+        if (!$editor.track && tracks.size > 0) {
+            $editor.track = Array.from(tracks.values())[0]
+        }
+    }, [$editor, tracks])
 
-    const handleRequestClose = event => {
+    const trackList = useMemo(() => Array.from(tracks.values()), [tracks])
+    const memoizedOnChange = useCallback((event) => onChange(event), [onChange])
+    const trackIconStyle = useMemo(() => ({color: editor.track?.color}), [editor.track?.color])
+
+    if (tracks.size <= 1 || !editor.track) {
+        return null
+    }
+
+    const handleRequestClose = (event) => {
         event.preventDefault()
     }
-    const mainStore = lgs.mainProxy.components.journeyEditor
-    const mainSnapshot = useSnapshot(mainStore)
-    const editorStore = lgs.theJourneyEditorProxy
-    const editorSnapshot = useSnapshot(editorStore)
-    const tracks = editorStore.journey.tracks
 
-    if (editorStore.track === null || editorStore.track === undefined) {
-        editorStore.track = Array.from(tracks.values())[0]
-    }
-    // if (tracks.size > 1) {
-    // We do not sort the list
-    // TODO : Check if it right to take tracks in the order in which they were created.
-    // }
-
-    return (<>
-            { // Several tracks : we add a selection widget
-                tracks.size > 1 && editorSnapshot.track &&
-                <SlSelect hoist label={props.label}
-                                             value={editorSnapshot.track.slug}
-                                             onSlChange={props.onChange}
-                                             key={mainSnapshot.keys.track.list}
-                >
-                    <SlIcon library="fa"
-                            name={FA2SL.set(faRoute)}
-                            slot={'prefix'}
-                            style={{color: editorSnapshot.track.color}}
+    return (
+        <SlSelect
+            hoist
+            label={label}
+            value={editor.track.slug}
+            onSlChange={memoizedOnChange}
+            key={`track-selector-${journeyEditorSnapshot.keys.track.list}`}
+            onSlRequestClose={handleRequestClose}
+        >
+            <SlIcon
+                library="fa"
+                name={FA2SL.set(editor.track.visible ? faSquare : faMask)}
+                slot="prefix"
+                style={trackIconStyle}
+            />
+            <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot="expand-icon"/>
+            {trackList.map(track => (
+                <SlOption key={track.slug} value={track.slug}>
+                    <SlIcon
+                        library="fa"
+                        name={FA2SL.set(track.visible ? faSquare : faMask)}
+                        slot="prefix"
+                        style={{color: track.color}}
                     />
-                    <SlIcon library="fa" name={FA2SL.set(faChevronDown)} slot={'expand-icon'}/>
-                    {Array.from(editorSnapshot.journey.tracks.values()).map(track =>
-                        <SlOption key={track.title} value={track.slug}>
-                            <SlIcon library="fa"
-                                    name={FA2SL.set(faSquare)}
-                                    slot={'prefix'}
-                                    style={{color: track.color}}
-                            />
-                            {track.visible
-                             ? <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEye)}/>
-                             : <SlIcon slot="suffix" library="fa" name={FA2SL.set(faEyeSlash)}/>}
-                            {track.title}
-                        </SlOption>)}
-                </SlSelect>}
-        </>
-
+                    {track.title}
+                </SlOption>
+            ))}
+        </SlSelect>
     )
-}
+});

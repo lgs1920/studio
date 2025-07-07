@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-17
- * Last modified: 2025-05-16
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -143,33 +143,33 @@ export class SceneManager {
     }
 
     get startRotate() {
-        lgs.mainProxy.components.mainUI.rotate.running = true
-        return lgs.mainProxy.components.mainUI.rotate.running
+        lgs.stores.ui.mainUI.rotate.running = true
+        return lgs.stores.ui.mainUI.rotate.running
     }
 
-    //
-    focusPreProcessing = (point, options) => {
-        const from = lgs.mainProxy.components.mainUI.rotate.target
-        if (point instanceof MapTarget) {
-            lgs.mainProxy.components.mainUI.rotate.target = point
-        }
-        else {
-            lgs.mainProxy.components.mainUI.rotate.target = new MapTarget(point.element, point)
-        }
-        const distance = Mobility.distance(from, point)
-        return {
-            distance: distance,
-            height:   Math.max(from.height, point.height),
-        }
+    get stopRotate() {
+        lgs.stores.ui.mainUI.rotate.running = false
+        return lgs.stores.ui.mainUI.rotate.running
     }
 
     focusPostProcessing = (point, options) => {
         // console.log(point, options)
     }
 
-    get stopRotate() {
-        lgs.mainProxy.components.mainUI.rotate.running = false
-        return lgs.mainProxy.components.mainUI.rotate.running
+    //
+    focusPreProcessing = (point, options) => {
+        const from = lgs.stores.ui.mainUI.rotate.target
+        if (point instanceof MapTarget) {
+            lgs.stores.ui.mainUI.rotate.target = point
+        }
+        else {
+            lgs.stores.ui.mainUI.rotate.target = new MapTarget(point.element, point)
+        }
+        const distance = Mobility.distance(from, point)
+        return {
+            distance: distance,
+            height:   Math.max(from.height, point.height),
+        }
     }
 
     getJourneyCentroid = async journey => await this.utils.getJourneyCentroid(journey)

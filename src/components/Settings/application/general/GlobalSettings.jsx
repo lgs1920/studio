@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-06-29
+ * Last modified: 2025-06-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -37,7 +37,7 @@ export const GlobalSettings = () => {
 
     return (
 
-        <div ref={generalTools} id={'style-settings'}>
+        <div ref={generalTools} id={'global-style-settings'}>
             <SlDetails id={'tools-unit-system'}
                        small open={false}
                        className={'lgs-theme'}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-24
- * Last modified: 2025-06-24
+ * Created on: 2025-07-02
+ * Last modified: 2025-07-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -518,11 +518,11 @@ export class TrackUtils {
     /**
      * Save the current journey into DB
      *
-     * @param value
      * @return {Promise<void>}
+     * @param current
      */
-    static saveCurrentJourneyToDB = async (current) => {
-        await lgs.db.lgs1920.put(CURRENT_JOURNEY, current, CURRENT_STORE)
+    static saveCurrentJourneyToDB = async current => {
+        await lgs.db.lgs1920.put(CURRENT_JOURNEY, current.slug, CURRENT_STORE)
     }
 
     /**
@@ -557,7 +557,7 @@ export class TrackUtils {
     static updatePOIsVisibility = (journey, visibility) => {
         TrackUtils.getDataSourcesByName(journey.slug, true)[0]?.entities.values.forEach(entity => {
             if (entity.id.startsWith(POI_STD)) {
-                entity.show = POIUtils.setPOIVisibility(journey.pois.get(entity.id), visibility)
+                entity.show = POIUtils.setPOIVisibility(__.ui.poiManager.get(entity.id), visibility)
             }
         })
 

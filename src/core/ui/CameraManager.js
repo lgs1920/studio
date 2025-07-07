@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-22
- * Last modified: 2025-05-22
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -393,13 +393,13 @@ export class CameraManager {
      */
     isRotating = (target) => {
         if (target) {
-            return lgs.mainProxy.components.mainUI.rotate.running
+            return lgs.stores.ui.mainUI.rotate.running
                 // type and slug are not defined in geocoding
-                && lgs.mainProxy.components.mainUI.rotate.target?.element === target.element
-                && lgs.mainProxy.components.mainUI.rotate.target?.slug === target.slug
+                && lgs.stores.ui.mainUI.rotate.target?.element === target.element
+                && lgs.stores.ui.mainUI.rotate.target?.slug === target.slug
         }
         else {
-            return lgs.mainProxy.components.mainUI.rotate.running
+            return lgs.stores.ui.mainUI.rotate.running
         }
 
 

@@ -7,586 +7,599 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-23
- * Last modified: 2025-06-23
+ * Created on: 2025-07-06
+ * Last modified: 2025-07-06
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { FAButton } from '@Components/FAButton'
-import { MapPOIEditFilter } from '@Components/MainUI/MapPOI/MapPOIEditFilter'
-import { MapPOIEditSettings } from '@Components/MainUI/MapPOI/MapPOIEditSettings'
-import { MapPOIEditToggleFilter } from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
-import { MapPOIList }         from '@Components/MainUI/MapPOI/MapPOIList'
+import { Fragment, useEffect, useMemo, useRef } from 'react'
+import {
+    useSnapshot,
+}                                                      from 'valtio'
+import {
+    sprintf,
+}                                                      from 'sprintf-js'
+import classNames                                      from 'classnames'
+import parse                                           from 'html-react-parser'
+import {
+    FAButton,
+}                                                      from '@Components/FAButton'
+import {
+    LGSScrollbars,
+}                                                      from '@Components/MainUI/LGSScrollbars'
+import {
+    MapPOIEditFilter,
+}                                                      from '@Components/MainUI/MapPOI/MapPOIEditFilter'
+import {
+    MapPOIEditSettings,
+}                                                      from '@Components/MainUI/MapPOI/MapPOIEditSettings'
+import {
+    MapPOIEditToggleFilter,
+}                                                      from '@Components/MainUI/MapPOI/MapPOIEditToggleFilter'
+import {
+    MapPOIList,
+}                                                      from '@Components/MainUI/MapPOI/MapPOIList'
 import {
     useConfirm,
-}                   from '@Components/Modals/ConfirmUI'
+}                                                      from '@Components/Modals/ConfirmUI'
 import {
     ToggleStateIcon,
-}                   from '@Components/ToggleStateIcon'
+}                                                      from '@Components/ToggleStateIcon'
 import {
     CURRENT_JOURNEY,
-    ORIGIN_STORE, POI_STANDARD_TYPE, REFRESH_DRAWING, REMOVE_JOURNEY_IN_EDIT, SIMULATE_ALTITUDE,
+    JOURNEY_EDITOR_DRAWER,
+    ORIGIN_STORE,
+    REFRESH_DRAWING,
+    REMOVE_JOURNEY_IN_EDIT,
+    SIMULATE_ALTITUDE,
     UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
 import {
     ElevationServer,
-}                   from '@Core/Elevation/ElevationServer'
+}                                                      from '@Core/Elevation/ElevationServer'
 import {
     Journey,
-}                   from '@Core/Journey'
+}                                                      from '@Core/Journey'
 import {
     RemoveJourney,
-}                   from '@Editor/journey/RemoveJourney'
+}                                                      from '@Editor/journey/RemoveJourney'
 import {
     TrackData,
-}                   from '@Editor/track/TrackData'
-import {
-    TrackFlagsSettings,
-}                   from '@Editor/track/TrackFlagsSettings'
+}                                                      from '@Editor/track/TrackData'
 import {
     TrackPoints,
-}                   from '@Editor/track/TrackPoints'
+}                                                      from '@Editor/track/TrackPoints'
 import {
     TrackStyleSettings,
-}                   from '@Editor/track/TrackStyleSettings'
+}                                                      from '@Editor/track/TrackStyleSettings'
 import {
     Utils,
-}                   from '@Editor/Utils'
+}                                                      from '@Editor/Utils'
 import {
-    faArrowRotateRight, faCircleDot, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash,
-    faPaintbrushPencil, faRectangleList,
-}                   from '@fortawesome/pro-regular-svg-icons'
+    faArrowRotateRight, faCrosshairsSimple, faDownload, faLocationDot, faLocationDotSlash, faPaintbrushPencil,
+    faRectangleList,
+}                                                      from '@fortawesome/pro-regular-svg-icons'
 import {
-    SlIcon, SlIconButton, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTextarea, SlTooltip,
-}                   from '@shoelace-style/shoelace/dist/react'
+    SlIcon, SlIconButton, SlInput, SlProgressBar, SlTab, SlTabGroup, SlTabPanel, SlTooltip, SlTextarea,
+}                                                      from '@shoelace-style/shoelace/dist/react'
 import {
     FEATURE_MULTILINE_STRING, FEATURE_POINT, TrackUtils,
-}                   from '@Utils/cesium/TrackUtils'
+}                                                      from '@Utils/cesium/TrackUtils'
 import {
     FA2SL,
-}                   from '@Utils/FA2SL'
+}                                                      from '@Utils/FA2SL'
 import {
     UIToast,
-}                   from '@Utils/UIToast'
-import classNames   from 'classnames'
-import parse        from 'html-react-parser'
-import React, {
-    useEffect, useRef, useState,
-}                   from 'react'
-import {
-    sprintf,
-}                   from 'sprintf-js'
-import {
-    useSnapshot,
-}                   from 'valtio'
+}                                                      from '@Utils/UIToast'
 import {
     SelectElevationSource,
-}                   from '../../MainUI/SelectElevationSource'
+}                                                      from '../../MainUI/SelectElevationSource'
 import {
     JourneyData,
-}                   from './JourneyData'
+}                                                      from './JourneyData'
 
-export const JourneySettings = function JourneySettings() {
+/**
+ * Available panel tabs for the journey settings interface
+ * @type {Object}
+ * @readonly
+ */
+const PANELS = {
+    DATA: 'tab-data',
+    EDIT: 'tab-edit',
+    POINTS: 'tab-points',
+    POIS: 'tab-pois',
+}
 
-    const $theJourneyEditor = lgs.stores.journeyEditor
-    const theJourneyEditor = useSnapshot($theJourneyEditor)
-    const former = $theJourneyEditor.journey.elevationServer
-    const editorStore = useSnapshot(lgs.theJourneyEditorProxy)
+const {DATA, EDIT, POINTS, POIS} = PANELS
 
-    const $rotate = lgs.stores.main.components.mainUI.rotate
-    const rotate = useSnapshot($rotate)
+/**
+ * Data tab panel component for displaying journey data and elevation settings
+ * @param {Object} props - Component properties
+ * @param {Object} props.journey - Journey object containing tracks and settings
+ * @param {boolean} props.isProcessing - Whether elevation processing is in progress
+ * @param {Array} props.serverList - List of available elevation servers
+ * @param {Function} props.onElevationChange - Callback for elevation server change
+ * @returns {JSX.Element} Data tab panel component
+ */
+const DataTabPanel = ({journey, isProcessing, serverList, onElevationChange}) => (
+    <SlTabPanel name={DATA}>
+        <div className="select-elevation-source">
+            <SelectElevationSource default={journey.elevationServer} label="Elevation:" onChange={onElevationChange}
+                                   servers={serverList}/>
+            {isProcessing && <SlProgressBar indeterminate/>}
+        </div>
+        {journey.tracks.size === 1 ? <TrackData/> : <JourneyData/>}
+    </SlTabPanel>
+)
 
-    const autoRotate = useSnapshot(lgs.settings.ui.camera.start.rotate)
-    let rotationAllowed = false
-    const manualRotate = useRef(null)
+/**
+ * Edit tab panel component for journey title and description editing
+ * @param {Object} props - Component properties
+ * @param {Object} props.journey - Journey object with title and description
+ * @param {Function} props.onTitleChange - Callback for title changes
+ * @param {Function} props.onDescriptionChange - Callback for description changes
+ * @returns {JSX.Element} Edit tab panel component
+ */
+const EditTabPanel = ({journey, onTitleChange, onDescriptionChange}) => (
+    <SlTabPanel name={EDIT}>
+        <div id="journey-text-description">
+            <SlTooltip content="Title">
+                <SlInput id="journey-title" aria-label="Journey Title" value={journey.title}
+                         onSlChange={onTitleChange}/>
+            </SlTooltip>
+            <SlTooltip hoist content="Description">
+                <SlTextarea
+                    row={2}
+                    size="small"
+                    id="journey-description"
+                    aria-label="Journey Description"
+                    value={parse(journey.description)}
+                    onSlChange={onDescriptionChange}
+                    placeholder="Journey description"
+                />
+            </SlTooltip>
+            {journey.tracks.size === 1 && <TrackStyleSettings/>}
+        </div>
+    </SlTabPanel>
+)
 
-    const POIS = 'pois'
+/**
+ * POIs tab panel component for managing Points of Interest
+ * @returns {JSX.Element} POIs tab panel component
+ */
+const PoisTabPanel = () => (
+    <SlTabPanel name={POIS}>
+        <div className="panel-wrapper">
+            <MapPOIEditFilter/>
+            <MapPOIEditSettings/>
+            <LGSScrollbars>
+                <MapPOIList/>
+            </LGSScrollbars>
+        </div>
+    </SlTabPanel>
+)
+
+/**
+ * Points tab panel component for managing track points
+ * @returns {JSX.Element} Points tab panel component
+ */
+const PointsTabPanel = () => (
+    <SlTabPanel name={POINTS}>
+        <TrackPoints/>
+    </SlTabPanel>
+)
+
+/**
+ * Main journey settings component providing comprehensive journey editing interface
+ * Features include:
+ * - Journey data management and elevation processing
+ * - Title and description editing
+ * - POI (Points of Interest) management
+ * - Track points editing
+ * - Journey visibility controls
+ * - Camera rotation and focus controls
+ * - Journey export functionality
+ *
+ * @component
+ * @returns {JSX.Element} Journey settings interface
+ */
+export const JourneySettings = () => {
+    const journeyEditorStore = lgs.stores.journeyEditor
+    const {journey, isProcessing, activeTab} = useSnapshot(journeyEditorStore)
+    const {running, target} = useSnapshot(lgs.stores.ui.mainUI.rotate)
+    const {journey: autoRotateJourney} = useSnapshot(lgs.settings.ui.camera.start.rotate)
+    const {open} = useSnapshot(lgs.stores.ui.drawers)
+
+    /** @type {React.RefObject} Reference to tab group component */
+    const _tabGroup = useRef(null)
+    /** @type {React.RefObject} Reference to title input component */
+    const _title = useRef(null)
+    /** @type {React.RefObject} Reference to description textarea component */
+    const _description = useRef(null)
+    /** @type {React.RefObject} Reference to manual rotate button */
+    const _manualRotate = useRef(null)
+
+    let allowRotation = false
+    const previousElevationServer = journeyEditorStore.journey.elevationServer
 
     /**
-     * Change journey description
-     *
-     * @type {(function(*): Promise<*>)|*}
+     * Memoized list of available elevation servers based on journey state
+     * @returns {Array} List of elevation server objects
      */
-    const setDescription = async event => {
-        const description = event.target.value
-        // Title is empty, we force the former value
-        if (description === '') {
-            const field = document.getElementById('journey-description')
-            field.value = $theJourneyEditor.journey.description
-            return
+    const serverList = useMemo(() => {
+        const list = []
+        const {hasElevation, elevationServer} = journey
+        if (!hasElevation) {
+            list.push(ElevationServer.FAKE_SERVERS.get(elevationServer === ElevationServer.NONE ? ElevationServer.NONE : ElevationServer.CLEAR))
         }
-        $theJourneyEditor.journey.description = description
-        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
+        else {
+            list.push(
+                ElevationServer.FAKE_SERVERS.get(ElevationServer.CLEAR),
+                ElevationServer.FAKE_SERVERS.get(ElevationServer.FILE_CONTENT),
+            )
+        }
+        return list.concat(Array.from(ElevationServer.SERVERS.values()))
+    }, [journey.hasElevation, journey.elevationServer])
+
+    /**
+     * Handles errors during elevation processing
+     * @param {Error|Object} error - The error object or message
+     * @param {string} message - User-friendly error message
+     */
+    const handleError = (error, message) => {
+        journeyEditorStore.isProcessing = false
+        journeyEditorStore.journey.elevationServer = previousElevationServer
+        console.error(error)
+        UIToast.error({
+                          caption: message,
+                          text:    'Changes aborted! Check logs to see error details.',
+                          errors:  error.errors ?? error,
+                      })
     }
 
     /**
-     * Change Journey Title
-     *
-     * The selection box is then synchronised
-     *
-     * @type {setTitle}
+     * Prepares coordinate data for elevation processing
+     * @param {Object} journeyData - Journey GeoJSON data
+     * @param {Object} originData - Original coordinate data
+     * @returns {Object} Object containing prepared coordinates and origins arrays
      */
-    const setTitle = async event => {
+    const prepareCoordinates = (journeyData, originData) => {
+        const coordinates = []
+        const origins = []
+        journeyData.geoJson.features.forEach((feature, index) => {
+            let coords = feature.geometry.coordinates
+            let orig = originData.features[index].geometry.coordinates
+            if (feature.geometry.type === FEATURE_POINT) {
+                coords = [coords]
+                orig = [orig]
+            }
+            else if (feature.geometry.type === FEATURE_MULTILINE_STRING) {
+                coords = coords.flat()
+                orig = orig.flat()
+            }
+            coordinates.push(...coords.map(([lon, lat]) => [lon, lat]))
+            origins.push(...orig)
+        })
+        return {coordinates, origins}
+    }
+
+    /**
+     * Updates journey with new elevation data
+     * @param {Array} coordinates - Array of coordinates with elevation data
+     * @param {Object} journeyData - Journey data to update
+     * @async
+     */
+    const updateJourneyWithElevation = async (coordinates, journeyData) => {
+        const updatedJourney = Journey.deserialize({object: Journey.unproxify(journeyData)})
+        let counter = 0
+        updatedJourney.geoJson.features.forEach((feature, index, features) => {
+            let length = feature.geometry.coordinates.flat().length
+            if (feature.geometry.type === FEATURE_POINT) {
+                length = 1
+            }
+            const chunk = coordinates.slice(counter, counter + length)
+            counter += length
+            if (feature.geometry.type === FEATURE_POINT) {
+                features[index].geometry.coordinates = chunk[0]
+            }
+            else if (feature.geometry.type === FEATURE_MULTILINE_STRING) {
+                const tmp = features[index].geometry.coordinates
+                let subCounter = 0
+                tmp.forEach((segment, subIndex) => {
+                    features[index].geometry.coordinates[subIndex] = chunk.slice(subCounter, subCounter + segment.length)
+                    subCounter += segment.length
+                })
+            }
+            else {
+                features[index].geometry.coordinates = chunk
+            }
+        })
+        updatedJourney.getTracksFromGeoJson(true)
+        await updatedJourney.getPOIsFromGeoJson()
+        await updatedJourney.extractMetrics()
+        updatedJourney.addToContext()
+        await updatedJourney.persistToDatabase()
+        await Utils.updateJourney(SIMULATE_ALTITUDE)
+        Utils.updateJourneyEditor(updatedJourney.slug, {})
+        __.ui.profiler.draw()
+    }
+
+    /**
+     * Computes elevation data for journey using selected elevation server
+     * @param {Event} event - Change event from elevation server selector
+     * @async
+     */
+    const computeElevation = async event => {
+        const newServer = event.target.value
+        journeyEditorStore.journey.elevationServer = newServer
+        journeyEditorStore.isProcessing = newServer !== ElevationServer.NONE
+        const server = new ElevationServer(newServer)
+        const originData = JSON.parse(await lgs.db.lgs1920.get(journeyEditorStore.journey.slug, ORIGIN_STORE))
+        const {coordinates, origins} = prepareCoordinates(lgs.theJourney, originData)
+        try {
+            const results = await server.getElevation(coordinates, origins)
+            journeyEditorStore.isProcessing = false
+            if (results.errors) {
+                handleError(results.errors, 'An error occurred when calculating elevations')
+                return
+            }
+            UIToast.success({
+                                caption: 'Elevation data have been modified',
+                                text:    `Source: ${ElevationServer.getServer(newServer).label}`,
+                            })
+            await updateJourneyWithElevation(results.coordinates, lgs.theJourney)
+        }
+        catch (error) {
+            handleError(error, 'An error occurred when calculating elevations')
+        }
+    }
+
+    /**
+     * Sets journey title with debouncing to prevent excessive updates
+     * @type {Function}
+     */
+    const setTitle = __.tools.debounce(async event => {
         const title = event.target.value
-        // Title is empty, we force the former value
-        if (title === '') {
-            const field = document.getElementById('journey-title')
-            field.value = $theJourneyEditor.journey.title
+        if (!title) {
+            _title.current.value = journeyEditorStore.journey.title
             return
         }
-        // title should not been already used for another journey.
-        $theJourneyEditor.journey.title = $theJourneyEditor.journey.singleTitle(title)
-        // If it is a mono track, we need to sync track title
+        journeyEditorStore.journey.title = journeyEditorStore.journey.singleTitle(title)
         if (lgs.theJourney.hasOneTrack()) {
             const [slug, track] = lgs.theJourney.tracks.entries().next().value
-            track.title = $theJourneyEditor.journey.title
-            $theJourneyEditor.journey.tracks.set(slug, track)
+            track.title = journeyEditorStore.journey.title
+            journeyEditorStore.journey.tracks.set(slug, track)
             track.addToEditor()
             __.ui.profiler.updateTitle()
-
         }
-
-        // Then use it
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneysList()
-    }
+    }, 300)
 
     /**
-     * Change journey visibility
-     *
+     * Sets journey description with debouncing to prevent excessive updates
+     * @type {Function}
+     */
+    const setDescription = __.tools.debounce(async event => {
+        const description = event.target.value
+        if (!description) {
+            _description.current.value = journeyEditorStore.journey.description
+            return
+        }
+        journeyEditorStore.journey.description = description
+        await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
+    }, 300)
+
+    /**
+     * Sets journey visibility and updates UI accordingly
+     * @param {boolean} visibility - Whether journey should be visible
+     * @async
      */
     const setJourneyVisibility = async visibility => {
-        stopRotate()
-        $theJourneyEditor.journey.visible = visibility
+        if (running) {
+            await __.ui.cameraManager.stopRotate()
+        }
+        journeyEditorStore.journey.visible = visibility
         lgs.theJourney.updateVisibility(visibility)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneySettings()
     }
+
     /**
-     * Change POIs visibility
-     *
+     * Sets visibility for all POIs in the journey
+     * @param {boolean} visibility - Whether POIs should be visible
+     * @async
      */
     const setAllPOIsVisibility = async visibility => {
-        $theJourneyEditor.journey.POIsVisible = visibility
+        journeyEditorStore.journey.POIsVisible = visibility
         TrackUtils.updatePOIsVisibility(lgs.theJourney, visibility)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)
         Utils.renderJourneySettings()
     }
 
     /**
-     * Change Elevation instance
-     *
-     * @type {computeElevation}
+     * Stops camera rotation if currently running
+     * @async
      */
-    const computeElevation = async event => {
-        $theJourneyEditor.journey.elevationServer = event.target.value
-
-        $theJourneyEditor.longTask = $theJourneyEditor.journey.elevationServer !== ElevationServer.NONE
-
-        // use an Elevation server
-        const server = new ElevationServer($theJourneyEditor.journey.elevationServer)
-
-        // Extract coordinates
-        let allCoordinates = []
-        // And Origin Data
-        lgs.origin = JSON.parse(await lgs.db.lgs1920.get($theJourneyEditor.journey.slug, ORIGIN_STORE))
-
-        let allOrigin = []
-
-        lgs.theJourney.geoJson.features.forEach((feature, index) => {
-            let coordinates = feature.geometry.coordinates
-            let origin = lgs.origin.features[index].geometry.coordinates
-
-            switch (feature.geometry.type) {
-                case FEATURE_POINT:
-                    // we do not have an array of array
-                    coordinates = [coordinates]
-                    break
-                case FEATURE_MULTILINE_STRING:
-                    // Easier to work with flatten array
-                    coordinates = coordinates.flat()
-                    origin = origin.flat()
-                    break
-            }
-
-            coordinates.forEach((coordinate, index) => {
-                allCoordinates.push([coordinate[0], coordinate[1]])
-                allOrigin.push(origin[index])
-            })
-        })
-
-        // Time to fetch
-        server.getElevation(allCoordinates, allOrigin)
-            .then(results => {
-
-                // Suppress in progress notification
-                $theJourneyEditor.longTask = false
-
-                if (results.errors) {
-                    // Failure notification
-                    results.errors.forEach(error => console.error(error))
-
-                    UIToast.error({
-                                      caption: `An error occurred when calculating elevations`,
-                                      text:    'Changes aborted! Check logs to see error details.',
-                                      error:   results.errors,
-                                  })
-                    $theJourneyEditor.journey.elevationServer = former
-
-                    return []
-                }
-                else {
-                    // Success notification
-                    UIToast.success({
-                                        caption: `Elevation data have been modified`,
-                                        text: `Source:${ElevationServer.getServer($theJourneyEditor.journey.elevationServer).label}`,
-                                    })
-                    const coordinates = []
-                    results.coordinates.forEach(coordinate => {
-                        coordinates.push(coordinate)
-                    })
-                    return coordinates
-                }
-            })
-
-            // Now manage and save new data
-            .then(async coordinates => {
-                if (coordinates.length > 0) {
-                    const theJourney = Journey.deserialize({object: Journey.unproxify(lgs.theJourney)})
-                    // Changes are OK, set data
-                    let counter = 0
-
-                    // coordinates is flat array, we need to slice it into chunks
-                    // in order to realign data
-
-                    theJourney.geoJson.features.forEach((feature, index, features) => {
-                        let length = feature.geometry.coordinates.length
-                        // We need to realign some types
-                        switch (feature.geometry.type) {
-                            case FEATURE_POINT:
-                                // Need an array
-                                feature.geometry.coordinates = [feature.geometry.coordinates[0]]
-                                length = 1
-                                break
-                            case FEATURE_MULTILINE_STRING:
-                                // Length is elements number, sub arrays included
-                                length = feature.geometry.coordinates.flat().length
-                                break
-                        }
-
-                        // Get the right part of coordinates
-                        const chunk = coordinates.slice(counter, counter + length)
-                        counter += length
-
-                        switch (feature.geometry.type) {
-                            case FEATURE_POINT:
-                                // Realign data for Point: only an object
-                                features[index].geometry.coordinates = chunk[0]
-                                break
-                            case FEATURE_MULTILINE_STRING: {
-                                // Realign data for multi strings: slice it into segments
-                                const tmp = features[index].geometry.coordinates
-                                let subCounter = 0
-                                tmp.forEach((segment, subIndex) => {
-                                    features[index].geometry.coordinates[subIndex] = chunk.slice(subCounter, subCounter + tmp[subIndex].length)
-                                    subCounter += tmp[subIndex].length
-                                })
-                                break
-                            }
-                            default:
-                                features[index].geometry.coordinates = chunk
-                        }
-                    })
-
-                    // Now we need to rebuild the data
-                    theJourney.getTracksFromGeoJson(true)
-                    await theJourney.getPOIsFromGeoJson()
-                    await theJourney.extractMetrics()
-                    theJourney.addToContext()
-                    await theJourney.persistToDatabase()
-
-                    // Then we redraw the journey
-                    await Utils.updateJourney(SIMULATE_ALTITUDE)
-
-                    // And update editor
-                    Utils.updateJourneyEditor(theJourney.slug, {})
-
-                    // If the Profile UI is open, we re-sync it
-                    __.ui.profiler.draw()
-
-
-                }
-                else {
-                    // Changes are in error, we reset selection
-                    $theJourneyEditor.journey.elevationServer = former
-                }
-            })
-
-            .catch(error => {
-                $theJourneyEditor.longTask = false
-                $theJourneyEditor.journey.elevationServer = former
-                // Failure notification
-                console.error(error.errors ?? error)
-                UIToast.error({
-                                  caption: `An error occurred when calculating elevations`,
-                                  text:    'Changes aborted! Check logs to see error details.',
-                                  errors: error.errors ?? error,
-                              })
-            })
-
-
-    }
-
-    /**
-     * Export journey confirmation
-     */
-    const Message = () => {
-        return (<>{`'Not Yet. Sorry.'`}</>)
-    }
-    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export <strong>${theJourneyEditor.journey.title}</strong> ?`, Message,
-                                                                          // {
-                                                                          //     text:'Export',
-                                                                          //     icon:faDownload
-                                                                          // }
-    )
-
-    /**
-     * Export Journey
-     */
-    const exportJourney = async () => {
-        const confirmation = await confirmExportJourney()
-        if (confirmation) {
-            // TODO
-        }
-    }
-
     const stopRotate = async () => {
-        if ($rotate.running) {
+        if (running) {
             await __.ui.cameraManager.stopRotate()
         }
     }
 
+    /**
+     * Forces camera rotation toggle and focuses on journey
+     * @async
+     */
     const forceRotate = async () => {
-        rotationAllowed = !rotationAllowed
-        await focusOnJourney()
-    }
-
-    const maybeRotate = async () => {
-        if ($rotate.running) {
-            rotationAllowed = false
-            stopRotate()
-            if ($rotate.target.element && $rotate.target.element === lgs.theJourney.element) {
-                return
-            }
-        }
-
-        rotationAllowed = autoRotate.journey
+        allowRotation = !allowRotation
         await focusOnJourney()
     }
 
     /**
-     * Focus on Journey
+     * Conditionally rotates camera based on settings and current state
+     * @async
      */
-    const focusOnJourney = async (event) => {
-        if ($rotate.running) {
-            await __.ui.cameraManager.stopRotate()
-            if (rotate.target?.instanceOf(CURRENT_JOURNEY)) {
+    const maybeRotate = async () => {
+        if (running) {
+            allowRotation = false
+            await stopRotate()
+            if (target.element && target.element === lgs.theJourney.element) {
                 return
             }
+        }
+        allowRotation = autoRotateJourney
+        await focusOnJourney()
+    }
+
+    /**
+     * Focuses camera on the current journey with optional rotation
+     * @async
+     */
+    const focusOnJourney = async () => {
+        if (running && target.instanceOf(CURRENT_JOURNEY)) {
+            return
         }
         await setJourneyVisibility(true)
         lgs.theJourney.focus({
                                  resetCamera: true,
-                                 action:      REFRESH_DRAWING,
-                                 rotate: rotationAllowed || autoRotate.journey,
+                                 action: REFRESH_DRAWING,
+                                 rotate: allowRotation || autoRotateJourney,
                              })
     }
 
-    const textVisibilityJourney = sprintf('%s Journey', theJourneyEditor.journey.visible ? 'Hide' : 'Show')
-    const textVisibilityPOIs = sprintf('%s POIs', theJourneyEditor.journey.allPOIs ? 'Hide' : 'Show')
+    /**
+     * Placeholder message component for export functionality
+     * @returns {JSX.Element} Message component
+     */
+    const Message = () => <>{`'Not Yet. Sorry.'`}</>
 
-    let serverList = []
+    /** Confirmation dialog hook for journey export */
+    const [ConfirmExportJourneyDialog, confirmExportJourney] = useConfirm(`Export <strong>${journey.title}</strong> ?`, Message)
 
-    if (!theJourneyEditor.journey.hasElevation) {
-        if (theJourneyEditor.journey?.elevationServer === ElevationServer.NONE) {
-            serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.NONE))
-        }
-        else {
-            serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.CLEAR))
+    /**
+     * Handles journey export functionality (currently placeholder)
+     * @async
+     */
+    const exportJourney = async () => {
+        const confirmed = await confirmExportJourney()
+        if (confirmed) {
+            // TODO: Implement export functionality
         }
     }
-    else {
-        serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.CLEAR))
-        serverList.push(ElevationServer.FAKE_SERVERS.get(ElevationServer.FILE_CONTENT))
-    }
-    serverList = serverList.concat(Array.from(ElevationServer.SERVERS.values()))
-    lgs.stores.main.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
 
+    /**
+     * Initializes tab state when tab is changed
+     * @param {Event} event - Tab change event
+     */
+    const initTab = event => {
+        __.ui.drawerManager.tab = event.detail.name
+        journeyEditorStore.activeTab = event.detail.name
+        journeyEditorStore.showPOIsFilter = event.detail.name === POIS && event.type === 'sl-tab-show'
+    }
+
+    /**
+     * Checks if a specific tab is currently active
+     * @param {string} tab - Tab identifier
+     * @returns {boolean} Whether the tab is active
+     */
+    const isTabActive = tab => __.ui.drawerManager.tabActive(tab)
+
+    // Dynamic text for visibility toggle buttons
+    const textVisibilityJourney = sprintf('%s Journey', journey.visible ? 'Hide' : 'Show')
+    const textVisibilityPOIs = sprintf('%s POIs', journey.allPOIs ? 'Hide' : 'Show')
+
+    // Component should only render when journey exists and drawer is open
+    const shouldRender = journey && open === JOURNEY_EDITOR_DRAWER
+
+    /**
+     * Component initialization and cleanup effect
+     */
     useEffect(() => {
-        return (() => {
-            lgs.stores.main.components.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
-        })
-    }, [lgs.stores.main.components.mainUI.removeJourneyDialog.active])
-
-    const toggleFilter = (event) => {
-        if (event.detail.name === POIS) {
-            lgs.stores.journeyEditor.showPOIsFilter = event.type === 'sl-tab-show'
+        if (!journeyEditorStore.activeTab) {
+            journeyEditorStore.activeTab = DATA
+            __.ui.drawerManager.tab = DATA
         }
-        else {
-            lgs.stores.journeyEditor.showPOIsFilter = false
-        }
+        lgs.stores.ui.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+        return () => lgs.stores.ui.mainUI.removeJourneyDialog.active.set(REMOVE_JOURNEY_IN_EDIT, false)
+    }, [])
 
-    }
-
-    return (<>
-        {theJourneyEditor.journey &&
-            <div id="journey-settings" key={lgs.stores.main.components.journeyEditor.keys.journey.settings}>
-                <div className={'settings-panel'} id={'editor-journey-settings-panel'}>
-                    <SlTabGroup className={'menu-panel'} onSlTabShow={toggleFilter} onSlTabHide={toggleFilter}>
-                        <SlTab slot="nav" panel="data" id="tab-journey-data"
-                               active={theJourneyEditor.tabs.journey.data}>
-                            <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/>Data
-                        </SlTab>
-                        <SlTab slot="nav" panel="edit" active={theJourneyEditor.tabs.journey.edit}>
-                            <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>Edit
-                        </SlTab>
-                        {/* {theJourneyEditor.journey.tracks.size === 1 && */}
-                        {/*     <SlTab slot="nav" panel="points" active={theJourneyEditor.tabs.journey.points}> */}
-                        {/*         <SlIcon library="fa" name={FA2SL.set(faCircleDot)}/>Points */}
-                        {/*     </SlTab> */}
-                        {/* } */}
-                        <SlTab slot="nav" panel={POIS} active={theJourneyEditor.tabs.journey.pois}>
-                            <SlIcon library="fa" name={FA2SL.set(faLocationDot)}/>POIs
-                        </SlTab>
-
-                        <MapPOIEditToggleFilter slot="nav" visible={theJourneyEditor.tabs.journey.pois}/>
-
-                        {/**
-                         * Data Tab Panel
-                         */}
-                        <SlTabPanel name="data">
-                            {/* Add DEM instance selection if we do not have height initially (ie in the journey file) */}
-                            <div className={'select-elevation-source'}>
-                                <SelectElevationSource
-                                    default={theJourneyEditor.journey?.elevationServer}
-                                    label={'Elevation:'}
-                                    onChange={computeElevation}
-                                    servers={serverList}
-                                />
-
-                                {theJourneyEditor.longTask && <SlProgressBar indeterminate/>}
-
-                            </div>
-                            {theJourneyEditor.journey.tracks.size === 1 && <TrackData/>}
-                            {theJourneyEditor.journey.tracks.size > 1 && <JourneyData/>}
-
-                        </SlTabPanel>
-                        {/**
-                         * Edit  Tab Panel
-                         */}
-                        <SlTabPanel name="edit">
-                            <div id={'journey-text-description'}>
-                                {/* Change visible name (title) */}
-                                <SlTooltip content={'Title'}>
-                                    <SlInput id="journey-title"
-                                             value={theJourneyEditor.journey.title}
-                                             onSlChange={setTitle}
-                                    />
-                                </SlTooltip>
-
-                                {/* Change description */}
-                                <SlTooltip hoist content={'Description'}>
-                                    <SlTextarea row={2}
-                                                size={'small'}
-                                                id={'journey-description'}
-                                                value={parse(theJourneyEditor.journey.description)}
-                                                onSlChange={setDescription}
-                                                placeholder={'Journey description'}
-                                    />
-                                </SlTooltip>
-
-
-                                { // if there only one track, the track style is here.
-                                    theJourneyEditor.journey.tracks.size === 1 && <TrackStyleSettings/>
-                                }
-
-                            </div>
-                        </SlTabPanel>
-                        {/**
-                         * POIs Tab Panel
-                         */}
-                        <SlTabPanel name={POIS}>
-                            <MapPOIEditFilter/>
-                            <MapPOIEditSettings/>
-                            <MapPOIList context={'journey-panel'}/>
-                        </SlTabPanel>
-
-                        {/**
-                         * Points Tab Panel
-                         */}
-                        <SlTabPanel name="points">
-                            <TrackPoints/>
-                        </SlTabPanel>
-                    </SlTabGroup>
-
-
-                    <div id="journey-visibility" className={'editor-vertical-menu'}>
-                        <div>
-                            {editorStore.journey?.visible &&
-                                <>
-                                    {!autoRotate.journey &&
+    return (
+        <Fragment>
+            {shouldRender && (
+                <div id="journey-settings" key={lgs.stores.main.components.journeyEditor.keys.journey.settings}>
+                    <div className="settings-panel" id="editor-journey-settings-panel">
+                        <SlTabGroup className="menu-panel" ref={_tabGroup} onSlTabShow={initTab} onSlTabHide={initTab}>
+                            <SlTab slot="nav" panel={DATA} active={isTabActive(DATA)}>
+                                <SlIcon library="fa" name={FA2SL.set(faRectangleList)}/> Data
+                            </SlTab>
+                            <SlTab slot="nav" panel={EDIT} active={isTabActive(EDIT)}>
+                                <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/> Edit
+                            </SlTab>
+                            <SlTab slot="nav" panel={POIS} active={isTabActive(POIS)}>
+                                <SlIcon library="fa" name={FA2SL.set(faLocationDot)}/> POIs
+                            </SlTab>
+                            <MapPOIEditToggleFilter slot="nav"/>
+                            <DataTabPanel journey={journey} isProcessing={isProcessing} serverList={serverList}
+                                          onElevationChange={computeElevation}/>
+                            <EditTabPanel journey={journey} onTitleChange={setTitle}
+                                          onDescriptionChange={setDescription}/>
+                            <PoisTabPanel/>
+                            <PointsTabPanel/>
+                        </SlTabGroup>
+                        <div id="journey-visibility" className="editor-vertical-menu">
+                            <div>
+                                {journey.visible && (
+                                    <>
+                                        {!autoRotateJourney && (
+                                            <SlTooltip hoist
+                                                       content={running && target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
+                                                       placement="left">
+                                                <FAButton
+                                                    onClick={forceRotate}
+                                                    ref={_manualRotate}
+                                                    icon={faArrowRotateRight}
+                                                    className={classNames({'fa-spin': running && target.instanceOf(CURRENT_JOURNEY)})}
+                                                />
+                                            </SlTooltip>
+                                        )}
                                         <SlTooltip hoist
-                                                   content={rotate.running && rotate.target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Start rotation'}
+                                                   content={running && target.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on journey'}
                                                    placement="left">
-                                            <FAButton onClick={forceRotate}
-                                                      ref={manualRotate}
-                                                      icon={faArrowRotateRight}
-                                                      className={classNames({'fa-spin': rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)})}/>
+                                            <FAButton
+                                                onClick={maybeRotate}
+                                                icon={running && autoRotateJourney && target.instanceOf(CURRENT_JOURNEY) ? faArrowRotateRight : faCrosshairsSimple}
+                                                className={classNames({'fa-spin': running && autoRotateJourney && target.instanceOf(CURRENT_JOURNEY)})}
+                                            />
                                         </SlTooltip>
-                                    }
-
-                                    <SlTooltip hoist
-                                               content={rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY) ? 'Stop rotation' : 'Focus on journey'}
-                                               placement="left">
-                                        <FAButton onClick={maybeRotate}
-                                                  icon={rotate.running && autoRotate.journey && (rotate.target?.instanceOf(CURRENT_JOURNEY)) ? faArrowRotateRight : faCrosshairsSimple}
-                                                  className={classNames({'fa-spin': rotate.running && autoRotate.journey && rotate.target?.instanceOf(CURRENT_JOURNEY)})}/>
-                                    </SlTooltip>
-                                </>
-                            }
-
-                            <SlTooltip hoist content={textVisibilityJourney} placement="left">
-                                <ToggleStateIcon onChange={setJourneyVisibility}
-                                                 initial={editorStore?.journey?.visible}/>
-                            </SlTooltip>
-                        </div>
-                        {theJourneyEditor.journey.pois.size > 1 &&
+                                    </>
+                                )}
+                                <SlTooltip hoist content={textVisibilityJourney} placement="left">
+                                    <ToggleStateIcon onChange={setJourneyVisibility} initial={journey.visible}/>
+                                </SlTooltip>
+                            </div>
+                            {journey.pois.size > 1 && (
                                 <SlTooltip hoist content={textVisibilityPOIs} placement="left">
                                     <ToggleStateIcon
                                         onChange={setAllPOIsVisibility}
-                                        initial={theJourneyEditor.journey.POIsVisible}
-                                        icons={{
-                                            shown: faLocationDot, hidden: faLocationDotSlash,
-                                        }}/>
+                                        initial={journey.POIsVisible}
+                                        icons={{shown: faLocationDot, hidden: faLocationDotSlash}}
+                                    />
                                 </SlTooltip>
-                            }
-
-                        {theJourneyEditor.journey.tracks.size === 1 && theJourneyEditor.journey.visible &&
-                            <TrackFlagsSettings tooltip="left"/>}
-
-                        <div>
-                        <SlTooltip hoist content={'Export'} placement="left">
-                                <SlIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>
-                        </SlTooltip>
-                        <RemoveJourney tooltip="left-start" name={REMOVE_JOURNEY_IN_EDIT}/>
-
+                            )}
+                            <div>
+                                <SlTooltip hoist content="Export" placement="left">
+                                    <SlIconButton onClick={exportJourney} library="fa" name={FA2SL.set(faDownload)}/>
+                                </SlTooltip>
+                                <RemoveJourney tooltip="left-start" name={REMOVE_JOURNEY_IN_EDIT}/>
+                            </div>
                         </div>
                     </div>
+                    <ConfirmExportJourneyDialog/>
                 </div>
-                <ConfirmExportJourneyDialog/>
-
-            </div>}
-    </>)
+            )}
+        </Fragment>
+    )
 }

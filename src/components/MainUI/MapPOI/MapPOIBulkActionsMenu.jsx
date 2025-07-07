@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-23
- * Last modified: 2025-06-23
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -41,7 +41,7 @@ export const MapPOIBulkActionsMenu = (globals) => {
     const $pois = lgs.mainProxy.components.pois
     const pois = useSnapshot($pois)
     const [disabled, setDisabled] = useState(false)
-    const drawers = useSnapshot(lgs.mainProxy.drawers)
+    const drawers = useSnapshot(lgs.stores.ui.drawers)
     const onlyJourney = drawers.open === JOURNEY_EDITOR_DRAWER
 
     const hide = async () => {
@@ -136,7 +136,7 @@ export const MapPOIBulkActionsMenu = (globals) => {
 
     return (
         <SlDropdown disabled={disabled}>
-            <SlButton slot="trigger" size="small" caret>
+            <SlButton slot="trigger" size="small" caret disabled={disabled}>
                 <SlIconButton size="small" slot="prefix"
                               library="fa"
                               name={FA2SL.set(faLocationDot)}

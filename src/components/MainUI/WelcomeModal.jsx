@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: WelcomeModal.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { APP_EVENT, INFO_DRAWER, MILLIS, SECOND, SLOGAN } from '@Core/constants'
 import { SlButton, SlCheckbox, SlDialog }                 from '@shoelace-style/shoelace/dist/react'
 import { UIToast }                             from '@Utils/UIToast'
@@ -9,7 +25,7 @@ export const WelcomeModal = () => {
     const [open, setOpen] = useState(true)
     const [show, setShow] = useState(false)
     const welcomeModal = useRef(null)
-    const infoPanel = lgs.mainProxy.components.informationPanel
+    const infoPanel = lgs.stores.ui.informationPanel
     const main = lgs.mainProxy
 
     const [closure, setClosure] = useState(lgs.settings.ui.welcome.displayTime)
@@ -23,17 +39,17 @@ export const WelcomeModal = () => {
     const close = (event) => {
         document.activeElement?.blur() // Remove focus on children
         if (event.detail.source === 'overlay') {
-            lgs.mainUIStore.show = true
+            lgs.stores.ui.show = true
         }
         lgs.settings.app.firstVisit = false
-        main.components.welcome.hidden = true
+        lgs.stores.ui.welcome.hidden = true
     }
 
     const hide = () => {
         document.activeElement?.blur() // Remove focus on children
         setOpen(false)
-        lgs.mainUIStore.show = true
-        main.components.welcome.hidden = true
+        lgs.stores.ui.show = true
+        lgs.stores.ui.welcome.hidden = true
 
 
         window.dispatchEvent(hideEvent)
@@ -50,7 +66,7 @@ export const WelcomeModal = () => {
 
     const loadJourney = () => {
         enter()
-        lgs.mainUIStore.journeyLoader.visible = true
+        lgs.stores.ui.journeyLoader.visible = true
     }
 
     const setShowModal = () => {
@@ -63,7 +79,7 @@ export const WelcomeModal = () => {
     }
 
     useEffect(() => {
-        main.components.welcome.modal = false
+        lgs.stores.ui.welcome.modal = false
         let timer
 
 
@@ -89,7 +105,7 @@ export const WelcomeModal = () => {
             }, MILLIS)
         }
         else {
-            main.components.welcome.hidden = true
+            lgs.stores.ui.welcome.hidden = true
             window.dispatchEvent(hideEvent)
 
         }

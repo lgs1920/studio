@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-21
- * Last modified: 2025-06-21
+ * Created on: 2025-06-30
+ * Last modified: 2025-06-30
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import {
-    APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, JOURNEYS_STORE, ORIGIN_STORE, platforms,
-    POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE,
+    APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEYS_STORE, ORIGIN_STORE,
+    platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE,
 }                            from '@Core/constants'
 import { StoresManager }     from '@Core/stores/StoresManager'
 import { AppToolsManager }   from '@Core/ui/AppToolsManager'
@@ -36,8 +36,8 @@ import { editorSettings }    from './stores/editorSettings'
 import { main }              from './stores/main'
 import { theJourneyEditor }  from './stores/theJourneyEditor'
 import { CameraManager }     from './ui/CameraManager'
-import { DrawerManager }     from './ui/DrawerManager'
 import { JourneyEditor }     from './ui/JourneyEditor'
+import { PanelManager }      from './ui/panels/PanelManager'
 import { Profiler }          from './ui/Profiler'
 import { SceneManager }      from './ui/SceneManager'
 import { Wanderer }          from './ui/Wanderer'
@@ -51,7 +51,8 @@ export class LGS1920Context {
     #editorSettingsProxy
     /** @type {Proxy} */
     #cameraProxy
-
+    /** @type {Proxy} */
+    #ui
     eventHandler = new MouseEventHandler()
     #viewer
 
@@ -69,7 +70,6 @@ export class LGS1920Context {
         this.#editorSettingsProxy = proxy(editorSettings)
 
         this.journeyEditorStore = this.#mainProxy.components.journeyEditor
-        this.mainUIStore = this.#mainProxy.components.mainUI
 
         this.stores = new StoresManager()// TODO change all stores
 
@@ -254,6 +254,9 @@ export class LGS1920Context {
      * @returns {*} The journey object associated with the processed slug, or undefined if not found.
      */
     getJourneyByTrackSlug = (slug) => {
+        if (slug === GLOBAL_PARENT) {
+            return {slug: GLOBAL_PARENT}
+        }
         const parts = slug.split('#')
         if (parts.length === 2) {
             // UC : journey POIs = parent = journey slug
@@ -323,7 +326,7 @@ export class LGS1920Context {
 
         __.ui.wanderer = new Wanderer()
         __.ui.cameraManager = new CameraManager()
-        __.ui.drawerManager = new DrawerManager()
+        __.ui.drawerManager = new PanelManager()
         __.ui.sceneManager = new SceneManager()
         __.ui.menuManager = new MenuManager()
 
