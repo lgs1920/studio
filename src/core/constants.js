@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-06
- * Last modified: 2025-07-06
+ * Created on: 2025-07-07
+ * Last modified: 2025-07-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -52,6 +52,8 @@ export const CONFIGURATION = 'config.yaml'
 export const SETTINGS = 'settings.yaml'
 export const LAYERS_TERRAINS_SETTINGS = 'layers-terrains.yaml'
 export const COUNTRIES = 'countries.yaml'
+export const WORLD = 'WORLD'
+export const COUNTRY_FLAGS_DIR = '/assets/images/flags/'
 
 /**
  * Servers identification

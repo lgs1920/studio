@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-06
- * Last modified: 2025-07-06
+ * Created on: 2025-07-07
+ * Last modified: 2025-07-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -154,12 +154,13 @@ export class AppUtils {
             .then(text => YAML.parse(text),
             )
         // Read Layers
+
         settings.layers = await fetch(LAYERS_TERRAINS_SETTINGS, {cache: 'no-store'})
             .then(res => res.text())
             .then(text => YAML.parse(text),
             )
 
-
+        console.log(settings.layers.filter.byCountries)
         // Get the setting sections ID
         lgs.settingSections = Object.keys(settings)
 

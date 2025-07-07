@@ -7,12 +7,13 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-28
- * Last modified: 2025-02-28
+ * Created on: 2025-07-07
+ * Last modified: 2025-07-07
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
+import { COUNTRY_FLAGS_DIR } from '@Core/constants'
 
 export class UIUtils {
 
@@ -152,6 +153,15 @@ export class UIUtils {
             .map(rgb => parseInt('0x' + rgb))
         return ((~~(r * 299) + ~~(g * 587) + ~~(b * 114)) / 1000) >= 128 || (!!(~(128 / a) + 1) && factorAlpha)
                ? '--lgs-dark-color' : '--lgs-light-color'
+    }
+
+    /**
+     *
+     * @param countryCode
+     * @return {string}
+     */
+    static countryFlag(countryCode) {
+        return `${COUNTRY_FLAGS_DIR}${countryCode.toLowerCase()}.svg`
     }
 
 }

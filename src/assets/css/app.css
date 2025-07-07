@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-04
- * Last modified: 2025-07-04
+ * Created on: 2025-07-07
+ * Last modified: 2025-07-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -183,4 +183,15 @@ main-logo.xlarge {
     height: 100%;
     opacity: 0.7;
     object-fit: cover;
+}
+
+/*******************************************************************************
+ * Emojis (openmoji)
+ *******************************************************************************/
+
+.country-flag {
+    width: auto;
+    height: var(--lgs-font-size);
+    border-radius: var(--lgs-border-radius-xs);
+    object-fit: contain;
 }
