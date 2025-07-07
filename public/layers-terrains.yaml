@@ -97,7 +97,7 @@ providers:
         tileMatrixSetID: PM
         doc: 'https://data.geopf.fr'
         type: base
-        countries: [ FR,DE,LU ]
+        countries: [ FR ]
 
       ## IGN Legacy
       - name: Map IGN

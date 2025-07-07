@@ -160,7 +160,6 @@ export class AppUtils {
             .then(text => YAML.parse(text),
             )
 
-        console.log(settings.layers.filter.byCountries)
         // Get the setting sections ID
         lgs.settingSections = Object.keys(settings)
 
