@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-01
- * Last modified: 2025-07-01
+ * Created on: 2025-07-07
+ * Last modified: 2025-07-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -255,6 +255,7 @@ export const SelectEntity = (props) => {
     classes.push(layersSnap.filter.provider ? 'by-provider' : 'by-layer')
     classes.push(layersSnap.filter.thumbnail ? 'by-thumbnail' : 'by-list')
 
+
     return (
         <LGSScrollbars>
             {
@@ -284,11 +285,13 @@ export const SelectEntity = (props) => {
                 <SlAlert variant="warning" open>
                     <SlIcon slot="icon" library="fa" name={FA2SL.set(faTriangleExclamation)}/>
                     <div id="filter-alert-content">
-                        {'It looks empty over here!'}<br/>{'Check your filter criteria.'}
+                        <strong>{'It looks empty over here!'}</strong>
+                        {`No ${props.type} entity found.`}
+                        <br/><br/>{'Please check your filter criteria.'}
                         {!snap.openFilter &&
-                            <SlButton small onClick={() => editor.openFilter = true}>
+                            <SlButton syze="small" onClick={() => editor.openFilter = true}>
                                 <SlIcon library="fa" slot="prefix" name={FA2SL.set(faFilter)}/>
-                                {'Open'}
+                                {'Open Filters'}
                             </SlButton>
                         }
                     </div>
