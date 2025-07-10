@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-07-10
+ * Last modified: 2025-07-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,8 +22,9 @@ import { GeocodingUI }                          from '@Components/MainUI/geocodi
 import { MapPOIMonitor } from '@Components/MainUI/MapPOI/MapPOIMonitor'
 import { TrackEditorButton } from '@Components/MainUI/TrackEditorButton'
 import { MapPOIContextMenu }                    from '@Components/MainUI/MapPOI/MapPOIContextMenu'
-import { RotateButton }                         from '@Components/MainUI/RotateButton'
-import { Profile }                              from '@Components/Profile/Profile'
+import { RotateButton }                 from '@Components/MainUI/RotateButton'
+import { VideoRecorderToolbar }         from '@Components/MainUI/video/VideoRecorderToolbar'
+import { Profile }                      from '@Components/Profile/Profile'
 import { ProfileButton }                        from '@Components/Profile/ProfileButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import {
@@ -51,6 +52,8 @@ import { PanelButton as POIEditButton }         from './MapPOI/PanelButton'
 import { SceneModeSelector }                    from './SceneModeSelector'
 import { SupportUI }                            from './SupportUI'
 import { SupportUIButton }                      from './SupportUIButton'
+import { PanelButton as VideoRecorder } from '@Components/MainUI/video/PanelButton'
+
 import './style.css'
 
 const PRIMARY_ENTRANCE = 'lgs-slide-in-from-left'
@@ -217,7 +220,10 @@ export const MainUI = memo(() => {
                                 <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <RotateButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <FullScreenButton/>
+                                <VideoRecorder tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingUI/>
+                                <VideoRecorderToolbar tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+
                             </div>
                         </div>
                         <CallForActions/>
