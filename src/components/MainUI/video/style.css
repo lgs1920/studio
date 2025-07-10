@@ -1,0 +1,32 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-07-08
+ * Last modified: 2025-07-08
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
+#trigger-video-recording {
+    font-size: 10px;/ /;
+}
+
+#trigger-video-recording svg {
+    height: 80%;
+    --fa-primary-color: var(--lgs-video-recorder-border-color);
+    --fa-secondary-color: var(--lgs-video-recorder-color);
+    --fa-primary-opacity: 1;
+    --fa-secondary-opacity: 1;
+}
+
+#trigger-video-recording svg:hover {
+    color: var(--lgs-video-recorder-hover-color);
+    --fa-primary-opacity: 0.5;
+}
