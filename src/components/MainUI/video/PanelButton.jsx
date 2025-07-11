@@ -14,14 +14,15 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { faCircleVideo }       from '@fortawesome/duotone-regular-svg-icons'
 import { FontAwesomeIcon }     from '@Components/FontAwesomeIcon'
-import { library }             from '@fortawesome/fontawesome-svg-core'
+import { APP_KEY, MINUTE } from '@Core/constants'
+import { faCircleVideo }   from '@fortawesome/duotone-regular-svg-icons'
 import { SlButton, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
+import { UIToast }         from '@Utils/UIToast'
 import { useEffect }           from 'react'
 import { useSnapshot }         from 'valtio'
-import { MINUTE }              from '@Core/constants'
+import { VideoRecorder }   from '@Core/ui/video-recorder/VideoRecorder'
 
 /**
  * PanelButton - Toggles video recording with a button
@@ -70,20 +71,20 @@ export const PanelButton = (props) => {
             $settings.totalBytes = 0
         }
         // Add event listeners
-        __.recorder.addEventListener('video/size', handleSizeUpdate)
-        __.recorder.addEventListener('video/pause', handlePause)
-        __.recorder.addEventListener('video/resume', handleResume)
-        __.recorder.addEventListener('video/stop', handleStop)
-        __.recorder.addEventListener('video/max-size', handleMaxSize)
-        __.recorder.addEventListener('video/max-duration', handleMaxDuration)
+        __.recorder.addEventListener(VideoRecorder.event.SIZE, handleSizeUpdate)
+        __.recorder.addEventListener(VideoRecorder.event.PAUSE, handlePause)
+        __.recorder.addEventListener(VideoRecorder.event.RESUME, handleResume)
+        __.recorder.addEventListener(VideoRecorder.event.STOP, handleStop)
+        __.recorder.addEventListener(VideoRecorder.event.MAX_SIZE, handleMaxSize)
+        __.recorder.addEventListener(VideoRecorder.event.MAX_DURATION, handleMaxDuration)
         // Clean up
         return () => {
-            __.recorder.removeEventListener('video/size', handleSizeUpdate)
-            __.recorder.removeEventListener('video/pause', handlePause)
-            __.recorder.removeEventListener('video/resume', handleResume)
-            __.recorder.removeEventListener('video/stop', handleStop)
-            __.recorder.removeEventListener('video/max-size', handleMaxSize)
-            __.recorder.removeEventListener('video/max-duration', handleMaxDuration)
+            __.recorder.removeEventListener(VideoRecorder.event.SIZE, handleSizeUpdate)
+            __.recorder.removeEventListener(VideoRecorder.event.PAUSE, handlePause)
+            __.recorder.removeEventListener(VideoRecorder.event.RESUME, handleResume)
+            __.recorder.removeEventListener(VideoRecorder.event.STOP, handleStop)
+            __.recorder.removeEventListener(VideoRecorder.event.MAX_SIZE, handleMaxSize)
+            __.recorder.removeEventListener(VideoRecorder.event.MAX_DURATION, handleMaxDuration)
             if (settings.recording && __.recorder) {
                 __.recorder.stop()
                 $settings.recording = false
@@ -105,16 +106,16 @@ export const PanelButton = (props) => {
         __.recorder.initialize((blob, duration) => {
             __.recorder.download()
         }, 'video/webm;codecs=vp9', {
-                                   maxSize:     1024 * 1024 * 100, // 100 MB
-                                   maxDuration: settings.maxDuration * MINUTE,
-                                   bitrate:     12000000,
-                                   filename:    'lgs1920',
+            maxSize:     settings.maxSize * 1048576,      // MB
+            maxDuration: settings.maxDuration * MINUTE,   // Seconds
+            bitrate:     settings.bitrate * 1000000,      // MBps
+            filename:    APP_KEY,
                                })
         // Set canvas source
         __.recorder.setSource([lgs.canvas], {
             width:    lgs.canvas.width,
             height:   lgs.canvas.height,
-            fps:      60,
+            fps: settings.fps,
             useWebGL: true,
         })
     }
@@ -139,6 +140,11 @@ export const PanelButton = (props) => {
                 $settings.recording = false
                 $settings.paused = false
                 $settings.totalBytes = 0
+
+                UIToast.error({
+                                  caption: `Video capture`,
+                                  text:    `Stopped due to error:<br>{error.message} !`,
+                              })
             }
         }
         else {

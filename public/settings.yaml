@@ -323,7 +323,8 @@ ui:
   ## Video
   video:
     recording: false
-    pause: false
+    paused: false
     maxDuration: 5     # minutes
     maxSize: 200       # MB
     bitRate: 12        # Mbps
+    fps: 60

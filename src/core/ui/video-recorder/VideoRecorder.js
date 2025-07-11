@@ -40,6 +40,18 @@ export class VideoRecorder extends EventTarget {
     #stopRendering = null // Stops WebGL rendering
     #lastFrameTime = 0 // Last frame timestamp
 
+    static event = {
+        START:        'video/start',
+        STOP:         'video/stop',
+        SIZE:         'video/size',
+        PAUSE:        'video/pause',
+        RESUME:       'video/resume',
+        SOURCE:       'video/source',
+        ERROR:        'video/error',
+        MAX_SIZE:     'video/max-size',
+        MAX_DURATION: 'video/max-duration',
+    }
+
     /**
      * Creates a VideoRecorder instance
      * Returns existing instance if already created
@@ -330,7 +342,7 @@ export class VideoRecorder extends EventTarget {
             // Check WebGL context validity
             if (gl.getError() !== gl.NO_ERROR || gl.isContextLost()) {
                 console.error('WebGL context error or lost')
-                this.dispatchEvent(new CustomEvent('video/error', {
+                this.dispatchEvent(new CustomEvent(VideoRecorder.event.ERROR, {
                     detail: {error: new Error('WebGL context error or lost'), timestamp: Date.now()},
                 }))
                 rafId = raf(draw)
@@ -377,11 +389,11 @@ export class VideoRecorder extends EventTarget {
         // Verify stream tracks
         if (!this.#stream.getVideoTracks().length) {
             console.error('No video tracks in stream')
-            this.dispatchEvent(new CustomEvent('video/error', {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.event.ERROR, {
                 detail: {error: new Error('No video tracks in stream'), timestamp: Date.now()},
             }))
         }
-        this.dispatchEvent(new CustomEvent('video/source', {
+        this.dispatchEvent(new CustomEvent(VideoRecorder.event.SOURCE, {
             detail: {
                 type:      'canvas',
                 timestamp: Date.now(),
@@ -444,7 +456,7 @@ export class VideoRecorder extends EventTarget {
                 if (e.data.size > 0) {
                     this.#chunks.push(e.data)
                     this.#totalBytes += e.data.size
-                    this.dispatchEvent(new CustomEvent('video/size', {
+                    this.dispatchEvent(new CustomEvent(VideoRecorder.event.SIZE, {
                         detail: {totalBytes: this.#totalBytes, chunkSize: e.data.size, timestamp: Date.now()},
                     }))
                 }
@@ -456,7 +468,7 @@ export class VideoRecorder extends EventTarget {
                 if (typeof this.#onStop === 'function' && blob.size > 0) {
                     this.#onStop(blob, duration)
                 }
-                this.dispatchEvent(new CustomEvent('video/stop', {
+                this.dispatchEvent(new CustomEvent(VideoRecorder.event.STOP, {
                     detail: {
                         blob,
                         duration,
@@ -467,7 +479,7 @@ export class VideoRecorder extends EventTarget {
             // Handle errors
             this.#mediaRecorder.onerror = (e) => {
                 console.error('MediaRecorder error:', e.error)
-                this.dispatchEvent(new CustomEvent('video/error', {
+                this.dispatchEvent(new CustomEvent(VideoRecorder.event.ERROR, {
                     detail: {error: e.error, timestamp: Date.now()},
                 }))
                 this.stop()
@@ -478,13 +490,13 @@ export class VideoRecorder extends EventTarget {
             const checkLimits = () => {
                 if (this.isRecording()) {
                     if (this.#totalBytes >= this.#maxSize) {
-                        this.dispatchEvent(new CustomEvent('video/max-size', {
+                        this.dispatchEvent(new CustomEvent(VideoRecorder.event.MAX_SIZE, {
                             detail: {totalBytes: this.#totalBytes, timestamp: Date.now()},
                         }))
                         this.stop()
                     }
                     else if (this.duration > this.#maxDuration + 1000) {
-                        this.dispatchEvent(new CustomEvent('video/max-duration', {
+                        this.dispatchEvent(new CustomEvent(VideoRecorder.event.MAX_DURATION, {
                             detail: {duration: this.duration, timestamp: Date.now()},
                         }))
                         this.stop()
@@ -498,7 +510,7 @@ export class VideoRecorder extends EventTarget {
             // Emit size events periodically
             const emitSizeEvent = () => {
                 if (this.isRecording()) {
-                    this.dispatchEvent(new CustomEvent('video/size', {
+                    this.dispatchEvent(new CustomEvent(VideoRecorder.event.SIZE, {
                         detail: {totalBytes: this.#totalBytes, chunkSize: 0, timestamp: Date.now()},
                     }))
                     setTimeout(emitSizeEvent, 1000)
@@ -506,13 +518,13 @@ export class VideoRecorder extends EventTarget {
             }
             emitSizeEvent()
             // Emit start event
-            this.dispatchEvent(new CustomEvent('video/start', {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.event.START, {
                 detail: {timestamp: this.#startTime},
             }))
         }
         catch (error) {
             console.error('Failed to start recording:', error)
-            this.dispatchEvent(new CustomEvent('video/error', {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.event.ERROR, {
                 detail: {error, timestamp: Date.now()},
             }))
             throw error
@@ -533,7 +545,7 @@ export class VideoRecorder extends EventTarget {
                 this.#onStop(blob, duration)
             }
             // Emit stop event
-            this.dispatchEvent(new CustomEvent('video/stop', {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.event.STOP, {
                 detail: {
                     blob,
                     duration,
@@ -570,7 +582,7 @@ export class VideoRecorder extends EventTarget {
         if (this.isRecording()) {
             this.#lastPauseStart = Date.now()
             this.#mediaRecorder.pause()
-            this.dispatchEvent(new CustomEvent('video/pause', {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.event.PAUSE, {
                 detail: {timestamp: Date.now(), duration: this.duration},
             }))
         }
@@ -584,7 +596,7 @@ export class VideoRecorder extends EventTarget {
         if (this.#mediaRecorder?.state === 'paused') {
             this.#pausedTime += Date.now() - this.#lastPauseStart
             this.#mediaRecorder.resume()
-            this.dispatchEvent(new CustomEvent('video/resume', {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.event.RESUME, {
                 detail: {timestamp: Date.now(), duration: this.duration},
             }))
         }
@@ -627,12 +639,12 @@ export class VideoRecorder extends EventTarget {
         // Verify stream tracks
         if (!this.#stream.getVideoTracks().length) {
             console.error('No video tracks in stream')
-            this.dispatchEvent(new CustomEvent('video/error', {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.event.ERROR, {
                 detail: {error: new Error('No video tracks in stream'), timestamp: Date.now()},
             }))
         }
         // Emit source event
-        this.dispatchEvent(new CustomEvent('video/source', {
+        this.dispatchEvent(new CustomEvent(VideoRecorder.event.SOURCE, {
             detail: {type: 'stream', timestamp: Date.now()},
         }))
     }
@@ -645,14 +657,13 @@ export class VideoRecorder extends EventTarget {
 
         const timestamped = () => {
             const now = new Date()
-            const timestamp =
+            const time =
                       now.getFullYear().toString() +
                       String(now.getMonth() + 1).padStart(2, '0') +
                       String(now.getDate()).padStart(2, '0') +
                       String(now.getHours()).padStart(2, '0') +
                       String(now.getMinutes()).padStart(2, '0')
-
-            return `${timestamp}-${this.#filename}`
+            return `${time}-${this.#filename}`
         }
 
 
@@ -667,6 +678,7 @@ export class VideoRecorder extends EventTarget {
         const link = document.createElement('a')
         link.href = url
         link.download = `${timestamped()}.${ext}`
+        lgs.stores.main.components.video.filename = link.download
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
