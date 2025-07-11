@@ -43,3 +43,9 @@
 #video-recorder-toolbar span.duration {}
 
 #video-recorder-toolbar button {margin: 0;}
+
+#video-preview-dialog-footer {
+    display: flex;
+    justify-content: space-between;
+    text-align: unset;
+}

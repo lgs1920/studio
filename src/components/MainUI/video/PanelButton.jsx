@@ -104,12 +104,12 @@ export const PanelButton = (props) => {
         }
         // Configure recorder
         __.recorder.initialize((blob, duration) => {
-            __.recorder.download()
+            console.log(`Recording complete: ${duration}ms, ${blob.size} bytes`)
         }, 'video/webm;codecs=vp9', {
-            maxSize:     settings.maxSize * 1048576,      // MB
-            maxDuration: settings.maxDuration * MINUTE,   // Seconds
-            bitrate:     settings.bitrate * 1000000,      // MBps
-            filename:    APP_KEY,
+                                   maxSize:     settings.maxSize * 1048576,      // MB
+                                   maxDuration: settings.maxDuration * MINUTE,   // Seconds
+                                   bitrate:     settings.bitrate * 1000000,      // MBps
+                                   filename:    APP_KEY,
                                })
         // Set canvas source
         __.recorder.setSource([lgs.canvas], {

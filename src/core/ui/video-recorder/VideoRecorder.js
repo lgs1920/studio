@@ -26,7 +26,7 @@ export class VideoRecorder extends EventTarget {
     // Private properties for recording state
     #stream = null // MediaStream for recording
     #onStop = null // Callback for stop event
-    #_mimeType = 'video/webm;codecs=vp9' // MIME type for recording
+    #mimeType = 'video/webm;codecs=vp9' // MIME type for recording
     #maxSize = Infinity // Max size in bytes
     #maxDuration = Infinity // Max duration in milliseconds
     #bitrate = 12000000 // Video bitrate
@@ -97,7 +97,7 @@ export class VideoRecorder extends EventTarget {
      * @returns {string} MIME type
      */
     get mimeType() {
-        return this.#_mimeType
+        return this.#mimeType
     }
 
     /**
@@ -114,7 +114,7 @@ export class VideoRecorder extends EventTarget {
         if (!MediaRecorder.isTypeSupported(value)) {
             throw new Error(`MIME type ${value} is not supported`)
         }
-        this.#_mimeType = value
+        this.#mimeType = value
     }
 
     /**
@@ -174,7 +174,7 @@ export class VideoRecorder extends EventTarget {
         }
         // Set configuration
         this.#onStop = onStop
-        this.#_mimeType = mimeType
+        this.#mimeType = mimeType
         this.#maxSize = maxSize
         this.#maxDuration = maxDuration
         this.#bitrate = bitrate
@@ -448,7 +448,7 @@ export class VideoRecorder extends EventTarget {
             this.#lastPauseStart = 0
             // Initialize MediaRecorder
             this.#mediaRecorder = new MediaRecorder(this.#stream, {
-                mimeType:           this.#_mimeType,
+                mimeType: this.#mimeType,
                 videoBitsPerSecond: this.#bitrate,
             })
             // Handle data chunks
@@ -463,7 +463,7 @@ export class VideoRecorder extends EventTarget {
             }
             // Handle stop event
             this.#mediaRecorder.onstop = () => {
-                const blob = new Blob(this.#chunks, {type: this.#_mimeType})
+                const blob = new Blob(this.#chunks, {type: this.#mimeType})
                 const duration = this.duration
                 if (typeof this.#onStop === 'function' && blob.size > 0) {
                     this.#onStop(blob, duration)
@@ -537,7 +537,7 @@ export class VideoRecorder extends EventTarget {
     stop() {
         // Stop recording if active
         if (this.#mediaRecorder && (this.#mediaRecorder.state === 'recording' || this.#mediaRecorder.state === 'paused')) {
-            const blob = new Blob(this.#chunks, {type: this.#_mimeType})
+            const blob = new Blob(this.#chunks, {type: this.#mimeType})
             const duration = this.duration
             this.#mediaRecorder.stop()
             // Trigger onStop callback
@@ -650,10 +650,12 @@ export class VideoRecorder extends EventTarget {
     }
 
     /**
-     * Triggers download of recorded video
-     * @param {string} [filename] - Output filename
+     * Triggers a download of the recorded video
+     * @param {string} [filename=this._filename] - Base name for the file (extension inferred from MIME type)
+     * @param {Blob} [blob] - Optional Blob to download; if not provided, uses recorded chunks
+     * @throws {Error} If no recorded data or provided Blob is invalid
      */
-    download(filename = this.#filename) {
+    download(filename = this.#filename, blob) {
 
         const timestamped = () => {
             const now = new Date()
@@ -666,18 +668,16 @@ export class VideoRecorder extends EventTarget {
             return `${time}-${this.#filename}`
         }
 
-
-        // Create blob from chunks
-        const blob = new Blob(this.#chunks, {type: this.#_mimeType})
-        if (blob.size === 0) {
-            return
+        const downloadBlob = blob || new Blob(this.chunks, {type: this.#mimeType})
+        if (!(downloadBlob instanceof Blob) || downloadBlob.size === 0) {
+            throw new Error('No valid recorded data available for download')
         }
-        // Generate download link
-        const ext = this.#_mimeType.split('/')[1].split(';')[0] || 'webm'
-        const url = URL.createObjectURL(blob)
+        const ext = this.#mimeType.split('/')[1].split(';')[0] || 'webm'
+        const url = URL.createObjectURL(downloadBlob)
+
         const link = document.createElement('a')
         link.href = url
-        link.download = `${timestamped()}.${ext}`
+        link.download = `${timestamped()}.${filename}`
         lgs.stores.main.components.video.filename = link.download
         document.body.appendChild(link)
         link.click()
