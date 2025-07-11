@@ -319,3 +319,11 @@ ui:
   ## Compass
   compass:
     mode: 1                # 0: none, 1: full, 2:light
+
+  ## Video
+  video:
+    recording: false
+    pause: false
+    maxDuration: 5     # minutes
+    maxSize: 200       # MB
+    bitRate: 12        # Mbps

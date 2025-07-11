@@ -7,16 +7,12 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-08
- * Last modified: 2025-07-08
+ * Created on: 2025-07-11
+ * Last modified: 2025-07-11
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
-
-#trigger-video-recording {
-    font-size: 10px;/ /;
-}
 
 #trigger-video-recording svg {
     height: 80%;
@@ -30,3 +26,20 @@
     color: var(--lgs-video-recorder-hover-color);
     --fa-primary-opacity: 0.5;
 }
+
+#video-recorder-toolbar {
+    font-size: var(--lgs-font-size-s);
+    display: flex;
+    flex-direction: row;
+    gap: 0
+}
+
+#video-recorder-toolbar span {
+    width: max-content;
+    margin-right: var(--lgs-gutter-s);
+    border-right: 1px solid var(--lgs-card-on-map-border-color);padding-inline-end: var(--lgs-gutter-s);
+}
+
+#video-recorder-toolbar span.duration {}
+
+#video-recorder-toolbar button {margin: 0;}

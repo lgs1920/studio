@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-07-11
+ * Last modified: 2025-07-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,6 +24,7 @@ import { DeviceManager }     from '@Core/ui/DeviceManager'
 import { Geocoder }          from '@Core/ui/Geocoder'
 import { MenuManager }       from '@Core/ui/MenuManager'
 import { POIManager }        from '@Core/ui/POIManager'
+import { VideoRecorder }     from '@Core/ui/video-recorder/VideoRecorder'
 import { AppUtils }          from '@Utils/AppUtils'
 import { MouseUtils }        from '@Utils/cesium/MouseUtils'
 import { CSSUtils }          from '@Utils/CSSUtils'
@@ -336,8 +337,7 @@ export class LGS1920Context {
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()
-
-
+        __.recorder = new VideoRecorder()
     }
 
 

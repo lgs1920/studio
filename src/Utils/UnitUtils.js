@@ -7,17 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-07-11
+ * Last modified: 2025-07-11
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { DAY, HOUR, MILLIS, MINUTE } from '@Core/constants'
-import { Duration }                  from 'luxon' //check configuration.unitSystems for the values
+import { Duration }                  from 'luxon'
 
-//check configuration.unitSystems for the values
+// Unit system constants
 export const INTERNATIONAL = 0
 export const IMPERIAL = 1
 
@@ -25,13 +25,22 @@ export const IMPERIAL = 1
 export const DD = 'dd'
 export const DMS = 'dms'
 
+// Byte unit constants
+export const BYTE = 1
+export const KB = 1024
+export const MB = KB * 1024
+export const GB = MB * 1024
+export const TB = GB * 1024
+
 export class UnitUtils {
+    altitudes
+
     /**
-     * Converter from internation system unit (ie m,s) to other.
+     * Converter from international system unit (ie m,s) to other.
      *
-     * How to use :   convert(myValue).to(KM) to convert myValue from meter to kilometers
+     * How to use: convert(myValue).to(KM) to convert myValue from meter to kilometers
      *
-     * @param input  always in metric based unit
+     * @param input always in metric-based unit
      *
      * @return {{source, to: data.to}}
      */
@@ -59,9 +68,9 @@ export class UnitUtils {
                     case inche:
                         return input * INCHES
                     case hour:
-                        return Duration.fromMillis(input * MILLIS).toFormat('hh:mm:ss')
+                        return Duration.fromMillis(input * MILLIS).toFormat('h:mm:ss')
                     case min:
-                        return Duration.fromMillis(input * MILLIS).toFormat('mm:ss')
+                        return Duration.fromMillis(input * MILLIS).toFormat('m:ss')
                     case dms: {
                         if (!input) {
                             return 'NaN'
@@ -83,17 +92,80 @@ export class UnitUtils {
                 }
             },
             /**
-             * Convert input to day hour minute
-             * @return {*|number}
+             * Convert input (in milliseconds) to a formatted time string (e.g., '1h 05m 05s' or '5m 05s')
+             * The first non-zero unit has no leading zero, while subsequent units have leading zeros.
+             * @param {boolean} showSeconds - Whether to include seconds in the output
+             * @returns {string} Formatted time string
              */
-            toTime: () => {
-                if (input === 0) {
-                    return 0
+            toTime: (showSeconds = true) => {
+                if (!input || isNaN(input) || input < 0) {
+                    return '0s'
                 }
-                const days = input >= DAY / 1000 ? `dd \'d\'` : ''
-                const hours = input >= HOUR / 1000 ? 'hh\'h\'' : ''
-                const minutes = 'mm\'m\''
-                return (input ? Duration.fromObject({seconds: input}) : undefined)?.toFormat(`${days} ${hours}${minutes}`)
+
+                const duration = Duration.fromMillis(input)
+                if (!duration.isValid) {
+                    return '0s'
+                }
+
+                // Build format string based on the first non-zero unit
+                let format = ''
+                let firstUnit = true
+
+                if (input >= DAY) {
+                    format += firstUnit ? 'd\'d\' ' : 'dd\'d\' '
+                    firstUnit = false
+                }
+                if (input >= HOUR) {
+                    format += firstUnit ? 'h\'h\' ' : 'hh\'h\' '
+                    firstUnit = false
+                }
+                if (input >= MINUTE) {
+                    format += firstUnit ? 'm\'m\' ' : 'mm\'m\' '
+                    firstUnit = false
+                }
+                if (showSeconds && input < DAY) {
+                    format += firstUnit ? 's\'s\'' : 'ss\'s\''
+                }
+
+                // Remove trailing space and handle empty format
+                format = format.trim()
+                if (!format) {
+                    return showSeconds ? '0s' : '0m'
+                }
+
+                console.log(`Formatting ${input}ms to ${format}`)
+                return duration.toFormat(format)
+            },
+            /**
+             * Convert input (in bytes) to a formatted size string with a single unit (e.g., '12B', '1.4MB')
+             * Uses the largest appropriate unit (B, KB, MB, GB, TB) with no leading zero.
+             * MB, GB, TB show one decimal place; B, KB show no decimal places.
+             * @returns {string} Formatted size string
+             */
+            toSize: () => {
+                if (!input || isNaN(input) || input < 0) {
+                    return '0B'
+                }
+
+                const units = [
+                    {threshold: TB, label: 'TB', decimals: 1},
+                    {threshold: GB, label: 'GB', decimals: 1},
+                    {threshold: MB, label: 'MB', decimals: 1},
+                    {threshold: KB, label: 'KB', decimals: 0},
+                    {threshold: BYTE, label: 'B', decimals: 0},
+                ]
+
+                // Find the largest unit where value >= 1
+                const unit = units.find(u => input >= u.threshold) || units[units.length - 1]
+                const value = input / unit.threshold
+
+                // Format with no leading zero and appropriate decimals
+                const formattedValue = unit.decimals === 0
+                                       ? Math.round(value)
+                                       : value.toFixed(1).replace(/^0+/, '')
+
+                console.log(`Formatting ${input} bytes to ${formattedValue}${unit.label}`)
+                return `${formattedValue}${unit.label}`
             },
         }
     }
@@ -102,7 +174,6 @@ export class UnitUtils {
 }
 
 /** Units */
-
 export const km = 'km'
 export const mile = 'mi'
 export const kmh = 'km/h'
@@ -130,10 +201,16 @@ export const KMH = 3.6                      // m/s to Km/h
 export const MPH = 2.236936                 // m/s to MPH
 export const MILE = 0.00062137119223        // miles = MILE * kms
 export const YARD = 1.09361                 // meters to yards
-export const INCHES = 39.3701               // meters t inches
-
+export const INCHES = 39.3701               // meters to inches
 
 export const ELEVATION_UNITS = [meter, foot]
 export const DISTANCE_UNITS = [km, mile]
 export const SPEED_UNITS = [kmh, mph]
 export const PACE_UNITS = [mkm, mpmile]
+
+export const byte = 'B'
+export const kb = 'KB'
+export const mb = 'MB'
+export const gb = 'GB'
+export const tb = 'TB'
+export const BYTE_UNITS = [byte, kb, mb, gb, tb]

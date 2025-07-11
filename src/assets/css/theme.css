@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-04
- * Last modified: 2025-07-04
+ * Created on: 2025-07-11
+ * Last modified: 2025-07-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -154,6 +154,10 @@
 
     --lgs-scroolbar-track-color: transparent;
     --lgs-scroolbar-thumb-color: var(--sl-color-gray-700);
+
+    --lgs-video-recorder-color: var(--sl-color-red-800);
+    --lgs-video-recorder-hover-color: var(--sl-color-red-400);
+    --lgs-video-recorder-border-color: var(--sl-color-gray-200);
 }
 
 .lgs-theme, .lgs-theme::part(panel) {
@@ -174,6 +178,14 @@
     --sl-input-height-small: var(--lgs-input-height-s);
     line-height: calc(var(--sl-input-height-small) - var(--sl-input-border-width) * 2);
     border-radius: var(--sl-input-border-radius-small);
+}
+
+/*******************************************************************************
+ * Canvas
+ */
+canvas {
+/ / image-rendering: pixelated;
+    image-rendering: crisp-edges;
 }
 
 
@@ -215,6 +227,11 @@ sl-button::part(label) {
     aspect-ratio: 1;
 }
 
+.square-button.transparent::part(base) {
+    border: none;
+    background: transparent;
+}
+
 .square-button.small {
     --lgs-square-dimension: var(--lgs-dimension-s);
 }
@@ -235,6 +252,7 @@ sl-button::part(label) {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding-right: 0;
 }
 
 .square-button.small::part(prefix) {
@@ -463,22 +481,29 @@ sl-card[variant="primary"]::part(base) {
     --border-color: var(--lgs-card-ui-border-color);
 }
 
-.lgs-card, .lgs-card::part(base), .lgs-one-line-card, .lgs-card::part(base) {
+.lgs-card, .lgs-card::part(base), .lgs-one-line-card, .lgs-one-line-card::part(base) {
     display: flex;
-    background-color: rgba(255, 255, 255, 0.15);
-    border: 1px solid var(--lgs-card-border-color);
     padding: var(--lgs-gutter-s);
+    border: 1px solid var(--lgs-card-border-color);
     border-radius: var(--lgs-border-radius-s);
+    background-color: rgba(255, 255, 255, 0.15);
 }
+
 
 .lgs-one-line-card {
+    line-height: 1;
     align-items: center;
     flex-direction: row;
-    background-color: var(--sl-color-neutral-0);
-    padding: var(--lgs-gutter-xs);
     height: var(--lgs-line-dimension);
+    padding: var(--lgs-gutter-xs);
+    background-color: var(--sl-color-neutral-0);
 }
 
+.lgs-card.small, .lgs-card.small::part(base), .lgs-one-line-card.small, .lgs-one-line-card.small::part(base) {
+    height: var(--lgs-dimension-s);
+    padding: var(--lgs-gutter-xs);
+    border-radius: var(--lgs-border-radius-xs);
+}
 /*.lgs-card ::part(base) {*/
 /*    height: var(--lgs-line-dimension);*/
 /*    width: 100%;*/
