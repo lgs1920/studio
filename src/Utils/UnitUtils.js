@@ -133,7 +133,6 @@ export class UnitUtils {
                     return showSeconds ? '0s' : '0m'
                 }
 
-                console.log(`Formatting ${input}ms to ${format}`)
                 return duration.toFormat(format)
             },
             /**
@@ -164,7 +163,6 @@ export class UnitUtils {
                                        ? Math.round(value)
                                        : value.toFixed(1).replace(/^0+/, '')
 
-                console.log(`Formatting ${input} bytes to ${formattedValue}${unit.label}`)
                 return `${formattedValue}${unit.label}`
             },
         }
