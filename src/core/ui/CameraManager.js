@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-07-12
+ * Last modified: 2025-07-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -352,7 +352,7 @@ export class CameraManager {
                 if (lgs.camera && infinite || totalRotation < totalTurns) {
                     lgs.camera.rotateRight(angleRotation)
                     totalRotation += Math.abs(angleRotation)
-                    this.move.animation = requestAnimationFrame((time) => rotateCamera(time))
+                    this.move.animation = __.requestAnimationFrame((time) => rotateCamera(time))
                 }
                 else {
                     this.stopRotate()
@@ -362,7 +362,7 @@ export class CameraManager {
         }
         this.move = {
             type:         CameraManager.ROTATE,
-            animation:    requestAnimationFrame((time) => rotateCamera(time)),
+            animation: __.requestAnimationFrame((time) => rotateCamera(time)),
             stopWatching: lgs.camera.changed.addEventListener(async () => {
                 if (!this.saveTimer) {
                     await this.startWatching()

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-11
- * Last modified: 2025-07-11
+ * Created on: 2025-07-12
+ * Last modified: 2025-07-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -97,6 +97,24 @@ export class LGS1920Context {
                 ui:  UIUtils,
             },
             convert: UnitUtils.convert,
+            // Let's use Cesium if it isok  or window frame functions
+            requestAnimationFrame: (callback) => {
+                const cesiumRAF = window.Cesium && typeof window.Cesium.requestAnimationFrame === 'function'
+                                  ? window.Cesium.requestAnimationFrame
+                                  : null
+                return (cesiumRAF || requestAnimationFrame)(callback)
+            },
+            cancelAnimationFrame:  (rafId) => {
+                const cesiumCancel = window.Cesium && typeof window.Cesium.cancelAnimationFrame === 'function'
+                                     ? window.Cesium.cancelAnimationFrame
+                                     : null
+                if (cesiumCancel) {
+                    cesiumCancel(rafId)
+                }
+                else {
+                    cancelAnimationFrame(rafId)
+                }
+            },
         }
 
     }

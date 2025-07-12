@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-05
- * Last modified: 2025-07-05
+ * Created on: 2025-07-12
+ * Last modified: 2025-07-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -273,8 +273,8 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
         }
 
         // Double requestAnimationFrame pour s'assurer que le DOM est stable
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
+        __.requestAnimationFrame(() => {
+            __.requestAnimationFrame(() => {
                 try {
                     const scale = 2
                     const ratio = window.devicePixelRatio || 1
@@ -313,7 +313,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
         }
 
         // Ne pas appeler renderToCanvas immédiatement
-        // requestAnimationFrame(renderToCanvas)
+        // __.requestAnimationFrame(renderToCanvas)
 
         // Set up MutationObserver to monitor changes to _poiContent
         const observer = new MutationObserver(() => {

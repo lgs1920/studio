@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-05
- * Last modified: 2025-07-05
+ * Created on: 2025-07-12
+ * Last modified: 2025-07-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -175,7 +175,7 @@ export const JourneyToolbar = (props) => {
             const {width, height} = toolbar.getBoundingClientRect()
             if (width === 0 || height === 0) {
                 // Retry if dimensions are not yet available
-                requestAnimationFrame(positionToolbar)
+                __.requestAnimationFrame(positionToolbar)
                 return
             }
 
@@ -191,7 +191,7 @@ export const JourneyToolbar = (props) => {
         }
         // Force the right opacity
         setToolbarOpacity(toolbar)
-        requestAnimationFrame(positionToolbar)
+        __.requestAnimationFrame(positionToolbar)
     }, [$journeyToolbar.show, journeyEditor.list.length]) // Dependencies to wait for toolbar visibility
 
 
