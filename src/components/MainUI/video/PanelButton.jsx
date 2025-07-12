@@ -16,13 +16,13 @@
 
 import { FontAwesomeIcon }     from '@Components/FontAwesomeIcon'
 import { APP_KEY, MINUTE } from '@Core/constants'
+import { VideoRecorder } from '@Core/ui/video-recorder/VideoRecorder'
 import { faCircleVideo }   from '@fortawesome/duotone-regular-svg-icons'
 import { SlButton, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { UIToast }         from '@Utils/UIToast'
 import { useEffect }           from 'react'
 import { useSnapshot }         from 'valtio'
-import { VideoRecorder }   from '@Core/ui/video-recorder/VideoRecorder'
 
 /**
  * PanelButton - Toggles video recording with a button
@@ -108,7 +108,7 @@ export const PanelButton = (props) => {
             console.log(`Recording complete: ${duration}ms, ${blob.size} bytes`)
         }, 'video/webm;codecs=vp9', {
                                    maxSize:     settings.maxSize * 1048576,      // MB
-                                   maxDuration: settings.maxDuration * MINUTE,   // Seconds
+            maxDuration: settings.maxDuration * MINUTE,   // MilliSeconds
                                    bitrate:     settings.bitrate * 1000000,      // MBps
                                    filename:    APP_KEY,
                                })
