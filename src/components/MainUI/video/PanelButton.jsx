@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-11
- * Last modified: 2025-07-11
+ * Created on: 2025-07-12
+ * Last modified: 2025-07-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -70,6 +70,7 @@ export const PanelButton = (props) => {
             $settings.paused = false
             $settings.totalBytes = 0
         }
+
         // Add event listeners
         __.recorder.addEventListener(VideoRecorder.event.SIZE, handleSizeUpdate)
         __.recorder.addEventListener(VideoRecorder.event.PAUSE, handlePause)
@@ -143,7 +144,7 @@ export const PanelButton = (props) => {
 
                 UIToast.error({
                                   caption: `Video capture`,
-                                  text:    `Stopped due to error:<br>{error.message} !`,
+                                  text: `Stopped due to error:<br>${error.message} !`,
                               })
             }
         }
