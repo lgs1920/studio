@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-11
- * Last modified: 2025-07-11
+ * Created on: 2025-07-12
+ * Last modified: 2025-07-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,7 +18,7 @@ import { fragmentShaderWebGL1, fragmentShaderWebGL2, vertexShaderWebGL1, vertexS
 
 /**
  * VideoRecorder - Singleton class to record canvas or media stream
- * Emits DOM CustomEvents: 'video/start', 'video/stop', 'video/size', 'video/pause',
+ * Emits DOM CustomEvents: 'video/start', 'video/stop', 'video/size', 'video/pause', 'video/download',
  * 'video/resume', 'video/source', 'video/error', 'video/max-size', 'video/max-duration'
  */
 export class VideoRecorder extends EventTarget {
@@ -39,7 +39,6 @@ export class VideoRecorder extends EventTarget {
     #lastPauseStart = 0 // Last pause start
     #stopRendering = null // Stops WebGL rendering
     #lastFrameTime = 0 // Last frame timestamp
-
     static event = {
         START:        'video/start',
         STOP:         'video/stop',
@@ -47,10 +46,12 @@ export class VideoRecorder extends EventTarget {
         PAUSE:        'video/pause',
         RESUME:       'video/resume',
         SOURCE:       'video/source',
+        DOWNLOAD: 'video/download',
         ERROR:        'video/error',
         MAX_SIZE:     'video/max-size',
         MAX_DURATION: 'video/max-duration',
     }
+    #sourceType = null // Track source type ('canvas' or 'stream')
 
     /**
      * Creates a VideoRecorder instance
@@ -184,15 +185,16 @@ export class VideoRecorder extends EventTarget {
             const defaultCanvas = document.createElement('canvas')
             defaultCanvas.width = 1280
             defaultCanvas.height = 720
-            const gl = defaultCanvas.getContext('webgl2', {preserveDrawingBuffer: true, antialias: true})
+            const gl = defaultCanvas.getContext('webgl2', {preserveDrawingBuffer: true, alpha: true})
             if (!gl) {
                 throw new Error('WebGL2 not supported')
             }
-            gl.clearColor(0, 0, 0, 1)
+            gl.clearColor(0, 0, 0, 0) // Transparent background
             gl.clear(gl.COLOR_BUFFER_BIT)
             this.#stream = defaultCanvas.captureStream(30) // Use 30 FPS for smoother default
             this.#stopRendering = () => {
             }
+            this.#sourceType = 'canvas'
         }
     }
 
@@ -211,6 +213,7 @@ export class VideoRecorder extends EventTarget {
         clipY = 0,
         clipWidth,
         clipHeight,
+        preserveAlpha = false, // Option to preserve alpha channel
     } = {}) {
         // Validate input
         if (!Array.isArray(canvases) || canvases.length === 0) {
@@ -238,7 +241,7 @@ export class VideoRecorder extends EventTarget {
         const outputCanvas = document.createElement('canvas')
         outputCanvas.width = width * dpr
         outputCanvas.height = height * dpr
-        const outputCtx = outputCanvas.getContext('2d', {alpha: false})
+        const outputCtx = outputCanvas.getContext('2d', {alpha: preserveAlpha})
         if (!outputCtx) {
             throw new Error('2D context not supported')
         }
@@ -249,8 +252,8 @@ export class VideoRecorder extends EventTarget {
         const compCanvas = document.createElement('canvas')
         compCanvas.width = clipWidth * dpr
         compCanvas.height = clipHeight * dpr
-        const gl = compCanvas.getContext('webgl2', {preserveDrawingBuffer: true, antialias: true}) ||
-            compCanvas.getContext('webgl', {preserveDrawingBuffer: true, antialias: true})
+        const gl = compCanvas.getContext('webgl2', {preserveDrawingBuffer: true, alpha: preserveAlpha}) ||
+            compCanvas.getContext('webgl', {preserveDrawingBuffer: true, alpha: preserveAlpha})
         if (!gl) {
             throw new Error('WebGL not supported')
         }
@@ -267,7 +270,7 @@ export class VideoRecorder extends EventTarget {
             if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
                 const log = gl.getShaderInfoLog(shader)
                 gl.deleteShader(shader)
-                throw new Error(`Shader compilation error: ${log}`)
+                throw new Error(`Shader compilation error: ${log}\nSource:\n${source}`)
             }
             return shader
         }
@@ -278,7 +281,9 @@ export class VideoRecorder extends EventTarget {
             gl.attachShader(program, createShader(gl.FRAGMENT_SHADER, fragmentShaderSource))
             gl.linkProgram(program)
             if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-                throw new Error(`Program linking error: ${gl.getProgramInfoLog(program)}`)
+                const log = gl.getProgramInfoLog(program)
+                gl.deleteProgram(program)
+                throw new Error(`Program linking error: ${log}`)
             }
             gl.useProgram(program)
         }
@@ -325,7 +330,7 @@ export class VideoRecorder extends EventTarget {
                                                       texX + texWidth, texY,
                                                   ])
         gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer)
-        gl.bufferData(gl.ARRAY_BUFFER, clippedTexCoords, gl.STATIC_DRAW)
+        gl.bufferData(gl.ARRAY_BUFFER, clippedTexCoords, gl.DYNAMIC_DRAW)
         // Set up animation frame
         let rafId
         const raf = window.Cesium?.requestAnimationFrame ? window.Cesium.requestAnimationFrame : window.requestAnimationFrame
@@ -361,7 +366,7 @@ export class VideoRecorder extends EventTarget {
             }
             // Set up WebGL viewport
             gl.viewport(0, 0, clipWidth * dpr, clipHeight * dpr)
-            gl.clearColor(0, 0, 0, 1)
+            gl.clearColor(0, 0, 0, preserveAlpha ? 0 : 1) // Transparent or opaque background
             gl.clear(gl.COLOR_BUFFER_BIT)
             // Bind texture and draw
             gl.bindTexture(gl.TEXTURE_2D, texture)
@@ -393,6 +398,7 @@ export class VideoRecorder extends EventTarget {
                 detail: {error: new Error('No video tracks in stream'), timestamp: Date.now()},
             }))
         }
+        this.#sourceType = 'canvas'
         this.dispatchEvent(new CustomEvent(VideoRecorder.event.SOURCE, {
             detail: {
                 type:      'canvas',
@@ -404,6 +410,7 @@ export class VideoRecorder extends EventTarget {
                 clipY,
                 clipWidth,
                 clipHeight,
+                preserveAlpha,
             },
         }))
     }
@@ -422,15 +429,16 @@ export class VideoRecorder extends EventTarget {
             const defaultCanvas = document.createElement('canvas')
             defaultCanvas.width = 1280
             defaultCanvas.height = 720
-            const gl = defaultCanvas.getContext('webgl2', {preserveDrawingBuffer: true, antialias: true})
+            const gl = defaultCanvas.getContext('webgl2', {preserveDrawingBuffer: true, alpha: true})
             if (!gl) {
                 throw new Error('WebGL2 not supported')
             }
-            gl.clearColor(0, 0, 0, 1)
+            gl.clearColor(0, 0, 0, 0) // Transparent background
             gl.clear(gl.COLOR_BUFFER_BIT)
             this.#stream = defaultCanvas.captureStream(30) // Use 30 FPS for smoother default
             this.#stopRendering = () => {
             }
+            this.#sourceType = 'canvas'
         }
         try {
             // Clean up existing recorder
@@ -571,6 +579,7 @@ export class VideoRecorder extends EventTarget {
                 this.#stream = null
             }
             this.#stopRendering = null
+            this.#sourceType = null
         }
     }
 
@@ -643,6 +652,8 @@ export class VideoRecorder extends EventTarget {
                 detail: {error: new Error('No video tracks in stream'), timestamp: Date.now()},
             }))
         }
+        // Set source type
+        this.#sourceType = 'stream'
         // Emit source event
         this.dispatchEvent(new CustomEvent(VideoRecorder.event.SOURCE, {
             detail: {type: 'stream', timestamp: Date.now()},
@@ -651,12 +662,11 @@ export class VideoRecorder extends EventTarget {
 
     /**
      * Triggers a download of the recorded video
-     * @param {string} [filename=this._filename] - Base name for the file (extension inferred from MIME type)
+     * @param {string} [filename=this.#filename] - Base name for the file (extension inferred from MIME type)
      * @param {Blob} [blob] - Optional Blob to download; if not provided, uses recorded chunks
      * @throws {Error} If no recorded data or provided Blob is invalid
      */
     download(filename = this.#filename, blob) {
-
         const timestamped = () => {
             const now = new Date()
             const time =
@@ -665,25 +675,38 @@ export class VideoRecorder extends EventTarget {
                       String(now.getDate()).padStart(2, '0') +
                       String(now.getHours()).padStart(2, '0') +
                       String(now.getMinutes()).padStart(2, '0')
-            return `${time}-${this.#filename}`
+            return `${time}-${filename}`
         }
 
-        const downloadBlob = blob || new Blob(this.chunks, {type: this.#mimeType})
+        const downloadBlob = blob || new Blob(this.#chunks, {type: this.#mimeType})
         if (!(downloadBlob instanceof Blob) || downloadBlob.size === 0) {
-            throw new Error('No valid recorded data available for download')
+            const error = new Error('No valid recorded data available for download')
+            console.error(error.message)
+            this.dispatchEvent(new CustomEvent(VideoRecorder.event.ERROR, {
+                detail: {error, timestamp: Date.now()},
+            }))
+            throw error
         }
         const ext = this.#mimeType.split('/')[1].split(';')[0] || 'webm'
         const url = URL.createObjectURL(downloadBlob)
-
         const link = document.createElement('a')
         link.href = url
-        link.download = `${timestamped()}.${filename}`
+        link.download = `${timestamped()}.${ext}`
         lgs.stores.main.components.video.filename = link.download
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
         // Clean up URL
         setTimeout(() => URL.revokeObjectURL(url), 2000)
+        // Emit download event
+        this.dispatchEvent(new CustomEvent(VideoRecorder.event.DOWNLOAD, {
+            detail: {
+                type:      this.#sourceType || 'unknown',
+                timestamp: Date.now(),
+                filename:  link.download,
+                size:      downloadBlob.size,
+            },
+        }))
     }
 
     /**
@@ -705,5 +728,6 @@ export class VideoRecorder extends EventTarget {
         this.#lastPauseStart = 0
         this.#stopRendering = null
         this.#lastFrameTime = 0
+        this.#sourceType = null
     }
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-11
- * Last modified: 2025-07-11
+ * Created on: 2025-07-12
+ * Last modified: 2025-07-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -106,6 +106,8 @@ export const VideoRecorderToolbar = (props) => {
             return
         }
 
+        const caption = 'Video Recording'
+
         // Handle recording start
         const handleStart = () => {
             $settings.recording = true
@@ -120,7 +122,7 @@ export const VideoRecorderToolbar = (props) => {
             }, SECOND)
 
             UIToast.warning({
-                                caption: `Video capture`,
+                                caption: caption,
                                 text:    'ON AIR !',
                             })
         }
@@ -138,7 +140,7 @@ export const VideoRecorderToolbar = (props) => {
             setRecordedDuration(__.recorder.duration)
 
             UIToast.warning({
-                                caption: `Video capture`,
+                                caption: caption,
                                 text:    `Paused`,
                             })
         }
@@ -153,7 +155,7 @@ export const VideoRecorderToolbar = (props) => {
             }, SECOND)
 
             UIToast.success({
-                                caption: `Video capture`,
+                                caption: caption,
                                 text:    `Resumed`,
                             })
         }
@@ -170,26 +172,33 @@ export const VideoRecorderToolbar = (props) => {
             setRecordedSize(0)
             setLastSizeEventTime(0)
             clearInterval(intervalRef.current)
-            const caption = 'Video Capture'
             switch (event.type) {
                 case VideoRecorder.event.STOP:
                     UIToast.success({
                                         caption: caption,
-                                        text:    `Done and saved in ${lgs.stores.main.components.video.filename}`,
+                                        text: `Done. Waiting...`,
                                     })
                     break
                 case VideoRecorder.event.MAX_SIZE:
                     UIToast.warning({
                                         caption: caption,
-                                        text:    `Stopped due to max size limit (${settings.maxSize}${'MB'}) but saved.`,
+                                        text: `Stopped due to max size limit (${settings.maxSize}${'MB'}). Waiting...`,
                                     })
                     break
                 case VideoRecorder.event.MAX_DURATION:
                     UIToast.warning({
                                         caption: caption,
-                                        text:    `Stopped due to max duration limit (${settings.maxDuration}m) but saved.`,
+                                        text: `Stopped due to max duration limit (${settings.maxDuration}m). Waiting...`,
                                     })
             }
+        }
+
+        // Handle Download Event
+        const handleDownload = (event) => {
+            UIToast.success({
+                                caption: caption,
+                                text:    `Saved in ${event.detail.filename}`,
+                            })
         }
 
         // Add event listeners
@@ -197,9 +206,10 @@ export const VideoRecorderToolbar = (props) => {
         __.recorder.addEventListener(VideoRecorder.event.SIZE, handleSize)
         __.recorder.addEventListener(VideoRecorder.event.PAUSE, handlePause)
         __.recorder.addEventListener(VideoRecorder.event.RESUME, handleResume)
+        __.recorder.addEventListener(VideoRecorder.event.MAX_SIZE, handleStop)
+        __.recorder.addEventListener(VideoRecorder.event.MAX_DURATION, handleStop)
         __.recorder.addEventListener(VideoRecorder.event.STOP, handleStop)
-        __.recorder.addEventListener(VideoRecorder.event.STOP, handleStop)
-        __.recorder.addEventListener(VideoRecorder.event.STOP, handleStop)
+        __.recorder.addEventListener(VideoRecorder.event.DOWNLOAD, handleDownload)
 
         // Clean up
         return () => {
@@ -208,9 +218,11 @@ export const VideoRecorderToolbar = (props) => {
             __.recorder.removeEventListener(VideoRecorder.event.SIZE, handleSize)
             __.recorder.removeEventListener(VideoRecorder.event.PAUSE, handlePause)
             __.recorder.removeEventListener(VideoRecorder.event.RESUME, handleResume)
+            __.recorder.removeEventListener(VideoRecorder.event.MAX_SIZE, handleStop)
+            __.recorder.removeEventListener(VideoRecorder.event.MAX_DURATION, handleStop)
             __.recorder.removeEventListener(VideoRecorder.event.STOP, handleStop)
-            __.recorder.removeEventListener(VideoRecorder.event.STOP, handleStop)
-            __.recorder.removeEventListener(VideoRecorder.event.STOP, handleStop)
+            __.recorder.removeEventListener(VideoRecorder.event.DOWNLOAD, handleDownload)
+
         }
     }, [__.recorder])
 
