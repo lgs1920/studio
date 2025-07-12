@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-11
- * Last modified: 2025-07-11
+ * Created on: 2025-07-12
+ * Last modified: 2025-07-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -105,15 +105,15 @@
 
 
     --lgs-success-color: var(--sl-color-green-500);
-    --lgs-success-bg-color: hsla(142.1 70.6% 45.3% / 0.5);
+    --lgs-success-bg-color: hsla(142.1 70.6% 45.3% / 0.8);
     --lgs-success-border-color: hsla(140.6 84.2% 92.5%/0.25);
 
     --lgs-warning-color: var(--sl-color-orange-500);
-    --lgs-warning-bg-color: hsla(24 100% 50%/ 0.5);
+    --lgs-warning-bg-color: hsla(24 100% 50%/ 0.8);
     --lgs-warning-border-color: hsla(32.1 97.7% 83.1% / 0.25);
 
     --lgs-information-color: var(--sl-color-blue-500);
-    --lgs-information-bg-color: hsla(217.2 91.2% 59.8%/0.5);
+    --lgs-information-bg-color: hsla(217.2 91.2% 59.8%/0.8);
     --lgs-information-border-color: hsla(214.3 94.6% 92.7%/0.25);
 
     --lgs-tooltip-color: var(--lgs-text-on-color);
@@ -171,21 +171,21 @@
 }
 
 .sl-theme-light {
-    --sl-input-border-width-small: 4px;
-    --test: var(--lgs-border-radius-s);
     font-size: var(--lgs-font-size);
-    --sl-input-border-width: var(--lgs-border-width-s);
-    --sl-input-height-small: var(--lgs-input-height-s);
     line-height: calc(var(--sl-input-height-small) - var(--sl-input-border-width) * 2);
     border-radius: var(--sl-input-border-radius-small);
+    --sl-input-border-width-small: 4px;
+    --test: var(--lgs-border-radius-s);
+    --sl-input-border-width: var(--lgs-border-width-s);
+    --sl-input-height-small: var(--lgs-input-height-s);
+    --sl-z-index-toast: var(--lgs-ui-layer-zindex);
 }
 
 /*******************************************************************************
  * Canvas
  */
 canvas {
-/ / image-rendering: pixelated;
-    image-rendering: crisp-edges;
+    image-rendering: crisp-edges !important;
 }
 
 
@@ -911,13 +911,15 @@ sl-alert::part(message) {
  * Toasts
  ******************************************************************************/
 
+
 .sl-toast-stack {
-    width: var(--lgs-max-mobile-width) !important;
-    overflow: hidden !important;
-    left: var(--lgs-gutter-xs) !important;
+    z-index: calc(var(--lgs-ui-layer-zindex) + 1) !important;
+    top: auto !important;
     right: auto !important;
     bottom: var(--lgs-gutter-xs) !important;
-    top: auto !important;
+    left: var(--lgs-gutter-xs) !important;
+    overflow: hidden !important;
+    width: var(--lgs-max-mobile-width) !important;
 }
 
 .sl-toast-stack sl-alert {
@@ -925,13 +927,13 @@ sl-alert::part(message) {
 }
 
 .sl-toast-stack sl-alert::part(base) {
-    box-shadow: var(--sl-shadow-large);
-    padding: 0;
     margin: 0 0 var(--lgs-gutter-xs);
-    border: 1px solid;
-    backdrop-filter: blur(var(--lgs-blur));
-    background-color: rgba(255, 255, 255, 0.5);
+    padding: 0;
     color: var(--lgs-text-on-color);
+    border: 1px solid;
+    background-color: rgba(255, 255, 255, 0.5);
+    box-shadow: var(--sl-shadow-large);
+    backdrop-filter: blur(var(--lgs-blur));
 }
 
 .sl-toast-stack sl-alert:last-child::part(base) {
