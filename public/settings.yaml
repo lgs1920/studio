@@ -326,5 +326,5 @@ ui:
     paused: false
     maxDuration: 5     # minutes
     maxSize: 200       # MB
-    bitRate: 12        # Mbps
-    fps: 60
+    bitRate: 8        # Mbps
+    fps: 30

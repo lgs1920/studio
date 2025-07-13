@@ -109,15 +109,16 @@ export const PanelButton = (props) => {
         }, undefined, {
                                    maxSize:     settings.maxSize * 1048576,      // MB
             maxDuration: settings.maxDuration * MINUTE,   // MilliSeconds
-                                   bitrate:     settings.bitrate * 1000000,      // MBps
+            bitrate:  settings.bitrate * 1000000,      // MBps
                                    filename:    APP_KEY,
-                               })
+            fps:      settings.fps,
+            useWebGL: true,
+
+        })
         // Set canvas source
         __.recorder.setSource([lgs.canvas], {
             width:         lgs.canvas.width,
             height:        lgs.canvas.height,
-            fps:           60,//settings.fps,
-            useWebGL: true,
             preserveAlpha: true,
         })
     }
