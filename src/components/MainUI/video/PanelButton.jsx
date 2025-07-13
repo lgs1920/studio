@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-12
- * Last modified: 2025-07-12
+ * Created on: 2025-07-13
+ * Last modified: 2025-07-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -72,20 +72,20 @@ export const PanelButton = (props) => {
         }
 
         // Add event listeners
-        __.recorder.addEventListener(VideoRecorder.event.SIZE, handleSizeUpdate)
-        __.recorder.addEventListener(VideoRecorder.event.PAUSE, handlePause)
-        __.recorder.addEventListener(VideoRecorder.event.RESUME, handleResume)
-        __.recorder.addEventListener(VideoRecorder.event.STOP, handleStop)
-        __.recorder.addEventListener(VideoRecorder.event.MAX_SIZE, handleMaxSize)
-        __.recorder.addEventListener(VideoRecorder.event.MAX_DURATION, handleMaxDuration)
+        __.recorder.addEventListener(VideoRecorder.events.SIZE, handleSizeUpdate)
+        __.recorder.addEventListener(VideoRecorder.events.PAUSE, handlePause)
+        __.recorder.addEventListener(VideoRecorder.events.RESUME, handleResume)
+        __.recorder.addEventListener(VideoRecorder.events.STOP, handleStop)
+        __.recorder.addEventListener(VideoRecorder.events.MAX_SIZE, handleMaxSize)
+        __.recorder.addEventListener(VideoRecorder.events.MAX_DURATION, handleMaxDuration)
         // Clean up
         return () => {
-            __.recorder.removeEventListener(VideoRecorder.event.SIZE, handleSizeUpdate)
-            __.recorder.removeEventListener(VideoRecorder.event.PAUSE, handlePause)
-            __.recorder.removeEventListener(VideoRecorder.event.RESUME, handleResume)
-            __.recorder.removeEventListener(VideoRecorder.event.STOP, handleStop)
-            __.recorder.removeEventListener(VideoRecorder.event.MAX_SIZE, handleMaxSize)
-            __.recorder.removeEventListener(VideoRecorder.event.MAX_DURATION, handleMaxDuration)
+            __.recorder.removeEventListener(VideoRecorder.events.SIZE, handleSizeUpdate)
+            __.recorder.removeEventListener(VideoRecorder.events.PAUSE, handlePause)
+            __.recorder.removeEventListener(VideoRecorder.events.RESUME, handleResume)
+            __.recorder.removeEventListener(VideoRecorder.events.STOP, handleStop)
+            __.recorder.removeEventListener(VideoRecorder.events.MAX_SIZE, handleMaxSize)
+            __.recorder.removeEventListener(VideoRecorder.events.MAX_DURATION, handleMaxDuration)
             if (settings.recording && __.recorder) {
                 __.recorder.stop()
                 $settings.recording = false
@@ -106,7 +106,7 @@ export const PanelButton = (props) => {
         // Configure recorder
         __.recorder.initialize((blob, duration) => {
             console.log(`Recording complete: ${duration}ms, ${blob.size} bytes`)
-        }, 'video/webm;codecs=vp9', {
+        }, undefined, {
                                    maxSize:     settings.maxSize * 1048576,      // MB
             maxDuration: settings.maxDuration * MINUTE,   // MilliSeconds
                                    bitrate:     settings.bitrate * 1000000,      // MBps
@@ -114,10 +114,11 @@ export const PanelButton = (props) => {
                                })
         // Set canvas source
         __.recorder.setSource([lgs.canvas], {
-            width:    lgs.canvas.width,
-            height:   lgs.canvas.height,
-            fps: settings.fps,
+            width:         lgs.canvas.width,
+            height:        lgs.canvas.height,
+            fps:           60,//settings.fps,
             useWebGL: true,
+            preserveAlpha: true,
         })
     }
 

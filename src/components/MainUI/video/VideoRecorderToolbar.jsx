@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-12
- * Last modified: 2025-07-12
+ * Created on: 2025-07-13
+ * Last modified: 2025-07-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -173,19 +173,19 @@ export const VideoRecorderToolbar = (props) => {
             setLastSizeEventTime(0)
             clearInterval(intervalRef.current)
             switch (event.type) {
-                case VideoRecorder.event.STOP:
+                case VideoRecorder.events.STOP:
                     UIToast.success({
                                         caption: caption,
                                         text: `Done. Waiting...`,
                                     })
                     break
-                case VideoRecorder.event.MAX_SIZE:
+                case VideoRecorder.events.MAX_SIZE:
                     UIToast.warning({
                                         caption: caption,
                                         text: `Stopped due to max size limit (${settings.maxSize}${'MB'}). Waiting...`,
                                     })
                     break
-                case VideoRecorder.event.MAX_DURATION:
+                case VideoRecorder.events.MAX_DURATION:
                     UIToast.warning({
                                         caption: caption,
                                         text: `Stopped due to max duration limit (${settings.maxDuration}m). Waiting...`,
@@ -197,31 +197,31 @@ export const VideoRecorderToolbar = (props) => {
         const handleDownload = (event) => {
             UIToast.success({
                                 caption: caption,
-                                text:    `Saved in ${event.detail.filename}`,
+                                text: `Saved in ${event.detail.filename}`,
                             })
         }
 
         // Add event listeners
-        __.recorder.addEventListener(VideoRecorder.event.START, handleStart)
-        __.recorder.addEventListener(VideoRecorder.event.SIZE, handleSize)
-        __.recorder.addEventListener(VideoRecorder.event.PAUSE, handlePause)
-        __.recorder.addEventListener(VideoRecorder.event.RESUME, handleResume)
-        __.recorder.addEventListener(VideoRecorder.event.MAX_SIZE, handleStop)
-        __.recorder.addEventListener(VideoRecorder.event.MAX_DURATION, handleStop)
-        __.recorder.addEventListener(VideoRecorder.event.STOP, handleStop)
-        __.recorder.addEventListener(VideoRecorder.event.DOWNLOAD, handleDownload)
+        __.recorder.addEventListener(VideoRecorder.events.START, handleStart)
+        __.recorder.addEventListener(VideoRecorder.events.SIZE, handleSize)
+        __.recorder.addEventListener(VideoRecorder.events.PAUSE, handlePause)
+        __.recorder.addEventListener(VideoRecorder.events.RESUME, handleResume)
+        __.recorder.addEventListener(VideoRecorder.events.MAX_SIZE, handleStop)
+        __.recorder.addEventListener(VideoRecorder.events.MAX_DURATION, handleStop)
+        __.recorder.addEventListener(VideoRecorder.events.STOP, handleStop)
+        __.recorder.addEventListener(VideoRecorder.events.DOWNLOAD, handleDownload)
 
         // Clean up
         return () => {
             clearInterval(intervalRef.current)
-            __.recorder.removeEventListener(VideoRecorder.event.START, handleStart)
-            __.recorder.removeEventListener(VideoRecorder.event.SIZE, handleSize)
-            __.recorder.removeEventListener(VideoRecorder.event.PAUSE, handlePause)
-            __.recorder.removeEventListener(VideoRecorder.event.RESUME, handleResume)
-            __.recorder.removeEventListener(VideoRecorder.event.MAX_SIZE, handleStop)
-            __.recorder.removeEventListener(VideoRecorder.event.MAX_DURATION, handleStop)
-            __.recorder.removeEventListener(VideoRecorder.event.STOP, handleStop)
-            __.recorder.removeEventListener(VideoRecorder.event.DOWNLOAD, handleDownload)
+            __.recorder.removeEventListener(VideoRecorder.events.START, handleStart)
+            __.recorder.removeEventListener(VideoRecorder.events.SIZE, handleSize)
+            __.recorder.removeEventListener(VideoRecorder.events.PAUSE, handlePause)
+            __.recorder.removeEventListener(VideoRecorder.events.RESUME, handleResume)
+            __.recorder.removeEventListener(VideoRecorder.events.MAX_SIZE, handleStop)
+            __.recorder.removeEventListener(VideoRecorder.events.MAX_DURATION, handleStop)
+            __.recorder.removeEventListener(VideoRecorder.events.STOP, handleStop)
+            __.recorder.removeEventListener(VideoRecorder.events.DOWNLOAD, handleDownload)
 
         }
     }, [__.recorder])
