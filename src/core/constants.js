@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-07
- * Last modified: 2025-07-07
+ * Created on: 2025-07-14
+ * Last modified: 2025-07-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -50,6 +50,7 @@ export const DESKTOP_MIN = 768
  */
 export const CONFIGURATION = 'config.yaml'
 export const SETTINGS = 'settings.yaml'
+export const PRESETS = 'presets.yaml'
 export const LAYERS_TERRAINS_SETTINGS = 'layers-terrains.yaml'
 export const COUNTRIES = 'countries.yaml'
 export const WORLD = 'WORLD'
