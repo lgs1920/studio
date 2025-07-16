@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-14
- * Last modified: 2025-07-14
+ * Created on: 2025-07-16
+ * Last modified: 2025-07-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -137,6 +137,7 @@
     left: 0;
     width: 100%;
     height: 100%;
+    user-select: none;
     pointer-events: none;
     background-color: var(--lgs-dark-color-75);
     clip-path: inset(0 0 0 0);

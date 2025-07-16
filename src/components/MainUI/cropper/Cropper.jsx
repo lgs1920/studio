@@ -15,9 +15,9 @@
  ******************************************************************************/
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useSnapshot }                                       from 'valtio'
-import PropTypes                                             from 'prop-types'
-import { CropperManager }                                    from './CropperManager'
+import { useSnapshot }    from 'valtio'
+import PropTypes          from 'prop-types'
+import { CropperManager } from './CropperManager'
 
 /**
  * Cropper component for interactive crop region selection over canvas, video, or image elements.
@@ -39,19 +39,19 @@ export const Cropper = ({source, container, className = '', store, options = {}}
     )
     const [manager, setManager] = useState(null)
     const [crop, setCrop] = useState(() => ({
-        x:      store.x ?? 0,
-        y:      store.y ?? 0,
-        width:  store.width ?? 0,
+        x:     store.x ?? 0,
+        y:     store.y ?? 0,
+        width: store.width ?? 0,
         height: store.height ?? 0,
     }))
     const [interactionState, setInteractionState] = useState({
-                                                                 action:               null,
-                                                                 showHCenterLine:      false,
-                                                                 showVCenterLine:      false,
+                                                                 action:             null,
+                                                                 showHCenterLine:    false,
+                                                                 showVCenterLine:    false,
                                                                  dragLockedHorizontal: false,
-                                                                 dragLockedVertical:   false,
-                                                                 wasJustCentered:      false,
-                                                                 isCentering:          false,
+                                                                 dragLockedVertical: false,
+                                                                 wasJustCentered:    false,
+                                                                 isCentering:        false,
                                                              })
     const _videoCropper = useRef(null)
     const _cropZone = useRef(null)
@@ -269,50 +269,57 @@ export const Cropper = ({source, container, className = '', store, options = {}}
                 ref={_cropZone}
                 className={`crop-zone ${className}`}
                 style={{
-                    left:   crop.x / manager.dpr,
-                    top:    crop.y / manager.dpr,
-                    width:  crop.width / manager.dpr,
+                    left:  crop.x / manager.dpr,
+                    top:   crop.y / manager.dpr,
+                    width: crop.width / manager.dpr,
                     height: crop.height / manager.dpr,
                     cursor: 'grab', // Curseur par défaut
                 }}
                 onPointerDown={(e) => handleStart('drag', e)}
                 onTouchStart={(e) => handleStart('drag', e)}
                 onDoubleClick={handleDoubleClick}
+                onContextMenu={(e) => {
+                    e.preventDefault() // Bloque le menu contextuel du navigateur
+                    e.stopPropagation() // Empêche la propagation à d'autres éléments
+                    console.log('ContextMenu event triggered on crop-zone') // Log pour débogage
+                    handleStart('drag', e) // Appelle handleStart pour déclencher maximizeRestore
+                }}
             >
                 {/* Crop information display - compact version */}
-                <div className="crop-info lgs-one-line-card on-map small" style={{
-                    fontSize:   '10px',
-                    padding:    '2px 4px',
-                    lineHeight: '1.2',
-                    whiteSpace: 'nowrap',
-                }}>
-                    {Math.round(crop.x / manager.dpr)}×{Math.round(crop.y / manager.dpr)} | {Math.round(crop.width / manager.dpr)}×{Math.round(crop.height / manager.dpr)}
+                <div
+                    className="crop-info lgs-one-line-card on-map small"
+                    style={{
+                        fontSize:   '10px',
+                        padding:    '2px 4px',
+                        lineHeight: '1.2',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    {Math.round(crop.x / manager.dpr)}×{Math.round(crop.y / manager.dpr)} |{' '}
+                    {Math.round(crop.width / manager.dpr)}×{Math.round(crop.height / manager.dpr)}
                 </div>
 
                 {/* Internal center lines */}
-                {interactionState.showHCenterLine && (
-                    <div className="center-line-inner-horizontal"/>
-                )}
-                {interactionState.showVCenterLine && (
-                    <div className="center-line-inner-vertical"/>
-                )}
+                {interactionState.showHCenterLine && <div className="center-line-inner-horizontal"/>}
+                {interactionState.showVCenterLine && <div className="center-line-inner-vertical"/>}
 
                 {/* Resize handles */}
-                {cropper.resizable && CropperManager.handleMap.map(([dir, cursor]) => (
-                    <div
-                        key={dir}
-                        className={`crop-handle handle-${dir}`}
-                        style={{cursor}}
-                        onPointerDown={(e) => {
-                            e.stopPropagation()
-                            handleStart(`resize-${dir}`, e)
-                        }}
-                        onTouchStart={(e) => {
-                            e.stopPropagation()
-                            handleStart(`resize-${dir}`, e)
-                        }}
-                    />
-                ))}
+                {cropper.resizable &&
+                    CropperManager.handleMap.map(([dir, cursor]) => (
+                        <div
+                            key={dir}
+                            className={`crop-handle handle-${dir}`}
+                            style={{cursor}}
+                            onPointerDown={(e) => {
+                                e.stopPropagation()
+                                handleStart(`resize-${dir}`, e)
+                            }}
+                            onTouchStart={(e) => {
+                                e.stopPropagation()
+                                handleStart(`resize-${dir}`, e)
+                            }}
+                        />
+                    ))}
             </div>
         </div>
     )
@@ -331,9 +338,11 @@ Cropper.propTypes = {
     className: PropTypes.string,
     store:   PropTypes.object.isRequired,
     options: PropTypes.shape({
-                                 draggable:     PropTypes.bool,
-                                 resizable:     PropTypes.bool,
+                                 draggable: PropTypes.bool,
+                                 resizable: PropTypes.bool,
                                  lockCentering: PropTypes.bool,
-                                 vibrate:       PropTypes.bool,
+                                 vibrate:   PropTypes.bool,
                              }),
 }
+
+export default Cropper
