@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-13
- * Last modified: 2025-07-13
+ * Created on: 2025-07-16
+ * Last modified: 2025-07-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -285,7 +285,7 @@ export class VideoRecorder extends EventTarget {
         let rafId
         const draw = () => {
             if (!this.needsRedraw && onNeedsRedraw && !onNeedsRedraw()) {
-                rafId = requestAnimationFrame(draw)
+                rafId = __.requestAnimationFrame(draw)
                 return
             }
             this.needsRedraw = false
@@ -315,11 +315,11 @@ export class VideoRecorder extends EventTarget {
                     )
                 })
             }
-            rafId = requestAnimationFrame(draw)
+            rafId = __.requestAnimationFrame(draw)
         }
 
         draw()
-        this.stopRendering = () => cancelAnimationFrame(rafId)
+        this.stopRendering = () => __.cancelAnimationFrame(rafId)
 
         this.stream = outputCanvas.captureStream(this.fps)
         this.sourceType = 'canvas'
