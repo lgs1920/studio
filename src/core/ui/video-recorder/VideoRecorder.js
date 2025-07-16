@@ -7,40 +7,33 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-11
- * Last modified: 2025-07-11
+ * Created on: 2025-07-13
+ * Last modified: 2025-07-13
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { fragmentShaderWebGL1, fragmentShaderWebGL2, vertexShaderWebGL1, vertexShaderWebGL2 } from './shaders.js'
-
 /**
  * VideoRecorder - Singleton class to record canvas or media stream
- * Emits DOM CustomEvents: 'video/start', 'video/stop', 'video/size', 'video/pause',
- * 'video/resume', 'video/source', 'video/error', 'video/max-size', 'video/max-duration'
+ * Emits DOM CustomEvents defined in VideoRecorder.events
  */
 export class VideoRecorder extends EventTarget {
-    static #instance = null // Singleton instance
-    // Private properties for recording state
-    #stream = null // MediaStream for recording
-    #onStop = null // Callback for stop event
-    #mimeType = 'video/webm;codecs=vp9' // MIME type for recording
-    #maxSize = Infinity // Max size in bytes
-    #maxDuration = Infinity // Max duration in milliseconds
-    #bitrate = 12000000 // Video bitrate
-    #filename = 'video' // Default filename
-    #mediaRecorder = null // MediaRecorder instance
-    #chunks = [] // Recorded data chunks
-    #totalBytes = 0 // Total bytes recorded
-    #startTime = 0 // Start timestamp
-    #pausedTime = 0 // Paused time
-    #lastPauseStart = 0 // Last pause start
-    #stopRendering = null // Stops WebGL rendering
-    #lastFrameTime = 0 // Last frame timestamp
-
-    static event = {
+    /**
+     * Event names for recording lifecycle
+     * @type {Object}
+     * @property {string} START - Fired when recording starts
+     * @property {string} STOP - Fired when recording stops
+     * @property {string} SIZE - Fired when new data is available
+     * @property {string} PAUSE - Fired when recording is paused
+     * @property {string} RESUME - Fired when recording resumes
+     * @property {string} SOURCE - Fired when a new source is set
+     * @property {string} ERROR - Fired on recording or download errors
+     * @property {string} DOWNLOAD - Fired when a video is downloaded
+     * @property {string} MAX_SIZE - Fired when maximum size limit is reached
+     * @property {string} MAX_DURATION - Fired when maximum duration limit is reached
+     */
+    static events = {
         START:        'video/start',
         STOP:         'video/stop',
         SIZE:         'video/size',
@@ -48,354 +41,291 @@ export class VideoRecorder extends EventTarget {
         RESUME:       'video/resume',
         SOURCE:       'video/source',
         ERROR:        'video/error',
+        DOWNLOAD: 'video/download',
         MAX_SIZE:     'video/max-size',
         MAX_DURATION: 'video/max-duration',
     }
 
     /**
      * Creates a VideoRecorder instance
-     * Returns existing instance if already created
+     * Use initialize() to configure recording parameters
      */
     constructor() {
-        // Enforce singleton pattern
-        if (VideoRecorder.#instance) {
-            return VideoRecorder.#instance
+        if (VideoRecorder.instance) {
+            return VideoRecorder.instance
         }
-        // Initialize EventTarget for custom events
         super()
-        // Set singleton instance
-        VideoRecorder.#instance = this
+
+        this.stream = null
+        this.onStop = null
+        this._mimeType = 'video/webm'
+        this.filename = 'video' // Default filename
+        this.fps = 24 // Default FPS optimized for Firefox
+        this.bitrate = 4000000 // Default bitrate (4 Mbps) for performance
+        this.timeslice = 200 // Default timeslice for SIZE events
+        this.maxSize = Infinity
+        this.maxDuration = Infinity
+        this.mediaRecorder = null
+        this.chunks = []
+        this.totalBytes = 0
+        this.startTime = 0
+        this.stopRendering = null
+        this.sourceType = 'unknown'
+        this.needsRedraw = true // Flag to optimize canvas rendering
+
+        VideoRecorder.instance = this
     }
 
     /**
-     * Gets total bytes recorded
-     * @returns {number} Bytes recorded
+     * Gets the total size recorded in bytes
+     * @returns {number} Total bytes recorded
      */
     get size() {
-        // Return current recorded size
-        return this.#totalBytes || 0
+        return this.totalBytes || 0
     }
 
     /**
-     * Gets recording duration, excluding paused time
+     * Gets the elapsed time since recording started
      * @returns {number} Duration in milliseconds
      */
     get duration() {
-        // Return 0 if not started
-        if (!this.#startTime) {
-            return 0
-        }
-        // Calculate elapsed time minus pauses
-        const elapsed = Date.now() - this.#startTime - this.#pausedTime
-        // Adjust for pause state
-        const adjusted = this.#mediaRecorder?.state === 'paused' ? elapsed - (Date.now() - this.#lastPauseStart) : elapsed
-        return Math.round(adjusted)
+        return this.startTime ? Date.now() - this.startTime : 0
     }
 
     /**
-     * Gets the recording MIME type
-     * @returns {string} MIME type
+     * Gets the current recording MIME type
+     * @returns {string} MIME type (e.g., 'video/webm', 'video/mp4')
      */
     get mimeType() {
-        return this.#mimeType
+        return this._mimeType
     }
 
     /**
-     * Sets the MIME type for recording
-     * @param {string} value - MIME type
-     * @throws {Error} If recording or unsupported MIME type
+     * Sets the MIME type for recording (must not be recording)
+     * @param {string} value - MIME type (e.g., 'video/webm', 'video/mp4')
+     * @throws {Error} If called while recording or if MIME type is not supported
      */
     set mimeType(value) {
-        // Prevent changes during recording
         if (this.isRecording()) {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new Error('Cannot change MIME type while recording'), timestamp: Date.now()},
+            }))
             throw new Error('Cannot change MIME type while recording')
         }
-        // Validate MIME type
         if (!MediaRecorder.isTypeSupported(value)) {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new Error(`MIME type ${value} is not supported`), timestamp: Date.now()},
+            }))
             throw new Error(`MIME type ${value} is not supported`)
         }
-        this.#mimeType = value
+        this._mimeType = value
     }
 
     /**
-     * Checks if a canvas is a Cesium canvas
-     * @param {HTMLCanvasElement} canvas - Canvas to check
-     * @returns {boolean} True if Cesium canvas
-     */
-    #isCesiumCanvas(canvas) {
-        // Validate canvas type
-        if (!(canvas instanceof HTMLCanvasElement)) {
-            return false
-        }
-        // Get WebGL context
-        const gl = canvas.getContext('webgl2') || canvas.getContext('webgl')
-        if (!gl) {
-            return false
-        }
-        // Check Cesium-specific indicators
-        const hasCesiumClass = canvas.classList.contains('cesium-widget') ||
-            canvas.closest('.cesium-widget') !== null
-        const hasViewer = window.lgs?.viewer?.canvas === canvas
-        const hasCesiumGlobal = !!window.Cesium
-        const extensions = gl.getSupportedExtensions()
-        const hasCesiumExtensions = extensions.includes('EXT_color_buffer_float') ||
-            extensions.includes('OES_texture_float')
-        const renderer = gl.getParameter(gl.RENDERER)
-        const isWebGLRenderer = renderer.includes('WebGL') || renderer.includes('WebKit')
-        const hasCesiumProperties = window.lgs?.scene || window.lgs?.camera || window.lgs?.viewer?.scene?.render
-        const hasNonStandardDimensions = canvas.width > 0 && canvas.height > 0 && (canvas.width % 2 !== 0 || canvas.height % 2 !== 0)
-        return hasCesiumClass || hasViewer || hasCesiumGlobal || hasCesiumExtensions || isWebGLRenderer || hasCesiumProperties || hasNonStandardDimensions
-    }
-
-    /**
-     * Initializes recorder with parameters
-     * @param {(blob: Blob, duration: number) => void} onStop - Stop callback
-     * @param {string} [mimeType='video/webm;codecs=vp9'] - MIME type
-     * @param {Object} [options] - Configuration options
-     * @throws {Error} If recording or invalid parameters
+     * Initializes the recorder with configuration parameters
+     * Creates a default 2D canvas stream if no stream is set
+     * @param {(blob: Blob, duration: number) => void} onStop - Callback invoked when recording stops, receiving the
+     *     recorded Blob and duration
+     * @param {string} [mimeType='video/webm;codecs=vp9'] - MIME type for recording (e.g., 'video/webm', 'video/mp4')
+     * @param {Object} [options] - Additional configuration options
+     * @param {number} [options.maxSize=Infinity] - Maximum recording size in bytes
+     * @param {number} [options.maxDuration=Infinity] - Maximum recording duration in milliseconds
+     * @param {number} [options.fps=24] - Frames per second for the captured stream
+     * @param {number} [options.bitrate=4000000] - Video bitrate in bits per second (default 4 Mbps)
+     * @param {number} [options.timeslice=200] - Interval in milliseconds for periodic SIZE events
+     * @param {string} [options.filename='video'] - Base filename for downloads (without date prefix or extension)
+     * @throws {TypeError} If onStop is not a function
+     * @throws {Error} If mimeType is not supported by MediaRecorder or if called while recording
      */
     initialize(onStop, mimeType = 'video/webm;codecs=vp9', {
         maxSize = Infinity,
         maxDuration = Infinity,
-        bitrate = 12000000,
+        fps = 24,
+        bitrate = 4000000,
+        timeslice = 200,
         filename = 'video',
     }                           = {}) {
-        // Prevent initialization during recording
         if (this.isRecording()) {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new Error('Cannot initialize while recording'), timestamp: Date.now()},
+            }))
             throw new Error('Cannot initialize while recording')
         }
-        // Validate onStop callback
         if (typeof onStop !== 'function') {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new TypeError('onStop must be a function'), timestamp: Date.now()},
+            }))
             throw new TypeError('onStop must be a function')
         }
-        // Fallback to default MIME type if unsupported
         if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = 'video/webm'
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {
+                    error:     new Error(`MIME type ${mimeType} is not supported, falling back to video/webm`),
+                    timestamp: Date.now(),
+                },
+            }))
+            mimeType = 'video/webm' // Fallback to default
         }
-        // Set configuration
-        this.#onStop = onStop
-        this.#mimeType = mimeType
-        this.#maxSize = maxSize
-        this.#maxDuration = maxDuration
-        this.#bitrate = bitrate
-        this.#filename = filename
-        // Create default stream if none exists
-        if (!this.#stream) {
+
+        this.onStop = onStop
+        this._mimeType = mimeType
+        this.maxSize = maxSize
+        this.maxDuration = maxDuration
+        this.fps = fps
+        this.bitrate = bitrate
+        this.timeslice = timeslice
+        this.filename = filename
+
+        if (!this.stream) {
+            // Create a default 2D canvas stream
             const defaultCanvas = document.createElement('canvas')
             defaultCanvas.width = 1280
             defaultCanvas.height = 720
-            const gl = defaultCanvas.getContext('webgl2', {preserveDrawingBuffer: true, antialias: true})
-            if (!gl) {
-                throw new Error('WebGL2 not supported')
+            const ctx = defaultCanvas.getContext('2d', {alpha: false})
+            if (!ctx) {
+                this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                    detail: {error: new Error('2D context not supported for default stream'), timestamp: Date.now()},
+                }))
+                throw new Error('2D context not supported for default stream')
             }
-            gl.clearColor(0, 0, 0, 1)
-            gl.clear(gl.COLOR_BUFFER_BIT)
-            this.#stream = defaultCanvas.captureStream(30) // Use 30 FPS for smoother default
-            this.#stopRendering = () => {
+
+            // Clear canvas with black background
+            ctx.fillStyle = 'black'
+            ctx.fillRect(0, 0, defaultCanvas.width, defaultCanvas.height)
+
+            this.stream = defaultCanvas.captureStream(this.fps)
+            this.sourceType = 'canvas'
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.SOURCE, {
+                detail: {type: 'canvas', timestamp: Date.now(), width: 1280, height: 720},
+            }))
+            this.stopRendering = () => {
             }
         }
     }
 
     /**
-     * Sets canvas source(s) for recording
-     * @param {HTMLCanvasElement[]} canvases - Canvases to record
+     * Sets canvas source(s) to be recorded. If multiple sources are provided, they are merged into a single stream
+     * Uses 2D canvas context for rendering with clipping support
+     * Note: For best quality, match output width/height to clipWidth/clipHeight and use 'video/webm;codecs=vp9' or
+     * 'video/mp4'
+     * @param {HTMLCanvasElement[]} canvases - Array of canvases to record
      * @param {Object} [options] - Configuration options
-     * @throws {Error} If invalid parameters or recording
+     * @param {number} [options.width] - Output width of the composite canvas (defaults to clipWidth)
+     * @param {number} [options.height] - Output height of the composite canvas (defaults to clipHeight)
+     * @param {number} [options.clipX=0] - X-coordinate of the top-left corner of the clipping region
+     * @param {number} [options.clipY=0] - Y-coordinate of the top-left corner of the clipping region
+     * @param {number} [options.clipWidth] - Width of the clipping region (defaults to canvas width)
+     * @param {number} [options.clipHeight] - Height of the clipping region (defaults to canvas height)
+     * @param {boolean} [options.preserveAlpha=false] - Preserve alpha channel in output canvas
+     * @param {Function} [options.onNeedsRedraw] - Optional callback to signal when canvas needs redraw
+     * @throws {Error} If no canvases are provided, recording is active, 2D context is not supported, or clipping
+     *     parameters are invalid
      */
     setSource(canvases, {
         width,
         height,
-        useWebGL = true,
-        fps = 30, // Default to 30 FPS for smoother video
         clipX = 0,
         clipY = 0,
         clipWidth,
         clipHeight,
+        preserveAlpha = false,
+        onNeedsRedraw,
     } = {}) {
-        // Validate input
         if (!Array.isArray(canvases) || canvases.length === 0) {
-            throw new Error('At least one canvas required')
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new Error('You must provide at least one canvas'), timestamp: Date.now()},
+            }))
+            throw new Error('You must provide at least one canvas')
         }
         if (this.isRecording()) {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new Error('Cannot change source while recording'), timestamp: Date.now()},
+            }))
             throw new Error('Cannot change source while recording')
         }
-        // Set default clipping dimensions
-        clipWidth = clipWidth ?? canvases[0].width
-        clipHeight = clipHeight ?? canvases[0].height
-        // Validate clipping parameters
+
+        // Validate clipping parameters for all canvases
         canvases.forEach((canvas, i) => {
+            clipWidth = clipWidth ?? canvas.width
+            clipHeight = clipHeight ?? canvas.height
             if (clipX < 0 || clipY < 0 || clipWidth <= 0 || clipHeight <= 0 ||
                 clipX + clipWidth > canvas.width || clipY + clipHeight > canvas.height) {
+                this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                    detail: {error: new Error(`Invalid clipping parameters for canvas ${i}`), timestamp: Date.now()},
+                }))
                 throw new Error(`Invalid clipping parameters for canvas ${i}`)
             }
         })
-        // Set output dimensions
+        clipWidth = clipWidth ?? canvases[0].width
+        clipHeight = clipHeight ?? canvases[0].height
+
+        // Default output resolution to clipped region to avoid scaling
         width = width ?? clipWidth
         height = height ?? clipHeight
-        // Handle device pixel ratio
-        const dpr = window.devicePixelRatio || 1
-        // Create output canvas
+
+        // Stop any existing rendering loop
+        this.stopRendering?.()
+        this.stopRendering = null
+
+        // Create output canvas for final stream
         const outputCanvas = document.createElement('canvas')
-        outputCanvas.width = width * dpr
-        outputCanvas.height = height * dpr
-        const outputCtx = outputCanvas.getContext('2d', {alpha: false})
+        outputCanvas.width = width
+        outputCanvas.height = height
+        const outputCtx = outputCanvas.getContext('2d', {alpha: preserveAlpha})
         if (!outputCtx) {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new Error('2D context not supported'), timestamp: Date.now()},
+            }))
             throw new Error('2D context not supported')
         }
-        outputCtx.scale(dpr, dpr)
-        // Check if canvas is Cesium
-        const isCesium = this.#isCesiumCanvas(canvases[0])
-        // Create composition canvas for WebGL
-        const compCanvas = document.createElement('canvas')
-        compCanvas.width = clipWidth * dpr
-        compCanvas.height = clipHeight * dpr
-        const gl = compCanvas.getContext('webgl2', {preserveDrawingBuffer: true, antialias: true}) ||
-            compCanvas.getContext('webgl', {preserveDrawingBuffer: true, antialias: true})
-        if (!gl) {
-            throw new Error('WebGL not supported')
-        }
-        // Determine WebGL version
-        const isWebGL2 = gl instanceof WebGL2RenderingContext
-        // Select appropriate shaders
-        const vertexShaderSource = isWebGL2 ? vertexShaderWebGL2 : vertexShaderWebGL1
-        const fragmentShaderSource = isWebGL2 ? fragmentShaderWebGL2 : fragmentShaderWebGL1
-        // Create shader
-        const createShader = (type, source) => {
-            const shader = gl.createShader(type)
-            gl.shaderSource(shader, source)
-            gl.compileShader(shader)
-            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-                const log = gl.getShaderInfoLog(shader)
-                gl.deleteShader(shader)
-                throw new Error(`Shader compilation error: ${log}`)
-            }
-            return shader
-        }
-        // Create and link program
-        const program = gl.createProgram()
-        try {
-            gl.attachShader(program, createShader(gl.VERTEX_SHADER, vertexShaderSource))
-            gl.attachShader(program, createShader(gl.FRAGMENT_SHADER, fragmentShaderSource))
-            gl.linkProgram(program)
-            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-                throw new Error(`Program linking error: ${gl.getProgramInfoLog(program)}`)
-            }
-            gl.useProgram(program)
-        }
-        catch (error) {
-            throw error
-        }
-        // Set up position buffer
-        const positionBuffer = gl.createBuffer()
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
-        const positions = new Float32Array([-1, -1, -1, 1, 1, -1, 1, -1, -1, 1, 1, 1])
-        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW)
-        const positionLocation = gl.getAttribLocation(program, 'a_position')
-        gl.enableVertexAttribArray(positionLocation)
-        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
-        // Set up texture coordinate buffer
-        const texCoordBuffer = gl.createBuffer()
-        gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer)
-        const texCoords = new Float32Array([0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0])
-        gl.bufferData(gl.ARRAY_BUFFER, texCoords, gl.STATIC_DRAW)
-        const texCoordLocation = gl.getAttribLocation(program, 'a_texCoord')
-        gl.enableVertexAttribArray(texCoordLocation)
-        gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0)
-        // Create texture
-        const texture = gl.createTexture()
-        gl.bindTexture(gl.TEXTURE_2D, texture)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-        if (isWebGL2) {
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, clipWidth * dpr, clipHeight * dpr, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
-        }
-        // Calculate clipped texture coordinates
-        const texX = clipX / canvases[0].width
-        const texY = clipY / canvases[0].height
-        const texWidth = clipWidth / canvases[0].width
-        const texHeight = clipHeight / canvases[0].height
-        const clippedTexCoords = new Float32Array([
-                                                      texX, texY + texHeight,
-                                                      texX, texY,
-                                                      texX + texWidth, texY + texHeight,
-                                                      texX + texWidth, texY + texHeight,
-                                                      texX, texY,
-                                                      texX + texWidth, texY,
-                                                  ])
-        gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer)
-        gl.bufferData(gl.ARRAY_BUFFER, clippedTexCoords, gl.STATIC_DRAW)
-        // Set up animation frame
+        // Disable image smoothing for sharp rendering
+        outputCtx.imageSmoothingEnabled = false
+
+        // Render single or multiple canvases
         let rafId
-        const raf = window.Cesium?.requestAnimationFrame ? window.Cesium.requestAnimationFrame : window.requestAnimationFrame
-        // Target frame interval (ms)
-        const frameInterval = 1000 / fps
-        let lastFrameTime = performance.now()
-        // Render loop
-        const draw = (currentTime) => {
-            // Validate canvas dimensions
-            if (canvases[0].width === 0 || canvases[0].height === 0) {
-                rafId = raf(draw)
+        const draw = () => {
+            if (!this.needsRedraw && onNeedsRedraw && !onNeedsRedraw()) {
+                rafId = requestAnimationFrame(draw)
                 return
             }
-            // Check WebGL context validity
-            if (gl.getError() !== gl.NO_ERROR || gl.isContextLost()) {
-                console.error('WebGL context error or lost')
-                this.dispatchEvent(new CustomEvent(VideoRecorder.event.ERROR, {
-                    detail: {error: new Error('WebGL context error or lost'), timestamp: Date.now()},
-                }))
-                rafId = raf(draw)
-                return
-            }
-            // Control FPS precisely
-            const deltaTime = currentTime - lastFrameTime
-            if (deltaTime < frameInterval) {
-                rafId = raf(draw)
-                return
-            }
-            lastFrameTime = currentTime - (deltaTime % frameInterval) // Align to frame interval
-            // Render Cesium scene if applicable
-            if (isCesium && window.lgs?.viewer?.scene?.render) {
-                window.lgs.viewer.scene.render()
-            }
-            // Set up WebGL viewport
-            gl.viewport(0, 0, clipWidth * dpr, clipHeight * dpr)
-            gl.clearColor(0, 0, 0, 1)
-            gl.clear(gl.COLOR_BUFFER_BIT)
-            // Bind texture and draw
-            gl.bindTexture(gl.TEXTURE_2D, texture)
-            gl.texImage2D(gl.TEXTURE_2D, 0, isWebGL2 ? gl.RGBA8 : gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvases[0])
-            gl.drawArrays(gl.TRIANGLES, 0, 6)
-            // Draw to output canvas
+            this.needsRedraw = false
             outputCtx.clearRect(0, 0, width, height)
-            outputCtx.drawImage(compCanvas, 0, 0, width, height)
-            // Schedule next frame
-            rafId = raf(draw)
+            if (canvases.length === 1) {
+                // Single canvas with clipping
+                outputCtx.drawImage(
+                    canvases[0],
+                    clipX, clipY, clipWidth, clipHeight, // Source region
+                    0, 0, width, height, // Destination region
+                )
+            }
+            else {
+                // Multiple canvases arranged in a grid
+                const cols = Math.ceil(Math.sqrt(canvases.length))
+                const rows = Math.ceil(canvases.length / cols)
+                const cellW = width / cols
+                const cellH = height / rows
+
+                canvases.forEach((canvas, i) => {
+                    const x = (i % cols) * cellW
+                    const y = Math.floor(i / cols) * cellH
+                    outputCtx.drawImage(
+                        canvas,
+                        clipX, clipY, clipWidth, clipHeight,
+                        x, y, cellW, cellH,
+                    )
+                })
+            }
+            rafId = requestAnimationFrame(draw)
         }
-        // Start rendering
-        this.#lastFrameTime = performance.now()
-        rafId = raf(draw)
-        // Set cleanup function
-        this.#stopRendering = () => {
-            window.Cesium?.cancelAnimationFrame(rafId) || cancelAnimationFrame(rafId)
-            gl.deleteTexture(texture)
-            gl.deleteBuffer(positionBuffer)
-            gl.deleteBuffer(texCoordBuffer)
-            gl.deleteProgram(program)
-        }
-        // Set stream and emit event
-        this.#stream = outputCanvas.captureStream(fps)
-        // Verify stream tracks
-        if (!this.#stream.getVideoTracks().length) {
-            console.error('No video tracks in stream')
-            this.dispatchEvent(new CustomEvent(VideoRecorder.event.ERROR, {
-                detail: {error: new Error('No video tracks in stream'), timestamp: Date.now()},
-            }))
-        }
-        this.dispatchEvent(new CustomEvent(VideoRecorder.event.SOURCE, {
+
+        draw()
+        this.stopRendering = () => cancelAnimationFrame(rafId)
+
+        this.stream = outputCanvas.captureStream(this.fps)
+        this.sourceType = 'canvas'
+        this.dispatchEvent(new CustomEvent(VideoRecorder.events.SOURCE, {
             detail: {
-                type:      'canvas',
+                type: 'canvas',
                 timestamp: Date.now(),
                 width,
                 height,
@@ -404,127 +334,103 @@ export class VideoRecorder extends EventTarget {
                 clipY,
                 clipWidth,
                 clipHeight,
-            },
+                preserveAlpha,
+            }
         }))
     }
 
     /**
-     * Starts recording and emits 'video/start' event
-     * @throws {Error} If no active stream or MediaRecorder fails
+     * Starts recording and emits START event
+     * @throws {Error} If no active MediaStream is available or MediaRecorder fails
      */
     start() {
-        // Prevent multiple recordings
         if (this.isRecording()) {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new Error('Recording already in progress'), timestamp: Date.now()},
+            }))
             return
         }
-        // Ensure stream exists and is active
-        if (!this.#stream || !this.#stream.active || !this.#stream.getVideoTracks().length) {
-            const defaultCanvas = document.createElement('canvas')
-            defaultCanvas.width = 1280
-            defaultCanvas.height = 720
-            const gl = defaultCanvas.getContext('webgl2', {preserveDrawingBuffer: true, antialias: true})
-            if (!gl) {
-                throw new Error('WebGL2 not supported')
-            }
-            gl.clearColor(0, 0, 0, 1)
-            gl.clear(gl.COLOR_BUFFER_BIT)
-            this.#stream = defaultCanvas.captureStream(30) // Use 30 FPS for smoother default
-            this.#stopRendering = () => {
-            }
+        if (!this.stream || !this.stream.active) {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new Error('No active MediaStream available'), timestamp: Date.now()},
+            }))
+            throw new Error('No active MediaStream available')
         }
+
         try {
-            // Clean up existing recorder
-            if (this.#mediaRecorder) {
-                this.#mediaRecorder.ondataavailable = null
-                this.#mediaRecorder.onstop = null
-                this.#mediaRecorder.onerror = null
-                this.#mediaRecorder = null
-            }
-            // Reset state
-            this.#chunks = []
-            this.#totalBytes = 0
-            this.#startTime = Date.now()
-            this.#pausedTime = 0
-            this.#lastPauseStart = 0
-            // Initialize MediaRecorder
-            this.#mediaRecorder = new MediaRecorder(this.#stream, {
-                mimeType: this.#mimeType,
-                videoBitsPerSecond: this.#bitrate,
+            this.chunks = []
+            this.totalBytes = 0
+            this.startTime = Date.now()
+
+            this.mediaRecorder = new MediaRecorder(this.stream, {
+                mimeType:           this._mimeType,
+                videoBitsPerSecond: this.bitrate,
             })
-            // Handle data chunks
-            this.#mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) {
-                    this.#chunks.push(e.data)
-                    this.#totalBytes += e.data.size
-                    this.dispatchEvent(new CustomEvent(VideoRecorder.event.SIZE, {
-                        detail: {totalBytes: this.#totalBytes, chunkSize: e.data.size, timestamp: Date.now()},
-                    }))
-                }
-            }
-            // Handle stop event
-            this.#mediaRecorder.onstop = () => {
-                const blob = new Blob(this.#chunks, {type: this.#mimeType})
-                const duration = this.duration
-                if (typeof this.#onStop === 'function' && blob.size > 0) {
-                    this.#onStop(blob, duration)
-                }
-                this.dispatchEvent(new CustomEvent(VideoRecorder.event.STOP, {
-                    detail: {
-                        blob,
-                        duration,
-                        totalBytes: this.#totalBytes,
-                    },
+
+            this.mediaRecorder.ondataavailable = (e) => {
+                // console.log('Data available:', e.data.size) // Debug log
+                this.chunks.push(e.data)
+                this.totalBytes += e.data.size
+                this.dispatchEvent(new CustomEvent(VideoRecorder.events.SIZE, {
+                    detail: {totalBytes: this.totalBytes, chunkSize: e.data.size, timestamp: Date.now()},
                 }))
             }
-            // Handle errors
-            this.#mediaRecorder.onerror = (e) => {
-                console.error('MediaRecorder error:', e.error)
-                this.dispatchEvent(new CustomEvent(VideoRecorder.event.ERROR, {
+
+            this.mediaRecorder.onstop = () => {
+                // console.log('MediaRecorder stopped') // Debug log
+                const blob = new Blob(this.chunks, {type: this._mimeType})
+                const duration = this.duration
+                this.onStop?.(blob, duration)
+
+                this.dispatchEvent(new CustomEvent(VideoRecorder.events.STOP, {
+                    detail: {blob, duration, totalBytes: this.totalBytes},
+                }))
+            }
+
+            this.mediaRecorder.onerror = (e) => {
+                // console.log('MediaRecorder error:', e.error) // Debug log
+                this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                     detail: {error: e.error, timestamp: Date.now()},
                 }))
                 this.stop()
             }
-            // Start recording with smaller chunk interval
-            this.#mediaRecorder.start(100) // Collect chunks every 100ms for smoother capture
+
+            // console.log('Starting MediaRecorder with bitrate:', this.bitrate, 'timeslice:', this.timeslice) // Debug
+            // log
+            this.mediaRecorder.start(this.timeslice)
+
             // Monitor size and duration limits
             const checkLimits = () => {
-                if (this.isRecording()) {
-                    if (this.#totalBytes >= this.#maxSize) {
-                        this.dispatchEvent(new CustomEvent(VideoRecorder.event.MAX_SIZE, {
-                            detail: {totalBytes: this.#totalBytes, timestamp: Date.now()},
-                        }))
-                        this.stop()
-                    }
-                    else if (this.duration > this.#maxDuration + 1000) {
-                        this.dispatchEvent(new CustomEvent(VideoRecorder.event.MAX_DURATION, {
-                            detail: {duration: this.duration, timestamp: Date.now()},
-                        }))
-                        this.stop()
-                    }
-                    else {
-                        setTimeout(checkLimits, 100)
-                    }
+                if (!this.isRecording()) {
+                    return
+                }
+                const currentTime = Date.now()
+                if (this.totalBytes >= this.maxSize) {
+                    // console.log('Max size reached:', this.totalBytes) // Debug log
+                    this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_SIZE, {
+                        detail: {totalBytes: this.totalBytes, timestamp: currentTime},
+                    }))
+                    this.stop()
+                }
+                else if (this.duration >= this.maxDuration) {
+                    // console.log('Max duration reached:', this.duration) // Debug log
+                    this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_DURATION, {
+                        detail: {duration: this.duration, timestamp: currentTime},
+                    }))
+                    this.stop()
+                }
+                else {
+                    setTimeout(checkLimits, 100)
                 }
             }
             checkLimits()
-            // Emit size events periodically
-            const emitSizeEvent = () => {
-                if (this.isRecording()) {
-                    this.dispatchEvent(new CustomEvent(VideoRecorder.event.SIZE, {
-                        detail: {totalBytes: this.#totalBytes, chunkSize: 0, timestamp: Date.now()},
-                    }))
-                    setTimeout(emitSizeEvent, 1000)
-                }
-            }
-            emitSizeEvent()
-            // Emit start event
-            this.dispatchEvent(new CustomEvent(VideoRecorder.event.START, {
-                detail: {timestamp: this.#startTime},
+
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.START, {
+                detail: {timestamp: this.startTime},
             }))
         }
         catch (error) {
-            console.error('Failed to start recording:', error)
-            this.dispatchEvent(new CustomEvent(VideoRecorder.event.ERROR, {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                 detail: {error, timestamp: Date.now()},
             }))
             throw error
@@ -532,178 +438,156 @@ export class VideoRecorder extends EventTarget {
     }
 
     /**
-     * Stops recording and emits 'video/stop' event
+     * Stops the recording and emits STOP event
      */
     stop() {
-        // Stop recording if active
-        if (this.#mediaRecorder && (this.#mediaRecorder.state === 'recording' || this.#mediaRecorder.state === 'paused')) {
-            const blob = new Blob(this.#chunks, {type: this.#mimeType})
-            const duration = this.duration
-            this.#mediaRecorder.stop()
-            // Trigger onStop callback
-            if (typeof this.#onStop === 'function' && blob.size > 0) {
-                this.#onStop(blob, duration)
-            }
-            // Emit stop event
-            this.dispatchEvent(new CustomEvent(VideoRecorder.event.STOP, {
-                detail: {
-                    blob,
-                    duration,
-                    totalBytes: this.#totalBytes,
-                },
+        if (this.isRecording()) {
+            // console.log('Stopping recording') // Debug log
+            this.mediaRecorder.stop()
+        }
+        else {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new Error('No active recording to stop'), timestamp: Date.now()},
             }))
-            // Clean up recorder
-            this.#mediaRecorder.ondataavailable = null
-            this.#mediaRecorder.onstop = null
-            this.#mediaRecorder.onerror = null
-            this.#mediaRecorder = null
-            // Reset state
-            this.#chunks = []
-            this.#totalBytes = 0
-            this.#startTime = 0
-            this.#pausedTime = 0
-            this.#lastPauseStart = 0
-            // Clean up rendering
-            this.#stopRendering?.()
-            // Stop stream
-            if (this.#stream) {
-                this.#stream.getTracks().forEach(track => track.stop())
-                this.#stream = null
-            }
-            this.#stopRendering = null
         }
     }
 
     /**
-     * Pauses recording and emits 'video/pause' event
+     * Pauses the recording and emits PAUSE event
      */
     pause() {
-        // Pause if recording
         if (this.isRecording()) {
-            this.#lastPauseStart = Date.now()
-            this.#mediaRecorder.pause()
-            this.dispatchEvent(new CustomEvent(VideoRecorder.event.PAUSE, {
+            // console.log('Pausing recording') // Debug log
+            this.mediaRecorder.pause()
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.PAUSE, {
                 detail: {timestamp: Date.now(), duration: this.duration},
+            }))
+        }
+        else {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new Error('Cannot pause: not recording'), timestamp: Date.now()},
             }))
         }
     }
 
     /**
-     * Resumes paused recording and emits 'video/resume' event
+     * Resumes a paused recording and emits RESUME event
      */
     resume() {
-        // Resume if paused
-        if (this.#mediaRecorder?.state === 'paused') {
-            this.#pausedTime += Date.now() - this.#lastPauseStart
-            this.#mediaRecorder.resume()
-            this.dispatchEvent(new CustomEvent(VideoRecorder.event.RESUME, {
+        if (this.mediaRecorder?.state === 'paused') {
+            // console.log('Resuming recording') // Debug log
+            this.mediaRecorder.resume()
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.RESUME, {
                 detail: {timestamp: Date.now(), duration: this.duration},
+            }))
+        }
+        else {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new Error('Cannot resume: not paused'), timestamp: Date.now()},
             }))
         }
     }
 
     /**
-     * Checks if recording is active
-     * @returns {boolean} True if recording
-     */
-    #isRecording() {
-        return this.#mediaRecorder?.state === 'recording'
-    }
-
-    /**
-     * Public method to check recording status
-     * @returns {boolean} True if recording
+     * Checks if recording is ongoing
+     * @returns {boolean} True if recording is active
      */
     isRecording() {
-        return this.#isRecording()
+        return this.mediaRecorder?.state === 'recording'
     }
 
     /**
-     * Sets a MediaStream as recording source
-     * @param {MediaStream} stream - Stream to record
-     * @throws {Error} If invalid stream or recording
+     * Sets a MediaStream directly as the recording source
+     * @param {MediaStream} stream - MediaStream to record (e.g., from webcam or screen)
+     * @throws {TypeError} If stream is not a MediaStream
+     * @throws {Error} If called while recording
      */
     setStream(stream) {
-        // Validate stream
         if (!(stream instanceof MediaStream)) {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new TypeError('stream must be a MediaStream'), timestamp: Date.now()},
+            }))
             throw new TypeError('stream must be a MediaStream')
         }
         if (this.isRecording()) {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error: new Error('Cannot change stream while recording'), timestamp: Date.now()},
+            }))
             throw new Error('Cannot change stream while recording')
         }
-        // Clean up existing rendering
-        this.#stopRendering?.()
-        this.#stopRendering = null
-        // Set new stream
-        this.#stream = stream
-        // Verify stream tracks
-        if (!this.#stream.getVideoTracks().length) {
-            console.error('No video tracks in stream')
-            this.dispatchEvent(new CustomEvent(VideoRecorder.event.ERROR, {
-                detail: {error: new Error('No video tracks in stream'), timestamp: Date.now()},
-            }))
-        }
-        // Emit source event
-        this.dispatchEvent(new CustomEvent(VideoRecorder.event.SOURCE, {
+
+        this.stopRendering?.()
+        this.stopRendering = null
+        this.stream = stream
+        this.sourceType = 'stream'
+
+        this.dispatchEvent(new CustomEvent(VideoRecorder.events.SOURCE, {
             detail: {type: 'stream', timestamp: Date.now()},
         }))
     }
 
     /**
-     * Triggers a download of the recorded video
-     * @param {string} [filename=this._filename] - Base name for the file (extension inferred from MIME type)
-     * @param {Blob} [blob] - Optional Blob to download; if not provided, uses recorded chunks
-     * @throws {Error} If no recorded data or provided Blob is invalid
+     * Triggers a download of the recorded video and emits DOWNLOAD event
+     * Uses format yyyymmddhhmmss-filename with extension based on MIME type
      */
-    download(filename = this.#filename, blob) {
-
-        const timestamped = () => {
+    download() {
+        try {
+            if (!this.chunks.length) {
+                this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                    detail: {error: new Error('No recorded data to download'), timestamp: Date.now()},
+                }))
+                throw new Error('No recorded data to download')
+            }
+            const blob = new Blob(this.chunks, {type: this._mimeType})
+            const ext = this._mimeType.startsWith('video/mp4') ? 'mp4' : 'webm'
             const now = new Date()
-            const time =
-                      now.getFullYear().toString() +
-                      String(now.getMonth() + 1).padStart(2, '0') +
-                      String(now.getDate()).padStart(2, '0') +
-                      String(now.getHours()).padStart(2, '0') +
-                      String(now.getMinutes()).padStart(2, '0')
-            return `${time}-${this.#filename}`
-        }
+            const datePrefix = now.toISOString().replace(/[-:T.]/g, '').slice(0, 12) // yyyymmddhhmm
+            const fullFilename = `${datePrefix}${now.getSeconds().toString().padStart(2, '0')}-${this.filename}.${ext}`
+            const url = URL.createObjectURL(blob)
 
-        const downloadBlob = blob || new Blob(this.chunks, {type: this.#mimeType})
-        if (!(downloadBlob instanceof Blob) || downloadBlob.size === 0) {
-            throw new Error('No valid recorded data available for download')
-        }
-        const ext = this.#mimeType.split('/')[1].split(';')[0] || 'webm'
-        const url = URL.createObjectURL(downloadBlob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = fullFilename
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
 
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `${timestamped()}.${filename}`
-        lgs.stores.main.components.video.filename = link.download
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        // Clean up URL
-        setTimeout(() => URL.revokeObjectURL(url), 2000)
+            setTimeout(() => URL.revokeObjectURL(url), 2000)
+
+            // console.log('Downloading:', fullFilename) // Debug log
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.DOWNLOAD, {
+                detail: {
+                    type:      this.sourceType,
+                    timestamp: Date.now(),
+                    filename:  fullFilename,
+                    size:      blob.size,
+                },
+            }))
+        }
+        catch (error) {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+                detail: {error, timestamp: Date.now()},
+            }))
+            throw error
+        }
     }
 
     /**
-     * Cleans up resources and stops operations
+     * Cleans up resources and stops any ongoing operations
      */
     dispose() {
-        // Stop recording and clean up
         this.stop()
-        this.#stopRendering?.()
-        if (this.#stream) {
-            this.#stream.getTracks().forEach(track => track.stop())
-            this.#stream = null
+        this.stopRendering?.()
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop())
+            this.stream = null
         }
-        this.#mediaRecorder = null
-        this.#chunks = []
-        this.#totalBytes = 0
-        this.#startTime = 0
-        this.#pausedTime = 0
-        this.#lastPauseStart = 0
-        this.#stopRendering = null
-        this.#lastFrameTime = 0
+        this.mediaRecorder = null
+        this.chunks = []
+        this.totalBytes = 0
+        this.startTime = 0
+        this.stopRendering = null
+        this.sourceType = 'unknown'
+        this.needsRedraw = true
     }
 }

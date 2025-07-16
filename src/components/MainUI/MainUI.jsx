@@ -7,32 +7,34 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-11
- * Last modified: 2025-07-11
+ * Created on: 2025-07-16
+ * Last modified: 2025-07-16
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { Compass } from '@Components/cesium/CompassUI/Compass'
+import { Compass }                      from '@Components/cesium/CompassUI/Compass'
 import { FullScreenButton }                     from '@Components/FullScreenButton/FullScreenButton'
 import { ContextMenuHook } from '@Components/MainUI/ContextMenuHook'
+import { Cropper }                      from '@Components/MainUI/cropper/Cropper'
+import { CropSelector }                 from '@Components/MainUI/cropper/CropSelector'
 import { GeocodingButton }                      from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'
-import { MapPOIMonitor } from '@Components/MainUI/MapPOI/MapPOIMonitor'
-import { TrackEditorButton } from '@Components/MainUI/TrackEditorButton'
-import { MapPOIContextMenu }                    from '@Components/MainUI/MapPOI/MapPOIContextMenu'
+import { MapPOIContextMenu }            from '@Components/MainUI/MapPOI/MapPOIContextMenu'
+import { MapPOIMonitor }                from '@Components/MainUI/MapPOI/MapPOIMonitor'
 import { RotateButton }                 from '@Components/MainUI/RotateButton'
-import { VideoPreview } from '@Components/MainUI/video/VideoPreview'
+import { TrackEditorButton }            from '@Components/MainUI/TrackEditorButton'
+import { PanelButton as VideoRecorder } from '@Components/MainUI/video/PanelButton'
+import { VideoPreview }                 from '@Components/MainUI/video/VideoPreview'
 import { VideoRecorderToolbar }         from '@Components/MainUI/video/VideoRecorderToolbar'
 import { Profile }                      from '@Components/Profile/Profile'
 import { ProfileButton }                        from '@Components/Profile/ProfileButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import {
-    BOTTOM, DESKTOP_MIN, END, EVENTS, MENU_BOTTOM_END,
-    MENU_BOTTOM_START, MENU_END_END, MENU_END_START,
-    MENU_START_END, MENU_START_START, MOBILE_MAX, SCENE_MODE_2D, SECOND, START, TOP,
-} from '@Core/constants'
+    BOTTOM, END, EVENTS, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
+    MENU_START_START, MOBILE_MAX, SCENE_MODE_2D, SECOND, START, TOP,
+}                                       from '@Core/constants'
 import { JourneyToolbar }                       from '@Editor/JourneyToolbar'
 import { memo, useCallback, useEffect, useRef } from 'react'
 import { useMediaQuery }                        from 'react-responsive'
@@ -53,7 +55,6 @@ import { PanelButton as POIEditButton }         from './MapPOI/PanelButton'
 import { SceneModeSelector }                    from './SceneModeSelector'
 import { SupportUI }                            from './SupportUI'
 import { SupportUIButton }                      from './SupportUIButton'
-import { PanelButton as VideoRecorder } from '@Components/MainUI/video/PanelButton'
 
 import './style.css'
 
@@ -223,8 +224,6 @@ export const MainUI = memo(() => {
                                 <FullScreenButton/>
                                 <VideoRecorder tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingUI/>
-                                <VideoRecorderToolbar tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                <VideoPreview/>
                             </div>
                         </div>
                         <CallForActions/>
@@ -253,7 +252,11 @@ export const MainUI = memo(() => {
             <JourneyLoaderUI multiple/>
             <MapPOIContextMenu/>
             <MapPOIMonitor/>
+            <VideoRecorderToolbar tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+            <VideoPreview/>
             <ContextMenuHook/>
+            <Cropper source={lgs.canvas} store={lgs.stores.main.components.cropper}/>
+            {/* <CropSelector/> */}
             {show && usage && <JourneyToolbar/>}
         </>
     )

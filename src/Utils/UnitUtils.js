@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-11
- * Last modified: 2025-07-11
+ * Created on: 2025-07-13
+ * Last modified: 2025-07-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -147,10 +147,10 @@ export class UnitUtils {
                 }
 
                 const units = [
-                    {threshold: TB, label: 'TB', decimals: 1},
-                    {threshold: GB, label: 'GB', decimals: 1},
-                    {threshold: MB, label: 'MB', decimals: 1},
-                    {threshold: KB, label: 'KB', decimals: 0},
+                    {threshold: TB, label: 'TB', decimals: 2},
+                    {threshold: GB, label: 'GB', decimals: 2},
+                    {threshold: MB, label: 'MB', decimals: 2},
+                    {threshold: KB, label: 'KB', decimals: 1},
                     {threshold: BYTE, label: 'B', decimals: 0},
                 ]
 
@@ -161,7 +161,7 @@ export class UnitUtils {
                 // Format with no leading zero and appropriate decimals
                 const formattedValue = unit.decimals === 0
                                        ? Math.round(value)
-                                       : value.toFixed(1).replace(/^0+/, '')
+                                       : value.toFixed(unit.decimals).replace(/^0+/, '')
 
                 return `${formattedValue}${unit.label}`
             },

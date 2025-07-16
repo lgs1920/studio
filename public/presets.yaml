@@ -1,0 +1,76 @@
+ratios:
+  - label: "16:9"
+    value: "16:9"
+    aspectRatio: 1.7778
+    orientation: "landscape"
+    description: "YouTube, film, widescreen"
+  - label: "4:3"
+    value: "4:3"
+    aspectRatio: 1.3333
+    orientation: "landscape"
+    description: "Classic television"
+  - label: "9:16"
+    value: "9:16"
+    aspectRatio: 0.5625
+    orientation: "portrait"
+    description: "TikTok, Shorts, Stories, Reels"
+  - label: "3:4"
+    value: "3:4"
+    aspectRatio: 0.75
+    orientation: "portrait"
+    description: "Vertical photos"
+  - label: "1:1"
+    value: "1:1"
+    aspectRatio: 1.0
+    orientation: "square"
+    description: "Instagram square posts"
+
+sizes:
+  - label: "YouTube HD"
+    value: "1280x720"
+    width: 1280
+    height: 720
+    orientation: "landscape"
+    description: "Standard video thumbnail"
+  - label: "Cover Large"
+    value: "1920x1080"
+    width: 1920
+    height: 1080
+    orientation: "landscape"
+    description: "Web banners, backgrounds"
+  - label: "TikTok"
+    value: "1080x1920"
+    width: 1080
+    height: 1920
+    orientation: "portrait"
+    description: "Vertical mobile video"
+  - label: "Instagram Square"
+    value: "1080x1080"
+    width: 1080
+    height: 1080
+    orientation: "square"
+    description: "Instagram post format"
+  - label: "Instagram Story"
+    value: "1080x1920"
+    width: 1080
+    height: 1920
+    orientation: "portrait"
+    description: "Stories and Reels"
+  - label: "Facebook Cover"
+    value: "1200x675"
+    width: 1200
+    height: 675
+    orientation: "landscape"
+    description: "Cover image for profile/page"
+  - label: "X Post"
+    value: "1600x900"
+    width: 1600
+    height: 900
+    orientation: "landscape"
+    description: "Wide image for X (Twitter)"
+  - label: "LinkedIn Post"
+    value: "1200x627"
+    width: 1200
+    height: 627
+    orientation: "landscape"
+    description: "Optimized visual for LinkedIn"

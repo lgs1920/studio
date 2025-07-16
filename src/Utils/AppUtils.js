@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-11
- * Last modified: 2025-07-11
+ * Created on: 2025-07-16
+ * Last modified: 2025-07-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,7 @@
 
 import {
     BUILD, CONFIGURATION, COUNTRIES, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, LGS_CONTEXT_MENU_HOOK, MILLIS,
-    platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE,
+    platforms, PRESETS, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE,
 }                           from '@Core/constants'
 import { ElevationServer }  from '@Core/Elevation/ElevationServer'
 import { Settings }         from '@Core/settings/Settings'
@@ -161,6 +161,12 @@ export class AppUtils {
 
         // Read Layers
         settings.layers = await fetch(LAYERS_TERRAINS_SETTINGS, {cache: 'no-store'})
+            .then(res => res.text())
+            .then(text => YAML.parse(text),
+            )
+
+        // Read Presets
+        __.presets = await fetch(PRESETS, {cache: 'no-store'})
             .then(res => res.text())
             .then(text => YAML.parse(text),
             )
