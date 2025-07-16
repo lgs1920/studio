@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-14
- * Last modified: 2025-07-14
+ * Created on: 2025-07-16
+ * Last modified: 2025-07-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -255,7 +255,7 @@ export const MainUI = memo(() => {
             <VideoRecorderToolbar tooltip={toolBar.fromStart ? 'left' : 'right'}/>
             <VideoPreview/>
             <ContextMenuHook/>
-            <Cropper/>
+            <Cropper source={lgs.canvas} store={lgs.stores.main.components.cropper}/>
             {/* <CropSelector/> */}
             {show && usage && <JourneyToolbar/>}
         </>
