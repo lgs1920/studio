@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-16
- * Last modified: 2025-07-16
+ * Created on: 2025-07-17
+ * Last modified: 2025-07-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,6 +18,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSnapshot }    from 'valtio'
 import PropTypes          from 'prop-types'
 import { CropperManager } from './CropperManager'
+import './style.css'
 
 /**
  * Cropper component for interactive crop region selection over canvas, video, or image elements.
