@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-12
- * Last modified: 2025-07-12
+ * Created on: 2025-07-17
+ * Last modified: 2025-07-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -32,7 +32,6 @@ import {
 }                                                                                           from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                                            from '@Utils/FA2SL'
 import React, { useEffect, useRef, useState }                                               from 'react'
-import { useMediaQuery }                                                                    from 'react-responsive'
 import { sprintf }                                                                          from 'sprintf-js'
 import { useSnapshot }                                                                      from 'valtio'
 

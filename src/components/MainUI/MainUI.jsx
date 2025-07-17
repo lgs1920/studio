@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-16
- * Last modified: 2025-07-16
+ * Created on: 2025-07-17
+ * Last modified: 2025-07-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -37,7 +37,6 @@ import {
 }                                       from '@Core/constants'
 import { JourneyToolbar }                       from '@Editor/JourneyToolbar'
 import { memo, useCallback, useEffect, useRef } from 'react'
-import { useMediaQuery }                        from 'react-responsive'
 import { subscribe, useSnapshot }               from 'valtio'
 import { CameraAndTargetPanel }                 from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
 import { JourneyLoaderUI }                      from '../FileLoader/JourneyLoaderUI'
@@ -63,19 +62,18 @@ const SECONDARY_ENTRANCE = 'lgs-slide-in-from-right'
 
 export const MainUI = memo(() => {
     const {hidden} = useSnapshot(lgs.stores.ui.welcome)
-    const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
-    const formerDevice = useRef(isMobile)
+    const formerDevice = useRef(__.device.isMobile)
     const {drawers, toolBar} = useSnapshot(lgs.settings.ui.menu)
     const {show, usage} = useSnapshot(lgs.settings.ui.journeyToolbar)
     const resizeTimer = useRef(null)
 
     const windowResized = useCallback(__.tools.debounce(() => {
-        if (formerDevice.current !== isMobile) {
+        if (formerDevice.current !== __.device.isMobile) {
             __.ui.menuManager.reset()
             arrangeDrawers()
-            formerDevice.current = isMobile
+            formerDevice.current = __.device.isMobile
         }
-    }, 0.3 * SECOND), [isMobile])
+    }, 0.3 * SECOND), [__.device.is])
 
     const closeDrawer = useCallback(() => {
         __.ui.drawerManager.close()
@@ -89,7 +87,7 @@ export const MainUI = memo(() => {
 
     const arrangeDrawers = useCallback(() => {
         const placement = sprintf('%s-%s',
-                                  isMobile ? (drawers.fromBottom ? BOTTOM : TOP) : (drawers.fromStart ? START : END),
+                                  __.device.isMobile ? (drawers.fromBottom ? BOTTOM : TOP) : (drawers.fromStart ? START : END),
                                   toolBar.fromStart ? START : END,
         )
 
@@ -175,7 +173,7 @@ export const MainUI = memo(() => {
             primaryEntrance:   config.primaryEntrance || PRIMARY_ENTRANCE,
             secondaryEntrance: config.secondaryEntrance || SECONDARY_ENTRANCE,
         }
-    }, [isMobile, drawers.fromBottom, drawers.fromStart, toolBar.fromStart])
+    }, [__.device.is, drawers.fromBottom, drawers.fromStart, toolBar.fromStart])
 
     useEffect(() => {
         if (lgs.settings.scene.mode.value === SCENE_MODE_2D.value) {
@@ -256,6 +254,7 @@ export const MainUI = memo(() => {
             <VideoPreview/>
             <ContextMenuHook/>
             <Cropper source={lgs.canvas} store={lgs.stores.main.components.cropper}/>
+            {/* <CropSelector/> */}
             {/* <CropSelector/> */}
             {show && usage && <JourneyToolbar/>}
         </>

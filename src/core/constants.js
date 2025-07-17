@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-14
- * Last modified: 2025-07-14
+ * Created on: 2025-07-17
+ * Last modified: 2025-07-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -41,7 +41,7 @@ export const WRONG = -99999999999
  * Responsivity
  ******************************************************************************/
 export const MOBILE_MAX = 767
-export const DESKTOP_MIN = 768
+export const DESKTOP_MIN = 992
 
 /**
  * Main Configuration file

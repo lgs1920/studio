@@ -34,7 +34,6 @@ import { TerrainUtils }            from '@Utils/cesium/TerrainUtils'
 import { TrackUtils }              from '@Utils/cesium/TrackUtils'
 import { UIToast }                 from '@Utils/UIToast'
 import { useEffect }               from 'react'
-import { useMediaQuery }           from 'react-responsive'
 
 /***************************************
  * Init Application context
@@ -63,23 +62,7 @@ if (initApp.status) {
 
 export function LGS1920() {
     const $pois = lgs.stores.main.components.pois
-    const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
 
-    if (isMobile) {
-        document.body.classList.add('mobile')
-        //  lgs.editorSettingsProxy.menu.drawer = BOTTOM
-    }
-    else {
-        document.body.classList.remove('mobile')
-    }
-
-    const isPortrait = useMediaQuery({orientation: 'portrait'})
-    if (isPortrait) {
-        document.body.classList.add('portrait')
-    }
-    else {
-        document.body.classList.remove('portrait')
-    }
     useEffect(() => {
                   try {
                       // If initialisation phase was OK, we have somme additional tasks to do.
