@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-28
- * Last modified: 2025-06-28
+ * Created on: 2025-07-17
+ * Last modified: 2025-07-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,6 +20,7 @@ import { Viewer }   from '@Components/cesium/Viewer'
 import { InitErrorMessage }        from '@Components/InitErrorMessage'
 import { MainUI }                  from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
+import ResponsiveDevice from '@Components/MainUI/ResponsiveDevice'
 import { SelectionIndicator }      from '@Components/MainUI/SelectionIndicator'
 import { WelcomeModal }            from '@Components/MainUI/WelcomeModal'
 import {
@@ -239,6 +240,7 @@ export function LGS1920() {
             {
                 initApp.status &&
                 <>
+                    <ResponsiveDevice/>
                     <WelcomeModal/>
                     <MapLayer type={BASE_ENTITY}/>
                     <MapLayer type={OVERLAY_ENTITY}/>
