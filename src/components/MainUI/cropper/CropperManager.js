@@ -71,6 +71,7 @@ class CropperManager {
         this.dpr = window.devicePixelRatio || 1
         this.lastClickTime = 0
         this.touchStartPosition = null
+        this.doubleTapStartPosition = null
         this.longTapTimer = null
         const bounds = this.getSourceBounds()
         this.crop = {
@@ -186,9 +187,10 @@ class CropperManager {
     /**
      * Checks if touch movement is significant for drag
      * @param {TouchEvent} event - Touch event
+     * @param {number} sensitivity - Sensitivity threshold in pixels
      * @returns {boolean}
      */
-    isSignificantTouchMovement = (event) => {
+    isSignificantTouchMovement = (event, sensitivity) => {
         if (!this.touchStartPosition || !event.touches || event.touches.length !== 1) {
             return true
         }
@@ -196,7 +198,7 @@ class CropperManager {
         const deltaX = Math.abs(touch.clientX - this.touchStartPosition.x)
         const deltaY = Math.abs(touch.clientY - this.touchStartPosition.y)
         const timeDelta = Date.now() - this.touchStartPosition.time
-        return deltaX > this.options.touchSensitivity || deltaY > this.options.touchSensitivity || timeDelta > CropperManager.TOUCH_MOVEMENT_TIMEOUT
+        return deltaX > sensitivity || deltaY > sensitivity || timeDelta > CropperManager.TOUCH_MOVEMENT_TIMEOUT
     }
 
     /**
@@ -224,14 +226,37 @@ class CropperManager {
             clearTimeout(this.longTapTimer)
             this.longTapTimer = null
         }
-        if (event.touches && event.touches.length === 1) {
+        const isTouch = event.type === 'touchstart' && event.touches && event.touches.length === 1
+        const currentTime = Date.now()
+        if (isTouch) {
+            const touch = event.touches[0]
             this.touchStartPosition = {
-                x:    event.touches[0].clientX,
-                y:    event.touches[0].clientY,
-                time: Date.now(),
+                x:    touch.clientX,
+                y:    touch.clientY,
+                time: currentTime,
             }
+            // Check for double-tap
+            const isDoubleTap = action === 'drag' &&
+                (currentTime - this.lastClickTime) < CropperManager.DOUBLE_TAP_THRESHOLD &&
+                this.doubleTapStartPosition &&
+                Math.abs(touch.clientX - this.doubleTapStartPosition.x) < 10 &&
+                Math.abs(touch.clientY - this.doubleTapStartPosition.y) < 10
+            this.lastClickTime = currentTime
+            this.doubleTapStartPosition = {x: touch.clientX, y: touch.clientY}
+            if (isDoubleTap) {
+                this.closeCropper()
+                return
+            }
+            // Set up long-tap timer
             this.longTapTimer = setTimeout(() => {
-                if (!this.isDestroyed && !this.isSignificantTouchMovement(event)) {
+                if (!this.isDestroyed && !this.isSignificantTouchMovement({
+                                                                              touches: [
+                                                                                  {
+                                                                                      clientX: touch.clientX,
+                                                                                      clientY: touch.clientY,
+                                                                                  },
+                                                                              ],
+                                                                          }, this.options.touchSensitivity)) {
                     const newCrop = this.maximizeRestore(cropper)
                     this.updateStore(newCrop)
                     if (this.options.vibrate && navigator.vibrate) {
@@ -242,22 +267,14 @@ class CropperManager {
             }, CropperManager.LONG_TAP_THRESHOLD)
             this.timers.push(this.longTapTimer)
         }
-        const currentTime = Date.now()
-        const isDoubleClick = action === 'drag' && !event.touches && event.button === 0 &&
-            (currentTime - this.lastClickTime) < CropperManager.DOUBLE_TAP_THRESHOLD
-        const isDoubleTap = action === 'drag' && event.touches && event.touches.length === 1 &&
-            (currentTime - this.lastClickTime) < CropperManager.DOUBLE_TAP_THRESHOLD &&
-            this.touchStartPosition &&
-            Math.abs(event.touches[0].clientX - this.touchStartPosition.x) < this.options.touchSensitivity &&
-            Math.abs(event.touches[0].clientY - this.touchStartPosition.y) < this.options.touchSensitivity
-        this.lastClickTime = currentTime
-        if (isDoubleClick || isDoubleTap) {
-            if (this.longTapTimer) {
-                clearTimeout(this.longTapTimer)
-                this.longTapTimer = null
+        else if (event.type === 'mousedown') {
+            this.lastClickTime = currentTime
+            const isDoubleClick = action === 'drag' && event.button === 0 &&
+                (currentTime - this.lastClickTime) < CropperManager.DOUBLE_TAP_THRESHOLD
+            if (isDoubleClick) {
+                this.closeCropper()
+                return
             }
-            this.closeCropper()
-            return
         }
         if (action === 'drag' && event.ctrlKey && !event.touches && !event.shiftKey && event.button === 0) {
             this.interactionState.isCentering = true
@@ -273,7 +290,7 @@ class CropperManager {
             }, CropperManager.CENTERING_TIMEOUT))
             return newCrop
         }
-        if ((action === 'drag' || action.startsWith('resize-')) && (event.button === 0 || event.touches)) {
+        if ((action === 'drag' || action.startsWith('resize-')) && (event.button === 0 || isTouch)) {
             this.interactionState.action = action
             if (action.startsWith('resize-')) {
                 this.resizeStartState = {
@@ -299,7 +316,7 @@ class CropperManager {
         if (!this.interactionState.action || cropper.recording || this.isDestroyed) {
             return {crop: this.crop, interaction: this.interactionState}
         }
-        if (this.longTapTimer && this.isSignificantTouchMovement(event)) {
+        if (this.longTapTimer && this.isSignificantTouchMovement(event, this.options.touchSensitivity)) {
             clearTimeout(this.longTapTimer)
             this.longTapTimer = null
         }
@@ -397,7 +414,6 @@ class CropperManager {
         if (isSymmetric) {
             let actualDelta = 0
             if (lockRatio) {
-                // For locked ratio, allow shrinking but prevent enlarging beyond bounds
                 const maxWidth = bounds.width - (lockRatio ? 0 : crop.x)
                 const maxHeight = bounds.height - (lockRatio ? 0 : crop.y)
                 let maxDeltaWidth = (maxWidth - crop.width) / 2
@@ -492,7 +508,6 @@ class CropperManager {
             const originalX = crop.x
             const originalY = crop.y
             if (lockRatio) {
-                // For locked ratio, allow shrinking but prevent enlarging beyond bounds
                 const maxWidth = bounds.width - crop.x
                 const maxHeight = bounds.height - crop.y
                 switch (direction) {
