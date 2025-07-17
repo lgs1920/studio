@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-16
- * Last modified: 2025-07-16
+ * Created on: 2025-07-17
+ * Last modified: 2025-07-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -393,52 +393,97 @@ class CropperManager {
         const centerX = crop.x + crop.width / 2
         const centerY = crop.y + crop.height / 2
         const aspectRatio = crop.width / crop.height
+
         if (isSymmetric) {
-            switch (direction) {
-                case 'nw':
-                case 'ne':
-                case 'se':
-                case 'sw':
-                    let actualDelta = 0
-                    if (direction === 'nw') {
+            let actualDelta = 0
+            if (lockRatio) {
+                // For locked ratio, allow shrinking but prevent enlarging beyond bounds
+                const maxWidth = bounds.width - (lockRatio ? 0 : crop.x)
+                const maxHeight = bounds.height - (lockRatio ? 0 : crop.y)
+                let maxDeltaWidth = (maxWidth - crop.width) / 2
+                let maxDeltaHeight = (maxHeight - crop.height) / 2
+                switch (direction) {
+                    case 'nw':
                         actualDelta = Math.max(-deltaX, -deltaY)
-                    }
-                    else if (direction === 'ne') {
+                        if (actualDelta > 0) {
+                            actualDelta = Math.min(actualDelta, Math.min(maxDeltaWidth, maxDeltaHeight * aspectRatio))
+                        }
+                        break
+                    case 'ne':
                         actualDelta = Math.max(deltaX, -deltaY)
-                    }
-                    else if (direction === 'se') {
+                        if (actualDelta > 0) {
+                            actualDelta = Math.min(actualDelta, Math.min(maxDeltaWidth, maxDeltaHeight * aspectRatio))
+                        }
+                        break
+                    case 'se':
                         actualDelta = Math.max(deltaX, deltaY)
-                    }
-                    else if (direction === 'sw') {
+                        if (actualDelta > 0) {
+                            actualDelta = Math.min(actualDelta, Math.min(maxDeltaWidth, maxDeltaHeight * aspectRatio))
+                        }
+                        break
+                    case 'sw':
                         actualDelta = Math.max(-deltaX, deltaY)
-                    }
-                    const newWidth = crop.width + actualDelta * 2
-                    const newHeight = lockRatio ? newWidth / aspectRatio : crop.height + actualDelta * 2
-                    crop.width = Math.max(10, newWidth)
-                    crop.height = Math.max(10, newHeight)
-                    crop.x = centerX - crop.width / 2
-                    crop.y = centerY - crop.height / 2
-                    break
-                case 'n':
-                case 's':
-                    const deltaYSign = direction === 'n' ? -1 : 1
-                    const newHeight2 = crop.height + deltaY * deltaYSign * 2
-                    const newWidth2 = lockRatio ? newHeight2 * aspectRatio : crop.width
-                    crop.width = Math.max(10, newWidth2)
-                    crop.height = Math.max(10, newHeight2)
-                    crop.x = centerX - crop.width / 2
-                    crop.y = centerY - crop.height / 2
-                    break
-                case 'e':
-                case 'w':
-                    const deltaXSign = direction === 'w' ? -1 : 1
-                    const newWidth3 = crop.width + deltaX * deltaXSign * 2
-                    const newHeight3 = lockRatio ? newWidth3 / aspectRatio : crop.height
-                    crop.width = Math.max(10, newWidth3)
-                    crop.height = Math.max(10, newHeight3)
-                    crop.x = centerX - crop.width / 2
-                    crop.y = centerY - crop.height / 2
-                    break
+                        if (actualDelta > 0) {
+                            actualDelta = Math.min(actualDelta, Math.min(maxDeltaWidth, maxDeltaHeight * aspectRatio))
+                        }
+                        break
+                    case 'n':
+                    case 's':
+                        const deltaYSign = direction === 'n' ? -1 : 1
+                        actualDelta = deltaY * deltaYSign
+                        if (actualDelta > 0) {
+                            maxDeltaHeight = (maxHeight - crop.height) / 2
+                            maxDeltaWidth = maxDeltaHeight * aspectRatio
+                            actualDelta = Math.min(actualDelta, maxDeltaHeight) * deltaYSign
+                        }
+                        break
+                    case 'e':
+                    case 'w':
+                        const deltaXSign = direction === 'w' ? -1 : 1
+                        actualDelta = deltaX * deltaXSign
+                        if (actualDelta > 0) {
+                            maxDeltaWidth = (maxWidth - crop.width) / 2
+                            maxDeltaHeight = maxDeltaWidth / aspectRatio
+                            actualDelta = Math.min(Math.abs(actualDelta), maxDeltaWidth) * deltaXSign
+                        }
+                        break
+                }
+                const newWidth = crop.width + actualDelta * 2
+                const newHeight = lockRatio ? newWidth / aspectRatio : crop.height + actualDelta * 2
+                crop.width = Math.max(10, newWidth)
+                crop.height = Math.max(10, newHeight)
+                crop.x = centerX - crop.width / 2
+                crop.y = centerY - crop.height / 2
+            }
+            else {
+                switch (direction) {
+                    case 'nw':
+                        actualDelta = Math.max(-deltaX, -deltaY)
+                        break
+                    case 'ne':
+                        actualDelta = Math.max(deltaX, -deltaY)
+                        break
+                    case 'se':
+                        actualDelta = Math.max(deltaX, deltaY)
+                        break
+                    case 'sw':
+                        actualDelta = Math.max(-deltaX, deltaY)
+                        break
+                    case 'n':
+                    case 's':
+                        actualDelta = deltaY * (direction === 'n' ? -1 : 1)
+                        break
+                    case 'e':
+                    case 'w':
+                        actualDelta = deltaX * (direction === 'w' ? -1 : 1)
+                        break
+                }
+                const newWidth = crop.width + actualDelta * 2
+                const newHeight = crop.height + actualDelta * 2
+                crop.width = Math.max(10, newWidth)
+                crop.height = Math.max(10, newHeight)
+                crop.x = centerX - crop.width / 2
+                crop.y = centerY - crop.height / 2
             }
         }
         else {
@@ -446,58 +491,171 @@ class CropperManager {
             const originalHeight = crop.height
             const originalX = crop.x
             const originalY = crop.y
-            switch (direction) {
-                case 'nw':
-                    crop.width = Math.max(10, originalWidth - deltaX)
-                    crop.height = lockRatio ? crop.width / aspectRatio : Math.max(10, originalHeight - deltaY)
-                    crop.x = originalX + originalWidth - crop.width
-                    crop.y = originalY + originalHeight - crop.height
-                    break
-                case 'ne':
-                    crop.width = Math.max(10, originalWidth + deltaX)
-                    crop.height = lockRatio ? crop.width / aspectRatio : Math.max(10, originalHeight - deltaY)
-                    crop.y = originalY + originalHeight - crop.height
-                    break
-                case 'se':
-                    crop.width = Math.max(10, originalWidth + deltaX)
-                    crop.height = lockRatio ? crop.width / aspectRatio : Math.max(10, originalHeight + deltaY)
-                    break
-                case 'sw':
-                    crop.width = Math.max(10, originalWidth - deltaX)
-                    crop.height = lockRatio ? crop.width / aspectRatio : Math.max(10, originalHeight + deltaY)
-                    crop.x = originalX + originalWidth - crop.width
-                    break
-                case 'n':
-                    crop.height = Math.max(10, originalHeight - deltaY)
-                    crop.width = lockRatio ? crop.height * aspectRatio : crop.width
-                    crop.y = originalY + originalHeight - crop.height
-                    crop.x = lockRatio ? originalX + (originalWidth - crop.width) / 2 : crop.x
-                    break
-                case 'e':
-                    crop.width = Math.max(10, originalWidth + deltaX)
-                    crop.height = lockRatio ? crop.width / aspectRatio : crop.height
-                    crop.y = lockRatio ? originalY + (originalHeight - crop.height) / 2 : crop.y
-                    break
-                case 's':
-                    crop.height = Math.max(10, originalHeight + deltaY)
-                    crop.width = lockRatio ? crop.height * aspectRatio : crop.width
-                    crop.x = lockRatio ? originalX + (originalWidth - crop.width) / 2 : crop.x
-                    break
-                case 'w':
-                    crop.width = Math.max(10, originalWidth - deltaX)
-                    crop.height = lockRatio ? crop.width / aspectRatio : crop.height
-                    crop.x = originalX + originalWidth - crop.width
-                    crop.y = lockRatio ? originalY + (originalHeight - crop.height) / 2 : crop.y
-                    break
+            if (lockRatio) {
+                // For locked ratio, allow shrinking but prevent enlarging beyond bounds
+                const maxWidth = bounds.width - crop.x
+                const maxHeight = bounds.height - crop.y
+                switch (direction) {
+                    case 'nw':
+                        crop.width = Math.max(10, originalWidth - deltaX)
+                        if (deltaX > 0 && crop.width >= maxWidth) {
+                            crop.width = maxWidth
+                        }
+                        crop.height = Math.max(10, crop.width / aspectRatio)
+                        if (deltaX > 0 && crop.height > maxHeight) {
+                            crop.height = maxHeight
+                            crop.width = Math.max(10, crop.height * aspectRatio)
+                        }
+                        crop.x = originalX + originalWidth - crop.width
+                        crop.y = originalY + originalHeight - crop.height
+                        break
+                    case 'ne':
+                        crop.width = Math.max(10, originalWidth + deltaX)
+                        if (deltaX > 0 && crop.width >= maxWidth) {
+                            crop.width = maxWidth
+                        }
+                        crop.height = Math.max(10, crop.width / aspectRatio)
+                        if (deltaX > 0 && crop.height > maxHeight) {
+                            crop.height = maxHeight
+                            crop.width = Math.max(10, crop.height * aspectRatio)
+                        }
+                        crop.y = originalY + originalHeight - crop.height
+                        break
+                    case 'se':
+                        crop.width = Math.max(10, originalWidth + deltaX)
+                        if (deltaX > 0 && crop.width >= maxWidth) {
+                            crop.width = maxWidth
+                        }
+                        crop.height = Math.max(10, crop.width / aspectRatio)
+                        if (deltaX > 0 && crop.height > maxHeight) {
+                            crop.height = maxHeight
+                            crop.width = Math.max(10, crop.height * aspectRatio)
+                        }
+                        break
+                    case 'sw':
+                        crop.width = Math.max(10, originalWidth - deltaX)
+                        if (deltaX < 0 && crop.width >= maxWidth) {
+                            crop.width = maxWidth
+                        }
+                        crop.height = Math.max(10, crop.width / aspectRatio)
+                        if (deltaX < 0 && crop.height > maxHeight) {
+                            crop.height = maxHeight
+                            crop.width = Math.max(10, crop.height * aspectRatio)
+                        }
+                        crop.x = originalX + originalWidth - crop.width
+                        break
+                    case 'n':
+                        crop.height = Math.max(10, originalHeight - deltaY)
+                        if (deltaY > 0 && crop.height >= maxHeight) {
+                            crop.height = maxHeight
+                        }
+                        crop.width = Math.max(10, crop.height * aspectRatio)
+                        if (deltaY > 0 && crop.width > maxWidth) {
+                            crop.width = maxWidth
+                            crop.height = Math.max(10, crop.width / aspectRatio)
+                        }
+                        crop.y = originalY + originalHeight - crop.height
+                        crop.x = originalX + (originalWidth - crop.width) / 2
+                        break
+                    case 'e':
+                        crop.width = Math.max(10, originalWidth + deltaX)
+                        if (deltaX > 0 && crop.width >= maxWidth) {
+                            crop.width = maxWidth
+                        }
+                        crop.height = Math.max(10, crop.width / aspectRatio)
+                        if (deltaX > 0 && crop.height > maxHeight) {
+                            crop.height = maxHeight
+                            crop.width = Math.max(10, crop.height * aspectRatio)
+                        }
+                        crop.y = originalY + (originalHeight - crop.height) / 2
+                        break
+                    case 's':
+                        crop.height = Math.max(10, originalHeight + deltaY)
+                        if (deltaY > 0 && crop.height >= maxHeight) {
+                            crop.height = maxHeight
+                        }
+                        crop.width = Math.max(10, crop.height * aspectRatio)
+                        if (deltaY > 0 && crop.width > maxWidth) {
+                            crop.width = maxWidth
+                            crop.height = Math.max(10, crop.width / aspectRatio)
+                        }
+                        crop.x = originalX + (originalWidth - crop.width) / 2
+                        break
+                    case 'w':
+                        crop.width = Math.max(10, originalWidth - deltaX)
+                        if (deltaX < 0 && crop.width >= maxWidth) {
+                            crop.width = maxWidth
+                        }
+                        crop.height = Math.max(10, crop.width / aspectRatio)
+                        if (deltaX < 0 && crop.height > maxHeight) {
+                            crop.height = maxHeight
+                            crop.width = Math.max(10, crop.height * aspectRatio)
+                        }
+                        crop.x = originalX + originalWidth - crop.width
+                        crop.y = originalY + (originalHeight - crop.height) / 2
+                        break
+                }
+            }
+            else {
+                switch (direction) {
+                    case 'nw':
+                        crop.width = Math.max(10, originalWidth - deltaX)
+                        crop.height = Math.max(10, originalHeight - deltaY)
+                        crop.x = originalX + originalWidth - crop.width
+                        crop.y = originalY + originalHeight - crop.height
+                        break
+                    case 'ne':
+                        crop.width = Math.max(10, originalWidth + deltaX)
+                        crop.height = Math.max(10, originalHeight - deltaY)
+                        crop.y = originalY + originalHeight - crop.height
+                        break
+                    case 'se':
+                        crop.width = Math.max(10, originalWidth + deltaX)
+                        crop.height = Math.max(10, originalHeight + deltaY)
+                        break
+                    case 'sw':
+                        crop.width = Math.max(10, originalWidth - deltaX)
+                        crop.height = Math.max(10, originalHeight + deltaY)
+                        crop.x = originalX + originalWidth - crop.width
+                        break
+                    case 'n':
+                        crop.height = Math.max(10, originalHeight - deltaY)
+                        crop.y = originalY + originalHeight - crop.height
+                        break
+                    case 'e':
+                        crop.width = Math.max(10, originalWidth + deltaX)
+                        break
+                    case 's':
+                        crop.height = Math.max(10, originalHeight + deltaY)
+                        break
+                    case 'w':
+                        crop.width = Math.max(10, originalWidth - deltaX)
+                        crop.x = originalX + originalWidth - crop.width
+                        break
+                }
             }
         }
         crop.x = Math.max(0, Math.min(crop.x, bounds.width - crop.width))
         crop.y = Math.max(0, Math.min(crop.y, bounds.height - crop.height))
-        if (crop.x + crop.width > bounds.width) {
-            crop.width = bounds.width - crop.x
+        if (lockRatio) {
+            if (crop.x + crop.width > bounds.width) {
+                crop.width = bounds.width - crop.x
+                crop.height = Math.max(10, crop.width / aspectRatio)
+                crop.y = centerY - crop.height / 2
+            }
+            if (crop.y + crop.height > bounds.height) {
+                crop.height = bounds.height - crop.y
+                crop.width = Math.max(10, crop.height * aspectRatio)
+                crop.x = centerX - crop.width / 2
+            }
         }
-        if (crop.y + crop.height > bounds.height) {
-            crop.height = bounds.height - crop.y
+        else {
+            if (crop.x + crop.width > bounds.width) {
+                crop.width = bounds.width - crop.x
+            }
+            if (crop.y + crop.height > bounds.height) {
+                crop.height = bounds.height - crop.y
+            }
         }
     }
 
@@ -569,30 +727,58 @@ class CropperManager {
     maximizeRestore = (cropper) => {
         const bounds = this.getSourceBounds()
         const newCrop = {...this.crop}
-        const isMaximized = Math.abs(newCrop.x) < 5 && Math.abs(newCrop.y) < 5 &&
-            Math.abs(newCrop.width - bounds.width) < 5 && Math.abs(newCrop.height - bounds.height) < 5
-        if (isMaximized) {
-            if (this.savedCropState) {
-                newCrop.x = this.savedCropState.x
-                newCrop.y = this.savedCropState.y
-                newCrop.width = this.savedCropState.width
-                newCrop.height = this.savedCropState.height
-                this.savedCropState = null
-            }
-            else {
-                newCrop.width = bounds.width / 2
-                newCrop.height = bounds.height / 2
-                newCrop.x = (bounds.width - newCrop.width) / 2
-                newCrop.y = (bounds.height - newCrop.height) / 2
-            }
+        const ratio = this.crop.width / this.crop.height
+        // Check if crop is maximized: centered and either full-screen or ratio-constrained
+        const expectedX = (bounds.width - newCrop.width) / 2
+        const expectedY = (bounds.height - newCrop.height) / 2
+        const isMaximized = Math.abs(newCrop.x - expectedX) < 5 && Math.abs(newCrop.y - expectedY) < 5 &&
+            (cropper.lockRatio
+             ? (Math.abs(newCrop.width - bounds.width) < 5 || Math.abs(newCrop.height - bounds.height) < 5)
+             : (Math.abs(newCrop.width - bounds.width) < 5 && Math.abs(newCrop.height - bounds.height) < 5))
+
+        if (isMaximized && this.savedCropState) {
+            newCrop.x = this.savedCropState.x
+            newCrop.y = this.savedCropState.y
+            newCrop.width = this.savedCropState.width
+            newCrop.height = this.savedCropState.height
+            this.savedCropState = null
         }
         else {
-            this.savedCropState = {x: newCrop.x, y: newCrop.y, width: newCrop.width, height: newCrop.height}
-            newCrop.x = 0
-            newCrop.y = 0
-            newCrop.width = bounds.width
-            newCrop.height = bounds.height
+            if (!isMaximized) {
+                this.savedCropState = {x: newCrop.x, y: newCrop.y, width: newCrop.width, height: newCrop.height}
+            }
+            if (cropper.lockRatio) {
+                if (ratio < 1) {
+                    // Portrait: Maximize height, adjust width
+                    newCrop.height = bounds.height
+                    newCrop.width = Math.floor(newCrop.height * ratio)
+                    if (newCrop.width > bounds.width) {
+                        newCrop.width = bounds.width
+                        newCrop.height = Math.floor(newCrop.width / ratio)
+                    }
+                }
+                else {
+                    // Landscape: Maximize width, adjust height
+                    newCrop.width = bounds.width
+                    newCrop.height = Math.floor(newCrop.width / ratio)
+                    if (newCrop.height > bounds.height) {
+                        newCrop.height = bounds.height
+                        newCrop.width = Math.floor(newCrop.height * ratio)
+                    }
+                }
+            }
+            else {
+                // No lockRatio: Maximize to full screen
+                newCrop.x = 0
+                newCrop.y = 0
+                newCrop.width = bounds.width
+                newCrop.height = bounds.height
+            }
+            newCrop.x = Math.floor((bounds.width - newCrop.width) / 2)
+            newCrop.y = Math.floor((bounds.height - newCrop.height) / 2)
         }
+        newCrop.width = Math.floor(Math.max(10, newCrop.width))
+        newCrop.height = Math.floor(Math.max(10, newCrop.height))
         this.crop = newCrop
         return newCrop
     }
