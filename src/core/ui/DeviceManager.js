@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-17
- * Last modified: 2025-07-17
+ * Created on: 2025-07-18
+ * Last modified: 2025-07-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -45,44 +45,23 @@ export class DeviceManager {
      * @returns {boolean} True if the <body> has the 'mobile' class, false otherwise
      */
     get isMobile() {
-        // Check for 'mobile' class on the <body> element
-        return document.body.classList.contains('mobile')
+        return lgs.stores.ui.device.mobile
     }
 
-    /**
-     * Checks if the <body> element has the 'tablet' class
-     * @returns {boolean} True if the <body> has the 'tablet' class, false otherwise
-     */
     get isTablet() {
-        // Check for 'tablet' class on the <body> element
-        return document.body.classList.contains('tablet')
+        return lgs.stores.ui.device.tablet
     }
 
-    /**
-     * Checks if the <body> element has the 'desktop' class
-     * @returns {boolean} True if the <body> has the 'desktop' class, false otherwise
-     */
     get isDesktop() {
-        // Check for 'desktop' class on the <body> element
-        return document.body.classList.contains('desktop')
+        return lgs.stores.ui.device.desktop
     }
 
-    /**
-     * Checks if the <body> element has the 'portrait' class
-     * @returns {boolean} True if the <body> has the 'portrait' class, false otherwise
-     */
     get isPortrait() {
-        // Check for 'portrait' class on the <body> element
-        return document.body.classList.contains('portrait')
+        return lgs.stores.ui.device.portrait
     }
 
-    /**
-     * Checks if the <body> element has the 'landscape' class
-     * @returns {boolean} True if the <body> has the 'landscape' class, false otherwise
-     */
     get isLandscape() {
-        // Check for 'landscape' class on the <body> element
-        return document.body.classList.contains('landscape')
+        return lgs.stores.ui.device.landscape
     }
 
     /**

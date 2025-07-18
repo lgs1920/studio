@@ -7,56 +7,90 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-17
- * Last modified: 2025-07-17
+ * Created on: 2025-07-18
+ * Last modified: 2025-07-18
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { useEffect }     from 'react'
+import { useEffect } from 'react'
 import { useMediaQuery } from 'react-responsive'
 
 /**
- * Component that dynamically updates device and orientation classes on the <body> element
- * based on screen size and orientation using media queries
- * Only modifies relevant classes to preserve other <body> classes
+ * Updates device and orientation classes on the <body> element and toggles
+ * device info in lgs.stores.ui.device based on screen size and orientation.
+ * Preserves other <body> classes and renders nothing.
  * @returns {null} Renders nothing
  */
 const ResponsiveDevice = () => {
-    // Detect device types
-    const isMobile = useMediaQuery({maxWidth: 767})
-    const isTablet = useMediaQuery({minWidth: 768, maxWidth: 991})
-    const isDesktop = useMediaQuery({minWidth: 992})
+    // Configuration for device and orientation groups with media queries
+    const groups = {
+        platform:    {
+            keys:    ['mobile', 'tablet', 'desktop'],
+            queries: {
+                mobile:  useMediaQuery({maxWidth: 767}),
+                tablet:  useMediaQuery({minWidth: 768, maxWidth: 991}),
+                desktop: useMediaQuery({minWidth: 992}),
+            },
+        },
+        orientation: {
+            keys:    ['portrait', 'landscape'],
+            queries: {
+                portrait:  useMediaQuery({orientation: 'portrait'}),
+                landscape: useMediaQuery({orientation: 'landscape'}),
+            },
+        },
+    }
 
-    // Detect orientation
-    const isPortrait = useMediaQuery({orientation: 'portrait'})
-    const isLandscape = useMediaQuery({orientation: 'landscape'})
+    /**
+     * Sets a single key to true in lgs.stores.ui.device and others to false within the same group
+     * @param {string} key - The key to set to true (e.g., 'mobile', 'portrait')
+     */
+    const setDeviceInfo = key => {
+        // Iterate through groups to find the matching group for the key
+        for (let group in groups) {
+            if (groups[group].keys.includes(key)) {
+                // Set all keys in the group to false, except the specified key
+                groups[group].keys.forEach(k => {
+                    lgs.stores.ui.device[k] = k === key
+                })
+                break
+            }
+        }
+    }
 
     useEffect(() => {
-        // Define device and orientation classes
-        const deviceClasses = ['mobile', 'tablet', 'desktop', 'unknown']
-        const orientationClasses = ['portrait', 'landscape', 'unknown']
+        // Determine active keys for each group (default to 'unknown' if none match)
+        const updates = Object.keys(groups).map(group => {
+            const {keys, queries} = groups[group]
+            const activeKey = keys.find(key => queries[key]) || 'unknown'
+            // Update store with exclusive booleans
+            setDeviceInfo(activeKey)
+            return activeKey
+        })
 
-        // Determine current device class
-        const currentDeviceClass = isMobile ? 'mobile' : isTablet ? 'tablet' : isDesktop ? 'desktop' : 'unknown'
+        // Collect all keys for class management, including 'unknown'
+        const allClasses = Object.values(groups).flatMap(g => g.keys).concat('unknown')
 
-        // Determine current orientation class
-        const currentOrientationClass = isPortrait ? 'portrait' : isLandscape ? 'landscape' : 'unknown'
+        // Remove previous device and orientation classes from <body>
+        document.body.classList.remove(...allClasses)
+        // Add current classes, excluding 'unknown'
+        document.body.classList.add(...updates.filter(cls => cls !== 'unknown'))
 
-        // Remove only previous device and orientation classes
-        document.body.classList.remove(...deviceClasses, ...orientationClasses)
-
-        // Add current device and orientation classes
-        document.body.classList.add(currentDeviceClass, currentOrientationClass)
-
-        // Cleanup: Remove only managed classes on unmount
+        // Cleanup: Remove managed classes on unmount
         return () => {
-            document.body.classList.remove(...deviceClasses, ...orientationClasses)
+            document.body.classList.remove(...allClasses)
         }
-    }, [isMobile, isTablet, isDesktop, isPortrait, isLandscape])
+    }, [
+                  groups.platform.queries.mobile,
+                  groups.platform.queries.tablet,
+                  groups.platform.queries.desktop,
+                  groups.orientation.queries.portrait,
+                  groups.orientation.queries.landscape,
+              ])
 
-    // Render nothing as this component only manages <body> classes
+    // Render nothing as this component only manages <body> classes and device info
     return null
 }
 
