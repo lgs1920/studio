@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-17
- * Last modified: 2025-07-17
+ * Created on: 2025-07-18
+ * Last modified: 2025-07-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,9 +16,8 @@
 
 import { Compass }                      from '@Components/cesium/CompassUI/Compass'
 import { FullScreenButton }                     from '@Components/FullScreenButton/FullScreenButton'
-import { ContextMenuHook } from '@Components/MainUI/ContextMenuHook'
+import { ContextMenuHook }              from '@Components/MainUI/ContextMenuHook'
 import { Cropper }                      from '@Components/MainUI/cropper/Cropper'
-import { CropSelector }                 from '@Components/MainUI/cropper/CropSelector'
 import { GeocodingButton }                      from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'
 import { MapPOIContextMenu }            from '@Components/MainUI/MapPOI/MapPOIContextMenu'
@@ -33,7 +32,7 @@ import { ProfileButton }                        from '@Components/Profile/Profil
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import {
     BOTTOM, END, EVENTS, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
-    MENU_START_START, MOBILE_MAX, SCENE_MODE_2D, SECOND, START, TOP,
+    MENU_START_START, SCENE_MODE_2D, SECOND, START, TOP,
 }                                       from '@Core/constants'
 import { JourneyToolbar }                       from '@Editor/JourneyToolbar'
 import { memo, useCallback, useEffect, useRef } from 'react'
@@ -65,7 +64,8 @@ export const MainUI = memo(() => {
     const formerDevice = useRef(__.device.isMobile)
     const {drawers, toolBar} = useSnapshot(lgs.settings.ui.menu)
     const {show, usage} = useSnapshot(lgs.settings.ui.journeyToolbar)
-    const resizeTimer = useRef(null)
+
+    const {device, video} = useSnapshot(lgs.stores.ui)
 
     const windowResized = useCallback(__.tools.debounce(() => {
         if (formerDevice.current !== __.device.isMobile) {
@@ -73,7 +73,7 @@ export const MainUI = memo(() => {
             arrangeDrawers()
             formerDevice.current = __.device.isMobile
         }
-    }, 0.3 * SECOND), [__.device.is])
+    }, 0.3 * SECOND), [])
 
     const closeDrawer = useCallback(() => {
         __.ui.drawerManager.close()
@@ -173,7 +173,7 @@ export const MainUI = memo(() => {
             primaryEntrance:   config.primaryEntrance || PRIMARY_ENTRANCE,
             secondaryEntrance: config.secondaryEntrance || SECONDARY_ENTRANCE,
         }
-    }, [__.device.is, drawers.fromBottom, drawers.fromStart, toolBar.fromStart])
+    }, [drawers.fromBottom, drawers.fromStart, toolBar.fromStart])
 
     useEffect(() => {
         if (lgs.settings.scene.mode.value === SCENE_MODE_2D.value) {
@@ -253,7 +253,10 @@ export const MainUI = memo(() => {
             <VideoRecorderToolbar tooltip={toolBar.fromStart ? 'left' : 'right'}/>
             <VideoPreview/>
             <ContextMenuHook/>
-            <Cropper source={lgs.canvas} store={lgs.stores.main.components.cropper}/>
+            {!device.mobile && video.canDefine &&
+                // No video Cropping
+                <Cropper source={lgs.canvas} store={lgs.stores.main.components.cropper}/>
+            }
             {/* <CropSelector/> */}
             {/* <CropSelector/> */}
             {show && usage && <JourneyToolbar/>}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-07-18
+ * Last modified: 2025-07-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,6 +21,13 @@ import { proxyMap } from 'valtio/utils'
  * Separated from main store to avoid conflicts and improve performance
  */
 export const ui = {
+    device: {
+        portrait:  false,
+        landscape: false,
+        tablet:    false,
+        mobile:    false,
+        desktop:   false,
+    },
     drawers: {
         open:   null,
         over:   false,
@@ -55,5 +62,10 @@ export const ui = {
 
     informationPanel: {
         tab: null,
+    },
+
+    video: {
+        filename:  0,
+        canDefine: false,
     },
 }
