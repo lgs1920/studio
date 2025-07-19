@@ -19,3 +19,24 @@ db:
   IDBDelay: 5    # Seconds
   extDelay: 30   # Seconds
 
+videoFormats:
+  - label: "16x9"
+    value: "16x9"
+    aspectRatio: 1.7778
+    orientation: "landscape"
+    description: "YouTube, film, widescreen"
+  - label: "9x16"
+    value: "9x16"
+    aspectRatio: 0.5625
+    orientation: "portrait"
+    description: "TikTok, Shorts, Stories, Reels"
+  - label: "1x1"
+    value: "1x1"
+    aspectRatio: 1.0
+    orientation: "square"
+    description: "Instagram square posts"
+  - label: "Free"
+    value: "free"
+    aspectRatio: 1.3333
+    orientation: "paysage"
+    description: "Define your own"
