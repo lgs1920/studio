@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-12
- * Last modified: 2025-07-12
+ * Created on: 2025-07-19
+ * Last modified: 2025-07-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,6 +20,7 @@ import {
 }                            from '@Core/constants'
 import { StoresManager }     from '@Core/stores/StoresManager'
 import { AppToolsManager }   from '@Core/ui/AppToolsManager'
+import { CropperManager }    from '@Core/ui/cropper/CropperManager'
 import { DeviceManager }     from '@Core/ui/DeviceManager'
 import { Geocoder }          from '@Core/ui/Geocoder'
 import { MenuManager }       from '@Core/ui/MenuManager'
@@ -356,6 +357,7 @@ export class LGS1920Context {
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()
         __.recorder = new VideoRecorder()
+        __.cropper = new CropperManager()
     }
 
 

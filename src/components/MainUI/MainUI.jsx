@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-18
- * Last modified: 2025-07-18
+ * Created on: 2025-07-19
+ * Last modified: 2025-07-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,6 +18,7 @@ import { Compass }                      from '@Components/cesium/CompassUI/Compa
 import { FullScreenButton }                     from '@Components/FullScreenButton/FullScreenButton'
 import { ContextMenuHook }              from '@Components/MainUI/ContextMenuHook'
 import { Cropper }                      from '@Components/MainUI/cropper/Cropper'
+import { CropSelector } from '@Components/MainUI/cropper/CropSelector'
 import { GeocodingButton }                      from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'
 import { MapPOIContextMenu }            from '@Components/MainUI/MapPOI/MapPOIContextMenu'
@@ -254,11 +255,8 @@ export const MainUI = memo(() => {
             <VideoPreview/>
             <ContextMenuHook/>
             {!device.mobile && video.canDefine &&
-                // No video Cropping
-                <Cropper source={lgs.canvas} store={lgs.stores.main.components.cropper}/>
+                <Cropper source={lgs.canvas} store={lgs.stores.main.components.cropper} options={{editor: true}}/>
             }
-            {/* <CropSelector/> */}
-            {/* <CropSelector/> */}
             {show && usage && <JourneyToolbar/>}
         </>
     )

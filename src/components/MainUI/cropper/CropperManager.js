@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-17
- * Last modified: 2025-07-17
+ * Created on: 2025-07-19
+ * Last modified: 2025-07-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -103,6 +103,83 @@ class CropperManager {
     }
 
     /**
+     * Resets the crop state with new parameters
+     * @param {Object} params - New crop parameters
+     * @param {number} [params.width=512] - New crop width
+     * @param {number} [params.height=360] - New crop height
+     * @param {boolean} [params.lockRatio=true] - Whether to lock aspect ratio
+     * @param {Object} [params.options={}] - New configuration options
+     * @returns {Object} Updated crop state
+     */
+    resetCrop = (params = {}) => {
+        if (this.isDestroyed) {
+            return this.crop
+        }
+
+        // Clear any ongoing interactions
+        this.handleEnd()
+        if (this.longTapTimer) {
+            clearTimeout(this.longTapTimer)
+            this.longTapTimer = null
+        }
+        this.timers.forEach(timer => {
+            if (typeof timer === 'number') {
+                clearTimeout(timer)
+                clearInterval(timer)
+            }
+        })
+        this.timers = []
+        if (this.rafId) {
+            cancelAnimationFrame(this.rafId)
+            this.rafId = null
+        }
+
+        // Reset interaction state
+        this.interactionState = {
+            action:               null,
+            showHCenterLine:      false,
+            showVCenterLine:      false,
+            dragLockedHorizontal: false,
+            dragLockedVertical:   false,
+            isCentering:          false,
+            wasJustCentered:      false,
+        }
+        this.resizeStartState = null
+        this.savedCropState = null
+        this.centeringLockTimers = {horizontal: null, vertical: null}
+
+        // Update options with new parameters
+        this.options = {
+            ...this.options,
+            ...params.options,
+            lockRatio: params.lockRatio ?? this.options.lockRatio ?? true,
+        }
+
+        // Get source bounds and set new crop dimensions
+        const bounds = this.getSourceBounds()
+        const newWidth = Math.min(params.width ?? 512, bounds.width)
+        const newHeight = Math.min(params.height ?? 360, bounds.height)
+
+        // Initialize new crop state, centered
+        this.crop = {
+            x:      (bounds.width - newWidth) / 2,
+            y:      (bounds.height - newHeight) / 2,
+            width:  newWidth,
+            height: newHeight,
+        }
+
+        // Ensure crop stays within bounds
+        this.crop.x = Math.max(0, Math.min(this.crop.x, bounds.width - this.crop.width))
+        this.crop.y = Math.max(0, Math.min(this.crop.y, bounds.height - this.crop.height))
+
+        // Update store and state
+        this.store.lockRatio = this.options.lockRatio
+        this.updateStore(this.crop)
+
+        return this.crop
+    }
+
+    /**
      * Updates device pixel ratio on window size change
      */
     updateWindowSize = () => {
@@ -133,28 +210,28 @@ class CropperManager {
         const sourceBounds = this.getSourceBounds()
         const dpr = this.dpr
         return {
-            overlayStyle:           {
+            overlayStyle:          {
                 clipPath: `polygon(
-    0 0, 100% 0, 100% 100%, 0 100%,
-    0 ${crop.y / dpr}px,
-    ${crop.x / dpr}px ${crop.y / dpr}px,
-    ${crop.x / dpr}px ${(crop.y + crop.height) / dpr}px,
-    ${(crop.x + crop.width) / dpr}px ${(crop.y + crop.height) / dpr}px,
-    ${(crop.x + crop.width) / dpr}px ${crop.y / dpr}px,
-    0 ${crop.y / dpr}px
-)`,
+                    0 0, 100% 0, 100% 100%, 0 100%,
+                    0 ${crop.y / dpr}px,
+                    ${crop.x / dpr}px ${crop.y / dpr}px,
+                    ${crop.x / dpr}px ${(crop.y + crop.height) / dpr}px,
+                    ${(crop.x + crop.width) / dpr}px ${(crop.y + crop.height) / dpr}px,
+                    ${(crop.x + crop.width) / dpr}px ${crop.y / dpr}px,
+                    0 ${crop.y / dpr}px
+                )`,
             },
-            hCenterLineLeftStyle:   {
+            hCenterLineLeftStyle:  {
                 left:  sourceBounds.x / dpr,
                 top:   (crop.y + crop.height / 2) / dpr,
                 width: Math.max(0, (crop.x - sourceBounds.x) / dpr),
             },
-            hCenterLineRightStyle:  {
+            hCenterLineRightStyle: {
                 left:  (crop.x + crop.width) / dpr,
                 top:   (crop.y + crop.height / 2) / dpr,
                 width: Math.max(0, (sourceBounds.x + sourceBounds.width - (crop.x + crop.width)) / dpr),
             },
-            vCenterLineTopStyle:    {
+            vCenterLineTopStyle:   {
                 top:    sourceBounds.y / dpr,
                 left:   (crop.x + crop.width / 2) / dpr,
                 height: Math.max(0, (crop.y - sourceBounds.y) / dpr),

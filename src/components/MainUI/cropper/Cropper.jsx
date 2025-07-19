@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-17
- * Last modified: 2025-07-17
+ * Created on: 2025-07-19
+ * Last modified: 2025-07-19
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { CropSelector } from './CropSelector'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSnapshot }    from 'valtio'
 import PropTypes          from 'prop-types'
@@ -54,7 +55,7 @@ export const Cropper = ({source, container, className = '', store, options = {}}
                                                                  wasJustCentered:    false,
                                                                  isCentering:        false,
                                                              })
-    const _videoCropper = useRef(null)
+    const _CropperContainer = useRef(null)
     const _cropZone = useRef(null)
 
     // Memoize options to prevent unnecessary re-renders
@@ -63,6 +64,7 @@ export const Cropper = ({source, container, className = '', store, options = {}}
         options.resizable,
         options.lockCentering,
         options.vibrate,
+        options.editor,
     ])
 
     /**
@@ -138,7 +140,7 @@ export const Cropper = ({source, container, className = '', store, options = {}}
 
         const handleCropperClose = (event) => {
             console.log('onClose', event)
-            _videoCropper.current.style.display = 'none'
+            _CropperContainer.current.style.display = 'none'
         }
 
         source.addEventListener('onCropperClose', handleCropperClose)
@@ -245,7 +247,8 @@ export const Cropper = ({source, container, className = '', store, options = {}}
     const styles = manager.getStyles(crop, interactionState)
 
     return (
-        <div ref={_videoCropper}>
+        <div ref={_CropperContainer} class="crop-container">
+            {/* options?.editor && */ <CropSelector/>}
             {/* Crop overlay - dims the area outside the crop region */}
             <div className="crop-overlay" style={styles.overlayStyle}/>
 

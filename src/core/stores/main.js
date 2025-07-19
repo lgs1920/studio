@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-18
- * Last modified: 2025-07-18
+ * Created on: 2025-07-19
+ * Last modified: 2025-07-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -113,15 +113,15 @@ export const main = {
         cropper: {
             x:           null,
             y:           null,
-            width:       512,
-            height:      360,
+            width:       null,
+            height:      null,
             draggable:   true,
             resizable:   true,
             lockRatio:   true,
             handleSize:  12,
             orientation: 'portrait',
             mode:        'ratio',
-            presetValue: '16:9',
+            presetValue: 'free',
             borderColor: '#0077ff',
             handleColor: '#0077ff',
             _rafId:      null,

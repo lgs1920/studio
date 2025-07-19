@@ -7,77 +7,116 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-13
- * Last modified: 2025-07-13
+ * Created on: 2025-07-19
+ * Last modified: 2025-07-19
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { useSnapshot }                  from 'valtio'
-import { SlSelect, SlOption, SlSwitch } from '@shoelace-style/shoelace/dist/react'
+/**
+ * CropSelector.jsx
+ * Component for selecting crop ratios with drag functionality and icon selection
+ * @returns {JSX.Element} Crop selector UI component
+ */
+import { DragHandler }                                    from '@Core/ui/drag-handler/DragHandler'
+import { faGripDots }                                     from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon, SlTooltip }                              from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                          from '@Utils/FA2SL'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { useSnapshot }                                    from 'valtio'
 import './style.css'
 
-export const CropSelector = () => {
+export const CropSelector = memo(() => {
     const $cropper = lgs.stores.main.components.cropper
+    const toolbars = useSnapshot(lgs.settings.ui.toolbars)
     const state = useSnapshot($cropper)
+    const _cropperMenu = useRef(null)
+    const [selectedRatio, setSelectedRatio] = useState(lgs.configuration.videoFormats[0]?.value || '16/9')
 
-    const ratioPresets = __.presets.ratios.filter(
-        r => r.orientation === state.orientation || r.orientation === 'square',
-    )
-    const sizePresets = __.presets.sizes.filter(
-        s => s.orientation === state.orientation || s.orientation === 'square',
-    )
+    /**
+     * Updates toolbar opacity when toolbars.opacity changes
+     */
+    useEffect(() => {
+        if (_cropperMenu.current) {
+            _cropperMenu.current.style.opacity = toolbars.opacity
+        }
+    }, [toolbars.opacity])
 
-    const handleRatio = value => {
-        videoCropper.mode = 'ratio'
-        videoCropper.presetValue = value
-    }
+    /**
+     * Initializes drag handler for the crop selector
+     */
+    useEffect(() => {
+        const editor = _cropperMenu.current
+        if (!editor) {
+            return
+        }
 
-    const handleSize = value => {
-        videoCropper.mode = 'size'
-        videoCropper.presetValue = value
-    }
+        const dragHandler = new DragHandler({
+                                                grabber:   editor,
+                                                parent:    editor,
+                                                container: lgs.canvas,
+                                            })
 
-    const toggle = (key, val) => videoCropper[key] = val
+        return () => {
+            dragHandler.destroy()
+        }
+    }, [])
+
+    /**
+     * Handles ratio selection, updates UI, and resets crop
+     * @param {Object} preset - Selected video format preset
+     * @param {Event} event - Click event
+     */
+    const handleChangeRatio = useCallback((preset, event) => {
+        if (!_cropperMenu.current) {
+            return
+        }
+
+        // Update selected class
+        const icons = _cropperMenu.current.querySelectorAll('.crop-ratio-presets sl-icon')
+        icons.forEach(icon => icon.classList.remove('selected'))
+        event.target.classList.add('selected')
+
+        // Update state and crop
+        setSelectedRatio(preset.value)
+        const [w, h] = preset.value.split('/').map(Number)
+        const bounds = $cropper.manager.getSourceBounds()
+        const width = Math.min(512, bounds.width)
+        const height = width * h / w
+
+        $cropper.manager.resetCrop({
+                                       width,
+                                       height,
+                                       lockRatio: true,
+                                   })
+
+        console.log('Selected ratio:', preset.value)
+    }, [$cropper])
 
     return (
-        <div className="crop-controls">
-            <SlSelect label="Ratio Presets" onSlChange={e => handleRatio(e.target.value)}>
-                {ratioPresets.map(p => (
-                    <SlOption key={p.value} value={p.value}>
-                        {p.label}
-                    </SlOption>
+        <div className="crop-controls lgs-toolbar lgs-card on-map" ref={_cropperMenu}>
+            <SlTooltip content="Drag me">
+                <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
+            </SlTooltip>
+            <div className="crop-ratio-presets">
+                {lgs.configuration.videoFormats.map(preset => (
+                    <SlTooltip
+                        key={preset.value}
+                        content={`${preset.label}: ${preset.description}`}
+                        placement="right"
+                    >
+                        <SlIcon
+                            library="fa"
+                            className={`lgs-card ${selectedRatio === preset.value ? 'selected' : ''}`}
+                            onClick={e => handleChangeRatio(preset, e)}
+                            name={FA2SL.set(__.cropper.icons[preset.value])}
+                        />
+                    </SlTooltip>
                 ))}
-            </SlSelect>
-
-            <SlSelect label="Fixed Size Presets" onSlChange={e => handleSize(e.target.value)}>
-                {sizePresets.map(p => (
-                    <SlOption key={p.value} value={p.value}>
-                        {p.label} ({p.width}×{p.height})
-                    </SlOption>
-                ))}
-            </SlSelect>
-
-            <SlSwitch checked={state.lockRatio} onSlChange={e => toggle('lockRatio', e.target.checked)}>
-                Lock aspect ratio
-            </SlSwitch>
-
-            <SlSwitch checked={state.resizable} onSlChange={e => toggle('resizable', e.target.checked)}>
-                Allow resize
-            </SlSwitch>
-
-            <SlSwitch checked={state.draggable} onSlChange={e => toggle('draggable', e.target.checked)}>
-                Allow drag
-            </SlSwitch>
-
-            <SlSwitch
-                checked={state.orientation === 'landscape'}
-                onSlChange={e => toggle('orientation', e.target.checked ? 'landscape' : 'portrait')}
-            >
-                Landscape mode
-            </SlSwitch>
+            </div>
         </div>
     )
-}
+})
 
+CropSelector.displayName = 'CropSelector'
