@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-17
- * Last modified: 2025-07-17
+ * Created on: 2025-07-19
+ * Last modified: 2025-07-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -44,6 +44,9 @@ import { useSnapshot }                                                          
 export const JourneyToolbar = (props) => {
     const $journeyToolbar = lgs.settings.ui.journeyToolbar
     const journeyToolbar = useSnapshot($journeyToolbar)
+    const toolbars = useSnapshot(lgs.settings.ui.toolbars)
+
+
     const _journeyToolbar = useRef(null)
     const _journeySelector = useRef(null)
 
@@ -161,11 +164,15 @@ export const JourneyToolbar = (props) => {
     const closeToolbar = (event) => {
         $journeyToolbar.show = false
     }
+
     const setToolbarOpacity = () => {
-        _journeyToolbar.current.style.opacity = $journeyToolbar.opacity
+        _journeyToolbar.current.style.opacity = toolbars.opacity
     }
+
     useEffect(() => {
         const toolbar = _journeyToolbar.current
+
+
         if (!toolbar || !$journeyToolbar.show || journeyEditor.list.length === 0) {
             return
         }
@@ -191,7 +198,8 @@ export const JourneyToolbar = (props) => {
         // Force the right opacity
         setToolbarOpacity(toolbar)
         __.requestAnimationFrame(positionToolbar)
-    }, [$journeyToolbar.show, journeyEditor.list.length]) // Dependencies to wait for toolbar visibility
+    }, [$journeyToolbar.show, journeyEditor.list.length, toolbars.opacity]) // Dependencies to wait for toolbar
+                                                                            // visibility
 
 
     /**
@@ -272,7 +280,7 @@ export const JourneyToolbar = (props) => {
         <>
             {journeyEditor.list.length > 0 && journeyToolbar.show &&
                 <div
-                    className="journey-toolbar lgs-card on-map"
+                    className="journey-toolbar lgs-toolbar lgs-card on-map"
                     ref={_journeyToolbar}
                     style={{
                         top:      `${$journeyToolbar.y}px`,
@@ -344,7 +352,7 @@ export const JourneyToolbar = (props) => {
                         </SlTooltip>
 
                         <SlTooltip hoist content="Close" placement="top">
-                            <FAButton id="close-journey-toolbar" onClick={closeToolbar} icon={faXmark}/>
+                            <FAButton className="close-lgs-toolbar" onClick={closeToolbar} icon={faXmark}/>
                         </SlTooltip>
                     </>
                 </div>

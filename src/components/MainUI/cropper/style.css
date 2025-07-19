@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-16
- * Last modified: 2025-07-16
+ * Created on: 2025-07-19
+ * Last modified: 2025-07-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -103,15 +103,6 @@
     left: -8px;
     cursor: ew-resize;
     transform: translateY(-50%);
-}
-
-/***************************************
- *  Crop Selector Panel
- **************************************/
-.crop-controls {
-    z-index: 10;
-    max-width: 320px;
-    padding: 1rem;
 }
 
 /***************************************
@@ -213,4 +204,49 @@
     width: var(--crop-centered-line-width);
     height: 100%;
     transform: translateX(-50%);
+}
+
+/*******************************************************************************
+ * Cropper Editor
+ ******************************************************************************/
+
+.crop-controls {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    padding: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}
+
+.crop-ratio-presets {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--lgs-gutter-xs);
+
+}
+
+.crop-ratio-presets sl-icon {
+    font-size: var(--lgs-font-size);
+    line-height: 1;
+    width: calc(var(--lgs-font-size) + 4px);
+    height: calc(var(--lgs-font-size) + 2px);
+    padding: var(--lgs-gutter-s);
+    text-align: center;
+}
+
+.crop-ratio-presets sl-icon.selected {
+    border-color: var(--lgs-card-on-map-selected-border-color);
+    background: var(--lgs-card-on-map-selected-bg-color);
+}
+
+.crop-ratio-presets sl-icon:hover {
+    border-color: var(--lgs-card-on-map-hover-border-color);
+    background: var(--lgs-card-on-map-hover-bg-color);
+}
+
+.crop-ratio-presets sl-icon svg {
+    width: unset;
+    height: var(--lgs-font-size);
 }

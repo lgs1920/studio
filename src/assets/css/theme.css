@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-12
- * Last modified: 2025-07-12
+ * Created on: 2025-07-19
+ * Last modified: 2025-07-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -141,8 +141,10 @@
 
     --lgs-card-on-map-bg-color: var(--lgs-dark-color-50);
     --lgs-card-on-map-border-color: var(--lgs-light-color-25);
-    --lgs-card-on-map-hover-bg-color: #ffffff22;
-
+    --lgs-card-on-map-hover-bg-color: var(--lgs-dark-color-75);
+    --lgs-card-on-map-hover-border-color: var(--lgs-light-color-50);
+    --lgs-card-on-map-selected-bg-color: var(--lgs-dark-color);
+    --lgs-card-on-map-selected-border-color: var(--lgs-light-color-75);
 
     --lgs-track-color-active: var(--lgs-dark-ui-secondary-color);
     --lgs-track-color-inactive: var(--sl-color-gray-200);
@@ -518,6 +520,11 @@ sl-card[variant="primary"]::part(base) {
     box-shadow: var(--sl-shadow-medium);
     gap: var(--lgs-gutter-s);
     backdrop-filter: blur(var(--lgs-blur));
+}
+
+.on-map .lgs-card {
+    border-color: var(--lgs-card-on-map-border-color);
+    background: var(--lgs-card-on-map-bg-color);
 }
 
 .lgs-card-wrapper {
@@ -1066,6 +1073,54 @@ h3 {
 [readonly] {
     user-select: none;
     pointer-events: none;
+}
+
+/*******************************************************************************
+ * toolbar
+ ******************************************************************************/
+
+.lgs-toolbar {
+    position: absolute;
+    z-index: var(--lgs-ui-layer-zindex);
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    flex-shrink: 0;
+    padding: 0;
+    opacity: 0;
+    gap: 0 !important;
+}
+
+.lgs-toolbar.dragging {
+    background-color: var(--lgs-dark-color-15);
+}
+
+.lgs-toolbar .grabber {
+    font-size: var(--lgs-font-size-l);
+    flex-shrink: 0;
+    cursor: grab;
+}
+
+.lgs-toolbar .grabber::part(base) {
+    font-size: var(--lgs-font-size);
+    padding-right: 0;
+    padding-left: 0;
+}
+
+.lgs-toolbar.dragging .grabber {
+    cursor: grabbing;
+}
+
+.lgs-toolbar sl-button::part(base) {
+    border: none;
+    background: transparent;
+}
+
+.close-lgs-toolbar {
+    font-size: var(--lgs-font-size);
+    height: 1.2rem;
+    border-left: 1px solid var(--lgs-card-on-map-border-color);
+    border-radius: 0;
 }
 
 /*******************************************************************************

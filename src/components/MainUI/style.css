@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-14
- * Last modified: 2025-07-14
+ * Created on: 2025-07-19
+ * Last modified: 2025-07-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -141,34 +141,6 @@ html {
     --sl-input-border-width: 0;
 }
 
-.journey-toolbar {
-    position: absolute;
-    z-index: var(--lgs-ui-layer-zindex);
-    display: flex;
-    align-items: center;
-    flex-direction: row;
-    flex-shrink: 0;
-    padding: 0;
-    opacity: 0;
-    gap: 0 !important;
-}
-
-.journey-toolbar.dragging {
-    background-color: var(--lgs-dark-color-15);
-}
-
-.journey-toolbar .grabber {
-    font-size: var(--lgs-font-size-l);
-    flex-shrink: 0;
-    cursor: grab;
-}
-
-.journey-toolbar .grabber::part(base) {
-    font-size: var(--lgs-font-size);
-    padding-right: 0;
-    padding-left: 0;
-}
-
 .journey-toolbar.dragging .grabber {
     cursor: grabbing;
 }
@@ -176,19 +148,6 @@ html {
 .journey-toolbar .journey-selector {
     min-width: 15rem;
     max-width: min(20rem, 100%);
-}
-
-.journey-toolbar sl-button::part(base) {
-
-    border: none;
-    background: transparent;
-}
-
-#close-journey-toolbar {
-    font-size: var(--lgs-font-size);
-    height: 1.2rem;
-    border-left: 1px solid var(--lgs-card-on-map-border-color);
-    border-radius: 0;
 }
 
 .journey-toolbar .journey-title {

@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: MenuSettings.jsx
+ * File: EditorSettings.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-07-19
+ * Last modified: 2025-07-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,6 +22,8 @@ import { useSnapshot }                             from 'valtio'
 
 export const EditorSettings = (props) => {
 
+    const $toolbars = lgs.settings.ui.toolbars
+    const toolbars = useSnapshot($toolbars)
     const $journeyToolbar = lgs.settings.ui.journeyToolbar
     const journeyToolbar = useSnapshot($journeyToolbar)
 
@@ -34,9 +36,9 @@ export const EditorSettings = (props) => {
     const toggleUsage = (event) => {
 
     }
-    const setToolbarOpacity = (event) => $journeyToolbar.opacity = event.target.value
+    const setToolbarOpacity = (event) => $toolbars.opacity = event.target.value
     const resetToolbarOpacity = (event) => {
-        $journeyToolbar.opacity = $journeyToolbar.defaultOpacity
+        $toolbars.opacity = toolbars.defaultOpacity
     }
 
     useEffect(() => {
@@ -55,21 +57,20 @@ export const EditorSettings = (props) => {
                               $journeyToolbar.usage = switchValue(event)
                               event.preventDefault()
                           }}>
-                    {'Add Floating Toolbar'}
+                    {'Add Journey Toolbar'}
                 </SlSwitch>
-                {journeyToolbar.usage &&
-                    <div id="journey-toolbar-opacity">
+                <h3>Toolbars</h3>
+                <div id="toolbars-opacity">
                         <span>Floating Toolbar Opacity</span>
                         <span><SlTooltip content="Reset to default">
-                        <FAButton icon={faArrowsRotate} id={'journey-toolbar-opacity-reset'}
+                        <FAButton icon={faArrowsRotate} id={'toolbars-opacity-reset'}
                                   onClick={resetToolbarOpacity}></FAButton>
                         </SlTooltip>
-                        <SlRange value={journeyToolbar.opacity * 1.0}
+                        <SlRange value={toolbars.opacity * 1.0}
                                  onSlInput={setToolbarOpacity}
                                  min={0.3} max={1} step={0.05} tooltip="top"/>
                     </span>
                     </div>
-                }
             </div>
         </>
     )

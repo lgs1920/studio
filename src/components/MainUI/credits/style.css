@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-07-19
+ * Last modified: 2025-07-19
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 /***************************************
  * Credits Bar
  */
@@ -65,8 +81,6 @@
 }
 
 .provider-credits {
-    --lgs-card-on-map-bg-color: rgba(255, 255, 255, 0.5);
-    --lgs-card-on-map-border-color: hsla(240 4.8% 95.9%/0.25);
     color: var(--lgs-card-on-map-border-color) !important;
 }
 
