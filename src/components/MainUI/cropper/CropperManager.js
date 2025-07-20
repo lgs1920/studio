@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-19
- * Last modified: 2025-07-19
+ * Created on: 2025-07-20
+ * Last modified: 2025-07-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -36,7 +36,7 @@ class CropperManager {
     ]
 
     /**
-     * Time-related constants (in milliseconds)
+     * Time-related and scaling constants
      * @static
      */
     static DOUBLE_TAP_THRESHOLD = 200
@@ -45,6 +45,9 @@ class CropperManager {
     static CENTERING_LOCK_TIMEOUT = 2000
     static RESET_CENTERING_INTERVAL = 100
     static TOUCH_MOVEMENT_TIMEOUT = 100
+    static CROP_SCALE_FACTOR = 0.95
+    static RESIZE_DEBOUNCE_MS = 100
+    static MIN_CROP_SIZE = 100
 
     /**
      * Creates a new CropperManager instance
@@ -61,11 +64,12 @@ class CropperManager {
         this.container = container || source
         this.store = store
         this.options = {
-            draggable:        true,
-            resizable:        true,
+            draggable: true,
+            resizable: true,
             lockCentering: true,
-            vibrate:          true,
+            vibrate:   true,
             touchSensitivity: 3,
+            lockRatio: true,
             ...options,
         }
         this.dpr = window.devicePixelRatio || 1
@@ -73,15 +77,130 @@ class CropperManager {
         this.touchStartPosition = null
         this.doubleTapStartPosition = null
         this.longTapTimer = null
-        const bounds = this.getSourceBounds()
-        this.crop = {
-            x:      store.x ?? (bounds.width - (store.width ?? 512)) / 2,
-            y:      store.y ?? (bounds.height - (store.height ?? 360)) / 2,
-            width:  Math.min(store.width ?? 512, bounds.width),
-            height: Math.min(store.height ?? 360, bounds.height),
+        this.timers = []
+        this.rafId = null
+        this.isDestroyed = false
+        this.resizeStartState = null
+        this.savedCropState = null
+        this.centeringLockTimers = {horizontal: null, vertical: null}
+        this.debounceTimer = null
+
+        this.crop = this.initializeCrop()
+        this.interactionState = {
+            action:          null,
+            showHCenterLine: false,
+            showVCenterLine: false,
+            dragLockedHorizontal: false,
+            dragLockedVertical: false,
+            isCentering:     false,
+            wasJustCentered: false,
         }
-        this.crop.x = Math.max(0, Math.min(this.crop.x, bounds.width - this.crop.width))
-        this.crop.y = Math.max(0, Math.min(this.crop.y, bounds.height - this.crop.height))
+
+        this.updateStore(this.crop)
+        this.handleResizeEvent = this.debounce(() => this.updateCropOnSourceChange(), CropperManager.RESIZE_DEBOUNCE_MS)
+        this.handleKeydown = (event) => {
+            if (!this.isDestroyed && event.key === 'Escape') {
+                this.closeCropper()
+            }
+        }
+        window.addEventListener('resize', this.handleResizeEvent)
+        window.addEventListener('orientationchange', this.handleResizeEvent)
+        window.addEventListener('keydown', this.handleKeydown)
+    }
+
+    /**
+     * Initializes crop region based on source bounds and aspect ratio
+     * @returns {Object} Initial crop state
+     */
+    initializeCrop = () => {
+        const bounds = this.getSourceBounds()
+        const aspectRatio = this.store.width && this.store.height
+                            ? this.store.width / this.store.height
+                            : bounds.width / bounds.height
+        return this.computeCropDimensions(bounds, aspectRatio)
+    }
+
+    /**
+     * Computes crop dimensions based on bounds and aspect ratio
+     * @param {Object} bounds - Source bounds
+     * @param {number} aspectRatio - Desired aspect ratio
+     * @returns {Object} Crop state
+     */
+    computeCropDimensions = (bounds, aspectRatio) => {
+        let width, height
+        if (aspectRatio === 1) {
+            width = height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, Math.min(bounds.width, bounds.height) * CropperManager.CROP_SCALE_FACTOR))
+        }
+        else if (aspectRatio < 1) {
+            height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, bounds.height * CropperManager.CROP_SCALE_FACTOR))
+            width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, height * aspectRatio))
+        }
+        else {
+            width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, bounds.width * CropperManager.CROP_SCALE_FACTOR))
+            height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, width / aspectRatio))
+        }
+        return this.clampCrop({
+                                  x: Math.floor((bounds.width - width) / 2),
+                                  y: Math.floor((bounds.height - height) / 2),
+                                  width,
+                                  height,
+                              }, bounds)
+    }
+
+    /**
+     * Clamps crop to bounds and ensures valid values
+     * @param {Object} crop - Crop object
+     * @param {Object} bounds - Source bounds
+     * @returns {Object} Clamped crop
+     */
+    clampCrop = (crop, bounds) => {
+        const result = {
+            x:      Math.floor(Math.max(0, Math.min(crop.x, bounds.width - crop.width))),
+            y:      Math.floor(Math.max(0, Math.min(crop.y, bounds.height - crop.height))),
+            width:  Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.width)),
+            height: Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.height)),
+        }
+        if (isNaN(result.x) || isNaN(result.y) || isNaN(result.width) || isNaN(result.height)) {
+            console.error('Invalid crop values:', {crop, bounds})
+            return {...this.crop}
+        }
+        return result
+    }
+
+    /**
+     * Debounces a function to limit execution rate
+     * @param {Function} func - Function to debounce
+     * @param {number} wait - Wait time in milliseconds
+     * @returns {Function} Debounced function
+     */
+    debounce = (func, wait) => {
+        return (...args) => {
+            clearTimeout(this.debounceTimer)
+            this.debounceTimer = setTimeout(() => func.apply(this, args), wait)
+            this.timers.push(this.debounceTimer)
+        }
+    }
+
+    /**
+     * Resets the crop state with new parameters
+     * @param {Object} params - New crop parameters
+     * @param {number|null} [params.aspectRatio] - Desired aspect ratio (width/height), null for free
+     * @param {boolean} [params.lockRatio=true] - Whether to lock aspect ratio
+     * @param {Object} [params.options={}] - New configuration options
+     * @param {string} [params.source='unknown'] - Source of the reset call
+     * @returns {Object} Updated crop state
+     */
+    resetCrop = (params = {}) => {
+        if (this.isDestroyed) {
+            return this.crop
+        }
+
+        this.handleEnd()
+        this.longTapTimer && clearTimeout(this.longTapTimer)
+        this.timers.forEach(timer => typeof timer === 'number' && (clearTimeout(timer), clearInterval(timer)))
+        this.rafId && cancelAnimationFrame(this.rafId)
+        this.timers = []
+        this.rafId = null
         this.interactionState = {
             action:             null,
             showHCenterLine:    false,
@@ -91,99 +210,34 @@ class CropperManager {
             isCentering:        false,
             wasJustCentered:    false,
         }
-        this.timers = []
-        this.rafId = null
-        this.isDestroyed = false
-        this.resizeStartState = null
-        this.savedCropState = null
-        this.centeringLockTimers = {horizontal: null, vertical: null}
-        this.updateStore(this.crop)
-        window.addEventListener('resize', this.updateCropOnSourceChange.bind(this, this))
-        window.addEventListener('orientationchange', this.updateCropOnSourceChange.bind(this, this))
-    }
-
-    /**
-     * Resets the crop state with new parameters
-     * @param {Object} params - New crop parameters
-     * @param {number} [params.width=512] - New crop width
-     * @param {number} [params.height=360] - New crop height
-     * @param {boolean} [params.lockRatio=true] - Whether to lock aspect ratio
-     * @param {Object} [params.options={}] - New configuration options
-     * @returns {Object} Updated crop state
-     */
-    resetCrop = (params = {}) => {
-        if (this.isDestroyed) {
-            return this.crop
-        }
-
-        // Clear any ongoing interactions
-        this.handleEnd()
-        if (this.longTapTimer) {
-            clearTimeout(this.longTapTimer)
-            this.longTapTimer = null
-        }
-        this.timers.forEach(timer => {
-            if (typeof timer === 'number') {
-                clearTimeout(timer)
-                clearInterval(timer)
-            }
-        })
-        this.timers = []
-        if (this.rafId) {
-            cancelAnimationFrame(this.rafId)
-            this.rafId = null
-        }
-
-        // Reset interaction state
-        this.interactionState = {
-            action:               null,
-            showHCenterLine:      false,
-            showVCenterLine:      false,
-            dragLockedHorizontal: false,
-            dragLockedVertical:   false,
-            isCentering:          false,
-            wasJustCentered:      false,
-        }
         this.resizeStartState = null
         this.savedCropState = null
         this.centeringLockTimers = {horizontal: null, vertical: null}
 
-        // Update options with new parameters
         this.options = {
             ...this.options,
             ...params.options,
             lockRatio: params.lockRatio ?? this.options.lockRatio ?? true,
         }
 
-        // Get source bounds and set new crop dimensions
         const bounds = this.getSourceBounds()
-        const newWidth = Math.min(params.width ?? 512, bounds.width)
-        const newHeight = Math.min(params.height ?? 360, bounds.height)
+        const aspectRatio = Number.isFinite(params.aspectRatio)
+                            ? params.aspectRatio
+                            : (this.options.lockRatio ? this.crop.width / this.crop.height || 1 : null)
 
-        // Initialize new crop state, centered
-        this.crop = {
-            x:      (bounds.width - newWidth) / 2,
-            y:      (bounds.height - newHeight) / 2,
-            width:  newWidth,
-            height: newHeight,
-        }
+        this.crop = params.aspectRatio === null && !this.options.lockRatio
+                    ? this.clampCrop({
+                                         x:      Math.floor((bounds.width - bounds.width * CropperManager.CROP_SCALE_FACTOR) / 2),
+                                         y:      Math.floor((bounds.height - bounds.height * CropperManager.CROP_SCALE_FACTOR) / 2),
+                                         width:  Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, bounds.width * CropperManager.CROP_SCALE_FACTOR)),
+                                         height: Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, bounds.height * CropperManager.CROP_SCALE_FACTOR)),
+                                     }, bounds)
+                    : this.computeCropDimensions(bounds, aspectRatio)
 
-        // Ensure crop stays within bounds
-        this.crop.x = Math.max(0, Math.min(this.crop.x, bounds.width - this.crop.width))
-        this.crop.y = Math.max(0, Math.min(this.crop.y, bounds.height - this.crop.height))
-
-        // Update store and state
         this.store.lockRatio = this.options.lockRatio
+        this.store.aspectRatio = this.options.lockRatio ? aspectRatio : null
         this.updateStore(this.crop)
-
         return this.crop
-    }
-
-    /**
-     * Updates device pixel ratio on window size change
-     */
-    updateWindowSize = () => {
-        this.dpr = window.devicePixelRatio || 1
     }
 
     /**
@@ -193,10 +247,10 @@ class CropperManager {
     getSourceBounds = () => {
         const rect = this.container.getBoundingClientRect()
         return {
-            x:     rect.left * this.dpr,
-            y:     rect.top * this.dpr,
-            width: rect.width * this.dpr,
-            height: rect.height * this.dpr,
+            x:      Math.floor(rect.left * this.dpr),
+            y:      Math.floor(rect.top * this.dpr),
+            width:  Math.floor(rect.width * this.dpr),
+            height: Math.floor(rect.height * this.dpr),
         }
     }
 
@@ -209,56 +263,64 @@ class CropperManager {
     getStyles = (crop, interactionState) => {
         const sourceBounds = this.getSourceBounds()
         const dpr = this.dpr
+        const cropX = Math.floor(crop.x / dpr)
+        const cropY = Math.floor(crop.y / dpr)
+        const cropWidth = Math.floor(crop.width / dpr)
+        const cropHeight = Math.floor(crop.height / dpr)
         return {
-            overlayStyle:          {
+            overlayStyle:           {
                 clipPath: `polygon(
-                    0 0, 100% 0, 100% 100%, 0 100%,
-                    0 ${crop.y / dpr}px,
-                    ${crop.x / dpr}px ${crop.y / dpr}px,
-                    ${crop.x / dpr}px ${(crop.y + crop.height) / dpr}px,
-                    ${(crop.x + crop.width) / dpr}px ${(crop.y + crop.height) / dpr}px,
-                    ${(crop.x + crop.width) / dpr}px ${crop.y / dpr}px,
-                    0 ${crop.y / dpr}px
-                )`,
+                    0% 0%, 100% 0%, 100% 100%, 0% 100%,
+                    0% ${cropY}px,
+                    ${cropX}px ${cropY}px,
+                    ${cropX}px ${cropY + cropHeight}px,
+                    ${cropX + cropWidth}px ${cropY + cropHeight}px,
+                    ${cropX + cropWidth}px ${cropY}px,
+                    0% ${cropY}px
+                )`
             },
-            hCenterLineLeftStyle:  {
-                left:  sourceBounds.x / dpr,
-                top:   (crop.y + crop.height / 2) / dpr,
-                width: Math.max(0, (crop.x - sourceBounds.x) / dpr),
+            hCenterLineLeftStyle:   {
+                left:  Math.floor(sourceBounds.x / dpr),
+                top:   Math.floor(cropY + cropHeight / 2),
+                width: Math.max(0, Math.floor(cropX - sourceBounds.x / dpr)),
             },
             hCenterLineRightStyle: {
-                left:  (crop.x + crop.width) / dpr,
-                top:   (crop.y + crop.height / 2) / dpr,
-                width: Math.max(0, (sourceBounds.x + sourceBounds.width - (crop.x + crop.width)) / dpr),
+                left:  Math.floor(cropX + cropWidth),
+                top:   Math.floor(cropY + cropHeight / 2),
+                width: Math.max(0, Math.floor((sourceBounds.x + sourceBounds.width) / dpr - (cropX + cropWidth))),
             },
-            vCenterLineTopStyle:   {
-                top:    sourceBounds.y / dpr,
-                left:   (crop.x + crop.width / 2) / dpr,
-                height: Math.max(0, (crop.y - sourceBounds.y) / dpr),
+            vCenterLineTopStyle:    {
+                top:    Math.floor(sourceBounds.y / dpr),
+                left:   Math.floor(cropX + cropWidth / 2),
+                height: Math.max(0, Math.floor(cropY - sourceBounds.y / dpr)),
             },
             vCenterLineBottomStyle: {
-                top:    (crop.y + crop.height) / dpr,
-                left:   (crop.x + crop.width / 2) / dpr,
-                height: Math.max(0, (sourceBounds.y + sourceBounds.height - (crop.y + crop.height)) / dpr),
-            },
+                top:    Math.floor(cropY + cropHeight),
+                left:   Math.floor(cropX + cropWidth / 2),
+                height: Math.max(0, Math.floor((sourceBounds.y + sourceBounds.height) / dpr - (cropY + cropHeight))),
+            }
         }
     }
 
     /**
      * Updates crop dimensions on source change (e.g., resize)
-     * @param {Object} cropper - Cropper state
      * @returns {Object} Updated crop
      */
-    updateCropOnSourceChange = (cropper) => {
+    updateCropOnSourceChange = () => {
         const bounds = this.getSourceBounds()
-        const newCrop = {...this.crop}
-        newCrop.width = Math.min(newCrop.width, bounds.width)
-        newCrop.height = Math.min(newCrop.height, bounds.height)
-        newCrop.x = Math.max(0, Math.min(newCrop.x, bounds.width - newCrop.width))
-        newCrop.y = Math.max(0, Math.min(newCrop.y, bounds.height - newCrop.height))
-        this.crop = newCrop
-        this.updateStore(newCrop)
-        return newCrop
+        const aspectRatio = this.store.lockRatio && Number.isFinite(this.store.aspectRatio)
+                            ? this.store.aspectRatio
+                            : this.crop.width / this.crop.height || 1
+        this.crop = this.store.lockRatio
+                    ? this.computeCropDimensions(bounds, aspectRatio)
+                    : this.clampCrop({
+                                         x:      Math.floor((bounds.width - bounds.width * CropperManager.CROP_SCALE_FACTOR) / 2),
+                                         y:      Math.floor((bounds.height - bounds.height * CropperManager.CROP_SCALE_FACTOR) / 2),
+                                         width:  Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, bounds.width * CropperManager.CROP_SCALE_FACTOR)),
+                                         height: Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, bounds.height * CropperManager.CROP_SCALE_FACTOR)),
+                                     }, bounds)
+        this.updateStore(this.crop)
+        return this.crop
     }
 
     /**
@@ -299,20 +361,14 @@ class CropperManager {
             }
         }
         this.interactionState.wasJustCentered = false
-        if (this.longTapTimer) {
-            clearTimeout(this.longTapTimer)
-            this.longTapTimer = null
-        }
+        this.longTapTimer && clearTimeout(this.longTapTimer)
+        this.longTapTimer = null
+
         const isTouch = event.type === 'touchstart' && event.touches && event.touches.length === 1
         const currentTime = Date.now()
         if (isTouch) {
             const touch = event.touches[0]
-            this.touchStartPosition = {
-                x:    touch.clientX,
-                y:    touch.clientY,
-                time: currentTime,
-            }
-            // Check for double-tap
+            this.touchStartPosition = {x: touch.clientX, y: touch.clientY, time: currentTime}
             const isDoubleTap = action === 'drag' &&
                 (currentTime - this.lastClickTime) < CropperManager.DOUBLE_TAP_THRESHOLD &&
                 this.doubleTapStartPosition &&
@@ -324,7 +380,6 @@ class CropperManager {
                 this.closeCropper()
                 return
             }
-            // Set up long-tap timer
             this.longTapTimer = setTimeout(() => {
                 if (!this.isDestroyed && !this.isSignificantTouchMovement({
                                                                               touches: [
@@ -346,13 +401,13 @@ class CropperManager {
         }
         else if (event.type === 'mousedown') {
             this.lastClickTime = currentTime
-            const isDoubleClick = action === 'drag' && event.button === 0 &&
-                (currentTime - this.lastClickTime) < CropperManager.DOUBLE_TAP_THRESHOLD
-            if (isDoubleClick) {
+            if (action === 'drag' && event.button === 0 &&
+                (currentTime - this.lastClickTime) < CropperManager.DOUBLE_TAP_THRESHOLD) {
                 this.closeCropper()
                 return
             }
         }
+
         if (action === 'drag' && event.ctrlKey && !event.touches && !event.shiftKey && event.button === 0) {
             this.interactionState.isCentering = true
             this.interactionState.action = 'centering'
@@ -367,15 +422,20 @@ class CropperManager {
             }, CropperManager.CENTERING_TIMEOUT))
             return newCrop
         }
+
         if ((action === 'drag' || action.startsWith('resize-')) && (event.button === 0 || isTouch)) {
             this.interactionState.action = action
             if (action.startsWith('resize-')) {
+                const aspectRatio = cropper.lockRatio
+                                    ? (Number.isFinite(cropper.aspectRatio) ? cropper.aspectRatio : this.crop.width / this.crop.height || 1)
+                                    : (event.shiftKey ? this.crop.width / this.crop.height || 1 : null)
                 this.resizeStartState = {
                     crop:        {...this.crop},
-                    centerX:     this.crop.x + this.crop.width / 2,
-                    centerY:     this.crop.y + this.crop.height / 2,
-                    isSymmetric: !event.shiftKey,
+                    centerX:     Math.floor(this.crop.x + this.crop.width / 2),
+                    centerY:     Math.floor(this.crop.y + this.crop.height / 2),
+                    isSymmetric: cropper.lockRatio ? !event.shiftKey : event.shiftKey,
                     lockRatio:   cropper.lockRatio,
+                    aspectRatio,
                 }
             }
         }
@@ -397,35 +457,37 @@ class CropperManager {
             clearTimeout(this.longTapTimer)
             this.longTapTimer = null
         }
+
         const newCrop = {...this.crop}
         const newInteraction = {...this.interactionState}
+        const deltaX = Math.floor((event.movementX || (event.touches && event.touches.length === 1 ? event.touches[0].clientX - this.touchStartPosition.x : 0)) * this.dpr)
+        const deltaY = Math.floor((event.movementY || (event.touches && event.touches.length === 1 ? event.touches[0].clientY - this.touchStartPosition.y : 0)) * this.dpr)
+
         if (this.interactionState.action === 'drag') {
-            const deltaX = ((event.movementX || (event.touches && event.touches.length === 1 ? event.touches[0].clientX - this.touchStartPosition.x : 0))) * this.dpr
-            const deltaY = ((event.movementY || (event.touches && event.touches.length === 1 ? event.touches[0].clientY - this.touchStartPosition.y : 0))) * this.dpr
-            newCrop.x = Math.max(0, Math.min(newCrop.x + deltaX, bounds.width - newCrop.width))
-            newCrop.y = Math.max(0, Math.min(newCrop.y + deltaY, bounds.height - newCrop.height))
+            newCrop.x = Math.floor(Math.max(0, Math.min(newCrop.x + deltaX, bounds.width - newCrop.width)))
+            newCrop.y = Math.floor(Math.max(0, Math.min(newCrop.y + deltaY, bounds.height - newCrop.height)))
             if (event.touches && event.touches.length === 1) {
                 this.touchStartPosition = {x: event.touches[0].clientX, y: event.touches[0].clientY, time: Date.now()}
             }
-            const sourceCenterX = bounds.width / 2
-            const sourceCenterY = bounds.height / 2
-            const cropCenterX = newCrop.x + newCrop.width / 2
-            const cropCenterY = newCrop.y + newCrop.height / 2
+
+            const sourceCenterX = Math.floor(bounds.width / 2)
+            const sourceCenterY = Math.floor(bounds.height / 2)
+            const cropCenterX = Math.floor(newCrop.x + newCrop.width / 2)
+            const cropCenterY = Math.floor(newCrop.y + newCrop.height / 2)
             const isHCentered = Math.abs(cropCenterX - sourceCenterX) < 5
             const isVCentered = Math.abs(cropCenterY - sourceCenterY) < 5
             newInteraction.showVCenterLine = isHCentered
             newInteraction.showHCenterLine = isVCentered
+
             if (this.options.lockCentering) {
                 if (isHCentered) {
-                    newCrop.x = sourceCenterX - newCrop.width / 2
+                    newCrop.x = Math.floor(sourceCenterX - newCrop.width / 2)
                     if (!newInteraction.dragLockedHorizontal) {
                         newInteraction.dragLockedHorizontal = true
                         if (this.options.vibrate && navigator.vibrate) {
                             navigator.vibrate(50)
                         }
-                        if (this.centeringLockTimers.horizontal) {
-                            clearTimeout(this.centeringLockTimers.horizontal)
-                        }
+                        this.centeringLockTimers.horizontal && clearTimeout(this.centeringLockTimers.horizontal)
                         this.centeringLockTimers.horizontal = setTimeout(() => {
                             if (!this.isDestroyed) {
                                 this.interactionState.dragLockedHorizontal = false
@@ -435,15 +497,13 @@ class CropperManager {
                     }
                 }
                 if (isVCentered) {
-                    newCrop.y = sourceCenterY - newCrop.height / 2
+                    newCrop.y = Math.floor(sourceCenterY - newCrop.height / 2)
                     if (!newInteraction.dragLockedVertical) {
                         newInteraction.dragLockedVertical = true
                         if (this.options.vibrate && navigator.vibrate) {
                             navigator.vibrate(50)
                         }
-                        if (this.centeringLockTimers.vertical) {
-                            clearTimeout(this.centeringLockTimers.vertical)
-                        }
+                        this.centeringLockTimers.vertical && clearTimeout(this.centeringLockTimers.vertical)
                         this.centeringLockTimers.vertical = setTimeout(() => {
                             if (!this.isDestroyed) {
                                 this.interactionState.dragLockedVertical = false
@@ -456,21 +516,17 @@ class CropperManager {
         }
         else if (this.interactionState.action.startsWith('resize-')) {
             const direction = this.interactionState.action.replace('resize-', '')
-            const deltaX = ((event.movementX || (event.touches && event.touches.length === 1 ? event.touches[0].clientX - this.touchStartPosition.x : 0))) * this.dpr
-            const deltaY = ((event.movementY || (event.touches && event.touches.length === 1 ? event.touches[0].clientY - this.touchStartPosition.y : 0))) * this.dpr
-            const isSymmetric = this.resizeStartState.isSymmetric
-            const lockRatio = cropper.lockRatio
-            this.handleResize(newCrop, direction, deltaX, deltaY, isSymmetric, lockRatio, bounds)
+            this.handleResize(newCrop, direction, deltaX, deltaY, this.resizeStartState.isSymmetric, cropper.lockRatio, this.resizeStartState.aspectRatio, bounds)
             if (event.touches && event.touches.length === 1) {
                 this.touchStartPosition = {x: event.touches[0].clientX, y: event.touches[0].clientY, time: Date.now()}
             }
-            // Update symmetry based on Shift key state
-            this.resizeStartState.isSymmetric = !event.shiftKey
+            this.resizeStartState.isSymmetric = cropper.lockRatio ? !event.shiftKey : event.shiftKey
         }
-        this.crop = newCrop
+
+        this.crop = this.clampCrop(newCrop, bounds)
         this.interactionState = newInteraction
-        this.updateStore(newCrop)
-        return {crop: newCrop, interaction: newInteraction}
+        this.updateStore(this.crop)
+        return {crop: this.crop, interaction: newInteraction}
     }
 
     /**
@@ -481,272 +537,185 @@ class CropperManager {
      * @param {number} deltaY - Vertical movement delta
      * @param {boolean} isSymmetric - Whether to resize symmetrically
      * @param {boolean} lockRatio - Whether to maintain aspect ratio
+     * @param {number|null} aspectRatio - Aspect ratio to use (null for free resize)
      * @param {Object} bounds - Source bounds
      */
-    handleResize = (crop, direction, deltaX, deltaY, isSymmetric, lockRatio, bounds) => {
-        const centerX = crop.x + crop.width / 2
-        const centerY = crop.y + crop.height / 2
-        const aspectRatio = crop.width / crop.height
+    handleResize = (crop, direction, deltaX, deltaY, isSymmetric, lockRatio, aspectRatio, bounds) => {
+        const effectiveAspectRatio = lockRatio ? (Number.isFinite(aspectRatio) ? aspectRatio : 1) : (aspectRatio || 1)
+        const centerX = Math.floor(crop.x + crop.width / 2)
+        const centerY = Math.floor(crop.y + crop.height / 2)
+        const original = {x: crop.x, y: crop.y, width: crop.width, height: crop.height}
 
         if (isSymmetric) {
-            let actualDelta = 0
-            if (lockRatio) {
-                const maxWidth = bounds.width - (lockRatio ? 0 : crop.x)
-                const maxHeight = bounds.height - (lockRatio ? 0 : crop.y)
-                let maxDeltaWidth = (maxWidth - crop.width) / 2
-                let maxDeltaHeight = (maxHeight - crop.height) / 2
+            let delta
+            if (lockRatio || aspectRatio) {
                 switch (direction) {
                     case 'nw':
-                        actualDelta = Math.max(-deltaX, -deltaY)
-                        if (actualDelta > 0) {
-                            actualDelta = Math.min(actualDelta, Math.min(maxDeltaWidth, maxDeltaHeight * aspectRatio))
-                        }
+                        delta = Math.floor(Math.max(Math.abs(deltaX) * effectiveAspectRatio, Math.abs(deltaY)) * (deltaX > 0 || deltaY > 0 ? -1 : 1))
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width + delta * 2))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.width / effectiveAspectRatio))
                         break
                     case 'ne':
-                        actualDelta = Math.max(deltaX, -deltaY)
-                        if (actualDelta > 0) {
-                            actualDelta = Math.min(actualDelta, Math.min(maxDeltaWidth, maxDeltaHeight * aspectRatio))
-                        }
+                        delta = Math.floor(Math.max(Math.abs(deltaX) * effectiveAspectRatio, Math.abs(deltaY)) * (deltaX < 0 || deltaY > 0 ? -1 : 1))
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width + delta * 2))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.width / effectiveAspectRatio))
                         break
                     case 'se':
-                        actualDelta = Math.max(deltaX, deltaY)
-                        if (actualDelta > 0) {
-                            actualDelta = Math.min(actualDelta, Math.min(maxDeltaWidth, maxDeltaHeight * aspectRatio))
-                        }
+                        delta = Math.floor(Math.max(Math.abs(deltaX) * effectiveAspectRatio, Math.abs(deltaY)) * (deltaX < 0 || deltaY < 0 ? -1 : 1))
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width + delta * 2))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.width / effectiveAspectRatio))
                         break
                     case 'sw':
-                        actualDelta = Math.max(-deltaX, deltaY)
-                        if (actualDelta > 0) {
-                            actualDelta = Math.min(actualDelta, Math.min(maxDeltaWidth, maxDeltaHeight * aspectRatio))
-                        }
+                        delta = Math.floor(Math.max(Math.abs(deltaX) * effectiveAspectRatio, Math.abs(deltaY)) * (deltaX > 0 || deltaY < 0 ? -1 : 1))
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width + delta * 2))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.width / effectiveAspectRatio))
                         break
                     case 'n':
                     case 's':
-                        const deltaYSign = direction === 'n' ? -1 : 1
-                        actualDelta = deltaY * deltaYSign
-                        if (actualDelta > 0) {
-                            maxDeltaHeight = (maxHeight - crop.height) / 2
-                            maxDeltaWidth = maxDeltaHeight * aspectRatio
-                            actualDelta = Math.min(actualDelta, maxDeltaHeight) * deltaYSign
-                        }
+                        delta = Math.floor(deltaY * (direction === 'n' ? -1 : 1))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.height + delta * 2))
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.height * effectiveAspectRatio))
                         break
                     case 'e':
                     case 'w':
-                        const deltaXSign = direction === 'w' ? -1 : 1
-                        actualDelta = deltaX * deltaXSign
-                        if (actualDelta > 0) {
-                            maxDeltaWidth = (maxWidth - crop.width) / 2
-                            maxDeltaHeight = maxDeltaWidth / aspectRatio
-                            actualDelta = Math.min(Math.abs(actualDelta), maxDeltaWidth) * deltaXSign
-                        }
+                        delta = Math.floor(deltaX * (direction === 'w' ? -1 : 1))
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width + delta * 2))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.width / effectiveAspectRatio))
                         break
                 }
-                const newWidth = crop.width + actualDelta * 2
-                const newHeight = lockRatio ? newWidth / aspectRatio : crop.height + actualDelta * 2
-                crop.width = Math.max(10, newWidth)
-                crop.height = Math.max(10, newHeight)
-                crop.x = centerX - crop.width / 2
-                crop.y = centerY - crop.height / 2
+                crop.x = Math.floor(centerX - crop.width / 2)
+                crop.y = Math.floor(centerY - crop.height / 2)
             }
             else {
                 switch (direction) {
                     case 'nw':
-                        actualDelta = Math.max(-deltaX, -deltaY)
+                        delta = Math.floor(Math.max(-deltaX, -deltaY))
                         break
                     case 'ne':
-                        actualDelta = Math.max(deltaX, -deltaY)
+                        delta = Math.floor(Math.max(deltaX, -deltaY))
                         break
                     case 'se':
-                        actualDelta = Math.max(deltaX, deltaY)
+                        delta = Math.floor(Math.max(deltaX, deltaY))
                         break
                     case 'sw':
-                        actualDelta = Math.max(-deltaX, deltaY)
+                        delta = Math.floor(Math.max(-deltaX, deltaY))
                         break
                     case 'n':
                     case 's':
-                        actualDelta = deltaY * (direction === 'n' ? -1 : 1)
+                        delta = Math.floor(deltaY * (direction === 'n' ? -1 : 1))
                         break
                     case 'e':
                     case 'w':
-                        actualDelta = deltaX * (direction === 'w' ? -1 : 1)
+                        delta = Math.floor(deltaX * (direction === 'w' ? -1 : 1))
                         break
                 }
-                const newWidth = crop.width + actualDelta * 2
-                const newHeight = crop.height + actualDelta * 2
-                crop.width = Math.max(10, newWidth)
-                crop.height = Math.max(10, newHeight)
-                crop.x = centerX - crop.width / 2
-                crop.y = centerY - crop.height / 2
+                crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width + delta * 2))
+                crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.height + delta * 2))
+                crop.x = Math.floor(centerX - crop.width / 2)
+                crop.y = Math.floor(centerY - crop.height / 2)
             }
         }
         else {
-            const originalWidth = crop.width
-            const originalHeight = crop.height
-            const originalX = crop.x
-            const originalY = crop.y
-            if (lockRatio) {
-                const maxWidth = bounds.width - crop.x
-                const maxHeight = bounds.height - crop.y
+            if (lockRatio || aspectRatio) {
                 switch (direction) {
                     case 'nw':
-                        crop.width = Math.max(10, originalWidth - deltaX)
-                        if (deltaX > 0 && crop.width >= maxWidth) {
-                            crop.width = maxWidth
-                        }
-                        crop.height = Math.max(10, crop.width / aspectRatio)
-                        if (deltaX > 0 && crop.height > maxHeight) {
-                            crop.height = maxHeight
-                            crop.width = Math.max(10, crop.height * aspectRatio)
-                        }
-                        crop.x = originalX + originalWidth - crop.width
-                        crop.y = originalY + originalHeight - crop.height
+                        deltaX = Math.floor(Math.max(Math.abs(deltaX), Math.abs(deltaY) * effectiveAspectRatio) * (deltaX < 0 ? -1 : 1))
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width - deltaX))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.width / effectiveAspectRatio))
+                        crop.x = Math.floor(original.x + original.width - crop.width)
+                        crop.y = Math.floor(original.y + original.height - crop.height)
                         break
                     case 'ne':
-                        crop.width = Math.max(10, originalWidth + deltaX)
-                        if (deltaX > 0 && crop.width >= maxWidth) {
-                            crop.width = maxWidth
-                        }
-                        crop.height = Math.max(10, crop.width / aspectRatio)
-                        if (deltaX > 0 && crop.height > maxHeight) {
-                            crop.height = maxHeight
-                            crop.width = Math.max(10, crop.height * aspectRatio)
-                        }
-                        crop.y = originalY + originalHeight - crop.height
+                        deltaX = Math.floor(Math.max(Math.abs(deltaX), Math.abs(deltaY) * effectiveAspectRatio) * (deltaX > 0 ? 1 : -1))
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width + deltaX))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.width / effectiveAspectRatio))
+                        crop.y = Math.floor(original.y + original.height - crop.height)
                         break
                     case 'se':
-                        crop.width = Math.max(10, originalWidth + deltaX)
-                        if (deltaX > 0 && crop.width >= maxWidth) {
-                            crop.width = maxWidth
-                        }
-                        crop.height = Math.max(10, crop.width / aspectRatio)
-                        if (deltaX > 0 && crop.height > maxHeight) {
-                            crop.height = maxHeight
-                            crop.width = Math.max(10, crop.height * aspectRatio)
-                        }
+                        deltaX = Math.floor(Math.max(Math.abs(deltaX), Math.abs(deltaY) * effectiveAspectRatio) * (deltaX > 0 ? 1 : -1))
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width + deltaX))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.width / effectiveAspectRatio))
                         break
                     case 'sw':
-                        crop.width = Math.max(10, originalWidth - deltaX)
-                        if (deltaX < 0 && crop.width >= maxWidth) {
-                            crop.width = maxWidth
-                        }
-                        crop.height = Math.max(10, crop.width / aspectRatio)
-                        if (deltaX < 0 && crop.height > maxHeight) {
-                            crop.height = maxHeight
-                            crop.width = Math.max(10, crop.height * aspectRatio)
-                        }
-                        crop.x = originalX + originalWidth - crop.width
+                        deltaX = Math.floor(Math.max(Math.abs(deltaX), Math.abs(deltaY) * effectiveAspectRatio) * (deltaX < 0 ? -1 : 1))
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width - deltaX))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.width / effectiveAspectRatio))
+                        crop.x = Math.floor(original.x + original.width - crop.width)
                         break
                     case 'n':
-                        crop.height = Math.max(10, originalHeight - deltaY)
-                        if (deltaY > 0 && crop.height >= maxHeight) {
-                            crop.height = maxHeight
-                        }
-                        crop.width = Math.max(10, crop.height * aspectRatio)
-                        if (deltaY > 0 && crop.width > maxWidth) {
-                            crop.width = maxWidth
-                            crop.height = Math.max(10, crop.width / aspectRatio)
-                        }
-                        crop.y = originalY + originalHeight - crop.height
-                        crop.x = originalX + (originalWidth - crop.width) / 2
-                        break
-                    case 'e':
-                        crop.width = Math.max(10, originalWidth + deltaX)
-                        if (deltaX > 0 && crop.width >= maxWidth) {
-                            crop.width = maxWidth
-                        }
-                        crop.height = Math.max(10, crop.width / aspectRatio)
-                        if (deltaX > 0 && crop.height > maxHeight) {
-                            crop.height = maxHeight
-                            crop.width = Math.max(10, crop.height * aspectRatio)
-                        }
-                        crop.y = originalY + (originalHeight - crop.height) / 2
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.height - deltaY))
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.height * effectiveAspectRatio))
+                        crop.y = Math.floor(original.y + original.height - crop.height)
+                        crop.x = Math.floor(original.x + (original.width - crop.width) / 2)
                         break
                     case 's':
-                        crop.height = Math.max(10, originalHeight + deltaY)
-                        if (deltaY > 0 && crop.height >= maxHeight) {
-                            crop.height = maxHeight
-                        }
-                        crop.width = Math.max(10, crop.height * aspectRatio)
-                        if (deltaY > 0 && crop.width > maxWidth) {
-                            crop.width = maxWidth
-                            crop.height = Math.max(10, crop.width / aspectRatio)
-                        }
-                        crop.x = originalX + (originalWidth - crop.width) / 2
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.height + deltaY))
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.height * effectiveAspectRatio))
+                        crop.x = Math.floor(original.x + (original.width - crop.width) / 2)
+                        break
+                    case 'e':
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width + deltaX))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.width / effectiveAspectRatio))
+                        crop.y = Math.floor(original.y + (original.height - crop.height) / 2)
                         break
                     case 'w':
-                        crop.width = Math.max(10, originalWidth - deltaX)
-                        if (deltaX < 0 && crop.width >= maxWidth) {
-                            crop.width = maxWidth
-                        }
-                        crop.height = Math.max(10, crop.width / aspectRatio)
-                        if (deltaX < 0 && crop.height > maxHeight) {
-                            crop.height = maxHeight
-                            crop.width = Math.max(10, crop.height * aspectRatio)
-                        }
-                        crop.x = originalX + originalWidth - crop.width
-                        crop.y = originalY + (originalHeight - crop.height) / 2
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width - deltaX))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.width / effectiveAspectRatio))
+                        crop.x = Math.floor(original.x + original.width - crop.width)
+                        crop.y = Math.floor(original.y + (original.height - crop.height) / 2)
                         break
                 }
             }
             else {
                 switch (direction) {
                     case 'nw':
-                        crop.width = Math.max(10, originalWidth - deltaX)
-                        crop.height = Math.max(10, originalHeight - deltaY)
-                        crop.x = originalX + originalWidth - crop.width
-                        crop.y = originalY + originalHeight - crop.height
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width - deltaX))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.height - deltaY))
+                        crop.x = Math.floor(original.x + original.width - crop.width)
+                        crop.y = Math.floor(original.y + original.height - crop.height)
                         break
                     case 'ne':
-                        crop.width = Math.max(10, originalWidth + deltaX)
-                        crop.height = Math.max(10, originalHeight - deltaY)
-                        crop.y = originalY + originalHeight - crop.height
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width + deltaX))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.height - deltaY))
+                        crop.y = Math.floor(original.y + original.height - crop.height)
                         break
                     case 'se':
-                        crop.width = Math.max(10, originalWidth + deltaX)
-                        crop.height = Math.max(10, originalHeight + deltaY)
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width + deltaX))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.height + deltaY))
                         break
                     case 'sw':
-                        crop.width = Math.max(10, originalWidth - deltaX)
-                        crop.height = Math.max(10, originalHeight + deltaY)
-                        crop.x = originalX + originalWidth - crop.width
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width - deltaX))
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.height + deltaY))
+                        crop.x = Math.floor(original.x + original.width - crop.width)
                         break
                     case 'n':
-                        crop.height = Math.max(10, originalHeight - deltaY)
-                        crop.y = originalY + originalHeight - crop.height
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.height - deltaY))
+                        crop.y = Math.floor(original.y + original.height - crop.height)
                         break
                     case 'e':
-                        crop.width = Math.max(10, originalWidth + deltaX)
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width + deltaX))
                         break
                     case 's':
-                        crop.height = Math.max(10, originalHeight + deltaY)
+                        crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.height + deltaY))
                         break
                     case 'w':
-                        crop.width = Math.max(10, originalWidth - deltaX)
-                        crop.x = originalX + originalWidth - crop.width
+                        crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, original.width - deltaX))
+                        crop.x = Math.floor(original.x + original.width - crop.width)
                         break
                 }
             }
         }
-        crop.x = Math.max(0, Math.min(crop.x, bounds.width - crop.width))
-        crop.y = Math.max(0, Math.min(crop.y, bounds.height - crop.height))
-        if (lockRatio) {
+
+        if ((lockRatio || aspectRatio) && (crop.x + crop.width > bounds.width || crop.y + crop.height > bounds.height)) {
             if (crop.x + crop.width > bounds.width) {
-                crop.width = bounds.width - crop.x
-                crop.height = Math.max(10, crop.width / aspectRatio)
-                crop.y = centerY - crop.height / 2
+                crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, bounds.width - crop.x))
+                crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.width / effectiveAspectRatio))
+                crop.y = Math.floor(centerY - crop.height / 2)
             }
             if (crop.y + crop.height > bounds.height) {
-                crop.height = bounds.height - crop.y
-                crop.width = Math.max(10, crop.height * aspectRatio)
-                crop.x = centerX - crop.width / 2
-            }
-        }
-        else {
-            if (crop.x + crop.width > bounds.width) {
-                crop.width = bounds.width - crop.x
-            }
-            if (crop.y + crop.height > bounds.height) {
-                crop.height = bounds.height - crop.y
+                crop.height = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, bounds.height - crop.y))
+                crop.width = Math.floor(Math.max(CropperManager.MIN_CROP_SIZE, crop.height * effectiveAspectRatio))
+                crop.x = Math.floor(centerX - crop.width / 2)
             }
         }
     }
@@ -760,13 +729,10 @@ class CropperManager {
         if (this.isDestroyed) {
             return this.interactionState
         }
-        if (this.longTapTimer) {
-            clearTimeout(this.longTapTimer)
-            this.longTapTimer = null
-        }
-        // Update symmetry based on Shift key state at release
+        this.longTapTimer && clearTimeout(this.longTapTimer)
+        this.longTapTimer = null
         if (this.resizeStartState && event && 'shiftKey' in event) {
-            this.resizeStartState.isSymmetric = !event.shiftKey
+            this.resizeStartState.isSymmetric = this.store.lockRatio ? !event.shiftKey : event.shiftKey
         }
         this.interactionState.action = null
         this.interactionState.isCentering = false
@@ -785,16 +751,15 @@ class CropperManager {
      * @param {Object} newCrop - New crop values
      */
     updateStore = (newCrop) => {
-        if (this.isDestroyed) {
+        if (this.isDestroyed || isNaN(newCrop.x) || isNaN(newCrop.y) || isNaN(newCrop.width) || isNaN(newCrop.height)) {
+            console.error('Invalid crop values for store:', newCrop)
             return
         }
-        if (this.store.x !== newCrop.x || this.store.y !== newCrop.y ||
-            this.store.width !== newCrop.width || this.store.height !== newCrop.height) {
-            this.store.x = newCrop.x
-            this.store.y = newCrop.y
-            this.store.width = newCrop.width
-            this.store.height = newCrop.height
-        }
+        this.store.x = Math.floor(newCrop.x)
+        this.store.y = Math.floor(newCrop.y)
+        this.store.width = Math.floor(newCrop.width)
+        this.store.height = Math.floor(newCrop.height)
+        this.store.lockRatio = this.options.lockRatio
     }
 
     /**
@@ -804,11 +769,14 @@ class CropperManager {
      */
     centerCrop = (cropper) => {
         const bounds = this.getSourceBounds()
-        const newCrop = {...this.crop}
-        newCrop.x = (bounds.width - newCrop.width) / 2
-        newCrop.y = (bounds.height - newCrop.height) / 2
-        this.crop = newCrop
-        return newCrop
+        const newCrop = {
+            ...this.crop,
+            x: Math.floor((bounds.width - this.crop.width) / 2),
+            y: Math.floor((bounds.height - this.crop.height) / 2),
+        }
+        this.crop = this.clampCrop(newCrop, bounds)
+        this.updateStore(this.crop)
+        return this.crop
     }
 
     /**
@@ -819,20 +787,19 @@ class CropperManager {
     maximizeRestore = (cropper) => {
         const bounds = this.getSourceBounds()
         const newCrop = {...this.crop}
-        const ratio = this.crop.width / this.crop.height
-        // Check if crop is maximized: centered and either full-screen or ratio-constrained
-        const expectedX = (bounds.width - newCrop.width) / 2
-        const expectedY = (bounds.height - newCrop.height) / 2
+        const ratio = this.crop.width / this.crop.height || 1
+        const expectedX = Math.floor((bounds.width - newCrop.width) / 2)
+        const expectedY = Math.floor((bounds.height - newCrop.height) / 2)
         const isMaximized = Math.abs(newCrop.x - expectedX) < 5 && Math.abs(newCrop.y - expectedY) < 5 &&
             (cropper.lockRatio
              ? (Math.abs(newCrop.width - bounds.width) < 5 || Math.abs(newCrop.height - bounds.height) < 5)
              : (Math.abs(newCrop.width - bounds.width) < 5 && Math.abs(newCrop.height - bounds.height) < 5))
 
         if (isMaximized && this.savedCropState) {
-            newCrop.x = this.savedCropState.x
-            newCrop.y = this.savedCropState.y
-            newCrop.width = this.savedCropState.width
-            newCrop.height = this.savedCropState.height
+            newCrop.x = Math.floor(this.savedCropState.x)
+            newCrop.y = Math.floor(this.savedCropState.y)
+            newCrop.width = Math.floor(this.savedCropState.width)
+            newCrop.height = Math.floor(this.savedCropState.height)
             this.savedCropState = null
         }
         else {
@@ -840,39 +807,40 @@ class CropperManager {
                 this.savedCropState = {x: newCrop.x, y: newCrop.y, width: newCrop.width, height: newCrop.height}
             }
             if (cropper.lockRatio) {
-                if (ratio < 1) {
-                    // Portrait: Maximize height, adjust width
-                    newCrop.height = bounds.height
-                    newCrop.width = Math.floor(newCrop.height * ratio)
+                const effectiveAspectRatio = Number.isFinite(cropper.aspectRatio) ? cropper.aspectRatio : ratio
+                if (ratio === 1) {
+                    newCrop.width = newCrop.height = Math.floor(Math.min(bounds.width, bounds.height))
+                }
+                else if (ratio < 1) {
+                    newCrop.height = Math.floor(bounds.height)
+                    newCrop.width = Math.floor(newCrop.height * effectiveAspectRatio)
                     if (newCrop.width > bounds.width) {
-                        newCrop.width = bounds.width
-                        newCrop.height = Math.floor(newCrop.width / ratio)
+                        newCrop.width = Math.floor(bounds.width)
+                        newCrop.height = Math.floor(newCrop.width / effectiveAspectRatio)
                     }
                 }
                 else {
-                    // Landscape: Maximize width, adjust height
-                    newCrop.width = bounds.width
-                    newCrop.height = Math.floor(newCrop.width / ratio)
+                    newCrop.width = Math.floor(bounds.width)
+                    newCrop.height = Math.floor(newCrop.width / effectiveAspectRatio)
                     if (newCrop.height > bounds.height) {
-                        newCrop.height = bounds.height
-                        newCrop.width = Math.floor(newCrop.height * ratio)
+                        newCrop.height = Math.floor(bounds.height)
+                        newCrop.width = Math.floor(newCrop.height * effectiveAspectRatio)
                     }
                 }
             }
             else {
-                // No lockRatio: Maximize to full screen
                 newCrop.x = 0
                 newCrop.y = 0
-                newCrop.width = bounds.width
-                newCrop.height = bounds.height
+                newCrop.width = Math.floor(bounds.width)
+                newCrop.height = Math.floor(bounds.height)
             }
             newCrop.x = Math.floor((bounds.width - newCrop.width) / 2)
             newCrop.y = Math.floor((bounds.height - newCrop.height) / 2)
         }
-        newCrop.width = Math.floor(Math.max(10, newCrop.width))
-        newCrop.height = Math.floor(Math.max(10, newCrop.height))
-        this.crop = newCrop
-        return newCrop
+
+        this.crop = this.clampCrop(newCrop, bounds)
+        this.updateStore(this.crop)
+        return this.crop
     }
 
     /**
@@ -885,7 +853,7 @@ class CropperManager {
         const closeEvent = new CustomEvent('onCropperClose', {
             bubbles: true,
             cancelable: true,
-            detail:  {crop: {...this.crop}},
+            detail: {crop: {...this.crop}},
         })
         this.source.dispatchEvent(closeEvent)
         this.destroy()
@@ -901,9 +869,7 @@ class CropperManager {
             if (!this.interactionState.action && !this.isDestroyed) {
                 const newState = {...this.interactionState, showHCenterLine: false, showVCenterLine: false}
                 this.interactionState = newState
-                if (callback) {
-                    callback(newState)
-                }
+                callback?.(newState)
             }
         }, CropperManager.RESET_CENTERING_INTERVAL)
         this.timers.push(interval)
@@ -915,32 +881,22 @@ class CropperManager {
      */
     destroy = () => {
         this.isDestroyed = true
-        this.timers.forEach(timer => {
-            if (typeof timer === 'number') {
-                clearTimeout(timer)
-                clearInterval(timer)
-            }
-        })
-        if (this.centeringLockTimers.horizontal) {
-            clearTimeout(this.centeringLockTimers.horizontal)
-        }
-        if (this.centeringLockTimers.vertical) {
-            clearTimeout(this.centeringLockTimers.vertical)
-        }
-        if (this.longTapTimer) {
-            clearTimeout(this.longTapTimer)
-        }
-        if (this.rafId) {
-            cancelAnimationFrame(this.rafId)
-        }
+        this.timers.forEach(timer => typeof timer === 'number' && (clearTimeout(timer), clearInterval(timer)))
+        this.centeringLockTimers.horizontal && clearTimeout(this.centeringLockTimers.horizontal)
+        this.centeringLockTimers.vertical && clearTimeout(this.centeringLockTimers.vertical)
+        this.longTapTimer && clearTimeout(this.longTapTimer)
+        this.debounceTimer && clearTimeout(this.debounceTimer)
+        this.rafId && cancelAnimationFrame(this.rafId)
         this.timers = []
         this.rafId = null
         this.resizeStartState = null
         this.savedCropState = null
         this.centeringLockTimers = {horizontal: null, vertical: null}
         this.longTapTimer = null
-        window.removeEventListener('resize', this.updateCropOnSourceChange)
-        window.removeEventListener('orientationchange', this.updateCropOnSourceChange)
+        this.debounceTimer = null
+        window.removeEventListener('resize', this.handleResizeEvent)
+        window.removeEventListener('orientationchange', this.handleResizeEvent)
+        window.removeEventListener('keydown', this.handleKeydown)
     }
 }
 
