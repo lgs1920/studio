@@ -23,20 +23,24 @@ videoFormats:
   - label: "16x9"
     value: "16x9"
     aspectRatio: 1.7778
+    locked: true
     orientation: "landscape"
     description: "YouTube, film, widescreen"
   - label: "9x16"
     value: "9x16"
     aspectRatio: 0.5625
+    locked: true
     orientation: "portrait"
     description: "TikTok, Shorts, Stories, Reels"
   - label: "1x1"
     value: "1x1"
     aspectRatio: 1.0
+    locked: true
     orientation: "square"
     description: "Instagram square posts"
   - label: "Free"
-    value: "free"
+    value: "4x3"
     aspectRatio: 1.3333
+    locked: false
     orientation: "paysage"
     description: "Define your own"
