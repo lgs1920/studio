@@ -99,7 +99,7 @@
     "zip-a-folder": "^3.1.9"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.18",
+    "@types/bun": "^1.2.19",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@typescript-eslint/eslint-plugin": "^8.37.0",
