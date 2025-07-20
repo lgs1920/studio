@@ -48,6 +48,7 @@ class CropperManager {
     static CROP_SCALE_FACTOR = 0.95
     static RESIZE_DEBOUNCE_MS = 100
     static MIN_CROP_SIZE = 100
+    static CENTERING_LINES_TIMEOUT = 5000 // Timeout for centering lines in milliseconds
 
     /**
      * Creates a new CropperManager instance
@@ -67,7 +68,7 @@ class CropperManager {
             draggable: true,
             resizable: true,
             lockCentering: true,
-            vibrate:   true,
+            vibrate: true,
             touchSensitivity: 3,
             lockRatio: true,
             ...options,
@@ -83,6 +84,7 @@ class CropperManager {
         this.resizeStartState = null
         this.savedCropState = null
         this.centeringLockTimers = {horizontal: null, vertical: null}
+        this.centeringLinesTimer = null
         this.debounceTimer = null
 
         this.crop = this.initializeCrop()
@@ -202,17 +204,19 @@ class CropperManager {
         this.timers = []
         this.rafId = null
         this.interactionState = {
-            action:             null,
-            showHCenterLine:    false,
-            showVCenterLine:    false,
+            action:          null,
+            showHCenterLine: false,
+            showVCenterLine: false,
             dragLockedHorizontal: false,
             dragLockedVertical: false,
-            isCentering:        false,
-            wasJustCentered:    false,
+            isCentering:     false,
+            wasJustCentered: false,
         }
         this.resizeStartState = null
         this.savedCropState = null
         this.centeringLockTimers = {horizontal: null, vertical: null}
+        this.centeringLinesTimer && clearTimeout(this.centeringLinesTimer)
+        this.centeringLinesTimer = null
 
         this.options = {
             ...this.options,
@@ -270,14 +274,14 @@ class CropperManager {
         return {
             overlayStyle:           {
                 clipPath: `polygon(
-                    0% 0%, 100% 0%, 100% 100%, 0% 100%,
-                    0% ${cropY}px,
-                    ${cropX}px ${cropY}px,
-                    ${cropX}px ${cropY + cropHeight}px,
-                    ${cropX + cropWidth}px ${cropY + cropHeight}px,
-                    ${cropX + cropWidth}px ${cropY}px,
-                    0% ${cropY}px
-                )`
+          0% 0%, 100% 0%, 100% 100%, 0% 100%,
+          0% ${cropY}px,
+          ${cropX}px ${cropY}px,
+          ${cropX}px ${cropY + cropHeight}px,
+          ${cropX + cropWidth}px ${cropY + cropHeight}px,
+          ${cropX + cropWidth}px ${cropY}px,
+          0% ${cropY}px
+        )`
             },
             hCenterLineLeftStyle:   {
                 left:  Math.floor(sourceBounds.x / dpr),
@@ -430,11 +434,11 @@ class CropperManager {
                                     ? (Number.isFinite(cropper.aspectRatio) ? cropper.aspectRatio : this.crop.width / this.crop.height || 1)
                                     : (event.shiftKey ? this.crop.width / this.crop.height || 1 : null)
                 this.resizeStartState = {
-                    crop:        {...this.crop},
-                    centerX:     Math.floor(this.crop.x + this.crop.width / 2),
-                    centerY:     Math.floor(this.crop.y + this.crop.height / 2),
+                    crop:      {...this.crop},
+                    centerX:   Math.floor(this.crop.x + this.crop.width / 2),
+                    centerY:   Math.floor(this.crop.y + this.crop.height / 2),
                     isSymmetric: cropper.lockRatio ? !event.shiftKey : event.shiftKey,
-                    lockRatio:   cropper.lockRatio,
+                    lockRatio: cropper.lockRatio,
                     aspectRatio,
                 }
             }
@@ -478,6 +482,19 @@ class CropperManager {
             const isVCentered = Math.abs(cropCenterY - sourceCenterY) < 5
             newInteraction.showVCenterLine = isHCentered
             newInteraction.showHCenterLine = isVCentered
+
+            // Start or reset centering lines timeout
+            if (isHCentered || isVCentered) {
+                this.centeringLinesTimer && clearTimeout(this.centeringLinesTimer)
+                this.centeringLinesTimer = setTimeout(() => {
+                    if (!this.isDestroyed) {
+                        this.interactionState.showHCenterLine = false
+                        this.interactionState.showVCenterLine = false
+                        this.centeringLinesTimer = null
+                    }
+                }, CropperManager.CENTERING_LINES_TIMEOUT)
+                this.timers.push(this.centeringLinesTimer)
+            }
 
             if (this.options.lockCentering) {
                 if (isHCentered) {
@@ -731,6 +748,8 @@ class CropperManager {
         }
         this.longTapTimer && clearTimeout(this.longTapTimer)
         this.longTapTimer = null
+        this.centeringLinesTimer && clearTimeout(this.centeringLinesTimer)
+        this.centeringLinesTimer = null
         if (this.resizeStartState && event && 'shiftKey' in event) {
             this.resizeStartState.isSymmetric = this.store.lockRatio ? !event.shiftKey : event.shiftKey
         }
@@ -873,6 +892,8 @@ class CropperManager {
             }
         }, CropperManager.RESET_CENTERING_INTERVAL)
         this.timers.push(interval)
+        this.centeringLinesTimer && clearTimeout(this.centeringLinesTimer)
+        this.centeringLinesTimer = null
         return () => clearInterval(interval)
     }
 
@@ -880,21 +901,22 @@ class CropperManager {
      * Cleans up timers and animation frames
      */
     destroy = () => {
-        console.log('destroy')
         this.isDestroyed = true
         this.timers.forEach(timer => typeof timer === 'number' && (clearTimeout(timer), clearInterval(timer)))
         this.centeringLockTimers.horizontal && clearTimeout(this.centeringLockTimers.horizontal)
         this.centeringLockTimers.vertical && clearTimeout(this.centeringLockTimers.vertical)
         this.longTapTimer && clearTimeout(this.longTapTimer)
         this.debounceTimer && clearTimeout(this.debounceTimer)
-        this.rafId && cancelAnimationFrame(this.rafId)
+        this.centeringLinesTimer && clearTimeout(this.centeringLinesTimer)
         this.timers = []
+        this.rafId && cancelAnimationFrame(this.rafId)
         this.rafId = null
         this.resizeStartState = null
         this.savedCropState = null
         this.centeringLockTimers = {horizontal: null, vertical: null}
         this.longTapTimer = null
         this.debounceTimer = null
+        this.centeringLinesTimer = null
         window.removeEventListener('resize', this.handleResizeEvent)
         window.removeEventListener('orientationchange', this.handleResizeEvent)
         window.removeEventListener('keydown', this.handleKeydown)

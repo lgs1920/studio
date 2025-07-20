@@ -145,7 +145,6 @@ export const Cropper = memo(({source, container, className = '', store, options 
 
         // Create manager only if it doesn't exist or is destroyed
         if (!managerRef.current || managerRef.current.isDestroyed) {
-            console.log('inside')
             const newManager = new CropperManager(source, container, store, memoizedOptions)
             managerRef.current = newManager
 
@@ -175,7 +174,6 @@ export const Cropper = memo(({source, container, className = '', store, options 
         source.addEventListener('onCropperClose', handleCropperClose)
 
         return () => {
-            console.log('bye')
             source.removeEventListener('onCropperClose', handleCropperClose)
         }
     }, [source, container, isSourceLoaded, memoizedOptions, store])
@@ -184,7 +182,6 @@ export const Cropper = memo(({source, container, className = '', store, options 
     useEffect(() => {
         return () => {
             if (managerRef.current && !managerRef.current.isDestroyed) {
-                console.log('destroying manager')
                 managerRef.current.destroy()
                 managerRef.current = null
             }

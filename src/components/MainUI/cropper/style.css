@@ -25,7 +25,7 @@
 }
 
 .crop-container {
-    position: relative;
+    position: absolute;
     z-index: var(--crop-zindex);
     top: 0;
     left: 0;
