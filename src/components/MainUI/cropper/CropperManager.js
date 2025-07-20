@@ -880,6 +880,7 @@ class CropperManager {
      * Cleans up timers and animation frames
      */
     destroy = () => {
+        console.log('destroy')
         this.isDestroyed = true
         this.timers.forEach(timer => typeof timer === 'number' && (clearTimeout(timer), clearInterval(timer)))
         this.centeringLockTimers.horizontal && clearTimeout(this.centeringLockTimers.horizontal)

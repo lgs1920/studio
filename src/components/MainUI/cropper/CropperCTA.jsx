@@ -13,31 +13,49 @@
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
-import { faRegularRouteCirclePlus } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import { faGlobePointer }           from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon }         from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                    from '@Utils/FA2SL'
 
-export const CropperCTA = props => {
+/**
+ * CropperCTA renders a call-to-action bar for the cropper interface
+ * @component
+ * @param {Object} props - Component props
+ */
+import { memo, useEffect }  from 'react'
+import { faVideo, faXmark } from '@fortawesome/pro-regular-svg-icons'
+import { SlButton, SlIcon } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }            from '@Utils/FA2SL'
+
+// Cache icon conversions
+const icons = {
+    cancel: FA2SL.set(faXmark),
+    next:   FA2SL.set(faVideo),
+}
+
+export const CropperCTA = memo(() => {
+    /**
+     * Placeholder for cancel action
+     */
+    const handleCancel = () => {
+    }
+
+    /**
+     * Placeholder for next action
+     */
+    const handleNext = () => {
+    }
+
+
     return (
         <div className="cropper-cta call-for-actions lgs-slide-in-from-bottom">
             <div className="buttons-bar">
-                <SlButton
-                    target="_blank"
-                    outline>
-                    <SlIcon slot="prefix" library="fa"
-                            name={FA2SL.set(faGlobePointer)}/>
-                    {'Exit'}
+                <SlButton onClick={handleCancel} outline>
+                    <SlIcon slot="prefix" library="fa" name={icons.cancel}/>
+                    Exit
                 </SlButton>
-
-
-                <SlButton variant="primary">
-                    <SlIcon slot="prefix" library="fa"
-                            name={FA2SL.set(faRegularRouteCirclePlus)}/>
-                    <span>{'Next'}</span>
-
+                <SlButton variant="primary" onClick={handleNext}>
+                    <SlIcon slot="prefix" library="fa" name={icons.next}/>
+                    Next
                 </SlButton>
             </div>
         </div>
     )
-}
+})

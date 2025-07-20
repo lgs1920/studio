@@ -359,6 +359,8 @@ sl-menu-item::part(spinner)::part(base) {
 
 .call-for-actions .buttons-bar {
     display: flex;
+    justify-content: space-between;
+    min-width: 200px;
     gap: var(--lgs-gutter) !important;
 }
 
