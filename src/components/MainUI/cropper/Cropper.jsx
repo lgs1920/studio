@@ -7,18 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-19
- * Last modified: 2025-07-19
+ * Created on: 2025-07-20
+ * Last modified: 2025-07-20
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { CropSelector } from './CropSelector'
+import { CropperCTA }        from '@Components/MainUI/cropper/CropperCTA'
+import { CropRatioSelector } from './CropRatioSelector'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useSnapshot }    from 'valtio'
-import PropTypes          from 'prop-types'
-import { CropperManager } from './CropperManager'
+import { useSnapshot }       from 'valtio'
+import PropTypes             from 'prop-types'
+import { CropperManager }    from './CropperManager'
 import './style.css'
 
 /**
@@ -247,8 +248,10 @@ export const Cropper = ({source, container, className = '', store, options = {}}
     const styles = manager.getStyles(crop, interactionState)
 
     return (
-        <div ref={_CropperContainer} class="crop-container">
-            {/* options?.editor && */ <CropSelector/>}
+        <div ref={_CropperContainer} className="crop-container">
+
+            {options?.editor && <CropRatioSelector manager={manager}/>}
+            {/* {options.cta && */}<CropperCTA/>
             {/* Crop overlay - dims the area outside the crop region */}
             <div className="crop-overlay" style={styles.overlayStyle}/>
 

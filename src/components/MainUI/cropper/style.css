@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-19
- * Last modified: 2025-07-19
+ * Created on: 2025-07-20
+ * Last modified: 2025-07-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,6 +27,8 @@
 .crop-container {
     /*position: relative;*/
     z-index: var(--crop-zindex);
+    width: 100%;
+    height: 100%;
 }
 
 /***************************************
@@ -241,6 +243,7 @@
     width: calc(var(--lgs-font-size) + 4px);
     height: calc(var(--lgs-font-size) + 2px);
     padding: var(--lgs-gutter-s);
+    cursor: pointer;
     text-align: center;
 }
 
@@ -257,4 +260,17 @@
 .crop-ratio-presets sl-icon svg {
     width: unset;
     height: var(--lgs-font-size);
+}
+
+
+/*******************************************************************************
+ * Cropper CTA
+ ******************************************************************************/
+
+.cropper-cta {
+    position: absolute;
+    z-index: calc(var(--crop-zindex) + 2);
+    top: 70%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }

@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: CropSelector.jsx
+ * File: CropRatioSelector.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-19
- * Last modified: 2025-07-19
+ * Created on: 2025-07-20
+ * Last modified: 2025-07-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,7 +27,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                    from 'valtio'
 import './style.css'
 
-export const CropSelector = memo(() => {
+export const CropRatioSelector = memo(({manager}) => {
     const $cropper = lgs.stores.main.components.cropper
     const toolbars = useSnapshot(lgs.settings.ui.toolbars)
     const state = useSnapshot($cropper)
@@ -69,9 +69,13 @@ export const CropSelector = memo(() => {
      * @param {Event} event - Click event
      */
     const handleChangeRatio = useCallback((preset, event) => {
+        console.log($cropper)
         if (!_cropperMenu.current) {
             return
         }
+
+        event.preventDefault()
+        event.stopPropagation()
 
         // Update selected class
         const icons = _cropperMenu.current.querySelectorAll('.crop-ratio-presets sl-icon')
@@ -80,18 +84,10 @@ export const CropSelector = memo(() => {
 
         // Update state and crop
         setSelectedRatio(preset.value)
-        const [w, h] = preset.value.split('/').map(Number)
-        const bounds = $cropper.manager.getSourceBounds()
-        const width = Math.min(512, bounds.width)
-        const height = width * h / w
+        const [w, h] = preset.value.split('x').map(Number)
+        manager.resetCrop({aspectRatio: w / h, lockRatio: preset.locked})
+        return true
 
-        $cropper.manager.resetCrop({
-                                       width,
-                                       height,
-                                       lockRatio: true,
-                                   })
-
-        console.log('Selected ratio:', preset.value)
     }, [$cropper])
 
     return (
@@ -109,7 +105,7 @@ export const CropSelector = memo(() => {
                         <SlIcon
                             library="fa"
                             className={`lgs-card ${selectedRatio === preset.value ? 'selected' : ''}`}
-                            onClick={e => handleChangeRatio(preset, e)}
+                            onMouseDown={e => handleChangeRatio(preset, e)}
                             name={FA2SL.set(__.cropper.icons[preset.value])}
                         />
                     </SlTooltip>
@@ -119,4 +115,4 @@ export const CropSelector = memo(() => {
     )
 })
 
-CropSelector.displayName = 'CropSelector'
+CropRatioSelector.displayName = 'CropSelector'
