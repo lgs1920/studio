@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-19
- * Last modified: 2025-07-19
+ * Created on: 2025-07-20
+ * Last modified: 2025-07-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,8 +27,7 @@ export class CropperManager {
             '9x16':    faRectangleVertical,
             '16x9':    faRectangle,
             '1x1':     faSquare,
-            'free':    faCropSimple,
-            'unknown': faCropSimple,
+            '4x3': faCropSimple,
         }
 
 
