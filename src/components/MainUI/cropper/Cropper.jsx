@@ -8,7 +8,7 @@
  * email: contact@lgs1920.fr
  *
  * Created on: 2025-07-20
- * Last modified: 2025-07-20
+ * Last modified: 2025-07-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,10 +27,13 @@
  * @returns {JSX.Element|null} Cropper UI or null if source is not loaded
  */
 import { memo, useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useSnapshot }                                             from 'valtio'
-import { CropperCTA }                                              from '@Components/MainUI/cropper/CropperCTA'
-import { CropRatioSelector }                                       from './CropRatioSelector'
-import { CropperManager }                                          from './CropperManager'
+import { useSnapshot } from 'valtio'
+import { CropperCTA } from '@Components/MainUI/cropper/CropperCTA'
+import { CropRatioSelector } from './CropRatioSelector'
+import { CropperManager } from './CropperManager'
+import { CropOverlay } from './CropOverlay'
+import { CropCenterLines } from './CropCenterLines'
+import { CropZone } from './CropZone'
 import './style.css'
 
 // Positioning constants
@@ -43,45 +46,45 @@ export const Cropper = memo(({source, container, className = '', store, options 
         !(source instanceof HTMLImageElement && !source.complete),
     )
     const [crop, setCrop] = useState({
-                                         x:      store.x ?? 0,
-                                         y:      store.y ?? 0,
-                                         width:  store.width ?? 0,
-                                         height: store.height ?? 0,
-                                     })
+        x: store.x ?? 0,
+        y: store.y ?? 0,
+        width: store.width ?? 0,
+        height: store.height ?? 0,
+    })
     const [interactionState, setInteractionState] = useState({
-                                                                 action:          null,
-                                                                 showHCenterLine: false,
-                                                                 showVCenterLine: false,
-                                                                 dragLockedHorizontal: false,
-                                                                 dragLockedVertical: false,
-                                                                 wasJustCentered: false,
-                                                                 isCentering:     false,
-                                                             })
-    const cropperContainerRef = useRef(null)
-    const cropZoneRef = useRef(null)
-    const managerRef = useRef(null)
+        action: null,
+        showHCenterLine: false,
+        showVCenterLine: false,
+        dragLockedHorizontal: false,
+        dragLockedVertical: false,
+        wasJustCentered: false,
+        isCentering: false,
+    })
+    const _cropperContainer= useRef(null)
+    const _cropZone= useRef(null)
+    const _manager= useRef(null)
 
     // Memoize options
     const memoizedOptions = useMemo(() => ({
-        draggable:     true,
-        resizable:     true,
+        draggable: true,
+        resizable: true,
         lockCentering: true,
-        vibrate:       true,
+        vibrate: true,
         ...options,
     }), [options])
 
     // Memoize styles for crop elements
     const styles = useMemo(() => {
-        if (!managerRef.current || !crop) {
+        if (!_manager.current || !crop) {
             return {
-                overlayStyle:           {},
-                hCenterLineLeftStyle:   {},
-                hCenterLineRightStyle:  {},
-                vCenterLineTopStyle:    {},
+                overlayStyle: {},
+                hCenterLineLeftStyle: {},
+                hCenterLineRightStyle: {},
+                vCenterLineTopStyle: {},
                 vCenterLineBottomStyle: {},
             }
         }
-        return managerRef.current.getStyles(crop, interactionState)
+        return _manager.current.getStyles(crop, interactionState)
     }, [crop, interactionState])
 
     /**
@@ -89,8 +92,8 @@ export const Cropper = memo(({source, container, className = '', store, options 
      * @param {string} cursor - CSS cursor value
      */
     const updateCursor = useCallback((cursor) => {
-        if (cropZoneRef.current) {
-            cropZoneRef.current.style.cursor = cursor
+        if (_cropZone.current) {
+            _cropZone.current.style.cursor = cursor
         }
     }, [])
 
@@ -100,10 +103,10 @@ export const Cropper = memo(({source, container, className = '', store, options 
      * @param {Event} event - DOM event
      */
     const handleStart = useCallback((action, event) => {
-        if (!managerRef.current) {
+        if (!_manager.current) {
             return
         }
-        const result = managerRef.current.handleStart(action, event, cropper)
+        const result = _manager.current.handleStart(action, event, cropper)
         if (result && typeof result === 'object') {
             setCrop(result)
             if (action === 'drag') {
@@ -116,10 +119,10 @@ export const Cropper = memo(({source, container, className = '', store, options 
      * Handles double-click to maximize/restore crop
      */
     const handleDoubleClick = useCallback(() => {
-        if (!managerRef.current) {
+        if (!_manager.current) {
             return
         }
-        const newCrop = managerRef.current.maximizeRestore(cropper)
+        const newCrop = _manager.current.maximizeRestore(cropper)
         setCrop(newCrop)
     }, [cropper])
 
@@ -144,9 +147,9 @@ export const Cropper = memo(({source, container, className = '', store, options 
         }
 
         // Create manager only if it doesn't exist or is destroyed
-        if (!managerRef.current || managerRef.current.isDestroyed) {
+        if (!_manager.current || _manager.current.isDestroyed) {
             const newManager = new CropperManager(source, container, store, memoizedOptions)
-            managerRef.current = newManager
+            _manager.current = newManager
 
             // Hard initialize crop position
             const bounds = newManager.getSourceBounds()
@@ -157,9 +160,9 @@ export const Cropper = memo(({source, container, className = '', store, options 
             const initialX = store.x || (containerWidth * CROP_X_PERCENTAGE - initialWidth / 2)
             const initialY = store.y || (containerHeight * CROP_Y_PERCENTAGE - initialHeight / 2)
             const initialCrop = {
-                x:      initialX,
-                y:      initialY,
-                width:  initialWidth,
+                x: initialX,
+                y: initialY,
+                width: initialWidth,
                 height: initialHeight,
             }
             setCrop(initialCrop)
@@ -167,8 +170,8 @@ export const Cropper = memo(({source, container, className = '', store, options 
         }
 
         const handleCropperClose = () => {
-            if (cropperContainerRef.current) {
-                cropperContainerRef.current.style.display = 'none'
+            if (_cropperContainer.current) {
+                _cropperContainer.current.style.display = 'none'
             }
         }
         source.addEventListener('onCropperClose', handleCropperClose)
@@ -181,55 +184,55 @@ export const Cropper = memo(({source, container, className = '', store, options 
     // Cleanup CropperManager only when source or container changes
     useEffect(() => {
         return () => {
-            if (managerRef.current && !managerRef.current.isDestroyed) {
-                managerRef.current.destroy()
-                managerRef.current = null
+            if (_manager.current && !_manager.current.isDestroyed) {
+                _manager.current.destroy()
+                _manager.current = null
             }
         }
     }, [source, container])
 
     // Handle window resize
     useEffect(() => {
-        if (!managerRef.current) {
+        if (!_manager.current) {
             return
         }
         const handleResize = () => {
-            if (managerRef.current && !managerRef.current.isDestroyed) {
-                setCrop(managerRef.current.updateCropOnSourceChange(cropper))
+            if (_manager.current && !_manager.current.isDestroyed) {
+                setCrop(_manager.current.updateCropOnSourceChange(cropper))
             }
         }
-        const debouncedResize = managerRef.current.debounce(handleResize, CropperManager.RESIZE_DEBOUNCE_MS)
+        const debouncedResize = _manager.current.debounce(handleResize, CropperManager.RESIZE_DEBOUNCE_MS)
         window.addEventListener('resize', debouncedResize)
         return () => window.removeEventListener('resize', debouncedResize)
     }, [cropper])
 
     // Reset centering lines
     useEffect(() => {
-        if (!managerRef.current) {
+        if (!_manager.current) {
             return
         }
-        return managerRef.current.resetCentering(setInteractionState)
+        return _manager.current.resetCentering(setInteractionState)
     }, [])
 
     // Handle global pointer/touch events
     useEffect(() => {
-        if (!managerRef.current) {
+        if (!_manager.current) {
             return
         }
         const handleMove = (e) => {
-            if (managerRef.current.isDestroyed) {
+            if (_manager.current.isDestroyed) {
                 return
             }
-            const bounds = managerRef.current.getSourceBounds()
-            const {crop: newCrop, interaction} = managerRef.current.handleMove(e, cropper, bounds)
+            const bounds = _manager.current.getSourceBounds()
+            const {crop: newCrop, interaction} = _manager.current.handleMove(e, cropper, bounds)
             setCrop(newCrop)
             setInteractionState(interaction)
         }
         const handleEnd = () => {
-            if (managerRef.current.isDestroyed) {
+            if (_manager.current.isDestroyed) {
                 return
             }
-            setInteractionState(managerRef.current.handleEnd())
+            setInteractionState(_manager.current.handleEnd())
             updateCursor('grab')
         }
         const eventOptions = {passive: false}
@@ -251,71 +254,31 @@ export const Cropper = memo(({source, container, className = '', store, options 
     }, [updateCursor])
 
     // Early return if source is not loaded or manager/crop not initialized
-    if (!isSourceLoaded || !managerRef.current || !crop) {
+    if (!isSourceLoaded || !_manager.current || !crop) {
         return null
     }
 
     return (
-        <div ref={cropperContainerRef} className="crop-container">
-            {memoizedOptions.editor && <CropRatioSelector manager={managerRef.current}/>}
+        <div ref={_cropperContainer
+} className="crop-container">
+            {memoizedOptions.editor && <CropRatioSelector manager={_manager.current}/>}
             <CropperCTA/>
-            <div className="crop-overlay" style={styles.overlayStyle}/>
-            <div className="center-lines-container">
-                {interactionState.showHCenterLine && (
-                    <>
-                        <div className="center-line-horizontal-left" style={styles.hCenterLineLeftStyle}/>
-                        <div className="center-line-horizontal-right" style={styles.hCenterLineRightStyle}/>
-                    </>
-                )}
-                {interactionState.showVCenterLine && (
-                    <>
-                        <div className="center-line-vertical-top" style={styles.vCenterLineTopStyle}/>
-                        <div className="center-line-vertical-bottom" style={styles.vCenterLineBottomStyle}/>
-                    </>
-                )}
-            </div>
-            <div
-                ref={cropZoneRef}
-                className={`crop-zone ${className}`}
-                style={{
-                    left:   crop.x / managerRef.current.dpr,
-                    top:    crop.y / managerRef.current.dpr,
-                    width:  crop.width / managerRef.current.dpr,
-                    height: crop.height / managerRef.current.dpr,
-                    cursor: 'grab',
-                }}
-                onPointerDown={(e) => handleStart('drag', e)}
-                onTouchStart={(e) => handleStart('drag', e)}
+            <CropOverlay style={styles.overlayStyle} />
+            <CropCenterLines 
+                interactionState={interactionState} 
+                styles={styles} 
+            />
+            <CropZone
+                ref={_cropZone
+}
+                crop={crop}
+                manager={_manager.current}
+                cropper={cropper}
+                interactionState={interactionState}
+                className={className}
+                onStart={handleStart}
                 onDoubleClick={handleDoubleClick}
-                onContextMenu={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    handleStart('drag', e)
-                }}
-            >
-                <div className="crop-info lgs-one-line-card on-map small">
-                    {Math.round(crop.x / managerRef.current.dpr)}×{Math.round(crop.y / managerRef.current.dpr)} |{' '}
-                    {Math.round(crop.width / managerRef.current.dpr)}×{Math.round(crop.height / managerRef.current.dpr)}
-                </div>
-                {interactionState.showHCenterLine && <div className="center-line-inner-horizontal"/>}
-                {interactionState.showVCenterLine && <div className="center-line-inner-vertical"/>}
-                {cropper.resizable &&
-                    CropperManager.handleMap.map(([dir, cursor]) => (
-                        <div
-                            key={dir}
-                            className={`crop-handle handle-${dir}`}
-                            style={{cursor}}
-                            onPointerDown={(e) => {
-                                e.stopPropagation()
-                                handleStart(`resize-${dir}`, e)
-                            }}
-                            onTouchStart={(e) => {
-                                e.stopPropagation()
-                                handleStart(`resize-${dir}`, e)
-                            }}
-                        />
-                    ))}
-            </div>
+            />
         </div>
     )
 })
