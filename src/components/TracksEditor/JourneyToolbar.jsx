@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-19
- * Last modified: 2025-07-19
+ * Created on: 2025-07-22
+ * Last modified: 2025-07-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -166,7 +166,9 @@ export const JourneyToolbar = (props) => {
     }
 
     const setToolbarOpacity = () => {
-        _journeyToolbar.current.style.opacity = toolbars.opacity
+        if (_journeyToolbar.current) {
+            _journeyToolbar.current.style.opacity = toolbars.opacity
+        }
     }
 
     useEffect(() => {
