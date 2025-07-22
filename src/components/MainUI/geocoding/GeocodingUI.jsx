@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-25
- * Last modified: 2025-05-25
+ * Created on: 2025-07-22
+ * Last modified: 2025-07-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -175,7 +175,9 @@ export const GeocodingUI = () => {
         return (() => {
             __.ui.geocoder.init()
             // store.list.clear()
-            address.current.value = ''
+            if (address.current) {
+                address.current.value = ''
+            }
             $geocoder.dialog.visible = false
             $geocoder.dialog.noResults = true
             $geocoder.dialog.error = false
