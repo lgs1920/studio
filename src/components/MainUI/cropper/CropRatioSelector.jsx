@@ -7,138 +7,180 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-20
- * Last modified: 2025-07-20
+ * Created on: 2025-07-22
+ * Last modified: 2025-07-22
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { CropperManager }    from '@Core/ui/cropper/CropperManager'
+import { DragHandler }       from '@Core/ui/drag-handler/DragHandler'
+import {
+    faCropSimple, faGripDots, faRectangle, faRectangleVertical, faSquare,
+}                                               from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                from '@Utils/FA2SL'
+import { memo, useCallback, useEffect, useRef } from 'react'
+import { useSnapshot }                          from 'valtio'
+import './style.css'
+
 /**
- * CropRatioSelector component for selecting crop ratios with drag functionality and icon selection.
+ * Positioning constants for CropRatioSelector placement
+ * @type {Object.<string, number>}
+ * @constant
+ */
+const POSITIONING = {
+    X_PERCENTAGE: 0.66, // Position at 66% of container width
+    Y_PERCENTAGE: 0.5,   // Position at 50% of container height
+}
+
+/**
+ * Icon mappings for crop ratio presets
+ * @type {Object.<string, import('@fortawesome/fontawesome-svg-core').IconDefinition>}
+ * @constant
+ */
+const ICONS = {
+    '9x16': faRectangleVertical,
+    '16x9': faRectangle,
+    '1x1':  faSquare,
+    '4x3':  faCropSimple,
+}
+
+/**
+ * CropRatioSelector renders a draggable toolbar for selecting crop ratios
  * @component
  * @param {Object} props - Component props
  * @param {Object} props.manager - CropperManager instance for crop operations
- * @returns {JSX.Element} Crop selector UI component
+ * @param {Object} props.manager.store - Valtio store with crop state (ratioEditor, etc.)
+ * @returns {JSX.Element} Draggable crop ratio selector UI
  */
-import { DragHandler }       from '@Core/ui/drag-handler/DragHandler'
-import { faGripDots }        from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }             from '@Utils/FA2SL'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { useSnapshot }       from 'valtio'
-import './style.css'
+const CropRatioSelector = memo(({manager}) => {
+    // Access reactive cropper and toolbar states
+    const $cropper = manager?.store
+    const cropper = useSnapshot($cropper || {})
+    const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
 
-// Positioning constants
-const CROP_RATIO_X_PERCENTAGE = 0.66 // CropRatioSelector at 66% width
-const CROP_RATIO_Y_PERCENTAGE = 0.5 // CropRatioSelector at 50% height
+    // Reference to the cropper menu DOM element
+    const cropperMenuRef = useRef(null)
 
-export const CropRatioSelector = memo(({manager}) => {
-    const $cropper = lgs.stores.main.components.cropper
-    const toolbars = useSnapshot(lgs.settings.ui.toolbars)
-    const state = useSnapshot($cropper)
-    const _cropperMenu = useRef(null)
-    const [selectedRatio, setSelectedRatio] = useState(lgs.configuration.videoFormats[0]?.value || '16x9')
+    // Track selected ratio, defaulting to first video format
+    const selectedRatio = cropper.ratioEditor
+                          ? lgs.configuration.videoFormats.find(p => p.value === cropper.aspectRatio?.toString().replace('/', 'x'))?.value
+                              || lgs.configuration.videoFormats[0]?.value
+                              || '16x9'
+                          : '16x9'
 
     /**
-     * Updates toolbar opacity when toolbars.opacity changes
+     * Updates menu position based on container bounds
+     * @function
+     * @param {Object} bounds - Container bounds from manager.getSourceBounds()
      */
-    useEffect(() => {
-        if (_cropperMenu.current) {
-            _cropperMenu.current.style.opacity = toolbars.opacity
+    const updatePosition = useCallback((bounds) => {
+        if (!cropperMenuRef.current) {
+            return
         }
+        cropperMenuRef.current.style.position = 'absolute'
+        cropperMenuRef.current.style.left = `${bounds.width * POSITIONING.X_PERCENTAGE}px`
+        cropperMenuRef.current.style.top = `${bounds.height * POSITIONING.Y_PERCENTAGE}px`
+        cropperMenuRef.current.style.width = 'auto'
+        cropperMenuRef.current.style.opacity = toolbars.opacity || 1
     }, [toolbars.opacity])
 
-    /**
-     * Initializes drag handler and positions CropRatioSelector
-     */
+    // Initialize position and drag handler, handle resize
     useEffect(() => {
-        if (!_cropperMenu.current || !manager) {
+        if (!manager || !cropper.ratioEditor || !cropperMenuRef.current) {
             return
         }
 
         // Set initial position
         const bounds = manager.getSourceBounds()
-        const containerWidth = bounds.width
-        const containerHeight = bounds.height
-        _cropperMenu.current.style.position = 'absolute'
-        _cropperMenu.current.style.left = `${containerWidth * CROP_RATIO_X_PERCENTAGE}px`
-        _cropperMenu.current.style.top = `${containerHeight * CROP_RATIO_Y_PERCENTAGE}px`
-        // _cropperMenu.current.style.transform = 'translate(-50%,-50%)'
-        _cropperMenu.current.style.width = 'auto'
+        updatePosition(bounds)
 
+        // Initialize drag handler
         const dragHandler = new DragHandler({
-                                                grabber: _cropperMenu.current,
-                                                parent:  _cropperMenu.current,
+                                                grabber: cropperMenuRef.current,
+                                                parent:  cropperMenuRef.current,
                                                 container: lgs.canvas,
                                             })
 
-        // Update position on resize
-        const handleResize = () => {
-            const newBounds = manager.getSourceBounds()
-            _cropperMenu.current.style.left = `${newBounds.width * CROP_RATIO_X_PERCENTAGE}px`
-            _cropperMenu.current.style.top = `${CROP_RATIO_Y_PERCENTAGE * 100}%`
-        }
-        const debouncedResize = manager.debounce(handleResize, CropperManager.RESIZE_DEBOUNCE_MS)
+        // Debounced resize handler to update position
+        const debouncedResize = manager.debounce(() => {
+            updatePosition(manager.getSourceBounds())
+        }, manager.RESIZE_DEBOUNCE_MS)
+
         window.addEventListener('resize', debouncedResize)
 
+        // Store references for cleanup
+        cropperMenuRef.current._dragHandler = dragHandler
+        cropperMenuRef.current._resizeHandler = debouncedResize
+
+        // Cleanup on unmount or when ratioEditor changes
         return () => {
-            dragHandler.destroy()
-            window.removeEventListener('resize', debouncedResize)
+            if (cropperMenuRef.current?._dragHandler) {
+                cropperMenuRef.current._dragHandler.destroy()
+            }
+            if (cropperMenuRef.current?._resizeHandler) {
+                window.removeEventListener('resize', cropperMenuRef.current._resizeHandler)
+            }
         }
-    }, [manager])
+    }, [manager, cropper.ratioEditor, updatePosition])
 
     /**
-     * Handles ratio selection, updates UI, and resets crop
-     * @param {Object} preset - Selected video format preset
-     * @param {Event} event - Click event
+     * Handles selection of a crop ratio preset
+     * Updates the selected ratio and resets the crop with new aspect ratio
+     * @function
+     * @param {Object} preset - Video format preset (value, label, description, locked)
+     * @param {Event} event - Click event from icon
      */
-    const handleChangeRatio = useCallback(
-        (preset, event) => {
-            if (!_cropperMenu.current) {
-                return
-            }
+    const handleChangeRatio = useCallback((preset, event) => {
+        if (!cropperMenuRef.current || !manager) {
+            return
+        }
 
-            event.preventDefault()
-            event.stopPropagation()
+        event.preventDefault()
+        event.stopPropagation()
 
-            // Update selected class
-            const icons = _cropperMenu.current.querySelectorAll('.crop-ratio-presets sl-icon')
-            icons.forEach(icon => icon.classList.remove('selected'))
-            event.target.classList.add('selected')
+        // Update selected class on icons
+        const icons = cropperMenuRef.current.querySelectorAll('.crop-ratio-presets sl-icon')
+        icons.forEach(icon => icon.classList.remove('selected'))
+        event.target.classList.add('selected')
 
-            // Update state and crop
-            setSelectedRatio(preset.value)
-            const [w, h] = preset.value.split('x').map(Number)
-            manager.resetCrop({aspectRatio: w / h, lockRatio: preset.locked})
-        },
-        [$cropper],
-    )
+        // Parse ratio and reset crop
+        const [w, h] = preset.value.split('x').map(Number)
+        manager.resetCrop({aspectRatio: w / h, lockRatio: preset.locked})
+    }, [manager])
 
+    // Render draggable toolbar with ratio preset icons
     return (
-        <div className="crop-controls lgs-toolbar lgs-card on-map" ref={_cropperMenu}>
-            <SlTooltip content="Drag me">
-                <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
-            </SlTooltip>
-            <div className="crop-ratio-presets">
-                {lgs.configuration.videoFormats.map(preset => (
-                    <SlTooltip
-                        key={preset.value}
-                        content={`${preset.label}: ${preset.description}`}
-                        placement="right"
-                    >
-                        <SlIcon
-                            library="fa"
-                            className={`lgs-card ${selectedRatio === preset.value ? 'selected' : ''}`}
-                            onClick={e => handleChangeRatio(preset, e)}
-                            name={FA2SL.set(__.cropper.icons[preset.value])}
-                        />
+        <>
+            {cropper.ratioEditor && (
+                <div className="crop-controls lgs-toolbar lgs-card on-map" ref={cropperMenuRef}>
+                    {/* Drag handle for moving the toolbar */}
+                    <SlTooltip content="Drag me">
+                        <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
                     </SlTooltip>
-                ))}
-            </div>
-        </div>
+                    <div className="crop-ratio-presets">
+                        {lgs.configuration.videoFormats.map(preset => (
+                            <SlTooltip
+                                key={preset.value}
+                                content={`${preset.label}: ${preset.description}`}
+                                placement="right"
+                            >
+                                <SlIcon
+                                    library="fa"
+                                    className={`lgs-card ${selectedRatio === preset.value ? 'selected' : ''}`}
+                                    onClick={e => handleChangeRatio(preset, e)}
+                                    name={FA2SL.set(ICONS[preset.value] || faSquare)}
+                                />
+                            </SlTooltip>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </>
     )
 })
 
 CropRatioSelector.displayName = 'CropRatioSelector'
+
+export { CropRatioSelector }

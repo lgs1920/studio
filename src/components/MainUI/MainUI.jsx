@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-20
- * Last modified: 2025-07-20
+ * Created on: 2025-07-22
+ * Last modified: 2025-07-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,13 +19,15 @@ import { FullScreenButton }                     from '@Components/FullScreenButt
 import { ContextMenuHook }              from '@Components/MainUI/ContextMenuHook'
 import { Cropper }           from '@Components/MainUI/cropper/Cropper'
 import { CropRatioSelector } from '@Components/MainUI/cropper/CropRatioSelector'
+import { VideoCropperCTA }   from '@Components/MainUI/video/VideoCropperCTA'
 import { GeocodingButton }   from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'
 import { MapPOIContextMenu }            from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { MapPOIMonitor }                from '@Components/MainUI/MapPOI/MapPOIMonitor'
 import { RotateButton }                 from '@Components/MainUI/RotateButton'
 import { TrackEditorButton }            from '@Components/MainUI/TrackEditorButton'
-import { PanelButton as VideoRecorder } from '@Components/MainUI/video/PanelButton'
+import { VideoRecordButton } from '@Components/MainUI/video/VideoRecordButton'
+import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoPreview }                 from '@Components/MainUI/video/VideoPreview'
 import { VideoRecorderToolbar }         from '@Components/MainUI/video/VideoRecorderToolbar'
 import { Profile }                      from '@Components/Profile/Profile'
@@ -203,7 +205,7 @@ export const MainUI = memo(() => {
     return (
         <>
             <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
-                {hidden && (
+                {!video.edit && (
                     <>
                         <div id="primary-buttons-bar" className={primaryEntrance}>
                             <SettingsButton tooltip={tooltipDir}/>
@@ -221,13 +223,16 @@ export const MainUI = memo(() => {
                                 <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <RotateButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <FullScreenButton/>
-                                <VideoRecorder tooltip={toolBar.fromStart ? 'left' : 'right'}/>
+                                <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingUI/>
                             </div>
                         </div>
                         <CallForActions/>
                     </>
                 )}
+
+                {!video.edit && (
+                    <>
                 <CameraTarget/>
                 <div id="bottom-left-ui">
                     {lgs.platform !== 'production' && (
@@ -239,6 +244,8 @@ export const MainUI = memo(() => {
                 <div id="bottom-right-ui">
                     <CreditsBar/>
                 </div>
+                    </>
+                )}
                 <CameraAndTargetPanel/>
                 <Profile/>
                 <InformationPanel/>
@@ -254,10 +261,14 @@ export const MainUI = memo(() => {
             <VideoRecorderToolbar tooltip={toolBar.fromStart ? 'left' : 'right'}/>
             <VideoPreview/>
             <ContextMenuHook/>
-            {!device.mobile && video.canDefine &&
-                <Cropper source={lgs.canvas} store={lgs.stores.main.components.cropper} options={{editor: true}}/>
+            {video.edit &&
+                <Cropper source={lgs.canvas}
+                         store={lgs.stores.ui.video.cropper}
+                         CTA={VideoCropperCTA}
+                         RatioSelector={CropRatioSelector}
+                />
             }
-            {show && usage && <JourneyToolbar/>}
+            {show && usage && !video.edit && <JourneyToolbar/>}
         </>
     )
 })

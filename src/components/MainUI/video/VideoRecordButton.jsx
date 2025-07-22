@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: PanelButton.jsx
+ * File: VideoRecordButton.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-13
- * Last modified: 2025-07-13
+ * Created on: 2025-07-22
+ * Last modified: 2025-07-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -160,7 +160,7 @@ export const VideoRecordButton  = (props) => {
 
     // Render button
     return (
-        <SlTooltip hoist placement={props.tooltip} disabled={!settings.recording || settings.paused}
+        <SlTooltip hoist disabled={!settings.recording || settings.paused}
                    content={settings.recording ? null : 'Start recording'}>
             <SlButton size={'small'} className={'square-button transparent'} id={'trigger-video-recording'}
                       onClick={handleVideoRecording}

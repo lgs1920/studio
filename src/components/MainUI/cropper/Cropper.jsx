@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-20
- * Last modified: 2025-07-21
+ * Created on: 2025-07-22
+ * Last modified: 2025-07-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,45 +24,53 @@
  * @param {string} [props.className=''] - Additional CSS classes for crop zone
  * @param {Object} props.store - Valtio store for cropper state
  * @param {Object} [props.options={}] - Configuration options for CropperManager
+ * @param {JSX.Element|string} [props.CTA] - All to actions buttons
+ * @param {JSX.Element|string} [props.RatioSelector] - ratio selector floating Menu
  * @returns {JSX.Element|null} Cropper UI or null if source is not loaded
  */
-import { memo, useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useSnapshot } from 'valtio'
-import { CropperCTA } from '@Components/MainUI/cropper/CropperCTA'
-import { CropRatioSelector } from './CropRatioSelector'
-import { CropperManager } from './CropperManager'
-import { CropOverlay } from './CropOverlay'
-import { CropCenterLines } from './CropCenterLines'
-import { CropZone } from './CropZone'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSnapshot }                                             from 'valtio'
+import { CropCenterLines }                                         from './CropCenterLines'
+import { CropOverlay }                                             from './CropOverlay'
+import { CropperManager }                                          from './CropperManager'
+import { CropZone }                                                from './CropZone'
 import './style.css'
 
 // Positioning constants
 const CROP_X_PERCENTAGE = 0.7 // Crop region center at 70% width
 const CROP_Y_PERCENTAGE = 0.5 // Crop region center at 50% height
 
-export const Cropper = memo(({source, container, className = '', store, options = {}}) => {
+export const Cropper = memo(({
+                                 source,
+                                 container,
+                                 className = '',
+                                 CTA = null,
+                                 RatioSelector = null,
+                                 store,
+                                 options = {},
+                             }) => {
     const cropper = useSnapshot(store)
     const [isSourceLoaded, setIsSourceLoaded] = useState(
         !(source instanceof HTMLImageElement && !source.complete),
     )
     const [crop, setCrop] = useState({
-        x: store.x ?? 0,
-        y: store.y ?? 0,
-        width: store.width ?? 0,
-        height: store.height ?? 0,
-    })
+                                         x:      store.x ?? 0,
+                                         y:      store.y ?? 0,
+                                         width:  store.width ?? 0,
+                                         height: store.height ?? 0,
+                                     })
     const [interactionState, setInteractionState] = useState({
-        action: null,
-        showHCenterLine: false,
-        showVCenterLine: false,
-        dragLockedHorizontal: false,
-        dragLockedVertical: false,
-        wasJustCentered: false,
-        isCentering: false,
-    })
-    const _cropperContainer= useRef(null)
-    const _cropZone= useRef(null)
-    const _manager= useRef(null)
+                                                                 action:               null,
+                                                                 showHCenterLine:      false,
+                                                                 showVCenterLine:      false,
+                                                                 dragLockedHorizontal: false,
+                                                                 dragLockedVertical:   false,
+                                                                 wasJustCentered:      false,
+                                                                 isCentering:          false,
+                                                             })
+    const _cropperContainer = useRef(null)
+    const _cropZone = useRef(null)
+    const _manager = useRef(null)
 
     // Memoize options
     const memoizedOptions = useMemo(() => ({
@@ -259,18 +267,19 @@ export const Cropper = memo(({source, container, className = '', store, options 
     }
 
     return (
-        <div ref={_cropperContainer
-} className="crop-container">
-            {memoizedOptions.editor && <CropRatioSelector manager={_manager.current}/>}
-            <CropperCTA/>
-            <CropOverlay style={styles.overlayStyle} />
-            <CropCenterLines 
-                interactionState={interactionState} 
-                styles={styles} 
+        <div ref={_cropperContainer} className="crop-container">
+            {RatioSelector && <RatioSelector manager={_manager.current}/>}
+
+            {CTA && <CTA manager={_manager.current}/>}
+
+            <CropOverlay style={styles.overlayStyle}/>
+            <CropCenterLines
+                interactionState={interactionState}
+                styles={styles}
             />
             <CropZone
                 ref={_cropZone
-}
+                }
                 crop={crop}
                 manager={_manager.current}
                 cropper={cropper}
