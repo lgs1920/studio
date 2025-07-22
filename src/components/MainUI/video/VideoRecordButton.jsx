@@ -29,7 +29,7 @@ import { useSnapshot }         from 'valtio'
  * @param {Object} props - Component props
  * @param {string} props.tooltip - Tooltip placement (e.g., 'top', 'bottom')
  */
-export const PanelButton = (props) => {
+export const VideoRecordButton  = (props) => {
     // Access global video settings
     const $settings = lgs.settings.ui.video
     const settings = useSnapshot($settings)
