@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-22
- * Last modified: 2025-07-22
+ * Created on: 2025-07-24
+ * Last modified: 2025-07-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,8 +16,9 @@
 
 import { DragHandler }       from '@Core/ui/drag-handler/DragHandler'
 import {
-    faCropSimple, faGripDots, faRectangle, faRectangleVertical, faSquare,
+    faCropSimple, faRectangle, faRectangleVertical, faSquare,
 }                                               from '@fortawesome/pro-regular-svg-icons'
+import { faGripDots }                           from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                from '@Utils/FA2SL'
 import { memo, useCallback, useEffect, useRef } from 'react'

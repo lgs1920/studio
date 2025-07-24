@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-22
- * Last modified: 2025-07-22
+ * Created on: 2025-07-24
+ * Last modified: 2025-07-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -31,8 +31,8 @@ import { useSnapshot }         from 'valtio'
  */
 export const VideoRecordButton  = (props) => {
     // Access global video settings
-    const $settings = lgs.settings.ui.video
-    const settings = useSnapshot($settings)
+    const $video = lgs.settings.ui.video
+    const video = useSnapshot($video)
 
     // Manage recorder events
     useEffect(() => {
@@ -42,33 +42,33 @@ export const VideoRecordButton  = (props) => {
         }
         // Handle size updates
         const handleSizeUpdate = (e) => {
-            $settings.totalBytes = e.detail.totalBytes
+            $video.totalBytes = e.detail.totalBytes
         }
         // Handle pause
         const handlePause = () => {
-            $settings.paused = true
+            $video.paused = true
         }
         // Handle resume
         const handleResume = () => {
-            $settings.paused = false
+            $video.paused = false
         }
         // Handle stop
         const handleStop = () => {
-            $settings.recording = false
-            $settings.paused = false
-            $settings.totalBytes = 0
+            $video.recording = false
+            $video.paused = false
+            $video.totalBytes = 0
         }
         // Handle max size limit
         const handleMaxSize = () => {
-            $settings.recording = false
-            $settings.paused = false
-            $settings.totalBytes = 0
+            $video.recording = false
+            $video.paused = false
+            $video.totalBytes = 0
         }
         // Handle max duration limit
         const handleMaxDuration = () => {
-            $settings.recording = false
-            $settings.paused = false
-            $settings.totalBytes = 0
+            $video.recording = false
+            $video.paused = false
+            $video.totalBytes = 0
         }
 
         // Add event listeners
@@ -86,11 +86,11 @@ export const VideoRecordButton  = (props) => {
             __.recorder.removeEventListener(VideoRecorder.events.STOP, handleStop)
             __.recorder.removeEventListener(VideoRecorder.events.MAX_SIZE, handleMaxSize)
             __.recorder.removeEventListener(VideoRecorder.events.MAX_DURATION, handleMaxDuration)
-            if (settings.recording && __.recorder) {
+            if (video.recording && __.recorder) {
                 __.recorder.stop()
-                $settings.recording = false
-                $settings.paused = false
-                $settings.totalBytes = 0
+                $video.recording = false
+                $video.paused = false
+                $video.totalBytes = 0
             }
         }
     }, [__.recorder])
@@ -107,11 +107,11 @@ export const VideoRecordButton  = (props) => {
         __.recorder.initialize((blob, duration) => {
             console.log(`Recording complete: ${duration}ms, ${blob.size} bytes`)
         }, undefined, {
-                                   maxSize:     settings.maxSize * 1048576,      // MB
-            maxDuration: settings.maxDuration * MINUTE,   // MilliSeconds
-            bitrate:  settings.bitrate * 1000000,      // MBps
+            maxSize:     video.maxSize * 1048576,      // MB
+            maxDuration: video.maxDuration * MINUTE,   // MilliSeconds
+            bitrate:     video.bitrate * 1000000,      // MBps
                                    filename:    APP_KEY,
-            fps:      settings.fps,
+            fps:         video.fps,
             useWebGL: true,
 
         })
@@ -132,17 +132,17 @@ export const VideoRecordButton  = (props) => {
             return
         }
         // Start or stop recording
-        if (!settings.recording) {
+        if (!video.recording) {
             try {
                 initializeRecorder()
                 __.recorder.start()
-                $settings.recording = true
-                $settings.paused = false
+                $video.recording = true
+                $video.paused = false
             }
             catch (error) {
-                $settings.recording = false
-                $settings.paused = false
-                $settings.totalBytes = 0
+                $video.recording = false
+                $video.paused = false
+                $video.totalBytes = 0
 
                 UIToast.error({
                                   caption: `Video capture`,
@@ -151,21 +151,19 @@ export const VideoRecordButton  = (props) => {
             }
         }
         else {
-            __.recorder.stop()
-            $settings.recording = false
-            $settings.paused = false
-            $settings.totalBytes = 0
+            __.recorder.pause()
+            $video.paused = true
         }
     }
 
     // Render button
     return (
-        <SlTooltip hoist disabled={!settings.recording || settings.paused}
-                   content={settings.recording ? null : 'Start recording'}>
+        <SlTooltip hoist
+                   content={!video.recording ? 'Click to start the recording' : (video.paused ? 'Paused' : 'On air !')}>
             <SlButton size={'small'} className={'square-button transparent'} id={'trigger-video-recording'}
                       onClick={handleVideoRecording}
                       disabled={!__.recorder || !lgs.canvas}>
-                <FontAwesomeIcon icon={faCircleVideo} beatFade={settings.recording && !settings.paused}/>
+                <FontAwesomeIcon icon={faCircleVideo} beatFade={video.recording && !video.paused}/>
             </SlButton>
         </SlTooltip>
     )

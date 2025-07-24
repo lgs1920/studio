@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-20
- * Last modified: 2025-07-20
+ * Created on: 2025-07-24
+ * Last modified: 2025-07-24
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 /**
- * CropperManager handles crop region management for canvas, video, or image elements.
+ * CropperManager handles crop region management for canvas, video, or image elements
  * @class CropperManager
  */
 class CropperManager {
@@ -87,6 +87,7 @@ class CropperManager {
         this.centeringLinesTimer = null
         this.debounceTimer = null
 
+        // Initialize crop and interaction state
         this.crop = this.initializeCrop()
         this.interactionState = {
             action:          null,
@@ -98,21 +99,52 @@ class CropperManager {
             wasJustCentered: false,
         }
 
-        this.updateStore(this.crop)
-        this.handleResizeEvent = this.debounce(() => this.updateCropOnSourceChange(), CropperManager.RESIZE_DEBOUNCE_MS)
-        this.handleKeydown = (event) => {
-            if (!this.isDestroyed && event.key === 'Escape') {
-                this.closeCropper()
-            }
+        // Store event handlers for enable/disable
+        this.eventHandlers = {
+            resize:  this.debounce(() => this.updateCropOnSourceChange(), CropperManager.RESIZE_DEBOUNCE_MS),
+            keydown: (event) => {
+                if (!this.isDestroyed && event.key === 'Escape') {
+                    this.closeCropper()
+                }
+            },
         }
-        window.addEventListener('resize', this.handleResizeEvent)
-        window.addEventListener('orientationchange', this.handleResizeEvent)
-        window.addEventListener('keydown', this.handleKeydown)
+
+        // Update store with initial crop
+        this.updateStore(this.crop)
+
+        // Enable event listeners
+        this.enableEvents()
+    }
+
+    /**
+     * Enables all event listeners (resize, orientationchange, keydown)
+     * @function
+     */
+    enableEvents = () => {
+        if (this.isDestroyed) {
+            return
+        }
+        window.addEventListener('resize', this.eventHandlers.resize)
+        window.addEventListener('orientationchange', this.eventHandlers.resize)
+        window.addEventListener('keydown', this.eventHandlers.keydown)
+    }
+
+    /**
+     * Disables all event listeners (resize, orientationchange, keydown)
+     * @function
+     */
+    disableEvents = () => {
+        if (this.isDestroyed) {
+            return
+        }
+        window.removeEventListener('resize', this.eventHandlers.resize)
+        window.removeEventListener('orientationchange', this.eventHandlers.resize)
+        window.removeEventListener('keydown', this.eventHandlers.keydown)
     }
 
     /**
      * Initializes crop region based on source bounds and aspect ratio
-     * @returns {Object} Initial crop state
+     * @returns {Object} Initial crop state with x, y, width, height
      */
     initializeCrop = () => {
         const bounds = this.getSourceBounds()
@@ -124,9 +156,9 @@ class CropperManager {
 
     /**
      * Computes crop dimensions based on bounds and aspect ratio
-     * @param {Object} bounds - Source bounds
-     * @param {number} aspectRatio - Desired aspect ratio
-     * @returns {Object} Crop state
+     * @param {Object} bounds - Source bounds (x, y, width, height)
+     * @param {number} aspectRatio - Desired aspect ratio (width/height)
+     * @returns {Object} Crop state with x, y, width, height
      */
     computeCropDimensions = (bounds, aspectRatio) => {
         let width, height
@@ -151,9 +183,9 @@ class CropperManager {
 
     /**
      * Clamps crop to bounds and ensures valid values
-     * @param {Object} crop - Crop object
-     * @param {Object} bounds - Source bounds
-     * @returns {Object} Clamped crop
+     * @param {Object} crop - Crop object (x, y, width, height)
+     * @param {Object} bounds - Source bounds (x, y, width, height)
+     * @returns {Object} Clamped crop object
      */
     clampCrop = (crop, bounds) => {
         const result = {
@@ -274,14 +306,14 @@ class CropperManager {
         return {
             overlayStyle:           {
                 clipPath: `polygon(
-          0% 0%, 100% 0%, 100% 100%, 0% 100%,
-          0% ${cropY}px,
-          ${cropX}px ${cropY}px,
-          ${cropX}px ${cropY + cropHeight}px,
-          ${cropX + cropWidth}px ${cropY + cropHeight}px,
-          ${cropX + cropWidth}px ${cropY}px,
-          0% ${cropY}px
-        )`
+                    0% 0%, 100% 0%, 100% 100%, 0% 100%,
+                    0% ${cropY}px,
+                    ${cropX}px ${cropY}px,
+                    ${cropX}px ${cropY + cropHeight}px,
+                    ${cropX + cropWidth}px ${cropY + cropHeight}px,
+                    ${cropX + cropWidth}px ${cropY}px,
+                    0% ${cropY}px
+                )`
             },
             hCenterLineLeftStyle:   {
                 left:  Math.floor(sourceBounds.x / dpr),
@@ -331,7 +363,7 @@ class CropperManager {
      * Checks if touch movement is significant for drag
      * @param {TouchEvent} event - Touch event
      * @param {number} sensitivity - Sensitivity threshold in pixels
-     * @returns {boolean}
+     * @returns {boolean} True if movement exceeds threshold
      */
     isSignificantTouchMovement = (event, sensitivity) => {
         if (!this.touchStartPosition || !event.touches || event.touches.length !== 1) {
@@ -434,9 +466,9 @@ class CropperManager {
                                     ? (Number.isFinite(cropper.aspectRatio) ? cropper.aspectRatio : this.crop.width / this.crop.height || 1)
                                     : (event.shiftKey ? this.crop.width / this.crop.height || 1 : null)
                 this.resizeStartState = {
-                    crop:      {...this.crop},
-                    centerX:   Math.floor(this.crop.x + this.crop.width / 2),
-                    centerY:   Math.floor(this.crop.y + this.crop.height / 2),
+                    crop:    {...this.crop},
+                    centerX: Math.floor(this.crop.x + this.crop.width / 2),
+                    centerY: Math.floor(this.crop.y + this.crop.height / 2),
                     isSymmetric: cropper.lockRatio ? !event.shiftKey : event.shiftKey,
                     lockRatio: cropper.lockRatio,
                     aspectRatio,
@@ -549,7 +581,7 @@ class CropperManager {
     /**
      * Handles resize operations
      * @param {Object} crop - Crop object to modify
-     * @param {string} direction - Resize direction
+     * @param {string} direction - Resize direction (nw, ne, se, sw, n, e, s, w)
      * @param {number} deltaX - Horizontal movement delta
      * @param {number} deltaY - Vertical movement delta
      * @param {boolean} isSymmetric - Whether to resize symmetrically
@@ -767,7 +799,7 @@ class CropperManager {
 
     /**
      * Updates store if crop values change
-     * @param {Object} newCrop - New crop values
+     * @param {Object} newCrop - New crop values (x, y, width, height)
      */
     updateStore = (newCrop) => {
         if (this.isDestroyed || isNaN(newCrop.x) || isNaN(newCrop.y) || isNaN(newCrop.width) || isNaN(newCrop.height)) {
@@ -898,7 +930,7 @@ class CropperManager {
     }
 
     /**
-     * Cleans up timers and animation frames
+     * Cleans up timers, animation frames, and event listeners
      */
     destroy = () => {
         this.isDestroyed = true
@@ -917,9 +949,7 @@ class CropperManager {
         this.longTapTimer = null
         this.debounceTimer = null
         this.centeringLinesTimer = null
-        window.removeEventListener('resize', this.handleResizeEvent)
-        window.removeEventListener('orientationchange', this.handleResizeEvent)
-        window.removeEventListener('keydown', this.handleKeydown)
+        this.disableEvents()
     }
 }
 

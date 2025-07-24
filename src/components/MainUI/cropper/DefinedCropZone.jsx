@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-21
- * Last modified: 2025-07-21
+ * Created on: 2025-07-24
+ * Last modified: 2025-07-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -42,8 +42,6 @@ export const DefinedCropZone = memo(forwardRef(({
                 top: crop.y / manager.dpr,
                 width: crop.width / manager.dpr,
                 height: crop.height / manager.dpr,
-                cursor: 'default',
-                pointerEvents: 'none',
             }}
         >
             {showInfo && (

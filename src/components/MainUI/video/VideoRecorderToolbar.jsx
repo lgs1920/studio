@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-13
- * Last modified: 2025-07-13
+ * Created on: 2025-07-24
+ * Last modified: 2025-07-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,9 +16,8 @@
 
 import { SECOND }                                         from '@Core/constants'
 import { VideoRecorder }                                  from '@Core/ui/video-recorder/VideoRecorder'
-import { faPause, faPlay }                                from '@fortawesome/pro-regular-svg-icons'
-import { faStop }                                         from '@fortawesome/pro-solid-svg-icons'
-import { SlAnimation, SlIconButton, SlPopup }             from '@shoelace-style/shoelace/dist/react'
+import { faPause, faPlay, faStop }          from '@fortawesome/pro-regular-svg-icons'
+import { SlIconButton, SlPopup, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { FA2SL }                                          from '@Utils/FA2SL'
 import { UIToast }                                        from '@Utils/UIToast'
@@ -47,19 +46,22 @@ const RecorderControls = memo(({recording, paused, recorder}) => {
 
     return (
         <>
+            <SlTooltip content={paused ? 'Click to resume' : 'Click to pause'}>
             <SlIconButton
                 library="fa"
                 name={FA2SL.set(paused ? faPlay : faPause)}
                 onClick={handlePlayPause}
                 disabled={!recorder}
             />
-            {recording && (
+            </SlTooltip>
+            {recording && !paused && (
+                <SlTooltip content={'Click to stop'}>
                 <SlIconButton
                     library="fa"
                     name={FA2SL.set(faStop)}
                     onClick={handleStop}
-                    disabled={!recorder}
                 />
+                </SlTooltip>
             )}
         </>
     )
@@ -72,14 +74,18 @@ const RecorderControls = memo(({recording, paused, recorder}) => {
  */
 export const VideoRecorderToolbar = (props) => {
     // Access global video settings
-    const $settings = lgs.settings.ui.video
-    const settings = useSnapshot($settings)
+    const $video = lgs.settings.ui.video
+    const video = useSnapshot($video)
     // Local state for UI updates
     const [recordedDuration, setRecordedDuration] = useState(0)
     const [recordedSize, setRecordedSize] = useState(0)
     const [lastSizeEventTime, setLastSizeEventTime] = useState(0)
     // Ref to track interval ID
     const intervalRef = useRef(null)
+
+    const _toolbar = useRef(null)
+    const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
+
 
     /**
      * Formats duration in milliseconds
@@ -110,15 +116,15 @@ export const VideoRecorderToolbar = (props) => {
 
         // Handle recording start
         const handleStart = () => {
-            $settings.recording = true
-            $settings.paused = false
-            $settings.totalBytes = 0
+            $video.recording = true
+            $video.paused = false
+            $video.totalBytes = 0
             setRecordedDuration(0)
             setRecordedSize(0)
             setLastSizeEventTime(Date.now())
             intervalRef.current = setInterval(() => {
                 setRecordedDuration(__.recorder.duration)
-                $settings.totalBytes = __.recorder.size
+                $video.totalBytes = __.recorder.size
             }, SECOND)
 
             UIToast.warning({
@@ -135,7 +141,7 @@ export const VideoRecorderToolbar = (props) => {
 
         // Handle pause
         const handlePause = () => {
-            $settings.paused = true
+            $video.paused = true
             clearInterval(intervalRef.current)
             setRecordedDuration(__.recorder.duration)
 
@@ -147,11 +153,11 @@ export const VideoRecorderToolbar = (props) => {
 
         // Handle resume
         const handleResume = () => {
-            $settings.paused = false
+            $video.paused = false
             setRecordedDuration(__.recorder.duration)
             intervalRef.current = setInterval(() => {
                 setRecordedDuration(__.recorder.duration)
-                $settings.totalBytes = __.recorder.size
+                $video.totalBytes = __.recorder.size
             }, SECOND)
 
             UIToast.success({
@@ -162,12 +168,12 @@ export const VideoRecorderToolbar = (props) => {
 
         // Handle stop, max-size, or max-duration
         const handleStop = (event) => {
-            if (__.recorder.isRecording()) {
+            if (__.recorder.isRecording() || $video.paused) {
                 __.recorder.stop()
             }
-            $settings.recording = false
-            $settings.paused = false
-            $settings.totalBytes = 0
+            $video.recording = false
+            $video.paused = false
+            $video.totalBytes = 0
             setRecordedDuration(0)
             setRecordedSize(0)
             setLastSizeEventTime(0)
@@ -182,13 +188,13 @@ export const VideoRecorderToolbar = (props) => {
                 case VideoRecorder.events.MAX_SIZE:
                     UIToast.warning({
                                         caption: caption,
-                                        text: `Stopped due to max size limit (${settings.maxSize}${'MB'}). Waiting...`,
+                                        text: `Stopped due to max size limit (${video.maxSize}${'MB'}). Waiting...`,
                                     })
                     break
                 case VideoRecorder.events.MAX_DURATION:
                     UIToast.warning({
                                         caption: caption,
-                                        text: `Stopped due to max duration limit (${settings.maxDuration}m). Waiting...`,
+                                        text: `Stopped due to max duration limit (${video.maxDuration}m). Waiting...`,
                                     })
             }
         }
@@ -199,6 +205,11 @@ export const VideoRecorderToolbar = (props) => {
                                 caption: caption,
                                 text: `Saved in ${event.detail.filename}`,
                             })
+        }
+
+        // Set opacity
+        if (_toolbar.current) {
+            _toolbar.current.style.opacity = toolbars.opacity
         }
 
         // Add event listeners
@@ -226,26 +237,30 @@ export const VideoRecorderToolbar = (props) => {
         }
     }, [__.recorder])
 
+    useEffect(() => {
+        // Set opacity
+        if (_toolbar.current) {
+            _toolbar.current.style.opacity = toolbars.opacity
+        }
+    }, [video.recording, video.paused])
+
     // Render toolbar
     return (
-        <SlPopup
-            active={settings.recording}
-            className={'lgs-theme'}
-            anchor="trigger-video-recording"
-            placement={props.tooltip}
-            distance={__.tools.rem2px(__.ui.css.getCSSVariable('lgs-gutter-xs'))}
-        >
-            <SlAnimation>
-                <div className={'lgs-one-line-card on-map small'} id="video-recorder-toolbar">
+        <>
+            {
+                video.recording &&
+                <div
+                    className="video-recorder-toolbar lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map"
+                    ref={_toolbar}>
                     <span className="duration">{formatDuration(recordedDuration)}</span>
                     <span className="size">{formatSize(recordedSize)}</span>
                     <RecorderControls
-                        recording={settings.recording}
-                        paused={settings.paused}
+                        recording={video.recording}
+                        paused={video.paused}
                         recorder={__.recorder}
                     />
                 </div>
-            </SlAnimation>
-        </SlPopup>
+            }
+        </>
     )
 }

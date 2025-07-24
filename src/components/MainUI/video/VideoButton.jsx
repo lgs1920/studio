@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-22
- * Last modified: 2025-07-22
+ * Created on: 2025-07-24
+ * Last modified: 2025-07-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -32,7 +32,7 @@ export const VideoButton = (props) => {
     }
     return (
         <>
-            <SlTooltip hoist placement={props.tooltip} content="Search location">
+            <SlTooltip hoist placement={props.tooltip} content="Make a new video">
                 <SlButton size={'small'} className={'square-button'} id={'launch-the-video-editor'}
                           onClick={handleClick}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faVideoPlus)}></SlIcon>

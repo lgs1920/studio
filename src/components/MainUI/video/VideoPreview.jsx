@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-11
- * Last modified: 2025-07-11
+ * Created on: 2025-07-24
+ * Last modified: 2025-07-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,6 +24,7 @@ import { SlDialog, SlButton, SlTooltip, SlIcon } from '@shoelace-style/shoelace/
 import './style.css'
 import { FA2SL }                                 from '@Utils/FA2SL'
 import { useEffect, useState, useRef }           from 'react'
+import { useSnapshot } from 'valtio/index'
 
 /**
  * VideoPreview component
@@ -34,6 +35,7 @@ export const VideoPreview = () => {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [videoBlob, setVideoBlob] = useState(null)
     const dialogRef = useRef(null)
+    const $video = lgs.stores.ui.video
 
     useEffect(() => {
         const handleStop = (e) => {
@@ -67,6 +69,8 @@ export const VideoPreview = () => {
         if (videoUrl) {
             URL.revokeObjectURL(videoUrl)
         }
+        // closes video tools
+        $video.edit = false
     }
 
     /**
@@ -79,6 +83,9 @@ export const VideoPreview = () => {
         if (videoUrl) {
             URL.revokeObjectURL(videoUrl)
         }
+
+        // closes video tools
+        $video.edit = false
     }
 
     return (

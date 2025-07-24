@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-22
- * Last modified: 2025-07-22
+ * Created on: 2025-07-24
+ * Last modified: 2025-07-24
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { DefinedCropZone } from '@Components/MainUI/cropper/DefinedCropZone'
 /**
  * Cropper component for interactive crop region selection over canvas, video, or image elements.
  * Provides a draggable and resizable crop area with visual feedback and center alignment guides.
@@ -277,17 +278,27 @@ export const Cropper = memo(({
                 interactionState={interactionState}
                 styles={styles}
             />
-            <CropZone
-                ref={_cropZone
-                }
-                crop={crop}
-                manager={_manager.current}
-                cropper={cropper}
-                interactionState={interactionState}
-                className={className}
-                onStart={handleStart}
-                onDoubleClick={handleDoubleClick}
-            />
+            {cropper.ratioEditor ? (
+                <CropZone
+                    ref={_cropZone}
+                    crop={crop}
+                    manager={_manager.current}
+                    cropper={cropper}
+                    interactionState={interactionState}
+                    className={className}
+                    onStart={handleStart}
+                    onDoubleClick={handleDoubleClick}
+                />
+            ) : (
+                 <DefinedCropZone
+                     ref={_cropZone}
+                     crop={crop}
+                     manager={_manager.current}
+                     cropper={cropper}
+                     interactionState={interactionState}
+                     className={className}
+                 />
+             )}
         </div>
     )
 })

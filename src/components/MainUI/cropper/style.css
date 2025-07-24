@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-20
- * Last modified: 2025-07-20
+ * Created on: 2025-07-24
+ * Last modified: 2025-07-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -44,6 +44,11 @@
     border: 2px dashed var(--crop-border-color);
     background: transparent;
     touch-action: none;
+}
+
+.defined-crop-zone {
+    cursor: default;
+    pointer-events: none;
 }
 
 /***************************************
@@ -273,14 +278,17 @@
  * Cropper CTA
  ******************************************************************************/
 
-.cropper-cta {
-    position: absolute;
+.video-cropper-toolbar {
     z-index: calc(var(--crop-zindex) + 2);
     top: 66%;
     left: 50%;
     transform: translate(-50%, -50%);
 }
 
-.cropper-cta .buttons-bar {
+.video-cropper-toolbar-actions {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
     justify-content: space-around;
+    gap: var(--lgs-gutter);
 }
