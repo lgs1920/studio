@@ -111,11 +111,16 @@ export const VideoRecorderToolbar = (props) => {
         if (!__.recorder) {
             return
         }
+        console.log(video.recording, video.paused)
 
         const caption = 'Video Recording'
 
         // Handle recording start
         const handleStart = () => {
+            if ($video.recording) {
+                return
+            }
+
             $video.recording = true
             $video.paused = false
             $video.totalBytes = 0
@@ -141,6 +146,9 @@ export const VideoRecorderToolbar = (props) => {
 
         // Handle pause
         const handlePause = () => {
+            if ($video.paused) {
+                return
+            }
             $video.paused = true
             clearInterval(intervalRef.current)
             setRecordedDuration(__.recorder.duration)
@@ -153,6 +161,9 @@ export const VideoRecorderToolbar = (props) => {
 
         // Handle resume
         const handleResume = () => {
+            if (!$video.paused) {
+                return
+            }
             $video.paused = false
             setRecordedDuration(__.recorder.duration)
             intervalRef.current = setInterval(() => {
