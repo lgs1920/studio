@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-22
- * Last modified: 2025-07-22
+ * Created on: 2025-07-24
+ * Last modified: 2025-07-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,8 +25,11 @@ import {
 }                                                                                           from '@Editor/journey/JourneySelector'
 import { Utils }                                                                            from '@Editor/Utils'
 import {
-    faCrosshairsSimple, faGripDotsVertical, faSquarePlus, faXmark,
+    faCrosshairsSimple, faSquarePlus, faXmark,
 }                                                                                           from '@fortawesome/pro-regular-svg-icons'
+import {
+    faGripDotsVertical,
+}                                                                                           from '@fortawesome/pro-solid-svg-icons'
 import {
     SlButton, SlIcon, SlIconButton, SlTooltip,
 }                                                                                           from '@shoelace-style/shoelace/dist/react'
@@ -282,7 +285,7 @@ export const JourneyToolbar = (props) => {
         <>
             {journeyEditor.list.length > 0 && journeyToolbar.show &&
                 <div
-                    className="journey-toolbar lgs-toolbar lgs-card on-map"
+                    className="journey-toolbar lgs-toolbar lgs-toolbar-horizontal lgs-card on-map"
                     ref={_journeyToolbar}
                     style={{
                         top:      `${$journeyToolbar.y}px`,
