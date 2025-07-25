@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-05
- * Last modified: 2025-07-05
+ * Created on: 2025-07-25
+ * Last modified: 2025-07-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -75,6 +75,47 @@ export class DragHandler {
     }
 
     /**
+     * Gets the effective position of the element considering transforms
+     * @private
+     * @returns {Object} Position with x and y properties
+     */
+    #getElementPosition() {
+        const rect = this.parent.getBoundingClientRect()
+        const containerOffset = this.container !== window ? this.container.getBoundingClientRect() : {
+            left: 0,
+            top:  0,
+        }
+        return {
+            x: rect.left - containerOffset.left,
+            y: rect.top - containerOffset.top,
+        }
+    }
+
+    /**
+     * Sets the element position using the most appropriate method
+     * @private
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     */
+    #setElementPosition(x, y) {
+        const currentTransform = getComputedStyle(this.parent).transform
+
+        if (currentTransform && currentTransform !== 'none') {
+            // If element has transform, use transform for positioning
+            this.parent.style.transform = `translate(${x}px, ${y}px)`
+            // Clear left/top to avoid conflicts
+            this.parent.style.left = '0px'
+            this.parent.style.top = '0px'
+        }
+        else {
+            // Use left/top positioning
+            this.parent.style.left = `${x}px`
+            this.parent.style.top = `${y}px`
+            this.parent.style.transform = ''
+        }
+    }
+
+    /**
      * Gets the bounding rectangle of the container, adjusted for padding and borders
      * @private
      * @returns {Object} Bounds with left, top, right, and bottom properties
@@ -111,23 +152,19 @@ export class DragHandler {
      */
     #ensureWithinBounds() {
         const bounds = this.#getBounds()
-        let x = parseFloat(this.parent.style.left) || 0
-        let y = parseFloat(this.parent.style.top) || 0
+        const currentPosition = this.#getElementPosition()
+        let x = currentPosition.x
+        let y = currentPosition.y
         const currentRect = this.parent.getBoundingClientRect()
 
         if (this.isInitialPositionInvalid) {
-            const containerOffset = this.container !== window ? this.container.getBoundingClientRect() : {
-                left: 0,
-                top: 0,
-            }
-            x = currentRect.left - containerOffset.left
-            y = currentRect.top - containerOffset.top
             const containerWidth = bounds.right - bounds.left
             const containerHeight = bounds.bottom - bounds.top
             x = bounds.left + containerWidth / 2 - currentRect.width / 2
             y = bounds.top + (containerHeight * 2) / 3 - currentRect.height / 2
         }
 
+        // Apply bounds constraints
         if (x + currentRect.width > bounds.right) {
             x = bounds.right - currentRect.width
         }
@@ -142,9 +179,7 @@ export class DragHandler {
         }
 
         this.parent.style.position = 'absolute'
-        this.parent.style.left = `${x}px`
-        this.parent.style.top = `${y}px`
-        this.parent.style.transform = ''
+        this.#setElementPosition(x, y)
 
         const finalRect = this.parent.getBoundingClientRect()
         if (this.hasMoved) {
@@ -229,10 +264,13 @@ export class DragHandler {
         const clientY = event.type === 'touchstart' ? event.touches[0].clientY : event.clientY
         this.startX = clientX
         this.startY = clientY
-        this.startLeft = parseFloat(this.parent.style.left) || 0
-        this.startTop = parseFloat(this.parent.style.top) || 0
-        this.grabber.style.cursor = 'grab'
 
+        // Get the current effective position
+        const currentPosition = this.#getElementPosition()
+        this.startLeft = currentPosition.x
+        this.startTop = currentPosition.y
+
+        this.grabber.style.cursor = 'grab'
         this.grabber.style.touchAction = 'none'
 
         document.addEventListener('pointermove', this.handleMove, {passive: false})
@@ -281,10 +319,12 @@ export class DragHandler {
         let newY = this.startTop + (clientY - this.startY)
         const bounds = this.#getBounds()
         const parentRect = this.parent.getBoundingClientRect()
+
+        // Apply bounds constraints
         newX = Math.max(bounds.left, Math.min(newX, bounds.right - parentRect.width))
         newY = Math.max(bounds.top, Math.min(newY, bounds.bottom - parentRect.height))
-        this.parent.style.left = `${newX}px`
-        this.parent.style.top = `${newY}px`
+
+        this.#setElementPosition(newX, newY)
 
         if (this.overlay) {
             const updatedRect = this.parent.getBoundingClientRect()
