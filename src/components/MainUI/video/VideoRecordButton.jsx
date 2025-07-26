@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-24
- * Last modified: 2025-07-24
+ * Created on: 2025-07-26
+ * Last modified: 2025-07-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,7 @@
 
 import { FontAwesomeIcon }     from '@Components/FontAwesomeIcon'
 import { APP_KEY, MINUTE } from '@Core/constants'
-import { VideoRecorder } from '@Core/ui/video-recorder/VideoRecorder'
+import { VideoRecorder } from '@Core/ui/video/recorder/VideoRecorder'
 import { faCircleVideo }   from '@fortawesome/duotone-regular-svg-icons'
 import { SlButton, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'

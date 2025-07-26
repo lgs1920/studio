@@ -14,9 +14,9 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { SECOND }                                         from '@Core/constants'
-import { VideoRecorder }                                  from '@Core/ui/video-recorder/VideoRecorder'
-import { faPause, faPlay, faStop }          from '@fortawesome/pro-regular-svg-icons'
+import { SECOND }                  from '@Core/constants'
+import { VideoRecorder }           from '@Core/ui/video/recorder/VideoRecorder'
+import { faPause, faPlay, faStop } from '@fortawesome/pro-regular-svg-icons'
 import { SlIconButton, SlPopup, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { FA2SL }                                          from '@Utils/FA2SL'
