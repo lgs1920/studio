@@ -1,239 +1,324 @@
-# VideoRecorder.js
+# VideoRecorder
 
-`VideoRecorder` is a singleton JavaScript class for recording video from a canvas or MediaStream, using the
-`MediaRecorder` API. It supports WebM and MP4 formats, emits lifecycle events, and provides configuration options for
-quality and performance.
+**VideoRecorder** is a singleton JavaScript class designed to record video from HTML canvas elements or MediaStream
+sources (e.g., webcam, screen capture) in a browser environment. It is part of the **LGS1920/studio** project, providing
+robust video recording capabilities with customizable settings for MIME types, bitrate, frame rate, size limits, and
+duration limits. The class emits custom DOM events to facilitate integration with UI components, such as the
+`VideoRecorderToolbar` React component.
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+    - [Basic Example](#basic-example)
+    - [Recording a Canvas](#recording-a-canvas)
+    - [Recording a MediaStream](#recording-a-mediastream)
+- [API Reference](#api-reference)
+    - [Static Properties](#static-properties)
+    - [Instance Properties](#instance-properties)
+    - [Methods](#methods)
+- [Events](#events)
+- [Configuration Options](#configuration-options)
+- [Error Handling](#error-handling)
+- [Dependencies](#dependencies)
+- [License](#license)
+- [Contact](#contact)
 
 ## Features
 
-- Record from one or multiple HTML canvases or a MediaStream (e.g., webcam, screen).
-- Configurable FPS, bitrate, and timeslice for recording.
-- Supports `video/webm` (VP8/VP9) and `video/mp4` (if supported by the browser).
-- Outputs files with a timestamped filename (`yyyymmddhhmmss-filename.webm` or `.mp4`).
-- Emits CustomEvents for recording lifecycle (start, stop, pause, resume, etc.).
-- Optimized for performance, including conditional canvas rendering for Firefox.
-- Sharp 2D rendering with configurable clipping and no image smoothing.
-- Size and duration limits to prevent excessive recordings.
-- No external dependencies.
+- **Singleton Pattern**: Ensures a single instance of the recorder for consistent state management across the
+  application.
+- **Flexible Source Support**: Records from HTML canvas elements (single or multiple) or MediaStream sources (e.g.,
+  webcam, screen).
+- **Customizable Recording**:
+    - Supports MIME types like `video/webm` and `video/mp4` (if supported by the browser).
+    - Configurable frame rate (FPS), bitrate, maximum size, and maximum duration.
+- **Event-Driven Architecture**: Emits custom DOM events (`start`, `stop`, `pause`, `resume`, `size`, etc.) for seamless
+  integration with UI components.
+- **Clipping and Compositing**: Supports clipping regions for canvas sources and compositing multiple canvases into a
+  single stream.
+- **Download Capability**: Automatically generates downloadable video files with timestamped filenames.
+- **Error Handling**: Robust error detection and reporting via custom events.
+- **Resource Management**: Proper cleanup of streams and resources via the `dispose` method.
+
+## Installation
+
+The `VideoRecorder` class is a standalone JavaScript module that runs in modern browsers supporting the `MediaRecorder`
+API and `canvas.captureStream`. To use it in your project:
+
+1. **Copy the File**:
+
+- Place `VideoRecorder.js` in your project's source directory (e.g., `src/utils/`).
+
+2. **Import the Module**:
+
+- Import the `VideoRecorder` class in your JavaScript or React application:
+  ```javascript
+  import { VideoRecorder } from './path/to/VideoRecorder.js'
+  ```
+
+3. **Ensure Browser Compatibility**:
+
+- Verify that your target browsers support `MediaRecorder`, `canvas.captureStream`, and the desired MIME types (
+  `video/webm` is widely supported; `video/mp4` may require specific codecs).
+
+No external dependencies are required, as the class uses native browser APIs.
 
 ## Usage
 
-### Installation
+### Basic Example
 
-Include `VideoRecorder.js` in your project:
+Initialize and start recording a default canvas stream:
 
-```html
+```javascript
+import { VideoRecorder } from './VideoRecorder.js'
 
-<script src="VideoRecorder.js"></script>
+const recorder = new VideoRecorder()
+
+// Initialize with a callback to handle the recorded video
+recorder.initialize((blob, duration) => {
+    console.log('Recording stopped:', {blob, duration})
+}, 'video/webm', {
+                        filename:    'my-video',
+                        maxSize:     100 * 1024 * 1024, // 100 MB
+                        maxDuration: 10 * 60 * 1000, // 10 minutes
+                        fps:         30,
+                        bitrate:     8000000 // 8 Mbps
+                    })
+
+// Start recording
+recorder.start()
+
+// Stop recording after 5 seconds
+setTimeout(() => recorder.stop(), 5000)
+
+// Download the recorded video
+recorder.download()
 ```
 
-### Basic Example
+### Recording a Canvas
+
+Record from a specific canvas with clipping:
+
 ```javascript
-// Create a canvas with a sharp animation
+import { VideoRecorder } from './VideoRecorder.js'
+
 const canvas = document.createElement('canvas')
-canvas.width = 640
-canvas.height = 360
-document.body.appendChild(canvas)
+canvas.width = 1920
+canvas.height = 1080
 const ctx = canvas.getContext('2d')
-let lastHue = 0
-const animate = () => {
-  const hue = (Date.now() % 360)
-  if (hue !== lastHue) {
-    lastHue = hue
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.fillStyle = `hsl(${hue}, 50%, 50%)`
-    ctx.fillRect(50, 50, 400, 200)
-    ctx.font = '24px Arial'
-    ctx.fillStyle = 'white'
-    ctx.fillText('Sharp Text', 75, 100)
-  }
-  requestAnimationFrame(animate)
-}
-animate()
+// Draw something on the canvas
+ctx.fillStyle = 'blue'
+ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-// Initialize VideoRecorder
 const recorder = new VideoRecorder()
-recorder.initialize(
-        (blob, duration) => {
-          console.log(`Recording complete: ${duration}ms, ${blob.size} bytes`)
-          recorder.download()
-        },
-        'video/mp4',
-        {
-          fps:         24,
-          bitrate:     4000000,
-          timeslice:   500,
-          filename:    'my-recording',
-          maxSize:     5 * 1024 * 1024, // 5 MB
-          maxDuration: 5000 // 5 seconds
-        }
-)
+recorder.initialize((blob, duration) => {
+  console.log('Recording stopped:', {blob, duration})
+}, 'video/webm')
 
-// Set canvas source with clipping
+// Set the canvas as the source with a clipping region
 recorder.setSource([canvas], {
-  clipX:         50,
-  clipY:         50,
-  clipWidth:     400,
-  clipHeight:    200,
-  onNeedsRedraw: () => lastHue !== (Date.now() % 360)
+  clipX:         100,
+  clipY:         100,
+  clipWidth:     800,
+  clipHeight:    600,
+  width:         800, // Output resolution
+  height:        600,
+  onNeedsRedraw: () => true // Force redraw every frame
 })
 
-// Record and handle events
-recorder.addEventListener(VideoRecorder.events.START, e => console.log('START:', e.detail))
-recorder.addEventListener(VideoRecorder.events.STOP, e => console.log('STOP:', e.detail))
-recorder.addEventListener(VideoRecorder.events.SIZE, e => console.log('SIZE:', e.detail))
+// Start recording
 recorder.start()
-setTimeout(() => recorder.stop(), 3000)
 ```
 
-## Events
+### Recording a MediaStream
 
-`VideoRecorder` emits the following `CustomEvent` types, accessible via the `VideoRecorder.events` object:
-
-| Constant                            | Event Name           | Description                                | Detail Object                                                                       |
-|-------------------------------------|----------------------|--------------------------------------------|-------------------------------------------------------------------------------------|
-| `VideoRecorder.events.START`        | `video/start`        | Fired when recording starts                | `{ timestamp: number }`                                                             |
-| `VideoRecorder.events.STOP`         | `video/stop`         | Fired when recording stops                 | `{ blob: Blob, duration: number, totalBytes: number }`                              |
-| `VideoRecorder.events.SIZE`         | `video/size`         | Fired when new data is available           | `{ totalBytes: number, chunkSize: number, timestamp: number }`                      |
-| `VideoRecorder.events.PAUSE`        | `video/pause`        | Fired when recording is paused             | `{ timestamp: number, duration: number }`                                           |
-| `VideoRecorder.events.RESUME`       | `video/resume`       | Fired when recording resumes               | `{ timestamp: number, duration: number }`                                           |
-| `VideoRecorder.events.SOURCE`       | `video/source`       | Fired when a new source is set             | `{ type: 'canvas' \| 'stream', timestamp: number, [width, height, ...] }`           |
-| `VideoRecorder.events.ERROR`        | `video/error`        | Fired on errors (e.g., invalid parameters) | `{ error: Error, timestamp: number }`                                               |
-| `VideoRecorder.events.DOWNLOAD`     | `video/download`     | Fired when a video is downloaded           | `{ type: 'canvas' \| 'stream', timestamp: number, filename: string, size: number }` |
-| `VideoRecorder.events.MAX_SIZE`     | `video/max-size`     | Fired when max size limit is reached       | `{ totalBytes: number, timestamp: number }`                                         |
-| `VideoRecorder.events.MAX_DURATION` | `video/max-duration` | Fired when max duration limit is reached   | `{ duration: number, timestamp: number }`                                           |
-
-## API
-
-### Constructor
+Record from a webcam stream:
 
 ```javascript
-const recorder = new VideoRecorder()
+import { VideoRecorder } from './VideoRecorder.js'
+
+async function startWebcamRecording() {
+  const stream = await navigator.mediaDevices.getUserMedia({video: true})
+  const recorder = new VideoRecorder()
+  recorder.initialize((blob, duration) => {
+    console.log('Recording stopped:', {blob, duration})
+  })
+
+  // Set the webcam stream as the source
+  recorder.setStream(stream)
+
+  // Start recording
+  recorder.start()
+
+  // Clean up
+  return () => recorder.dispose()
+}
 ```
 
-Creates or returns the singleton `VideoRecorder` instance. Use `initialize` to configure.
+## API Reference
+
+### Static Properties
+
+- **`VideoRecorder.events`**:
+    - Object defining custom event names for the recording lifecycle.
+    - Example: `VideoRecorder.events.START` → `'video/start'`.
+    - See [Events](#events) for details.
+
+### Instance Properties
+
+- **`size`** (getter): Returns the total bytes recorded (`number`).
+- **`duration`** (getter): Returns the elapsed recording time in milliseconds (`number`).
+- **`mimeType`** (getter/setter):
+    - Gets or sets the MIME type for recording (e.g., `'video/webm'`).
+    - Throws an error if changed during recording or if the MIME type is unsupported.
+- **Internal State** (not meant for direct access):
+    - `stream`, `mediaRecorder`, `chunks`, `totalBytes`, `startTime`, `fps`, `bitrate`, `maxSize`, `maxDuration`,
+      `filename`, `sourceType`, `needsRedraw`, etc.
 
 ### Methods
 
-#### `initialize(onStop, mimeType = 'video/webm;codecs=vp9', options)`
+1. **`initialize(onStop, mimeType = 'video/webm;codecs=vp9', options)`**
 
-Configures the recorder.
+- Configures the recorder with a callback and settings.
+- Parameters:
+    - `onStop`: Function to handle the recorded `Blob` and duration.
+    - `mimeType`: String, e.g., `'video/webm'`.
+    - `options`: Object with `maxSize`, `maxDuration`, `fps`, `bitrate`, `timeslice`, `filename`.
+- Throws: `TypeError` or `Error` if invalid.
 
-- **Parameters**:
-  - `onStop: (blob: Blob, duration: number) => void` - Callback invoked when recording stops.
-  - `mimeType: string` - MIME type (e.g., `'video/webm;codecs=vp9'`, `'video/mp4'`). Falls back to `'video/webm'` if
-    unsupported.
-  - `options: Object`:
-    - `maxSize: number` - Max recording size in bytes (default: `Infinity`).
-    - `maxDuration: number` - Max recording duration in milliseconds (default: `Infinity`).
-    - `fps: number` - Frames per second for canvas stream (default: 24).
-    - `bitrate: number` - Video bitrate in bits per second (default: 4000000, 4 Mbps).
-    - `timeslice: number` - Interval for `SIZE` events in milliseconds (default: 200).
-    - `filename: string` - Base filename for downloads, without date or extension (default: `'video'`).
+2. **`setSource(canvases, options)`**
 
-- **Throws**:
-  - `Error` if called while recording.
-  - `TypeError` if `onStop` is not a function.
-  - `Error` if `mimeType` is unsupported.
+- Sets one or more canvases as the recording source.
+- Parameters:
+    - `canvases`: Array of `HTMLCanvasElement`.
+    - `options`: Object with `width`, `height`, `clipX`, `clipY`, `clipWidth`, `clipHeight`, `preserveAlpha`,
+      `onNeedsRedraw`.
+- Throws: `Error` if invalid canvases or clipping parameters.
 
-#### `setSource(canvases, options)`
+3. **`setStream(stream)`**
 
-Sets one or more canvases as the recording source.
+- Sets a `MediaStream` as the recording source.
+- Parameters:
+    - `stream`: `MediaStream` instance.
+- Throws: `TypeError` or `Error` if invalid.
 
-- **Parameters**:
-  - `canvases: HTMLCanvasElement[]` - Array of canvases to record.
-  - `options: Object`:
-    - `width: number` - Output width (defaults to `clipWidth`).
-    - `height: number` - Output height (defaults to `clipHeight`).
-    - `clipX: number` - X-coordinate of clipping region (default: 0).
-    - `clipY: number` - Y-coordinate of clipping region (default: 0).
-    - `clipWidth: number` - Width of clipping region (defaults to canvas width).
-    - `clipHeight: number` - Height of clipping region (defaults to canvas height).
-    - `preserveAlpha: boolean` - Preserve alpha channel (default: false).
-    - `onNeedsRedraw: () => boolean` - Optional callback to signal when redraw is needed (for performance).
+4. **`start()`**
 
-- **Throws**:
-  - `Error` if no canvases provided, recording is active, 2D context is unsupported, or clipping parameters are invalid.
+- Starts recording and emits `START` event.
+- Throws: `Error` if no active stream or recording is already in progress.
 
-#### `setStream(stream)`
+5. **`stop()`**
 
-Sets a MediaStream as the recording source.
+- Stops recording and emits `STOP` event.
 
-- **Parameters**:
-  - `stream: MediaStream` - MediaStream to record (e.g., from webcam).
+6. **`pause()`**
 
-- **Throws**:
-  - `TypeError` if `stream` is not a MediaStream.
-  - `Error` if called while recording.
+- Pauses recording and emits `PAUSE` event.
+- Throws: `Error` if not recording.
 
-#### `start()`
+7. **`resume()`**
 
-Starts recording and emits `START` event.
+- Resumes a paused recording and emits `RESUME` event.
+- Throws: `Error` if not paused.
 
-- **Throws**:
-  - `Error` if no active MediaStream or recording is already in progress.
+8. **`isRecording()`**
 
-#### `stop()`
+- Returns `true` if recording is active.
 
-Stops recording and emits `STOP` event.
+9. **`download()`**
 
-#### `pause()`
+- Triggers a download of the recorded video with a timestamped filename.
+- Emits `DOWNLOAD` event.
+- Throws: `Error` if no recorded data.
 
-Pauses recording and emits `PAUSE` event.
+10. **`dispose()`**
 
-- **Throws**:
-  - `Error` if not recording.
+- Cleans up resources (stops recording, streams, etc.).
 
-#### `resume()`
+## Events
 
-Resumes a paused recording and emits `RESUME` event.
+The `VideoRecorder` class extends `EventTarget` and emits custom DOM events:
 
-- **Throws**:
-  - `Error` if not paused.
+| Event Name           | Description                              | Detail Properties                                                                                                                            |
+|----------------------|------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| `video/start`        | Fired when recording starts              | `timestamp`                                                                                                                                  |
+| `video/stop`         | Fired when recording stops               | `blob`, `duration`, `totalBytes`                                                                                                             |
+| `video/size`         | Fired when new data is available         | `totalBytes`, `chunkSize`, `timestamp`                                                                                                       |
+| `video/pause`        | Fired when recording is paused           | `timestamp`, `durati on`                                                                                                                     || `video/r       esume` | Fired when recording resumes | `timestamp`, `duration` |
+| `video/source`       | Fired when a new source is set           | `type`, `timestamp`, `width`, `height`, `canva ses`, `clipX`,         `clipY`, `clipWidth`, `clipHeight`, `preserv eAlpha` (for canva     s) |
+| `video/error`        | Fired on errors                          | `error`, `timestamp`                                                                                                                         |
+| `video/downloa d`    | Fired when a      video is downloaded    | `type`, `timestamp`, `filename`, `size`                                                                                                      |
+| `vid eo/max-size`    | Fired w hen max size limit is reached    | `totalBytes`, `timestamp`                                                                                                                    |
+| `video/max-duration` | Fired when max duration limit is reached | `duration`, `timestamp`                                                                                                                      |
 
-#### `download()`
+Example of listening to events:
 
-Downloads the recorded video as `yyyymmddhhmmss-filename.webm` or `.mp4`.
+```javascript
+recorder.addEventListener(VideoRecorder.events.START, () => {
+  console.log('Recording started')
+})
+recorder.addEventListener(VideoRecorder.events.SIZE, (e) => {
+  console.log('New data:', e.detail.totalBytes, 'bytes')
+})
+```
 
-- **Throws**:
-  - `Error` if no recorded data.
+## Configuration Options
 
-#### `dispose()`
+- **`initialize` Options**:
+    - `maxSize`: Maximum recording size in bytes (default: `Infinity`).
+    - `maxDuration`: Maximum recording duration in milliseconds (default: `Infinity`).
+    - `fps`: Frames per second (default: `24`).
+    - `bitrate`: Video bitrate in bits per second (default: `4000000`).
+    - `timeslice`: Interval for `SIZE` events in milliseconds (default: `200`).
+    - `filename`: Base filename for downloads (default: `'video'`).
 
-Cleans up resources (stops recording, rendering, and tracks).
+- **`setSource` Options**:
+    - `width`, `height`: Output resolution (defaults to `clipWidth`, `clipHeight`).
+    - `clipX`, `clipY`: Top-left corner of the clipping region (default: `0`).
+    - `clipWidth`, `clipHeight`: Clipping region size (defaults to canvas dimensions).
+    - `preserveAlpha`: Preserve canvas alpha channel (default: `false`).
+    - `onNeedsRedraw`: Callback to optimize canvas redraws (optional).
 
-#### `isRecording(): boolean`
+## Error Handling
 
-Returns `true` if recording is active.
+The class throws errors for invalid operations (e.g., changing MIME type during recording) and emits `video/error`
+events with details:
 
-#### `size: number` (getter)
+```javascript
+recorder.addEventListener(VideoRecorder.events.ERROR, (e) => {
+  console.error('Recorder error:', e.detail.error.message)
+})
+```
 
-Returns total bytes recorded.
+Common errors:
 
-#### `duration: number` (getter)
+- Unsupported MIME type.
+- Invalid canvas or clipping parameters.
+- No active MediaStream.
+- Operations attempted during active recording.
 
-Returns recording duration in milliseconds.
+## Dependencies
 
-#### `mimeType: string` (getter/setter)
+- **None**: Uses native browser APIs (`MediaRecorder`, `canvas.captureStream`, `EventTarget`).
+- **Browser Support**:
+    - Modern browsers (Chrome, Firefox, Edge, Safari) with `MediaRecorder` support.
+    - Check `MediaRecorder.isTypeSupported` for MIME type compatibility.
+    - `video/mp4` may require specific codecs and browser support.
 
-Gets or sets the MIME type (e.g., `'video/webm'`, `'video/mp4'`).
+## License
 
-- **Throws**:
-  - `Error` if set while recording or if MIME type is unsupported.
+Copyright © 2025 LGS1920. All rights reserved.
 
-## Notes
+This software is proprietary and may not be copied, modified, or distributed without permission from LGS1920.
 
-- For best quality, match `setSource` output resolution (`width`, `height`) to `clipWidth` and `clipHeight`.
-- Use `video/mp4` or `video/webm;codecs=vp8` for better performance in Firefox.
-- Set `onNeedsRedraw` in `setSource` to optimize rendering by skipping unchanged frames.
-- Check browser support for `MediaRecorder` and `canvas.captureStream` (available in modern browsers).
-- WebGPU is not required but may improve canvas rendering performance in Firefox Nightly with `dom.webgpu.enabled=true`.
+## Contact
 
-## Performance Tips for Firefox
+- **Email**: [contact@lgs1920.fr](mailto:contact@lgs1920.fr)
+- **Team**: LGS1920 Team
+- **Project**: LGS1920/studio
 
-- Use lower `fps` (e.g., 15) or `bitrate` (e.g., 3000000) for smoother recording.
-- Prefer `video/mp4` or `video/webm;codecs=vp8` for faster encoding.
-- Reduce resolution (e.g., 640x360) to lower CPU/GPU load.
-- Ensure hardware acceleration is enabled (`about:support` > “Graphics” > “Compositing” should show “WebRender”).
-- Use `onNeedsRedraw` to skip unnecessary canvas redraws.
-- Increase `timeslice` (e.g., 500ms) to reduce `SIZE` event frequency.
+For support or inquiries, please contact the LGS1920 team via email.
+
+---
