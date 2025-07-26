@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-07-26
+ * Last modified: 2025-07-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -96,5 +96,12 @@ export default defineConfig({
             },
 
         ]
-    }
+    },
+    optimizeDeps: {
+        exclude: [
+            '@ffmpeg/core', // Exclude FFmpeg core to avoid worker optimization issues
+            '@ffmpeg/ffmpeg', // Exclude FFmpeg main module
+            '@ffmpeg/util', // Exclude FFmpeg utilities
+        ],
+    },
 })
