@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-24
- * Last modified: 2025-07-24
+ * Created on: 2025-07-26
+ * Last modified: 2025-07-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -111,8 +111,6 @@ export const VideoRecorderToolbar = (props) => {
         if (!__.recorder) {
             return
         }
-        console.log(video.recording, video.paused)
-
         const caption = 'Video Recording'
 
         // Handle recording start
