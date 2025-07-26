@@ -47,20 +47,20 @@ const RecorderControls = memo(({recording, paused, recorder}) => {
     return (
         <>
             <SlTooltip content={paused ? 'Click to resume' : 'Click to pause'}>
-            <SlIconButton
-                library="fa"
-                name={FA2SL.set(paused ? faPlay : faPause)}
-                onClick={handlePlayPause}
-                disabled={!recorder}
-            />
+                <SlIconButton
+                    library="fa"
+                    name={FA2SL.set(paused ? faPlay : faPause)}
+                    onClick={handlePlayPause}
+                    disabled={!recorder}
+                />
             </SlTooltip>
             {recording && !paused && (
                 <SlTooltip content={'Click to stop'}>
-                <SlIconButton
-                    library="fa"
-                    name={FA2SL.set(faStop)}
-                    onClick={handleStop}
-                />
+                    <SlIconButton
+                        library="fa"
+                        name={FA2SL.set(faStop)}
+                        onClick={handleStop}
+                    />
                 </SlTooltip>
             )}
         </>
@@ -86,9 +86,8 @@ export const VideoRecorderToolbar = (props) => {
     const _toolbar = useRef(null)
     const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
 
-
     /**
-     * Formats duration in milliseconds
+     * Formats duration in milliseconds to human readable format
      * @param {number} ms - Duration in milliseconds
      * @returns {string} Formatted duration (e.g., '1h 05m 05s')
      */
@@ -97,7 +96,7 @@ export const VideoRecorderToolbar = (props) => {
     }, [])
 
     /**
-     * Formats size in bytes
+     * Formats size in bytes to human readable format
      * @param {number} bytes - Size in bytes
      * @returns {string} Formatted size (e.g., '1.4MB')
      */
@@ -113,7 +112,7 @@ export const VideoRecorderToolbar = (props) => {
         }
         const caption = 'Video Recording'
 
-        // Handle recording start
+        // Handle recording start event
         const handleStart = () => {
             if ($video.recording) {
                 return
@@ -125,9 +124,20 @@ export const VideoRecorderToolbar = (props) => {
             setRecordedDuration(0)
             setRecordedSize(0)
             setLastSizeEventTime(Date.now())
+
+            // Clear existing interval
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+            }
+
             intervalRef.current = setInterval(() => {
-                setRecordedDuration(__.recorder.duration)
-                $video.totalBytes = __.recorder.size
+                if (__.recorder) {
+                    const currentDuration = __.recorder.duration
+                    const currentSize = __.recorder.size
+                    setRecordedDuration(currentDuration)
+                    setRecordedSize(currentSize)
+                    $video.totalBytes = currentSize
+                }
             }, SECOND)
 
             UIToast.warning({
@@ -136,20 +146,25 @@ export const VideoRecorderToolbar = (props) => {
                             })
         }
 
-        // Handle size updates
+        // Handle size update events
         const handleSize = (e) => {
             setLastSizeEventTime(Date.now())
             setRecordedSize(e.detail.totalBytes)
         }
 
-        // Handle pause
+        // Handle recording pause event
         const handlePause = () => {
             if ($video.paused) {
                 return
             }
             $video.paused = true
-            clearInterval(intervalRef.current)
-            setRecordedDuration(__.recorder.duration)
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+                intervalRef.current = null
+            }
+            if (__.recorder) {
+                setRecordedDuration(__.recorder.duration)
+            }
 
             UIToast.warning({
                                 caption: caption,
@@ -157,16 +172,29 @@ export const VideoRecorderToolbar = (props) => {
                             })
         }
 
-        // Handle resume
+        // Handle recording resume event
         const handleResume = () => {
             if (!$video.paused) {
                 return
             }
             $video.paused = false
-            setRecordedDuration(__.recorder.duration)
-            intervalRef.current = setInterval(() => {
+            if (__.recorder) {
                 setRecordedDuration(__.recorder.duration)
-                $video.totalBytes = __.recorder.size
+            }
+
+            // Clear existing interval
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+            }
+
+            intervalRef.current = setInterval(() => {
+                if (__.recorder) {
+                    const currentDuration = __.recorder.duration
+                    const currentSize = __.recorder.size
+                    setRecordedDuration(currentDuration)
+                    setRecordedSize(currentSize)
+                    $video.totalBytes = currentSize
+                }
             }, SECOND)
 
             UIToast.success({
@@ -175,10 +203,10 @@ export const VideoRecorderToolbar = (props) => {
                             })
         }
 
-        // Handle stop, max-size, or max-duration
+        // Handle recording stop events (stop, max-size, or max-duration)
         const handleStop = (event) => {
-            if (__.recorder.isRecording() || $video.paused) {
-                __.recorder.stop()
+            if ((__.recorder && __.recorder.isRecording()) || $video.paused) {
+                __.recorder?.stop()
             }
             $video.recording = false
             $video.paused = false
@@ -186,7 +214,12 @@ export const VideoRecorderToolbar = (props) => {
             setRecordedDuration(0)
             setRecordedSize(0)
             setLastSizeEventTime(0)
-            clearInterval(intervalRef.current)
+
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+                intervalRef.current = null
+            }
+
             switch (event.type) {
                 case VideoRecorder.events.STOP:
                     UIToast.success({
@@ -208,7 +241,7 @@ export const VideoRecorderToolbar = (props) => {
             }
         }
 
-        // Handle Download Event
+        // Handle download completion event
         const handleDownload = (event) => {
             UIToast.success({
                                 caption: caption,
@@ -216,7 +249,7 @@ export const VideoRecorderToolbar = (props) => {
                             })
         }
 
-        // Set opacity
+        // Set initial toolbar opacity
         if (_toolbar.current) {
             _toolbar.current.style.opacity = toolbars.opacity
         }
@@ -231,29 +264,33 @@ export const VideoRecorderToolbar = (props) => {
         __.recorder.addEventListener(VideoRecorder.events.STOP, handleStop)
         __.recorder.addEventListener(VideoRecorder.events.DOWNLOAD, handleDownload)
 
-        // Clean up
+        // Clean up function
         return () => {
-            clearInterval(intervalRef.current)
-            __.recorder.removeEventListener(VideoRecorder.events.START, handleStart)
-            __.recorder.removeEventListener(VideoRecorder.events.SIZE, handleSize)
-            __.recorder.removeEventListener(VideoRecorder.events.PAUSE, handlePause)
-            __.recorder.removeEventListener(VideoRecorder.events.RESUME, handleResume)
-            __.recorder.removeEventListener(VideoRecorder.events.MAX_SIZE, handleStop)
-            __.recorder.removeEventListener(VideoRecorder.events.MAX_DURATION, handleStop)
-            __.recorder.removeEventListener(VideoRecorder.events.STOP, handleStop)
-            __.recorder.removeEventListener(VideoRecorder.events.DOWNLOAD, handleDownload)
-
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+                intervalRef.current = null
+            }
+            if (__.recorder) {
+                __.recorder.removeEventListener(VideoRecorder.events.START, handleStart)
+                __.recorder.removeEventListener(VideoRecorder.events.SIZE, handleSize)
+                __.recorder.removeEventListener(VideoRecorder.events.PAUSE, handlePause)
+                __.recorder.removeEventListener(VideoRecorder.events.RESUME, handleResume)
+                __.recorder.removeEventListener(VideoRecorder.events.MAX_SIZE, handleStop)
+                __.recorder.removeEventListener(VideoRecorder.events.MAX_DURATION, handleStop)
+                __.recorder.removeEventListener(VideoRecorder.events.STOP, handleStop)
+                __.recorder.removeEventListener(VideoRecorder.events.DOWNLOAD, handleDownload)
+            }
         }
     }, [__.recorder])
 
+    // Update toolbar opacity when needed
     useEffect(() => {
-        // Set opacity
         if (_toolbar.current) {
             _toolbar.current.style.opacity = toolbars.opacity
         }
-    }, [video.recording, video.paused])
+    }, [video.recording, video.paused, toolbars.opacity])
 
-    // Render toolbar
+    // Render toolbar only when recording is active
     return (
         <>
             {

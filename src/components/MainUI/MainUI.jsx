@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-24
- * Last modified: 2025-07-24
+ * Created on: 2025-07-26
+ * Last modified: 2025-07-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -257,7 +257,6 @@ export const MainUI = memo(() => {
             <JourneyLoaderUI multiple/>
             <MapPOIContextMenu/>
             <MapPOIMonitor/>
-            <VideoRecorderToolbar tooltip={toolBar.fromStart ? 'left' : 'right'}/>
             <VideoPreview/>
             <ContextMenuHook/>
             {video.edit &&
