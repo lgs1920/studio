@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-26
- * Last modified: 2025-07-26
+ * Created on: 2025-07-27
+ * Last modified: 2025-07-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -380,10 +380,19 @@ export class VideoRecorder extends EventTarget {
                 // console.log('MediaRecorder stopped') // Debug log
                 const blob = new Blob(this.chunks, {type: this._mimeType})
                 const duration = this.duration
-                this.onStop?.(blob, duration)
+
+                const metadata = {
+                    author:     lgs.servers.studio.name,
+                    date:       new Date().toISOString(),
+                    subtitles:  `Visit ${lgs.servers.site.protocol}://${lgs.servers.site.domain}`,
+                    duration,
+                    totalBytes: this.totalBytes,
+                }
+
+                this.onStop?.({blob, metadata})
 
                 this.dispatchEvent(new CustomEvent(VideoRecorder.events.STOP, {
-                    detail: {blob, duration, totalBytes: this.totalBytes},
+                    detail: {blob, metadata},
                 }))
             }
 

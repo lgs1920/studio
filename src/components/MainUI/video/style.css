@@ -131,3 +131,5 @@
 .conversion-logs .lgs-console {
     margin-top: 0;
 }
+
+.conversion-trigger.video-conversion-in-progress::part(label) {padding-left: var(--lgs-gutter-s)}

@@ -16,7 +16,7 @@
 
     // VideoConverter class for converting video files using FFmpeg.wasm
 export class VideoConverter {
-    // Supported video formats with their configurations
+    // Supported video formats with optimized configurations for SPEED
     static FORMATS = {
         MP4:  {
             extension:    'mp4',
@@ -25,7 +25,14 @@ export class VideoConverter {
             mimeType:     'video/mp4',
             description:  'MP4 (H.264/AAC)',
             videoFilters: 'format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2',
-            extraArgs:    ['-movflags', '+faststart', '-fps_mode', 'vfr'],
+            extraArgs:  [
+                '-movflags', '+faststart',
+                '-tune', 'zerolatency',
+                '-x264-params', 'ref=1:bframes=0:me=dia:subme=1:trellis=0',
+                '-threads', '0',
+                '-preset', 'ultrafast',
+            ],
+            timeFactor: 0.5,
         },
         WEBM: {
             extension:    'webm',
@@ -33,8 +40,16 @@ export class VideoConverter {
             audioCodec:   'opus',
             mimeType:     'video/webm',
             description:  'WebM (VP9/Opus)',
-            videoFilters: 'format=vp9',
-            extraArgs:    ['-fps_mode', 'vfr'],
+            videoFilters: 'format=yuv420p',
+            extraArgs:    [
+                '-speed', '8',
+                '-tile-columns', '4',
+                '-frame-parallel', '1',
+                '-threads', '0',
+                '-deadline', 'realtime',
+                '-cpu-used', '8',
+            ],
+            timeFactor:   0.6,
         },
         AVI:  {
             extension:    'avi',
@@ -43,7 +58,11 @@ export class VideoConverter {
             mimeType:     'video/x-msvideo',
             description:  'AVI (MPEG-4/MP3)',
             videoFilters: 'format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2',
-            extraArgs:    ['-fps_mode', 'vfr'],
+            extraArgs:  [
+                '-threads', '0',
+                '-qscale:v', '5',
+            ],
+            timeFactor: 0.3,
         },
         MOV:  {
             extension:    'mov',
@@ -52,32 +71,68 @@ export class VideoConverter {
             mimeType:     'video/quicktime',
             description:  'MOV (H.264/AAC)',
             videoFilters: 'format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2',
-            extraArgs:    ['-fps_mode', 'vfr'],
+            extraArgs:  [
+                '-movflags', '+faststart',
+                '-tune', 'zerolatency',
+                '-preset', 'ultrafast',
+                '-threads', '0',
+            ],
+            timeFactor: 0.5,
         },
     }
 
-    // Quality presets for video conversion
+    // Quality presets optimized for SPEED over quality
     static QUALITY_PRESETS = {
-        LOW:    {
+        DRAFT:     {
+            crf:         '30',
+            preset:      'ultrafast',
+            description: 'Draft - very fast',
+            timeFactor:  0.2,
+        },
+        LOW:       {
             crf:         '28',
-            preset:      'veryfast',
-            description: 'Low - fast ',
+            preset:      'ultrafast',
+            description: 'Low - fast',
+            timeFactor:  0.3,
         },
         MEDIUM: {
-            crf:         '23',
-            preset:      'fast',
+            crf:        '25',
+            preset:     'veryfast',
             description: 'Medium - balanced',
+            timeFactor: 0.5,
         },
-        HIGH:   {
-            crf:         '18',
-            preset:      'medium',
+        HIGH:      {
+            crf:         '22',
+            preset:      'fast',
             description: 'High - slower',
+            timeFactor:  0.8,
         },
-        ULTRA:  {
-            crf:         '15',
+        EXCELLENT: {
+            crf:         '19',
+            preset:      'medium',
+            description: 'Excellent - slow',
+            timeFactor:  1.2,
+        },
+        PERFECT:   {
+            crf:         '16',
             preset:      'slow',
-            description: 'Ultra - slowest',
+            description: 'Perfect - very slow',
+            timeFactor:  2.0,
         },
+    }
+
+    // Public attributes
+    conversionTime = 0
+    inputFile = null
+    outputFile = null
+    conversionData = {
+        success:          false,
+        completed:        false,
+        inputFormat:      null,
+        outputFormat:     null,
+        inputFileDetails: null,
+        conversionTime:   0,
+        errorMessage:     null,
     }
 
     /**
@@ -87,18 +142,18 @@ export class VideoConverter {
      * @param {Function} [options.onLog] - Callback for logging messages
      */
     constructor({onProgress, onLog} = {}) {
-        // FFmpeg instance for video processing
         this.ffmpeg = null
-        // Flag indicating if FFmpeg is loaded
         this.isLoaded = false
-        // Progress callback, defaults to no-op
         this.onProgress = onProgress || (() => {
         })
-        // Log callback, defaults to no-op
         this.onLog = onLog || (() => {
         })
-        // Tracks current conversion state
         this.currentConversion = null
+        this.progressFallback = {
+            startTime:         null,
+            estimatedDuration: null,
+            lastValidProgress: 0,
+        }
     }
 
     /**
@@ -118,40 +173,63 @@ export class VideoConverter {
     }
 
     /**
-     * Loads FFmpeg.wasm and initializes the instance
+     * Loads FFmpeg.wasm and initializes the instance with speed optimizations
      * @throws {Error} If FFmpeg loading fails
      */
     async loadFFmpeg() {
-        // Skip if already loaded
         if (this.isLoaded) {
             this.onLog('FFmpeg already loaded')
             return
         }
         try {
             this.onLog('Loading FFmpeg.wasm...')
-            // Dynamically import FFmpeg and utility functions
             const {FFmpeg} = await import('@ffmpeg/ffmpeg')
             const {fetchFile, toBlobURL} = await import('@ffmpeg/util')
             this.ffmpeg = new FFmpeg()
             this.fetchFile = fetchFile
             this.toBlobURL = toBlobURL
-            // Set up logging
+
+            // Optimize log handling - only log errors
             this.ffmpeg.on('log', ({type, message}) => {
-                this.onLog(`[${type}] ${message}`)
-            })
-            // Set up progress tracking
-            this.ffmpeg.on('progress', ({progress, time}) => {
-                if (this.currentConversion) {
-                    const percentage = Math.max(0, Math.min(100, Math.round(progress * 100)))
-                    this.onProgress({percentage, time})
+                if (type === 'error') {
+                    this.onLog(`[${type}] ${message}`)
                 }
             })
-            // Load FFmpeg core and wasm
+
+            this.ffmpeg.on('progress', (event) => {
+                const {progress, time} = event
+
+                if (this.currentConversion) {
+                    let percentage = 0
+
+                    // Improved time-based progress calculation
+                    if (time && this.currentConversion.videoDuration) {
+                        const timeInSeconds = time / 1000000
+                        const timeBasedProgress = Math.min(timeInSeconds / this.currentConversion.videoDuration, 1)
+                        percentage = Math.round(timeBasedProgress * 90)
+                        this.progressFallback.lastValidProgress = percentage
+                    }
+                    else if (progress >= 0 && progress <= 1 && !isNaN(progress)) {
+                        // Use FFmpeg progress if valid
+                        percentage = Math.round(progress * 90)
+                        this.progressFallback.lastValidProgress = percentage
+                    }
+                    else {
+                        // Fallback to time estimation
+                        const elapsed = Date.now() - this.currentConversion.startTime
+                        const estimatedProgress = Math.min(this.progressFallback.lastValidProgress + (elapsed / 10000) * 5, 90)
+                        percentage = Math.round(estimatedProgress)
+                    }
+
+                    percentage = Math.max(0, Math.min(90, percentage))
+                    this.onProgress({percentage, time: time || 0})
+                }
+            })
+
             const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm'
             const coreURL = await this.toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript')
             const wasmURL = await this.toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
-            this.onLog(`Core URL: ${coreURL}`)
-            this.onLog(`WASM URL: ${wasmURL}`)
+
             await this.ffmpeg.load({coreURL, wasmURL})
             this.isLoaded = true
             this.onLog('FFmpeg loaded successfully')
@@ -163,181 +241,235 @@ export class VideoConverter {
     }
 
     /**
-     * Converts a WebM video to the specified format
+     * Estimates the conversion time (optimized for speed)
      * @param {File|Blob} inputFile - Input video file (WebM)
      * @param {string} outputFormat - Target format (MP4, WEBM, AVI, MOV)
-     * @param {Object} [options] - Conversion options
-     * @param {string} [options.quality='MEDIUM'] - Quality preset (LOW, MEDIUM, HIGH, ULTRA)
-     * @param {string} [options.outputFileName] - Custom output filename
-     * @returns {Promise<Blob>} Converted video as a Blob
-     * @throws {Error} If conversion fails
+     * @param {string} [quality='MEDIUM'] - Quality preset
+     * @returns {Promise<number>} Estimated conversion time in seconds
      */
-    async convertVideo(inputFile, outputFormat, options = {}) {
-        // Ensure FFmpeg is loaded
-        if (!this.isLoaded) {
-            await this.loadFFmpeg()
-        }
-        // Validate input file
+    async getEstimatedTime(inputFile, outputFormat, quality = 'MEDIUM') {
         if (!(inputFile instanceof File || inputFile instanceof Blob)) {
-            this.onLog('Input must be a File or Blob')
             throw new Error('Input must be a File or Blob')
         }
-        // Restrict input to WebM
-        if (!inputFile.type.includes('webm') && !inputFile.name.toLowerCase().endsWith('.webm')) {
-            this.onLog('Input file must be WebM format')
+        if (!inputFile.type.includes('webm') && !inputFile.name?.toLowerCase().endsWith('.webm')) {
             throw new Error('Input file must be WebM format')
         }
-        // Check for empty file
-        if (inputFile.size === 0) {
-            this.onLog('Input file is empty')
-            throw new Error('Input file is empty')
-        }
-        // Validate output format and quality
-        const {quality = 'MEDIUM', outputFileName} = options
         if (!VideoConverter.FORMATS[outputFormat]) {
-            this.onLog(`Unsupported output format: ${outputFormat}`)
             throw new Error(`Unsupported output format: ${outputFormat}`)
         }
         if (!VideoConverter.QUALITY_PRESETS[quality]) {
-            this.onLog(`Unsupported quality preset: ${quality}`)
             throw new Error(`Unsupported quality preset: ${quality}`)
         }
-        const format = VideoConverter.FORMATS[outputFormat]
-        const qualityPreset = VideoConverter.QUALITY_PRESETS[quality]
-        const inputFileName = 'input.webm'
-        const outputName = outputFileName || `output.${format.extension}`
+
         try {
-            // Initialize conversion tracking
-            this.currentConversion = {
-                startTime: Date.now(),
-                inputFileName,
-                outputName,
-            }
-            this.onLog(`Starting conversion: ${inputFile.name || 'WebM'} → ${outputFormat} (${quality}, input size: ${(inputFile.size / 1000000).toFixed(2)} MB)`)
-            this.onProgress({percentage: 0, time: 0})
-            // Get video metadata
-            const videoInfo = await this.getVideoInfo(inputFile)
-            const hasAudio = videoInfo.audioStream !== undefined
-            this.onLog(`Input video info: ${JSON.stringify(videoInfo, null, 2)}`)
-            this.onLog('Writing input file to FFmpeg filesystem...')
-            // Read input file
-            const inputData = await this.fetchFile(inputFile)
-            if (!inputData || inputData.byteLength === 0) {
-                this.onLog('Input file data is empty or invalid')
-                throw new Error('Input file data is empty or invalid')
-            }
-            await this.ffmpeg.writeFile(inputFileName, inputData)
-            this.onProgress({percentage: 10, time: 0})
-            // Build FFmpeg command
-            const args = [
-                '-i', inputFileName,
-                '-c:v', format.codec,
-                ...(format.codec === 'libx264' || format.codec === 'mpeg4' ? ['-crf', qualityPreset.crf, '-preset', qualityPreset.preset] : []),
-                ...(format.extraArgs || []),
-                ...(format.videoFilters ? ['-vf', format.videoFilters] : []),
-                ...(hasAudio ? ['-c:a', format.audioCodec] : ['-an']),
-                '-y',
-                outputName,
-            ]
-            this.onLog(`FFmpeg command: ffmpeg ${args.join(' ')}`)
-            this.onLog('Executing FFmpeg conversion...')
-            // Execute conversion
-            const result = await this.ffmpeg.exec(args)
-            if (result !== 0) {
-                this.onLog(`FFmpeg execution failed with code ${result}`)
-                throw new Error(`FFmpeg failed with code ${result}`)
-            }
-            this.onProgress({percentage: 90, time: 0})
-            this.onLog('Reading output file...')
-            // Read output file
-            const outputData = await this.ffmpeg.readFile(outputName)
-            if (!outputData || outputData.byteLength === 0) {
-                this.onLog('Output file is empty or missing')
-                throw new Error('Output file is empty or missing')
-            }
-            this.onProgress({percentage: 95, time: 0})
-            // Clean up temporary files
-            await this._cleanupFile(inputFileName)
-            await this._cleanupFile(outputName)
-            // Create output Blob
-            const mimeType = format.mimeType
-            const outputBlob = new Blob([outputData], {type: mimeType})
-            if (!(outputBlob instanceof Blob) || outputBlob.size === 0) {
-                this.onLog('Failed to create valid output blob')
-                throw new Error('Failed to create valid blob')
-            }
-            // Log conversion details
-            this.onLog(`Output blob created: type=${outputBlob.type}, size=${(outputBlob.size / 1000000).toFixed(2)} MB`)
-            const conversionTime = ((Date.now() - this.currentConversion.startTime) / 1000).toFixed(2)
-            this.onLog(`Conversion completed in ${conversionTime}s`)
-            this.onLog(`Original size: ${(inputFile.size / 1000000).toFixed(2)} MB`)
-            this.onLog(`Output size: ${(outputBlob.size / 1000000).toFixed(2)} MB`)
-            this.onProgress({percentage: 100, time: 0})
-            return outputBlob
+            // Quick estimation without full video info for speed
+            const fileSizeMB = inputFile.size / 1000000
+            const format = VideoConverter.FORMATS[outputFormat]
+            const qualityPreset = VideoConverter.QUALITY_PRESETS[quality]
+
+            // Simplified estimation based on file size
+            const baseTime = Math.max(5, fileSizeMB * 0.1)
+            const estimatedTime = baseTime * format.timeFactor * qualityPreset.timeFactor
+
+            this.onLog(`Quick estimated conversion time: ${estimatedTime.toFixed(2)}s for ${fileSizeMB.toFixed(2)}MB file`)
+            return Math.max(3, estimatedTime)
         }
         catch (error) {
-            this.onLog(`Conversion failed: ${error.message}`)
-            throw error
-        }
-        finally {
-            // Ensure cleanup even on failure
-            await this._cleanupFile(inputFileName)
-            await this._cleanupFile(outputName)
-            this.currentConversion = null
+            this.onLog(`Failed to estimate conversion time: ${error.message}`)
+            return 10
         }
     }
 
     /**
-     * Retrieves metadata from a video file
-     * @param {File|Blob} videoFile - Input video file
-     * @returns {Promise<Object>} Video metadata (duration, resolution, etc.)
-     * @throws {Error} If metadata extraction fails
+     * Converts a WebM video with maximum speed optimizations
+     * @param {File|Blob} inputFile - Input video file (WebM)
+     * @param {string} outputFormat - Target format (MP4, WEBM, AVI, MOV)
+     * @param {Object} [options] - Conversion options
+     * @param {string} [options.quality='MEDIUM'] - Quality preset
+     * @param {string} [options.outputFileName] - Custom output filename
+     * @param {boolean} [options.fastMode=true] - Enable maximum speed mode
+     * @returns {Promise<Blob>} Converted video as a Blob
      */
-    async getVideoInfo(videoFile) {
+    async convertVideo(inputFile, outputFormat, options = {}) {
         if (!this.isLoaded) {
             await this.loadFFmpeg()
         }
-        if (!(videoFile instanceof File || videoFile instanceof Blob)) {
-            this.onLog('Input must be a File or Blob')
-            throw new Error('Input must be a File or Blob')
+
+        // Input validation with early returns
+        if (!(inputFile instanceof File || inputFile instanceof Blob) || inputFile.size === 0) {
+            throw new Error('Invalid input file')
         }
-        const inputFileName = 'info_input.webm'
-        let logOutput = ''
+        if (!inputFile.type.includes('webm') && !inputFile.name?.toLowerCase().endsWith('.webm')) {
+            throw new Error('Input file must be WebM format')
+        }
+
+        const {quality = 'MEDIUM', outputFileName, fastMode = true} = options
+
+        if (!VideoConverter.FORMATS[outputFormat] || !VideoConverter.QUALITY_PRESETS[quality]) {
+            throw new Error('Invalid format or quality preset')
+        }
+
+        const format = VideoConverter.FORMATS[outputFormat]
+        const qualityPreset = VideoConverter.QUALITY_PRESETS[quality]
+        const inputFileName = 'input.webm'
+        const outputName = outputFileName || `output.${format.extension}`
+
         try {
-            // Capture FFmpeg logs
-            const logHandler = ({message}) => {
-                logOutput += message + '\n'
-                this.onLog(message)
+            this.conversionData.success = false
+            this.conversionData.completed = false
+
+            this.onLog(`Starting FAST conversion: ${inputFile.name || 'WebM'} → ${outputFormat}`)
+            this.onProgress({percentage: 0, time: 0})
+
+            const startTime = Date.now()
+
+            // Get basic video info first
+            let videoDuration = null
+            let hasAudio = false
+            try {
+                const quickInfo = await this.getVideoInfo(inputFile)
+                videoDuration = quickInfo.duration
+                hasAudio = quickInfo.audioStream !== undefined
+                this.onLog(`Video info: duration=${videoDuration}s, hasAudio=${hasAudio}`)
             }
-            this.ffmpeg.on('log', logHandler)
+            catch (e) {
+                this.onLog(`Warning: Could not get video info: ${e.message}`)
+                videoDuration = Math.max(10, inputFile.size / 1000000)
+                hasAudio = true
+            }
+
+            this.currentConversion = {
+                startTime,
+                inputFileName,
+                outputName,
+                videoDuration,
+            }
+
             // Write input file
-            const inputData = await this.fetchFile(videoFile)
-            if (!inputData || inputData.byteLength === 0) {
-                this.onLog('Input file for info is empty or invalid')
-                throw new Error('Input file for info is empty or invalid')
-            }
+            const inputData = await this.fetchFile(inputFile)
             await this.ffmpeg.writeFile(inputFileName, inputData)
-            // Run FFmpeg to extract info
-            const result = await this.ffmpeg.exec(['-i', inputFileName, '-f', 'null', '-'])
-            if (result !== 0) {
-                this.onLog(`FFmpeg info extraction failed with code ${result}`)
-                throw new Error(`FFmpeg info extraction failed`)
+            this.onProgress({percentage: 10, time: 0})
+
+            // Build FFmpeg command
+            const args = [
+                '-i', inputFileName,
+                '-c:v', format.codec,
+            ]
+
+            // Add codec-specific parameters based on format
+            if (format.codec === 'libx264') {
+                args.push(
+                    '-vf', format.videoFilters,
+                    '-preset', qualityPreset.preset,
+                    '-crf', qualityPreset.crf,
+                )
+                if (fastMode) {
+                    args.push('-x264-params', 'ref=1:bframes=0:me=dia:subme=1:trellis=0')
+                }
             }
-            // Parse metadata from logs
-            const info = this._parseFFmpegLog(logOutput)
-            info.size = videoFile.size
-            info.type = videoFile.type
-            info.name = videoFile.name
-            info.audioStream = logOutput.includes('audio') ? true : undefined
-            return info
+            else if (format.codec === 'mpeg4') {
+                args.push(
+                    '-vf', format.videoFilters,
+                    '-qscale:v', '5',
+                )
+            }
+            else if (format.codec === 'libvpx-vp9') {
+                args.push(
+                    '-vf', format.videoFilters,
+                    '-speed', '8',
+                    '-cpu-used', '8',
+                )
+            }
+
+            // Handle audio
+            if (hasAudio && format.audioCodec) {
+                args.push('-c:a', format.audioCodec, '-b:a', '128k')
+            }
+            else {
+                args.push('-an')
+            }
+
+            // Add format-specific extra args
+            if (format.extraArgs) {
+                args.push(...format.extraArgs)
+            }
+
+            // Final parameters
+            args.push(
+                '-map_metadata', '-1',
+                '-avoid_negative_ts', 'make_zero',
+                '-y',
+                outputName,
+            )
+
+            this.onLog(`FFmpeg command: ffmpeg ${args.join(' ')}`)
+
+            // Execute conversion
+            const execStart = Date.now()
+            const result = await this.ffmpeg.exec(args)
+            const execDuration = (Date.now() - execStart) / 1000
+
+            if (result !== 0) {
+                this.onLog(`FFmpeg execution failed with code ${result}`)
+
+                // Try fallback command
+                this.onLog('Trying fallback conversion...')
+                const fallbackArgs = [
+                    '-i', inputFileName,
+                    '-c:v', 'libx264',
+                    '-vf', 'format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2',
+                    '-preset', 'ultrafast',
+                    '-crf', '28',
+                    ...(hasAudio ? ['-c:a', 'aac', '-b:a', '128k'] : ['-an']),
+                    '-y',
+                    outputName,
+                ]
+
+                this.onLog(`Fallback command: ffmpeg ${fallbackArgs.join(' ')}`)
+                const fallbackResult = await this.ffmpeg.exec(fallbackArgs)
+
+                if (fallbackResult !== 0) {
+                    throw new Error(`FFmpeg failed with code ${result}, fallback also failed with code ${fallbackResult}`)
+                }
+            }
+
+            this.onProgress({percentage: 90, time: 0})
+
+            // Read output
+            const outputData = await this.ffmpeg.readFile(outputName)
+            if (!outputData || outputData.byteLength === 0) {
+                throw new Error('Output file is empty')
+            }
+
+            const outputBlob = new Blob([outputData], {type: format.mimeType})
+
+            // Log performance metrics
+            const totalTime = (Date.now() - startTime) / 1000
+            const compressionRatio = ((1 - outputBlob.size / inputFile.size) * 100)
+
+            this.onLog(`FAST conversion completed in ${totalTime.toFixed(2)}s`)
+            this.onLog(`Input: ${(inputFile.size / 1000000).toFixed(2)}MB → Output: ${(outputBlob.size / 1000000).toFixed(2)}MB`)
+            this.onLog(`Compression: ${compressionRatio.toFixed(1)}%, Speed: ${(inputFile.size / 1000000 / totalTime).toFixed(2)} MB/s`)
+
+            this.conversionData.success = true
+            this.conversionData.completed = true
+            this.conversionData.conversionTime = totalTime
+
+            this.onProgress({percentage: 100, time: 0})
+            return outputBlob
+
         }
         catch (error) {
-            this.onLog(`Failed to get video info: ${error.message}`)
-            return {error: error.message}
+            this.onLog(`FAST conversion failed: ${error.message}`)
+            this.conversionData.success = false
+            this.conversionData.completed = true
+            this.conversionData.errorMessage = error.message
+            throw error
         }
         finally {
-            this.ffmpeg.off('log')
-            await this._cleanupFile(inputFileName)
+            await this.#cleanupFile(inputFileName)
+            await this.#cleanupFile(outputName)
+            this.currentConversion = null
         }
     }
 
@@ -346,12 +478,11 @@ export class VideoConverter {
      * @param {string} path - File path to clean up
      * @private
      */
-    async _cleanupFile(path) {
+    async #cleanupFile(path) {
         try {
-            // Check if file exists before deleting
-            if (this.ffmpeg && typeof this.ffmpeg.FS === 'function' && this.ffmpeg.FS('stat', path)) {
+            if (this.ffmpeg && path) {
                 await this.ffmpeg.deleteFile(path)
-                this.onLog(`Files cleaned up: ${path}`)
+                this.onLog(`File cleaned up: ${path}`)
             }
         }
         catch (error) {
@@ -360,56 +491,116 @@ export class VideoConverter {
     }
 
     /**
-     * Parses FFmpeg log output to extract video metadata
-     * @param {string} log - FFmpeg log output
-     * @returns {Object} Parsed metadata (duration, resolution)
+     * Gets basic video info quickly (optimized version)
+     * @param {File|Blob} videoFile - Input video file
+     * @returns {Promise<Object>} Basic video metadata
+     */
+    async getVideoInfo(videoFile) {
+        if (!this.isLoaded) {
+            await this.loadFFmpeg()
+        }
+
+        const inputFileName = 'info_input.webm'
+        let logOutput = ''
+
+        try {
+            const logHandler = ({message}) => {
+                logOutput += message + '\n'
+            }
+
+            this.ffmpeg.on('log', logHandler)
+
+            const inputData = await this.fetchFile(videoFile)
+            await this.ffmpeg.writeFile(inputFileName, inputData)
+
+            // Quick probe with timeout
+            await Promise.race([
+                                   this.ffmpeg.exec(['-i', inputFileName, '-t', '0.1', '-f', 'null', '-']),
+                                   new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000)),
+                               ])
+
+            const info = this._parseFFmpegLog(logOutput)
+            info.size = videoFile.size
+            info.type = videoFile.type
+            info.name = videoFile.name
+            info.audioStream = logOutput.includes('Audio:') ? true : undefined
+
+            return info
+
+        }
+        catch (error) {
+            // Return basic fallback info
+            return {
+                duration: Math.max(10, videoFile.size / 2000000),
+                size:     videoFile.size,
+                type:     videoFile.type,
+                name:     videoFile.name,
+                error:    error.message,
+            }
+        }
+        finally {
+            this.ffmpeg.off('log')
+            await this._cleanupFile(inputFileName)
+        }
+    }
+
+    /**
+     * Cleanup file (fire and forget for speed)
+     * @param {string} path - File path
+     * @private
+     */
+    async _cleanupFile(path) {
+        try {
+            if (this.ffmpeg) {
+                // Don't wait for cleanup to complete
+                this.ffmpeg.deleteFile(path).catch(() => {
+                })
+            }
+        }
+        catch (error) {
+            // Ignore cleanup errors
+        }
+    }
+
+    /**
+     * Parse FFmpeg log (simplified)
+     * @param {string} log - FFmpeg log
+     * @returns {Object} Parsed info
      * @private
      */
     _parseFFmpegLog(log) {
         const info = {}
-        // Extract duration
+
+        // Quick duration extraction
         const durationMatch = log.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/)
         if (durationMatch) {
             info.duration = parseInt(durationMatch[1]) * 3600 +
                 parseInt(durationMatch[2]) * 60 +
                 parseFloat(durationMatch[3])
         }
-        // Extract resolution
+
+        // Quick resolution extraction
         const resolutionMatch = log.match(/(\d{3,4})x(\d{3,4})/)
         if (resolutionMatch) {
             info.resolution = {
-                width:  parseInt(resolutionMatch[1]),
+                width: parseInt(resolutionMatch[1]),
                 height: parseInt(resolutionMatch[2]),
             }
         }
+
         return info
     }
 
     /**
-     * Gets MIME type for a given file extension
-     * @param {string} extension - File extension
-     * @returns {string} MIME type
-     * @throws {Error} If no MIME type is found
-     * @private
-     */
-    _getMimeType(extension) {
-        const format = Object.values(VideoConverter.FORMATS).find(f => f.extension === extension.toLowerCase())
-        if (!format) {
-            this.onLog(`No MIME type defined for extension: ${extension}`)
-            throw new Error(`No MIME type defined for extension: ${extension}`)
-        }
-        return format.mimeType
-    }
-
-    /**
-     * Terminates FFmpeg and cleans up resources
+     * Destroy converter
      */
     destroy() {
-        // Terminate FFmpeg instance if it exists
         if (this.ffmpeg) {
             this.ffmpeg.terminate()
             this.ffmpeg = null
         }
         this.isLoaded = false
+        this.currentConversion = null
+        this.onLog('VideoConverter destroyed')
     }
 }

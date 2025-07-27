@@ -14,31 +14,28 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { LGSScrollbars }                                     from '@Components/MainUI/LGSScrollbars'
-import { VideoConverter }                                    from '@Core/ui/video/converter/VideoConverter'
-import { VideoRecorder }                                     from '@Core/ui/video/recorder/VideoRecorder'
-import { faDownload, faXmark }                               from '@fortawesome/pro-regular-svg-icons'
+import { LGSScrollbars }              from '@Components/MainUI/LGSScrollbars'
+import { VideoConverter }             from '@Core/ui/video/converter/VideoConverter'
+import { VideoRecorder }              from '@Core/ui/video/recorder/VideoRecorder'
+import { faCog, faDownload, faXmark } from '@fortawesome/pro-regular-svg-icons'
+import { FontAwesomeIcon }            from '@fortawesome/react-fontawesome'
 import {
-    SlButton,
-    SlDetails,
-    SlDialog,
-    SlDivider,
-    SlIcon,
-    SlInput,
-    SlOption,
-    SlProgressBar,
-    SlSelect,
-    SlTooltip,
-}                                                            from '@shoelace-style/shoelace/dist/react'
+    SlButton, SlDetails, SlDialog, SlDivider, SlIcon, SlInput, SlOption, SlProgressBar, SlSelect, SlTooltip,
+}                                     from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { FA2SL }                                             from '@Utils/FA2SL'
+import { FA2SL }                      from '@Utils/FA2SL'
+import classNames                     from 'classnames'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSnapshot }                                       from 'valtio/index'
+import { useSnapshot }                from 'valtio/index'
 
 // Constants
 const AVAILABLE_FORMATS = VideoConverter.getAvailableFormats()
 const QUALITY_PRESETS = VideoConverter.getQualityPresets()
 
+/**
+ * VideoPreview component for previewing and converting recorded videos
+ * @returns {JSX.Element} Video preview dialog with conversion options
+ */
 export const VideoPreview = () => {
     const [videoUrl, setVideoUrl] = useState(null)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -46,6 +43,9 @@ export const VideoPreview = () => {
     const [isConverting, setIsConverting] = useState(false)
     const [conversionProgress, setConversionProgress] = useState(0)
     const [conversionLogs, setConversionLogs] = useState([])
+    const [estimatedConversionTime, setEstimatedConversionTime] = useState(null)
+    const [isEstimating, setIsEstimating] = useState(false)
+    const [inputFormat, setInputFormat] = useState(null)
     const dialogRef = useRef(null)
     const converterRef = useRef(null)
     const mainVideoRef = useRef(null)
@@ -53,7 +53,7 @@ export const VideoPreview = () => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
-    // Memoized final filename
+    // Memoized final filename based on timestamp and format
     const finalFilename = useMemo(() => {
         const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14)
         const fileExtension = AVAILABLE_FORMATS[video.format]?.extension || 'webm'
@@ -77,7 +77,7 @@ export const VideoPreview = () => {
                                                       },
                                                       onLog:      (message) => {
                                                           setConversionLogs((prev) => [...prev, message])
-                                                      },
+                                                      }
                                                   })
 
         converterRef.current.loadFFmpeg().catch((error) => {
@@ -94,6 +94,16 @@ export const VideoPreview = () => {
                 return
             }
             const url = URL.createObjectURL(blob)
+            // Determine input format from blob type or filename extension
+            const blobExtension = blob.name ? blob.name.split('.').pop().toLowerCase() : ''
+            const formatFromMime = Object.keys(AVAILABLE_FORMATS).find(
+                (key) => AVAILABLE_FORMATS[key].mimeType === blob.type,
+            )
+            const formatFromExtension = Object.keys(AVAILABLE_FORMATS).find(
+                (key) => AVAILABLE_FORMATS[key].extension === blobExtension,
+            )
+            const detectedFormat = formatFromMime || formatFromExtension || 'WEBM'
+            setInputFormat(detectedFormat)
             setVideoBlob(blob)
             setVideoUrl(url)
             setIsDialogOpen(true)
@@ -110,8 +120,8 @@ export const VideoPreview = () => {
                 converterRef.current.destroy()
                 converterRef.current = null
             }
-        };
-    }, [videoUrl]);
+        }
+    }, [videoUrl])
 
     // Synchronize blurred video with main video
     useEffect(() => {
@@ -145,13 +155,49 @@ export const VideoPreview = () => {
             mainVideo.removeEventListener('pause', handlePause)
             mainVideo.removeEventListener('timeupdate', syncVideos)
         }
-    }, [videoUrl]);
+    }, [videoUrl])
 
+    // Update estimated conversion time when format, quality, or blob changes
+    useEffect(() => {
+        const updateEstimatedTime = async () => {
+            if (!converterRef.current || !videoBlob || isConverting || !inputFormat) {
+                setEstimatedConversionTime(null)
+                setIsEstimating(false)
+                return
+            }
+            if (video.format === inputFormat) {
+                setEstimatedConversionTime(0) // No conversion needed if formats match
+                setIsEstimating(false)
+                return
+            }
+            setIsEstimating(true) // Show "Waiting..." immediately
+            try {
+                const estimatedTime = await converterRef.current.getEstimatedTime(
+                    videoBlob,
+                    video.format,
+                    video.quality,
+                )
+                setEstimatedConversionTime(estimatedTime)
+            }
+            catch (error) {
+                setEstimatedConversionTime(null)
+                setConversionLogs((prev) => [...prev, `Error estimating conversion time: ${error.message}`])
+            }
+            finally {
+                setIsEstimating(false) // Return to estimated value or "N/A" after calculation
+            }
+        }
+
+        updateEstimatedTime()
+    }, [video.format, video.quality, videoBlob, isConverting, inputFormat])
+
+    // Handle filename input changes
     const handleFilenameChange = useCallback((e) => {
         __.recorder.filename = e.target.value
         $video.filename = e.target.value
     }, [$video])
 
+    // Handle output format selection
     const handleFormatChange = useCallback(
         (event) => {
             event.stopPropagation()
@@ -161,6 +207,7 @@ export const VideoPreview = () => {
         [$video],
     )
 
+    // Handle quality preset selection
     const handleQualityChange = useCallback(
         (event) => {
             event.stopPropagation()
@@ -170,7 +217,12 @@ export const VideoPreview = () => {
         [$video],
     )
 
+    // Handle save action with conversion and download
     const handleSave = useCallback(async () => {
+        if (isConverting) {
+            return
+        }
+
         if (!videoBlob || !(videoBlob instanceof Blob) || videoBlob.size === 0) {
             setConversionLogs((prev) => [...prev, 'Error: Invalid video blob'])
             return
@@ -185,7 +237,7 @@ export const VideoPreview = () => {
             let finalBlob = videoBlob
             let mimeType = AVAILABLE_FORMATS[video.format]?.mimeType || videoBlob.type
 
-            if (video.format !== 'WEBM' && converterRef.current) {
+            if (video.format !== inputFormat && converterRef.current) {
                 finalBlob = await converterRef.current.convertVideo(videoBlob, video.format, {
                     quality:        video.quality,
                     outputFileName: `converted.${fileExtension}`,
@@ -215,8 +267,9 @@ export const VideoPreview = () => {
         finally {
             setIsConverting(false)
         }
-    }, [videoBlob, video.format, video.quality, finalFilename]);
+    }, [videoBlob, video.format, video.quality, finalFilename, inputFormat])
 
+    // Handle cancel action
     const handleCancel = useCallback(() => {
         if (isConverting) {
             return
@@ -229,8 +282,9 @@ export const VideoPreview = () => {
             URL.revokeObjectURL(videoUrl)
         }
         $video.edit = false
-    }, [isConverting, videoUrl, $video]);
+    }, [isConverting, videoUrl, $video])
 
+    // Handle dialog close event
     const handleDialogClose = useCallback(
         (event) => {
             if (isConverting) {
@@ -245,7 +299,20 @@ export const VideoPreview = () => {
             }
         },
         [isConverting],
-    );
+    )
+
+    // Format estimated time for display
+    const formatEstimatedTime = (seconds) => {
+        if (seconds === null) {
+            return 'N/A'
+        }
+        if (seconds === 0) {
+            return 'Immediate'
+        }
+        const minutes = Math.floor(seconds / 60)
+        const remainingSeconds = Math.round(seconds % 60)
+        return `${minutes}m ${remainingSeconds}s`
+    }
 
     return (
         <SlDialog
@@ -304,7 +371,7 @@ export const VideoPreview = () => {
                             label="Quality Preset"
                             value={video.quality || 'MEDIUM'}
                             onSlChange={handleQualityChange}
-                            disabled={isConverting}
+                            disabled={isConverting || video.format === inputFormat}
                         >
                             {Object.entries(QUALITY_PRESETS).map(([key, preset]) => (
                                 <SlOption key={key} value={key}>
@@ -316,9 +383,16 @@ export const VideoPreview = () => {
                     <div>
                         Final filename: <code>{finalFilename}</code>
                     </div>
+                    {/* {isEstimating ? ( */}
+                    {/*     <div>Estimated conversion time: Waiting...</div> */}
+                    {/* ) : ( */}
+                    {/*      <div> */}
+                    {/*          Estimated conversion time: {formatEstimatedTime(estimatedConversionTime)} */}
+                    {/*      </div> */}
+                    {/*  )} */}
                     {isConverting && (
                         <div>
-                            <SlProgressBar value={conversionProgress}>{conversionProgress}%</SlProgressBar>
+                            <SlProgressBar value={conversionProgress}></SlProgressBar>
                         </div>
                     )}
                     {conversionLogs.length > 0 && (
@@ -339,12 +413,25 @@ export const VideoPreview = () => {
                     </SlButton>
                 </SlTooltip>
                 <SlTooltip content={isConverting ? 'Converting video...' : 'Save your video.'}>
-                    <SlButton variant="primary" onClick={handleSave} disabled={isConverting}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDownload)}/>
-                        {isConverting ? `Converting... ${conversionProgress}%` : 'Download'}
+                    <SlButton
+                        className={classNames('conversion-trigger', {'video-conversion-in-progress': isConverting})}
+                        variant={isConverting ? 'warning' : 'primary'}
+                        onClick={handleSave}
+                    >
+                        {isConverting ? (
+                            <>
+                                <FontAwesomeIcon slot="prefix" icon={faCog} spin/>
+                                {`Converting... ${conversionProgress}%`}
+                            </>
+                        ) : (
+                             <>
+                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDownload)}/>
+                                 {'Download'}
+                             </>
+                         )}
                     </SlButton>
                 </SlTooltip>
             </div>
         </SlDialog>
-    );
-};
+    )
+}

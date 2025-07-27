@@ -1184,7 +1184,7 @@ h3 {
 
 .lgs-console {
     padding: var(--lgs-gutter-xs);
-    white-space: break-word;
+    white-space: break-spaces;
     color: var(--sl-color-gray-100);
     border-radius: var(--lgs-border-radius-xs);
     background-color: var(--sl-color-gray-800);
