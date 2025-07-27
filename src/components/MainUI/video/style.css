@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-24
- * Last modified: 2025-07-24
+ * Created on: 2025-07-27
+ * Last modified: 2025-07-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -55,11 +55,79 @@
 
 .video-recorder-toolbar button {margin: 0;}
 
+/***************************************
+ * Video preview
+ */
+
 #video-preview-dialog::part(panel) {
-    width: min(100%, 600px)
+    width: min(100%, 600px);
+    max-height: 90%;
 }
+
+#video-preview-dialog video {
+
+}
+
+.video-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.main-video {
+    z-index: +2;
+    max-width: 400px;
+    max-height: 400px;
+}
+
+.blurred-video-wrapper {
+    position: absolute;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--lgs-border-radius-xs);
+}
+
+.blurred-video {
+    position: absolute;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(5px); /* Adjust blur radius as needed */
+}
+
+.blurred-video-wrapper::before {
+    position: absolute; /* Ensure overlay is above the video but below other elements */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    content: '';
+    background-color: var(--lgs-dark-color-50);
+
+}
+
 #video-preview-dialog-footer {
     display: flex;
     justify-content: space-between;
     text-align: unset;
+}
+
+.video-file-name-quality-format {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    gap: var(--lgs-gutter-xs);
+}
+
+.conversion-logs {
+    line-height: 1.3;
+    height: 200px;
+}
+
+.conversion-logs .lgs-console {
+    margin-top: 0;
 }

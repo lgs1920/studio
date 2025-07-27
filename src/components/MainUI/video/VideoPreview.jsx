@@ -7,49 +7,61 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-26
- * Last modified: 2025-07-26
+ * Created on: 2025-07-27
+ * Last modified: 2025-07-27
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-/**
- * VideoPreview - React component to display recorded video in a dialog
- * @module VideoPreview
- */
-
-import { VideoConverter }                                                     from '@Core/ui/video/converter/VideoConverter'
-import { faDownload, faXmark }                                                from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlDialog, SlIcon, SlInput, SlOption, SlSelect, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { LGSScrollbars }                                     from '@Components/MainUI/LGSScrollbars'
+import { VideoConverter }                                    from '@Core/ui/video/converter/VideoConverter'
+import { VideoRecorder }                                     from '@Core/ui/video/recorder/VideoRecorder'
+import { faDownload, faXmark }                               from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlButton,
+    SlDetails,
+    SlDialog,
+    SlDivider,
+    SlIcon,
+    SlInput,
+    SlOption,
+    SlProgressBar,
+    SlSelect,
+    SlTooltip,
+}                                                            from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { FA2SL }                                                              from '@Utils/FA2SL'
-import { useEffect, useRef, useState }                                        from 'react'
-import { useSnapshot }                                                        from 'valtio/index'
+import { FA2SL }                                             from '@Utils/FA2SL'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSnapshot }                                       from 'valtio/index'
 
-/**
- * VideoPreview component
- * @returns {JSX.Element} The video preview dialog component
- */
+// Constants
+const AVAILABLE_FORMATS = VideoConverter.getAvailableFormats()
+const QUALITY_PRESETS = VideoConverter.getQualityPresets()
+
 export const VideoPreview = () => {
     const [videoUrl, setVideoUrl] = useState(null)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [videoBlob, setVideoBlob] = useState(null)
     const [isConverting, setIsConverting] = useState(false)
     const [conversionProgress, setConversionProgress] = useState(0)
+    const [conversionLogs, setConversionLogs] = useState([])
     const dialogRef = useRef(null)
     const converterRef = useRef(null)
+    const mainVideoRef = useRef(null)
+    const blurredVideoRef = useRef(null)
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
-    // Ajoutez un state pour les logs
-    const [conversionLogs, setConversionLogs] = useState([])
 
-    // Get available formats and quality presets
-    const availableFormats = VideoConverter.getAvailableFormats()
-    const qualityPresets = VideoConverter.getQualityPresets()
+    // Memoized final filename
+    const finalFilename = useMemo(() => {
+        const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14)
+        const fileExtension = AVAILABLE_FORMATS[video.format]?.extension || 'webm'
+        return `${timestamp}-${video.filename || 'LGS1920'}.${fileExtension}`
+    }, [video.format, video.filename])
 
+    // Initialize VideoConverter and set default format/quality
     useEffect(() => {
-        // Initialize default values in store if not set
         if (!$video.format) {
             $video.format = 'MP4'
         }
@@ -57,196 +69,158 @@ export const VideoPreview = () => {
             $video.quality = 'MEDIUM'
         }
 
-        // Initialize converter
-        if (!converterRef.current) {
-            converterRef.current = new VideoConverter({
-                                                          onProgress: (progress) => {
-                                                              console.log('🔄 Conversion progress received:', progress)
-                                                              const percentage = progress.percentage || 0
-                                                              setConversionProgress(percentage)
+        converterRef.current = new VideoConverter({
+                                                      onProgress: ({percentage, time}) => {
+                                                          const clampedPercentage = Math.max(0, Math.min(100, percentage || 0))
+                                                          setConversionProgress(clampedPercentage)
+                                                          setConversionLogs((prev) => [...prev, `Progress: ${clampedPercentage}%`])
+                                                      },
+                                                      onLog:      (message) => {
+                                                          setConversionLogs((prev) => [...prev, message])
+                                                      },
+                                                  })
 
-                                                              // Ajouter au log
-                                                              setConversionLogs(prev => [...prev, `Progress: ${percentage}%`])
-                                                          },
-                                                          onLog:      (message) => {
-                                                              console.log('📝 VideoConverter log:', message)
-                                                              setConversionLogs(prev => [...prev, message])
-                                                          },
-                                                      })
-        }
+        converterRef.current.loadFFmpeg().catch((error) => {
+            setConversionLogs((prev) => [...prev, `Error: Failed to load FFmpeg: ${error.message}`])
+        })
 
-        const handleStop = (e) => {
-            const {blob} = e.detail
-            console.log(e.detail)
+        const handleStop = ({detail: {blob}}) => {
+            if (!(blob instanceof Blob) || blob.size === 0) {
+                setConversionLogs((prev) => [
+                    ...prev,
+                    `Error: Invalid video blob (type: ${blob?.type}, size: ${blob?.size})`,
+                ])
+                alert('Invalid video recorded. Please try again.')
+                return
+            }
             const url = URL.createObjectURL(blob)
             setVideoBlob(blob)
             setVideoUrl(url)
             setIsDialogOpen(true)
         }
 
-        __.recorder.addEventListener('video/stop', handleStop)
+        __.recorder.addEventListener(VideoRecorder.events.STOP, handleStop)
 
         return () => {
-            __.recorder.removeEventListener('video/stop', handleStop)
+            __.recorder.removeEventListener(VideoRecorder.events.STOP, handleStop)
             if (videoUrl) {
                 URL.revokeObjectURL(videoUrl)
             }
-            // Dans le useEffect qui initialise le converter
             if (converterRef.current) {
                 converterRef.current.destroy()
                 converterRef.current = null
             }
-        }
-    }, [])
+        };
+    }, [videoUrl]);
 
-    /**
-     * Handles changes to the filename input
-     */
-    const handleFilenameChange = (e) => {
-        __.recorder.filename = e.target.value
-    }
+    // Synchronize blurred video with main video
+    useEffect(() => {
+        const mainVideo = mainVideoRef.current
+        const blurredVideo = blurredVideoRef.current
 
-    /**
-     * Handles format selection change
-     */
-    const handleFormatChange = (event) => {
-        event.stopPropagation()
-        event.preventDefault()
-        $video.format = event.target.value
-    }
-
-    /**
-     * Handles quality preset selection change
-     */
-    const handleQualityChange = (event) => {
-        event.stopPropagation()
-        event.preventDefault()
-        $video.quality = event.target.value
-    }
-
-    /**
-     * Handles the save button click to download the video
-     */
-    const handleSave = async (event) => {
-        if (!videoBlob) {
+        if (!mainVideo || !blurredVideo || !videoUrl) {
             return
         }
 
-        // Generate filename with timestamp and prefix first
-        const timestamp = new Date()
-            .toISOString()
-            .replace(/[-:]/g, '')
-            .replace('T', '')
-            .substring(0, 14) // YYYYMMDDHHMMSS
+        const syncVideos = () => {
+            blurredVideo.currentTime = mainVideo.currentTime
+        }
 
-        const prefix = __.recorder.filename || 'video'
+        const handlePlay = () => {
+            blurredVideo.play().catch((error) => {
+                setConversionLogs((prev) => [...prev, `Error playing blurred video: ${error.message}`])
+            })
+        }
+
+        const handlePause = () => {
+            blurredVideo.pause()
+        }
+
+        mainVideo.addEventListener('play', handlePlay)
+        mainVideo.addEventListener('pause', handlePause)
+        mainVideo.addEventListener('timeupdate', syncVideos)
+
+        return () => {
+            mainVideo.removeEventListener('play', handlePlay)
+            mainVideo.removeEventListener('pause', handlePause)
+            mainVideo.removeEventListener('timeupdate', syncVideos)
+        }
+    }, [videoUrl]);
+
+    const handleFilenameChange = useCallback((e) => {
+        __.recorder.filename = e.target.value
+        $video.filename = e.target.value
+    }, [$video])
+
+    const handleFormatChange = useCallback(
+        (event) => {
+            event.stopPropagation()
+            event.preventDefault()
+            $video.format = event.target.value
+        },
+        [$video],
+    )
+
+    const handleQualityChange = useCallback(
+        (event) => {
+            event.stopPropagation()
+            event.preventDefault()
+            $video.quality = event.target.value
+        },
+        [$video],
+    )
+
+    const handleSave = useCallback(async () => {
+        if (!videoBlob || !(videoBlob instanceof Blob) || videoBlob.size === 0) {
+            setConversionLogs((prev) => [...prev, 'Error: Invalid video blob'])
+            return
+        }
+
+        setIsConverting(true)
+        setConversionLogs([])
+        setConversionProgress(0)
 
         try {
-            setIsConverting(true)
-            setConversionProgress(0)
-
+            const fileExtension = AVAILABLE_FORMATS[video.format]?.extension || 'webm'
             let finalBlob = videoBlob
-            let fileExtension = 'webm'
+            let mimeType = AVAILABLE_FORMATS[video.format]?.mimeType || videoBlob.type
 
-            // Always attempt conversion based on selected format and quality
-            const formatInfo = availableFormats[video.format]
-            if (formatInfo) {
-                fileExtension = formatInfo.extension
-
-                // Start conversion
-                console.log(`Starting conversion to ${video.format} with ${video.quality} quality`)
-
-                finalBlob = await converterRef.current.convertVideo(
-                    videoBlob,
-                    video.format,
-                    {
-                        quality:        video.quality,
-                        outputFileName: `converted.${fileExtension}`,
-                    },
-                )
-
-                // Conversion successful - log success
-                const conversionTime = (
-                    (Date.now() - converterRef.current.currentConversion?.startTime) /
-                    1000
-                ).toFixed(2)
-                console.log(`✅ Video conversion successful in ${conversionTime}s`)
-                console.log(`Original size: ${(videoBlob.size / 1024 / 1024).toFixed(2)} MB`)
-                console.log(`Converted size: ${(finalBlob.size / 1024 / 1024).toFixed(2)} MB`)
-
-                // Save the converted file
-                const filename = `${timestamp}-${prefix}.${fileExtension}`
-                __.recorder.download(filename, finalBlob)
-
-                // Dispatch success event
-                __.recorder.dispatchEvent(
-                    new CustomEvent(VideoRecorder.events.DOWNLOAD, {
-                        detail: {
-                            filename,
-                            originalSize:  videoBlob.size,
-                            convertedSize: finalBlob.size,
-                            format:        video.format,
-                            quality:       video.quality,
-                            success:       true,
-                            timestamp:     Date.now(),
-                        },
-                    }),
-                )
+            if (video.format !== 'WEBM' && converterRef.current) {
+                finalBlob = await converterRef.current.convertVideo(videoBlob, video.format, {
+                    quality:        video.quality,
+                    outputFileName: `converted.${fileExtension}`,
+                })
+                mimeType = AVAILABLE_FORMATS[video.format].mimeType
             }
-            else {
-                throw new Error(`Format ${video.format} not found in available formats`)
-            }
+
+            const url = URL.createObjectURL(new Blob([finalBlob], {type: mimeType}))
+            const link = document.createElement('a')
+            link.href = url
+            link.download = finalFilename
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(url)
+
+            setConversionLogs((prev) => [
+                finalBlob !== videoBlob
+                ? `Conversion successful: ${video.format} (${(finalBlob.size / 1000000).toFixed(2)} MB)`
+                : '',
+                `Downloading: ${finalFilename}`,
+            ])
         }
         catch (error) {
-            console.error('❌ Video conversion failed:', error)
-
-            // Conversion failed - fallback to original file with webm extension
-            const fallbackFilename = `${timestamp}-${prefix}.webm`
-            __.recorder.download(fallbackFilename, videoBlob)
-
-            // Show user notification about fallback
-            alert(
-                `Conversion to ${video.format} failed. Downloaded original WebM file instead.\nError: ${error.message}`,
-            )
-
-            // Dispatch failure event
-            __.recorder.dispatchEvent(
-                new CustomEvent(VideoRecorder.events.DOWNLOAD, {
-                    detail: {
-                        filename:      fallbackFilename,
-                        originalSize:  videoBlob.size,
-                        convertedSize: videoBlob.size,
-                        format:        'WEBM',
-                        quality:       'ORIGINAL',
-                        success:       false,
-                        error:         error.message,
-                        timestamp:     Date.now(),
-                    },
-                }),
-            )
+            setConversionLogs((prev) => [...prev, `Error: ${error.message}`])
         }
         finally {
-            // Reset UI state
             setIsConverting(false)
-            setConversionProgress(0)
-            setIsDialogOpen(false)
-            setVideoUrl(null)
-            setVideoBlob(null)
-            __.recorder.filename = ''
-
-            if (videoUrl) {
-                URL.revokeObjectURL(videoUrl)
-            }
-
-            // Close video tools
-            $video.edit = false
         }
-    }
+    }, [videoBlob, video.format, video.quality, finalFilename]);
 
-    /**
-     * Handles the cancel button click to close the dialog
-     */
-    const handleCancel = () => {
+    const handleCancel = useCallback(() => {
+        if (isConverting) {
+            return
+        }
         setIsDialogOpen(false)
         setVideoUrl(null)
         setVideoBlob(null)
@@ -254,163 +228,123 @@ export const VideoPreview = () => {
         if (videoUrl) {
             URL.revokeObjectURL(videoUrl)
         }
-        // closes video tools
         $video.edit = false
-    }
+    }, [isConverting, videoUrl, $video]);
 
-    /**
-     * Handles dialog close requests
-     */
-    const handleRequestClose = (event) => {
-        // Only allow closing during the bubbling phase for overlay clicks or explicit button actions
-        if (event.eventPhase === Event.BUBBLING_PHASE) {
-            if (
-                event.detail?.source === 'overlay' || // Clicking outside the dialog
-                event.target.tagName === 'SL-BUTTON' // Clicking Cancel or Save buttons
-            ) {
-                if (!isConverting) {
-                    // Allow close only if not converting
-                    return
-                }
+    const handleDialogClose = useCallback(
+        (event) => {
+            if (isConverting) {
+                event.preventDefault()
+                return
             }
-        }
-        // Prevent closing for all other cases, including SlSelect interactions
-        event.preventDefault()
-    }
-
-    /**
-     * Handles dialog after hide events
-     */
-    const handleAfterHide = (event) => {
-        // Prevent hide completion during bubbling phase for non-intended actions
-        if (event.eventPhase === Event.BUBBLING_PHASE) {
             if (
-                event.detail?.source === 'overlay' || // Allow hide for overlay clicks
-                event.target.tagName === 'SL-BUTTON' // Allow hide for Cancel/Save buttons
+                event.eventPhase === Event.BUBBLING_PHASE &&
+                (event.detail?.source === 'overlay' || event.target.tagName === 'SL-BUTTON')
             ) {
-                if (!isConverting) {
-                    setIsDialogOpen(false) // Ensure state is updated
-                    return
-                }
+                setIsDialogOpen(false)
             }
-            // Prevent hide for other bubbling events (e.g., from SlSelect)
-            event.preventDefault()
-            return
-        }
-        // Allow hide to complete for non-bubbling phases if not converting
-        if (!isConverting) {
-            setIsDialogOpen(false)
-        }
-    }
+        },
+        [isConverting],
+    );
 
     return (
         <SlDialog
-            label={'Video Preview'}
+            label="Video Preview"
             id="video-preview-dialog"
             open={isDialogOpen}
-            onSlRequestClose={handleRequestClose}
-            onSlAfterHide={handleAfterHide}
+            onSlRequestClose={handleDialogClose}
+            onSlAfterHide={handleDialogClose}
             ref={dialogRef}
             className="lgs-theme"
         >
             {videoUrl && (
-                <video
-                    controls
-                    src={videoUrl}
-                    style={{maxWidth: '100%', marginBottom: '20px'}}
-                />
-            )}
-
-            <form onSubmit={(e) => e.preventDefault()}>
-                <div className="video-file-name-quality-format">
-                    <SlInput
-                        label="Video file name prefix"
-                        name="video-file-name"
-                        value={__.recorder.filename || ''}
-                        onSlInput={handleFilenameChange}
-                        disabled={isConverting}
+                <div className="video-container">
+                    <video
+                        ref={mainVideoRef}
+                        controls
+                        src={videoUrl}
+                        className="main-video"
                     />
-
-                    <SlSelect
-                        label="Output Format"
-                        value={video.format || 'MP4'}
-                        onSlChange={handleFormatChange}
-                        disabled={isConverting}
-                    >
-                        {Object.entries(availableFormats).map(([key, format]) => (
-                            <SlOption key={key} value={key}>
-                                {format.description}
-                            </SlOption>
-                        ))}
-                    </SlSelect>
-
-                    <SlSelect
-                        label="Quality Preset"
-                        value={video.quality || 'MEDIUM'}
-                        onSlChange={handleQualityChange}
-                        disabled={isConverting}
-                    >
-                        {Object.entries(qualityPresets).map(([key, preset]) => (
-                            <SlOption key={key} value={key}>
-                                {preset.description}
-                            </SlOption>
-                        ))}
-                    </SlSelect>
-                </div>
-
-                <div
-                    style={{
-                        fontSize:     '0.875rem',
-                        color:        'var(--sl-color-neutral-600)',
-                        marginBottom: '16px',
-                    }}
-                >
-                    Final
-                    filename:{' '}
-                    <code>{`<YYYYMMDDHHMMSS>-${__.recorder.filename || 'video'}.${
-                        availableFormats[video.format]?.extension || 'webm'
-                    }`}</code>
-                </div>
-
-                {isConverting && (
-                    <div style={{marginBottom: '16px'}}>
-                        <div style={{marginBottom: '8px', fontSize: '0.875rem'}}>
-                            Converting video... {conversionProgress}%
-                        </div>
-                        <sl-progress-bar value={conversionProgress}></sl-progress-bar>
+                    <div className="blurred-video-wrapper">
+                        <video
+                            ref={blurredVideoRef}
+                            src={videoUrl}
+                            className="blurred-video"
+                            muted
+                        />
                     </div>
-                )}
-            </form>
-
+                </div>
+            )}
+            <LGSScrollbars autoHide autoHeight>
+                <form onSubmit={(e) => e.preventDefault()}>
+                    <div className="video-file-name-quality-format">
+                        <SlInput
+                            size="small"
+                            label="Video file name prefix"
+                            name="video-file-name"
+                            value={video.filename || __.recorder.filename}
+                            onSlInput={handleFilenameChange}
+                            disabled={isConverting}
+                        />
+                        <SlSelect
+                            size="small"
+                            label="Output Format"
+                            value={video.format || 'MP4'}
+                            onSlChange={handleFormatChange}
+                            disabled={isConverting}
+                        >
+                            {Object.entries(AVAILABLE_FORMATS).map(([key, format]) => (
+                                <SlOption key={key} value={key}>
+                                    {format.description}
+                                </SlOption>
+                            ))}
+                        </SlSelect>
+                        <SlSelect
+                            size="small"
+                            label="Quality Preset"
+                            value={video.quality || 'MEDIUM'}
+                            onSlChange={handleQualityChange}
+                            disabled={isConverting}
+                        >
+                            {Object.entries(QUALITY_PRESETS).map(([key, preset]) => (
+                                <SlOption key={key} value={key}>
+                                    {preset.description}
+                                </SlOption>
+                            ))}
+                        </SlSelect>
+                    </div>
+                    <div>
+                        Final filename: <code>{finalFilename}</code>
+                    </div>
+                    {isConverting && (
+                        <div>
+                            <SlProgressBar value={conversionProgress}>{conversionProgress}%</SlProgressBar>
+                        </div>
+                    )}
+                    {conversionLogs.length > 0 && (
+                        <SlDetails className="conversion-logs" summary="Conversion Logs">
+                            <SlDivider/>
+                            <LGSScrollbars autoHide autoHeight>
+                                <pre className="lgs-console">{conversionLogs.join('\n')}</pre>
+                            </LGSScrollbars>
+                        </SlDetails>
+                    )}
+                </form>
+            </LGSScrollbars>
             <div slot="footer" id="video-preview-dialog-footer">
-                <SlTooltip content={'Cancel recording'}>
-                    <SlButton
-                        variant="default"
-                        onClick={handleCancel}
-                        disabled={isConverting}
-                    >
+                <SlTooltip content="Cancel recording">
+                    <SlButton onClick={handleCancel} disabled={isConverting}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}/>
-                        {'Cancel'}
+                        Cancel
                     </SlButton>
                 </SlTooltip>
-
                 <SlTooltip content={isConverting ? 'Converting video...' : 'Save your video.'}>
-                    <SlButton
-                        variant="primary"
-                        onClick={handleSave}
-                        disabled={isConverting}
-                    >
-                        <SlIcon
-                            slot="prefix"
-                            library="fa"
-                            name={FA2SL.set(faDownload)}
-                        />
-                        {isConverting
-                         ? `Converting... ${conversionProgress}%`
-                         : 'Download'}
+                    <SlButton variant="primary" onClick={handleSave} disabled={isConverting}>
+                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDownload)}/>
+                        {isConverting ? `Converting... ${conversionProgress}%` : 'Download'}
                     </SlButton>
                 </SlTooltip>
             </div>
         </SlDialog>
-    )
-}
+    );
+};

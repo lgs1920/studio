@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-24
- * Last modified: 2025-07-24
+ * Created on: 2025-07-27
+ * Last modified: 2025-07-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -1016,7 +1016,13 @@ sl-alert::part(message) {
  * Progress Bars
  ******************************************************************************/
 sl-progress-bar {
-    --height: var(--lgs-gutter-xs)
+    margin-top: var(--lgs-gutter-xs);
+    margin-bottom: var(--lgs-gutter-xs);
+    --height: var(--lgs-gutter-s);
+}
+
+sl-progress-bar.normal {
+    --height: var(--lgs-gutter)
 }
 
 /*******************************************************************************
@@ -1169,4 +1175,17 @@ h3 {
 .cesium-selection-wrapper-two {
     fill: chartreuse;
     stroke: chartreuse
+}
+
+
+/*******************************************************************************
+ * Console
+ ******************************************************************************/
+
+.lgs-console {
+    padding: var(--lgs-gutter-xs);
+    white-space: break-word;
+    color: var(--sl-color-gray-100);
+    border-radius: var(--lgs-border-radius-xs);
+    background-color: var(--sl-color-gray-800);
 }
