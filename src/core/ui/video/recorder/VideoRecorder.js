@@ -7,12 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-27
- * Last modified: 2025-07-27
+ * Created on: 2025-08-02
+ * Last modified: 2025-08-02
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
+
+
+import { DateTime } from 'luxon'
 
 /**
  * VideoRecorder - Singleton class to record canvas or media stream
@@ -60,8 +63,8 @@ export class VideoRecorder extends EventTarget {
         this.onStop = null
         this._mimeType = 'video/webm'
         this.filename = 'video' // Default filename
-        this.fps = 24 // Default FPS optimized for Firefox
-        this.bitrate = 4000000 // Default bitrate (4 Mbps) for performance
+        this.fps = 30 // Default FPS
+        this.bitrate = 10000000 // Default bitrate
         this.timeslice = 200 // Default timeslice for SIZE events
         this.maxSize = Infinity
         this.maxDuration = Infinity
@@ -141,7 +144,7 @@ export class VideoRecorder extends EventTarget {
         maxSize = Infinity,
         maxDuration = Infinity,
         fps = 24,
-        bitrate = 4000000,
+        bitrate = 10000000,
         timeslice = 200,
         filename = 'video',
     }                           = {}) {
@@ -377,22 +380,19 @@ export class VideoRecorder extends EventTarget {
             }
 
             this.mediaRecorder.onstop = () => {
-                // console.log('MediaRecorder stopped') // Debug log
                 const blob = new Blob(this.chunks, {type: this._mimeType})
                 const duration = this.duration
 
                 const metadata = {
-                    author:     lgs.servers.studio.name,
-                    date:       new Date().toISOString(),
-                    subtitles:  `Visit ${lgs.servers.site.protocol}://${lgs.servers.site.domain}`,
-                    duration,
-                    totalBytes: this.totalBytes,
+                    artist:      lgs.servers.studio.name,
+                    date:        DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss'),
+                    description: `Visit ${lgs.servers.site.protocol}://${lgs.servers.site.domain}`,
                 }
 
-                this.onStop?.({blob, metadata})
+                this.onStop?.({blob, metadata, duration})
 
                 this.dispatchEvent(new CustomEvent(VideoRecorder.events.STOP, {
-                    detail: {blob, metadata},
+                    detail: {blob, metadata, duration},
                 }))
             }
 

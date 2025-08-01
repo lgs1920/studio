@@ -7,26 +7,31 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-27
- * Last modified: 2025-07-27
+ * Created on: 2025-08-01
+ * Last modified: 2025-08-01
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { LGSScrollbars }              from '@Components/MainUI/LGSScrollbars'
-import { VideoConverter }             from '@Core/ui/video/converter/VideoConverter'
-import { VideoRecorder }              from '@Core/ui/video/recorder/VideoRecorder'
-import { faCog, faDownload, faXmark } from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon }            from '@fortawesome/react-fontawesome'
+import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import {
-    SlButton, SlDetails, SlDialog, SlDivider, SlIcon, SlInput, SlOption, SlProgressBar, SlSelect, SlTooltip,
-}                                     from '@shoelace-style/shoelace/dist/react'
+    VideoConverter,
+}                        from '@Core/ui/video/converter/VideoConverter'
+import {
+    VideoRecorder,
+}                        from '@Core/ui/video/recorder/VideoRecorder'
+import {
+    faDownload, faXmark,
+}                        from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlButton, SlDetails, SlDialog, SlDivider, SlIcon, SlInput, SlOption, SlSelect, SlTooltip, SlProgressBar,
+}                        from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { FA2SL }                      from '@Utils/FA2SL'
-import classNames                     from 'classnames'
+import { FA2SL }         from '@Utils/FA2SL'
+import classNames        from 'classnames'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSnapshot }                from 'valtio/index'
+import { useSnapshot }   from 'valtio/index'
 
 // Constants
 const AVAILABLE_FORMATS = VideoConverter.getAvailableFormats()
@@ -40,12 +45,15 @@ export const VideoPreview = () => {
     const [videoUrl, setVideoUrl] = useState(null)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [videoBlob, setVideoBlob] = useState(null)
+    const [metadata, setMetadata] = useState(null)
+    const [duration, setDuration] = useState(null)
+
     const [isConverting, setIsConverting] = useState(false)
-    const [conversionProgress, setConversionProgress] = useState(0)
     const [conversionLogs, setConversionLogs] = useState([])
     const [estimatedConversionTime, setEstimatedConversionTime] = useState(null)
     const [isEstimating, setIsEstimating] = useState(false)
     const [inputFormat, setInputFormat] = useState(null)
+    const [progressPercentage, setProgressPercentage] = useState(0)
     const dialogRef = useRef(null)
     const converterRef = useRef(null)
     const mainVideoRef = useRef(null)
@@ -71,30 +79,27 @@ export const VideoPreview = () => {
 
         converterRef.current = new VideoConverter({
                                                       onProgress: ({percentage, time}) => {
-                                                          const clampedPercentage = Math.max(0, Math.min(100, percentage || 0))
-                                                          setConversionProgress(clampedPercentage)
-                                                          setConversionLogs((prev) => [...prev, `Progress: ${clampedPercentage}%`])
+                                                          setProgressPercentage(percentage)
+                                                          setConversionLogs((prev) => [
+                                                              ...prev,
+                                                              percentage === 100 ? `Conversion completed: ${percentage}%` : `Progress: ${percentage.toFixed(2)}% (${time}s)`,
+                                                          ])
                                                       },
                                                       onLog:      (message) => {
+                                                          console.log(message)
                                                           setConversionLogs((prev) => [...prev, message])
                                                       }
                                                   })
 
-        converterRef.current.loadFFmpeg().catch((error) => {
-            setConversionLogs((prev) => [...prev, `Error: Failed to load FFmpeg: ${error.message}`])
-        })
-
-        const handleStop = ({detail: {blob}}) => {
+        const handleStop = ({detail: {blob, duration, metadata}}) => {
             if (!(blob instanceof Blob) || blob.size === 0) {
                 setConversionLogs((prev) => [
                     ...prev,
                     `Error: Invalid video blob (type: ${blob?.type}, size: ${blob?.size})`,
                 ])
-                alert('Invalid video recorded. Please try again.')
                 return
             }
             const url = URL.createObjectURL(blob)
-            // Determine input format from blob type or filename extension
             const blobExtension = blob.name ? blob.name.split('.').pop().toLowerCase() : ''
             const formatFromMime = Object.keys(AVAILABLE_FORMATS).find(
                 (key) => AVAILABLE_FORMATS[key].mimeType === blob.type,
@@ -107,8 +112,14 @@ export const VideoPreview = () => {
             setVideoBlob(blob)
             setVideoUrl(url)
             setIsDialogOpen(true)
-        }
+            setMetadata(metadata)
+            setDuration(duration)
 
+            setConversionLogs((prev) => [
+                ...prev,
+                `Video blob received: type=${blob.type}, size=${(blob.size / 1000000).toFixed(2)}MB`,
+            ])
+        }
         __.recorder.addEventListener(VideoRecorder.events.STOP, handleStop)
 
         return () => {
@@ -166,11 +177,11 @@ export const VideoPreview = () => {
                 return
             }
             if (video.format === inputFormat) {
-                setEstimatedConversionTime(0) // No conversion needed if formats match
+                setEstimatedConversionTime(0)
                 setIsEstimating(false)
                 return
             }
-            setIsEstimating(true) // Show "Waiting..." immediately
+            setIsEstimating(true)
             try {
                 const estimatedTime = await converterRef.current.getEstimatedTime(
                     videoBlob,
@@ -180,11 +191,10 @@ export const VideoPreview = () => {
                 setEstimatedConversionTime(estimatedTime)
             }
             catch (error) {
-                setEstimatedConversionTime(null)
                 setConversionLogs((prev) => [...prev, `Error estimating conversion time: ${error.message}`])
             }
             finally {
-                setIsEstimating(false) // Return to estimated value or "N/A" after calculation
+                setIsEstimating(false)
             }
         }
 
@@ -220,6 +230,7 @@ export const VideoPreview = () => {
     // Handle save action with conversion and download
     const handleSave = useCallback(async () => {
         if (isConverting) {
+            setConversionLogs((prev) => [...prev, 'Conversion already in progress'])
             return
         }
 
@@ -229,8 +240,8 @@ export const VideoPreview = () => {
         }
 
         setIsConverting(true)
-        setConversionLogs([])
-        setConversionProgress(0)
+        setConversionLogs((prev) => [...prev, 'Starting download process'])
+        setProgressPercentage(0)
 
         try {
             const fileExtension = AVAILABLE_FORMATS[video.format]?.extension || 'webm'
@@ -238,26 +249,46 @@ export const VideoPreview = () => {
             let mimeType = AVAILABLE_FORMATS[video.format]?.mimeType || videoBlob.type
 
             if (video.format !== inputFormat && converterRef.current) {
-                finalBlob = await converterRef.current.convertVideo(videoBlob, video.format, {
+                setConversionLogs((prev) => [
+                    ...prev,
+                    `Starting conversion to ${finalFilename}`,
+                ])
+                finalBlob = await converterRef.current.convertVideo(videoBlob, inputFormat, video.format, {
                     quality:        video.quality,
-                    outputFileName: `converted.${fileExtension}`,
+                    outputFileName: finalFilename,
+                    metadata:       metadata,
+                    duration:       duration,
                 })
                 mimeType = AVAILABLE_FORMATS[video.format].mimeType
+                setConversionLogs((prev) => [
+                    ...prev,
+                    `Received converted blob: type=${finalBlob.type}, size=${(finalBlob.size / 1000000).toFixed(2)}MB`,
+                ])
+            }
+            else {
+                setConversionLogs((prev) => [
+                    ...prev,
+                    `No conversion needed, using original blob: type=${finalBlob.type}, size=${(finalBlob.size / 1000000).toFixed(2)}MB`,
+                ])
             }
 
             const url = URL.createObjectURL(new Blob([finalBlob], {type: mimeType}))
+            setConversionLogs((prev) => [...prev, `Created download URL: ${url}`])
             const link = document.createElement('a')
             link.href = url
             link.download = finalFilename
             document.body.appendChild(link)
+            setConversionLogs((prev) => [...prev, `Triggering download for ${finalFilename}`])
             link.click()
             document.body.removeChild(link)
             URL.revokeObjectURL(url)
+            setConversionLogs((prev) => [...prev, `Download initiated for ${finalFilename}`])
 
             setConversionLogs((prev) => [
+                ...prev,
                 finalBlob !== videoBlob
                 ? `Conversion successful: ${video.format} (${(finalBlob.size / 1000000).toFixed(2)} MB)`
-                : '',
+                : `No conversion needed: ${video.format} (${(finalBlob.size / 1000000).toFixed(2)} MB)`,
                 `Downloading: ${finalFilename}`,
             ])
         }
@@ -266,12 +297,14 @@ export const VideoPreview = () => {
         }
         finally {
             setIsConverting(false)
+            setProgressPercentage(0)
         }
     }, [videoBlob, video.format, video.quality, finalFilename, inputFormat])
 
     // Handle cancel action
     const handleCancel = useCallback(() => {
         if (isConverting) {
+            setConversionLogs((prev) => [...prev, 'Cannot cancel while converting'])
             return
         }
         setIsDialogOpen(false)
@@ -282,6 +315,7 @@ export const VideoPreview = () => {
             URL.revokeObjectURL(videoUrl)
         }
         $video.edit = false
+        setConversionLogs((prev) => [...prev, 'Dialog closed and resources cleaned up'])
     }, [isConverting, videoUrl, $video])
 
     // Handle dialog close event
@@ -289,6 +323,7 @@ export const VideoPreview = () => {
         (event) => {
             if (isConverting) {
                 event.preventDefault()
+                setConversionLogs((prev) => [...prev, 'Cannot close dialog during conversion'])
                 return
             }
             if (
@@ -383,17 +418,19 @@ export const VideoPreview = () => {
                     <div>
                         Final filename: <code>{finalFilename}</code>
                     </div>
-                    {/* {isEstimating ? ( */}
-                    {/*     <div>Estimated conversion time: Waiting...</div> */}
-                    {/* ) : ( */}
-                    {/*      <div> */}
-                    {/*          Estimated conversion time: {formatEstimatedTime(estimatedConversionTime)} */}
-                    {/*      </div> */}
-                    {/*  )} */}
-                    {isConverting && (
-                        <div>
-                            <SlProgressBar value={conversionProgress}></SlProgressBar>
-                        </div>
+                    {isEstimating ? (
+                        <div>Estimated conversion time: Waiting...</div>
+                    ) : (
+                         <div>
+                             Estimated conversion time: {formatEstimatedTime(estimatedConversionTime)}
+                         </div>
+                     )}
+                    {progressPercentage > 0 && (
+                        <SlProgressBar
+                            value={progressPercentage}
+                            label="Conversion Progress"
+                            className="conversion-progress"
+                        />
                     )}
                     {conversionLogs.length > 0 && (
                         <SlDetails className="conversion-logs" summary="Conversion Logs">
@@ -418,17 +455,8 @@ export const VideoPreview = () => {
                         variant={isConverting ? 'warning' : 'primary'}
                         onClick={handleSave}
                     >
-                        {isConverting ? (
-                            <>
-                                <FontAwesomeIcon slot="prefix" icon={faCog} spin/>
-                                {`Converting... ${conversionProgress}%`}
-                            </>
-                        ) : (
-                             <>
-                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDownload)}/>
-                                 {'Download'}
-                             </>
-                         )}
+                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDownload)}/>
+                        {isConverting ? 'Converting...' : 'Download'}
                     </SlButton>
                 </SlTooltip>
             </div>

@@ -7,117 +7,53 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-27
- * Last modified: 2025-07-27
+ * Created on: 2025-08-02
+ * Last modified: 2025-08-02
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-    // VideoConverter class for converting video files using FFmpeg.wasm
 export class VideoConverter {
-    // Supported video formats with optimized configurations for SPEED
+    // Supported video formats
     static FORMATS = {
         MP4:  {
-            extension:    'mp4',
-            codec:        'libx264',
-            audioCodec:   'aac',
-            mimeType:     'video/mp4',
-            description:  'MP4 (H.264/AAC)',
+            extension:  'mp4',
+            codec:      'libx264',
+            audioCodec: 'aac',
+            mimeType:   'video/mp4',
+            description: 'MP4 (H.264/AAC)',
             videoFilters: 'format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2',
             extraArgs:  [
                 '-movflags', '+faststart',
-                '-tune', 'zerolatency',
-                '-x264-params', 'ref=1:bframes=0:me=dia:subme=1:trellis=0',
-                '-threads', '0',
                 '-preset', 'ultrafast',
-            ],
-            timeFactor: 0.5,
+            ]
         },
         WEBM: {
-            extension:    'webm',
-            codec:        'libvpx-vp9',
-            audioCodec:   'opus',
-            mimeType:     'video/webm',
-            description:  'WebM (VP9/Opus)',
+            extension:  'webm',
+            codec:      'libvpx-vp9',
+            audioCodec: 'opus',
+            mimeType:   'video/webm',
+            description: 'WebM (VP9/Opus)',
             videoFilters: 'format=yuv420p',
-            extraArgs:    [
+            extraArgs:  [
                 '-speed', '8',
-                '-tile-columns', '4',
-                '-frame-parallel', '1',
                 '-threads', '0',
-                '-deadline', 'realtime',
-                '-cpu-used', '8',
-            ],
-            timeFactor:   0.6,
-        },
-        AVI:  {
-            extension:    'avi',
-            codec:        'mpeg4',
-            audioCodec:   'mp3',
-            mimeType:     'video/x-msvideo',
-            description:  'AVI (MPEG-4/MP3)',
-            videoFilters: 'format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2',
-            extraArgs:  [
-                '-threads', '0',
-                '-qscale:v', '5',
-            ],
-            timeFactor: 0.3,
-        },
-        MOV:  {
-            extension:    'mov',
-            codec:        'libx264',
-            audioCodec:   'aac',
-            mimeType:     'video/quicktime',
-            description:  'MOV (H.264/AAC)',
-            videoFilters: 'format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2',
-            extraArgs:  [
-                '-movflags', '+faststart',
-                '-tune', 'zerolatency',
-                '-preset', 'ultrafast',
-                '-threads', '0',
-            ],
-            timeFactor: 0.5,
-        },
+            ]
+        }
     }
 
-    // Quality presets optimized for SPEED over quality
+    // Quality presets
     static QUALITY_PRESETS = {
-        DRAFT:     {
-            crf:         '30',
-            preset:      'ultrafast',
-            description: 'Draft - very fast',
-            timeFactor:  0.2,
-        },
-        LOW:       {
-            crf:         '28',
-            preset:      'ultrafast',
-            description: 'Low - fast',
-            timeFactor:  0.3,
-        },
         MEDIUM: {
-            crf:        '25',
-            preset:     'veryfast',
+            crf: '25',
+            preset: 'veryfast',
             description: 'Medium - balanced',
-            timeFactor: 0.5,
         },
-        HIGH:      {
+        HIGH:   {
             crf:         '22',
             preset:      'fast',
             description: 'High - slower',
-            timeFactor:  0.8,
-        },
-        EXCELLENT: {
-            crf:         '19',
-            preset:      'medium',
-            description: 'Excellent - slow',
-            timeFactor:  1.2,
-        },
-        PERFECT:   {
-            crf:         '16',
-            preset:      'slow',
-            description: 'Perfect - very slow',
-            timeFactor:  2.0,
         },
     }
 
@@ -126,13 +62,13 @@ export class VideoConverter {
     inputFile = null
     outputFile = null
     conversionData = {
-        success:          false,
-        completed:        false,
-        inputFormat:      null,
-        outputFormat:     null,
+        success:      false,
+        completed:    false,
+        inputFormat:  null,
+        outputFormat: null,
         inputFileDetails: null,
-        conversionTime:   0,
-        errorMessage:     null,
+        conversionTime: 0,
+        errorMessage: null,
     }
 
     /**
@@ -140,20 +76,16 @@ export class VideoConverter {
      * @param {Object} options - Configuration options
      * @param {Function} [options.onProgress] - Callback for progress updates
      * @param {Function} [options.onLog] - Callback for logging messages
+     * @param {Object} [options.backendConfig] - Backend configuration { domain, port }
      */
-    constructor({onProgress, onLog} = {}) {
-        this.ffmpeg = null
-        this.isLoaded = false
+    constructor({onProgress, onLog, backendConfig} = {}) {
         this.onProgress = onProgress || (() => {
         })
         this.onLog = onLog || (() => {
         })
-        this.currentConversion = null
-        this.progressFallback = {
-            startTime:         null,
-            estimatedDuration: null,
-            lastValidProgress: 0,
-        }
+        this.backendConfig = backendConfig || {domain: 'http://dev.lgs1920.fr', port: 3333}
+        this.backendBase = `${this.backendConfig.domain}:${this.backendConfig.port}/convert`
+        this.lastProgressPercentage = 0
     }
 
     /**
@@ -173,434 +105,353 @@ export class VideoConverter {
     }
 
     /**
-     * Loads FFmpeg.wasm and initializes the instance with speed optimizations
-     * @throws {Error} If FFmpeg loading fails
-     */
-    async loadFFmpeg() {
-        if (this.isLoaded) {
-            this.onLog('FFmpeg already loaded')
-            return
-        }
-        try {
-            this.onLog('Loading FFmpeg.wasm...')
-            const {FFmpeg} = await import('@ffmpeg/ffmpeg')
-            const {fetchFile, toBlobURL} = await import('@ffmpeg/util')
-            this.ffmpeg = new FFmpeg()
-            this.fetchFile = fetchFile
-            this.toBlobURL = toBlobURL
-
-            // Optimize log handling - only log errors
-            this.ffmpeg.on('log', ({type, message}) => {
-                if (type === 'error') {
-                    this.onLog(`[${type}] ${message}`)
-                }
-            })
-
-            this.ffmpeg.on('progress', (event) => {
-                const {progress, time} = event
-
-                if (this.currentConversion) {
-                    let percentage = 0
-
-                    // Improved time-based progress calculation
-                    if (time && this.currentConversion.videoDuration) {
-                        const timeInSeconds = time / 1000000
-                        const timeBasedProgress = Math.min(timeInSeconds / this.currentConversion.videoDuration, 1)
-                        percentage = Math.round(timeBasedProgress * 90)
-                        this.progressFallback.lastValidProgress = percentage
-                    }
-                    else if (progress >= 0 && progress <= 1 && !isNaN(progress)) {
-                        // Use FFmpeg progress if valid
-                        percentage = Math.round(progress * 90)
-                        this.progressFallback.lastValidProgress = percentage
-                    }
-                    else {
-                        // Fallback to time estimation
-                        const elapsed = Date.now() - this.currentConversion.startTime
-                        const estimatedProgress = Math.min(this.progressFallback.lastValidProgress + (elapsed / 10000) * 5, 90)
-                        percentage = Math.round(estimatedProgress)
-                    }
-
-                    percentage = Math.max(0, Math.min(90, percentage))
-                    this.onProgress({percentage, time: time || 0})
-                }
-            })
-
-            const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm'
-            const coreURL = await this.toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript')
-            const wasmURL = await this.toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
-
-            await this.ffmpeg.load({coreURL, wasmURL})
-            this.isLoaded = true
-            this.onLog('FFmpeg loaded successfully')
-        }
-        catch (error) {
-            this.onLog(`Failed to load FFmpeg: ${error.message}`)
-            throw new Error(`Failed to load FFmpeg: ${error.message}`)
-        }
-    }
-
-    /**
-     * Estimates the conversion time (optimized for speed)
-     * @param {File|Blob} inputFile - Input video file (WebM)
-     * @param {string} outputFormat - Target format (MP4, WEBM, AVI, MOV)
-     * @param {string} [quality='MEDIUM'] - Quality preset
-     * @returns {Promise<number>} Estimated conversion time in seconds
-     */
-    async getEstimatedTime(inputFile, outputFormat, quality = 'MEDIUM') {
-        if (!(inputFile instanceof File || inputFile instanceof Blob)) {
-            throw new Error('Input must be a File or Blob')
-        }
-        if (!inputFile.type.includes('webm') && !inputFile.name?.toLowerCase().endsWith('.webm')) {
-            throw new Error('Input file must be WebM format')
-        }
-        if (!VideoConverter.FORMATS[outputFormat]) {
-            throw new Error(`Unsupported output format: ${outputFormat}`)
-        }
-        if (!VideoConverter.QUALITY_PRESETS[quality]) {
-            throw new Error(`Unsupported quality preset: ${quality}`)
-        }
-
-        try {
-            // Quick estimation without full video info for speed
-            const fileSizeMB = inputFile.size / 1000000
-            const format = VideoConverter.FORMATS[outputFormat]
-            const qualityPreset = VideoConverter.QUALITY_PRESETS[quality]
-
-            // Simplified estimation based on file size
-            const baseTime = Math.max(5, fileSizeMB * 0.1)
-            const estimatedTime = baseTime * format.timeFactor * qualityPreset.timeFactor
-
-            this.onLog(`Quick estimated conversion time: ${estimatedTime.toFixed(2)}s for ${fileSizeMB.toFixed(2)}MB file`)
-            return Math.max(3, estimatedTime)
-        }
-        catch (error) {
-            this.onLog(`Failed to estimate conversion time: ${error.message}`)
-            return 10
-        }
-    }
-
-    /**
-     * Converts a WebM video with maximum speed optimizations
-     * @param {File|Blob} inputFile - Input video file (WebM)
-     * @param {string} outputFormat - Target format (MP4, WEBM, AVI, MOV)
+     * Converts a video by sending it to the remote API
+     * @param {File|Blob} inputFile - Input video file
+     * @param {string} inputFormat - Input format (e.g., WEBM, MP4)
+     * @param {string} outputFormat - Target format (e.g., MP4, WEBM)
      * @param {Object} [options] - Conversion options
      * @param {string} [options.quality='MEDIUM'] - Quality preset
      * @param {string} [options.outputFileName] - Custom output filename
-     * @param {boolean} [options.fastMode=true] - Enable maximum speed mode
+     * @param {number} [options.duration] - Video duration in milliseconds
      * @returns {Promise<Blob>} Converted video as a Blob
      */
-    async convertVideo(inputFile, outputFormat, options = {}) {
-        if (!this.isLoaded) {
-            await this.loadFFmpeg()
-        }
-
-        // Input validation with early returns
+    async convertVideo(inputFile, inputFormat, outputFormat, options = {}) {
         if (!(inputFile instanceof File || inputFile instanceof Blob) || inputFile.size === 0) {
+            this.onLog(`Invalid input file: type=${inputFile?.type}, size=${inputFile?.size}`)
             throw new Error('Invalid input file')
         }
-        if (!inputFile.type.includes('webm') && !inputFile.name?.toLowerCase().endsWith('.webm')) {
-            throw new Error('Input file must be WebM format')
+        if (!VideoConverter.FORMATS[inputFormat]) {
+            this.onLog(`Invalid input format: ${inputFormat}`)
+            throw new Error(`Unsupported input format: ${inputFormat}`)
+        }
+        if (!VideoConverter.FORMATS[outputFormat]) {
+            this.onLog(`Unsupported output format: ${outputFormat}`)
+            throw new Error(`Unsupported output format: ${outputFormat}`)
         }
 
-        const {quality = 'MEDIUM', outputFileName, fastMode = true} = options
-
-        if (!VideoConverter.FORMATS[outputFormat] || !VideoConverter.QUALITY_PRESETS[quality]) {
-            throw new Error('Invalid format or quality preset')
+        const {quality = 'MEDIUM', outputFileName, duration} = options
+        if (!VideoConverter.QUALITY_PRESETS[quality]) {
+            this.onLog(`Unsupported quality preset: ${quality}`)
+            throw new Error(`Unsupported quality preset: ${quality}`)
         }
 
         const format = VideoConverter.FORMATS[outputFormat]
         const qualityPreset = VideoConverter.QUALITY_PRESETS[quality]
-        const inputFileName = 'input.webm'
+        const inputFileName = `input.${VideoConverter.FORMATS[inputFormat].extension}`
         const outputName = outputFileName || `output.${format.extension}`
+        let eventSource = null
+        let isDone = false
+        let conversionId = null
+        let ssePromise = null
+        let startTime = Date.now()
 
         try {
-            this.conversionData.success = false
-            this.conversionData.completed = false
-
-            this.onLog(`Starting FAST conversion: ${inputFile.name || 'WebM'} → ${outputFormat}`)
-            this.onProgress({percentage: 0, time: 0})
-
-            const startTime = Date.now()
-
-            // Get basic video info first
-            let videoDuration = null
-            let hasAudio = false
-            try {
-                const quickInfo = await this.getVideoInfo(inputFile)
-                videoDuration = quickInfo.duration
-                hasAudio = quickInfo.audioStream !== undefined
-                this.onLog(`Video info: duration=${videoDuration}s, hasAudio=${hasAudio}`)
+            // Initialize conversion data
+            this.conversionData = {
+                success:          false,
+                completed:        false,
+                inputFormat,
+                outputFormat,
+                inputFileDetails: {
+                    name: inputFile.name || 'input',
+                    size: inputFile.size,
+                    type: inputFile.type,
+                },
+                conversionTime:   0,
+                errorMessage:     null,
             }
-            catch (e) {
-                this.onLog(`Warning: Could not get video info: ${e.message}`)
-                videoDuration = Math.max(10, inputFile.size / 1000000)
-                hasAudio = true
-            }
+            this.onLog(`Starting conversion: ${inputFile.name || 'input'} (${inputFormat}) → ${outputFormat} as ${outputName}`)
+            this.onProgress({percentage: 0})
 
-            this.currentConversion = {
-                startTime,
-                inputFileName,
-                outputName,
-                videoDuration,
-            }
+            startTime = Date.now()
 
-            // Write input file
-            const inputData = await this.fetchFile(inputFile)
-            await this.ffmpeg.writeFile(inputFileName, inputData)
-            this.onProgress({percentage: 10, time: 0})
-
-            // Build FFmpeg command
+            // Build FFmpeg command arguments
             const args = [
-                '-i', inputFileName,
                 '-c:v', format.codec,
+                '-vf', format.videoFilters,
+                '-preset', qualityPreset.preset,
+                '-crf', qualityPreset.crf,
             ]
 
-            // Add codec-specific parameters based on format
-            if (format.codec === 'libx264') {
-                args.push(
-                    '-vf', format.videoFilters,
-                    '-preset', qualityPreset.preset,
-                    '-crf', qualityPreset.crf,
-                )
-                if (fastMode) {
-                    args.push('-x264-params', 'ref=1:bframes=0:me=dia:subme=1:trellis=0')
-                }
-            }
-            else if (format.codec === 'mpeg4') {
-                args.push(
-                    '-vf', format.videoFilters,
-                    '-qscale:v', '5',
-                )
-            }
-            else if (format.codec === 'libvpx-vp9') {
-                args.push(
-                    '-vf', format.videoFilters,
-                    '-speed', '8',
-                    '-cpu-used', '8',
-                )
-            }
-
-            // Handle audio
-            if (hasAudio && format.audioCodec) {
+            if (format.audioCodec) {
                 args.push('-c:a', format.audioCodec, '-b:a', '128k')
             }
             else {
                 args.push('-an')
             }
+            args.push(...format.extraArgs, '-y')
 
-            // Add format-specific extra args
-            if (format.extraArgs) {
-                args.push(...format.extraArgs)
+            // Prepare FormData for conversion
+            const formData = new FormData()
+            formData.append('file', inputFile, inputFileName)
+            formData.append('body', JSON.stringify({
+                                                       from:     inputFormat,
+                                                       to:       outputFormat,
+                                                       params:   args,
+                                                       duration: duration,
+                                                   }))
+
+            // Send conversion request with explicit progress tracking request
+            this.onLog(`Sending conversion request to ${this.backendBase}`)
+
+            const response = await lgs.axios.post(this.backendBase, formData, {
+                headers:         {
+                    'Content-Type': 'multipart/form-data',
+                    'Accept':              'application/octet-stream',
+                    'X-Request-Progress':  'true', // Signal that we want progress updates
+                    'X-Progress-Interval': '500', // Request updates every 500ms
+                },
+                responseType:    'blob',
+                withCredentials: true,
+            })
+
+            // Get conversion ID from HTTP headers
+            conversionId = response.headers['x-conversion-id']
+            if (!conversionId) {
+                this.onLog('No conversion ID received from HTTP headers')
+                throw new Error('No conversion ID received')
             }
+            this.onLog(`Received conversion ID from HTTP headers: ${conversionId}`)
 
-            // Final parameters
-            args.push(
-                '-map_metadata', '-1',
-                '-avoid_negative_ts', 'make_zero',
-                '-y',
-                outputName,
-            )
+            // Initialize SSE with conversionId immediately after getting the ID
+            const _sseUrl = `${this.backendBase}/progress/${conversionId}`
+            this.onLog(`Initializing SSE at ${_sseUrl}`)
 
-            this.onLog(`FFmpeg command: ffmpeg ${args.join(' ')}`)
+            // Add parameters to SSE URL for better debugging
+            const sseUrlWithParams = `${_sseUrl}?debug=true&interval=500`
+            this.onLog(`SSE URL with params: ${sseUrlWithParams}`)
 
-            // Execute conversion
-            const execStart = Date.now()
-            const result = await this.ffmpeg.exec(args)
-            const execDuration = (Date.now() - execStart) / 1000
+            // Add a small delay to ensure backend is ready for SSE connection
+            await new Promise(resolve => setTimeout(resolve, 200))
 
-            if (result !== 0) {
-                this.onLog(`FFmpeg execution failed with code ${result}`)
+            eventSource = new EventSource(sseUrlWithParams, {
+                withCredentials: true,
+            })
 
-                // Try fallback command
-                this.onLog('Trying fallback conversion...')
-                const fallbackArgs = [
-                    '-i', inputFileName,
-                    '-c:v', 'libx264',
-                    '-vf', 'format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2',
-                    '-preset', 'ultrafast',
-                    '-crf', '28',
-                    ...(hasAudio ? ['-c:a', 'aac', '-b:a', '128k'] : ['-an']),
-                    '-y',
-                    outputName,
-                ]
+            // Add detailed SSE state logging
+            this.onLog(`EventSource created. ReadyState: ${eventSource.readyState}`)
 
-                this.onLog(`Fallback command: ffmpeg ${fallbackArgs.join(' ')}`)
-                const fallbackResult = await this.ffmpeg.exec(fallbackArgs)
+            ssePromise = new Promise((resolve, reject) => {
+                let hasReceivedData = false
+                let connectionTimeout = null
+                let heartbeatTimeout = null
+                let messageCount = 0
+                let lastProgressTime = Date.now()
 
-                if (fallbackResult !== 0) {
-                    throw new Error(`FFmpeg failed with code ${result}, fallback also failed with code ${fallbackResult}`)
+                // Set a connection timeout
+                connectionTimeout = setTimeout(() => {
+                    if (!hasReceivedData) {
+                        this.onLog('SSE connection timeout - no data received')
+                        eventSource.close()
+                        reject(new Error('SSE connection timeout'))
+                    }
+                }, 15000) // 15 seconds timeout
+
+                // Reset heartbeat timeout on each message
+                const resetHeartbeat = () => {
+                    if (heartbeatTimeout) {
+                        clearTimeout(heartbeatTimeout)
+                    }
+                    heartbeatTimeout = setTimeout(() => {
+                        if (!isDone) {
+                            this.onLog(`SSE heartbeat timeout - no messages for 45s. Last message count: ${messageCount}`)
+                            eventSource.close()
+                            reject(new Error('SSE heartbeat timeout'))
+                        }
+                    }, 45000) // 45 seconds without messages
                 }
+
+                eventSource.onopen = () => {
+                    this.onLog(`SSE connection opened successfully. ReadyState: ${eventSource.readyState}`)
+                    hasReceivedData = true
+                    if (connectionTimeout) {
+                        clearTimeout(connectionTimeout)
+                        connectionTimeout = null
+                    }
+                    resetHeartbeat()
+                }
+
+                eventSource.onmessage = (event) => {
+                    messageCount++
+                    const now = Date.now()
+                    const timeSinceLastProgress = now - lastProgressTime
+
+                    this.onLog(`SSE message #${messageCount} received (${timeSinceLastProgress}ms since last): ${event.data}`)
+                    hasReceivedData = true
+                    resetHeartbeat()
+
+                    try {
+                        const data = JSON.parse(event.data)
+
+                        // Log all received data fields for debugging
+                        this.onLog(`SSE data fields: ${Object.keys(data).join(', ')}`)
+
+                        // Handle heartbeat/keep-alive messages
+                        if (data.type === 'heartbeat' || data.type === 'keepalive') {
+                            this.onLog('SSE heartbeat/keepalive received')
+                            return
+                        }
+
+                        // Handle start message
+                        if (data.started) {
+                            this.onLog(`Conversion started for ID: ${data.conversionId}`)
+                            lastProgressTime = now
+                        }
+
+                        if (data.percentage !== undefined) {
+                            const progressInfo = `Progress update: ${data.percentage.toFixed(2)}% (time: ${data.timeSec || 'N/A'}s)`
+                            this.onLog(progressInfo)
+
+                            // Log progress timing
+                            if (this.lastProgressPercentage !== undefined) {
+                                const progressDiff = data.percentage - this.lastProgressPercentage
+                                this.onLog(`Progress increment: +${progressDiff.toFixed(2)}% in ${timeSinceLastProgress}ms`)
+                            }
+
+                            this.onProgress({
+                                                percentage: Number(data.percentage.toFixed(2)),
+                                                time:       data.timeSec,
+                                            })
+                            this.lastProgressPercentage = data.percentage
+                            lastProgressTime = now
+                        }
+
+                        if (data.done) {
+                            this.onLog(`Conversion completed via SSE. Total messages received: ${messageCount}`)
+                            isDone = true
+                            if (connectionTimeout) {
+                                clearTimeout(connectionTimeout)
+                            }
+                            if (heartbeatTimeout) {
+                                clearTimeout(heartbeatTimeout)
+                            }
+                            eventSource.close()
+                            resolve()
+                        }
+                        else if (data.error) {
+                            this.onLog(`SSE error message: ${data.error}`)
+                            if (connectionTimeout) {
+                                clearTimeout(connectionTimeout)
+                            }
+                            if (heartbeatTimeout) {
+                                clearTimeout(heartbeatTimeout)
+                            }
+                            eventSource.close()
+                            reject(new Error(`Conversion failed: ${data.error}`))
+                        }
+                    }
+                    catch (error) {
+                        this.onLog(`Failed to parse SSE message #${messageCount}: ${error.message}. Raw data: ${event.data}`)
+                        if (isDone) {
+                            this.onLog('Ignoring parse error as conversion is complete')
+                            if (connectionTimeout) {
+                                clearTimeout(connectionTimeout)
+                            }
+                            if (heartbeatTimeout) {
+                                clearTimeout(heartbeatTimeout)
+                            }
+                            eventSource.close()
+                            resolve()
+                        }
+                    }
+                }
+
+                eventSource.onerror = (error) => {
+                    this.onLog(`SSE error event for ${_sseUrl}. ReadyState: ${eventSource.readyState}, Error:`, error)
+
+                    if (isDone) {
+                        this.onLog('Ignoring SSE error as conversion is complete')
+                        if (connectionTimeout) {
+                            clearTimeout(connectionTimeout)
+                        }
+                        if (heartbeatTimeout) {
+                            clearTimeout(heartbeatTimeout)
+                        }
+                        eventSource.close()
+                        resolve()
+                    }
+                    else if (eventSource.readyState === EventSource.CLOSED) {
+                        this.onLog(`SSE connection closed by server. Total messages received: ${messageCount}`)
+                        if (connectionTimeout) {
+                            clearTimeout(connectionTimeout)
+                        }
+                        if (heartbeatTimeout) {
+                            clearTimeout(heartbeatTimeout)
+                        }
+                        reject(new Error(`SSE connection closed for ${_sseUrl}`))
+                    }
+                    else {
+                        this.onLog(`SSE connection error, ReadyState: ${eventSource.readyState}. EventSource will try to reconnect.`)
+                        // EventSource will automatically try to reconnect for CONNECTING state
+                    }
+                }
+            })
+
+            // Wait for SSE completion with a race condition fallback
+            try {
+                await Promise.race([
+                                       ssePromise,
+                                       // Fallback timeout in case SSE completely fails
+                                       new Promise((_, reject) =>
+                                                       setTimeout(() => reject(new Error('SSE process timeout after 10 minutes')), 600000),
+                                       ),
+                                   ])
+            }
+            catch (sseError) {
+                this.onLog(`SSE process failed: ${sseError.message}. Conversion may still be successful.`)
+                // Don't throw here - the conversion might still be successful
+                // The blob response should still be valid
             }
 
-            this.onProgress({percentage: 90, time: 0})
-
-            // Read output
-            const outputData = await this.ffmpeg.readFile(outputName)
-            if (!outputData || outputData.byteLength === 0) {
-                throw new Error('Output file is empty')
-            }
-
-            const outputBlob = new Blob([outputData], {type: format.mimeType})
-
-            // Log performance metrics
+            // Update conversion data
             const totalTime = (Date.now() - startTime) / 1000
-            const compressionRatio = ((1 - outputBlob.size / inputFile.size) * 100)
+            this.conversionTime = totalTime
+            this.inputFile = inputFile
+            this.outputFile = response.data
+            this.conversionData = {
+                success:          true,
+                completed:        true,
+                inputFormat,
+                outputFormat,
+                inputFileDetails: {
+                    name: inputFile.name || 'input',
+                    size: inputFile.size,
+                    type: inputFile.type,
+                },
+                conversionTime:   totalTime,
+                errorMessage:     null,
+            }
 
-            this.onLog(`FAST conversion completed in ${totalTime.toFixed(2)}s`)
-            this.onLog(`Input: ${(inputFile.size / 1000000).toFixed(2)}MB → Output: ${(outputBlob.size / 1000000).toFixed(2)}MB`)
-            this.onLog(`Compression: ${compressionRatio.toFixed(1)}%, Speed: ${(inputFile.size / 1000000 / totalTime).toFixed(2)} MB/s`)
-
-            this.conversionData.success = true
-            this.conversionData.completed = true
-            this.conversionData.conversionTime = totalTime
-
-            this.onProgress({percentage: 100, time: 0})
-            return outputBlob
-
+            this.onLog(`Conversion completed in ${totalTime.toFixed(2)}s`)
+            return response.data
         }
         catch (error) {
-            this.onLog(`FAST conversion failed: ${error.message}`)
-            this.conversionData.success = false
-            this.conversionData.completed = true
-            this.conversionData.errorMessage = error.message
+            if (eventSource) {
+                eventSource.close()
+            }
+            this.onLog(`Conversion failed: ${error.message}`)
+            this.conversionData = {
+                success:          false,
+                completed:        true,
+                inputFormat,
+                outputFormat,
+                inputFileDetails: {
+                    name: inputFile.name || 'input',
+                    size: inputFile.size,
+                    type: inputFile.type,
+                },
+                conversionTime:   ((Date.now() - startTime) / 1000) || 0,
+                errorMessage:     error.message,
+            }
+            this.onProgress({percentage: 100})
             throw error
         }
-        finally {
-            await this.#cleanupFile(inputFileName)
-            await this.#cleanupFile(outputName)
-            this.currentConversion = null
-        }
     }
 
     /**
-     * Cleans up a file from FFmpeg's virtual filesystem
-     * @param {string} path - File path to clean up
-     * @private
-     */
-    async #cleanupFile(path) {
-        try {
-            if (this.ffmpeg && path) {
-                await this.ffmpeg.deleteFile(path)
-                this.onLog(`File cleaned up: ${path}`)
-            }
-        }
-        catch (error) {
-            this.onLog(`Cleanup failed for ${path}: ${error.message}`)
-        }
-    }
-
-    /**
-     * Gets basic video info quickly (optimized version)
-     * @param {File|Blob} videoFile - Input video file
-     * @returns {Promise<Object>} Basic video metadata
-     */
-    async getVideoInfo(videoFile) {
-        if (!this.isLoaded) {
-            await this.loadFFmpeg()
-        }
-
-        const inputFileName = 'info_input.webm'
-        let logOutput = ''
-
-        try {
-            const logHandler = ({message}) => {
-                logOutput += message + '\n'
-            }
-
-            this.ffmpeg.on('log', logHandler)
-
-            const inputData = await this.fetchFile(videoFile)
-            await this.ffmpeg.writeFile(inputFileName, inputData)
-
-            // Quick probe with timeout
-            await Promise.race([
-                                   this.ffmpeg.exec(['-i', inputFileName, '-t', '0.1', '-f', 'null', '-']),
-                                   new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000)),
-                               ])
-
-            const info = this._parseFFmpegLog(logOutput)
-            info.size = videoFile.size
-            info.type = videoFile.type
-            info.name = videoFile.name
-            info.audioStream = logOutput.includes('Audio:') ? true : undefined
-
-            return info
-
-        }
-        catch (error) {
-            // Return basic fallback info
-            return {
-                duration: Math.max(10, videoFile.size / 2000000),
-                size:     videoFile.size,
-                type:     videoFile.type,
-                name:     videoFile.name,
-                error:    error.message,
-            }
-        }
-        finally {
-            this.ffmpeg.off('log')
-            await this._cleanupFile(inputFileName)
-        }
-    }
-
-    /**
-     * Cleanup file (fire and forget for speed)
-     * @param {string} path - File path
-     * @private
-     */
-    async _cleanupFile(path) {
-        try {
-            if (this.ffmpeg) {
-                // Don't wait for cleanup to complete
-                this.ffmpeg.deleteFile(path).catch(() => {
-                })
-            }
-        }
-        catch (error) {
-            // Ignore cleanup errors
-        }
-    }
-
-    /**
-     * Parse FFmpeg log (simplified)
-     * @param {string} log - FFmpeg log
-     * @returns {Object} Parsed info
-     * @private
-     */
-    _parseFFmpegLog(log) {
-        const info = {}
-
-        // Quick duration extraction
-        const durationMatch = log.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/)
-        if (durationMatch) {
-            info.duration = parseInt(durationMatch[1]) * 3600 +
-                parseInt(durationMatch[2]) * 60 +
-                parseFloat(durationMatch[3])
-        }
-
-        // Quick resolution extraction
-        const resolutionMatch = log.match(/(\d{3,4})x(\d{3,4})/)
-        if (resolutionMatch) {
-            info.resolution = {
-                width: parseInt(resolutionMatch[1]),
-                height: parseInt(resolutionMatch[2]),
-            }
-        }
-
-        return info
-    }
-
-    /**
-     * Destroy converter
+     * Destroys the converter instance
      */
     destroy() {
-        if (this.ffmpeg) {
-            this.ffmpeg.terminate()
-            this.ffmpeg = null
-        }
-        this.isLoaded = false
-        this.currentConversion = null
         this.onLog('VideoConverter destroyed')
     }
 }

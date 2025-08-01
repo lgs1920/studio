@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-26
- * Last modified: 2025-07-26
+ * Created on: 2025-08-01
+ * Last modified: 2025-08-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -105,7 +105,6 @@ export const VideoRecordButton  = (props) => {
         }
         // Configure recorder
         __.recorder.initialize((blob, duration) => {
-            console.log(`Recording complete: ${duration}ms, ${blob.size} bytes`)
         }, undefined, {
             maxSize:     video.maxSize * 1048576,      // MB
             maxDuration: video.maxDuration * MINUTE,   // MilliSeconds
