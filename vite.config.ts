@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-26
- * Last modified: 2025-07-26
+ * Created on: 2025-08-01
+ * Last modified: 2025-08-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -35,8 +35,9 @@ export default defineConfig({
         },
     ],
     server: {
-        host: '0.0.0.0',  // Écoute sur toutes les interfaces
-        port: 5173        // Le port que vous souhaitez utiliser
+        host: 'dev.lgs1920.fr',
+        port: 5173,
+        strictPort: true
     },
 
     define: {
