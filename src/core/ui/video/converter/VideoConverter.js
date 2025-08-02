@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 export class VideoConverter {
-    // Supported video formats
+    // Supported video formats configuration
     static FORMATS = {
         MP4:  {
             extension:  'mp4',
@@ -43,7 +43,7 @@ export class VideoConverter {
         }
     }
 
-    // Quality presets
+    // Quality presets configuration
     static QUALITY_PRESETS = {
         MEDIUM: {
             crf: '25',
@@ -57,7 +57,7 @@ export class VideoConverter {
         },
     }
 
-    // Public attributes
+    // Public attributes to store conversion state
     conversionTime = 0
     inputFile = null
     outputFile = null
@@ -79,12 +79,17 @@ export class VideoConverter {
      * @param {Object} [options.backendConfig] - Backend configuration { domain, port }
      */
     constructor({onProgress, onLog, backendConfig} = {}) {
+        // Initialize progress callback with default empty function
         this.onProgress = onProgress || (() => {
         })
+        // Initialize logging callback with default empty function
         this.onLog = onLog || (() => {
         })
+        // Set backend configuration with default values
         this.backendConfig = backendConfig || {domain: 'http://dev.lgs1920.fr', port: 3333}
+        // Construct base URL for conversion API
         this.backendBase = `${this.backendConfig.domain}:${this.backendConfig.port}/convert`
+        // Track last progress percentage for updates
         this.lastProgressPercentage = 0
     }
 
@@ -93,6 +98,7 @@ export class VideoConverter {
      * @returns {Object} Supported formats configuration
      */
     static getAvailableFormats() {
+        // Return the static FORMATS configuration
         return VideoConverter.FORMATS
     }
 
@@ -101,6 +107,7 @@ export class VideoConverter {
      * @returns {Object} Quality presets configuration
      */
     static getQualityPresets() {
+        // Return the static QUALITY_PRESETS configuration
         return VideoConverter.QUALITY_PRESETS
     }
 
@@ -116,25 +123,32 @@ export class VideoConverter {
      * @returns {Promise<Blob>} Converted video as a Blob
      */
     async convertVideo(inputFile, inputFormat, outputFormat, options = {}) {
+        // Validate input file
         if (!(inputFile instanceof File || inputFile instanceof Blob) || inputFile.size === 0) {
             this.onLog(`Invalid input file: type=${inputFile?.type}, size=${inputFile?.size}`)
             throw new Error('Invalid input file')
         }
+
+        // Validate input format
         if (!VideoConverter.FORMATS[inputFormat]) {
             this.onLog(`Invalid input format: ${inputFormat}`)
             throw new Error(`Unsupported input format: ${inputFormat}`)
         }
+
+        // Validate output format
         if (!VideoConverter.FORMATS[outputFormat]) {
             this.onLog(`Unsupported output format: ${outputFormat}`)
             throw new Error(`Unsupported output format: ${outputFormat}`)
         }
 
+        // Extract and validate options
         const {quality = 'MEDIUM', outputFileName, duration} = options
         if (!VideoConverter.QUALITY_PRESETS[quality]) {
             this.onLog(`Unsupported quality preset: ${quality}`)
             throw new Error(`Unsupported quality preset: ${quality}`)
         }
 
+        // Get format and quality configurations
         const format = VideoConverter.FORMATS[outputFormat]
         const qualityPreset = VideoConverter.QUALITY_PRESETS[quality]
         const inputFileName = `input.${VideoConverter.FORMATS[inputFormat].extension}`
@@ -163,6 +177,7 @@ export class VideoConverter {
             this.onLog(`Starting conversion: ${inputFile.name || 'input'} (${inputFormat}) → ${outputFormat} as ${outputName}`)
             this.onProgress({percentage: 0})
 
+            // Record conversion start time
             startTime = Date.now()
 
             // Build FFmpeg command arguments
@@ -173,15 +188,17 @@ export class VideoConverter {
                 '-crf', qualityPreset.crf,
             ]
 
+            // Add audio codec if specified
             if (format.audioCodec) {
                 args.push('-c:a', format.audioCodec, '-b:a', '128k')
             }
             else {
                 args.push('-an')
             }
+            // Add extra format-specific arguments
             args.push(...format.extraArgs, '-y')
 
-            // Prepare FormData for conversion
+            // Prepare FormData for API request
             const formData = new FormData()
             formData.append('file', inputFile, inputFileName)
             formData.append('body', JSON.stringify({
@@ -191,78 +208,65 @@ export class VideoConverter {
                                                        duration: duration,
                                                    }))
 
-            // Send conversion request with explicit progress tracking request
-            this.onLog(`Sending conversion request to ${this.backendBase}`)
-
+            // Send conversion request to backend
             const response = await lgs.axios.post(this.backendBase, formData, {
-                headers:         {
+                headers:      {
                     'Content-Type': 'multipart/form-data',
                     'Accept':              'application/octet-stream',
-                    'X-Request-Progress':  'true', // Signal that we want progress updates
-                    'X-Progress-Interval': '500', // Request updates every 500ms
+                    'X-Request-Progress':  'true', // Request progress updates
+                    'X-Progress-Interval': '500', // Update interval in milliseconds
                 },
-                responseType:    'blob',
+                responseType: 'blob',
                 withCredentials: true,
             })
 
-            // Get conversion ID from HTTP headers
+            // Extract conversion ID from response headers
             conversionId = response.headers['x-conversion-id']
             if (!conversionId) {
                 this.onLog('No conversion ID received from HTTP headers')
                 throw new Error('No conversion ID received')
             }
-            this.onLog(`Received conversion ID from HTTP headers: ${conversionId}`)
 
-            // Initialize SSE with conversionId immediately after getting the ID
-            const _sseUrl = `${this.backendBase}/progress/${conversionId}`
-            this.onLog(`Initializing SSE at ${_sseUrl}`)
+            // Construct SSE URL for progress tracking
+            const sseUrl = `${this.backendBase}/progress/${conversionId}?debug=true&interval=500`
 
-            // Add parameters to SSE URL for better debugging
-            const sseUrlWithParams = `${_sseUrl}?debug=true&interval=500`
-            this.onLog(`SSE URL with params: ${sseUrlWithParams}`)
-
-            // Add a small delay to ensure backend is ready for SSE connection
+            // Wait briefly to ensure backend is ready for SSE
             await new Promise(resolve => setTimeout(resolve, 200))
 
-            eventSource = new EventSource(sseUrlWithParams, {
+            // Initialize EventSource for progress updates
+            eventSource = new EventSource(sseUrl, {
                 withCredentials: true,
             })
 
-            // Add detailed SSE state logging
-            this.onLog(`EventSource created. ReadyState: ${eventSource.readyState}`)
-
+            // Create promise to handle SSE events
             ssePromise = new Promise((resolve, reject) => {
                 let hasReceivedData = false
                 let connectionTimeout = null
                 let heartbeatTimeout = null
-                let messageCount = 0
-                let lastProgressTime = Date.now()
 
-                // Set a connection timeout
+                // Set connection timeout
                 connectionTimeout = setTimeout(() => {
                     if (!hasReceivedData) {
-                        this.onLog('SSE connection timeout - no data received')
                         eventSource.close()
                         reject(new Error('SSE connection timeout'))
                     }
-                }, 15000) // 15 seconds timeout
+                }, 15000)
 
-                // Reset heartbeat timeout on each message
+                // Manage heartbeat timeout for connection health
                 const resetHeartbeat = () => {
                     if (heartbeatTimeout) {
                         clearTimeout(heartbeatTimeout)
                     }
                     heartbeatTimeout = setTimeout(() => {
                         if (!isDone) {
-                            this.onLog(`SSE heartbeat timeout - no messages for 45s. Last message count: ${messageCount}`)
                             eventSource.close()
                             reject(new Error('SSE heartbeat timeout'))
                         }
-                    }, 45000) // 45 seconds without messages
+                    }, 45000)
                 }
 
+                // Handle SSE connection open
                 eventSource.onopen = () => {
-                    this.onLog(`SSE connection opened successfully. ReadyState: ${eventSource.readyState}`)
                     hasReceivedData = true
                     if (connectionTimeout) {
                         clearTimeout(connectionTimeout)
@@ -271,53 +275,35 @@ export class VideoConverter {
                     resetHeartbeat()
                 }
 
+                // Handle SSE messages
                 eventSource.onmessage = (event) => {
-                    messageCount++
-                    const now = Date.now()
-                    const timeSinceLastProgress = now - lastProgressTime
-
-                    this.onLog(`SSE message #${messageCount} received (${timeSinceLastProgress}ms since last): ${event.data}`)
                     hasReceivedData = true
                     resetHeartbeat()
 
                     try {
                         const data = JSON.parse(event.data)
 
-                        // Log all received data fields for debugging
-                        this.onLog(`SSE data fields: ${Object.keys(data).join(', ')}`)
-
-                        // Handle heartbeat/keep-alive messages
+                        // Handle heartbeat messages
                         if (data.type === 'heartbeat' || data.type === 'keepalive') {
-                            this.onLog('SSE heartbeat/keepalive received')
                             return
                         }
 
-                        // Handle start message
+                        // Handle conversion start
                         if (data.started) {
-                            this.onLog(`Conversion started for ID: ${data.conversionId}`)
-                            lastProgressTime = now
+                            // Conversion started, no additional action needed
                         }
 
+                        // Update progress if percentage is provided
                         if (data.percentage !== undefined) {
-                            const progressInfo = `Progress update: ${data.percentage.toFixed(2)}% (time: ${data.timeSec || 'N/A'}s)`
-                            this.onLog(progressInfo)
-
-                            // Log progress timing
-                            if (this.lastProgressPercentage !== undefined) {
-                                const progressDiff = data.percentage - this.lastProgressPercentage
-                                this.onLog(`Progress increment: +${progressDiff.toFixed(2)}% in ${timeSinceLastProgress}ms`)
-                            }
-
                             this.onProgress({
                                                 percentage: Number(data.percentage.toFixed(2)),
-                                                time:       data.timeSec,
+                                                time: data.timeSec,
                                             })
                             this.lastProgressPercentage = data.percentage
-                            lastProgressTime = now
                         }
 
+                        // Handle completion
                         if (data.done) {
-                            this.onLog(`Conversion completed via SSE. Total messages received: ${messageCount}`)
                             isDone = true
                             if (connectionTimeout) {
                                 clearTimeout(connectionTimeout)
@@ -328,8 +314,8 @@ export class VideoConverter {
                             eventSource.close()
                             resolve()
                         }
+                        // Handle errors
                         else if (data.error) {
-                            this.onLog(`SSE error message: ${data.error}`)
                             if (connectionTimeout) {
                                 clearTimeout(connectionTimeout)
                             }
@@ -341,9 +327,7 @@ export class VideoConverter {
                         }
                     }
                     catch (error) {
-                        this.onLog(`Failed to parse SSE message #${messageCount}: ${error.message}. Raw data: ${event.data}`)
                         if (isDone) {
-                            this.onLog('Ignoring parse error as conversion is complete')
                             if (connectionTimeout) {
                                 clearTimeout(connectionTimeout)
                             }
@@ -356,11 +340,9 @@ export class VideoConverter {
                     }
                 }
 
+                // Handle SSE errors
                 eventSource.onerror = (error) => {
-                    this.onLog(`SSE error event for ${_sseUrl}. ReadyState: ${eventSource.readyState}, Error:`, error)
-
                     if (isDone) {
-                        this.onLog('Ignoring SSE error as conversion is complete')
                         if (connectionTimeout) {
                             clearTimeout(connectionTimeout)
                         }
@@ -371,46 +353,44 @@ export class VideoConverter {
                         resolve()
                     }
                     else if (eventSource.readyState === EventSource.CLOSED) {
-                        this.onLog(`SSE connection closed by server. Total messages received: ${messageCount}`)
                         if (connectionTimeout) {
                             clearTimeout(connectionTimeout)
                         }
                         if (heartbeatTimeout) {
                             clearTimeout(heartbeatTimeout)
                         }
-                        reject(new Error(`SSE connection closed for ${_sseUrl}`))
+                        reject(new Error('SSE connection closed by server'))
                     }
-                    else {
-                        this.onLog(`SSE connection error, ReadyState: ${eventSource.readyState}. EventSource will try to reconnect.`)
-                        // EventSource will automatically try to reconnect for CONNECTING state
-                    }
+                    // EventSource will attempt to reconnect automatically
                 }
             })
 
-            // Wait for SSE completion with a race condition fallback
+            // Wait for SSE completion with timeout
             try {
                 await Promise.race([
                                        ssePromise,
-                                       // Fallback timeout in case SSE completely fails
                                        new Promise((_, reject) =>
-                                                       setTimeout(() => reject(new Error('SSE process timeout after 10 minutes')), 600000),
-                                       ),
+                                                       setTimeout(() => reject(new Error('SSE process timeout after 10 minutes')), 600000)
+                                       )
                                    ])
             }
             catch (sseError) {
-                this.onLog(`SSE process failed: ${sseError.message}. Conversion may still be successful.`)
-                // Don't throw here - the conversion might still be successful
-                // The blob response should still be valid
+                // SSE failure doesn't necessarily mean conversion failed
+                // Continue with response processing
             }
 
-            // Update conversion data
+            // Calculate total conversion time
             const totalTime = (Date.now() - startTime) / 1000
+
+            // Update instance properties
             this.conversionTime = totalTime
             this.inputFile = inputFile
             this.outputFile = response.data
+
+            // Update conversion data
             this.conversionData = {
-                success:          true,
-                completed:        true,
+                success:        true,
+                completed:      true,
                 inputFormat,
                 outputFormat,
                 inputFileDetails: {
@@ -418,21 +398,23 @@ export class VideoConverter {
                     size: inputFile.size,
                     type: inputFile.type,
                 },
-                conversionTime:   totalTime,
-                errorMessage:     null,
+                conversionTime: totalTime,
+                errorMessage:   null,
             }
 
             this.onLog(`Conversion completed in ${totalTime.toFixed(2)}s`)
             return response.data
         }
         catch (error) {
+            // Clean up EventSource if it exists
             if (eventSource) {
                 eventSource.close()
             }
-            this.onLog(`Conversion failed: ${error.message}`)
+
+            // Update conversion data with error information
             this.conversionData = {
-                success:          false,
-                completed:        true,
+                success:        false,
+                completed:      true,
                 inputFormat,
                 outputFormat,
                 inputFileDetails: {
@@ -440,9 +422,11 @@ export class VideoConverter {
                     size: inputFile.size,
                     type: inputFile.type,
                 },
-                conversionTime:   ((Date.now() - startTime) / 1000) || 0,
-                errorMessage:     error.message,
+                conversionTime: ((Date.now() - startTime) / 1000) || 0,
+                errorMessage:   error.message,
             }
+
+            this.onLog(`Conversion failed: ${error.message}`)
             this.onProgress({percentage: 100})
             throw error
         }
@@ -452,6 +436,7 @@ export class VideoConverter {
      * Destroys the converter instance
      */
     destroy() {
+        // Log destruction of the instance
         this.onLog('VideoConverter destroyed')
     }
 }
