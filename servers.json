@@ -5,7 +5,8 @@
     "shortname": "Backend",
     "domain": "dev.lgs1920.fr",
     "protocol": "http",
-    "port": 3333
+    "port": 3333,
+    "ffmpeg": "/home/christian/bin/ffmpeg"
   },
   "studio": {
     "name": "LGS1920 Development Studio",
