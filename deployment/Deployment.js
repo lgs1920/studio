@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-03
- * Last modified: 2025-08-03
+ * Created on: 2025-08-05
+ * Last modified: 2025-08-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -374,7 +374,6 @@ export class Deployment {
             this.configuration.remote.current
         )
         // Save server configuration to servers.json
-        console.log(this.configuration)
         fs.writeFileSync(`${this.localDistPath}/servers.json`, JSON.stringify({
                                                                                   platform: this.platform,
                                                                                   backend:  this.configuration.backend[this.platform],
