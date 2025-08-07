@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-05
- * Last modified: 2025-08-05
+ * Created on: 2025-08-07
+ * Last modified: 2025-08-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,18 +19,19 @@
  *
  * @class VideoConverter
  * @description Handles video conversion through a remote backend API with real-time progress tracking via Server-Sent
- *     Events (SSE)
+ *     Events (SSE) or polling
  * @example
  * const converter = new VideoConverter({
  *   onProgress: ({percentage}) => console.log(`Progress: ${percentage}%`),
  *   onLog: (message) => console.log(message),
- *   backend: 'http://localhost:3333'
- * });
+ *   backend: 'http://localhost:3333',
+ *   sse: true // Use SSE (true) or polling (false)
+ * })
  *
  * const convertedBlob = await converter.convertVideo(file, 'WEBM', 'MP4', {
  *   quality: 'HIGH',
  *   outputFileName: 'my-video.mp4'
- * });
+ * })
  */
 export class VideoConverter {
     // Supported video formats configuration
@@ -100,6 +101,9 @@ export class VideoConverter {
     #heartbeatTimeout = null
     #hasReceivedData = false
     #isDone = false
+    #pollInterval = null
+    #pollDelay = 2000
+    #sse = true
 
     /**
      * Creates an instance of VideoConverter
@@ -109,18 +113,20 @@ export class VideoConverter {
      *     number}
      * @param {Function} [options.onLog] - Callback for logging messages. Receives string message
      * @param {string} options.backend - Backend base URL (e.g., http://dev.lgs1920.fr:3333)
+     * @param {boolean} [options.sse=true] - Use SSE (true) or polling (false) for progress tracking
      * @throws {Error} If backend URL is not provided
      * @memberof VideoConverter
      */
-    constructor({onProgress, onLog, backend} = {}) {
+    constructor({onProgress, onLog, backend, sse = true} = {}) {
         this.onProgress = onProgress || (() => {
         })
         this.onLog = onLog || (() => {
         })
+        this.#sse = sse
         if (!backend) {
             throw new Error('Backend URL is required')
         }
-        // Accept backend URL as provided (e.g., http://dev.lgs1920.fr:3333)
+        // Accept backend URL as provided
         this.backend = `${backend}`
         this.convertURL = `${this.backend}/convert`
         this.lastProgressPercentage = 0
@@ -133,7 +139,7 @@ export class VideoConverter {
      * @returns {Object} Supported formats configuration with codec, extension, and other settings
      * @memberof VideoConverter
      */
-    static getAvailableFormats() {
+    static getAvailableFormats = () => {
         return VideoConverter.FORMATS
     }
 
@@ -144,7 +150,7 @@ export class VideoConverter {
      * @returns {Object} Quality presets configuration with CRF values and descriptions
      * @memberof VideoConverter
      */
-    static getQualityPresets() {
+    static getQualityPresets = () => {
         return VideoConverter.QUALITY_PRESETS
     }
 
@@ -163,7 +169,7 @@ export class VideoConverter {
      * @throws {Error} If input file is invalid, format is unsupported, or conversion fails
      * @memberof VideoConverter
      */
-    async convertVideo(inputFile, inputFormat, outputFormat, options = {}) {
+    convertVideo = async (inputFile, inputFormat, outputFormat, options = {}) => {
         // Validate input file
         if (!(inputFile instanceof File || inputFile instanceof Blob) || inputFile.size === 0) {
             this.onLog(`Invalid input file: type=${inputFile?.type}, size=${inputFile?.size}`)
@@ -207,22 +213,30 @@ export class VideoConverter {
 
             // Send conversion request
             const response = await this.#sendConversionRequest(formData)
-            const {conversionId, message, urls} = JSON.parse(await response.data.text())
-            this.sseURL = `${this.backend}${urls.progress}?sse=true`
-            this.downloadURL = `${this.backend}${urls.progress}`
+            const {conversionId, message, urls} = await response.json()
+            this.sseURL = this.#sse ? `${this.backend}${urls.progress}?sse=true` : `${this.backend}${urls.progress}?sse=false`
+            this.downloadURL = `${this.backend}${urls.download}`
             this.cancelURL = `${this.backend}${urls.cancel}`
-            console.log(this.backend)
             this.onLog(`Received conversion ID: ${conversionId} with message ${message}`)
 
-            // Initialize and wait for SSE completion
+            // Initialize and wait for completion
             await this.#initializeSSEConnection()
+
+            // Fetch the converted file
+            const downloadResponse = await fetch(this.downloadURL, {
+                credentials: 'include',
+            })
+            if (!downloadResponse.ok) {
+                throw new Error(`Download failed: ${downloadResponse.status}`)
+            }
+            const blob = await downloadResponse.blob()
 
             // Calculate and update final conversion data
             const totalTime = (Date.now() - startTime) / 1000
             this.#updateConversionSuccess(inputFile, inputFormat, outputFormat, totalTime)
 
             this.onLog(`Conversion completed in ${totalTime.toFixed(2)}s`)
-            return response.data
+            return blob
         }
         catch (error) {
             this.#cleanup()
@@ -239,19 +253,21 @@ export class VideoConverter {
      * Helper to read response data for error logging
      *
      * @async
-     * @param {Object} response - Axios response object
+     * @param {Response} response - Fetch response object
      * @returns {Promise<string>} Response data as string
      * @private
      * @memberof VideoConverter
      */
-    async #readResponseData(response) {
-        if (!response.data) {
-            return 'No data'
+    #readResponseData = async (response) => {
+        try {
+            if (!response.body) {
+                return 'No data'
+            }
+            return await response.text()
         }
-        if (response.data instanceof Blob) {
-            return await response.data.text()
+        catch (error) {
+            return 'Error reading response data'
         }
-        return JSON.stringify(response.data)
     }
 
     /**
@@ -263,7 +279,7 @@ export class VideoConverter {
      * @param {string} outputFormat - Output format key
      * @memberof VideoConverter
      */
-    #resetConversionState(inputFile, inputFormat, outputFormat) {
+    #resetConversionState = (inputFile, inputFormat, outputFormat) => {
         this.conversionData = {
             success:          false,
             completed:        false,
@@ -295,7 +311,7 @@ export class VideoConverter {
      * @returns {FormData} Prepared form data for the API request
      * @memberof VideoConverter
      */
-    #buildConversionRequest(inputFile, inputFileName, format, qualityPreset, inputFormat, outputFormat, duration) {
+    #buildConversionRequest = (inputFile, inputFileName, format, qualityPreset, inputFormat, outputFormat, duration) => {
         // Build FFmpeg command arguments
         const args = [
             '-c:v', format.codec,
@@ -320,7 +336,7 @@ export class VideoConverter {
                                                    to:       outputFormat,
                                                    params:   args,
                                                    duration: duration,
-                                                   verbose:  false, // Enable verbose logging for debugging
+                                                   verbose: false,
                                                }))
 
         return formData
@@ -332,64 +348,228 @@ export class VideoConverter {
      * @private
      * @async
      * @param {FormData} formData - Form data to send
-     * @returns {Promise<Object>} Axios response object
+     * @returns {Promise<Response>} Fetch response object
      * @throws {Error} If the request fails
      * @memberof VideoConverter
      */
-    async #sendConversionRequest(formData) {
+    #sendConversionRequest = async (formData) => {
         this.onLog(`Sending POST request to ${this.convertURL}`)
         try {
-            const response = await lgs.axios.post(this.convertURL, formData, {
-                headers:      {
-                    'Content-Type':        'multipart/form-data',
-                    'Accept':              'application/octet-stream',
-                    'X-Request-Progress':  'true',
+            const response = await fetch(this.convertURL, {
+                method:      'POST',
+                body:        formData,
+                credentials: 'include',
+                headers:     {
+                    'X-Request-Progress': 'true',
                     'X-Progress-Interval': '500',
                 },
-                responseType: 'blob',
-                withCredentials: true,
             })
 
-            this.onLog(`Received response: status=${response.status}, headers=${JSON.stringify(response.headers)}`)
+            if (!response.ok) {
+                const errorText = await this.#readResponseData(response)
+                throw new Error(`HTTP error: ${response.status}, ${errorText}`)
+            }
+
+            this.onLog(`Received response: status=${response.status}`)
             return response
         }
-        catch (axiosError) {
-            let errorDetails = `Axios POST error: ${axiosError.message}`
-            if (axiosError.response) {
-                errorDetails += `, status: ${axiosError.response.status}, data: ${await this.#readResponseData(axiosError.response)}`
-            }
-            this.onLog(errorDetails)
-            throw new Error(`Failed to send conversion request: ${axiosError.message}`)
+        catch (error) {
+            this.onLog(`Fetch error: ${error.message}`)
+            throw new Error(`Failed to send conversion request: ${error.message}`)
         }
     }
 
     /**
-     * Initializes the Server-Sent Events connection for progress tracking
+     * Initializes progress tracking via SSE or polling
      *
      * @private
      * @async
      * @returns {Promise<void>} Resolves when conversion is complete
-     * @throws {Error} If SSE connection fails or times out
+     * @throws {Error} If connection or polling fails
      * @memberof VideoConverter
      */
-    async #initializeSSEConnection() {
-        this.onLog(`Initiating SSE connection: ${this.sseURL}`)
-        this.#eventSource = new EventSource(this.sseURL, {
-            withCredentials: true,
-        })
+    #initializeSSEConnection = async () => {
+        this.onLog(`Initiating progress tracking: ${this.sseURL} (sse=${this.#sse})`)
 
         return new Promise((resolve, reject) => {
             // Set connection timeout
             this.#connectionTimeout = setTimeout(() => {
                 if (!this.#hasReceivedData) {
                     this.#cleanup()
-                    reject(new Error('SSE connection timeout after 30s'))
+                    reject(new Error('Progress tracking timeout after 30s'))
                 }
             }, 30000) // 30s timeout
 
-            // Setup event listeners
-            this.#setupSSEEventListeners(resolve, reject)
+            if (this.#sse) {
+                // SSE mode
+                this.#eventSource = new EventSource(this.sseURL, {
+                    withCredentials: true,
+                })
+                // Setup event listeners
+                this.#setupSSEEventListeners(resolve, reject)
+            }
+            else {
+                // Polling mode
+                this.#pollProgress(resolve, reject)
+            }
         })
+    }
+
+    /**
+     * Parses SSE-like response for polling mode
+     *
+     * @private
+     * @param {string} text - Raw response text
+     * @returns {Object|null} Parsed event object with event and data properties, or null if invalid
+     * @memberof VideoConverter
+     */
+    #parseSseResponse = (text) => {
+        try {
+            const lines = text.trim().split('\n')
+            let event = null
+            let data = null
+
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].startsWith('event: ')) {
+                    event = lines[i].substring(7).trim()
+                }
+                else if (lines[i].startsWith('data: ')) {
+                    data = JSON.parse(lines[i].substring(6).trim())
+                }
+            }
+
+            if (event && data) {
+                return {event, data}
+            }
+            this.onLog(`Invalid SSE response format: ${text}`)
+            return null
+        }
+        catch (error) {
+            this.onLog(`Failed to parse SSE response: ${error.message}, raw: ${text}`)
+            return null
+        }
+    }
+
+    /**
+     * Polls the progress endpoint periodically
+     *
+     * @private
+     * @param {Function} resolve - Promise resolve function
+     * @param {Function} reject - Promise reject function
+     * @memberof VideoConverter
+     */
+    #pollProgress = (resolve, reject) => {
+        const poll = async () => {
+            try {
+                const response = await fetch(this.sseURL, {
+                    credentials: 'include',
+                    headers:     {
+                        'Accept': 'application/json',
+                    },
+                })
+                if (!response.ok) {
+                    const errorText = await this.#readResponseData(response)
+                    this.onLog(`HTTP error: ${response.status}, response: ${errorText}`)
+                    if (response.status === 500) {
+                        this.onLog('Server error (500), continuing polling')
+                        return
+                    }
+                    throw new Error(`HTTP error: ${response.status}`)
+                }
+
+                const contentType = response.headers.get('Content-Type')
+                const text = await this.#readResponseData(response)
+                this.onLog(`Polling response: ${text}, Content-Type: ${contentType}`)
+
+                let eventData
+                if (contentType && contentType.includes('application/json')) {
+                    // Expected JSON response
+                    try {
+                        const data = JSON.parse(text.trim())
+                        if (!data.success || !data.event || !data.data) {
+                            this.onLog(`Invalid JSON response format: ${text}`)
+                            return
+                        }
+                        eventData = {event: data.event, data: data.data}
+                    }
+                    catch (parseError) {
+                        this.onLog(`Failed to parse JSON response: ${parseError.message}, raw: ${text}`)
+                        return
+                    }
+                }
+                else if (contentType && contentType.includes('text/event-stream')) {
+                    // Fallback to parsing SSE format
+                    eventData = this.#parseSseResponse(text)
+                    if (!eventData) {
+                        return
+                    }
+                }
+                else {
+                    this.onLog(`Unexpected Content-Type: ${contentType}, response: ${text}`)
+                    return
+                }
+
+                // Simulate SSE event
+                const event = {data: JSON.stringify(eventData.data)}
+                console.log('Simulating SSE event:', eventData)
+                this.#hasReceivedData = true
+                this.#clearConnectionTimeout()
+
+                switch (eventData.event) {
+                    case 'start':
+                        this.#handleStartEvent(event)
+                        break
+                    case 'progress':
+                        this.#handleProgressEvent(event)
+                        break
+                    case 'complete':
+                        this.#handleCompleteEvent(event, resolve)
+                        clearInterval(this.#pollInterval)
+                        break
+                    case 'error':
+                        this.#handleErrorEvent(event, reject)
+                        clearInterval(this.#pollInterval)
+                        break
+                    case 'cancelled':
+                        this.#handleCancelledEvent(event, reject)
+                        clearInterval(this.#pollInterval)
+                        break
+                }
+            }
+            catch (error) {
+                this.onLog(`Polling error: ${error.message}`)
+                if (!this.#isDone) {
+                    this.#cleanup()
+                    reject(new Error(`Polling failed: ${error.message}`))
+                }
+            }
+        }
+
+        // Start polling
+        this.#pollInterval = setInterval(poll, this.#pollDelay)
+        poll() // Immediate first poll
+    }
+
+    /**
+     * Handles SSE or polling 'cancelled' event
+     *
+     * @private
+     * @param {Event} event - SSE or simulated polling event object
+     * @param {Function} reject - Promise reject function
+     * @memberof VideoConverter
+     */
+    #handleCancelledEvent = (event, reject) => {
+        this.onLog(`Cancelled event: ${event.data}`)
+        try {
+            const data = JSON.parse(event.data)
+            this.#cleanup()
+            reject(new Error(`Conversion cancelled: ${data.message}`))
+        }
+        catch (error) {
+            this.onLog(`Failed to parse cancelled event: ${error.message}`)
+            this.#cleanup()
+            reject(new Error(`Cancelled event error: ${error.message}`))
+        }
     }
 
     /**
@@ -400,25 +580,26 @@ export class VideoConverter {
      * @param {Function} reject - Promise reject function
      * @memberof VideoConverter
      */
-    #setupSSEEventListeners(resolve, reject) {
+    #setupSSEEventListeners = (resolve, reject) => {
         this.#eventSource.addEventListener('start', (event) => this.#handleStartEvent(event))
         this.#eventSource.addEventListener('progress', (event) => this.#handleProgressEvent(event))
         this.#eventSource.addEventListener('complete', (event) => this.#handleCompleteEvent(event, resolve))
         this.#eventSource.addEventListener('error', (event) => this.#handleErrorEvent(event, reject))
+        this.#eventSource.addEventListener('cancelled', (event) => this.#handleCancelledEvent(event, reject))
         this.#eventSource.addEventListener('heartbeat', (event) => this.#handleHeartbeatEvent(event))
 
         this.#eventSource.onerror = () => this.#handleConnectionError(resolve, reject)
     }
 
     /**
-     * Handles SSE 'start' event
+     * Handles SSE or polling 'start' event
      *
      * @private
-     * @param {Event} event - SSE event object
+     * @param {Event} event - SSE or simulated polling event object
      * @memberof VideoConverter
      */
-    #handleStartEvent(event) {
-        this.onLog(`SSE start event: ${event.data}`)
+    #handleStartEvent = (event) => {
+        this.onLog(`Start event: ${event.data}`)
         try {
             const data = JSON.parse(event.data)
             this.#hasReceivedData = true
@@ -433,14 +614,14 @@ export class VideoConverter {
     }
 
     /**
-     * Handles SSE 'progress' event
+     * Handles SSE or polling 'progress' event
      *
      * @private
-     * @param {Event} event - SSE event object
+     * @param {Event} event - SSE or simulated polling event object
      * @memberof VideoConverter
      */
-    #handleProgressEvent(event) {
-        this.onLog(`SSE progress event: ${event.data}`)
+    #handleProgressEvent = (event) => {
+        this.onLog(`Progress event: ${event.data}`)
         try {
             const data = JSON.parse(event.data)
             this.#hasReceivedData = true
@@ -458,15 +639,17 @@ export class VideoConverter {
     }
 
     /**
-     * Handles SSE 'complete' event
+     * Handles SSE or polling 'complete' event
      *
      * @private
-     * @param {Event} event - SSE event object
+     * @param {Event} event - SSE or simulated polling event object
      * @param {Function} resolve - Promise resolve function
      * @memberof VideoConverter
      */
-    #handleCompleteEvent(event, resolve) {
-        this.onLog(`SSE complete event: ${event.data}`)
+    #handleCompleteEvent = (event, resolve) => {
+        this.onLog(`Complete event: ${event.data}`)
+
+
         try {
             const data = JSON.parse(event.data)
             if (data.done) {
@@ -486,24 +669,24 @@ export class VideoConverter {
     }
 
     /**
-     * Handles SSE 'error' event
+     * Handles SSE or polling 'error' event
      *
      * @private
-     * @param {Event} event - SSE event object
+     * @param {Event} event - SSE or simulated polling event object
      * @param {Function} reject - Promise reject function
      * @memberof VideoConverter
      */
-    #handleErrorEvent(event, reject) {
-        this.onLog(`SSE error event for ${this.sseURL}. ReadyState: ${this.#eventSource.readyState}, Error: ${event.data || 'No data'}`)
+    #handleErrorEvent = (event, reject) => {
+        this.onLog(`Error event: ${event.data}`)
         try {
-            const data = event.data ? JSON.parse(event.data) : {error: 'Unknown SSE error'}
+            const data = JSON.parse(event.data)
             this.#cleanup()
             reject(new Error(`Conversion failed: ${data.error}`))
         }
         catch (error) {
             this.onLog(`Failed to parse error event: ${error.message}`)
             this.#cleanup()
-            reject(new Error(`SSE error: ${error.message}`))
+            reject(new Error(`Error event: ${error.message}`))
         }
     }
 
@@ -514,7 +697,7 @@ export class VideoConverter {
      * @param {Event} event - SSE event object
      * @memberof VideoConverter
      */
-    #handleHeartbeatEvent(event) {
+    #handleHeartbeatEvent = (event) => {
         this.onLog('SSE heartbeat received')
         this.#hasReceivedData = true
         this.#resetHeartbeatTimeout()
@@ -528,8 +711,8 @@ export class VideoConverter {
      * @param {Function} reject - Promise reject function
      * @memberof VideoConverter
      */
-    #handleConnectionError(resolve, reject) {
-        this.onLog(`SSE connection error for ${this.sseURL}. ReadyState: ${this.#eventSource.readyState}`)
+    #handleConnectionError = (resolve, reject) => {
+        this.onLog(`SSE connection error for ${this.sseURL}. ReadyState: ${this.#eventSource?.readyState}`)
         if (this.#isDone) {
             this.onLog('Ignoring SSE error as conversion is complete')
             this.#cleanup()
@@ -548,14 +731,16 @@ export class VideoConverter {
      * @private
      * @memberof VideoConverter
      */
-    #resetHeartbeatTimeout() {
+    #resetHeartbeatTimeout = () => {
+        if (!this.#sse) {
+            return
+        } // No heartbeat in polling mode
         if (this.#heartbeatTimeout) {
             clearTimeout(this.#heartbeatTimeout)
         }
         this.#heartbeatTimeout = setTimeout(() => {
             if (!this.#isDone) {
                 this.#cleanup()
-                // Note: This should trigger a rejection, but we're in a timeout context
                 this.onLog('SSE heartbeat timeout after 45s')
             }
         }, 45000) // 45s timeout
@@ -567,7 +752,7 @@ export class VideoConverter {
      * @private
      * @memberof VideoConverter
      */
-    #clearConnectionTimeout() {
+    #clearConnectionTimeout = () => {
         if (this.#connectionTimeout) {
             clearTimeout(this.#connectionTimeout)
             this.#connectionTimeout = null
@@ -584,7 +769,7 @@ export class VideoConverter {
      * @param {number} totalTime - Total conversion time in seconds
      * @memberof VideoConverter
      */
-    #updateConversionSuccess(inputFile, inputFormat, outputFormat, totalTime) {
+    #updateConversionSuccess = (inputFile, inputFormat, outputFormat, totalTime) => {
         this.conversionData = {
             success:          true,
             completed:        true,
@@ -611,7 +796,7 @@ export class VideoConverter {
      * @param {string} errorMessage - Error message
      * @memberof VideoConverter
      */
-    #updateConversionError(inputFile, inputFormat, outputFormat, totalTime, errorMessage) {
+    #updateConversionError = (inputFile, inputFormat, outputFormat, totalTime, errorMessage) => {
         this.conversionData = {
             success:          false,
             completed:        true,
@@ -628,15 +813,19 @@ export class VideoConverter {
     }
 
     /**
-     * Cleans up resources (event source, timeouts)
+     * Cleans up resources (event source, timeouts, polling interval)
      *
      * @private
      * @memberof VideoConverter
      */
-    #cleanup() {
+    #cleanup = () => {
         if (this.#eventSource) {
             this.#eventSource.close()
             this.#eventSource = null
+        }
+        if (this.#pollInterval) {
+            clearInterval(this.#pollInterval)
+            this.#pollInterval = null
         }
         this.#clearConnectionTimeout()
         if (this.#heartbeatTimeout) {
@@ -651,7 +840,7 @@ export class VideoConverter {
      * @public
      * @memberof VideoConverter
      */
-    destroy() {
+    destroy = () => {
         this.#cleanup()
         this.onLog('VideoConverter destroyed')
     }
