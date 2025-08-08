@@ -7,15 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-02
- * Last modified: 2025-08-02
+ * Created on: 2025-08-08
+ * Last modified: 2025-08-08
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 
-import { DateTime } from 'luxon'
+import { LGS_PROJECT } from '@Core/constants'
+import { DateTime }    from 'luxon'
 
 /**
  * VideoRecorder - Singleton class to record canvas or media stream
@@ -338,7 +339,7 @@ export class VideoRecorder extends EventTarget {
                 clipWidth,
                 clipHeight,
                 preserveAlpha,
-            }
+            },
         }))
     }
 
@@ -387,6 +388,8 @@ export class VideoRecorder extends EventTarget {
                     artist:      lgs.servers.studio.name,
                     date:        DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss'),
                     description: `Visit ${lgs.servers.site.protocol}://${lgs.servers.site.domain}`,
+                    album: LGS_PROJECT,
+                    genre: 'Adventure',
                 }
 
                 this.onStop?.({blob, metadata, duration})

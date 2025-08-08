@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-07
- * Last modified: 2025-08-07
+ * Created on: 2025-08-08
+ * Last modified: 2025-08-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -253,7 +253,6 @@ export const VideoPreview = () => {
             let finalBlob = videoBlob
             let mimeType = AVAILABLE_FORMATS[video.format]?.mimeType || videoBlob.type
 
-            if (video.format !== inputFormat && converterRef.current) {
                 setConversionLogs((prev) => [
                     ...prev,
                     `Starting conversion to ${finalFilename}`,
@@ -269,13 +268,7 @@ export const VideoPreview = () => {
                     ...prev,
                     `Received converted blob: type=${finalBlob.type}, size=${(finalBlob.size / 1000000).toFixed(2)}MB`,
                 ])
-            }
-            else {
-                setConversionLogs((prev) => [
-                    ...prev,
-                    `No conversion needed, using original blob: type=${finalBlob.type}, size=${(finalBlob.size / 1000000).toFixed(2)}MB`,
-                ])
-            }
+
 
             const url = URL.createObjectURL(new Blob([finalBlob], {type: mimeType}))
             setConversionLogs((prev) => [...prev, `Created download URL: ${url}`])

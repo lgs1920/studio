@@ -7,12 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-07
- * Last modified: 2025-08-07
+ * Created on: 2025-08-08
+ * Last modified: 2025-08-08
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
+
+import { LGS_PROJECT } from '@Core/constants'
 
 /**
  * VideoConverter class for converting video files using a remote API
@@ -165,6 +167,7 @@ export class VideoConverter {
      * @param {string} [options.quality='MEDIUM'] - Quality preset key ('MEDIUM', 'HIGH')
      * @param {string} [options.outputFileName] - Custom output filename
      * @param {number} [options.duration] - Video duration in milliseconds for progress calculation
+     * @param {Object} [options.metadata] - Metadata key-value pairs to apply to the output video
      * @returns {Promise<Blob>} Converted video as a Blob
      * @throws {Error} If input file is invalid, format is unsupported, or conversion fails
      * @memberof VideoConverter
@@ -189,7 +192,7 @@ export class VideoConverter {
         }
 
         // Extract and validate options
-        const {quality = 'MEDIUM', outputFileName, duration} = options
+        const {quality = 'MEDIUM', outputFileName, duration, metadata} = options
         if (!VideoConverter.QUALITY_PRESETS[quality]) {
             this.onLog(`Unsupported quality preset: ${quality}`)
             throw new Error(`Unsupported quality preset: ${quality}`)
@@ -202,14 +205,31 @@ export class VideoConverter {
         const outputName = outputFileName || `output.${format.extension}`
         const startTime = Date.now()
 
+        // Merge default metadata with provided metadata, prioritizing provided values
+        const _defaultMetadata = {
+            date:  new Date().toISOString().split('T')[0],
+            album: LGS_PROJECT,
+            genre: 'Adventure',
+        }
+        const _metadata = {..._defaultMetadata, ...metadata}
+
         try {
             // Initialize conversion state
             this.#resetConversionState(inputFile, inputFormat, outputFormat)
             this.onLog(`Starting conversion: ${inputFile.name || 'input'} (${inputFormat}) → ${outputFormat} as ${outputName}`)
+            this.onLog(`Metadata applied: ${JSON.stringify(_metadata)}`)
             this.onProgress({percentage: 0})
 
             // Build FFmpeg arguments and prepare request
-            const formData = this.#buildConversionRequest(inputFile, inputFileName, format, qualityPreset, inputFormat, outputFormat, duration)
+            const formData = this.#buildConversionRequest(inputFile, {
+                inputFileName,
+                format,
+                qualityPreset,
+                inputFormat,
+                outputFormat,
+                duration,
+                metadata: _metadata,
+            })
 
             // Send conversion request
             const response = await this.#sendConversionRequest(formData)
@@ -302,16 +322,20 @@ export class VideoConverter {
      *
      * @private
      * @param {File|Blob} inputFile - Input file
-     * @param {string} inputFileName - Input filename
-     * @param {Object} format - Output format configuration
-     * @param {Object} qualityPreset - Quality preset configuration
-     * @param {string} inputFormat - Input format key
-     * @param {string} outputFormat - Output format key
-     * @param {number} [duration] - Video duration in milliseconds
+     * @param {Object} options - Conversion options
+     * @param {string} options.inputFileName - Input filename
+     * @param {Object} options.format - Output format configuration
+     * @param {Object} options.qualityPreset - Quality preset configuration
+     * @param {string} options.inputFormat - Input format key
+     * @param {string} options.outputFormat - Output format key
+     * @param {number} [options.duration] - Video duration in milliseconds
+     * @param {Object} [options.metadata] - Metadata key-value pairs to apply to the output video
      * @returns {FormData} Prepared form data for the API request
      * @memberof VideoConverter
      */
-    #buildConversionRequest = (inputFile, inputFileName, format, qualityPreset, inputFormat, outputFormat, duration) => {
+    #buildConversionRequest = (inputFile, options) => {
+        const {inputFileName, format, qualityPreset, inputFormat, outputFormat, duration, metadata} = options
+
         // Build FFmpeg command arguments
         const args = [
             '-c:v', format.codec,
@@ -332,10 +356,11 @@ export class VideoConverter {
         const formData = new FormData()
         formData.append('file', inputFile, inputFileName)
         formData.append('body', JSON.stringify({
-                                                   from:     inputFormat,
-                                                   to:       outputFormat,
-                                                   params:   args,
-                                                   duration: duration,
+                                                   from:   inputFormat,
+                                                   to:     outputFormat,
+                                                   params: args,
+                                                   duration,
+                                                   metadata,
                                                    verbose: false,
                                                }))
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-19
- * Last modified: 2025-07-19
+ * Created on: 2025-08-08
+ * Last modified: 2025-08-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -81,6 +81,7 @@ export const platforms = {
 
 
 export const APP_KEY = 'LGS1920'
+export const LGS_PROJECT = 'LGS1920 Project'
 export const SETTINGS_STORE = 'settings'
 export const VAULT_STORE = 'vault'
 export const CURRENT_STORE = 'current'
