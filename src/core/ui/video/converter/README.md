@@ -34,7 +34,8 @@ like `VideoRecorder` and `VideoRecorderToolbar` for a seamless video processing 
   `copy`), or re-encode audio with a specified codec (`encode`).
 - **Quality Presets**: Supports configurable quality settings (`DRAFT`, `MEDIUM`, `HIGH`, `HIGHEST`) for balancing file
   size and quality, applied via FFmpeg `-crf` and `-preset` parameters.
-- **Progress Tracking**: Provides real-time progress updates via callbacks, using SSE or polling for percentage updates.
+- **Progress Tracking**: Provides real-time progress updates via callbacks, including percentage, elapsed time, and
+  video duration for UI integration (e.g., time remaining).
 - **Metadata Support**: Applies custom metadata (e.g., date, album, genre) to the output video.
 - **Custom FFmpeg Arguments**: Configures FFmpeg arguments based on format and quality presets, with support for video
   filters, codecs, and custom encoding options.
@@ -54,7 +55,8 @@ The `VideoConverter` class requires a remote backend API to handle video convers
 2. **Set Up the Backend**:
     - Ensure a compatible backend API is running (e.g., at `http://localhost:3333`) with endpoints for conversion,
       progress tracking, download, and cancellation.
-    - The backend must support FFmpeg-based video conversion and provide SSE or polling for progress updates.
+   - The backend must support FFmpeg-based video conversion and provide SSE or polling for progress updates, including
+     video duration.
 
 3. **Import the Module**:
     - Import the `VideoConverter` class in your JavaScript or React application:
@@ -70,18 +72,21 @@ The `VideoConverter` class requires a remote backend API to handle video convers
 
 ### Basic Example
 
-Convert a WebM file to MP4 with audio removed and debug logging enabled:
+Convert a WebM file to MP4 with audio removed, displaying progress with duration:
 
 ```javascript
 import { VideoConverter } from './VideoConverter.js'
 
 async function convertVideo() {
     const converter = new VideoConverter({
-                                             onProgress: ({percentage}) => console.log(`Progress: ${percentage}%`),
-                                             onLog: (message) => console.log(`[DEBUG] ${message}`),
+                                             onProgress: ({percentage, time, duration}) => {
+                                                 console.log(`Progress: ${percentage}% (${time ? (time / 1000).toFixed(2) : 0}s/${duration ? (duration / 1000).toFixed(2) : 'unknown'}s)`);
+                                                 // Update UI with progress bar and time remaining (duration - time)
+                                             },
+                                             onLog:      (message) => console.log(`[DEBUG] ${message}`),
                                              backend:    'http://localhost:3333',
-                                             sse:   true,
-                                             debug: true // Enable debug logs
+                                             sse:        true,
+                                             debug:      true // Enable debug logs
                                          })
 
     try {
@@ -90,9 +95,9 @@ async function convertVideo() {
 
         // Convert to MP4 with high quality and no audio
         const outputBlob = await converter.convertVideo(inputFile, 'WEBM', 'MP4', {
-            quality:        'HIGH',
+            quality: 'HIGH',
             outputFileName: 'converted-video.mp4',
-            audio:          VideoConverter.AUDIO_ENCODE.NONE
+            audio:   VideoConverter.AUDIO_ENCODE.NONE
         })
 
         // Download the converted video
@@ -102,6 +107,10 @@ async function convertVideo() {
         link.download = 'converted-video.mp4'
         link.click()
         URL.revokeObjectURL(url)
+
+        // Access duration from conversion data
+        const {duration} = converter.getConversionData()
+        console.log(`Video duration: ${duration ? (duration / 1000).toFixed(2) : 'unknown'} seconds`)
     }
     catch (error) {
         console.error('Conversion failed:', error.message)
@@ -116,27 +125,30 @@ convertVideo()
 
 ### Converting a Video
 
-Convert a WebM file to MP4 with high quality, custom metadata, and copied audio:
+Convert a WebM file to MP4 with high quality, copied audio, and duration display:
 
 ```javascript
 import { VideoConverter } from './VideoConverter.js'
 
 async function convertToMP4() {
     const converter = new VideoConverter({
-                                             onProgress: ({percentage}) => console.log(`Progress: ${percentage}%`),
-                                             onLog: (message) => console.log(`[DEBUG] ${message}`),
-                                             backend: 'http://localhost:3333',
-                                             sse:   true,
-                                             debug: true
+                                             onProgress: ({percentage, time, duration}) => {
+                                                 console.log(`Progress: ${percentage}% (${time ? (time / 1000).toFixed(2) : 0}s/${duration ? (duration / 1000).toFixed(2) : 'unknown'}s)`);
+                                                 // Update UI with progress bar and time remaining
+                                             },
+                                             onLog:      (message) => console.log(`[DEBUG] ${message}`),
+                                             backend:    'http://localhost:3333',
+                                             sse:        true,
+                                             debug:      true
                                          })
 
     const inputFile = new File([/* video blob */], 'input.webm', {type: 'video/webm'})
 
     try {
         const outputBlob = await converter.convertVideo(inputFile, 'WEBM', 'MP4', {
-            quality:  'HIGH',
+            quality: 'HIGH',
             outputFileName: 'output.mp4',
-            audio:    VideoConverter.AUDIO_ENCODE.COPY,
+            audio:   VideoConverter.AUDIO_ENCODE.COPY,
             metadata: {
                 title: 'My Video',
                 comment: 'Converted with VideoConverter'
@@ -144,6 +156,8 @@ async function convertToMP4() {
         })
 
         console.log('Converted video size:', outputBlob.size)
+        const {duration} = converter.getConversionData()
+        console.log(`Video duration: ${duration ? (duration / 1000).toFixed(2) : 'unknown'} seconds`)
     }
     catch (error) {
         console.error('Conversion error:', error.message)
@@ -165,7 +179,10 @@ import { VideoConverter } from './VideoConverter.js'
 
 async function convertToAVI() {
     const converter = new VideoConverter({
-                                             onProgress: ({percentage}) => console.log(`Progress: ${percentage}%`),
+                                             onProgress: ({percentage, time, duration}) => {
+                                                 console.log(`Progress: ${percentage}% (${time ? (time / 1000).toFixed(2) : 0}s/${duration ? (duration / 1000).toFixed(2) : 'unknown'}s)`);
+                                                 // Update UI with progress bar and time remaining
+                                             },
                                              onLog:      (message) => console.log(`[DEBUG] ${message}`),
                                              backend:    'http://localhost:3333',
                                              sse:        true,
@@ -176,16 +193,18 @@ async function convertToAVI() {
 
     try {
         const outputBlob = await converter.convertVideo(inputFile, 'MP4', 'AVI', {
-            quality:        'MEDIUM',
+            quality:  'MEDIUM',
             outputFileName: 'output.avi',
-            audio:          VideoConverter.AUDIO_ENCODE.ENCODE,
-            metadata:       {
-                title:   'My AVI Video',
+            audio:    VideoConverter.AUDIO_ENCODE.ENCODE,
+            metadata: {
+                title: 'My AVI Video',
                 comment: 'Converted to AVI with VideoConverter'
             }
         })
 
         console.log('Converted AVI video size:', outputBlob.size)
+        const {duration} = converter.getConversionData()
+        console.log(`Video duration: ${duration ? (duration / 1000).toFixed(2) : 'unknown'} seconds`)
     }
     catch (error) {
         console.error('Conversion error:', error.message)
@@ -207,7 +226,10 @@ import { VideoConverter } from './VideoConverter.js'
 
 async function convertWithCustomEncoding() {
     const converter = new VideoConverter({
-                                             onProgress: ({percentage}) => console.log(`Progress: ${percentage}%`),
+                                             onProgress: ({percentage, time, duration}) => {
+                                                 console.log(`Progress: ${percentage}% (${time ? (time / 1000).toFixed(2) : 0}s/${duration ? (duration / 1000).toFixed(2) : 'unknown'}s)`);
+                                                 // Update UI with progress bar and time remaining
+                                             },
                                              onLog:      (message) => console.log(`[DEBUG] ${message}`),
                                              backend:    'http://localhost:3333',
                                              sse:        true,
@@ -221,17 +243,19 @@ async function convertWithCustomEncoding() {
             outputFileName: 'custom-output.mp4',
             audio:          VideoConverter.AUDIO_ENCODE.ENCODE,
             customEncoding: {
-                codec:      'libx264',
+                codec:     'libx264',
                 audioCodec: 'aac',
-                extraArgs:  ['-crf', '18', '-preset', 'slow', '-b:a', '192k']
+                extraArgs: ['-crf', '18', '-preset', 'slow', '-b:a', '192k']
             },
             metadata:       {
-                title:   'Custom Encoded Video',
+                title: 'Custom Encoded Video',
                 comment: 'Converted with custom FFmpeg settings'
             }
         })
 
         console.log('Custom converted video size:', outputBlob.size)
+        const {duration} = converter.getConversionData()
+        console.log(`Video duration: ${duration ? (duration / 1000).toFixed(2) : 'unknown'} seconds`)
     }
     catch (error) {
         console.error('Conversion error:', error.message)
@@ -250,8 +274,7 @@ convertWithCustomEncoding()
 
 - `VideoConverter.FORMATS`:
     - Object defining supported formats (`MP4`, `WEBM`, `AVI`).
-    - Each format includes `extension`, `codec`, `audioCodec`, `mimeType`, `description`, `videoFilters`, and
-      `extraArgs`.
+  - Each format includes `extension`, `codec`, `audioCodec`, `mimeType`, `description`, `videoFilters`, and `extraArgs`.
     - Example: `{ MP4: { extension: 'mp4', codec: 'libx264', audioCodec: 'aac', ... } }`.
 
 - `VideoConverter.QUALITY_PRESETS`:
@@ -282,11 +305,12 @@ convertWithCustomEncoding()
 1. `constructor({ onProgress, onLog, backend, sse, debug })`
     - Initializes the converter with callbacks and backend configuration.
     - Parameters:
-        - `onProgress`: Function called with `{ percentage, time }` for progress updates.
-      - `onLog`: Function called with log messages when `debug` is `true`.
+        - `onProgress`: Function called with `{ percentage, time, duration }` for progress updates (time and duration in
+          milliseconds).
+        - `onLog`: Function called with log messages when `debug` is `true`.
         - `backend`: String, required backend base URL (e.g., `'http://localhost:3333'`).
         - `sse`: Boolean, use SSE (`true`) or polling (`false`) for progress tracking (default: `true`).
-      - `debug`: Boolean, enable debug logging (default: `false`).
+        - `debug`: Boolean, enable debug logging (default: `false`).
     - Throws: `Error` if backend URL is not provided.
 
 2. `convertVideo(inputFile, inputFormat, outputFormat, options)`
@@ -299,13 +323,17 @@ convertWithCustomEncoding()
     - Returns: `Promise<Blob>` (converted video).
    - Throws: `Error` for invalid inputs, formats, quality presets, audio options, or conversion failures.
 
-3. `destroy()`
+3. `getConversionData()`
+    - Returns the current conversion data, including `duration` (in milliseconds) if provided by the backend.
+    - Example: `{ success: true, duration: 30000, ... }`.
+
+4. `destroy()`
     - Cleans up resources (SSE connections, polling intervals, timeouts).
 
 ## Configuration Options
 
 - **Constructor Options**:
-    - `onProgress`: Callback for progress updates (e.g., `{ percentage: 50, time: 10 }`).
+    - `onProgress`: Callback for progress updates (e.g., `{ percentage: 50, time: 10000, duration: 30000 }`).
     - `onLog`: Callback for debug messages, triggered only when `debug` is `true`.
     - `backend`: Required backend URL (e.g., `'http://localhost:3333'`).
     - `sse`: Boolean, enables SSE (`true`) or polling (`false`) (default: `true`).
@@ -315,7 +343,8 @@ convertWithCustomEncoding()
     - `quality`: Quality preset (`'DRAFT'`, `'MEDIUM'`, `'HIGH'`, `'HIGHEST'`) (default: `'MEDIUM'`). Maps to FFmpeg
       `-crf` and `-preset` parameters.
     - `outputFileName`: Custom output filename (default: `output.<extension>`).
-    - `duration`: Video duration in milliseconds for progress calculation.
+  - `duration`: Optional video duration in milliseconds for progress calculation (overridden by backend-provided
+    duration if available).
     - `metadata`: Object with key-value pairs for video metadata (e.g., `{ title: 'My Video' }`).
     - `customEncoding`: Object with custom FFmpeg settings (optional):
         - `codec`: Video codec (e.g., `libx264`, `libvpx-vp9`, `mpeg4`).
@@ -366,6 +395,8 @@ try {
 }
 catch (error) {
     console.error('Conversion error:', error.message)
+    const {duration} = converter.getConversionData()
+    console.log(`Video duration (if available): ${duration ? (duration / 1000).toFixed(2) : 'unknown'} seconds`)
 }
 ```
 

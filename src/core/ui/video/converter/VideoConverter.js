@@ -24,7 +24,7 @@ import { LGS_PROJECT } from '@Core/constants'
  *     Events (SSE) or polling
  * @example
  * const converter = new VideoConverter({
- *   onProgress: ({percentage}) => console.log(`Progress: ${percentage}%`),
+ *   onProgress: ({percentage, time, duration}) => console.log(`Progress: ${percentage}% (${time}/${duration}ms)`),
  *   onLog: (message) => console.log(message),
  *   backend: 'http://localhost:3333',
  *   sse: true, // Use SSE (true) or polling (false)
@@ -129,6 +129,7 @@ export class VideoConverter {
         outputFormat: null,
         inputFileDetails: null,
         conversionTime: 0,
+        duration: null, // Store video duration in milliseconds
         errorMessage: null,
     }
 
@@ -148,7 +149,7 @@ export class VideoConverter {
      *
      * @param {Object} options - Configuration options
      * @param {Function} [options.onProgress] - Callback for progress updates. Receives {percentage: number, time?:
-     *     number}
+     *     number, duration?: number}
      * @param {Function} [options.onLog] - Callback for logging messages. Receives string message
      * @param {string} options.backend - Backend base URL (e.g., http://dev.lgs1920.fr:3333)
      * @param {boolean} [options.sse=true] - Use SSE (true) or polling (false) for progress tracking
@@ -166,10 +167,19 @@ export class VideoConverter {
         if (!backend) {
             throw new Error('Backend URL is required')
         }
-        // Accept backend URL as provided
         this.backend = `${backend}`
         this.convertURL = `${this.backend}/convert`
         this.lastProgressPercentage = 0
+    }
+
+    /**
+     * Returns the current conversion data
+     *
+     * @returns {Object} Conversion data including duration
+     * @memberof VideoConverter
+     */
+    getConversionData = () => {
+        return this.conversionData
     }
 
     /**
@@ -213,7 +223,7 @@ export class VideoConverter {
      * @param {string} inputFormat - Input format key (e.g., 'WEBM', 'MP4')
      * @param {string} outputFormat - Target format key (e.g., 'MP4', 'WEBM')
      * @param {Object} [options={}] - Conversion options
-     * @param {string} [options.quality='MEDIUM'] - Quality preset key ('MEDIUM', 'HIGH')
+     * @param {string} [options.quality='MEDIUM'] - Quality preset key ('DRAFT', 'MEDIUM', 'HIGH', 'HIGHEST')
      * @param {string} [options.outputFileName] - Custom output filename
      * @param {number} [options.duration] - Video duration in milliseconds for progress calculation
      * @param {Object} [options.metadata] - Metadata key-value pairs to apply to the output video
@@ -255,7 +265,7 @@ export class VideoConverter {
                   duration,
                   metadata,
                   customEncoding,
-                  audio   = VideoConverter.AUDIO_ENCODE.ENCODE,
+                  audio = VideoConverter.AUDIO_ENCODE.ENCODE,
               } = options
         if (!VideoConverter.QUALITY_PRESETS[quality]) {
             if (this.#DEBUG) {
@@ -408,6 +418,7 @@ export class VideoConverter {
                 type: inputFile.type,
             },
             conversionTime: 0,
+            duration: null,
             errorMessage:   null,
         }
         this.#hasReceivedData = false
@@ -451,7 +462,6 @@ export class VideoConverter {
             '-preset', qualityPreset.preset,
         ]
 
-
         // Prepare FormData for API request
         const formData = new FormData()
         formData.append('file', inputFile, inputFileName)
@@ -462,7 +472,7 @@ export class VideoConverter {
                                                    metadata,
                                                    customEncoding: customEncoding,
                                                    audio,
-                                                   verbose: false,
+                                                   verbose: this.#DEBUG, // Enable verbose logging if debug is true
                                                }))
 
         return formData
@@ -792,10 +802,18 @@ export class VideoConverter {
             this.#resetHeartbeatTimeout()
 
             if (data.percentage !== undefined) {
-                if (this.#DEBUG) {
-                    this.onLog(`Progress update: ${data.percentage.toFixed(2)}% (time: ${data.timeSec}s)`)
+                const progressData = {
+                    percentage: Number(data.percentage.toFixed(2)),
+                    time:       data.timeSec !== undefined ? Number(data.timeSec) * 1000 : undefined,
+                    duration:   data.duration !== undefined ? Number(data.duration) : undefined,
                 }
-                this.onProgress({percentage: Number(data.percentage.toFixed(2))})
+                if (data.duration !== undefined) {
+                    this.conversionData.duration = Number(data.duration)
+                }
+                if (this.#DEBUG) {
+                    this.onLog(`Progress update: ${progressData.percentage}% (time: ${data.timeSec}s, duration: ${data.duration}ms)`)
+                }
+                this.onProgress(progressData)
                 this.lastProgressPercentage = data.percentage
             }
         }
@@ -967,6 +985,7 @@ export class VideoConverter {
                 type: inputFile.type,
             },
             conversionTime: totalTime,
+            duration: this.conversionData.duration, // Preserve duration from progress events
             errorMessage:   null,
         }
     }
@@ -994,6 +1013,7 @@ export class VideoConverter {
                 type: inputFile.type,
             },
             conversionTime: totalTime || 0,
+            duration: this.conversionData.duration, // Preserve duration from progress events
             errorMessage:   errorMessage,
         }
     }
