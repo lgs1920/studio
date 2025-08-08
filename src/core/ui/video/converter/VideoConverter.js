@@ -36,45 +36,63 @@ import { LGS_PROJECT } from '@Core/constants'
  * })
  */
 export class VideoConverter {
-    // Supported video formats configuration
     static FORMATS = {
         MP4:  {
-            extension:  'mp4',
-            codec:      'libx264',
+            extension: 'mp4',
+            codec:     'libx264',
             audioCodec: 'aac',
-            mimeType:   'video/mp4',
+            mimeType:  'video/mp4',
             description: 'MP4 (H.264/AAC)',
             videoFilters: 'format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2',
-            extraArgs:  [
-                '-movflags', '+faststart',
-                '-preset', 'ultrafast',
+            extraArgs: [
+                '-movflags', '+faststart', // Enables fast playback start for streaming
             ]
         },
         WEBM: {
-            extension:  'webm',
-            codec:      'libvpx-vp9',
+            extension: 'webm',
+            codec:     'libvpx-vp9',
             audioCodec: 'opus',
-            mimeType:   'video/webm',
+            mimeType:  'video/webm',
             description: 'WebM (VP9/Opus)',
             videoFilters: 'format=yuv420p',
-            extraArgs:  [
-                '-speed', '8',
-                '-threads', '0',
+            extraArgs: [
+                '-speed', '8',             // Encoding speed (higher = faster, lower quality)
+                '-threads', '0',            // Use all available CPU threads
+            ],
+        },
+        AVI:  {
+            extension:    'avi',
+            codec:        'mpeg4',
+            audioCodec:   'mp3',
+            mimeType:     'video/x-msvideo',
+            description:  'AVI (MPEG-4/MP3)',
+            videoFilters: 'format=yuv420p',
+            extraArgs:    [
+                '-qscale:v', '3',           // Variable bitrate quality (lower = better)
             ]
         }
     }
 
-    // Quality presets configuration
     static QUALITY_PRESETS = {
-        MEDIUM: {
-            crf: '25',
-            preset: 'veryfast',
-            description: 'Medium - balanced',
+        DRAFT:   {
+            crf:         '35',                    // Very low quality, suitable for fast previews
+            preset:      'ultrafast',
+            description: 'Draft – ultra-fast, minimal quality',
         },
-        HIGH:   {
-            crf:         '22',
+        MEDIUM: {
+            crf:         '25',                    // Balanced quality and encoding speed
+            preset: 'veryfast',
+            description: 'Medium – balanced quality/speed',
+        },
+        HIGH:    {
+            crf:         '22',                    // High quality, slower encoding
             preset:      'fast',
-            description: 'High - slower',
+            description: 'High – slower, better quality',
+        },
+        HIGHEST: {
+            crf:         '18',                    // Maximum quality, slowest encoding
+            preset:      'slow',
+            description: 'Highest – best quality, slow encoding',
         },
     }
 
