@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-08-09
+ * Last modified: 2025-08-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,7 +18,7 @@ import { faXmark }                    from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'
-import support                        from '../../../src/assets/modals/support.md'
+import { markdown as support } from '../../../src/assets/modals/support.md'
 import { FA2SL } from '@Utils/FA2SL'
 
 

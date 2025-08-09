@@ -7,8 +7,8 @@
   ~ Author : LGS1920 Team
   ~ email: contact@lgs1920.fr
   ~
-  ~ Created on: 2025-05-22
-  ~ Last modified: 2025-05-21
+  ~ Created on: 2025-08-09
+  ~ Last modified: 2025-08-09
   ~
   ~
   ~ Copyright © 2025 LGS1920
@@ -19,6 +19,23 @@
 <head>
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
+
+    <meta content="#000000" name="theme-color"/>
+
+    <!-- PWA Manifest -->
+    <link href="/manifest.json" rel="manifest"/>
+
+    <!-- iOS PWA -->
+    <meta content="yes" name="apple-mobile-web-app-capable">
+    <meta content="black" name="apple-mobile-web-app-status-bar-style">
+    <meta content="LGS1920 Studi
+    o" name="apple-mobile-web-app-title">
+    <link href="/icons/icon-152x152.png" rel="apple-touch-icon">
+
+    <!-- Windows PWA -->
+    <meta content="/icons/icon-144x144.png" name="msapplication-TileImage">
+    <meta content="#000000" name="msapplication-TileColor">
+
     <title>Studio LGS1920 : Replay Your Adventures</title>
     <link href="/assets/images/favicon.png" rel="icon"/>
 
@@ -29,5 +46,19 @@
 <div id="lgs1920-container"></div>
 
 <script src="/src/main.jsx" type="module"></script>
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then((registration) => {
+                    console.log('SW registered: ', registration)
+                })
+                .catch((registrationError) => {
+                    console.log('SW registration failed: ', registrationError)
+                })
+        })
+    }
+</script>
+
 </body>
 </html>

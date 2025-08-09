@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-01
- * Last modified: 2025-07-01
+ * Created on: 2025-08-09
+ * Last modified: 2025-08-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,7 +21,7 @@ import React                          from 'react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'
 import { FA2SL }         from '@Utils/FA2SL'
-import infoText                       from './info-layer.md'
+import { markdown as infoText } from './info-layer.md'
 
 export const InfoLayerModal = () => {
     const editor = lgs.editorSettingsProxy
