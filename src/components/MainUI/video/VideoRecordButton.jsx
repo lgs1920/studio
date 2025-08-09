@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-01
- * Last modified: 2025-08-01
+ * Created on: 2025-08-09
+ * Last modified: 2025-08-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -33,6 +33,7 @@ export const VideoRecordButton  = (props) => {
     // Access global video settings
     const $video = lgs.settings.ui.video
     const video = useSnapshot($video)
+    const $videoSetup = lgs.stores.ui.video.cropper
 
     // Manage recorder events
     useEffect(() => {
@@ -116,8 +117,10 @@ export const VideoRecordButton  = (props) => {
         })
         // Set canvas source
         __.recorder.setSource([lgs.canvas], {
-            width:         lgs.canvas.width,
-            height:        lgs.canvas.height,
+            clipWidth:  $videoSetup.width,
+            clipHeight: $videoSetup.height,
+            clipX:      $videoSetup.x,
+            clipY:      $videoSetup.y,
             preserveAlpha: true,
         })
     }
