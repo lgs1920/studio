@@ -28,9 +28,8 @@
     <!-- iOS PWA -->
     <meta content="yes" name="apple-mobile-web-app-capable">
     <meta content="black" name="apple-mobile-web-app-status-bar-style">
-    <meta content="LGS1920 Studi
-    o" name="apple-mobile-web-app-title">
-    <link href="/icons/icon-152x152.png" rel="apple-touch-icon">
+    <meta content="LGS1920 Studio" name="apple-mobile-web-app-title">
+    <!--    <link href="/icons/icon-152x152.png" rel="apple-touch-icon">-->
 
     <!-- Windows PWA -->
     <meta content="/icons/icon-144x144.png" name="msapplication-TileImage">
@@ -49,12 +48,12 @@
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
+            navigator.serviceWorker.register('/ServiceWorkerPWA.js')
                 .then((registration) => {
                     console.log('SW registered: ', registration)
                 })
                 .catch((registrationError) => {
-                    console.log('SW registration failed: ', registrationError)
+                    console.error('SW registration failed: ', registrationError)
                 })
         })
     }

@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: ServiceWorkerCacheManagement.js
+ * File: ServiceWorkerPWA.js
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -15,7 +15,7 @@
  ******************************************************************************/
 
     // Cache name for storing resources
-const CACHE_NAME = 'lgs1920-studio-v1';
+const CACHE_NAME = 'lgs1920-studio-v1'
 
 // URLs to cache during installation
 const urlsToCache = [
@@ -23,7 +23,7 @@ const urlsToCache = [
     '/static/js/bundle.js',
     '/static/css/main.css',
     '/manifest.json',
-];
+]
 
 /**
  * Handles the Service Worker installation event.
@@ -34,7 +34,7 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log(`[ServiceWorker] Opening cache: ${CACHE_NAME}`)
+                alert(`[ServiceWorker] Opening cache: ${CACHE_NAME}`)
                 return cache.addAll(urlsToCache)
                     .catch((error) => {
                         console.error(`[ServiceWorker] Cache add failed: ${error}`)
@@ -42,7 +42,7 @@ self.addEventListener('install', (event) => {
                     })
             })
             .then(() => {
-                console.log('[ServiceWorker] Installation successful')
+                alert('[ServiceWorker] Installation successful')
                 // Force immediate activation
                 return self.skipWaiting()
             })
@@ -50,7 +50,7 @@ self.addEventListener('install', (event) => {
                 console.error(`[ServiceWorker] Installation error: ${error}`)
             }),
     )
-});
+})
 
 /**
  * Handles the Service Worker activation event.
@@ -64,14 +64,14 @@ self.addEventListener('activate', (event) => {
                 return Promise.all(
                     cacheNames.map((cacheName) => {
                         if (cacheName !== CACHE_NAME) {
-                            console.log(`[ServiceWorker] Deleting outdated cache: ${cacheName}`)
+                            alert(`[ServiceWorker] Deleting outdated cache: ${cacheName}`)
                             return caches.delete(cacheName)
                         }
                     }),
                 )
             })
             .then(() => {
-                console.log('[ServiceWorker] Activation successful')
+                alert('[ServiceWorker] Activation successful')
                 // Take immediate control of pages
                 return self.clients.claim()
             })
@@ -79,7 +79,7 @@ self.addEventListener('activate', (event) => {
                 console.error(`[ServiceWorker] Activation error: ${error}`)
             }),
     )
-});
+})
 
 /**
  * Handles fetch requests using a Cache First strategy.
@@ -97,12 +97,12 @@ self.addEventListener('fetch', (event) => {
             .then((response) => {
                 // Return cached response if available
                 if (response) {
-                    console.log(`[ServiceWorker] Cache hit for: ${event.request.url}`)
+                    alert(`[ServiceWorker] Cache hit for: ${event.request.url}`)
                     return response
                 }
 
                 // Otherwise, fetch from network
-                console.log(`[ServiceWorker] Network fetch for: ${event.request.url}`)
+                alert(`[ServiceWorker] Network fetch for: ${event.request.url}`)
                 return fetch(event.request)
                     .then((networkResponse) => {
                         // Validate response before caching
@@ -115,7 +115,7 @@ self.addEventListener('fetch', (event) => {
                         caches.open(CACHE_NAME)
                             .then((cache) => {
                                 cache.put(event.request, responseToCache)
-                                console.log(`[ServiceWorker] Cached: ${event.request.url}`)
+                                alert(`[ServiceWorker] Cached: ${event.request.url}`)
                             })
                             .catch((error) => {
                                 console.error(`[ServiceWorker] Cache put error: ${error}`)
@@ -126,7 +126,7 @@ self.addEventListener('fetch', (event) => {
                     .catch((error) => {
                         console.error(`[ServiceWorker] Network error for: ${event.request.url}`, error)
                         // TODO: Return fallback response (e.g., offline page)
-                    });
-            })
-    );
-});
+                    })
+            }),
+    )
+})

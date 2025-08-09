@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-17
- * Last modified: 2025-07-17
+ * Created on: 2025-08-09
+ * Last modified: 2025-08-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,6 +23,7 @@ import '@shoelace-style/shoelace/dist/themes/light.css'
 import ResponsiveDevice from '@Components/MainUI/ResponsiveDevice'
 import { SelectionIndicator }      from '@Components/MainUI/SelectionIndicator'
 import { WelcomeModal }            from '@Components/MainUI/WelcomeModal'
+import { PWAInstallButton } from '@Components/PWAInstallButton'
 import {
     APP_EVENT, BASE_ENTITY, BOTTOM, CURRENT_JOURNEY, FOCUS_LAST, FOCUS_STARTER, MOBILE_MAX, OVERLAY_ENTITY,
     POI_STARTER_TYPE,
@@ -232,6 +233,7 @@ export function LGS1920() {
 
                     <MainUI/>
                     <SelectionIndicator/>
+                    <PWAInstallButton/>
                 </>
 
             }
