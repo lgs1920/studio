@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: InitErrorMessage.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-08-09
+ * Last modified: 2025-08-09
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { faArrowsRotate, faTriangleExclamation } from '@fortawesome/pro-regular-svg-icons'
 import { SlAlert, SlButton, SlDialog, SlIcon }   from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                 from '@Utils/FA2SL'
@@ -14,7 +30,7 @@ import parse                                     from 'html-react-parser'
  */
 export const InitErrorMessage = (props) => {
     return (
-        <SlDialog label={`${lgs.settings.applicationName}  stopped!`}
+        <SlDialog label={`${lgs.servers.studio.name}  stopped!`}
                   open={true}
                   id={'init-error-modal'}
                   className={'lgs-theme'}
