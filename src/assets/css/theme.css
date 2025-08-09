@@ -398,8 +398,6 @@ sl-menu-item::part(spinner)::part(base) {
     --lgs-horizontal-panel-offset-left: calc(var(--lgs-vertical-panel-width) + var(--lgs-gutter-xs));
     --lgs-vertical-panel-offset-right: calc(var(--lgs-vertical-panel-width) + var(--lgs-gutter-xs));
     --lgs-horizontal-panel-offset-right: var(--lgs-vertical-panel-offset-right);
-)
-
 }
 
 sl-drawer {
@@ -413,6 +411,7 @@ sl-drawer::part(header) {
     font-family: "Open Sans", var(--sl-font-sans);
     font-weight: 700 !important;
 }
+
 .mobile.portrait sl-drawer {
     --size: var(--lgs-vertical-panel-height)
 }
@@ -510,6 +509,7 @@ sl-card[variant="primary"]::part(base) {
     padding: var(--lgs-gutter-xs);
     border-radius: var(--lgs-border-radius-xs);
 }
+
 /*.lgs-card ::part(base) {*/
 /*    height: var(--lgs-line-dimension);*/
 /*    width: 100%;*/
@@ -767,9 +767,10 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
     position: absolute;
     top: -1000px;
     left: -1000px;
-translate(- 50 %, - 10 px);
     width: 10px;
     height: 50px;
+
+    transform: translate(-50%, -10px);
 }
 
 .lgs-context-menu {
@@ -842,6 +843,7 @@ sl-divider {
 sl-input [slot="suffix"] {
     margin: 0 var(--lgs-gutter-xs);
 }
+
 /*******************************************************************************
  * Ranges
  ******************************************************************************/
@@ -905,6 +907,7 @@ sl-switch[size="x-small"] {
     --height: 10px;
     --width: calc(2 * var(--height));
 }
+
 /*******************************************************************************
  * Alerts
  ******************************************************************************/
