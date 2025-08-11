@@ -45,7 +45,7 @@
     "@turf/nearest-point-on-line": "^7.2.0",
     "@turf/point-to-line-distance": "^7.2.0",
     "@turf/transform-rotate": "^7.2.0",
-    "@zumer/snapdom": "1.9.7",
+    "@zumer/snapdom": "1.9.8",
     "argparse": "^2.0.1",
     "axios": "^1.11.0",
     "babel-plugin-module-resolver": "^5.0.2",
@@ -101,7 +101,7 @@
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.0",
-    "@types/bun": "^1.2.19",
+    "@types/bun": "^1.2.20",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
     "@typescript-eslint/eslint-plugin": "^8.39.0",
