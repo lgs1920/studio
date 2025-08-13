@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-26
- * Last modified: 2025-07-26
+ * Created on: 2025-08-13
+ * Last modified: 2025-08-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -103,7 +103,7 @@ export const MainUI = memo(() => {
 
         const cssConfig = {
             [MENU_START_START]:  {
-                '--primary-buttons-bar-left':          width,
+                '--primary-buttons-bar-left': width,
                 '--primary-buttons-bar-right':         'auto',
                 '--secondary-buttons-bar-left':        'auto',
                 '--secondary-buttons-bar-margin-left': 'auto',
@@ -113,7 +113,7 @@ export const MainUI = memo(() => {
             },
             [MENU_START_END]:    {
                 '--primary-buttons-bar-left':          'auto',
-                '--primary-buttons-bar-right':         0,
+                '--primary-buttons-bar-right': 'var(--right)',
                 '--secondary-buttons-bar-left':        width,
                 '--secondary-buttons-bar-margin-left': 0,
                 '--secondary-buttons-bar-right':       'auto',
@@ -133,12 +133,12 @@ export const MainUI = memo(() => {
             },
             [MENU_END_END]:      {
                 '--primary-buttons-bar-left':          'auto',
-                '--primary-buttons-bar-right':         width,
+                '--primary-buttons-bar-right':  `calc(${width} + var(--right))`,
                 '--secondary-buttons-bar-left':        0,
                 '--secondary-buttons-bar-margin-left': 0,
                 '--secondary-buttons-bar-right':       'auto',
                 '--lgs-horizontal-panel-left':         0,
-                '--lgs-horizontal-panel-width':        `calc(var(--lgs-inner-width) - calc(var(--left) + ${width}))`,
+                '--lgs-horizontal-panel-width': `calc(var(--lgs-inner-width) - calc(var(--left) - var(--right) + ${width}))`,
                 primaryEntrance:                       SECONDARY_ENTRANCE,
                 secondaryEntrance:                     PRIMARY_ENTRANCE,
             },
