@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-08
- * Last modified: 2025-08-08
+ * Created on: 2025-08-15
+ * Last modified: 2025-08-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -81,6 +81,7 @@ export const platforms = {
 
 
 export const APP_KEY = 'LGS1920'
+export const APP_STUDIO = `${APP_KEY} Studio`
 export const LGS_PROJECT = 'LGS1920 Project'
 export const SETTINGS_STORE = 'settings'
 export const VAULT_STORE = 'vault'
@@ -409,3 +410,35 @@ COMPASS_LIGHT           = 2
  ******************************************************************************/
 
 export const LGS_CONTEXT_MENU_HOOK = 'lgs-context-menu-hook'
+
+/** Device type, Navigator, Os, ... **/
+
+export const OS = {
+    windows: 'windows',
+    linux:   'linux',
+    macOS:   'macOS',
+    android: 'android',
+    iOS:     'ios',
+    unknown: 'unknown',
+}
+
+export const ORIENTATION = {
+    portrait:  'portrait',
+    landscape: 'landscape',
+}
+
+export const DEVICE_TYPE = {
+    mobile:  'mobile',
+    tablet:  'tablet',
+    desktop: 'desktop',
+    unknown: 'unknown',
+}
+
+export const NAVIGATOR = {
+    chrome:  'Chrome',
+    firefox: 'Firefox',
+    safari:  'Safari',
+    edge:    'Edge',
+    opera:   'Opera',
+    unknown: 'unknown',
+}
