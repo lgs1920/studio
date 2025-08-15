@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-05
- * Last modified: 2025-08-05
+ * Created on: 2025-08-15
+ * Last modified: 2025-08-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -348,6 +348,17 @@ export class Deployment {
         console.log('    > Preparing files')
         switch (this.product) {
             case 'studio': {
+                // Replace __GITTAG__,__VERSION__ in service-worker-pwa.js
+                const serviceWorkerPath = path.join(this.localDistPath, 'service-worker-pwa.js')
+                if (fs.existsSync(serviceWorkerPath)) {
+                    let serviceWorkerContent = fs.readFileSync(serviceWorkerPath, 'utf8')
+                    serviceWorkerContent = serviceWorkerContent.replace(/__GITTAG__/g, `"${this.tagName}"`)
+                    serviceWorkerContent = serviceWorkerContent.replace(/__VERSION__/g, `"${this.version}"`)
+
+                    fs.writeFileSync(serviceWorkerPath, serviceWorkerContent, 'utf8')
+                    console.log(`    > Git tag ${this.tagName}  and version ${this.version} injected in Service Worker`)
+                }
+
                 break
             }
             case 'backend': {
