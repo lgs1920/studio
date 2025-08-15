@@ -19,9 +19,37 @@ import react from '@vitejs/plugin-react';
 import cesium from 'vite-plugin-cesium';
 import {VitePWA} from 'vite-plugin-pwa';
 import mdPlugin from 'vite-plugin-markdown';
-import data from './public/version.json' with {type: 'json'};
+import data from './public/branch.json' with {type: 'json'};
+import {execSync} from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
-const version = data.studio
+
+function saveBranchInLocal() {
+    return {
+        name: 'inject-git-branch',
+        apply: 'serve',
+        configureServer() {
+            const branchPath = path.resolve(__dirname, 'public/branch.json');
+            const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
+
+            let branchData = {};
+            if (fs.existsSync(branchPath)) {
+                branchData = JSON.parse(fs.readFileSync(branchPath, 'utf-8'));
+            }
+
+            if (branchData.branch !== branch) {
+                branchData.branch = branch;
+                fs.writeFileSync(branchPath, JSON.stringify(branchData, null, 2));
+                console.log(`✅ Git branch "${branch}" injected into branch.json`);
+            } else {
+                console.log(`ℹ️ Git branch "${branch}" already present in branch.json`);
+            }
+        }
+    };
+}
+
+const branch = data.studio
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -38,6 +66,7 @@ export default defineConfig({
             },
         }),
         mdPlugin({mode: ['html', 'markdown']}),
+        saveBranchInLocal()
     ],
     server: {
         allowedHosts: [
@@ -54,7 +83,7 @@ export default defineConfig({
         minify: 'esbuild',
         target: 'esnext',
         chunkSizeWarningLimit: 500000,
-        outDir: `./dist/${version}`,
+        outDir: `./dist/${branch}`,
         rollupOptions: {
             output: {
                 assetFileNames: ({name}) => {
