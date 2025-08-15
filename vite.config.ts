@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-09
- * Last modified: 2025-08-09
+ * Created on: 2025-08-15
+ * Last modified: 2025-08-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -29,50 +29,13 @@ export default defineConfig({
         react(),
         cesium(),
         VitePWA({
-            registerType: 'autoUpdate',
-            workbox: {
-                globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-                maximumFileSizeToCacheInBytes: 50 * 1024 * 1024, // 50 MiB
-                runtimeCaching: [
-                    {
-                        urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
-                        handler: 'StaleWhileRevalidate',
-                        options: {
-                            cacheName: 'google-fonts-stylesheets',
-                        },
-                    },
-                    {
-                        urlPattern: /.*\.(mp4|webm|ogg)$/,
-                        handler: 'CacheFirst',
-                        options: {
-                            cacheName: 'video-cache',
-                            expiration: {
-                                maxEntries: 10,
-                                maxAgeSeconds: 60 * 60 * 24 * 7, // 1 semaine
-                            },
-                        },
-                    }
-                ]
+            registerType: 'prompt',
+            strategies: 'injectManifest',
+            filename: 'service-worker-pwa.js',
+            srcDir: 'public',
+            injectManifest: {
+                injectionPoint: undefined,
             },
-            // manifest: {
-            //     name: 'LGS1920 Studio',
-            //     short_name: 'Studio',
-            //     description: 'LGS1920 Studio Application',
-            //     theme_color: '#000000',
-            //     icons: [
-            //         {
-            //             src: 'icons/icon-192x192.png',
-            //             sizes: '192x192',
-            //             type: 'image/png',
-            //         },
-            //         {
-            //             src: 'icons/icon-512x512.png',
-            //             sizes: '512x512',
-            //             type: 'image/png',
-            //         },
-            //
-            //     ],
-            //}
         }),
         mdPlugin({mode: ['html', 'markdown']}),
     ],
@@ -86,9 +49,6 @@ export default defineConfig({
         strictPort: true
     },
 
-    define: {
-        global: {},
-    },
     build: {
         sourcemap: true,
         minify: 'esbuild',
@@ -127,6 +87,10 @@ export default defineConfig({
             {
                 find: '@Core',
                 replacement: Bun.fileURLToPath(new URL('./src/core', import.meta.url))
+            },
+            {
+                find: '@Locales',
+                replacement: Bun.fileURLToPath(new URL('./src/locales', import.meta.url))
             },
         ]
     },
