@@ -27,7 +27,7 @@
 import {
     APP_STUDIO, BANNER_SHOW_DELAY, BANNER_HIDE_DELAY, BANNER_HIDE_DELAY_INSTALL, NAVIGATOR, SECOND, OS_ICONS,
 }                                                     from '@Core/constants'
-import { faGlobePointer, faMobileArrowDown, faXmark } from '@fortawesome/pro-regular-svg-icons'
+import { faMobileArrowDown, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import {
     SlButton, SlDialog, SlIcon, SlSpinner,
 }                                                     from '@shoelace-style/shoelace/dist/react'
@@ -229,7 +229,7 @@ export const AppUpdate = () => {
                 onSlAfterHide={() => setShowInstructionsDialog(false)}
             >
                 <div slot="label">
-                    <SlIcon slot="prefix" size="small" library="fa" name={FA2SL.set(OS_ICONS[__.device.os])}/>&nbsp;
+                    <SlIcon size="small" library="fa" name={FA2SL.set(OS_ICONS[__.device.os])}/>&nbsp;
                     <span>How to Install {APP_STUDIO}</span>
                 </div>
                 <ReactMarkdown>{browserInstructions}</ReactMarkdown>

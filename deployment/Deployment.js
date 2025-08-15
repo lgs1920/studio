@@ -103,8 +103,6 @@ export class Deployment {
 
         // Get current Git branch
         this.branch = (await this.git.status()).current
-
-
     }
 
     /**
@@ -127,30 +125,18 @@ export class Deployment {
     }
 
     /**
-     * Saves the version and branch information to a JSON file.
-     * Overwrites the existing branch value if present.
+     * Saves the branch information to a JSON file.
+     * Creates or overwrites the branch.json file with the branch value.
      * @returns {Promise<void>} Resolves when the file has been written.
      */
-    saveVersionInfo = async () => {
+    saveBranchInfo = async () => {
         const data = {
-            version: this.version,
-            branch:  this.branch,
+            branch: this.branch,
         }
 
-        // eslint-disable-next-line no-undef
-        const file = Bun.file('./version.json')
-        const existing = await file.json()
-
-        const updated = {
-            ...existing,
-            version: data.version,
-            branch:  data.branch,
-        }
-
-        // eslint-disable-next-line no-undef
-        await Bun.write('./version.json', JSON.stringify(updated, null, 2))
+        // Write the branch data to branch.json, creating the file if it doesn't exist
+        await Bun.write(`${this.localDistPath}/branch.json`, JSON.stringify(data, null, 2))
     }
-
 
     /**
      * Creates a symbolic link on the remote server to maintain consistent app access across releases.
@@ -240,7 +226,8 @@ export class Deployment {
      */
     build = async () => {
         // Remove existing version directory if it exists
-        execSync(`rm -rf ${this.localDistPath}`)
+        execSync(`rm -rf ${this.localDistPath} && mkdir -p ${this.localDistPath}`)
+
         return new Promise((resolve, reject) => {
             console.log(`--- Building ${this.yellow}${this.product} (version: ${this.version} - branch ${this.branch}) ${this.reset} for ${this.platform} ...`)
             let buildCommand
@@ -376,7 +363,6 @@ export class Deployment {
         console.log('    > Preparing files')
         switch (this.product) {
             case 'studio': {
-                // Replace __GITTAG__,__VERSION__ in service-worker-pwa.js
                 const serviceWorkerPath = path.join(this.localDistPath, 'service-worker-pwa.js')
                 if (fs.existsSync(serviceWorkerPath)) {
                     let serviceWorkerContent = fs.readFileSync(serviceWorkerPath, 'utf8')
@@ -423,6 +409,10 @@ export class Deployment {
                                                                               }), 'utf8')
         // Save build date to build.json
         fs.writeFileSync(`${this.localDistPath}/build.json`, JSON.stringify({date: Date.now()}))
+
+        // Save Branch
+        this.saveBranchInfo()
+
         // Zip the distribution
         await this.zip()
     }
