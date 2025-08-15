@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-27
- * Last modified: 2025-07-27
+ * Created on: 2025-08-15
+ * Last modified: 2025-08-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -75,5 +75,15 @@ export const ui = {
             draggable:   true,
             resizable:   true,
         },
+    },
+
+    appUpdate: {
+        isInstallPromptAvailable: false,
+        isUpdateAvailable:        false,
+        version:                  null,
+        build:                    null,
+        installOutcome:           null,
+        promptInstall:            null,
+        applyUpdate:              null,
     },
 }

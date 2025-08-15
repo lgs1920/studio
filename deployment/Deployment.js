@@ -103,6 +103,8 @@ export class Deployment {
 
         // Get current Git branch
         this.branch = (await this.git.status()).current
+
+
     }
 
     /**
@@ -123,6 +125,32 @@ export class Deployment {
             }
         }
     }
+
+    /**
+     * Saves the version and branch information to a JSON file.
+     * Overwrites the existing branch value if present.
+     * @returns {Promise<void>} Resolves when the file has been written.
+     */
+    saveVersionInfo = async () => {
+        const data = {
+            version: this.version,
+            branch:  this.branch,
+        }
+
+        // eslint-disable-next-line no-undef
+        const file = Bun.file('./version.json')
+        const existing = await file.json()
+
+        const updated = {
+            ...existing,
+            version: data.version,
+            branch:  data.branch,
+        }
+
+        // eslint-disable-next-line no-undef
+        await Bun.write('./version.json', JSON.stringify(updated, null, 2))
+    }
+
 
     /**
      * Creates a symbolic link on the remote server to maintain consistent app access across releases.
@@ -352,11 +380,12 @@ export class Deployment {
                 const serviceWorkerPath = path.join(this.localDistPath, 'service-worker-pwa.js')
                 if (fs.existsSync(serviceWorkerPath)) {
                     let serviceWorkerContent = fs.readFileSync(serviceWorkerPath, 'utf8')
-                    serviceWorkerContent = serviceWorkerContent.replace(/__GITTAG__/g, `"${this.tagName}"`)
+                    serviceWorkerContent = serviceWorkerContent.replace(/__BUILD_TIME__/g, `"${this.date}"`)
                     serviceWorkerContent = serviceWorkerContent.replace(/__VERSION__/g, `"${this.version}"`)
+                    serviceWorkerContent = serviceWorkerContent.replace(/__BRANCH__/g, `"${this.branch}"`)
 
                     fs.writeFileSync(serviceWorkerPath, serviceWorkerContent, 'utf8')
-                    console.log(`    > Git tag ${this.tagName}  and version ${this.version} injected in Service Worker`)
+                    console.log(`    > Service Worker updated with date, branch, and version.`)
                 }
 
                 break

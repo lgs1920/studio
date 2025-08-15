@@ -7,8 +7,8 @@
   ~ Author : LGS1920 Team
   ~ email: contact@lgs1920.fr
   ~
-  ~ Created on: 2025-08-09
-  ~ Last modified: 2025-08-09
+  ~ Created on: 2025-08-15
+  ~ Last modified: 2025-08-15
   ~
   ~
   ~ Copyright © 2025 LGS1920
@@ -18,46 +18,44 @@
 <html class="sl-theme-light" lang="en">
 <head>
     <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+          name="viewport">
 
+    <!-- Theme color for Android and browsers -->
     <meta content="#000000" name="theme-color"/>
 
     <!-- PWA Manifest -->
-    <link href="/manifest.json" rel="manifest"/>
+    <link href="/manifest.webmanifest" rel="manifest" type="application/manifest+json">
 
     <!-- iOS PWA -->
+
     <meta content="yes" name="apple-mobile-web-app-capable">
     <meta content="black" name="apple-mobile-web-app-status-bar-style">
-    <meta content="LGS1920 Studio" name="apple-mobile-web-app-title">
-    <!--    <link href="/icons/icon-152x152.png" rel="apple-touch-icon">-->
+    <meta content="LGS Studio" name="apple-mobile-web-app-title">
+    <link href="/assets/icons/app-icons/ios/180.png" rel="apple-touch-icon" sizes="180x180">
+    <link href="/assets/icons/app-icons/ios/167.png" rel="apple-touch-icon" sizes="167x167">
+    <link href="/assets/icons/app-icons/ios/152.png" rel="apple-touch-icon" sizes="152x152">
+    <link href="/assets/icons/app-icons/ios/120.png" rel="apple-touch-icon" sizes="120x120">
+
+
+    <!-- Android and browser icons -->
+    <link href="/assets/images/app-icons/android/android-launchericon-192-192.png" rel="icon" sizes="192x192">
+    <link href="/assets/images/app-icons/android/android-launchericon-512-512.png" rel="icon" sizes="512x512">
 
     <!-- Windows PWA -->
-    <meta content="/icons/icon-144x144.png" name="msapplication-TileImage">
+    <meta content="/assets/images/app-icons/windows/144.png" name="msapplication-TileImage">
     <meta content="#000000" name="msapplication-TileColor">
 
-    <title>Studio LGS1920 : Replay Your Adventures</title>
+    <!-- Favicon for browsers -->
     <link href="/assets/images/favicon.png" rel="icon"/>
 
+    <!-- Page title -->
+    <title>Studio LGS1920: Replay Your Adventures</title>
 </head>
 <body>
-
 <div id="cesium-viewer"></div>
 <div id="lgs1920-container"></div>
 
 <script src="/src/main.jsx" type="module"></script>
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/ServiceWorkerPWA.js')
-                .then((registration) => {
-                    console.log('SW registered: ', registration)
-                })
-                .catch((registrationError) => {
-                    console.error('SW registration failed: ', registrationError)
-                })
-        })
-    }
-</script>
-
 </body>
 </html>

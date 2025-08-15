@@ -14,12 +14,14 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { CESIUM_EVENTS as $CESIUM_EVENTS } from '@Core/events/cesiumEvents'
+import { CESIUM_EVENTS as $CESIUM_EVENTS }        from '@Core/events/cesiumEvents'
 import {
     faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faEarthEurope, faFlagPennant, faFlagSwallowtail,
     faFort, faHouseBlank, faLock, faMap, faMountains, faPlaceOfWorship, faRoad, faSquareParking, faTablePicnic,
     faTelescope, faUnlock, faUser,
-}                                          from '@fortawesome/duotone-regular-svg-icons'
+}                                                 from '@fortawesome/duotone-regular-svg-icons'
+import { faAndroid, faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
+import { faDesktop }                              from '@fortawesome/pro-solid-svg-icons'
 
 export const SLOGAN = 'Replay Your Adventures!'
 /*******************************************************************************
@@ -220,8 +222,6 @@ export const UNLOCKED = 'unlocked'
 /*******************************************************************************
  * UI Click/Touch events
  ******************************************************************************/
-
-
 export const DOUBLE_CLICK_TIMEOUT = 300     // milliseconds
 export const DOUBLE_TAP_TIMEOUT = 300       // milliseconds
 export const LONG_TAP_TIMEOUT = 700         // milliseconds
@@ -411,7 +411,9 @@ COMPASS_LIGHT           = 2
 
 export const LGS_CONTEXT_MENU_HOOK = 'lgs-context-menu-hook'
 
-/** Device type, Navigator, Os, ... **/
+/*******************************************************************************
+ * Device type, Navigator, Os, ...
+ ******************************************************************************/
 
 export const OS = {
     windows: 'windows',
@@ -420,6 +422,15 @@ export const OS = {
     android: 'android',
     iOS:     'ios',
     unknown: 'unknown',
+}
+
+export const OS_ICONS = {
+    windows: faWindows,
+    linux:   faLinux,
+    macOS:   faApple,
+    android: faAndroid,
+    iOS:     faApple,
+    unknown: faDesktop,
 }
 
 export const ORIENTATION = {
@@ -442,3 +453,11 @@ export const NAVIGATOR = {
     opera:   'Opera',
     unknown: 'unknown',
 }
+
+
+/*******************************************************************************
+ * Banners
+ ******************************************************************************/
+export const BANNER_HIDE_DELAY_INSTALL = 3  // Seconds
+export const BANNER_HIDE_DELAY = 7          // Seconds
+export const BANNER_SHOW_DELAY = 5          // Seconds

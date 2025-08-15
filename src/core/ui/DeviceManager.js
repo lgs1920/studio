@@ -14,7 +14,7 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { DEVICE_TYPE, NAVIGATOR, ORIENTATION } from '@Core/constants'
+import { DEVICE_TYPE, NAVIGATOR, ORIENTATION, OS } from '@Core/constants'
 
 /**
  * DeviceManager class to detect device type, orientation, and browser from <body> classes and user agent.
@@ -32,6 +32,7 @@ export class DeviceManager {
 
     // debounce timeout
     #timeout
+
     /**
      * Creates or returns the singleton instance of DeviceManager
      * @returns {DeviceManager} The singleton instance
@@ -44,6 +45,24 @@ export class DeviceManager {
 
         // Initialize user agent
         this.#ua = navigator.userAgent.toLowerCase()
+
+        // OS
+
+        if (this.isIOS) {
+            this.os = OS.iOS
+        }
+        else if (this.isAndroid) {
+            this.os = OS.android
+        }
+        else if (this.isLinux) {
+            this.os = OS.linux
+        }
+        else if (this.isWindows) {
+            this.os = OS.windows
+        }
+        else {
+            this.os = OS.unknown
+        }
 
         // Set singleton instance
         DeviceManager.#instance = this
