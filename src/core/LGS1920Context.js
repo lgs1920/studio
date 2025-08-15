@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-26
- * Last modified: 2025-07-26
+ * Created on: 2025-08-15
+ * Last modified: 2025-08-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,6 +20,7 @@ import {
 }                            from '@Core/constants'
 import { StoresManager }     from '@Core/stores/StoresManager'
 import { AppToolsManager }   from '@Core/ui/AppToolsManager'
+import { AppUpdateManager }  from '@Core/ui/AppUpdateManager'
 import { DeviceManager }     from '@Core/ui/DeviceManager'
 import { Geocoder }          from '@Core/ui/Geocoder'
 import { MenuManager }       from '@Core/ui/MenuManager'
@@ -56,13 +57,14 @@ export class LGS1920Context {
     #ui
     eventHandler = new MouseEventHandler()
     #viewer
+    #lang
+
 
     floatingMenu = {}
     journeys = new Map()
 
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
-
         // Journey Editor store is used to manage the settings of the theJourney in edit
         this.#theJourneyEditorProxy = proxy(theJourneyEditor)
         // Main is global to the app
@@ -73,6 +75,13 @@ export class LGS1920Context {
         this.journeyEditorStore = this.#mainProxy.components.journeyEditor
 
         this.stores = new StoresManager()// TODO change all stores
+
+
+        // Progressive web app ?
+        this.pwa = window.matchMedia('(display-mode: standalone)').matches
+
+        // lang
+        this.#lang = 'en'
 
         // Get the first as current theJourney
         if (this.journeys.size) {
@@ -117,6 +126,22 @@ export class LGS1920Context {
             },
         }
 
+    }
+
+    /**
+     *
+     * @return {string}
+     */
+    get lang() {
+        return this.#lang || 'en'
+    }
+
+    /**
+     *
+     * @param lang
+     */
+    set lang(lang) {
+        this.#lang = lang
     }
 
     /**
@@ -356,8 +381,8 @@ export class LGS1920Context {
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()
         __.recorder = new VideoRecorder()
+        __.updater = new AppUpdateManager()
     }
 
 
 }
-
