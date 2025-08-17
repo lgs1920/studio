@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-15
- * Last modified: 2025-08-15
+ * Created on: 2025-08-17
+ * Last modified: 2025-08-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -49,6 +49,7 @@ function saveBranchInLocal() {
     };
 }
 
+
 const version = data.studio
 
 // https://vitejs.dev/config/
@@ -64,6 +65,8 @@ export default defineConfig({
             injectManifest: {
                 injectionPoint: undefined,
             },
+            manifest: false,
+            manifestFilename: 'manifest.webmanifest'
         }),
         mdPlugin({mode: ['html', 'markdown']}),
         saveBranchInLocal()

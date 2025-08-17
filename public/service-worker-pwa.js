@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-15
- * Last modified: 2025-08-15
+ * Created on: 2025-08-17
+ * Last modified: 2025-08-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,7 +20,20 @@
  * Manages versioning by fetching build.json, version.json, and branch.json
  * Notifies clients of new versions when build time, version, or branch changes
  * Controlled by AppUpdateManager for updates via SKIP_WAITING
+ * Uses Cache Storage with environment-specific cache name based on lgs.platform
  */
+
+/**
+ * Generates a cache name based on the lgs.platform global variable
+ * @returns {string} Cache name specific to the environment
+ */
+const getCacheName = async () => {
+    // Read servers
+    const servers = await fetch('servers.json').then(
+        res => res.json(),
+    )
+    return servers.platform
+}
 
 /**
  * Fetches build metadata from JSON files
@@ -64,6 +77,7 @@ const getBuildMetadata = async () => {
     catch (error) {
         console.error('[Service Worker] Failed to fetch branch.json:', error)
     }
+
     return {buildTime, version, branch}
 }
 
@@ -99,28 +113,38 @@ const notifyNewVersion = async () => {
 }
 
 /**
- * Checks if a new version is available by comparing build metadata
- * Stores previous values in memory for comparison
+ * Checks if a new version is available by comparing build metadata with stored values in Cache Storage
+ * Stores current metadata in Cache Storage for future comparisons
  * @async
- * @returns {boolean} True if a new version is detected
+ * @returns {Promise<boolean>} True if a new version is detected
  */
 const isNewVersionAvailable = async () => {
     try {
         const currentMetadata = await getBuildMetadata()
-        const previousMetadata = self.previousMetadata || {}
+        // Open environment-specific cache
+        const cache = await caches.open(getCacheName())
+        // Retrieve previous metadata from cache
+        const cachedResponse = await cache.match('build_metadata')
+        const previousMetadata = cachedResponse ? await cachedResponse.json() : {}
 
         // Compare current and previous metadata
-        const isNew = previousMetadata.buildTime !== currentMetadata.buildTime ||
-            previousMetadata.version !== currentMetadata.version ||
-            previousMetadata.branch !== currentMetadata.branch
+        const isNew =
+                  previousMetadata.buildTime !== currentMetadata.buildTime ||
+                  previousMetadata.version !== currentMetadata.version ||
+                  previousMetadata.branch !== currentMetadata.branch
 
-        // Store current metadata for next comparison
-        self.previousMetadata = currentMetadata
+        // Store current metadata in cache
+        await cache.put(
+            'build_metadata',
+            new Response(JSON.stringify(currentMetadata), {
+                headers: {'Content-Type': 'application/json'},
+            }),
+        )
 
         return isNew
     }
     catch (error) {
-        console.error('[Service Worker] Failed to check version:', error)
+        console.error('[Service Worker] Failed to check version in Cache Storage:', error)
         return false
     }
 }
@@ -173,7 +197,6 @@ self.addEventListener('message', event => {
         console.info('[Service Worker] Skip waiting requested')
         self.skipWaiting()
     }
-
     if (event.data?.type === 'GET_BUILD_INFO') {
         (async () => {
             const {buildTime, version, branch} = await getBuildMetadata()
