@@ -1,8 +1,9 @@
 {
-    "name": "LGS1920 Studio",
+    "name": "LGS1920 Studio Development",
     "short_name": "Studio",
     "description": "LGS1920 Studio Application",
     "lang": "en",
+    "id":"/",
     "start_url": "/",
     "scope": "/",
     "display": "standalone",
