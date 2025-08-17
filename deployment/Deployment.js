@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-15
- * Last modified: 2025-08-15
+ * Created on: 2025-08-17
+ * Last modified: 2025-08-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,6 +24,7 @@ import { zip }            from 'zip-a-folder'
 
 const fs = require('fs')
 const yaml = require('yaml')
+const STUDIO_APP_NAME = 'LGS1920 Studio Development'
 
 /**
  * Class to manage the deployment of applications to different platforms such as production, staging, and test.
@@ -112,12 +113,10 @@ export class Deployment {
     getVersion = async () => {
         switch (this.product) {
             case 'studio': {
-                // eslint-disable-next-line no-undef
                 const file = Bun.file('./public/version.json')
                 return (await file.json()).studio
             }
             case 'backend': {
-                // eslint-disable-next-line no-undef
                 const file = Bun.file('./version.json')
                 return (await file.json()).backend
             }
@@ -354,6 +353,7 @@ export class Deployment {
 
     /**
      * Handles pre-deployment tasks, such as creating a Git tag and preparing files for deployment.
+     * Updates manifest.webmanifest for studio product by replacing 'Development' in name and short_name.
      * @returns {Promise<void>} Resolves when pre-deployment tasks are complete.
      */
     preDeployment = async () => {
@@ -372,6 +372,23 @@ export class Deployment {
 
                     fs.writeFileSync(serviceWorkerPath, serviceWorkerContent, 'utf8')
                     console.log(`    > Service Worker updated with date, branch, and version.`)
+                }
+
+                // Update manifest.webmanifest
+                const manifestPath = path.join(this.localDistPath, 'manifest.webmanifest')
+                if (fs.existsSync(manifestPath)) {
+                    const manifestContent = await Bun.file(manifestPath).json()
+                    console.log(manifestContent)
+                    const replacement = this.platform === 'production'
+                                        ? ''
+                                        : this.platform.charAt(0).toUpperCase() + this.platform.slice(1)
+                    manifestContent.name = STUDIO_APP_NAME.replace('Development', replacement)
+                    await Bun.write(manifestPath, JSON.stringify(manifestContent, null, 2))
+                    console.log(`    > Manifest updated with name: ${manifestContent.name}`)
+                }
+                else {
+                    console.warn(`    > ${this.red}manifest.webmanifest not found in
+                ${this.localDistPath}${this.reset}`)
                 }
 
                 break
@@ -409,10 +426,8 @@ export class Deployment {
                                                                               }), 'utf8')
         // Save build date to build.json
         fs.writeFileSync(`${this.localDistPath}/build.json`, JSON.stringify({date: Date.now()}))
-
         // Save Branch
         this.saveBranchInfo()
-
         // Zip the distribution
         await this.zip()
     }
