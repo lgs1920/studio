@@ -371,7 +371,7 @@ export class Deployment {
                     serviceWorkerContent = serviceWorkerContent.replace(/__BRANCH__/g, `"${this.branch}"`)
 
                     fs.writeFileSync(serviceWorkerPath, serviceWorkerContent, 'utf8')
-                    console.log(`    > Service Worker updated with date, branch, and version.`)
+                    console.log(`    > Service Worker configured.`)
                 }
 
                 // Update manifest.webmanifest
@@ -383,7 +383,7 @@ export class Deployment {
                                         : this.platform.charAt(0).toUpperCase() + this.platform.slice(1)
                     manifestContent.name = STUDIO_APP_NAME.replace('Development', replacement)
                     await Bun.write(manifestPath, JSON.stringify(manifestContent, null, 2))
-                    console.log(`    > Manifest updated with name: ${manifestContent.name}`)
+                    console.log(`    > Manifest configured for ${manifestContent.name}`)
                 }
                 else {
                     console.warn(`    > ${this.red}manifest.webmanifest not found in
