@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: StudioLogo.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-08-17
+ * Last modified: 2025-08-17
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { SLOGAN }   from '@Core/constants'
 import { DateTime } from 'luxon'
 
@@ -26,7 +42,7 @@ export const StudioLogo = (props) => {
     ${DateTime.fromMillis(lgs.build.date ?? Date.now()).toLocaleString(DateTime.TIME_SIMPLE)}`
 
     return (
-        <div className={`main-logo ${size} ${addClass}`} style={style}>
+        <div className={`main-logo signage-style ${size} ${addClass}`} style={style}>
             <img src={src}/>
             {props.version &&
                 <div className={'version-info'}>{lgs.versions.studio} - {'build'}: {date}</div>

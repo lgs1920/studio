@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-15
- * Last modified: 2025-08-15
+ * Created on: 2025-08-17
+ * Last modified: 2025-08-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -70,19 +70,54 @@ body {
     display: none !important;
 }
 
+.signage-style {
+    color: var(--lgs-signage-color);
+    border-color: var(--lgs-signage-border-color);
+    border-radius: var(--lgs-border-radius-s);
+    background: var(--lgs-signage-bg-color);
+    box-shadow: var(--sl-shadow-medium);
+}
+
+.app-installing-dialog::part(body) {
+    padding: 0;
+}
+
+.installing-dialog {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: center;
+    padding: var(--lgs-gutter-s);
+
+    gap: var(--lgs-gutter);
+}
+
+.installing-dialog > sl-spinner {
+    font-size: 2rem;
+    --track-width: var(--lgs-gutter-xs);
+    --indicator-color: black;
+    --track-color: var(--lgs-signage-disabled-color);
+}
 
 .main-logo {
     position: relative;
     --padding: calc(6 * var(--lgs-gutter));
     padding: var(--padding);
-    background: var(--lgs-direction-panel-bg-color);
-    border-color: var(--lgs-direction-panel-border-color);
-    border-radius: var(--lgs-border-radius-s);
-    box-shadow: var(--sl-shadow-medium);
     aspect-ratio: 2.813;
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+
+.panel-wrapper {
+    position: absolute;
+    z-index: var(--lgs-ui-layer-zindex);
+    top: var(--top);
+    right: var(--right);
+    bottom: var(--bottom);
+    left: var(--left);
+    pointer-events: none;
 }
 
 main-logo.xlarge {

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-09
- * Last modified: 2025-08-09
+ * Created on: 2025-08-17
+ * Last modified: 2025-08-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -134,8 +134,10 @@
 
     --lgs-theme-background-image: var(--lgs-theme-gradient-1);
 
-    --lgs-direction-panel-bg-color: #f3bb35;
-    --lgs-direction-panel-border-color: #2b1f02;
+    --lgs-signage-bg-color: #f3bb35;
+    --lgs-signage-border-color: #2b1f02;
+    --lgs-signage-color: black;
+    --lgs-signage-disabled-color: var(--sl-color-gray-400);
 
     --lgs-slogan-font-family: "Cookie";
     --lgs-slogan-font-size: calc(2.5 * var(--lgs-gutter));
