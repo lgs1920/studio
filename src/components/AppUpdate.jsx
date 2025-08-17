@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-15
- * Last modified: 2025-08-15
+ * Created on: 2025-08-17
+ * Last modified: 2025-08-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -45,7 +45,6 @@ import safariMacOSInstructions from '@Locales/en/pwa-instructions/safari-macos.m
 import otherInstructions       from '@Locales/en/pwa-instructions/other.md?raw'
 
 export const AppUpdate = () => {
-    // Get the AppUpdateManager store from __.updater
     const store = useSnapshot(__.updater.store)
 
     // Local states for banners, dialogs, and browser detection
@@ -281,7 +280,7 @@ export const AppUpdate = () => {
                                 <SlIcon slot="prefix" size="small" library="fa" name={FA2SL.set(faXmark)}/>
                                 {updateError ? 'Close' : 'Later'}
                             </SlButton>
-                            {!_updateError && (
+                            {!updateError && (
                                 <SlButton
                                     size="small"
                                     onClick={handleApplyUpdate}
