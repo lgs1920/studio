@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-15
- * Last modified: 2025-08-15
+ * Created on: 2025-08-17
+ * Last modified: 2025-08-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -270,8 +270,8 @@ export const LGS1920 = () => {
             {!initStatus && initError && <InitErrorMessage message={initError.message}/>}
             {initStatus && (
                 <>
-                    <AppUpdate/>
                     <ResponsiveDevice/>
+                    <AppUpdate/>
                     <WelcomeModal/>
                     <MapLayer type={BASE_ENTITY}/>
                     <MapLayer type={OVERLAY_ENTITY}/>
