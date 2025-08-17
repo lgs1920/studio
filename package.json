@@ -93,7 +93,7 @@
     "turf-linestring": "^1.0.2",
     "turf-point": "^2.0.1",
     "uuid": "^11.1.0",
-    "valtio": "^2.1.5",
+    "valtio": "^2.1.7",
     "vite-plugin-cesium": "^1.2.23",
     "vite-plugin-pwa": "^1.0.2",
     "yaml": "^2.8.1",
