@@ -378,7 +378,6 @@ export class Deployment {
                 const manifestPath = path.join(this.localDistPath, 'manifest.webmanifest')
                 if (fs.existsSync(manifestPath)) {
                     const manifestContent = await Bun.file(manifestPath).json()
-                    console.log(manifestContent)
                     const replacement = this.platform === 'production'
                                         ? ''
                                         : this.platform.charAt(0).toUpperCase() + this.platform.slice(1)
