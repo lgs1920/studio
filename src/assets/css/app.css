@@ -44,7 +44,7 @@ body {
     right: var(--right);
     bottom: var(--bottom);
     left: var(--left);
-
+    pointer-events: none;
 }
 
 #cesium-viewer {
