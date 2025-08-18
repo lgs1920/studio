@@ -44,17 +44,17 @@ body {
     right: var(--right);
     bottom: var(--bottom);
     left: var(--left);
-    pointer-events: none;
 }
 
 #cesium-viewer {
-    width: 100vw;
-    min-height: 100dvh;
-    max-height: 100dvh;
-    height: 100dvh;
     position: absolute;
+    z-index: 1;
     top: 0;
     left: 0;
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    max-height: 100dvh;
 }
 
 /** Hide the main toolbar */
@@ -249,6 +249,7 @@ main-logo.xlarge {
     align-items: center;
     flex-direction: row;
     margin: 0;
+    pointer-events: auto;
     border-radius: var(--lgs-border-radius-s);
     gap: var(--lgs-gutter);
 }
