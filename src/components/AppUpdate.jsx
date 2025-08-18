@@ -14,7 +14,34 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { NAVIGATOR } from '@Core/constants'
+import {
+    APP_STUDIO,
+    BANNER_SHOW_DELAY,
+    BANNER_HIDE_DELAY,
+    BANNER_HIDE_DELAY_INSTALL,
+    NAVIGATOR,
+    SECOND,
+    OS_ICONS,
+}                                     from '@Core/constants'
+import { faMobileArrowDown, faXmark } from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlButton,
+    SlDialog,
+    SlIcon,
+    SlSpinner,
+}                                     from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                      from '@Utils/FA2SL'
+import ReactMarkdown                  from 'react-markdown'
+import { useEffect, useState }        from 'react'
+import { useSnapshot }                from 'valtio'
+
+// Import Markdown instruction files
+import iosInstructions         from '@Locales/en/pwa-instructions/ios.md?raw'
+import androidInstructions     from '@Locales/en/pwa-instructions/android.md?raw'
+import chromeEdgeInstructions  from '@Locales/en/pwa-instructions/chrome-edge.md?raw'
+import firefoxInstructions     from '@Locales/en/pwa-instructions/firefox.md?raw'
+import safariMacOSInstructions from '@Locales/en/pwa-instructions/safari-macos.md?raw'
+import otherInstructions       from '@Locales/en/pwa-instructions/other.md?raw'
 
 /**
  * Component to manage PWA installation and update banners using Shoelace components.
