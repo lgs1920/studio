@@ -14,34 +14,7 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import {
-    APP_STUDIO,
-    BANNER_SHOW_DELAY,
-    BANNER_HIDE_DELAY,
-    BANNER_HIDE_DELAY_INSTALL,
-    NAVIGATOR,
-    SECOND,
-    OS_ICONS,
-}                              from '@Core/constants'
-import { faMobileArrowDown, faXmark } from '@fortawesome/pro-regular-svg-icons'
-import {
-    SlButton,
-    SlDialog,
-    SlIcon,
-    SlSpinner,
-}                              from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }               from '@Utils/FA2SL'
-import ReactMarkdown           from 'react-markdown'
-import { useEffect, useState } from 'react'
-import { useSnapshot }         from 'valtio'
-
-// Import Markdown instruction files
-import iosInstructions        from '@Locales/en/pwa-instructions/ios.md?raw'
-import androidInstructions    from '@Locales/en/pwa-instructions/android.md?raw'
-import chromeEdgeInstructions from '@Locales/en/pwa-instructions/chrome-edge.md?raw'
-import firefoxInstructions    from '@Locales/en/pwa-instructions/firefox.md?raw'
-import safariMacOSInstructions from '@Locales/en/pwa-instructions/safari-macos.md?raw'
-import otherInstructions      from '@Locales/en/pwa-instructions/other.md?raw'
+import { NAVIGATOR } from '@Core/constants'
 
 /**
  * Component to manage PWA installation and update banners using Shoelace components.
@@ -51,6 +24,7 @@ import otherInstructions      from '@Locales/en/pwa-instructions/other.md?raw'
  * as a PWA, after BANNER_SHOW_DELAY, which hides after BANNER_HIDE_DELAY. Displays browser-specific
  * installation instructions from imported Markdown files in a dialog if prompt is unavailable.
  * Uses Shoelace icons for download, close, and refresh actions.
+ * Displays current version in both install and update banners, with specific update message format in English.
  * @returns {JSX.Element} The AppUpdate component
  */
 export const AppUpdate = () => {
@@ -77,13 +51,13 @@ export const AppUpdate = () => {
         if (__.device.isAndroid) {
             return androidInstructions
         }
-        if (__.device.browser === 'Chrome' || __.device.browser === 'Edge') {
+        if (__.device.browser === NAVIGATOR.chrome || __.device.browser === NAVIGATOR.edge) {
             return chromeEdgeInstructions
         }
-        if (__.device.browser === 'Firefox') {
+        if (__.device.browser === NAVIGATOR.firefox) {
             return firefoxInstructions
         }
-        if (__.device.browser === 'Safari') {
+        if (__.device.browser === NAVIGATOR.safari) {
             return safariMacOSInstructions
         }
         return otherInstructions
@@ -187,7 +161,7 @@ export const AppUpdate = () => {
     }
 
     // Prevent the dialog from closing when the user clicks on the overlay
-    function handleRequestClose(event) {
+    const handleRequestClose = (event) => {
         if (event.detail.source === 'overlay') {
             event.preventDefault()
         }
@@ -201,7 +175,7 @@ export const AppUpdate = () => {
                     <div className="lgs-install-banner-content">
                         <div>
                             <SlIcon library="fa" name={FA2SL.set(faMobileArrowDown)}/>
-                            <span>Install {APP_STUDIO} as an application for a better experience</span>
+                            <span>Install {APP_STUDIO} version {lgs?.versions?.studio} as an application for a better experience</span>
                         </div>
                         <div className="buttons-bar">
                             <SlButton
@@ -243,7 +217,7 @@ export const AppUpdate = () => {
                     onClick={() => setShowInstructionsDialog(false)}
                 >
                     <SlIcon slot="prefix" size="small" library="fa" name={FA2SL.set(faXmark)}/>
-                    {'Close'}
+                    Close
                 </SlButton>
             </SlDialog>
 
@@ -253,7 +227,6 @@ export const AppUpdate = () => {
                 label="Installing LGS1920 Studio"
                 noHeader className="app-installing-dialog"
                 onSlRequestClose={handleRequestClose}
-
             >
                 <div className="installing-dialog signage-style" style={{textAlign: 'center'}}>
                     {installError ? (
@@ -274,8 +247,8 @@ export const AppUpdate = () => {
                         <div>
                             <SlIcon library="fa" name={FA2SL.set(faMobileArrowDown)}/>
                             <span>
-                {updateError || `A new version ${_updaterStore.buildTime ? `(${_updaterStore.buildTime})` : ''} is available. Update now?`}
-              </span>
+                                {updateError || `You are on version ${lgs?.versions?.studio}. A new version ${_updaterStore.buildTime ? `(${_updaterStore.buildTime})` : ''} is ready to be installed.`}
+                            </span>
                         </div>
                         <div className="buttons-bar">
                             <SlButton
