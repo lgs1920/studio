@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-24
- * Last modified: 2025-07-24
+ * Created on: 2025-08-19
+ * Last modified: 2025-08-19
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { DefinedCropZone } from '@Components/MainUI/cropper/DefinedCropZone'
+import { DefinedCropZone } from '@Components/ToolsUI/cropper/DefinedCropZone'
 /**
  * Cropper component for interactive crop region selection over canvas, video, or image elements.
  * Provides a draggable and resizable crop area with visual feedback and center alignment guides.
