@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-02
- * Last modified: 2025-07-02
+ * Created on: 2025-08-19
+ * Last modified: 2025-08-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -231,7 +231,7 @@ export const MapPOIContextMenu = () => {
                   Timeout.set(
                       pois.context.timer,
                       hideMenu,
-                      SECOND,
+                      2 * SECOND,
                   )
                   return () => {
                       Timeout.clear(pois.context.timer)

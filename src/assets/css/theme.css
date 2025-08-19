@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-17
- * Last modified: 2025-08-17
+ * Created on: 2025-08-19
+ * Last modified: 2025-08-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -59,6 +59,7 @@
     --lgs-font-size-xl: 2rem;
 
     --lgs-ui-layer-zindex: 2000;
+    --lgs-tools-ui-zindex: 2500;
     --lgs-drop-zone-zindex: 10;
 
     --lgs-button-border-color: var(--lgs-dark-ui-secondary-color);
@@ -771,15 +772,17 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
     left: -1000px;
     width: 10px;
     height: 50px;
-
     transform: translate(-50%, -10px);
 }
 
 .lgs-context-menu {
+    position: relative;
     display: flex;
     flex-direction: column;
+    width: auto;
     margin: 0;
     padding: var(--lgs-gutter-xs) 0;
+    pointer-events: auto;
 }
 
 :root {
@@ -796,9 +799,11 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
 .lgs-context-menu li {
     display: flex;
     align-items: center;
+    max-width: 150px;
     margin: 0;
     padding: 0 var(--lgs-gutter-xs);
     cursor: pointer;
+    white-space: nowrap;
     border-radius: var(--lgs-border-radius-xs);
 }
 
@@ -1096,12 +1101,13 @@ h3 {
 
 .lgs-toolbar {
     position: absolute;
-    z-index: var(--lgs-ui-layer-zindex);
     display: flex;
     align-items: center;
     flex-direction: row;
     flex-shrink: 0;
+    width: auto;
     padding: var(--lgs-gutter-xs) 0;
+    pointer-events: auto;
     opacity: 0;
     gap: var(--lgs-gutter-xs);
 }

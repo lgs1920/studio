@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-14
- * Last modified: 2025-06-14
+ * Created on: 2025-08-19
+ * Last modified: 2025-08-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -120,7 +120,7 @@ export const CreditsBar = () => {
 
     return (
         <div className="credits-bar">
-            <div className="main-logo">
+            <div className="main-logo signage-style">
                 <img src="/assets/images/logo-lgs1920.png" alt="LGS1920 Logo"/>
             </div>
             <div className="provider-credits lgs-credits lgs-one-line-card on-map">
