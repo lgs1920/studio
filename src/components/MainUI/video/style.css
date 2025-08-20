@@ -7,24 +7,47 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-15
- * Last modified: 2025-08-15
+ * Created on: 2025-08-20
+ * Last modified: 2025-08-20
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-#trigger-video-recording svg {
-    height: 80%;
-    --fa-primary-color: var(--lgs-video-recorder-border-color);
-    --fa-secondary-color: var(--lgs-video-recorder-color);
-    --fa-primary-opacity: 1;
-    --fa-secondary-opacity: 1;
+
+.video-recording-settings-toolbar {
+    z-index: calc(var(--crop-zindex) + 2);
+    top: 66%;
+    left: 50%;
 }
 
-#trigger-video-recording svg:hover {
+.video-recording-settings-toolbar-actions {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-around;
+    gap: var(--lgs-gutter);
+}
+
+.lgs-video-recording-trigger-actions {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-around;
+    gap: var(--lgs-gutter);
+}
+
+.lgs-video-recording-trigger:not(.lgs-tunnel-element-blocked) {
+    color: var(--lgs-video-recorder-color);
+    border-color: var(--lgs-video-recorder-border-color);
+    background: var(--lgs-video-recorder-bg-color);
+}
+
+.lgs-video-recording-trigger:not(.lgs-tunnel-element-blocked):hover {
     color: var(--lgs-video-recorder-hover-color);
-    --fa-primary-opacity: 0.5;
+    border-color: var(--lgs-video-recorder-hover-border-color);
+    background: var(--lgs-video-recorder-hover-bg-color);
+
 }
 
 .video-recorder-wrapper-toolbar {
