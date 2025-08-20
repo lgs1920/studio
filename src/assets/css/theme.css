@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-19
- * Last modified: 2025-08-19
+ * Created on: 2025-08-20
+ * Last modified: 2025-08-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -162,9 +162,12 @@
     --lgs-scroolbar-track-color: transparent;
     --lgs-scroolbar-thumb-color: var(--sl-color-gray-700);
 
-    --lgs-video-recorder-color: var(--sl-color-red-800);
-    --lgs-video-recorder-hover-color: var(--sl-color-red-400);
-    --lgs-video-recorder-border-color: var(--sl-color-gray-200);
+    --lgs-video-recorder-color: white;
+    --lgs-video-recorder-hover-color: var(--sl-color-red-800);
+    --lgs-video-recorder-bg-color: var(--sl-color-red-800);
+    --lgs-video-recorder-hover-bg-color: var(--sl-color-red-800);
+    --lgs-video-recorder-border-color: white;
+    --lgs-video-recorder-hover-border-color: var(--sl-color-red-600);
 }
 
 .lgs-theme, .lgs-theme::part(panel) {
