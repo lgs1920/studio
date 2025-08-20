@@ -1,0 +1,97 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-08-20
+ * Last modified: 2025-08-20
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
+:root {
+    --lgs-tunnel-thickness: 2px;
+    --lgs-tunnel-icon-border-thickness: 2px;
+    --lgs-tunnel-color: var(--lgs-light-color-75);
+    --lgs-tunnel-bg-color: var(--lgs-dark-color-75);
+    --lgs-tunnel-bg-blocked-color: var(--lgs-dark-color-50);
+    --lgs-tunnel-blocked-color: var(--lgs-light-color-50);
+
+    --lgs-tunnel-bg-active-color: var(--lgs-dark-color);
+    --lgs-tunnel-active-color: var(--lgs-light-color);
+
+    --lgs-tunnel-hover-bg-color: var(--lgs-dark-color);
+    --lgs-tunnel-hover-color: var(--lgs-light-color);
+
+    --lgs-tunnel-spacer-width: var(--lgs-gutter);
+}
+
+.lgs-tunnel-container {
+    position: absolute;
+}
+
+
+.lgs-tunnel-bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+}
+
+
+.lgs-tunnel-element {
+    position: relative;
+    z-index: 2;
+    color: var(--lgs-tunnel-color);
+    border: var(--lgs-tunnel-icon-border-thickness) solid var(--lgs-tunnel-color);
+    border-radius: 50%;
+    background-color: var(--lgs-tunnel-bg-color);
+}
+
+.lgs-tunnel-element:hover {
+    color: var(--lgs-tunnel-hover-color);
+    border-color: var(--lgs-tunnel-hover-color) !important;
+    background-color: var(--lgs-tunnel-hover-bg-color);
+}
+
+.lgs-tunnel-element-blocked {
+    color: var(--lgs-tunnel-blocked-color);
+    background-color: var(--lgs-tunnel-bg-blocked-color);
+}
+
+.lgs-tunnel-element-active {
+    color: var(--lgs-tunnel-active-color);
+    border-color: var(--lgs-tunnel-active-color);
+    background-color: var(--lgs-tunnel-bg-active-color);
+}
+
+.lgs-tunnel-bar-spacer {
+    width: var(--lgs-tunnel-spacer-width);
+}
+
+.lgs-tunnel-bar-spacer::before {
+    position: absolute;
+    z-index: 1;
+    top: calc(50% - var(--lgs-tunnel-thickness) / 2);
+    width: var(--lgs-tunnel-spacer-width);
+    height: var(--lgs-tunnel-thickness);
+    content: "";
+    background-color: var(--lgs-tunnel-color);
+}
+
+.lgs-tunnel-element svg {
+    --fa-primary-color: var(--lgs-video-recorder-border-color);
+    --fa-secondary-color: var(--lgs-video-recorder-color);
+    --fa-primary-opacity: 1;
+    --fa-secondary-opacity: 1;
+}
+
+.lgs-tunnel-cancel {
+    font-size: var(--lgs-font-size-s);
+}
