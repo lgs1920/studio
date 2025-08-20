@@ -88,13 +88,6 @@
     background-color: var(--lgs-tunnel-color);
 }
 
-.lgs-tunnel-element svg {
-    --fa-primary-color: var(--lgs-video-recorder-border-color);
-    --fa-secondary-color: var(--lgs-video-recorder-color);
-    --fa-primary-opacity: 1;
-    --fa-secondary-opacity: 1;
-}
-
 .lgs-tunnel-cancel {
     font-size: var(--lgs-font-size-s);
 }
