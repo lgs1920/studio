@@ -78,8 +78,13 @@ export const ManageTunnel = ({steps, onCancel, className}) => {
                 steps[currentContainer].afterStep(currentContainer)
             }
 
-            // Trigger beforeStep event for the target step if defined
+            // Trigger onClick event for the target step if defined
             const targetStep = steps[index]
+            if (targetStep.onClick?.(index) === false) {
+                return
+            }
+
+            // Trigger beforeStep event for the target step if defined
             if (targetStep.beforeStep?.(index) === false) {
                 return
             }
@@ -113,7 +118,7 @@ export const ManageTunnel = ({steps, onCancel, className}) => {
                     return (
                         <div key={index} className="lgs-tunnel-bar-item"
                              style={{
-                                 opacity:       isCurrent ? 1 : 0.5,
+                                 opacity: (isCurrent || step.className) ? 1 : 0.7,
                                  pointerEvents: isBlocked ? 'none' : 'auto',
                              }}>
                             <SlTooltip content={step.text} placement="top">
