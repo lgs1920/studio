@@ -283,22 +283,3 @@
     width: unset;
     height: var(--lgs-font-size);
 }
-
-
-/*******************************************************************************
- * Cropper CTA
- ******************************************************************************/
-
-.video-recording-settings-toolbar {
-    z-index: calc(var(--crop-zindex) + 2);
-    top: 66%;
-    left: 50%;
-}
-
-.video-recording-settings-toolbar-actions {
-    display: flex;
-    align-items: center;
-    flex-direction: row;
-    justify-content: space-around;
-    gap: var(--lgs-gutter);
-}
