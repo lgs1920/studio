@@ -162,10 +162,11 @@ export const Cropper = memo(({
 
             // Hard initialize crop position
             const bounds = newManager.getSourceBounds()
+            const initScale = (__.device.isMobile || __.device.isTablet) ? 1 : CropperManager.INIT_CROP_SCALE_FACTOR
             const containerWidth = bounds.width
             const containerHeight = bounds.height
-            const initialWidth = (store.width || containerWidth) * CropperManager.INIT_CROP_SCALE_FACTOR
-            const initialHeight = (store.height || (store.aspectRatio ? initialWidth / store.aspectRatio : containerHeight)) * CropperManager.INIT_CROP_SCALE_FACTOR
+            const initialWidth = (store.width || containerWidth) * initScale
+            const initialHeight = (store.height || (store.aspectRatio ? initialWidth / store.aspectRatio : containerHeight)) * initScale
             const initialX = store.x || (containerWidth * CROP_X_PERCENTAGE - initialWidth) / 2
             const initialY = store.y || (containerHeight * CROP_Y_PERCENTAGE - initialHeight) / 2
             const initialCrop = {
