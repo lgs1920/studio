@@ -32,9 +32,9 @@
 }
 
 .lgs-tunnel-container {
-    position: absolute;
+    position: relative;
+    transform: translate(-50%, -50%);
 }
-
 
 .lgs-tunnel-bar {
     position: relative;
@@ -44,7 +44,10 @@
     gap: 0;
 }
 
-
+.lgs-tunnel-bar-item {
+    display: flex;
+    gap: 0
+}
 .lgs-tunnel-element {
     position: relative;
     z-index: 2;

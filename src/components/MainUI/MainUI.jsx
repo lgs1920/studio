@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-19
- * Last modified: 2025-08-19
+ * Created on: 2025-08-20
+ * Last modified: 2025-08-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,7 +19,7 @@ import { FullScreenButton }                     from '@Components/FullScreenButt
 import { ContextMenuHook }              from '@Components/MainUI/ContextMenuHook'
 import { Cropper }           from '@Components/ToolsUI/cropper/Cropper'
 import { CropRatioSelector } from '@Components/ToolsUI/cropper/CropRatioSelector'
-import { VideoCropperToolbar } from '@Components/MainUI/video/VideoCropperToolbar'
+import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/VideoRecordingSettingsToolbar'
 import { GeocodingButton }     from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'
 import { MapPOIContextMenu }            from '@Components/MainUI/MapPOI/MapPOIContextMenu'

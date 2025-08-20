@@ -7,22 +7,20 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-19
- * Last modified: 2025-08-19
+ * Created on: 2025-08-20
+ * Last modified: 2025-08-20
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { DragHandler }       from '@Core/ui/drag-handler/DragHandler'
-import {
-    faCropSimple, faRectangle, faRectangleVertical, faSquare,
-}                                               from '@fortawesome/pro-regular-svg-icons'
-import { faGripDots }                           from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                from '@Utils/FA2SL'
-import { memo, useCallback, useEffect, useRef } from 'react'
-import { useSnapshot }                          from 'valtio'
+import { DragHandler }                                              from '@Core/ui/drag-handler/DragHandler'
+import { faCropSimple, faRectangle, faRectangleVertical, faSquare } from '@fortawesome/pro-regular-svg-icons'
+import { faGripDots }                                               from '@fortawesome/pro-solid-svg-icons'
+import { SlIcon, SlIconButton, SlTooltip }                          from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                    from '@Utils/FA2SL'
+import { memo, useCallback, useEffect, useRef, useState }           from 'react'
+import { useSnapshot }                                              from 'valtio'
 import './style.css'
 
 /**
@@ -58,11 +56,11 @@ const ICONS = {
 const CropRatioSelector = memo(({manager}) => {
     // Access reactive cropper and toolbar states
     const $cropper = manager?.store
-    const cropper = useSnapshot($cropper || {})
+    const cropper = useSnapshot($cropper || {}, {sync: true})
     const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
-
+    const [forceRender, setForceRender] = useState(0)
     // Reference to the cropper menu DOM element
-    const cropperMenuRef = useRef(null)
+    const _toolbar = useRef(null)
 
     // Track selected ratio, defaulting to first video format
     const selectedRatio = cropper.ratioEditor
@@ -77,19 +75,19 @@ const CropRatioSelector = memo(({manager}) => {
      * @param {Object} bounds - Container bounds from manager.getSourceBounds()
      */
     const updatePosition = useCallback((bounds) => {
-        if (!cropperMenuRef.current) {
+        if (!_toolbar.current) {
             return
         }
-        cropperMenuRef.current.style.position = 'absolute'
-        cropperMenuRef.current.style.left = `${bounds.width * POSITIONING.X_PERCENTAGE}px`
-        cropperMenuRef.current.style.top = `${bounds.height * POSITIONING.Y_PERCENTAGE}px`
-        cropperMenuRef.current.style.width = 'auto'
-        cropperMenuRef.current.style.opacity = toolbars.opacity || 1
+        _toolbar.current.style.position = 'absolute'
+        _toolbar.current.style.left = `${bounds.width * POSITIONING.X_PERCENTAGE}px`
+        _toolbar.current.style.top = `${bounds.height * POSITIONING.Y_PERCENTAGE}px`
+        _toolbar.current.style.width = 'auto'
+        _toolbar.current.style.opacity = toolbars.opacity || 1
     }, [toolbars.opacity])
 
     // Initialize position and drag handler, handle resize
     useEffect(() => {
-        if (!manager || !cropper.ratioEditor || !cropperMenuRef.current) {
+        if (!manager || !cropper.ratioEditor || !_toolbar.current) {
             return
         }
 
@@ -98,33 +96,28 @@ const CropRatioSelector = memo(({manager}) => {
         updatePosition(bounds)
 
         // Initialize drag handler
-        const dragHandler = new DragHandler({
-                                                grabber: cropperMenuRef.current,
-                                                parent:  cropperMenuRef.current,
-                                                container: lgs.canvas,
-                                            })
-
-        // Debounced resize handler to update position
-        const debouncedResize = manager.debounce(() => {
-            updatePosition(manager.getSourceBounds())
-        }, manager.RESIZE_DEBOUNCE_MS)
-
-        window.addEventListener('resize', debouncedResize)
-
-        // Store references for cleanup
-        cropperMenuRef.current._dragHandler = dragHandler
-        cropperMenuRef.current._resizeHandler = debouncedResize
+        _toolbar.current._dragHandler = new DragHandler({
+                                                            grabber:   _toolbar.current,
+                                                            parent:    _toolbar.current,
+                                                            container: lgs.canvas,
+                                                        })
 
         // Cleanup on unmount or when ratioEditor changes
         return () => {
-            if (cropperMenuRef.current?._dragHandler) {
-                cropperMenuRef.current._dragHandler.destroy()
-            }
-            if (cropperMenuRef.current?._resizeHandler) {
-                window.removeEventListener('resize', cropperMenuRef.current._resizeHandler)
+            if (_toolbar.current?._dragHandler) {
+                _toolbar.current._dragHandler.destroy()
             }
         }
     }, [manager, cropper.ratioEditor, updatePosition])
+
+    useEffect(() => {
+        const handleCropUpdate = (event) => {
+            console.debug('CropRatioSelector: onCropUpdate received:', event.detail.crop)
+            setForceRender((prev) => prev + 1) // Forcer le re-rendu local
+        }
+        document.addEventListener('onCropUpdate', handleCropUpdate)
+        return () => document.removeEventListener('onCropUpdate', handleCropUpdate)
+    }, [])
 
     /**
      * Handles selection of a crop ratio preset
@@ -133,48 +126,61 @@ const CropRatioSelector = memo(({manager}) => {
      * @param {Object} preset - Video format preset (value, label, description, locked)
      * @param {Event} event - Click event from icon
      */
-    const handleChangeRatio = useCallback((preset, event) => {
-        if (!cropperMenuRef.current || !manager) {
+    const handleChangeRatio = (preset, event) => {
+        if (!_toolbar.current || !manager) {
             return
         }
 
-        event.preventDefault()
-        event.stopPropagation()
+        // event.preventDefault()
+        // event.stopPropagation()
 
         // Update selected class on icons
-        const icons = cropperMenuRef.current.querySelectorAll('.crop-ratio-presets sl-icon')
+        const icons = _toolbar.current.querySelectorAll('.crop-ratio-presets sl-icon')
         icons.forEach(icon => icon.classList.remove('selected'))
         event.target.classList.add('selected')
 
         // Parse ratio and reset crop
         const [w, h] = preset.value.split('x').map(Number)
         manager.resetCrop({aspectRatio: w / h, lockRatio: preset.locked})
-    }, [manager])
+        const rect = lgs.canvas.getBoundingClientRect()
+
+        // Trick : simulates a pointer event to trigger the resize...
+        // TODO: find a better way to do this
+        const pointerMoveEvent = new PointerEvent('pointermove', {
+            bubbles:    true,
+            cancelable: true,
+            clientX:    rect.left + 1, // Déplacer de 1 pixel par rapport à la position initiale
+            clientY:    rect.top + 1,
+        })
+        lgs.canvas.dispatchEvent(pointerMoveEvent)
+    }
 
     // Render draggable toolbar with ratio preset icons
     return (
         <>
             {cropper.ratioEditor && (
-                <div className="crop-ratio-selector lgs-toolbar lgs-card on-map" ref={cropperMenuRef}>
-                    {/* Drag handle for moving the toolbar */}
-                    <SlTooltip content="Drag me">
-                        <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
-                    </SlTooltip>
-                    <div className="crop-ratio-presets">
-                        {lgs.configuration.videoFormats.map(preset => (
-                            <SlTooltip
-                                key={preset.value}
-                                content={`${preset.label}: ${preset.description}`}
-                                placement="right"
-                            >
-                                <SlIcon
-                                    library="fa"
-                                    className={`lgs-card ${selectedRatio === preset.value ? 'selected' : ''}`}
-                                    onClick={e => handleChangeRatio(preset, e)}
-                                    name={FA2SL.set(ICONS[preset.value] || faSquare)}
-                                />
-                            </SlTooltip>
-                        ))}
+                <div className="crop-ratio-selector-container" ref={_toolbar}>
+                    <div className="crop-ratio-selector lgs-toolbar lgs-card on-map">
+                        {/* Drag handle for moving the toolbar */}
+                        <SlTooltip content="Drag me">
+                            <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
+                        </SlTooltip>
+                        <div className="crop-ratio-presets">
+                            {lgs.configuration.videoFormats.map(preset => (
+                                <SlTooltip
+                                    key={preset.value}
+                                    content={`${preset.label}: ${preset.description}`}
+                                    placement="right"
+                                >
+                                    <SlIcon
+                                        library="fa"
+                                        className={`lgs-card ${selectedRatio === preset.value ? 'selected' : ''}`}
+                                        onClick={event => handleChangeRatio(preset, event)}
+                                        name={FA2SL.set(ICONS[preset.value] || faSquare)}
+                                    />
+                                </SlTooltip>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}

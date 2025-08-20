@@ -22,11 +22,11 @@
  *
  */
 
-import { SlButton, SlIcon, SlIconButton, SlTooltip }          from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                              from '@Utils/FA2SL'
-import classNames                                             from 'classnames'
-import { useState, useCallback, useRef, useEffect, Fragment } from 'react'
-import { faXmark }                                            from '@fortawesome/pro-regular-svg-icons'
+import { faXmark }                                  from '@fortawesome/pro-regular-svg-icons'
+import { SlIconButton, SlTooltip }                  from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                    from '@Utils/FA2SL'
+import classNames                                   from 'classnames'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './style.css'
 
 /**
@@ -111,15 +111,19 @@ export const ManageTunnel = ({steps, onCancel, className}) => {
                         .some(s => s.mandatory && !s.done)
 
                     return (
-                        <div key={index}>
+                        <div key={index} className="lgs-tunnel-bar-item"
+                             style={{
+                                 opacity:       isCurrent ? 1 : 0.5,
+                                 pointerEvents: isBlocked ? 'none' : 'auto',
+                             }}>
                             <SlTooltip content={step.text} placement="top">
                                 <SlIconButton
-                                    className={`
-                lgs-tunnel-element
-                ${isDone ? 'lgs-tunnel-element-done' : ''}
-                ${isCurrent ? 'lgs-tunnel-element-active' : ''}
-                ${isBlocked ? 'lgs-tunnel-element-blocked' : ''}
-              `}
+                                    className={`lgs-tunnel-element 
+                                        ${step?.className ?? ''}
+                                        ${isDone ? 'lgs-tunnel-element-done' : ''}
+                                        ${isCurrent ? 'lgs-tunnel-element-active' : ''}
+                                        ${isBlocked ? 'lgs-tunnel-element-blocked' : ''}
+                                  `}
                                     onClick={() => handleStepClick(index)}
                                     disabled={isBlocked}
                                     library="fa" name={FA2SL.set(step.icon)}

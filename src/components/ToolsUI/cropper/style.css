@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-19
- * Last modified: 2025-08-19
+ * Created on: 2025-08-20
+ * Last modified: 2025-08-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,8 +20,12 @@
     --crop-centered-color: var(--lgs-light-color);
     --crop-centered-opacity: 0.5;
     --crop-centered-line-width: 1px;
-    --crop-handle-size: 10px;
+    --crop-handle-size: 12px;
     --crop-zindex: calc(var(--lgs-tools-ui-zindex) - 2);
+}
+
+.mobile {
+    --crop-handle-size: 16px;
 }
 
 .crop-container {
@@ -68,31 +72,31 @@
  *  Crop Handle Positions
  **************************************/
 .handle-nw {
-    top: -8px;
-    left: -8px;
+    top: calc(-1 * var(--crop-handle-size) / 2);
+    left: calc(-1 * var(--crop-handle-size) / 2);
     cursor: nwse-resize;
 }
 
 .handle-ne {
-    top: -8px;
-    right: -8px;
+    top: calc(-1 * var(--crop-handle-size) / 2);
+    right: calc(-1 * var(--crop-handle-size) / 2);
     cursor: nesw-resize;
 }
 
 .handle-se {
-    right: -8px;
-    bottom: -8px;
+    right: calc(-1 * var(--crop-handle-size) / 2);
+    bottom: calc(-1 * var(--crop-handle-size) / 2);
     cursor: nwse-resize;
 }
 
 .handle-sw {
-    bottom: -8px;
-    left: -8px;
+    bottom: calc(-1 * var(--crop-handle-size) / 2);
+    left: calc(-1 * var(--crop-handle-size) / 2);
     cursor: nesw-resize;
 }
 
 .handle-n {
-    top: -8px;
+    top: calc(-1 * var(--crop-handle-size) / 2);
     left: 50%;
     cursor: ns-resize;
     transform: translateX(-50%);
@@ -100,13 +104,13 @@
 
 .handle-e {
     top: 50%;
-    right: -8px;
+    right: calc(-1 * var(--crop-handle-size) / 2);
     cursor: ew-resize;
     transform: translateY(-50%);
 }
 
 .handle-s {
-    bottom: -8px;
+    bottom: calc(-1 * var(--crop-handle-size) / 2);
     left: 50%;
     cursor: ns-resize;
     transform: translateX(-50%);
@@ -114,7 +118,7 @@
 
 .handle-w {
     top: 50%;
-    left: -8px;
+    left: calc(-1 * var(--crop-handle-size) / 2);
     cursor: ew-resize;
     transform: translateY(-50%);
 }
@@ -225,11 +229,14 @@
  * Cropper Editor
  ******************************************************************************/
 
-.crop-ratio-selector {
+.crop-ratio-selector-container {
     position: absolute;
     z-index: calc(var(--crop-zindex) + 2);
     top: 50%;
     left: 66%;
+}
+
+.crop-ratio-selector {
     display: flex;
     align-items: center;
     flex-direction: column;
@@ -237,7 +244,10 @@
     padding: var(--lgs-gutter-xs);
     transform: translateY(-50%);
     gap: var(--lgs-gutter-xs);
+}
 
+.crop-ratio-selector.lgs-toolbar {
+    opacity: 1;
 }
 
 .crop-ratio-presets {
@@ -279,14 +289,13 @@
  * Cropper CTA
  ******************************************************************************/
 
-.video-cropper-toolbar {
+.video-recording-settings-toolbar {
     z-index: calc(var(--crop-zindex) + 2);
     top: 66%;
     left: 50%;
-    transform: translate(-50%, -50%);
 }
 
-.video-cropper-toolbar-actions {
+.video-recording-settings-toolbar-actions {
     display: flex;
     align-items: center;
     flex-direction: row;

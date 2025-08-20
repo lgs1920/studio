@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-19
- * Last modified: 2025-08-19
+ * Created on: 2025-08-20
+ * Last modified: 2025-08-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,7 +38,7 @@ body {
     box-sizing: border-box;
 }
 
-#lgs1920-container, #lgs-tools-ui {
+#lgs1920-container {
     position: absolute;
     top: var(--top);
     right: var(--right);
@@ -47,8 +47,12 @@ body {
 }
 
 #lgs-tools-ui {
-    z-index: var(--lgs-tools-ui-zindex);
-    pointer-events: none;
+    position: absolute;
+    top: calc(-1 * var(--top));
+    right: calc(-1 * var(--right));
+    bottom: calc(-1 * var(--bottom));
+    left: calc(-1 * var(--left));
+    pointer-events: auto;
 }
 
 #cesium-viewer {

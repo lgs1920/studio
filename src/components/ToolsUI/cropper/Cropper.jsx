@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-19
- * Last modified: 2025-08-19
+ * Created on: 2025-08-20
+ * Last modified: 2025-08-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,8 +38,8 @@ import { CropZone }                                                from './CropZ
 import './style.css'
 
 // Positioning constants
-const CROP_X_PERCENTAGE = 0.7 // Crop region center at 70% width
-const CROP_Y_PERCENTAGE = 0.5 // Crop region center at 50% height
+const CROP_X_PERCENTAGE = 1 // Crop region center at 70% width
+const CROP_Y_PERCENTAGE = 1 // Crop region center at 50% height
 
 export const Cropper = memo(({
                                  source,
@@ -164,10 +164,10 @@ export const Cropper = memo(({
             const bounds = newManager.getSourceBounds()
             const containerWidth = bounds.width
             const containerHeight = bounds.height
-            const initialWidth = store.width || containerWidth * 0.5
-            const initialHeight = store.height || (store.aspectRatio ? initialWidth / store.aspectRatio : containerHeight * 0.5)
-            const initialX = store.x || (containerWidth * CROP_X_PERCENTAGE - initialWidth / 2)
-            const initialY = store.y || (containerHeight * CROP_Y_PERCENTAGE - initialHeight / 2)
+            const initialWidth = (store.width || containerWidth) * CropperManager.INIT_CROP_SCALE_FACTOR
+            const initialHeight = (store.height || (store.aspectRatio ? initialWidth / store.aspectRatio : containerHeight)) * CropperManager.INIT_CROP_SCALE_FACTOR
+            const initialX = store.x || (containerWidth * CROP_X_PERCENTAGE - initialWidth) / 2
+            const initialY = store.y || (containerHeight * CROP_Y_PERCENTAGE - initialHeight) / 2
             const initialCrop = {
                 x: initialX,
                 y: initialY,

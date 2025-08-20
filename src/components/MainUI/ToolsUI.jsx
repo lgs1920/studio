@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-19
- * Last modified: 2025-08-19
+ * Created on: 2025-08-20
+ * Last modified: 2025-08-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,7 +18,7 @@ import { ContextMenuHook }      from '@Components/MainUI/ContextMenuHook'
 import { Cropper }              from '@Components/ToolsUI/cropper/Cropper'
 import { CropRatioSelector }    from '@Components/ToolsUI/cropper/CropRatioSelector'
 import { MapPOIContextMenu }    from '@Components/MainUI/MapPOI/MapPOIContextMenu'
-import { VideoCropperToolbar }  from '@Components/MainUI/video/VideoCropperToolbar'
+import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/VideoRecordingSettingsToolbar'
 import { JourneyToolbar }       from '@Editor/JourneyToolbar'
 import { useSnapshot }          from 'valtio/index'
 
@@ -33,7 +33,7 @@ export const ToolsUI = () => {
                     <Cropper
                         source={lgs.canvas}
                         store={lgs.stores.ui.video.cropper}
-                        CTA={VideoCropperToolbar}
+                        CTA={VideoRecordingSettingsToolbar}
                         RatioSelector={CropRatioSelector}
                     />
                 </>
