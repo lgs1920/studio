@@ -26,9 +26,6 @@ export const VideoButton = (props) => {
 
     const handleClick = () => {
         $video.editing = !$video.editing
-        if ($video.editing) {
-            $video.step = 1
-        }
     }
     return (
         <>
