@@ -14,17 +14,17 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { VideoRecorderToolbar }                           from '@Components/MainUI/video/VideoRecorderToolbar'
-import { Tunnel }               from '@Components/Tunnel/Tunnel'
-import { APP_KEY, MINUTE }      from '@Core/constants'
-import { DragHandler }                                    from '@Core/ui/drag-handler/DragHandler'
-import { VideoRecorder }        from '@Core/ui/video/recorder/VideoRecorder'
-import { faCropSimple }                                   from '@fortawesome/pro-regular-svg-icons'
-import { faPhotoFilm, faVideo } from '@fortawesome/pro-solid-svg-icons'
-import { FA2SL }                                          from '@Utils/FA2SL'
-import { UIToast }              from '@Utils/UIToast'
-import { Fragment, memo, useCallback, useEffect, useRef } from 'react'
-import { useSnapshot }                                    from 'valtio'
+import { VideoRecorderToolbar }                 from '@Components/MainUI/video/VideoRecorderToolbar'
+import { Tunnel }                               from '@Components/Tunnel/Tunnel'
+import { APP_KEY, MINUTE }                      from '@Core/constants'
+import { DragHandler }                          from '@Core/ui/drag-handler/DragHandler'
+import { VideoRecorder }                        from '@Core/ui/video/recorder/VideoRecorder'
+import { faCropSimple }                         from '@fortawesome/pro-regular-svg-icons'
+import { faPhotoFilm, faVideo }                 from '@fortawesome/pro-solid-svg-icons'
+import { FA2SL }                                from '@Utils/FA2SL'
+import { UIToast }                              from '@Utils/UIToast'
+import { memo, useCallback, useEffect, useRef } from 'react'
+import { useSnapshot }                          from 'valtio'
 
 /**
  * Positioning constants for CropRatioSelector placement
@@ -98,10 +98,10 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
 
         // Initialize drag handler
         _tunnel.current._dragHandler = new DragHandler({
-                                                           grabber: _tunnel.current,
-                                                           parent:  _tunnel.current,
-                                                            container: lgs.canvas,
-                                                        })
+                                                           grabber:   _tunnel.current,
+                                                           parent:    _tunnel.current,
+                                                           container: lgs.canvas,
+                                                       })
         _tunnel.current.addEventListener(DragHandler.AFTER_DRAG, getCoordinates)
 
 
@@ -114,50 +114,6 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
         }
     }, [manager, toolbars.opacity])
 
-    useEffect(() => {
-    }, [video.recording])
-
-    /**
-     * Steps configuration for Tunnel
-     * @type {Array.<Object>}
-     */
-    const steps = [
-        {
-            icon:       faCropSimple,
-            text: 'Define Video dimensions',
-            done:       false,
-            mandatory:  false,
-            beforeStep: (index) => {
-                $cropper.ratioEditor = true
-            },
-            afterStep:  (index) => {
-                $cropper.ratioEditor = false
-                steps[index].done = true
-            },
-        },
-        {
-            icon:       faPhotoFilm,
-            text:       'Add widgets',
-            done:       false,
-            mandatory:  true,
-            beforeStep: (index) => {
-                steps[index].done = true
-            },
-        },
-        {
-            icon:      faVideo,
-            text:    'Start Recording',
-            done:      false,
-            mandatory: false,
-            className: 'lgs-video-recording-trigger',
-            onClick: (index) => {
-                $video.editing = false
-                steps[index].done = true
-                handleVideoRecording()
-            },
-
-        },
-    ]
     // Manage recorder events
     useEffect(() => {
         // Ensure recorder exists
@@ -274,16 +230,52 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
                           })
         }
     }
+    const steps = [
+        {
+            icon:       faCropSimple,
+            text:       'Define Video dimensions',
+            done:       false,
+            mandatory:  false,
+            beforeStep: (index) => {
+                $cropper.ratioEditor = true
+            },
+            afterStep:  (index) => {
+                $cropper.ratioEditor = false
+                steps[index].done = true
+            },
+        },
+        {
+            icon:       faPhotoFilm,
+            text:       'Add widgets',
+            done:       false,
+            mandatory:  true,
+            beforeStep: (index) => {
+                steps[index].done = true
+            },
+        },
+        {
+            icon:      faVideo,
+            text:      'Start Recording',
+            done:      false,
+            mandatory: false,
+            className: 'lgs-video-recording-trigger',
+            onClick:   (index) => {
+                $video.editing = false
+                steps[index].done = true
+                handleVideoRecording()
+            },
 
+        },
+    ]
     return (
         <div ref={_tunnel} className="video-recording-settings-toolbar">
             {video.editing &&
 
                 <Tunnel
-                        className="lgs-toolbar lgs-toolbar-horizontal"
-                        steps={steps}
-                        onCancel={handleCancel}
-                    />
+                    className="lgs-toolbar lgs-toolbar-horizontal"
+                    steps={steps ?? {}}
+                    onCancel={handleCancel}
+                />
 
             }
             <VideoRecorderToolbar toolbar={_toolbar}/>

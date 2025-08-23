@@ -77,6 +77,12 @@
     --fa-secondary-opacity: 1;
 }
 
+.video-recording-in-progress {
+    border-width: 3px;
+    border-style: solid;
+    border-color: var(--lgs-video-recorder-bg-color);
+}
+
 /***************************************
  * Video preview
  */

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-15
- * Last modified: 2025-08-15
+ * Created on: 2025-08-23
+ * Last modified: 2025-08-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -46,8 +46,9 @@ export class DeviceManager {
         // Initialize user agent
         this.#ua = navigator.userAgent.toLowerCase()
 
+        // DPR
+        this.dpr = window.devicePixelRatio || 1
         // OS
-
         if (this.isIOS) {
             this.os = OS.iOS
         }

@@ -15,6 +15,8 @@
  ******************************************************************************/
 
 import { FontAwesomeIcon }         from '@Components/FontAwesomeIcon'
+import { CropOverlay }     from '@Components/ToolsUI/cropper/CropOverlay'
+import { DefinedCropZone } from '@Components/ToolsUI/cropper/DefinedCropZone'
 import { SECOND }                  from '@Core/constants'
 import { DragHandler }             from '@Core/ui/drag-handler/DragHandler'
 import { VideoRecorder }           from '@Core/ui/video/recorder/VideoRecorder'
@@ -209,7 +211,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         // Handle recording stop events (stop, max-size, or max-duration)
         const handleStop = (event) => {
             if ((__.recorder && __.recorder.isRecording()) || $video.paused) {
-                __.recorder?.stop()
+                __.recorder.stop()
             }
             $video.recording = false
             $video.paused = false
@@ -263,7 +265,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             _toolbar.current.style.opacity = toolbars.opacity
         }
 
-        // Add drag capacity tothe cntainer
+        // Add drag capacity to the container
         _container.current._dragHandler = new DragHandler({
                                                               grabber:   _container.current,
                                                               parent:    _container.current,
@@ -309,9 +311,32 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         }
     }, [video.recording, video.paused, toolbars.opacity])
 
+    const crop = video.cropper
+    const overlayStyle = {
+        clipPath: `polygon(
+                    0% 0%, 100% 0%, 100% 100%, 0% 100%,
+                    0% ${crop.y}px,
+                    ${crop.x}px ${crop.y}px,
+                    ${crop.x}px ${crop.y + crop.height}px,
+                    ${crop.x + crop.width}px ${crop.y + crop.height}px,
+                    ${crop.x + crop.width}px ${crop.y}px,
+                    0% ${crop.y}px
+                )`,
+    }
     // Render toolbar only when recording is active
     return (
         <>
+            {video.recording &&
+                <>
+                    <CropOverlay style={overlayStyle}/>
+
+                    <DefinedCropZone
+                        crop={crop}
+                        manager={{dpr: __.device.dpr}}
+                        className="video-recording-in-progress"
+                    />
+                </>
+            }
             <div className="video-recorder-toolbar" ref={_container}>
                 <div ref={_toolbar}
                      className="lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map">
