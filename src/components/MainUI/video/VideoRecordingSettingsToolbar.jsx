@@ -87,7 +87,6 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
 
         const getCoordinates = (event) => {
             $video.toolbarPosition = event.detail.value
-            console.log(event.detail.value)
         }
 
         // Set initial toolbar opacity
@@ -116,7 +115,6 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
     }, [manager, toolbars.opacity])
 
     useEffect(() => {
-        console.log('video.recording:', $video.recording)
     }, [video.recording])
 
     /**
