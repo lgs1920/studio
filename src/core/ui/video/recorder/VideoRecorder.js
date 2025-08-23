@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-08
- * Last modified: 2025-08-08
+ * Created on: 2025-08-23
+ * Last modified: 2025-08-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -48,6 +48,11 @@ export class VideoRecorder extends EventTarget {
         DOWNLOAD: 'video/download',
         MAX_SIZE:     'video/max-size',
         MAX_DURATION: 'video/max-duration',
+    }
+
+    static CLASSES = {
+        recording: 'recording-in-progress',
+        paused:    'recording-paused',
     }
 
     /**
@@ -401,15 +406,18 @@ export class VideoRecorder extends EventTarget {
 
             this.mediaRecorder.onerror = (e) => {
                 // console.log('MediaRecorder error:', e.error) // Debug log
+                this.cleanBodyClasses()
+
                 this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                     detail: {error: e.error, timestamp: Date.now()},
                 }))
                 this.stop()
             }
 
-            // console.log('Starting MediaRecorder with bitrate:', this.bitrate, 'timeslice:', this.timeslice) // Debug
-            // log
+            // Let's start recording
             this.mediaRecorder.start(this.timeslice)
+            document.body.classList.add(VideoRecorder.CLASSES.recording)
+
 
             // Monitor size and duration limits
             const checkLimits = () => {
@@ -442,6 +450,7 @@ export class VideoRecorder extends EventTarget {
             }))
         }
         catch (error) {
+            this.cleanBodyClasses()
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                 detail: {error, timestamp: Date.now()},
             }))
@@ -456,12 +465,22 @@ export class VideoRecorder extends EventTarget {
         if (this.isRecording()) {
             // console.log('Stopping recording') // Debug log
             this.mediaRecorder.stop()
+            this.cleanBodyClasses()
         }
         else {
+            this.cleanBodyClasses()
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                 detail: {error: new Error('No active recording to stop'), timestamp: Date.now()},
             }))
         }
+    }
+
+    /**
+     * Cleans the body classes to remove the recording indicators
+     */
+    cleanBodyClasses = () => {
+        document.body.classList.remove(VideoRecorder.CLASSES.recording)
+        document.body.classList.remove(VideoRecorder.CLASSES.paused)
     }
 
     /**
@@ -471,11 +490,15 @@ export class VideoRecorder extends EventTarget {
         if (this.isRecording()) {
             // console.log('Pausing recording') // Debug log
             this.mediaRecorder.pause()
+            document.body.classList.add(VideoRecorder.CLASSES.paused)
+            document.body.classList.remove(VideoRecorder.CLASSES.recording)
+
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.PAUSE, {
                 detail: {timestamp: Date.now(), duration: this.duration},
             }))
         }
         else {
+            this.cleanBodyClasses()
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                 detail: {error: new Error('Cannot pause: not recording'), timestamp: Date.now()},
             }))
@@ -489,11 +512,14 @@ export class VideoRecorder extends EventTarget {
         if (this.mediaRecorder?.state === 'paused') {
             // console.log('Resuming recording') // Debug log
             this.mediaRecorder.resume()
+            document.body.classList.remove(VideoRecorder.CLASSES.paused)
+            document.body.classList.add(VideoRecorder.CLASSES.recording)
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.RESUME, {
                 detail: {timestamp: Date.now(), duration: this.duration},
             }))
         }
         else {
+            this.cleanBodyClasses()
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                 detail: {error: new Error('Cannot resume: not paused'), timestamp: Date.now()},
             }))

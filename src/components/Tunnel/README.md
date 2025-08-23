@@ -1,8 +1,8 @@
-# ManageTunnel Component
+# Tunnel Component
 
 ## Overview
 
-The `ManageTunnel` component is a React component that renders a horizontal navigation tunnel. Each step in the tunnel
+The `Tunnel` component is a React component that renders a horizontal navigation tunnel. Each step in the tunnel
 is represented by a FontAwesome icon, a label, and optional content. Steps can be marked as completed or mandatory, with
 optional `beforeStep` and `afterStep` events to control navigation. An exit button allows the user to leave the tunnel.
 
@@ -10,7 +10,7 @@ optional `beforeStep` and `afterStep` events to control navigation. An exit butt
 
 1. Import the component in your application:
    ```javascript
-   import { ManageTunnel } from './ManageTunnel'
+   import { Tunnel } from './Tunnel'
    ```
 
 ## Props
@@ -35,7 +35,7 @@ Each step is an object with the following properties:
 
 ```javascript
 import React            from 'react'
-import { ManageTunnel } from './ManageTunnel'
+import { Tunnel } from './Tunnel'
 
 const Step1Component = () => <div>Step 1 content</div>
 const Step2Component = () => <div>Step 2 content</div>
@@ -66,7 +66,7 @@ const steps = [
 const App = () => {
     const handleExit = () => console.log('Exiting tunnel')
 
-    return <ManageTunnel steps={steps} onExit={handleExit}/>
+    return <Tunnel steps={steps} onExit={handleExit}/>
 }
 ```
 

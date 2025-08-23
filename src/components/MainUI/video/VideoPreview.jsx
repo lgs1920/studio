@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-15
- * Last modified: 2025-08-15
+ * Created on: 2025-08-23
+ * Last modified: 2025-08-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -286,7 +286,7 @@ export const VideoPreview = () => {
         if (videoUrl) {
             URL.revokeObjectURL(videoUrl)
         }
-        $video.edit = false
+        $video.editing = false
         setConversionLogs((prev) => [...prev, 'Dialog closed and resources cleaned up'])
     }, [isConverting, videoUrl, $video])
 

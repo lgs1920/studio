@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-24
- * Last modified: 2025-07-24
+ * Created on: 2025-08-23
+ * Last modified: 2025-08-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,8 +25,8 @@ export const VideoButton = (props) => {
     const video = useSnapshot($video)
 
     const handleClick = () => {
-        $video.edit = !$video.edit
-        if ($video.edit) {
+        $video.editing = !$video.editing
+        if ($video.editing) {
             $video.step = 1
         }
     }

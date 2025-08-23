@@ -7,21 +7,25 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-20
- * Last modified: 2025-08-20
+ * Created on: 2025-08-23
+ * Last modified: 2025-08-23
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { FontAwesomeIcon }         from '@Components/FontAwesomeIcon'
 import { SECOND }                  from '@Core/constants'
+import { DragHandler }             from '@Core/ui/drag-handler/DragHandler'
 import { VideoRecorder }           from '@Core/ui/video/recorder/VideoRecorder'
 import { faPause, faPlay, faStop } from '@fortawesome/pro-regular-svg-icons'
-import { SlIconButton, SlPopup, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { faCircle }                from '@fortawesome/duotone-regular-svg-icons'
+import { SlIconButton, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { FA2SL }                                          from '@Utils/FA2SL'
 import { UIToast }                                        from '@Utils/UIToast'
 import { UnitUtils }                                      from '@Utils/UnitUtils'
+import classNames                  from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                    from 'valtio'
 
@@ -69,21 +73,20 @@ const RecorderControls = memo(({recording, paused, recorder}) => {
 
 /**
  * VideoRecorderToolbar - Displays video recording controls and stats
- * @param {Object} props - Component props
- * @param {string} props.tooltip - Popup placement (e.g., 'top', 'bottom')
  */
-export const VideoRecorderToolbar = (props) => {
+export const VideoRecorderToolbar = ({toolbar}) => {
     // Access global video settings
-    const $video = lgs.settings.ui.video
+    const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
     // Local state for UI updates
     const [recordedDuration, setRecordedDuration] = useState(0)
     const [recordedSize, setRecordedSize] = useState(0)
     const [lastSizeEventTime, setLastSizeEventTime] = useState(0)
     // Ref to track interval ID
-    const intervalRef = useRef(null)
+    const _interval = useRef(null)
 
-    const _toolbar = useRef(null)
+    const _toolbar = useRef(toolbar)
+    const _container = useRef(null)
     const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
 
     /**
@@ -126,11 +129,11 @@ export const VideoRecorderToolbar = (props) => {
             setLastSizeEventTime(Date.now())
 
             // Clear existing interval
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current)
+            if (_interval.current) {
+                clearInterval(_interval.current)
             }
 
-            intervalRef.current = setInterval(() => {
+            _interval.current = setInterval(() => {
                 if (__.recorder) {
                     const currentDuration = __.recorder.duration
                     const currentSize = __.recorder.size
@@ -158,9 +161,9 @@ export const VideoRecorderToolbar = (props) => {
                 return
             }
             $video.paused = true
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current)
-                intervalRef.current = null
+            if (_interval.current) {
+                clearInterval(_interval.current)
+                _interval.current = null
             }
             if (__.recorder) {
                 setRecordedDuration(__.recorder.duration)
@@ -183,11 +186,11 @@ export const VideoRecorderToolbar = (props) => {
             }
 
             // Clear existing interval
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current)
+            if (_interval.current) {
+                clearInterval(_interval.current)
             }
 
-            intervalRef.current = setInterval(() => {
+            _interval.current = setInterval(() => {
                 if (__.recorder) {
                     const currentDuration = __.recorder.duration
                     const currentSize = __.recorder.size
@@ -215,9 +218,9 @@ export const VideoRecorderToolbar = (props) => {
             setRecordedSize(0)
             setLastSizeEventTime(0)
 
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current)
-                intervalRef.current = null
+            if (_interval.current) {
+                clearInterval(_interval.current)
+                _interval.current = null
             }
 
             switch (event.type) {
@@ -249,10 +252,23 @@ export const VideoRecorderToolbar = (props) => {
                             })
         }
 
+        // Set position according to Settings toolbar
+        if (_toolbar.current) {
+            _toolbar.current.style.left = `${video.toolbarPosition.x - video.toolbarPosition.width / 2}px`
+            _toolbar.current.style.top = `${video.toolbarPosition.y}px`
+        }
+
         // Set initial toolbar opacity
         if (_toolbar.current) {
             _toolbar.current.style.opacity = toolbars.opacity
         }
+
+        // Add drag capacity tothe cntainer
+        _container.current._dragHandler = new DragHandler({
+                                                              grabber:   _container.current,
+                                                              parent:    _container.current,
+                                                              container: lgs.canvas,
+                                                          })
 
         // Add event listeners
         __.recorder.addEventListener(VideoRecorder.events.START, handleStart)
@@ -266,9 +282,12 @@ export const VideoRecorderToolbar = (props) => {
 
         // Clean up function
         return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current)
-                intervalRef.current = null
+            if (_container.current?._dragHandler) {
+                _container.current._dragHandler.destroy()
+            }
+            if (_interval.current) {
+                clearInterval(_interval.current)
+                _interval.current = null
             }
             if (__.recorder) {
                 __.recorder.removeEventListener(VideoRecorder.events.START, handleStart)
@@ -293,11 +312,11 @@ export const VideoRecorderToolbar = (props) => {
     // Render toolbar only when recording is active
     return (
         <>
-            {
-                video.recording &&
-                <div
-                    className="video-recorder-toolbar lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map"
-                    ref={_toolbar}>
+            <div className="video-recorder-toolbar" ref={_container}>
+                <div ref={_toolbar}
+                     className="lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map">
+                    <FontAwesomeIcon icon={faCircle}
+                                     className={classNames(video.paused ? '' : 'fa-beat', 'video-recorder-indicator')}/>
                     <span className="duration">{formatDuration(recordedDuration)}</span>
                     <span className="size">{formatSize(recordedSize)}</span>
                     <RecorderControls
@@ -306,7 +325,7 @@ export const VideoRecorderToolbar = (props) => {
                         recorder={__.recorder}
                     />
                 </div>
-            }
+            </div>
         </>
     )
 }

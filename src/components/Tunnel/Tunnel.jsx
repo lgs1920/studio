@@ -2,20 +2,20 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: ManageTunnel.jsx
+ * File: Tunnel.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-20
- * Last modified: 2025-08-20
+ * Created on: 2025-08-23
+ * Last modified: 2025-08-23
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 /**
- * ManageTunnel.jsx
+ * Tunnel.jsx
  *
  * Displays a horizontal tunnel of steps with FontAwesome icons
  * Each step has optional beforeStep and afterStep events, mandatory status, and content
@@ -41,7 +41,7 @@ import './style.css'
  */
 
 /**
- * ManageTunnel component displays a horizontal tunnel of steps
+ * Tunnel component displays a horizontal tunnel of steps
  * Each step has a FontAwesome icon, label, optional content, and optional navigation events
  * Mandatory steps must be completed before proceeding
  *
@@ -50,7 +50,7 @@ import './style.css'
  * @param {() => void} props.onExit - Callback for exit button
  * @returns {JSX.Element}
  */
-export const ManageTunnel = ({steps, onCancel, className}) => {
+export const Tunnel = ({steps, onCancel, className}) => {
     // State for the current step index
     const [currentContainer, setCurrentStepIndex] = useState(0)
     const _tunnelContainer = useRef(null)

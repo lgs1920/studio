@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-15
- * Last modified: 2025-08-15
+ * Created on: 2025-08-23
+ * Last modified: 2025-08-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -68,8 +68,12 @@ export const ui = {
         filename: '',
         format:   'MP4',    // check video formats
         quality:  'MEDIUM', // and presets in VideoRecorder.js
-        edit:    false,
+        editing:         false,
+        recording:       false,
+        paused:          false,
+        totalBytes:      0,
         step:    0,
+        toolbarPosition: {},
         cropper: {
             ratioEditor: true,
             draggable:   true,
