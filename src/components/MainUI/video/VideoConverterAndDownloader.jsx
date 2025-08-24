@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-23
- * Last modified: 2025-08-23
+ * Created on: 2025-08-24
+ * Last modified: 2025-08-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,10 +38,10 @@ const AVAILABLE_FORMATS = VideoConverter.getAvailableFormats()
 const QUALITY_PRESETS = VideoConverter.getQualityPresets()
 
 /**
- * VideoPreview component for previewing and converting recorded videos
+ * VideoConverterAndDownloader component for previewing and converting recorded videos
  * @returns {JSX.Element} Video preview dialog with conversion options
  */
-export const VideoPreview = () => {
+export const VideoConverterAndDownloader = () => {
     const [videoUrl, setVideoUrl] = useState(null)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [videoBlob, setVideoBlob] = useState(null)
@@ -223,7 +223,6 @@ export const VideoPreview = () => {
         try {
             const fileExtension = AVAILABLE_FORMATS[video.format]?.extension || 'webm'
             let finalBlob = videoBlob
-            let mimeType = AVAILABLE_FORMATS[video.format]?.mimeType || videoBlob.type
 
             setConversionLogs((prev) => [
                 ...prev,
@@ -237,13 +236,13 @@ export const VideoPreview = () => {
                 customEncoding: AVAILABLE_FORMATS[video.format],
                 audio:          VideoConverter.AUDIO_ENCODE.NONE,
             })
-            mimeType = AVAILABLE_FORMATS[video.format].mimeType
+            const mimeType = AVAILABLE_FORMATS[video.format].mimeType
             setConversionLogs((prev) => [
                 ...prev,
                 `Received converted blob: type=${finalBlob.type}, size=${(finalBlob.size / 1000000).toFixed(2)}MB`,
             ])
 
-
+            // Download file
             const url = URL.createObjectURL(new Blob([finalBlob], {type: mimeType}))
             setConversionLogs((prev) => [...prev, `Created download URL: ${url}`])
             const link = document.createElement('a')
@@ -290,12 +289,12 @@ export const VideoPreview = () => {
         setConversionLogs((prev) => [...prev, 'Dialog closed and resources cleaned up'])
     }, [isConverting, videoUrl, $video])
 
+
     // Handle dialog close event
     const handleDialogClose = useCallback(
         (event) => {
             if (isConverting) {
                 event.preventDefault()
-                setConversionLogs((prev) => [...prev, 'Cannot close dialog during conversion'])
                 return
             }
             if (
@@ -307,6 +306,7 @@ export const VideoPreview = () => {
         },
         [isConverting],
     )
+
     const displayTextDuringConversion = () => {
         if (!isConverting) {
             return 'Download'
@@ -316,6 +316,7 @@ export const VideoPreview = () => {
         }
         return `Converting... ${progressPercentage.toFixed(2)}% (${(convertedTime / 1000).toFixed(2)}/${duration}s)`
     }
+
     return (
         <SlDialog
             label="Video Preview"
@@ -349,7 +350,7 @@ export const VideoPreview = () => {
                     <div className="video-file-name-quality-format">
                         <SlSelect
                             size="small"
-                            label="Video Format"
+                            label={'Video Format'}
                             value={video.format || 'MP4'}
                             onSlChange={handleFormatChange}
                             disabled={isConverting}
@@ -362,7 +363,7 @@ export const VideoPreview = () => {
                         </SlSelect>
                         <SlSelect
                             size="small"
-                            label="Quality Preset"
+                            label={'Quality Preset'}
                             value={video.quality || 'MEDIUM'}
                             onSlChange={handleQualityChange}
                             disabled={isConverting || video.format === inputFormat}
@@ -377,7 +378,7 @@ export const VideoPreview = () => {
                     <div className="video-file-name-quality-format">
                         <SlInput
                             size="small"
-                            label="Video file name prefix"
+                            label={'Video file name prefix'}
                             name="video-file-name"
                             value={video.filename || __.recorder.filename}
                             onSlInput={handleFilenameChange}
@@ -391,7 +392,7 @@ export const VideoPreview = () => {
                     {progressPercentage > 0 && (
                         <SlProgressBar
                             value={progressPercentage}
-                            label="Conversion Progress"
+                            label={'Conversion Progress'}
                             className="conversion-progress"
                         />
                     )}
@@ -409,7 +410,7 @@ export const VideoPreview = () => {
                 <SlTooltip content="Cancel recording">
                     <SlButton onClick={handleCancel} disabled={isConverting}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}/>
-                        Cancel
+                        {'Cancel'}
                     </SlButton>
                 </SlTooltip>
                 <SlTooltip content={isConverting ? 'Converting video...' : 'Save your video.'}>
