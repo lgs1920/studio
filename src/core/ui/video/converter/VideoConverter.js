@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-08
- * Last modified: 2025-08-08
+ * Created on: 2025-08-26
+ * Last modified: 2025-08-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,7 +21,7 @@ import { LGS_PROJECT } from '@Core/constants'
  *
  * @class VideoConverter
  * @description Handles video conversion through a remote backend API with real-time progress tracking via Server-Sent
- *     Events (SSE) or polling
+ *     Events (SSE) or polling. Supports video filters for format compatibility and optimization.
  * @example
  * const converter = new VideoConverter({
  *   onProgress: ({percentage, time, duration}) => console.log(`Progress: ${percentage}% (${time}/${duration}ms)`),
@@ -35,7 +35,8 @@ import { LGS_PROJECT } from '@Core/constants'
  *   quality: 'HIGH',
  *   outputFileName: 'my-video.mp4',
  *   audio: VideoConverter.AUDIO_ENCODE.NONE, // 'none', 'copy', or 'encode'
- *   customEncoding: { codec: 'libx264', audioCodec: 'aac', extraArgs: ['-movflags', '+faststart'] }
+ *   customEncoding: { codec: 'libx264', audioCodec: 'aac', videoFilters: 'format=yuv420p', extraArgs: ['-movflags',
+ *     '+faststart'] }
  * })
  */
 export class VideoConverter {
@@ -47,15 +48,14 @@ export class VideoConverter {
     }
 
     // Formats (container + codecs)
-    static FORMATS = {
+    static VIDEO_FORMATS = {
         MP4:  {
             extension: 'mp4',
             codec:    'libx264',
             audioCodec: 'aac',
             mimeType: 'video/mp4',
             description: 'MP4 (H.264/AAC)',
-            // Ensure chroma format and even dimensions for H.264 compatibility
-            videoFilters: 'format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2',
+            videoFilters: 'scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p',
             // Container/streaming optimizations only
             extraArgs: [
                 '-movflags', '+faststart',
@@ -67,12 +67,10 @@ export class VideoConverter {
             audioCodec: 'opus',
             mimeType: 'video/webm',
             description: 'WebM (VP9/Opus)',
-            // yuv420p keeps broad browser compatibility
             videoFilters: 'format=yuv420p',
-            // VP9 speed uses -speed/-cpu-used
             extraArgs: [
-                '-speed', '8', // Higher = faster encode, lower compression efficiency
-                '-threads', '0', // Use all available CPU threads
+                '-speed', '8',
+                '-threads', '0',
             ]
         },
         AVI:  {
@@ -82,36 +80,35 @@ export class VideoConverter {
             mimeType:    'video/x-msvideo',
             description: 'AVI (MPEG-4/MP3)',
             videoFilters: 'format=yuv420p',
-            // Old-school MPEG-4 quality via qscale (lower = better)
             extraArgs: [
                 '-qscale:v', '3',
             ]
         }
-    };
+    }
 
     // Quality presets (encoder speed + CRF)
     static QUALITY_PRESETS = {
         DRAFT:   {
-            crf:         '35', // Very low quality, very fast
+            crf:         '35',
             preset:      'ultrafast',
-            description: '⚡ Draft – blazing speed, minimal quality',
+            description: 'Draft – blazing speed, minimal quality',
         },
         MEDIUM: {
-            crf:         '25', // Balanced quality/speed
-            preset: 'veryfast',
-            description: '🎯 Medium – balanced speed & quality',
+            crf:         '25',
+            preset:      'veryfast',
+            description: 'Medium – balanced speed & quality',
         },
         HIGH:    {
-            crf:         '22', // High quality, slower
+            crf:         '22',
             preset:      'fast',
-            description: '🚀 High – slower encode, great visuals',
+            description: 'High – slower encode, great visuals',
         },
         HIGHEST: {
-            crf:         '18', // Near visually lossless, slowest
+            crf:         '18',
             preset:      'slow',
-            description: '👑 Highest – top-notch quality, slow render',
+            description: 'Highest – top-notch quality, slow render',
         }
-    };
+    }
 
     // Public attributes to store conversion state
     conversionTime = 0
@@ -129,7 +126,7 @@ export class VideoConverter {
         outputFormat: null,
         inputFileDetails: null,
         conversionTime: 0,
-        duration: null, // Store video duration in milliseconds
+        duration: null,
         errorMessage: null,
     }
 
@@ -186,11 +183,11 @@ export class VideoConverter {
      * Returns available video formats
      *
      * @static
-     * @returns {Object} Supported formats configuration with codec, extension, and other settings
+     * @returns {Object} Supported formats configuration with codec, extension, video filters, and other settings
      * @memberof VideoConverter
      */
     static getAvailableFormats = () => {
-        return VideoConverter.FORMATS
+        return VideoConverter.VIDEO_FORMATS
     }
 
     /**
@@ -243,7 +240,7 @@ export class VideoConverter {
         }
 
         // Validate input format
-        if (!VideoConverter.FORMATS[inputFormat]) {
+        if (!VideoConverter.VIDEO_FORMATS[inputFormat]) {
             if (this.#DEBUG) {
                 this.onLog(`Invalid input format: ${inputFormat}`)
             }
@@ -251,7 +248,7 @@ export class VideoConverter {
         }
 
         // Validate output format
-        if (!VideoConverter.FORMATS[outputFormat]) {
+        if (!VideoConverter.VIDEO_FORMATS[outputFormat]) {
             if (this.#DEBUG) {
                 this.onLog(`Unsupported output format: ${outputFormat}`)
             }
@@ -296,9 +293,9 @@ export class VideoConverter {
         }
 
         // Get format and quality configurations
-        const format = customEncoding || VideoConverter.FORMATS[outputFormat]
+        const format = customEncoding || VideoConverter.VIDEO_FORMATS[outputFormat]
         const qualityPreset = VideoConverter.QUALITY_PRESETS[quality]
-        const inputFileName = `input.${VideoConverter.FORMATS[inputFormat].extension}`
+        const inputFileName = `input.${VideoConverter.VIDEO_FORMATS[inputFormat].extension}`
         const outputName = outputFileName || `output.${format.extension}`
         const startTime = Date.now()
 
@@ -319,7 +316,7 @@ export class VideoConverter {
             }
             this.onProgress({percentage: 0})
 
-            // Build request with customEncoding and audio
+            // Build request with customEncoding, audio, and videoFilters
             const formData = this.#buildConversionRequest(inputFile, {
                 inputFileName,
                 format,
@@ -331,10 +328,10 @@ export class VideoConverter {
                 customEncoding,
                 audio,
             })
-
             // Send conversion request
             const response = await this.#sendConversionRequest(formData)
-            const {conversionId, message, urls} = await response.json()
+            const {conversionId, message, urls} = await response.data
+
             this.sseURL = this.#sse ? `${this.backend}${urls.progress}?sse=true` : `${this.backend}${urls.progress}?sse=false`
             this.downloadURL = `${this.backend}${urls.download}`
             this.cancelURL = `${this.backend}${urls.cancel}`
@@ -452,15 +449,20 @@ export class VideoConverter {
                   metadata,
                   customEncoding,
                   qualityPreset,
+                  format,
                   audio,
               } = options
 
-        // Prepare customEncoding with quality preset parameters if not provided
-        customEncoding.extraArgs = [
-            ...(customEncoding.extraArgs || []),
-            '-crf', qualityPreset.crf,
-            '-preset', qualityPreset.preset,
-        ]
+        // Prepare encoding configuration with quality preset parameters
+        const encodingConfig = {
+            ...format,
+            extraArgs:    [
+                ...(customEncoding?.extraArgs || format.extraArgs || []),
+                '-crf', qualityPreset.crf,
+                '-preset', qualityPreset.preset,
+            ],
+            videoFilters: customEncoding?.videoFilters || format.videoFilters,
+        }
 
         // Prepare FormData for API request
         const formData = new FormData()
@@ -470,11 +472,10 @@ export class VideoConverter {
                                                    to:             outputFormat,
                                                    duration,
                                                    metadata,
-                                                   customEncoding: customEncoding,
+                                                   customEncoding: encodingConfig,
                                                    audio,
-                                                   verbose: this.#DEBUG, // Enable verbose logging if debug is true
+                                                   verbose:        this.#DEBUG,
                                                }))
-
         return formData
     }
 
@@ -492,18 +493,17 @@ export class VideoConverter {
         if (this.#DEBUG) {
             this.onLog(`Sending POST request to ${this.convertURL}`)
         }
+
         try {
-            const response = await fetch(this.convertURL, {
-                method:  'POST',
-                body:    formData,
-                credentials: 'include',
+            const response = await lgs.axios.post(this.convertURL, formData, {
                 headers: {
                     'X-Request-Progress': 'true',
                     'X-Progress-Interval': '500',
                 },
+                withCredentials: true,
             })
-
-            if (!response.ok) {
+            console.log(response)
+            if (response.status !== 200) {
                 const errorText = await this.#readResponseData(response)
                 throw new Error(`HTTP error: ${response.status}, ${errorText}`)
             }
@@ -542,7 +542,7 @@ export class VideoConverter {
                     this.#cleanup()
                     reject(new Error('Progress tracking timeout after 30s'))
                 }
-            }, 30000) // 30s timeout
+            }, 30000)
 
             if (this.#sse) {
                 // SSE mode
@@ -637,7 +637,6 @@ export class VideoConverter {
 
                 let eventData
                 if (contentType && contentType.includes('application/json')) {
-                    // Expected JSON response
                     try {
                         const data = JSON.parse(text.trim())
                         if (!data.success || !data.event || !data.data) {
@@ -656,7 +655,6 @@ export class VideoConverter {
                     }
                 }
                 else if (contentType && contentType.includes('text/event-stream')) {
-                    // Fallback to parsing SSE format
                     eventData = this.#parseSseResponse(text)
                     if (!eventData) {
                         return
@@ -711,7 +709,7 @@ export class VideoConverter {
 
         // Start polling
         this.#pollInterval = setInterval(poll, this.#pollDelay)
-        poll() // Immediate first poll
+        poll()
     }
 
     /**
@@ -936,7 +934,7 @@ export class VideoConverter {
     #resetHeartbeatTimeout = () => {
         if (!this.#sse) {
             return
-        } // No heartbeat in polling mode
+        }
         if (this.#heartbeatTimeout) {
             clearTimeout(this.#heartbeatTimeout)
         }
@@ -947,7 +945,7 @@ export class VideoConverter {
                     this.onLog('SSE heartbeat timeout after 45s')
                 }
             }
-        }, 45000) // 45s timeout
+        }, 45000)
     }
 
     /**
@@ -985,7 +983,7 @@ export class VideoConverter {
                 type: inputFile.type,
             },
             conversionTime: totalTime,
-            duration: this.conversionData.duration, // Preserve duration from progress events
+            duration: this.conversionData.duration,
             errorMessage:   null,
         }
     }
@@ -1013,7 +1011,7 @@ export class VideoConverter {
                 type: inputFile.type,
             },
             conversionTime: totalTime || 0,
-            duration: this.conversionData.duration, // Preserve duration from progress events
+            duration: this.conversionData.duration,
             errorMessage:   errorMessage,
         }
     }

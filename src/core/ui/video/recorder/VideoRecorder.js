@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-23
- * Last modified: 2025-08-23
+ * Created on: 2025-08-26
+ * Last modified: 2025-08-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -215,22 +215,30 @@ export class VideoRecorder extends EventTarget {
     /**
      * Sets canvas source(s) to be recorded. If multiple sources are provided, they are merged into a single stream
      * Uses 2D canvas context for rendering with clipping support
-     * Note: For best quality, match output width/height to clipWidth/clipHeight and use 'video/webm;codecs=vp9' or
+     * Note: Output canvas is set in physical pixels to preserve quality on high-DPI displays
+     * Clipping parameters (clipX, clipY, clipWidth, clipHeight) are in physical pixels
+     * For best quality, match output width/height to clipWidth/clipHeight and use 'video/webm;codecs=vp9' or
      * 'video/mp4'
-     * @param {HTMLCanvasElement[]} canvases - Array of canvases to record
+     * @param {HTMLCanvasElement[]} canvases - Array of canvases to record (dimensions in CSS pixels)
      * @param {Object} [options] - Configuration options
-     * @param {number} [options.width] - Output width of the composite canvas (defaults to clipWidth)
-     * @param {number} [options.height] - Output height of the composite canvas (defaults to clipHeight)
-     * @param {number} [options.clipX=0] - X-coordinate of the top-left corner of the clipping region
-     * @param {number} [options.clipY=0] - Y-coordinate of the top-left corner of the clipping region
-     * @param {number} [options.clipWidth] - Width of the clipping region (defaults to canvas width)
-     * @param {number} [options.clipHeight] - Height of the clipping region (defaults to canvas height)
+     * @param {number} [options.width] - Output width of the composite canvas in physical pixels (defaults to
+     *     clipWidth)
+     * @param {number} [options.height] - Output height of the composite canvas in physical pixels (defaults to
+     *     clipHeight)
+     * @param {number} [options.clipX=0] - X-coordinate of the top-left corner of the clipping region in physical
+     *     pixels
+     * @param {number} [options.clipY=0] - Y-coordinate of the top-left corner of the clipping region in physical
+     *     pixels
+     * @param {number} [options.clipWidth] - Width of the clipping region in physical pixels (defaults to canvas width
+     *     * dpr)
+     * @param {number} [options.clipHeight] - Height of the clipping region in physical pixels (defaults to canvas
+     *     height * dpr)
      * @param {boolean} [options.preserveAlpha=false] - Preserve alpha channel in output canvas
      * @param {Function} [options.onNeedsRedraw] - Optional callback to signal when canvas needs redraw
      * @throws {Error} If no canvases are provided, recording is active, 2D context is not supported, or clipping
      *     parameters are invalid
      */
-    setSource(canvases, {
+    setSource = (canvases, {
         width,
         height,
         clipX = 0,
@@ -239,7 +247,7 @@ export class VideoRecorder extends EventTarget {
         clipHeight,
         preserveAlpha = false,
         onNeedsRedraw,
-    } = {}) {
+    } = {}) => {
         if (!Array.isArray(canvases) || canvases.length === 0) {
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                 detail: {error: new Error('You must provide at least one canvas'), timestamp: Date.now()},
@@ -253,33 +261,43 @@ export class VideoRecorder extends EventTarget {
             throw new Error('Cannot change source while recording')
         }
 
-        // Validate clipping parameters for all canvases
+        // Get device pixel ratio
+        const dpr = __.device.dpr || 1
+
+        // Validate clipping parameters for all canvases in physical pixels
         canvases.forEach((canvas, i) => {
-            clipWidth = clipWidth ?? canvas.width
-            clipHeight = clipHeight ?? canvas.height
-            if (clipX < 0 || clipY < 0 || clipWidth <= 0 || clipHeight <= 0 ||
-                clipX + clipWidth > canvas.width || clipY + clipHeight > canvas.height) {
+            const canvasWidth = canvas.width * dpr
+            const canvasHeight = canvas.height * dpr
+            const validatedClipWidth = clipWidth ?? canvasWidth
+            const validatedClipHeight = clipHeight ?? canvasHeight
+
+            console.log(`Canvas ${i}: clipX=${clipX}, clipY=${clipY}, clipWidth=${validatedClipWidth}, clipHeight=${validatedClipHeight}, canvasWidth=${canvasWidth}, canvasHeight=${canvasHeight}`)
+
+            if (clipX < 0 || clipY < 0 || validatedClipWidth <= 0 || validatedClipHeight <= 0 ||
+                clipX + validatedClipWidth > canvasWidth || clipY + validatedClipHeight > canvasHeight) {
                 this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                     detail: {error: new Error(`Invalid clipping parameters for canvas ${i}`), timestamp: Date.now()},
                 }))
                 throw new Error(`Invalid clipping parameters for canvas ${i}`)
             }
         })
-        clipWidth = clipWidth ?? canvases[0].width
-        clipHeight = clipHeight ?? canvases[0].height
 
-        // Default output resolution to clipped region to avoid scaling
-        width = width ?? clipWidth
-        height = height ?? clipHeight
+        // Default clip dimensions to first canvas in physical pixels
+        const finalClipWidth = clipWidth ?? canvases[0].width * dpr
+        const finalClipHeight = clipHeight ?? canvases[0].height * dpr
+
+        // Default output resolution to clipped region in physical pixels
+        const outputWidth = width ?? finalClipWidth
+        const outputHeight = height ?? finalClipHeight
 
         // Stop any existing rendering loop
         this.stopRendering?.()
         this.stopRendering = null
 
-        // Create output canvas for final stream
+        // Create output canvas for final stream in physical pixels
         const outputCanvas = document.createElement('canvas')
-        outputCanvas.width = width
-        outputCanvas.height = height
+        outputCanvas.width = outputWidth
+        outputCanvas.height = outputHeight
         const outputCtx = outputCanvas.getContext('2d', {alpha: preserveAlpha})
         if (!outputCtx) {
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
@@ -298,28 +316,29 @@ export class VideoRecorder extends EventTarget {
                 return
             }
             this.needsRedraw = false
-            outputCtx.clearRect(0, 0, width, height)
+            outputCtx.clearRect(0, 0, outputWidth, outputHeight)
             if (canvases.length === 1) {
                 // Single canvas with clipping
                 outputCtx.drawImage(
                     canvases[0],
-                    clipX, clipY, clipWidth, clipHeight, // Source region
-                    0, 0, width, height, // Destination region
+                    clipX / dpr, clipY / dpr, finalClipWidth / dpr, finalClipHeight / dpr, // Source region adjusted
+                    // for CSS pixels
+                    0, 0, outputWidth, outputHeight, // Destination region in physical pixels
                 )
             }
             else {
                 // Multiple canvases arranged in a grid
                 const cols = Math.ceil(Math.sqrt(canvases.length))
                 const rows = Math.ceil(canvases.length / cols)
-                const cellW = width / cols
-                const cellH = height / rows
+                const cellW = outputWidth / cols
+                const cellH = outputHeight / rows
 
                 canvases.forEach((canvas, i) => {
                     const x = (i % cols) * cellW
                     const y = Math.floor(i / cols) * cellH
                     outputCtx.drawImage(
                         canvas,
-                        clipX, clipY, clipWidth, clipHeight,
+                        clipX / dpr, clipY / dpr, finalClipWidth / dpr, finalClipHeight / dpr,
                         x, y, cellW, cellH,
                     )
                 })
@@ -328,23 +347,24 @@ export class VideoRecorder extends EventTarget {
         }
 
         draw()
-        this.stopRendering = () => __.cancelAnimationFrame(rafId)
 
+        this.stopRendering = () => __.cancelAnimationFrame(rafId)
         this.stream = outputCanvas.captureStream(this.fps)
         this.sourceType = 'canvas'
+
         this.dispatchEvent(new CustomEvent(VideoRecorder.events.SOURCE, {
             detail: {
                 type: 'canvas',
                 timestamp: Date.now(),
-                width,
-                height,
+                width:      outputCanvas.width,
+                height:     outputCanvas.height,
                 canvases,
                 clipX,
                 clipY,
-                clipWidth,
-                clipHeight,
+                clipWidth:  finalClipWidth,
+                clipHeight: finalClipHeight,
                 preserveAlpha,
-            },
+            }
         }))
     }
 

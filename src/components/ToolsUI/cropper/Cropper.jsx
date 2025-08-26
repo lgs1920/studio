@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-20
- * Last modified: 2025-08-20
+ * Created on: 2025-08-26
+ * Last modified: 2025-08-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -294,9 +294,7 @@ export const Cropper = memo(({
                  <DefinedCropZone
                      ref={_cropZone}
                      crop={crop}
-                     manager={_manager.current}
-                     cropper={cropper}
-                     interactionState={interactionState}
+                     manager={{dpr: _manager.current.dpr}}
                      className={className}
                  />
              )}

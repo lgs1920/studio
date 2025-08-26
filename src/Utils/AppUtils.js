@@ -13,6 +13,7 @@
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
+
 import {
     BUILD, CONFIGURATION, COUNTRIES, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, LGS_CONTEXT_MENU_HOOK, MILLIS,
     platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE,
@@ -22,8 +23,8 @@ import { Settings }         from '@Core/settings/Settings'
 import { SettingsSection }  from '@Core/settings/SettingsSection'
 import { ChangelogManager } from '@Core/ui/ChangelogManager'
 import axios                from 'axios'
-import YAML                 from 'bun'
 import * as Cesium          from 'cesium'
+import YAML                 from 'yaml'
 import { EventEmitter }     from '../assets/libs/EventEmitter/EventEmitter'
 import { FA2SL }            from './FA2SL'
 
