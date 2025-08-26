@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-15
- * Last modified: 2025-08-15
+ * Created on: 2025-08-26
+ * Last modified: 2025-08-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -418,18 +418,20 @@ export const LGS_CONTEXT_MENU_HOOK = 'lgs-context-menu-hook'
 export const OS = {
     windows: 'windows',
     linux:   'linux',
-    macOS:   'macOS',
+    macOS: 'macos',
+    macos: 'macos',
     android: 'android',
     iOS:     'ios',
+    ios:   'ios',
     unknown: 'unknown',
 }
 
 export const OS_ICONS = {
     windows: faWindows,
     linux:   faLinux,
-    macOS:   faApple,
+    macos: faApple,
     android: faAndroid,
-    iOS:     faApple,
+    ios:   faApple,
     unknown: faDesktop,
 }
 
@@ -453,7 +455,6 @@ export const NAVIGATOR = {
     opera:   'Opera',
     unknown: 'unknown',
 }
-
 
 /*******************************************************************************
  * Banners
