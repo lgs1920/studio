@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-26
- * Last modified: 2025-08-26
+ * Created on: 2025-08-29
+ * Last modified: 2025-08-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -270,8 +270,6 @@ export class VideoRecorder extends EventTarget {
             const canvasHeight = canvas.height * dpr
             const validatedClipWidth = clipWidth ?? canvasWidth
             const validatedClipHeight = clipHeight ?? canvasHeight
-
-            console.log(`Canvas ${i}: clipX=${clipX}, clipY=${clipY}, clipWidth=${validatedClipWidth}, clipHeight=${validatedClipHeight}, canvasWidth=${canvasWidth}, canvasHeight=${canvasHeight}`)
 
             if (clipX < 0 || clipY < 0 || validatedClipWidth <= 0 || validatedClipHeight <= 0 ||
                 clipX + validatedClipWidth > canvasWidth || clipY + validatedClipHeight > canvasHeight) {

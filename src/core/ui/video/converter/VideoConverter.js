@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-26
- * Last modified: 2025-08-26
+ * Created on: 2025-08-29
+ * Last modified: 2025-08-29
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { LGS_PROJECT } from '@Core/constants'
+import { APP_KEY, LGS_PROJECT } from '@Core/constants'
+import { DateTime }             from 'luxon'
 
 /**
  * VideoConverter class for converting video files using a remote API
@@ -59,19 +60,19 @@ export class VideoConverter {
             // Container/streaming optimizations only
             extraArgs: [
                 '-movflags', '+faststart',
-            ]
+            ],
         },
         WEBM: {
             extension: 'webm',
-            codec:    'libvpx-vp9',
+            codec:     'libvpx-vp9',
             audioCodec: 'opus',
-            mimeType: 'video/webm',
+            mimeType:  'video/webm',
             description: 'WebM (VP9/Opus)',
             videoFilters: 'format=yuv420p',
             extraArgs: [
                 '-speed', '8',
                 '-threads', '0',
-            ]
+            ],
         },
         AVI:  {
             extension:   'avi',
@@ -82,8 +83,8 @@ export class VideoConverter {
             videoFilters: 'format=yuv420p',
             extraArgs: [
                 '-qscale:v', '3',
-            ]
-        }
+            ],
+        },
     }
 
     // Quality presets (encoder speed + CRF)
@@ -91,23 +92,27 @@ export class VideoConverter {
         DRAFT:   {
             crf:         '35',
             preset:      'ultrafast',
-            description: 'Draft – blazing speed, minimal quality',
+            text:        'Draft',
+            description: 'Blazing speed, minimal quality',
         },
-        MEDIUM: {
+        MEDIUM:  {
             crf:         '25',
             preset:      'veryfast',
-            description: 'Medium – balanced speed & quality',
+            text:        'Medium',
+            description: 'Balanced speed & quality',
         },
         HIGH:    {
             crf:         '22',
             preset:      'fast',
-            description: 'High – slower encode, great visuals',
+            text:        'High',
+            description: 'Slower encode, great visuals',
         },
         HIGHEST: {
             crf:         '18',
             preset:      'slow',
-            description: 'Highest – top-notch quality, slow render',
-        }
+            text:        'Highest',
+            description: 'Top-notch quality, slow render',
+        },
     }
 
     // Public attributes to store conversion state
@@ -212,6 +217,17 @@ export class VideoConverter {
         return VideoConverter.AUDIO_ENCODE
     }
 
+    /**
+     * Generate a filename for the converted video
+     * @param {string} format - Output format key (e.g., 'MP4', 'WEBM')
+     * @param {string} [filenamePrefix=APP_KEY] - Prefix for the filename
+     * @returns {string} Generated filename with timestamp, prefix, and extension
+     */
+    fileName = (format, filenamePrefix = APP_KEY) => {
+        const timestamp = DateTime.local().toFormat('yyyyLLddHHmm')
+        const fileExtension = VideoConverter.VIDEO_FORMATS[format]?.extension || 'webm'
+        return `${timestamp}-${filenamePrefix}.${fileExtension}`
+    }
     /**
      * Converts a video by sending it to the remote API
      *
