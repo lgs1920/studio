@@ -7,17 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-20
- * Last modified: 2025-08-20
+ * Created on: 2025-08-29
+ * Last modified: 2025-08-29
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { DragHandler }                                              from '@Core/ui/drag-handler/DragHandler'
-import { faCropSimple, faRectangle, faRectangleVertical, faSquare } from '@fortawesome/pro-regular-svg-icons'
-import { faGripDots }                                               from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlIconButton, SlTooltip }                          from '@shoelace-style/shoelace/dist/react'
+import {
+    faCropSimple, faRectangle, faRectangleVertical, faSquare, faRectangleTall, faRectangleWide,
+}                                   from '@fortawesome/pro-regular-svg-icons'
+import { faExpandWide, faGripDots } from '@fortawesome/pro-solid-svg-icons'
+import { SlIcon, SlTooltip }        from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                    from '@Utils/FA2SL'
 import { memo, useCallback, useEffect, useRef, useState }           from 'react'
 import { useSnapshot }                                              from 'valtio'
@@ -39,6 +41,7 @@ const POSITIONING = {
  * @constant
  */
 const ICONS = {
+    'square': faSquare,
     '9x16': faRectangleVertical,
     '16x9': faRectangle,
     '1x1':  faSquare,
@@ -53,7 +56,7 @@ const ICONS = {
  * @param {Object} props.manager.store - Valtio store with crop state (ratioEditor, etc.)
  * @returns {JSX.Element} Draggable crop ratio selector UI
  */
-const CropRatioSelector = memo(({manager}) => {
+export const CropRatioSelector = memo(({manager}) => {
     // Access reactive cropper and toolbar states
     const $cropper = manager?.store
     const cropper = useSnapshot($cropper || {}, {sync: true})
@@ -63,11 +66,12 @@ const CropRatioSelector = memo(({manager}) => {
     const _toolbar = useRef(null)
 
     // Track selected ratio, defaulting to first video format
+    const defaultRatio = __.device.isPortrait ? '9x16' : '16x9'
     const selectedRatio = cropper.ratioEditor
                           ? lgs.configuration.videoFormats.find(p => p.value === cropper.aspectRatio?.toString().replace('/', 'x'))?.value
                               || lgs.configuration.videoFormats[0]?.value
-                              || '16x9'
-                          : '16x9'
+                              || defaultRatio
+                          : defaultRatio
 
     /**
      * Updates menu position based on container bounds
@@ -79,8 +83,8 @@ const CropRatioSelector = memo(({manager}) => {
             return
         }
         _toolbar.current.style.position = 'absolute'
-        _toolbar.current.style.left = `${bounds.width * POSITIONING.X_PERCENTAGE}px`
-        _toolbar.current.style.top = `${bounds.height * POSITIONING.Y_PERCENTAGE}px`
+        _toolbar.current.style.left = `${bounds.width / __.device.dpr * POSITIONING.X_PERCENTAGE}px`
+        _toolbar.current.style.top = `${bounds.height / __.device.dpr * POSITIONING.Y_PERCENTAGE}px`
         _toolbar.current.style.width = 'auto'
         _toolbar.current.style.opacity = toolbars.opacity || 1
     }, [toolbars.opacity])
@@ -155,6 +159,28 @@ const CropRatioSelector = memo(({manager}) => {
         lgs.canvas.dispatchEvent(pointerMoveEvent)
     }
 
+
+    /**
+     * Determines if a given preset is visible on the current device and orientation
+     *
+     * @param {Object} preset - The preset object from YAML
+     * @returns {boolean} True if the preset should be visible
+     */
+    const isPresetVisible = preset => {
+        const device = __.device.getDeviceType()        // ex: "mobile"
+        const orientation = __.device.getOrientation()  // ex: "portrait"
+        const key = `${device}-${orientation}`     // ex: "mobile-portrait"
+        console.log(key, preset.visibility)
+        // If no visibility is defined, preset is visible everywhere
+        if (!preset.visibility) {
+            return true
+        }
+
+        // Check if visibility includes either the device or the device-orientation key
+        return preset.visibility.includes(device) || preset.visibility.includes(key)
+    }
+
+
     // Render draggable toolbar with ratio preset icons
     return (
         <>
@@ -167,18 +193,22 @@ const CropRatioSelector = memo(({manager}) => {
                         </SlTooltip>
                         <div className="crop-ratio-presets">
                             {lgs.configuration.videoFormats.map(preset => (
-                                <SlTooltip
-                                    key={preset.value}
-                                    content={`${preset.label}: ${preset.description}`}
-                                    placement="right"
-                                >
-                                    <SlIcon
-                                        library="fa"
-                                        className={`lgs-card ${selectedRatio === preset.value ? 'selected' : ''}`}
-                                        onClick={event => handleChangeRatio(preset, event)}
-                                        name={FA2SL.set(ICONS[preset.value] || faSquare)}
-                                    />
-                                </SlTooltip>
+                                <>
+                                    {isPresetVisible(preset) &&
+                                        <SlTooltip
+                                            key={preset.value}
+                                            content={`${preset.label}: ${preset.description}`}
+                                            placement="right"
+                                        >
+                                            <SlIcon
+                                                library="fa"
+                                                className={`lgs-card ${selectedRatio === preset.value ? 'selected' : ''}`}
+                                                onClick={event => handleChangeRatio(preset, event)}
+                                                name={FA2SL.set(ICONS[preset.value] || faSquare)}
+                                            />
+                                        </SlTooltip>
+                                    }
+                                </>
                             ))}
                         </div>
                     </div>
@@ -187,7 +217,3 @@ const CropRatioSelector = memo(({manager}) => {
         </>
     )
 })
-
-CropRatioSelector.displayName = 'CropRatioSelector'
-
-export { CropRatioSelector }

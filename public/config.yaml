@@ -25,12 +25,14 @@ videoFormats:
     aspectRatio: 1.7778
     locked: true
     orientation: "landscape"
-    description: "YouTube, film, widescreen"
+    visibility: [ "tablet","desktop","mobile-landscape" ]
+    description: "YouTube, film"
   - label: "9x16"
     value: "9x16"
     aspectRatio: 0.5625
     locked: true
     orientation: "portrait"
+    visibility: [ "tablet","desktop","mobile-portrait" ]
     description: "TikTok, Shorts, Stories, Reels"
   - label: "1x1"
     value: "1x1"
@@ -44,3 +46,4 @@ videoFormats:
     locked: false
     orientation: "paysage"
     description: "Define your own"
+    visibility: [ "tablet","desktop" ]
