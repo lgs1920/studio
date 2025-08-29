@@ -170,7 +170,6 @@ export const CropRatioSelector = memo(({manager}) => {
         const device = __.device.getDeviceType()        // ex: "mobile"
         const orientation = __.device.getOrientation()  // ex: "portrait"
         const key = `${device}-${orientation}`     // ex: "mobile-portrait"
-        console.log(key, preset.visibility)
         // If no visibility is defined, preset is visible everywhere
         if (!preset.visibility) {
             return true
