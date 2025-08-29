@@ -40,8 +40,9 @@ export const VideoPostConversion = ({videoBlob}) => {
                 <div className="info-item">
                     <span>{'File name:'}&nbsp;{$video.conversion.finalFilename}</span>
                     <div>
-                        <span>{'Size:'}&nbsp;{videoBlob ? __.convert(videoBlob.size).toSize() : '0.00'}</span>
-                        <span>{'Duration:'}&nbsp;{__.convert(video.conversion.duration * SECOND).toTime()}</span>
+                        <span>{'Size:'}</span><span>{videoBlob ? __.convert(videoBlob.size).toSize() : '0.00'}</span>
+                        -
+                        <span>{'Duration:'}</span><span>{__.convert(video.conversion.duration * SECOND).toTime()}</span>
                     </div>
                 </div>
             </div>

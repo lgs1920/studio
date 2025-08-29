@@ -233,15 +233,22 @@
 .post-conversion-container {
     display: flex;
     flex-direction: column;
-    gap: var(--lgs-gutter);
+    justify-content: space-between;
 }
 
 .post-conversion-container .info-item, .post-conversion-container .info-item div {
     display: flex;
     align-items: center;
-    gap: var(--lgs-gutter-s);
+    flex-wrap: wrap;
+    gap: var(--lgs-gutter);
 }
 
 .post-conversion-container .info-item div {
     margin-left: auto;
+    gap: var(--lgs-gutter-xs);
+}
+
+.mobile .post-conversion-container .info-item div span:first-child,
+.mobile .post-conversion-container .info-item div span:nth-child(3) {
+    display: none
 }
