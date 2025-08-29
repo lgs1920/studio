@@ -56,7 +56,7 @@ export const VideoConversionSettings = ({handleFormatChange, handleQualityChange
             </div>
             <div className="video-file-name-quality-format">
                 <SlSelect
-                    size="small"
+                    size="small" hoist
                     label={'Format'}
                     value={video.format || 'MP4'}
                     onSlChange={handleFormatChange}
@@ -69,7 +69,7 @@ export const VideoConversionSettings = ({handleFormatChange, handleQualityChange
                     ))}
                 </SlSelect>
                 <SlSelect
-                    size="small"
+                    size="small" hoist
                     label={'Quality'}
                     value={video.quality || 'MEDIUM'}
                     onSlChange={handleQualityChange}
