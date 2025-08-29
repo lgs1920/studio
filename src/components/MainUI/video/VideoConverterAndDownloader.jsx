@@ -445,7 +445,8 @@ export const VideoConverterAndDownloader = () => {
             </LGSScrollbars>
             <div slot="footer" id="video-preview-dialog-footer">
                 {!video.conversion.isConverted && (
-                    <SlTooltip content="Cancel recording">
+                    <SlTooltip
+                        content={video.conversion.isConverting ? `Cancel ${video.conversion.doConversion ? 'conversion' : 'downloading'}` : 'Cancel recording'}>
                         <SlButton onClick={handleCancel}>
                             <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}/>
                             {'Cancel'}
