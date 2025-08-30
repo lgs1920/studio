@@ -7,14 +7,13 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-26
- * Last modified: 2025-08-26
+ * Created on: 2025-08-30
+ * Last modified: 2025-08-30
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { DefinedCropZone } from '@Components/ToolsUI/cropper/DefinedCropZone'
 /**
  * Cropper component for interactive crop region selection over canvas, video, or image elements.
  * Provides a draggable and resizable crop area with visual feedback and center alignment guides.
@@ -25,21 +24,22 @@ import { DefinedCropZone } from '@Components/ToolsUI/cropper/DefinedCropZone'
  * @param {string} [props.className=''] - Additional CSS classes for crop zone
  * @param {Object} props.store - Valtio store for cropper state
  * @param {Object} [props.options={}] - Configuration options for CropperManager
- * @param {JSX.Element|string} [props.CTA] - All to actions buttons
- * @param {JSX.Element|string} [props.RatioSelector] - ratio selector floating Menu
+ * @param {JSX.Element|string} [props.CTA] - Call to actions buttons
+ * @param {JSX.Element|string} [props.RatioSelector] - Ratio selector floating menu
  * @returns {JSX.Element|null} Cropper UI or null if source is not loaded
  */
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSnapshot }                                             from 'valtio'
-import { CropCenterLines }                                         from './CropCenterLines'
-import { CropOverlay }                                             from './CropOverlay'
-import { CropperManager }                                          from './CropperManager'
-import { CropZone }                                                from './CropZone'
+import { useSnapshot }     from 'valtio'
+import { CropCenterLines } from './CropCenterLines'
+import { CropOverlay }     from './CropOverlay'
+import { CropperManager }  from './CropperManager'
+import { CropZone }        from './CropZone'
+import { DefinedCropZone } from '@Components/ToolsUI/cropper/DefinedCropZone'
 import './style.css'
 
 // Positioning constants
-const CROP_X_PERCENTAGE = 1 // Crop region center at 70% width
-const CROP_Y_PERCENTAGE = 1 // Crop region center at 50% height
+const CROP_X_PERCENTAGE = 1 // Crop region center at 100% width
+const CROP_Y_PERCENTAGE = 1 // Crop region center at 100% height
 
 export const Cropper = memo(({
                                  source,
@@ -55,19 +55,25 @@ export const Cropper = memo(({
         !(source instanceof HTMLImageElement && !source.complete),
     )
     const [crop, setCrop] = useState({
-                                         x:      store.x ?? 0,
-                                         y:      store.y ?? 0,
-                                         width:  store.width ?? 0,
+                                         x:     store.x ?? 0,
+                                         y:     store.y ?? 0,
+                                         width: store.width ?? 0,
                                          height: store.height ?? 0,
                                      })
+    const [cssCrop, setCssCrop] = useState({
+                                               x:      store.x ? Math.floor(store.x / (window.devicePixelRatio || 1)) : 0,
+                                               y:      store.y ? Math.floor(store.y / (window.devicePixelRatio || 1)) : 0,
+                                               width:  store.width ? Math.floor(store.width / (window.devicePixelRatio || 1)) : 0,
+                                               height: store.height ? Math.floor(store.height / (window.devicePixelRatio || 1)) : 0,
+                                           })
     const [interactionState, setInteractionState] = useState({
-                                                                 action:               null,
-                                                                 showHCenterLine:      false,
-                                                                 showVCenterLine:      false,
+                                                                 action:             null,
+                                                                 showHCenterLine:    false,
+                                                                 showVCenterLine:    false,
                                                                  dragLockedHorizontal: false,
-                                                                 dragLockedVertical:   false,
-                                                                 wasJustCentered:      false,
-                                                                 isCentering:          false,
+                                                                 dragLockedVertical: false,
+                                                                 wasJustCentered:    false,
+                                                                 isCentering:        false,
                                                              })
     const _cropperContainer = useRef(null)
     const _cropZone = useRef(null)
@@ -84,7 +90,7 @@ export const Cropper = memo(({
 
     // Memoize styles for crop elements
     const styles = useMemo(() => {
-        if (!_manager.current || !crop) {
+        if (!_manager.current || !cssCrop) {
             return {
                 overlayStyle: {},
                 hCenterLineLeftStyle: {},
@@ -93,8 +99,8 @@ export const Cropper = memo(({
                 vCenterLineBottomStyle: {},
             }
         }
-        return _manager.current.getStyles(crop, interactionState)
-    }, [crop, interactionState])
+        return _manager.current.getStyles(cssCrop, interactionState)
+    }, [cssCrop, interactionState])
 
     /**
      * Updates cursor style on crop zone
@@ -118,6 +124,7 @@ export const Cropper = memo(({
         const result = _manager.current.handleStart(action, event, cropper)
         if (result && typeof result === 'object') {
             setCrop(result)
+            setCssCrop(_manager.current.cssCrop || cssCrop) // Fallback to current cssCrop
             if (action === 'drag') {
                 updateCursor(event.ctrlKey && !event.touches ? 'crosshair' : 'grabbing')
             }
@@ -133,7 +140,8 @@ export const Cropper = memo(({
         }
         const newCrop = _manager.current.maximizeRestore(cropper)
         setCrop(newCrop)
-    }, [cropper])
+        setCssCrop(_manager.current.cssCrop || cssCrop) // Fallback to current cssCrop
+    }, [cropper, cssCrop])
 
     // Handle image source loading
     useEffect(() => {
@@ -175,8 +183,18 @@ export const Cropper = memo(({
                 width: initialWidth,
                 height: initialHeight,
             }
-            setCrop(initialCrop)
+            const initialCssCrop = {
+                x:      Math.floor(initialX / newManager.dpr),
+                y:      Math.floor(initialY / newManager.dpr),
+                width:  Math.floor(initialWidth / newManager.dpr),
+                height: Math.floor(initialHeight / newManager.dpr),
+            }
+
             newManager.crop = initialCrop
+            newManager.cssCrop = initialCrop
+            setCrop(initialCrop)
+            setCssCrop(newManager.cssCrop)
+
         }
 
         const handleCropperClose = () => {
@@ -184,12 +202,18 @@ export const Cropper = memo(({
                 _cropperContainer.current.style.display = 'none'
             }
         }
+        const handleCropUpdate = (e) => {
+            setCrop(e.detail.crop)
+            setCssCrop(e.detail.cssCrop || cssCrop) // Fallback to current cssCrop
+        }
         source.addEventListener('onCropperClose', handleCropperClose)
+        source.addEventListener('onCropUpdate', handleCropUpdate)
 
         return () => {
             source.removeEventListener('onCropperClose', handleCropperClose)
+            source.removeEventListener('onCropUpdate', handleCropUpdate)
         }
-    }, [source, container, isSourceLoaded, memoizedOptions, store])
+    }, [source, container, isSourceLoaded, memoizedOptions, store, cssCrop])
 
     // Cleanup CropperManager only when source or container changes
     useEffect(() => {
@@ -208,13 +232,15 @@ export const Cropper = memo(({
         }
         const handleResize = () => {
             if (_manager.current && !_manager.current.isDestroyed) {
-                setCrop(_manager.current.updateCropOnSourceChange(cropper))
+                const newCrop = _manager.current.updateCropOnSourceChange(cropper)
+                setCrop(newCrop)
+                setCssCrop(_manager.current.cssCrop || cssCrop) // Fallback to current cssCrop
             }
         }
         const debouncedResize = _manager.current.debounce(handleResize, CropperManager.RESIZE_DEBOUNCE_MS)
         window.addEventListener('resize', debouncedResize)
         return () => window.removeEventListener('resize', debouncedResize)
-    }, [cropper])
+    }, [cropper, cssCrop])
 
     // Reset centering lines
     useEffect(() => {
@@ -236,6 +262,7 @@ export const Cropper = memo(({
             const bounds = _manager.current.getSourceBounds()
             const {crop: newCrop, interaction} = _manager.current.handleMove(e, cropper, bounds)
             setCrop(newCrop)
+            setCssCrop(_manager.current.cssCrop || cssCrop) // Fallback to current cssCrop
             setInteractionState(interaction)
         }
         const handleEnd = () => {
@@ -256,7 +283,7 @@ export const Cropper = memo(({
             window.removeEventListener('touchmove', handleMove)
             window.removeEventListener('touchend', handleEnd)
         }
-    }, [cropper, updateCursor])
+    }, [cropper, updateCursor, cssCrop])
 
     // Set initial cursor
     useEffect(() => {
@@ -264,16 +291,14 @@ export const Cropper = memo(({
     }, [updateCursor])
 
     // Early return if source is not loaded or manager/crop not initialized
-    if (!isSourceLoaded || !_manager.current || !crop) {
+    if (!isSourceLoaded || !_manager.current || !cssCrop) {
         return null
     }
 
     return (
         <div ref={_cropperContainer} className="crop-container">
             {RatioSelector && <RatioSelector manager={_manager.current}/>}
-
             {CTA && <CTA manager={_manager.current}/>}
-
             <CropOverlay style={styles.overlayStyle}/>
             <CropCenterLines
                 interactionState={interactionState}
@@ -282,7 +307,7 @@ export const Cropper = memo(({
             {cropper.ratioEditor ? (
                 <CropZone
                     ref={_cropZone}
-                    crop={crop}
+                    cssCrop={cssCrop}
                     manager={_manager.current}
                     cropper={cropper}
                     interactionState={interactionState}
@@ -293,7 +318,7 @@ export const Cropper = memo(({
             ) : (
                  <DefinedCropZone
                      ref={_cropZone}
-                     crop={crop}
+                     cssCrop={cssCrop}
                      manager={{dpr: _manager.current.dpr}}
                      className={className}
                  />

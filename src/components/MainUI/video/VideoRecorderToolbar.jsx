@@ -14,22 +14,28 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { FontAwesomeIcon }         from '@Components/FontAwesomeIcon'
+/**
+ * VideoRecorderToolbar - Displays video recording controls and stats
+ * @component
+ * @param {Object} props - Component props
+ * @param {Object} props.toolbar - Toolbar element reference
+ * @returns {JSX.Element} Video recorder toolbar UI
+ */
+import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
 import { CropOverlay }     from '@Components/ToolsUI/cropper/CropOverlay'
 import { DefinedCropZone } from '@Components/ToolsUI/cropper/DefinedCropZone'
-import { SECOND }                  from '@Core/constants'
-import { DragHandler }             from '@Core/ui/drag-handler/DragHandler'
-import { VideoRecorder }           from '@Core/ui/video/recorder/VideoRecorder'
+import { DragHandler }     from '@Core/ui/drag-handler/DragHandler'
+import { VideoRecorder }   from '@Core/ui/video/recorder/VideoRecorder'
 import { faPause, faPlay, faStop } from '@fortawesome/pro-regular-svg-icons'
-import { faCircle }                from '@fortawesome/duotone-regular-svg-icons'
+import { faCircle }        from '@fortawesome/duotone-regular-svg-icons'
 import { SlIconButton, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { FA2SL }                                          from '@Utils/FA2SL'
-import { UIToast }                                        from '@Utils/UIToast'
-import { UnitUtils }                                      from '@Utils/UnitUtils'
-import classNames                  from 'classnames'
+import { FA2SL }           from '@Utils/FA2SL'
+import { UIToast }         from '@Utils/UIToast'
+import { UnitUtils }       from '@Utils/UnitUtils'
+import classNames          from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { useSnapshot }                                    from 'valtio'
+import { useSnapshot }     from 'valtio'
 
 /**
  * RecorderControls - Renders play/pause and stop buttons for the recorder
@@ -65,7 +71,7 @@ const RecorderControls = memo(({recording, paused, recorder}) => {
                     <SlIconButton
                         library="fa"
                         name={FA2SL.set(faStop)}
-                        onClick={handleStop} F
+                        onClick={handleStop}
                     />
                 </SlTooltip>
             )}
@@ -74,7 +80,20 @@ const RecorderControls = memo(({recording, paused, recorder}) => {
 })
 
 /**
- * VideoRecorderToolbar - Displays video recording controls and stats
+ * Converts physical crop values to CSS crop values
+ * @param {Object} crop - Physical crop values {x, y, width, height}
+ * @param {number} dpr - Device pixel ratio
+ * @returns {Object} CSS crop values {x, y, width, height}
+ */
+const toCssCrop = (crop, dpr) => ({
+    x:      crop?.x ? Math.floor(crop.x / dpr) : 0,
+    y:      crop?.y ? Math.floor(crop.y / dpr) : 0,
+    width:  crop?.width ? Math.floor(crop.width / dpr) : 0,
+    height: crop?.height ? Math.floor(crop.height / dpr) : 0,
+})
+
+/**
+ * VideoRecorderToolbar component
  */
 export const VideoRecorderToolbar = ({toolbar}) => {
     // Access global video settings
@@ -84,11 +103,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     const [recordedDuration, setRecordedDuration] = useState(0)
     const [recordedSize, setRecordedSize] = useState(0)
     const [lastSizeEventTime, setLastSizeEventTime] = useState(0)
-    // Ref to track interval ID and timing
-    const _interval = useRef(null)
-    const _startTime = useRef(0)
-    const _totalPausedTime = useRef(0)
-    const _pauseStartTime = useRef(0)
 
     const _toolbar = useRef(toolbar)
     const _container = useRef(null)
@@ -101,7 +115,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
      */
     const formatDuration = useCallback((ms) => {
         return UnitUtils.convert(ms).toTime()
-    }, [recordedDuration])
+    }, [])
 
     /**
      * Formats size in bytes to human readable format
@@ -112,7 +126,30 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         return UnitUtils.convert(bytes).toSize()
     }, [])
 
-    // Manage recorder events and state
+    /**
+     * Updates toolbar position based on canvas bounds
+     * @param {Object} bounds - Canvas bounds {width, height}
+     */
+    const updatePosition = useCallback((bounds) => {
+        if (!_toolbar.current || !bounds) {
+            return
+        }
+        const cssBounds = {
+            width:  Math.floor(bounds.width / __.device.dpr),
+            height: Math.floor(bounds.height / __.device.dpr),
+        }
+        const isMobilePortrait = __.device.isMobile && __.device.isPortrait
+        // Position at 50% left, 66% top, adjusted for mobile portrait
+        const left = cssBounds.width * 0.5
+        const top = isMobilePortrait ? cssBounds.height * 0.5 : cssBounds.height * 0.66
+        _toolbar.current.style.position = 'absolute'
+        _toolbar.current.style.left = `${left}px`
+        _toolbar.current.style.top = `${top}px`
+        _toolbar.current.style.transform = 'translateX(-50%)' // Center horizontally
+        _toolbar.current.style.opacity = toolbars.opacity || 1
+    }, [toolbars.opacity])
+
+    // Manage recorder events, state, and toolbar position
     useEffect(() => {
         // Ensure recorder exists
         if (!__.recorder) {
@@ -125,7 +162,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             if ($video.recording) {
                 return
             }
-
             const startTime = Date.now()
             $video.recording = true
             $video.paused = false
@@ -135,7 +171,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             setLastSizeEventTime(Date.now())
             UIToast.warning({
                                 caption: caption,
-                                text:    'ON AIR !',
+                                text: 'ON AIR !',
                             })
         }
 
@@ -152,12 +188,10 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 return
             }
             $video.paused = true
-                setRecordedDuration(__.recorder.duration)
-
-
+            setRecordedDuration(__.recorder.duration)
             UIToast.warning({
                                 caption: caption,
-                                text:    `Paused`,
+                                text: `Paused`,
                             })
         }
 
@@ -167,12 +201,10 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 return
             }
             $video.paused = false
-                setRecordedDuration(__.recorder.duration)
-
-
+            setRecordedDuration(__.recorder.duration)
             UIToast.success({
                                 caption: caption,
-                                text:    `Resumed`,
+                                text: `Resumed`,
                             })
         }
 
@@ -187,7 +219,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             setRecordedDuration(0)
             setRecordedSize(0)
             setLastSizeEventTime(0)
-
             switch (event.type) {
                 case VideoRecorder.events.STOP:
                     UIToast.success({
@@ -217,23 +248,25 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                             })
         }
 
-        // Set position according to Settings toolbar
-        if (_toolbar.current) {
-            _toolbar.current.style.left = `${video.toolbarPosition.x - video.toolbarPosition.width / 2}px`
-            _toolbar.current.style.top = `${video.toolbarPosition.y}px`
-        }
-
-        // Set initial toolbar opacity
-        if (_toolbar.current) {
-            _toolbar.current.style.opacity = toolbars.opacity
-        }
+        // Initialize position
+        const canvasBounds = lgs.canvas.getBoundingClientRect()
+        updatePosition(canvasBounds)
 
         // Add drag capacity to the container
-        _container.current._dragHandler = new DragHandler({
-                                                              grabber:   _container.current,
-                                                              parent:    _container.current,
-                                                              container: lgs.canvas,
-                                                          })
+        if (_container.current) {
+            _container.current._dragHandler = new DragHandler({
+                                                                  grabber:   _container.current,
+                                                                  parent:    _container.current,
+                                                                  container: lgs.canvas,
+                                                              })
+        }
+
+        // Update position on resize
+        const handleResize = () => {
+            const bounds = lgs.canvas.getBoundingClientRect()
+            updatePosition(bounds)
+        }
+        window.addEventListener('resize', handleResize)
 
         // Add event listeners
         __.recorder.addEventListener(VideoRecorder.events.START, handleStart)
@@ -260,42 +293,53 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 __.recorder.removeEventListener(VideoRecorder.events.STOP, handleStop)
                 __.recorder.removeEventListener(VideoRecorder.events.DOWNLOAD, handleDownload)
             }
+            window.removeEventListener('resize', handleResize)
         }
-    }, [__.recorder])
+    }, [__.recorder, updatePosition])
 
     // Update toolbar opacity when needed
     useEffect(() => {
         if (_toolbar.current) {
             _toolbar.current.style.opacity = toolbars.opacity
         }
-    }, [video.recording, video.paused, toolbars.opacity])
+    }, [toolbars.opacity])
 
-    const crop = video.cropper
-    const overlayStyle = {
-        clipPath: `polygon(
-                    0% 0%, 100% 0%, 100% 100%, 0% 100%,
-                    0% ${crop.y}px,
-                    ${crop.x}px ${crop.y}px,
-                    ${crop.x}px ${crop.y + crop.height}px,
-                    ${crop.x + crop.width}px ${crop.y + crop.height}px,
-                    ${crop.x + crop.width}px ${crop.y}px,
-                    0% ${crop.y}px
-                )`,
-    }
     // Render toolbar only when recording is active
     return (
         <>
-            {video.recording &&
-                <>
-                    <CropOverlay style={overlayStyle}/>
-
-                    <DefinedCropZone
-                        crop={crop}
-                        manager={{dpr: __.device.dpr}}
-                        className="video-recording-in-progress"
-                    />
-                </>
-            }
+            {video.recording && (() => {
+                // Access crop only when recording to avoid unnecessary re-renders/subscriptions
+                const crop = video.cropper
+                // Early return if crop is invalid
+                if (!crop || !crop.x || !crop.y || !crop.width || !crop.height) {
+                    return null
+                }
+                const dpr = __.device.dpr
+                // Compute CSS crop from physical data
+                const cssCrop = toCssCrop(crop, dpr)
+                // Memoize style for overlay
+                const overlayStyle = {
+                    clipPath: `polygon(
+                        0% 0%, 100% 0%, 100% 100%, 0% 100%,
+                        0% ${cssCrop.y}px,
+                        ${cssCrop.x}px ${cssCrop.y}px,
+                        ${cssCrop.x}px ${cssCrop.y + cssCrop.height}px,
+                        ${cssCrop.x + cssCrop.width}px ${cssCrop.y + cssCrop.height}px,
+                        ${cssCrop.x + cssCrop.width}px ${cssCrop.y}px,
+                        0% ${cssCrop.y}px
+                    )`,
+                }
+                return (
+                    <>
+                        <CropOverlay style={overlayStyle}/>
+                        <DefinedCropZone
+                            cssCrop={cssCrop}
+                            manager={{dpr: __.device.dpr}}
+                            className="video-recording-in-progress"
+                        />
+                    </>
+                )
+            })()}
             <div className="video-recorder-toolbar" ref={_container}>
                 <div ref={_toolbar}
                      className="lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-Card on-map">

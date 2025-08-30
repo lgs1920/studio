@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-29
- * Last modified: 2025-08-29
+ * Created on: 2025-08-30
+ * Last modified: 2025-08-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -76,11 +76,9 @@ export const VideoConversionSettings = ({handleFormatChange, handleQualityChange
                     disabled={video.conversion.isConverting || video.format === video.conversion.inputFormat}
                 >
                     {Object.entries(QUALITY_PRESETS).map(([key, preset]) => (
-                        <SlTooltip content={preset.description} placement="left">
                             <SlOption key={key} value={key}>
                                 {preset.text}
                             </SlOption>
-                        </SlTooltip>
                     ))}
                 </SlSelect>
                 {!__.device.isMobile &&

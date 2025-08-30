@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-19
- * Last modified: 2025-08-19
+ * Created on: 2025-08-30
+ * Last modified: 2025-08-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,7 +18,7 @@
  * CropZone component for the interactive crop area with handles
  * @component
  * @param {Object} props - Component props
- * @param {Object} props.crop - Crop dimensions and position
+ * @param {Object} props.cssCrop - Crop dimensions and position in CSS units
  * @param {Object} props.manager - CropperManager instance
  * @param {Object} props.cropper - Cropper state from store
  * @param {Object} props.interactionState - Current interaction state
@@ -28,27 +28,28 @@
  * @param {Object} props.ref - Ref for the crop zone element
  * @returns {JSX.Element} The interactive crop zone with handles
  */
-import { memo, forwardRef } from 'react'
+import { memo } from 'react'
 import { CropperManager } from './CropperManager'
 
-export const CropZone = memo(forwardRef(({ 
-    crop, 
-    manager, 
-    cropper, 
-    interactionState, 
-    className, 
-    onStart, 
-    onDoubleClick 
-}, ref) => {
+export const CropZone = memo(({
+                                  cssCrop,
+                                  manager,
+                                  cropper,
+                                  interactionState,
+                                  className,
+                                  onStart,
+                                  onDoubleClick,
+                                  ref,
+                              }) => {
     return (
         <div
             ref={ref}
             className={`crop-zone ${className}`}
             style={{
-                left: crop.x / manager.dpr,
-                top: crop.y / manager.dpr,
-                width: crop.width / manager.dpr,
-                height: crop.height / manager.dpr,
+                left:   cssCrop.x,
+                top:    cssCrop.y,
+                width:  cssCrop.width,
+                height: cssCrop.height,
                 cursor: 'grab',
             }}
             onPointerDown={(e) => onStart('drag', e)}
@@ -61,8 +62,8 @@ export const CropZone = memo(forwardRef(({
             }}
         >
             <div className="crop-info lgs-one-line-card on-map small">
-                {Math.round(crop.x / manager.dpr)}×{Math.round(crop.y / manager.dpr)} |{' '}
-                {Math.round(crop.width / manager.dpr)}×{Math.round(crop.height / manager.dpr)}
+                {Math.round(cssCrop.x)}×{Math.round(cssCrop.y)} |{' '}
+                {Math.round(cssCrop.width)}×{Math.round(cssCrop.height)}
             </div>
             {interactionState.showHCenterLine && <div className="center-line-inner-horizontal" />}
             {interactionState.showVCenterLine && <div className="center-line-inner-vertical" />}
@@ -84,4 +85,4 @@ export const CropZone = memo(forwardRef(({
                 ))}
         </div>
     )
-}))
+})
