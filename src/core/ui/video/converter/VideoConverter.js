@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-29
- * Last modified: 2025-08-29
+ * Created on: 2025-08-30
+ * Last modified: 2025-08-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -518,7 +518,6 @@ export class VideoConverter {
                 },
                 withCredentials: true,
             })
-            console.log(response)
             if (response.status !== 200) {
                 const errorText = await this.#readResponseData(response)
                 throw new Error(`HTTP error: ${response.status}, ${errorText}`)
