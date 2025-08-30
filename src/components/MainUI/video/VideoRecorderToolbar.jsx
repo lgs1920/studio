@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-23
- * Last modified: 2025-08-23
+ * Created on: 2025-08-30
+ * Last modified: 2025-08-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -65,7 +65,7 @@ const RecorderControls = memo(({recording, paused, recorder}) => {
                     <SlIconButton
                         library="fa"
                         name={FA2SL.set(faStop)}
-                        onClick={handleStop}
+                        onClick={handleStop} F
                     />
                 </SlTooltip>
             )}
@@ -84,8 +84,11 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     const [recordedDuration, setRecordedDuration] = useState(0)
     const [recordedSize, setRecordedSize] = useState(0)
     const [lastSizeEventTime, setLastSizeEventTime] = useState(0)
-    // Ref to track interval ID
+    // Ref to track interval ID and timing
     const _interval = useRef(null)
+    const _startTime = useRef(0)
+    const _totalPausedTime = useRef(0)
+    const _pauseStartTime = useRef(0)
 
     const _toolbar = useRef(toolbar)
     const _container = useRef(null)
@@ -98,7 +101,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
      */
     const formatDuration = useCallback((ms) => {
         return UnitUtils.convert(ms).toTime()
-    }, [])
+    }, [recordedDuration])
 
     /**
      * Formats size in bytes to human readable format
@@ -123,28 +126,13 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 return
             }
 
+            const startTime = Date.now()
             $video.recording = true
             $video.paused = false
             $video.totalBytes = 0
             setRecordedDuration(0)
             setRecordedSize(0)
             setLastSizeEventTime(Date.now())
-
-            // Clear existing interval
-            if (_interval.current) {
-                clearInterval(_interval.current)
-            }
-
-            _interval.current = setInterval(() => {
-                if (__.recorder) {
-                    const currentDuration = __.recorder.duration
-                    const currentSize = __.recorder.size
-                    setRecordedDuration(currentDuration)
-                    setRecordedSize(currentSize)
-                    $video.totalBytes = currentSize
-                }
-            }, SECOND)
-
             UIToast.warning({
                                 caption: caption,
                                 text:    'ON AIR !',
@@ -152,9 +140,10 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         }
 
         // Handle size update events
-        const handleSize = (e) => {
+        const handleInfo = (e) => {
             setLastSizeEventTime(Date.now())
             setRecordedSize(e.detail.totalBytes)
+            setRecordedDuration(e.detail.duration)
         }
 
         // Handle recording pause event
@@ -163,13 +152,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 return
             }
             $video.paused = true
-            if (_interval.current) {
-                clearInterval(_interval.current)
-                _interval.current = null
-            }
-            if (__.recorder) {
                 setRecordedDuration(__.recorder.duration)
-            }
+
 
             UIToast.warning({
                                 caption: caption,
@@ -183,24 +167,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 return
             }
             $video.paused = false
-            if (__.recorder) {
                 setRecordedDuration(__.recorder.duration)
-            }
 
-            // Clear existing interval
-            if (_interval.current) {
-                clearInterval(_interval.current)
-            }
-
-            _interval.current = setInterval(() => {
-                if (__.recorder) {
-                    const currentDuration = __.recorder.duration
-                    const currentSize = __.recorder.size
-                    setRecordedDuration(currentDuration)
-                    setRecordedSize(currentSize)
-                    $video.totalBytes = currentSize
-                }
-            }, SECOND)
 
             UIToast.success({
                                 caption: caption,
@@ -219,11 +187,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             setRecordedDuration(0)
             setRecordedSize(0)
             setLastSizeEventTime(0)
-
-            if (_interval.current) {
-                clearInterval(_interval.current)
-                _interval.current = null
-            }
 
             switch (event.type) {
                 case VideoRecorder.events.STOP:
@@ -274,7 +237,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
 
         // Add event listeners
         __.recorder.addEventListener(VideoRecorder.events.START, handleStart)
-        __.recorder.addEventListener(VideoRecorder.events.SIZE, handleSize)
+        __.recorder.addEventListener(VideoRecorder.events.INFO, handleInfo)
         __.recorder.addEventListener(VideoRecorder.events.PAUSE, handlePause)
         __.recorder.addEventListener(VideoRecorder.events.RESUME, handleResume)
         __.recorder.addEventListener(VideoRecorder.events.MAX_SIZE, handleStop)
@@ -287,13 +250,9 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             if (_container.current?._dragHandler) {
                 _container.current._dragHandler.destroy()
             }
-            if (_interval.current) {
-                clearInterval(_interval.current)
-                _interval.current = null
-            }
             if (__.recorder) {
                 __.recorder.removeEventListener(VideoRecorder.events.START, handleStart)
-                __.recorder.removeEventListener(VideoRecorder.events.SIZE, handleSize)
+                __.recorder.removeEventListener(VideoRecorder.events.INFO, handleInfo)
                 __.recorder.removeEventListener(VideoRecorder.events.PAUSE, handlePause)
                 __.recorder.removeEventListener(VideoRecorder.events.RESUME, handleResume)
                 __.recorder.removeEventListener(VideoRecorder.events.MAX_SIZE, handleStop)
@@ -339,7 +298,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             }
             <div className="video-recorder-toolbar" ref={_container}>
                 <div ref={_toolbar}
-                     className="lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map">
+                     className="lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-Card on-map">
                     <FontAwesomeIcon icon={faCircle}
                                      className={classNames(video.paused ? '' : 'fa-beat', 'video-recorder-indicator')}/>
                     <span className="duration">{formatDuration(recordedDuration)}</span>

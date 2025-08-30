@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-29
- * Last modified: 2025-08-29
+ * Created on: 2025-08-30
+ * Last modified: 2025-08-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -28,7 +28,7 @@ export class VideoRecorder extends EventTarget {
      * @type {Object}
      * @property {string} START - Fired when recording starts
      * @property {string} STOP - Fired when recording stops
-     * @property {string} SIZE - Fired when new data is available
+     * @property {string} INFO - Fired when new data is available
      * @property {string} PAUSE - Fired when recording is paused
      * @property {string} RESUME - Fired when recording resumes
      * @property {string} SOURCE - Fired when a new source is set
@@ -40,7 +40,7 @@ export class VideoRecorder extends EventTarget {
     static events = {
         START:        'video/start',
         STOP:         'video/stop',
-        SIZE:         'video/size',
+        INFO: 'video/info',
         PAUSE:        'video/pause',
         RESUME:       'video/resume',
         SOURCE:       'video/source',
@@ -54,6 +54,10 @@ export class VideoRecorder extends EventTarget {
         recording: 'recording-in-progress',
         paused:    'recording-paused',
     }
+
+    // Private fields for pause management
+    #pausedTime = 0
+    #lastPauseTime = 0
 
     /**
      * Creates a VideoRecorder instance
@@ -69,9 +73,9 @@ export class VideoRecorder extends EventTarget {
         this.onStop = null
         this._mimeType = 'video/webm'
         this.filename = 'video' // Default filename
-        this.fps = 30 // Default FPS
-        this.bitrate = 10000000 // Default bitrate
-        this.timeslice = 200 // Default timeslice for SIZE events
+        this.fps = 60 // Default FPS
+        this.bitrate = 15000000 // Default bitrate
+        this.timeslice = 200 // Default timeslice for INFO events
         this.maxSize = Infinity
         this.maxDuration = Infinity
         this.mediaRecorder = null
@@ -94,11 +98,12 @@ export class VideoRecorder extends EventTarget {
     }
 
     /**
-     * Gets the elapsed time since recording started
-     * @returns {number} Duration in milliseconds
+     * Gets the elapsed recording time in milliseconds, excluding paused time
+     * This handles multiple pauses by accumulating total paused time in #pausedTime
+     * @returns {number} Effective duration in milliseconds
      */
     get duration() {
-        return this.startTime ? Date.now() - this.startTime : 0
+        return this.startTime ? Date.now() - this.startTime - this.#pausedTime : 0
     }
 
     /**
@@ -139,21 +144,21 @@ export class VideoRecorder extends EventTarget {
      * @param {Object} [options] - Additional configuration options
      * @param {number} [options.maxSize=Infinity] - Maximum recording size in bytes
      * @param {number} [options.maxDuration=Infinity] - Maximum recording duration in milliseconds
-     * @param {number} [options.fps=24] - Frames per second for the captured stream
-     * @param {number} [options.bitrate=4000000] - Video bitrate in bits per second (default 4 Mbps)
-     * @param {number} [options.timeslice=200] - Interval in milliseconds for periodic SIZE events
+     * @param {number} [options.fps=60] - Frames per second for the captured stream
+     * @param {number} [options.bitrate=15000000] - Video bitrate in bits per second (default 15 Mbps)
+     * @param {number} [options.timeslice=200] - Interval in milliseconds for periodic INFO events
      * @param {string} [options.filename='video'] - Base filename for downloads (without date prefix or extension)
      * @throws {TypeError} If onStop is not a function
      * @throws {Error} If mimeType is not supported by MediaRecorder or if called while recording
      */
-    initialize(onStop, mimeType = 'video/webm;codecs=vp9', {
+    initialize = (onStop, mimeType = 'video/webm;codecs=vp9', {
         maxSize = Infinity,
         maxDuration = Infinity,
-        fps = 24,
-        bitrate = 10000000,
+        fps = 60,
+        bitrate = 15000000,
         timeslice = 200,
         filename = 'video',
-    }                           = {}) {
+    }                              = {}) => {
         if (this.isRecording()) {
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                 detail: {error: new Error('Cannot initialize while recording'), timestamp: Date.now()},
@@ -341,6 +346,7 @@ export class VideoRecorder extends EventTarget {
                     )
                 })
             }
+
             rafId = __.requestAnimationFrame(draw)
         }
 
@@ -370,7 +376,7 @@ export class VideoRecorder extends EventTarget {
      * Starts recording and emits START event
      * @throws {Error} If no active MediaStream is available or MediaRecorder fails
      */
-    start() {
+    start = () => {
         if (this.isRecording()) {
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                 detail: {error: new Error('Recording already in progress'), timestamp: Date.now()},
@@ -388,6 +394,8 @@ export class VideoRecorder extends EventTarget {
             this.chunks = []
             this.totalBytes = 0
             this.startTime = Date.now()
+            this.#pausedTime = 0
+            this.#lastPauseTime = 0
 
             this.mediaRecorder = new MediaRecorder(this.stream, {
                 mimeType:           this._mimeType,
@@ -395,11 +403,15 @@ export class VideoRecorder extends EventTarget {
             })
 
             this.mediaRecorder.ondataavailable = (e) => {
-                // console.log('Data available:', e.data.size) // Debug log
                 this.chunks.push(e.data)
                 this.totalBytes += e.data.size
-                this.dispatchEvent(new CustomEvent(VideoRecorder.events.SIZE, {
-                    detail: {totalBytes: this.totalBytes, chunkSize: e.data.size, timestamp: Date.now()},
+                this.dispatchEvent(new CustomEvent(VideoRecorder.events.INFO, {
+                    detail: {
+                        totalBytes: this.totalBytes,
+                        duration:   this.duration,
+                        chunkSize:  e.data.size,
+                        timestamp:  Date.now(),
+                    },
                 }))
             }
 
@@ -423,7 +435,6 @@ export class VideoRecorder extends EventTarget {
             }
 
             this.mediaRecorder.onerror = (e) => {
-                // console.log('MediaRecorder error:', e.error) // Debug log
                 this.cleanBodyClasses()
 
                 this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
@@ -436,32 +447,8 @@ export class VideoRecorder extends EventTarget {
             this.mediaRecorder.start(this.timeslice)
             document.body.classList.add(VideoRecorder.CLASSES.recording)
 
-
-            // Monitor size and duration limits
-            const checkLimits = () => {
-                if (!this.isRecording()) {
-                    return
-                }
-                const currentTime = Date.now()
-                if (this.totalBytes >= this.maxSize) {
-                    // console.log('Max size reached:', this.totalBytes) // Debug log
-                    this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_SIZE, {
-                        detail: {totalBytes: this.totalBytes, timestamp: currentTime},
-                    }))
-                    this.stop()
-                }
-                else if (this.duration >= this.maxDuration) {
-                    // console.log('Max duration reached:', this.duration) // Debug log
-                    this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_DURATION, {
-                        detail: {duration: this.duration, timestamp: currentTime},
-                    }))
-                    this.stop()
-                }
-                else {
-                    setTimeout(checkLimits, 100)
-                }
-            }
-            checkLimits()
+            // Start monitoring size and duration limits
+            this.#checkLimits()
 
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.START, {
                 detail: {timestamp: this.startTime},
@@ -477,11 +464,40 @@ export class VideoRecorder extends EventTarget {
     }
 
     /**
-     * Stops the recording and emits STOP event
+     * Internal method to monitor size and duration limits recursively
+     * Called on start and resume to ensure continuous checking
      */
-    stop() {
-        if (this.isRecording()) {
-            // console.log('Stopping recording') // Debug log
+    #checkLimits = () => {
+        if (this.mediaRecorder?.state === 'inactive') {
+            return
+        }
+        const currentTime = Date.now()
+        if (this.totalBytes >= this.maxSize) {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_SIZE, {
+                detail: {totalBytes: this.totalBytes, timestamp: currentTime},
+            }))
+            this.stop()
+        }
+        else if (this.duration >= this.maxDuration) {
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_DURATION, {
+                detail: {duration: this.duration, timestamp: currentTime},
+            }))
+            this.stop()
+        }
+        else {
+            setTimeout(this.#checkLimits, 100)
+        }
+    }
+
+    /**
+     * Stops the recording and emits STOP event
+     * Handles stop while paused by accumulating the current pause time
+     */
+    stop = () => {
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+            if (this.mediaRecorder.state === 'paused') {
+                this.#pausedTime += Date.now() - this.#lastPauseTime
+            }
             this.mediaRecorder.stop()
             this.cleanBodyClasses()
         }
@@ -502,15 +518,31 @@ export class VideoRecorder extends EventTarget {
     }
 
     /**
-     * Pauses the recording and emits PAUSE event
+     * Sets body classes for paused state
      */
-    pause() {
-        if (this.isRecording()) {
-            // console.log('Pausing recording') // Debug log
-            this.mediaRecorder.pause()
-            document.body.classList.add(VideoRecorder.CLASSES.paused)
-            document.body.classList.remove(VideoRecorder.CLASSES.recording)
+    setPauseBodyClasses = () => {
+        document.body.classList.remove(VideoRecorder.CLASSES.recording)
+        document.body.classList.add(VideoRecorder.CLASSES.paused)
+    }
 
+    /**
+     * Sets body classes for recording state
+     */
+    setRecordingBodyClasses = () => {
+        document.body.classList.remove(VideoRecorder.CLASSES.paused)
+        document.body.classList.add(VideoRecorder.CLASSES.recording)
+    }
+
+    /**
+     * Pauses the recording and emits PAUSE event
+     * Captures the pause timestamp to adjust duration later
+     * Supports multiple pauses by resetting #lastPauseTime each time
+     */
+    pause = () => {
+        if (this.isRecording()) {
+            this.mediaRecorder.pause()
+            this.#lastPauseTime = Date.now()
+            this.setPauseBodyClasses()
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.PAUSE, {
                 detail: {timestamp: Date.now(), duration: this.duration},
             }))
@@ -525,13 +557,17 @@ export class VideoRecorder extends EventTarget {
 
     /**
      * Resumes a paused recording and emits RESUME event
+     * Accumulates paused time to exclude it from duration
+     * Handles multiple resumes by adding to #pausedTime each time
+     * Restarts limit checking after resume
      */
-    resume() {
+    resume = () => {
         if (this.mediaRecorder?.state === 'paused') {
-            // console.log('Resuming recording') // Debug log
+            this.#pausedTime += Date.now() - this.#lastPauseTime
             this.mediaRecorder.resume()
-            document.body.classList.remove(VideoRecorder.CLASSES.paused)
-            document.body.classList.add(VideoRecorder.CLASSES.recording)
+            this.setRecordingBodyClasses()
+            // Restart limit checking after resume
+            this.#checkLimits()
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.RESUME, {
                 detail: {timestamp: Date.now(), duration: this.duration},
             }))
@@ -545,10 +581,10 @@ export class VideoRecorder extends EventTarget {
     }
 
     /**
-     * Checks if recording is ongoing
-     * @returns {boolean} True if recording is active
+     * Checks if recording is ongoing (state === 'recording')
+     * @returns {boolean} True if recording is active (not paused or inactive)
      */
-    isRecording() {
+    isRecording = () => {
         return this.mediaRecorder?.state === 'recording'
     }
 
@@ -558,7 +594,7 @@ export class VideoRecorder extends EventTarget {
      * @throws {TypeError} If stream is not a MediaStream
      * @throws {Error} If called while recording
      */
-    setStream(stream) {
+    setStream = (stream) => {
         if (!(stream instanceof MediaStream)) {
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                 detail: {error: new TypeError('stream must be a MediaStream'), timestamp: Date.now()},
@@ -586,7 +622,7 @@ export class VideoRecorder extends EventTarget {
      * Triggers a download of the recorded video and emits DOWNLOAD event
      * Uses format yyyymmddhhmmss-filename with extension based on MIME type
      */
-    download() {
+    download = () => {
         try {
             if (!this.chunks.length) {
                 this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
@@ -610,7 +646,6 @@ export class VideoRecorder extends EventTarget {
 
             setTimeout(() => URL.revokeObjectURL(url), 2000)
 
-            // console.log('Downloading:', fullFilename) // Debug log
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.DOWNLOAD, {
                 detail: {
                     type:      this.sourceType,
@@ -631,7 +666,7 @@ export class VideoRecorder extends EventTarget {
     /**
      * Cleans up resources and stops any ongoing operations
      */
-    dispose() {
+    dispose = () => {
         this.stop()
         this.stopRendering?.()
         if (this.stream) {
@@ -642,6 +677,8 @@ export class VideoRecorder extends EventTarget {
         this.chunks = []
         this.totalBytes = 0
         this.startTime = 0
+        this.#pausedTime = 0
+        this.#lastPauseTime = 0
         this.stopRendering = null
         this.sourceType = 'unknown'
         this.needsRedraw = true
