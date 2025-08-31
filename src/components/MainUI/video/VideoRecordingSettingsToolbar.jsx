@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-23
- * Last modified: 2025-08-23
+ * Created on: 2025-08-31
+ * Last modified: 2025-08-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -207,7 +207,7 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
     /**
      * Toggles video recording
      */
-    const handleVideoRecording = () => {
+    const handleVideoRecording = (event) => {
         // Ensure recorder exists
         if (!__.recorder) {
             return
@@ -215,9 +215,11 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
 
         try {
             initializeRecorder()
+            console.log(event)
             __.recorder.start()
             $video.recording = true
             $video.paused = false
+            $video.position = {x: event.clientX, y: event.clientY}
         }
         catch (error) {
             $video.recording = false
@@ -259,10 +261,10 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
             done:      false,
             mandatory: false,
             className: 'lgs-video-recording-trigger',
-            onClick:   (index) => {
+            onClick: (index, event) => {
                 $video.editing = false
                 steps[index].done = true
-                handleVideoRecording()
+                handleVideoRecording(event)
             },
 
         },
@@ -270,7 +272,6 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
     return (
         <div ref={_tunnel} className="video-recording-settings-toolbar">
             {video.editing &&
-
                 <Tunnel
                     className="lgs-toolbar lgs-toolbar-horizontal"
                     steps={steps ?? {}}
@@ -278,7 +279,7 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
                 />
 
             }
-            <VideoRecorderToolbar toolbar={_toolbar}/>
+            {/* <VideoRecorderToolbar toolbar={_toolbar}/> */}
         </div>
     )
 })

@@ -142,11 +142,13 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         const isMobilePortrait = __.device.isMobile && __.device.isPortrait
         // Position at 50% left, 66% top, adjusted for mobile portrait
         const left = cssBounds.width * 0.5
-        const top = isMobilePortrait ? cssBounds.height * 0.5 : cssBounds.height * 0.66
-        _toolbar.current.style.position = 'absolute'
-        _toolbar.current.style.left = `${left}px`
-        _toolbar.current.style.top = `${top}px`
-        _toolbar.current.style.transform = 'translateX(-50%)' // Center horizontally
+        //const top = isMobilePortrait ? cssBounds.height * 0.5 : cssBounds.height * 0.66
+        _container.current.style.top = `${$video.position.y}px`
+        _container.current.style.left = `${$video.position.x}px`
+    }, [])
+
+    // Initial poitioning
+    useEffect(() => {
         _toolbar.current.style.opacity = toolbars.opacity || 1
     }, [toolbars.opacity])
 
