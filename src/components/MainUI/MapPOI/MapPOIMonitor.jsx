@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-05-25
- * Last modified: 2025-05-25
+ * Created on: 2025-08-31
+ * Last modified: 2025-08-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -133,10 +133,10 @@ export const MapPOIMonitor = () => {
     }
 
     return (
-        <>
+        <div id="map-poi-list">
             {Array.from(currentList, ([id, poi]) => (
                 <MapPOIContent key={id} poi={poi.id}/>
             ))}
-        </>
+        </div>
     )
 }
