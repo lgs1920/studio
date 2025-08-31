@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-30
- * Last modified: 2025-08-30
+ * Created on: 2025-08-31
+ * Last modified: 2025-08-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -86,10 +86,10 @@ const RecorderControls = memo(({recording, paused, recorder}) => {
  * @returns {Object} CSS crop values {x, y, width, height}
  */
 const toCssCrop = (crop, dpr) => ({
-    x:      crop?.x ? Math.floor(crop.x / dpr) : 0,
-    y:      crop?.y ? Math.floor(crop.y / dpr) : 0,
-    width:  crop?.width ? Math.floor(crop.width / dpr) : 0,
-    height: crop?.height ? Math.floor(crop.height / dpr) : 0,
+    x:      crop?.x == null ? 0 : Math.floor(crop.x / dpr),
+    y:      crop?.y == null ? 0 : Math.floor(crop.y / dpr),
+    width:  crop?.width == null ? 0 : Math.floor(crop.width / dpr),
+    height: crop?.height == null ? 0 : Math.floor(crop.height / dpr),
 })
 
 /**
@@ -106,6 +106,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
 
     const _toolbar = useRef(toolbar)
     const _container = useRef(null)
+    const _cropZone = useRef(null)
     const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
 
     /**
@@ -188,6 +189,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 return
             }
             $video.paused = true
+            _cropZone.current.style.animationPlayState = 'paused'
+
             setRecordedDuration(__.recorder.duration)
             UIToast.warning({
                                 caption: caption,
@@ -201,6 +204,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 return
             }
             $video.paused = false
+            _cropZone.current.style.animationPlayState = 'running'
+
             setRecordedDuration(__.recorder.duration)
             UIToast.success({
                                 caption: caption,
@@ -310,10 +315,21 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             {video.recording && (() => {
                 // Access crop only when recording to avoid unnecessary re-renders/subscriptions
                 const crop = video.cropper
-                // Early return if crop is invalid
-                if (!crop || !crop.x || !crop.y || !crop.width || !crop.height) {
+
+                // Robust validation: allow x or y = 0, require positive width/height
+                const isValidCrop =
+                          crop &&
+                          Number.isFinite(crop.x) &&
+                          Number.isFinite(crop.y) &&
+                          Number.isFinite(crop.width) &&
+                          Number.isFinite(crop.height) &&
+                          crop.width > 0 &&
+                          crop.height > 0
+
+                if (!isValidCrop) {
                     return null
                 }
+
                 const dpr = __.device.dpr
                 // Compute CSS crop from physical data
                 const cssCrop = toCssCrop(crop, dpr)
@@ -332,11 +348,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 return (
                     <>
                         <CropOverlay style={overlayStyle}/>
-                        <DefinedCropZone
-                            cssCrop={cssCrop}
-                            manager={{dpr: __.device.dpr}}
-                            className="video-recording-in-progress"
-                        />
+                        <DefinedCropZone cssCrop={cssCrop} className="video-recording-in-progress" ref={_cropZone}/>
                     </>
                 )
             })()}

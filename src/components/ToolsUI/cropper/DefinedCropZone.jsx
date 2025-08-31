@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-30
- * Last modified: 2025-08-30
+ * Created on: 2025-08-31
+ * Last modified: 2025-08-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -29,7 +29,6 @@ import { memo } from 'react'
 
 export const DefinedCropZone = memo(({
                                          cssCrop,
-                                         manager,
                                          className = '',
                                          showInfo = true,
                                          ref,

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-30
- * Last modified: 2025-08-30
+ * Created on: 2025-08-31
+ * Last modified: 2025-08-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -267,7 +267,7 @@ export class VideoRecorder extends EventTarget {
         }
 
         // Get device pixel ratio
-        const dpr = __.device.dpr || 1
+        const dpr = __.device.dpr
 
         // Validate clipping parameters for all canvases in physical pixels
         canvases.forEach((canvas, i) => {
@@ -275,11 +275,14 @@ export class VideoRecorder extends EventTarget {
             const canvasHeight = canvas.height * dpr
             const validatedClipWidth = clipWidth ?? canvasWidth
             const validatedClipHeight = clipHeight ?? canvasHeight
-
+            alert(`${clipX}  ${clipY}  ${validatedClipWidth}  ${validatedClipHeight} ${canvasWidth} ${canvasHeight}`)
             if (clipX < 0 || clipY < 0 || validatedClipWidth <= 0 || validatedClipHeight <= 0 ||
                 clipX + validatedClipWidth > canvasWidth || clipY + validatedClipHeight > canvasHeight) {
                 this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                    detail: {error: new Error(`Invalid clipping parameters for canvas ${i}`), timestamp: Date.now()},
+                    detail: {
+                        error:     new Error(`Invalid clipping parameters for canvas ${i}`),
+                        timestamp: Date.now(),
+                    },
                 }))
                 throw new Error(`Invalid clipping parameters for canvas ${i}`)
             }
@@ -499,14 +502,17 @@ export class VideoRecorder extends EventTarget {
                 this.#pausedTime += Date.now() - this.#lastPauseTime
             }
             this.mediaRecorder.stop()
-            this.cleanBodyClasses()
+            this.stream.getTracks().forEach(track => track.stop())
         }
         else {
-            this.cleanBodyClasses()
+
+            // Libération des pistes du flux (audio, vidéo)
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                 detail: {error: new Error('No active recording to stop'), timestamp: Date.now()},
             }))
         }
+        this.cleanBodyClasses()
+
     }
 
     /**

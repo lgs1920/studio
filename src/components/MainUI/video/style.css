@@ -80,6 +80,7 @@
 .video-recording-in-progress {
     padding: 20px;
     animation: border-dance var(--border-dance-duration) infinite linear;
+    animation-play-state: running;
     border: none;
     border-width: var(--border-width);
     background: linear-gradient(90deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(90deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(0deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(0deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%);
