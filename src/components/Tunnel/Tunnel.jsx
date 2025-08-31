@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-23
- * Last modified: 2025-08-23
+ * Created on: 2025-08-31
+ * Last modified: 2025-08-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -63,7 +63,7 @@ export const Tunnel = ({steps, onCancel, className}) => {
      * @param {number} index - Target step index
      */
     const handleStepClick = useCallback(
-        index => {
+        (index, event) => {
             // Check if navigation is blocked by mandatory steps
             const isBlocked = steps
                 .slice(0, index)
@@ -80,7 +80,7 @@ export const Tunnel = ({steps, onCancel, className}) => {
 
             // Trigger onClick event for the target step if defined
             const targetStep = steps[index]
-            if (targetStep.onClick?.(index) === false) {
+            if (targetStep.onClick?.(index, event) === false) {
                 return
             }
 
@@ -129,7 +129,7 @@ export const Tunnel = ({steps, onCancel, className}) => {
                                         ${isCurrent ? 'lgs-tunnel-element-active' : ''}
                                         ${isBlocked ? 'lgs-tunnel-element-blocked' : ''}
                                   `}
-                                    onClick={() => handleStepClick(index)}
+                                    onClick={(event) => handleStepClick(index, event)}
                                     disabled={isBlocked}
                                     library="fa" name={FA2SL.set(step.icon)}
                                 >
