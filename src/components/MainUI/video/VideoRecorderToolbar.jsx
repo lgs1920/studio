@@ -356,7 +356,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             })()}
             <div className="video-recorder-toolbar" ref={_container}>
                 <div ref={_toolbar}
-                     className="lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-Card on-map">
+                     className="lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map">
                     <FontAwesomeIcon icon={faCircle}
                                      className={classNames(video.paused ? '' : 'fa-beat', 'video-recorder-indicator')}/>
                     <span className="duration">{formatDuration(recordedDuration)}</span>
