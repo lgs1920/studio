@@ -1,3 +1,5 @@
+###### OBSOLETE #######
+
 # VideoConverter
 
 **VideoConverter** is a JavaScript class designed to convert video files between formats (e.g., MP4, WebM, AVI) using a
