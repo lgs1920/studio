@@ -16,8 +16,9 @@ The application, including studio, backend,APIs, is based on :
 * [React](https://react.dev/) - UI creation
 * [Valtio](https://valtio.pmnd.rs) - state management
 * [Shoelace](https://shoelace.style/) - The web components used for UI
-* [fontawesome](https://fontawesome.com/) - The icons library
+* [FontAwesome](https://fontawesome.com/) - The icons library
 * [echarts](https://echarts.apache.org/) - Chart library
+* [mediabunny](https://mediabunny.dev/) - Video reading/writing/encoding
 
 ### Deployment
 
