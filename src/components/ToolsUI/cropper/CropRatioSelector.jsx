@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-30
- * Last modified: 2025-08-30
+ * Created on: 2025-09-02
+ * Last modified: 2025-09-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,6 +27,7 @@ import { faCropSimple, faRectangle, faRectangleVertical, faSquare } from '@forta
 import { faGripDots }                                               from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlTooltip }                                        from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                    from '@Utils/FA2SL'
+import classNames from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState }           from 'react'
 import { useSnapshot }                                              from 'valtio'
 import './style.css'
@@ -61,6 +62,9 @@ export const CropRatioSelector = memo(({manager}) => {
     // Access reactive cropper and toolbar states
     const $cropper = manager?.store
     const cropper = useSnapshot($cropper || {}, {sync: true})
+    const $video = lgs.stores.ui.video
+    const video = useSnapshot($video || {}, {sync: true})
+
     const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
     const [forceRender, setForceRender] = useState(0)
     // Reference to the cropper menu DOM element
@@ -68,11 +72,7 @@ export const CropRatioSelector = memo(({manager}) => {
 
     // Track selected ratio, defaulting to first video format
     const defaultRatio = __.device.isPortrait ? '9x16' : '16x9'
-    const selectedRatio = cropper.ratioEditor
-                          ? lgs.configuration.videoFormats.find(p => p.value === cropper.aspectRatio?.toString().replace('/', 'x'))?.value ||
-                              lgs.configuration.videoFormats[0]?.value ||
-                              defaultRatio
-                          : defaultRatio
+
 
     /**
      * Updates menu position based on container bounds
@@ -138,6 +138,14 @@ export const CropRatioSelector = memo(({manager}) => {
         return () => document.removeEventListener('onCropUpdate', handleCropUpdate)
     }, [manager, updatePosition])
 
+    useEffect(() => {
+        $video.ratio = cropper.ratioEditor
+                       ? lgs.configuration.videoFormats.find(p => p.value === cropper.aspectRatio?.toString().replace('/', 'x'))?.value ||
+                           lgs.configuration.videoFormats[0]?.value ||
+                           defaultRatio
+                       : defaultRatio
+    }, [])
+
     /**
      * Handles selection of a crop ratio preset
      * Updates the selected ratio and resets the crop with new aspect ratio
@@ -150,10 +158,7 @@ export const CropRatioSelector = memo(({manager}) => {
             return
         }
 
-        // Update selected class on icons
-        const icons = _toolbar.current.querySelectorAll('.crop-ratio-presets sl-icon')
-        icons.forEach(icon => icon.classList.remove('selected'))
-        event.target.classList.add('selected')
+        $video.ratio = preset.value
 
         // Parse ratio and reset crop
         const [w, h] = preset.value.split('x').map(Number)
@@ -217,7 +222,7 @@ export const CropRatioSelector = memo(({manager}) => {
                         <SlTooltip content="Drag me">
                             <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
                         </SlTooltip>
-                        <div className="crop-ratio-presets">
+                        <div className="buttons-bar-on-map">
                             {lgs.configuration.videoFormats.map(preset => (
                                 isPresetVisible(preset) && (
                                     <SlTooltip
@@ -227,7 +232,7 @@ export const CropRatioSelector = memo(({manager}) => {
                                     >
                                         <SlIcon
                                             library="fa"
-                                            className={`lgs-card ${selectedRatio === preset.value ? 'selected' : ''}`}
+                                            className={classNames('lgs-one-line-card on-map', {'selected': preset.value === video.ratio})}
                                             onClick={event => handleChangeRatio(preset, event)}
                                             name={FA2SL.set(ICONS[preset.value] || faSquare)}
                                         />

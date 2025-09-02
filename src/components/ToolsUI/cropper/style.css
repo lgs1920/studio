@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-23
- * Last modified: 2025-08-23
+ * Created on: 2025-09-02
+ * Last modified: 2025-09-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -237,14 +237,12 @@
  * Cropper Editor
  ******************************************************************************/
 
-.crop-ratio-selector-container {
+.crop-ratio-selector-container, .video-quality-selector-container {
     position: absolute;
     z-index: calc(var(--crop-zindex) + 2);
-    top: 50%;
-    left: 66%;
 }
 
-.crop-ratio-selector {
+.crop-ratio-selector, .video-quality-selector {
     display: flex;
     align-items: center;
     flex-direction: column;
@@ -254,20 +252,19 @@
     gap: var(--lgs-gutter-xs);
 }
 
-.crop-ratio-selector.lgs-toolbar {
+.crop-ratio-selector.lgs-toolbar, .video-quality-selector.lgs-toolbar {
     opacity: 1;
 }
 
-.crop-ratio-presets {
+.buttons-bar-on-map {
     display: flex;
     align-items: center;
     flex-direction: column;
     justify-content: space-between;
     gap: var(--lgs-gutter-xs);
-
 }
 
-.crop-ratio-presets sl-icon {
+.buttons-bar-on-map sl-icon, .buttons-bar-on-map div {
     font-size: var(--lgs-font-size);
     line-height: 1;
     width: calc(var(--lgs-font-size) + 4px);
@@ -277,17 +274,24 @@
     text-align: center;
 }
 
-.crop-ratio-presets sl-icon.selected {
+.buttons-bar-on-map div {
+    justify-content: center;
+    width: 100%;
+    height: auto;
+}
+
+.buttons-bar-on-map .selected {
     border-color: var(--lgs-card-on-map-selected-border-color);
     background: var(--lgs-card-on-map-selected-bg-color);
 }
 
-.crop-ratio-presets sl-icon:hover {
+.buttons-bar-on-map sl-icon:hover, .buttons-bar-on-map div:hover {
     border-color: var(--lgs-card-on-map-hover-border-color);
     background: var(--lgs-card-on-map-hover-bg-color);
 }
 
-.crop-ratio-presets sl-icon svg {
+.buttons-bar-on-map sl-icon svg {
     width: unset;
     height: var(--lgs-font-size);
 }
+
