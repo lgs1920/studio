@@ -2,77 +2,66 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: CropRatioSelector.jsx
+ * File: VideoQualitySelector.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-30
- * Last modified: 2025-08-30
+ * Created on: 2025-09-02
+ * Last modified: 2025-09-02
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 /**
- * CropRatioSelector renders a draggable toolbar for selecting crop ratios
+ * VideoQualitySelector allows users to select a video quality
+ *
  * @component
  * @param {Object} props - Component props
- * @param {Object} props.manager - CropperManager instance for crop operations
- * @param {Object} props.manager.store - Valtio store with crop state (ratioEditor, etc.)
- * @returns {JSX.Element} Draggable crop ratio selector UI
+ * @param {Object} props.manager - CropperManager instance for crop opeQualityns
+ * @param {Object} props.manager.store - Valtio store with crop state (qualityEditor, etc.)
+ * @returns {JSX.Element} Draggable crop Quality selector UI
  */
 import { DragHandler }                                              from '@Core/ui/drag-handler/DragHandler'
+import { VideoRecorder } from '@Core/ui/video/recorder/VideoRecorder'
 import { faCropSimple, faRectangle, faRectangleVertical, faSquare } from '@fortawesome/pro-regular-svg-icons'
 import { faGripDots }                                               from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlTooltip }                                        from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                    from '@Utils/FA2SL'
+import classNames        from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState }           from 'react'
 import { useSnapshot }                                              from 'valtio'
 import './style.css'
 
 /**
- * Positioning constants for CropRatioSelector placement
+ * Positioning constants for CropQualitySelector placement
  * @type {Object.<string, number>}
  * @constant
  */
 const POSITIONING = {
-    X_PERCENTAGE: 0.66, // Position at 66% of container width
+    X_PERCENTAGE: 0.33, // Position at 66% of container width
     Y_PERCENTAGE: 0.5, // Position at 50% of container height
 }
 
-/**
- * Icon mappings for crop ratio presets
- * @type {Object.<string, import('@fortawesome/fontawesome-svg-core').IconDefinition>}
- * @constant
- */
-const ICONS = {
-    'square': faSquare,
-    '9x16': faRectangleVertical,
-    '16x9': faRectangle,
-    '1x1': faSquare,
-    '4x3': faCropSimple,
-}
 
 /**
- * CropRatioSelector component
+ * CropQualitySelector component
  */
-export const CropRatioSelector = memo(({manager}) => {
+export const VideoQualitySelector = memo(({manager}) => {
     // Access reactive cropper and toolbar states
     const $cropper = manager?.store
+    const $video = lgs.stores.ui.video
+    const video = useSnapshot($video)
     const cropper = useSnapshot($cropper || {}, {sync: true})
     const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
     const [forceRender, setForceRender] = useState(0)
     // Reference to the cropper menu DOM element
     const _toolbar = useRef(null)
 
-    // Track selected ratio, defaulting to first video format
-    const defaultRatio = __.device.isPortrait ? '9x16' : '16x9'
-    const selectedRatio = cropper.ratioEditor
-                          ? lgs.configuration.videoFormats.find(p => p.value === cropper.aspectRatio?.toString().replace('/', 'x'))?.value ||
-                              lgs.configuration.videoFormats[0]?.value ||
-                              defaultRatio
-                          : defaultRatio
+    // Track selected quality, defaulting to first video format
+    const defaultQuality = VideoRecorder.DEFAULT_QUALITY
+
 
     /**
      * Updates menu position based on container bounds
@@ -97,7 +86,7 @@ export const CropRatioSelector = memo(({manager}) => {
 
     // Initialize position and drag handler, handle resize
     useEffect(() => {
-        if (!manager || !cropper.ratioEditor || !_toolbar.current) {
+        if (!manager || !cropper.qualityEditor || !_toolbar.current) {
             return
         }
 
@@ -118,121 +107,56 @@ export const CropRatioSelector = memo(({manager}) => {
         }
         window.addEventListener('resize', handleResize)
 
-        // Cleanup on unmount or when ratioEditor changes
+        // Cleanup on unmount or when qualityEditor changes
         return () => {
             if (_toolbar.current?._dragHandler) {
                 _toolbar.current._dragHandler.destroy()
             }
             window.removeEventListener('resize', handleResize)
         }
-    }, [manager, cropper.ratioEditor, updatePosition])
-
-    // Handle crop updates
-    useEffect(() => {
-        const handleCropUpdate = (event) => {
-            console.debug('CropRatioSelector: onCropUpdate received:', event.detail)
-            setForceRender((prev) => prev + 1) // Force local re-render
-            updatePosition(manager.getSourceBounds()) // Update position with new bounds
-        }
-        document.addEventListener('onCropUpdate', handleCropUpdate)
-        return () => document.removeEventListener('onCropUpdate', handleCropUpdate)
-    }, [manager, updatePosition])
+    }, [manager, cropper.qualityEditor, updatePosition])
 
     /**
-     * Handles selection of a crop ratio preset
-     * Updates the selected ratio and resets the crop with new aspect ratio
+     * Handles selection of a crop quality key
+     * Updates the selected quality and resets the crop with new aspect quality
      * @function
-     * @param {Object} preset - Video format preset (value, label, description, locked)
+     * @param {Object} key - Video format key (value, label, description, locked)
      * @param {Event} event - Click event from icon
      */
-    const handleChangeRatio = useCallback((preset, event) => {
-        if (!_toolbar.current || !manager || !lgs.canvas) {
+    const handleChangeQuality = useCallback((key, event) => {
+        if (!_toolbar.current || !manager) {
             return
         }
+        // Update store to keep qualityEditor active
+        $cropper.qualityEditor = true
+        $video.quality = key
 
-        // Update selected class on icons
-        const icons = _toolbar.current.querySelectorAll('.crop-ratio-presets sl-icon')
-        icons.forEach(icon => icon.classList.remove('selected'))
-        event.target.classList.add('selected')
-
-        // Parse ratio and reset crop
-        const [w, h] = preset.value.split('x').map(Number)
-        const newCrop = manager.resetCrop({aspectRatio: w / h, lockRatio: preset.locked})
-
-        // Update cssCrop using setter
-        if (newCrop) {
-            manager.cssCrop = newCrop
-        }
-        else {
-            console.warn('CropRatioSelector: Failed to update cssCrop, newCrop is invalid')
-            return
-        }
-
-        // Update store to keep ratioEditor active
-        $cropper.ratioEditor = true
-        $cropper.aspectRatio = w / h
-
-        // Trigger a render update
-        setForceRender((prev) => prev + 1)
-
-        // Simulate pointer event to trigger resize
-        const rect = lgs.canvas.getBoundingClientRect()
-        const cssRect = {
-            left: Math.floor(rect.left / manager.dpr),
-            top:  Math.floor(rect.top / manager.dpr),
-        }
-        const pointerMoveEvent = new PointerEvent('pointermove', {
-            bubbles: true,
-            cancelable: true,
-            clientX: cssRect.left + 1,
-            clientY: cssRect.top + 1,
-        })
-        lgs.canvas.dispatchEvent(pointerMoveEvent)
     }, [manager, $cropper])
 
-    /**
-     * Determines if a given preset is visible on the current device and orientation
-     * @param {Object} preset - The preset object from YAML
-     * @returns {boolean} True if the preset should be visible
-     */
-    const isPresetVisible = useCallback((preset) => {
-        const device = __.device.getDeviceType() // e.g., "mobile"
-        const orientation = __.device.getOrientation() // e.g., "portrait"
-        const key = `${device}-${orientation}` // e.g., "mobile-portrait"
-        // If no visibility is defined, preset is visible everywhere
-        if (!preset.visibility) {
-            return true
-        }
-        // Check if visibility includes either the device or the device-orientation key
-        return preset.visibility.includes(device) || preset.visibility.includes(key)
-    }, [])
 
-    // Render draggable toolbar with ratio preset icons
+    // Render draggable toolbar with quality
     return (
         <>
-            {cropper.ratioEditor && (
-                <div className="crop-ratio-selector-container" ref={_toolbar}>
-                    <div className="crop-ratio-selector lgs-toolbar lgs-card on-map">
+            {cropper.qualityEditor && (
+                <div className="video-quality-selector-container" ref={_toolbar}>
+                    <div className="video-quality-selector lgs-toolbar lgs-card on-map">
                         {/* Drag handle for moving the toolbar */}
                         <SlTooltip content="Drag me">
                             <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
                         </SlTooltip>
-                        <div className="crop-ratio-presets">
-                            {lgs.configuration.videoFormats.map(preset => (
-                                isPresetVisible(preset) && (
+                        <div className="buttons-bar-on-map">
+                            {Object.entries(VideoRecorder.QUALITY).map(([key, {value, name, short}]) => (
                                     <SlTooltip
-                                        key={preset.value}
-                                        content={`${preset.label}: ${preset.description}`}
-                                        placement="right"
+                                        key={key}
+                                        content={name}
+                                        placement="left"
                                     >
-                                        <SlIcon
-                                            library="fa"
-                                            className={`lgs-card ${selectedRatio === preset.value ? 'selected' : ''}`}
-                                            onClick={event => handleChangeRatio(preset, event)}
-                                            name={FA2SL.set(ICONS[preset.value] || faSquare)}
-                                        />
+                                        <div
+                                            className={classNames('lgs-one-line-card on-map', {'selected': key === video.quality})}
+                                            onClick={event => handleChangeQuality(key, event)}>
+                                            {short}
+                                        </div>
                                     </SlTooltip>
-                                )
                             ))}
                         </div>
                     </div>
