@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-26
- * Last modified: 2025-08-26
+ * Created on: 2025-09-03
+ * Last modified: 2025-09-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -153,11 +153,6 @@ export class AppUtils {
             .then(res => res.text())
             .then(text => YAML.parse(text),
             )
-
-        // Video pause/recording forced to false
-        settings.ui.video.recording = false
-        settings.ui.video.pause = false
-
 
         // Read Layers
         settings.layers = await fetch(LAYERS_TERRAINS_SETTINGS, {cache: 'no-store'})
