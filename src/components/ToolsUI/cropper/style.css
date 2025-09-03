@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-02
- * Last modified: 2025-09-02
+ * Created on: 2025-09-03
+ * Last modified: 2025-09-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -237,31 +237,45 @@
  * Cropper Editor
  ******************************************************************************/
 
-.crop-ratio-selector-container, .video-quality-selector-container {
-    position: absolute;
-    z-index: calc(var(--crop-zindex) + 2);
+:root {
+    --buttons-bar-on-map-direction: column;
 }
 
-.crop-ratio-selector, .video-quality-selector {
+.crop-ratio-selector-container, .video-quality-selector-container, .video-fps-selector-container {
+    position: absolute;
+    z-index: calc(var(--crop-zindex) + 2);
+    transform: translate(-50%, -50%);
+}
+
+
+.crop-ratio-selector, .video-quality-selector, .video-fps-selector {
     display: flex;
     align-items: center;
-    flex-direction: column;
+    flex-direction: var(--buttons-bar-on-map-direction);
     width: auto;
     padding: var(--lgs-gutter-xs);
-    transform: translateY(-50%);
+
     gap: var(--lgs-gutter-xs);
 }
 
-.crop-ratio-selector.lgs-toolbar, .video-quality-selector.lgs-toolbar {
+.video-fps-selector {
+    --buttons-bar-on-map-direction: row;
+}
+
+.crop-ratio-selector.lgs-toolbar, .video-quality-selector.lgs-toolbar, .video-fps-selector {
     opacity: 1;
 }
 
 .buttons-bar-on-map {
     display: flex;
     align-items: center;
-    flex-direction: column;
+    flex-direction: var(--buttons-bar-on-map-direction);
     justify-content: space-between;
     gap: var(--lgs-gutter-xs);
+}
+
+.video-fps-selector .grabber {
+    rotate: 90deg;
 }
 
 .buttons-bar-on-map sl-icon, .buttons-bar-on-map div {
