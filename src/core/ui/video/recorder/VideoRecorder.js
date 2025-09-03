@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-01
- * Last modified: 2025-09-01
+ * Created on: 2025-09-03
+ * Last modified: 2025-09-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -55,16 +55,16 @@ export class VideoRecorder extends EventTarget {
         paused: 'recording-paused',
     }
 
-    static QUALITY = {
-        low:       {value: QUALITY_LOW, name: 'Low'},
-        medium:    {value: QUALITY_MEDIUM, name: 'Medium'},
-        high:      {value: QUALITY_HIGH, name: 'High'},
-        very_high: {value: QUALITY_VERY_HIGH, name: 'Very High'},
-    }
-    static DEFAULT_QUALITY = VideoRecorder.QUALITY.medium
+    static QUALITY = [
+        {value: QUALITY_LOW, name: 'Low Quality', short: 'L'},
+        {value: QUALITY_MEDIUM, name: 'Medium Quality', short: 'M'},
+        {value: QUALITY_HIGH, name: 'High Quality', short: 'H'},
+        {value: QUALITY_VERY_HIGH, name: 'Very High Quality', short: 'V'},
+    ]
+    static DEFAULT_QUALITY
 
     static FPS = [15, 30, 45, 60]
-    static DEFAULT_FPS = 1
+    static DEFAULT_FPS
 
     // Private fields for pause and frame loop management
     #pausedTime = 0
@@ -87,12 +87,15 @@ export class VideoRecorder extends EventTarget {
         }
         super()
 
+        VideoRecorder.DEFAULT_QUALITY = lgs.settings.ui.video.quality
+        VideoRecorder.DEFAULT_FPS = lgs.settings.ui.video.fps
+
         this.stream = null
         this.onStop = null
         this._mimeType = 'video/mp4'
         this.filename = 'video' // Default filename
         this.fps = VideoRecorder.FPS[VideoRecorder.DEFAULT_FPS]
-        this.quality = VideoRecorder.QUALITY.medium.value
+        this.quality = VideoRecorder.QUALITY[VideoRecorder.DEFAULT_QUALITY]
         this.timeslice = SECOND // Default timeslice for INFO events
         this.maxDuration = Infinity
         this.totalBytes = 0
@@ -164,35 +167,28 @@ export class VideoRecorder extends EventTarget {
      * @throws {TypeError} If onStop is not a function or quality is invalid
      * @throws {Error} If called while recording
      */
-    initialize = (onStop, {
-        maxDuration = this.maxDuration,
-        fps = this.fps,
-        timeslice = this.timeslice,
-        filename = this.filename,
-        quality = this.quality,
-    } = {}) => {
+    initialize = (onStop, options = {}) => {
+        const {
+                  maxDuration = this.maxDuration,
+                  fps         = this.fps,
+                  timeslice   = this.timeslice,
+                  filename    = this.filename,
+                  quality     = this.quality,
+              } = options
+
+
         if (this.isRecording()) {
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
                 detail: {error: new Error('Cannot initialize while recording'), timestamp: Date.now()},
             }))
             throw new Error('Cannot initialize while recording')
         }
-        if (typeof onStop !== 'function') {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new TypeError('onStop must be a function'), timestamp: Date.now()},
-            }))
-            throw new TypeError('onStop must be a function')
-        }
-        if (![QUALITY_LOW, QUALITY_MEDIUM, QUALITY_HIGH].includes(quality)) {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new TypeError('Invalid quality value'), timestamp: Date.now()},
-            }))
-            throw new TypeError('Invalid quality value')
-        }
 
         this.onStop = onStop
         Object.assign(this, {maxDuration, fps, timeslice, filename, quality})
+
         console.log(this)
+
         if (!this.stream) {
             // Create a default 2D canvas
             this.outputCanvas = document.createElement('canvas')
@@ -425,10 +421,11 @@ export class VideoRecorder extends EventTarget {
                                           target: new BufferTarget(),
                                       })
 
+            console.log(this.quality)
             this.#videoSource = new CanvasSource(this.outputCanvas, {
-                codec:            'avc',
-                bitrate:          this.quality,
-                latencyMode:      'realtime',
+                codec:       'vp9',
+                bitrate:     this.quality,
+                latencyMode: 'quality',
                 keyFrameInterval: 5,
             })
 
@@ -513,12 +510,12 @@ export class VideoRecorder extends EventTarget {
             await this.#videoSource.close()
             this.#videoSource = null
         }
-        if (this.#output) {
+        if (this.#output && this.#output.state !== 'finalized') {
             await this.#output.finalize()
-            const buffer = this.#output.target.buffer
+            const buffer = this.#output.target?.buffer
             const blob = new Blob([buffer], {type: this._mimeType})
             const duration = this.duration
-            this.totalBytes = this.#output.target.buffer?.byteLength || 0
+            this.totalBytes = buffer?.byteLength || 0
             const totalBytes = this.totalBytes
 
             const metadata = {

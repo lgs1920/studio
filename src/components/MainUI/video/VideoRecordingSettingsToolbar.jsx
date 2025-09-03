@@ -7,21 +7,19 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-31
- * Last modified: 2025-08-31
+ * Created on: 2025-09-03
+ * Last modified: 2025-09-03
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { VideoRecorderToolbar }                 from '@Components/MainUI/video/VideoRecorderToolbar'
 import { Tunnel }                               from '@Components/Tunnel/Tunnel'
 import { APP_KEY, MINUTE }                      from '@Core/constants'
 import { DragHandler }                          from '@Core/ui/drag-handler/DragHandler'
 import { VideoRecorder }                        from '@Core/ui/video/recorder/VideoRecorder'
-import { faCropSimple }                         from '@fortawesome/pro-regular-svg-icons'
+import { faGear } from '@fortawesome/pro-regular-svg-icons'
 import { faPhotoFilm, faVideo }                 from '@fortawesome/pro-solid-svg-icons'
-import { FA2SL }                                from '@Utils/FA2SL'
 import { UIToast }                              from '@Utils/UIToast'
 import { memo, useCallback, useEffect, useRef } from 'react'
 import { useSnapshot }                          from 'valtio'
@@ -183,15 +181,21 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
         if (!__.recorder || !lgs.canvas) {
             return
         }
+
+        // Let's save settings
+        lgs.settings.ui.video.quality = $video.quality
+        lgs.settings.ui.video.fps = $video.fps
+
         // Configure recorder
         __.recorder.initialize((blob, duration) => {
-        }, undefined, {
+        }, {
                                    maxSize:     settings.maxSize * 1048576,      // MB
                                    maxDuration: settings.maxDuration * MINUTE,   // MilliSeconds
-                                   bitrate:     settings.bitrate * 1000000,      // MBps
+                                   quality: VideoRecorder.QUALITY[$video.quality].value,
                                    filename:    APP_KEY,
-                                   fps:         settings.fps,
-                                   useWebGL:    true,
+                                   fps:     VideoRecorder.FPS[$video.fps],
+
+                                   useWebGL: true,
 
                                })
         // Set canvas source
@@ -215,7 +219,6 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
 
         try {
             initializeRecorder()
-            console.log(event)
             __.recorder.start()
             $video.recording = true
             $video.paused = false
@@ -234,15 +237,20 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
     }
     const steps = [
         {
-            icon:       faCropSimple,
-            text:       'Define Video dimensions',
+            icon:       faGear,
+            text:       'Video parameters',
             done:       false,
             mandatory:  false,
             beforeStep: (index) => {
                 $cropper.ratioEditor = true
+                $cropper.qualityEditor = true
+                $cropper.fpsEditor = true
             },
             afterStep:  (index) => {
                 $cropper.ratioEditor = false
+                $cropper.qualityEditor = false
+                $cropper.fpsEditor = false
+
                 steps[index].done = true
             },
         },

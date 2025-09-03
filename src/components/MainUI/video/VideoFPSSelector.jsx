@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: VideoQualitySelector.jsx
+ * File: VideoFPSSelector.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -15,53 +15,51 @@
  ******************************************************************************/
 
 /**
- * VideoQualitySelector allows users to select a video quality
- *
+ * CropFPSSelector renders a draggable toolbar for selecting crop FPSs
  * @component
  * @param {Object} props - Component props
- * @param {Object} props.manager - CropperManager instance for crop opeQualityns
- * @param {Object} props.manager.store - Valtio store with crop state (qualityEditor, etc.)
- * @returns {JSX.Element} Draggable crop Quality selector UI
+ * @param {Object} props.manager - CropperManager instance for crop opeFPSns
+ * @param {Object} props.manager.store - Valtio store with crop state (fpsEditor, etc.)
+ * @returns {JSX.Element} Draggable crop FPS selector UI
  */
 import { DragHandler }                                              from '@Core/ui/drag-handler/DragHandler'
-import { VideoRecorder } from '@Core/ui/video/recorder/VideoRecorder'
+import { VideoRecorder }                                            from '@Core/ui/video/recorder/VideoRecorder'
 import { faCropSimple, faRectangle, faRectangleVertical, faSquare } from '@fortawesome/pro-regular-svg-icons'
 import { faGripDots }                                               from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlTooltip }                                        from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                    from '@Utils/FA2SL'
-import classNames        from 'classnames'
+import classNames                                                   from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState }           from 'react'
 import { useSnapshot }                                              from 'valtio'
 import './style.css'
 
 /**
- * Positioning constants for CropQualitySelector placement
+ * Positioning constants for CropFPSSelector placement
  * @type {Object.<string, number>}
  * @constant
  */
 const POSITIONING = {
-    X_PERCENTAGE: 0.33, // Position at 66% of container width
-    Y_PERCENTAGE: 0.5, // Position at 50% of container height
+    Y_PERCENTAGE: 0.33,
+    X_PERCENTAGE: 0.5,
 }
 
 
 /**
- * CropQualitySelector component
+ * CropFPSSelector component
  */
-export const VideoQualitySelector = memo(({manager}) => {
+export const VideoFPSSelector = memo(({manager}) => {
     // Access reactive cropper and toolbar states
     const $cropper = manager?.store
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
     const cropper = useSnapshot($cropper || {}, {sync: true})
     const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
-    const [forceRender, setForceRender] = useState(0)
     // Reference to the cropper menu DOM element
     const _toolbar = useRef(null)
 
-    // Track selected quality, defaulting to first video format
-    const defaultQuality = VideoRecorder.DEFAULT_QUALITY
-
+    useEffect(() => {
+        $video.fps = lgs.settings.ui.video.fps
+    }, [])
 
     /**
      * Updates menu position based on container bounds
@@ -86,7 +84,7 @@ export const VideoQualitySelector = memo(({manager}) => {
 
     // Initialize position and drag handler, handle resize
     useEffect(() => {
-        if (!manager || !cropper.qualityEditor || !_toolbar.current) {
+        if (!manager || !cropper.fpsEditor || !_toolbar.current) {
             return
         }
 
@@ -96,8 +94,8 @@ export const VideoQualitySelector = memo(({manager}) => {
 
         // Initialize drag handler
         _toolbar.current._dragHandler = new DragHandler({
-                                                            grabber: _toolbar.current,
-                                                            parent:  _toolbar.current,
+                                                            grabber:   _toolbar.current,
+                                                            parent:    _toolbar.current,
                                                             container: lgs.canvas,
                                                         })
 
@@ -107,58 +105,57 @@ export const VideoQualitySelector = memo(({manager}) => {
         }
         window.addEventListener('resize', handleResize)
 
-        // Cleanup on unmount or when qualityEditor changes
+        // Cleanup on unmount or when fpsEditor changes
         return () => {
             if (_toolbar.current?._dragHandler) {
                 _toolbar.current._dragHandler.destroy()
             }
             window.removeEventListener('resize', handleResize)
         }
-    }, [manager, cropper.qualityEditor, updatePosition])
+    }, [manager, cropper.fpsEditor, updatePosition])
 
     /**
      * Handles selection of a crop quality key
-     *
+     * Updates the selected quality and resets the crop with new aspect quality
      * @function
      * @param {Object} key - Video format key (value, label, description, locked)
      * @param {Event} event - Click event from icon
      */
-    const handleChangeQuality = useCallback((index, event) => {
+    const handleChangeFPS = useCallback((index, event) => {
         if (!_toolbar.current || !manager) {
             return
         }
-        // Update store to keep qualityEditor active
-        $cropper.qualityEditor = true
-        $video.quality = index
+        // Update store to keep fpsEditor active
+        $cropper.fpsEditor = true
+        $video.fps = index
+        lgs.settings.ui.video.fps = index
+
     }, [manager, $cropper])
 
-    useEffect(() => {
-        $video.quality = lgs.settings.ui.video.quality
-    }, [])
 
     // Render draggable toolbar with quality
     return (
         <>
-            {cropper.qualityEditor && (
-                <div className="video-quality-selector-container" ref={_toolbar}>
-                    <div className="video-quality-selector lgs-toolbar lgs-card on-map">
+            {cropper.fpsEditor && (
+                <div className="video-fps-selector-container" ref={_toolbar}>
+                    <div className="video-fps-selector lgs-toolbar lgs-card on-map">
                         {/* Drag handle for moving the toolbar */}
                         <SlTooltip content="Drag me">
                             <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
                         </SlTooltip>
                         <div className="buttons-bar-on-map">
-                            {VideoRecorder.QUALITY.map(({value, name, short}, index) => (
-                                    <SlTooltip
-                                        key={index}
-                                        content={name}
-                                        placement="left"
-                                    >
-                                        <div
-                                            className={classNames('lgs-one-line-card on-map', {'selected': index === video.quality})}
-                                            onClick={event => handleChangeQuality(index, event)}>
-                                            {short}
-                                        </div>
-                                    </SlTooltip>
+                            {VideoRecorder.FPS.map((fps, index) => (
+                                <SlTooltip
+                                    key={fps}
+                                    content={`FPS: ${fps}`}
+                                    placement="top"
+                                >
+                                    <div
+                                        className={classNames('lgs-one-line-card on-map', {'selected': index === video.fps})}
+                                        onClick={event => handleChangeFPS(index, event)}>
+                                        {fps}
+                                    </div>
+                                </SlTooltip>
                             ))}
                         </div>
                     </div>
