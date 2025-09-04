@@ -19,6 +19,7 @@
  * Emits CustomEvents defined in VideoRecorder.events.
  */
 import { APP_KEY, LGS_PROJECT, SECOND } from '@Core/constants'
+import axios                            from 'axios'
 import { DateTime }                     from 'luxon'
 import {
     BufferTarget, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH, QUALITY_LOW, QUALITY_MEDIUM, QUALITY_VERY_HIGH,
@@ -102,7 +103,8 @@ export class VideoRecorder extends EventTarget {
      * @returns {number} Duration in milliseconds.
      */
     get duration() {
-        return this.#currentTimestamp * SECOND
+        // Convert accumulated frames to milliseconds using FPS
+        return Math.round((this.#currentTimestamp / this.fps) * SECOND)
     }
 
     /**
@@ -325,43 +327,59 @@ export class VideoRecorder extends EventTarget {
             document.body.classList.add(VideoRecorder.CLASSES.RECORDING)
 
             const frameDuration = SECOND / this.fps
-            const frameLoop = async (currentTime) => {
-                if (!this.#output || this.#isPaused) {
+            const frameLoop = (currentTime) => {
+                if (!this.#output) {
+                    return
+                }
+
+                // Skip frames while paused but keep RAF going
+                if (this.#isPaused) {
+                    this.#rafId = requestAnimationFrame(frameLoop)
                     return
                 }
 
                 if (currentTime - this.#lastFrameTime >= frameDuration) {
                     try {
-                        await this.#videoSource.add(this.#currentTimestamp, frameDuration / SECOND)
-                        this.#currentTimestamp += frameDuration / SECOND
+                        // Encoder expects timestamps in SECONDS, not milliseconds
+                        const ptsSec = this.#currentTimestamp / this.fps
+                        const durSec = 1 / this.fps
+                        this.#videoSource.add(ptsSec, durSec)
+
+                        // Advance frame count and mark last frame time
+                        this.#currentTimestamp += 1
                         this.#lastFrameTime = currentTime
                     }
                     catch (e) {
-                        this.#dispatchError(e.message)
-                        await this.stop()
+                        this.#dispatchError(e?.message || String(e))
                         return
                     }
                 }
 
-                if (currentTime - this.#lastCheckTime >= this.timeslice) {
-                    this.totalBytes = this.#output.target.buffer?.byteLength || 0
+                // Periodic INFO updates and max-duration cutoff
+                if (Date.now() - this.#lastCheckTime >= this.timeslice) {
+                    this.#lastCheckTime = Date.now()
                     this.dispatchEvent(new CustomEvent(VideoRecorder.events.INFO, {
-                        detail: {totalBytes: this.totalBytes, duration: this.duration, timestamp: Date.now()},
+                        detail: {
+                            timestamp: this.#lastCheckTime,
+                            duration:  this.duration,
+                            size:      this.totalBytes,
+                            fps:       this.fps,
+                            quality:   this.quality,
+                        },
                     }))
 
                     if (this.duration >= this.maxDuration) {
                         this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_DURATION, {
-                            detail: {duration: this.duration, timestamp: Date.now()},
+                            detail: {duration: this.duration},
                         }))
-                        await this.stop()
+                        this.stop().catch(() => {
+                        })
                         return
                     }
-                    this.#lastCheckTime = currentTime
                 }
 
                 this.#rafId = requestAnimationFrame(frameLoop)
             }
-
             this.#rafId = requestAnimationFrame(frameLoop)
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.START, {
                 detail: {timestamp: this.startTime},
@@ -452,59 +470,212 @@ export class VideoRecorder extends EventTarget {
      * @param {string} [options.type='local'] - Download type ('local', 'local-filesystem', 'remote').
      * @param {string} [options.url] - URL for remote upload (required for 'remote').
      * @param {Object} [options.headers] - HTTP headers for remote upload.
-     * @param {string} [options.path] - File path for local-filesystem download.
+     * @param {string} [options.path] - File path for local-filesystem download (kept for backward compatibility).
      * @throws {Error} If no recorded data, invalid type, or required options missing.
      */
-    async download({filename = this.filename({}), type = 'local', url, headers, path} = {}) {
+    async download({
+                       filename = (typeof this.filename === 'function' ? this.filename({}) : 'video'),
+                       type = 'local',
+                       url,
+                       headers,
+                       path,
+                   } = {}) {
         if (!this.#blob) {
             throw this.#dispatchError('No recorded data to download')
         }
 
-        const finalFilename = filename.endsWith('.mp4') ? filename : `${filename}.mp4`
-        const detail = {type: this.sourceType, downloadType: type, timestamp: Date.now(), filename: finalFilename}
+        const extFromType = (t) => {
+            if (t === 'video/mp4') {
+                return 'mp4'
+            }
+            if (t === 'video/webm') {
+                return 'webm'
+            }
+            if (t === 'video/ogg') {
+                return 'ogv'
+            }
+            return 'mp4'
+        }
+        const mime = this.#blob.type || 'video/mp4'
+        const ext = extFromType(mime)
+        const safeBase = String(filename || 'video').trim().replace(/[\/\\:*?"<>|]/g, '_')
+        const finalFilename = safeBase.endsWith(`.${ext}`) ? safeBase : `${safeBase}.${ext}`
+
+        const detailBase = {
+            type:         this.sourceType,
+            downloadType: type,
+            timestamp:    Date.now(),
+            filename:     finalFilename,
+            size:         this.#blob.size,
+            mime,
+        }
 
         try {
             if (type === 'local') {
-                const url = URL.createObjectURL(this.#blob)
+                const urlObj = URL.createObjectURL(this.#blob)
                 const link = document.createElement('a')
-                link.href = url
+                link.href = urlObj
                 link.download = finalFilename
                 document.body.appendChild(link)
                 link.click()
                 document.body.removeChild(link)
-                setTimeout(() => URL.revokeObjectURL(url), 2000)
-                detail.size = this.#blob.size
-            }
-            else if (type === 'local-filesystem') {
-                if (!path || typeof path !== 'string') {
-                    throw this.#dispatchError('Path required for local-filesystem download')
-                }
-                detail.blob = this.#blob
-                detail.path = path
-                detail.size = this.#blob.size
-            }
-            else if (type === 'remote') {
-                if (!url || !url.startsWith('https://')) {
-                    throw this.#dispatchError('Valid HTTPS URL required for remote download')
-                }
-                const formData = new FormData()
-                formData.append('file', this.#blob, finalFilename)
-                const response = await fetch(url, {method: 'POST', headers: headers || {}, body: formData})
-                if (!response.ok) {
-                    throw this.#dispatchError(`Remote upload failed: ${response.status} ${response.statusText}`)
-                }
-                detail.size = this.#blob.size
-                detail.url = url
-            }
-            else {
-                throw this.#dispatchError(`Invalid download type: ${type}`)
+                setTimeout(() => URL.revokeObjectURL(urlObj), 2000)
+
+                this.dispatchEvent(new CustomEvent(VideoRecorder.events.DOWNLOAD, {
+                    detail: {...detailBase, method: 'anchor'},
+                }))
+                return
             }
 
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.DOWNLOAD, {detail}))
+            if (type === 'local-filesystem') {
+                // Prefer File System Access API if available
+                if (typeof window.showSaveFilePicker === 'function') {
+                    await this.#saveToLocalFileSystem(this.#blob, finalFilename, mime, (progress) => {
+                        this.dispatchEvent(new CustomEvent(VideoRecorder.events.DOWNLOAD, {
+                            detail: {
+                                ...detailBase,
+                                stage:  'saving',
+                                progress, // 0..1
+                                method: 'fs-access',
+                                // Backward-compat fields
+                                blob: this.#blob,
+                                path,
+                            },
+                        }))
+                    })
+                    this.dispatchEvent(new CustomEvent(VideoRecorder.events.DOWNLOAD, {
+                        detail: {
+                            ...detailBase,
+                            method: 'fs-access',
+                            stage:  'done',
+                            // Backward-compat fields
+                            blob: this.#blob,
+                            path,
+                        },
+                    }))
+                    return
+                }
+
+                // Backward-compatible behavior: expose blob and path in the event for host environments
+                if (!path || typeof path !== 'string') {
+                    // No usable FS API and no valid path: fallback to classic download
+                    const urlObj = URL.createObjectURL(this.#blob)
+                    const link = document.createElement('a')
+                    link.href = urlObj
+                    link.download = finalFilename
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link)
+                    setTimeout(() => URL.revokeObjectURL(urlObj), 2000)
+
+                    this.dispatchEvent(new CustomEvent(VideoRecorder.events.DOWNLOAD, {
+                        detail: {...detailBase, method: 'anchor-fallback', requestedPath: path, blob: this.#blob, path},
+                    }))
+                    return
+                }
+
+                // If a host (e.g., Electron, native bridge) watches events to perform the write,
+                // keep emitting the blob and desired path.
+                this.dispatchEvent(new CustomEvent(VideoRecorder.events.DOWNLOAD, {
+                    detail: {...detailBase, method: 'host-path', blob: this.#blob, path},
+                }))
+                return
+            }
+
+            if (type === 'remote') {
+                if (!url || typeof url !== 'string' || !/^https:\/\//i.test(url)) {
+                    throw this.#dispatchError('Valid HTTPS URL required for remote download')
+                }
+
+                const formData = new FormData()
+                formData.append('file', this.#blob, finalFilename)
+
+                const response = await axios.post(url, formData, {
+                    headers:          {
+                        ...(headers || {}),
+                        // Do not set Content-Type here; axios/FormData will set proper boundary.
+                    },
+                    onUploadProgress: (evt) => {
+                        const total = evt.total ?? this.#blob.size
+                        const progress = total ? evt.loaded / total : undefined
+                        this.dispatchEvent(new CustomEvent(VideoRecorder.events.DOWNLOAD, {
+                            detail: {
+                                ...detailBase,
+                                stage:         'uploading',
+                                method:        'remote',
+                                url,
+                                uploadedBytes: evt.loaded,
+                                totalBytes:    total,
+                                progress,
+                            },
+                        }))
+                    },
+                    withCredentials:  false,
+                    timeout:          120000,
+                })
+
+                if (response?.status < 200 || response?.status >= 300) {
+                    throw this.#dispatchError(`Remote upload failed: ${response?.status} ${response?.statusText || ''}`.trim())
+                }
+
+                this.dispatchEvent(new CustomEvent(VideoRecorder.events.DOWNLOAD, {
+                    detail: {
+                        ...detailBase,
+                        method: 'remote',
+                        url,
+                        stage:  'done',
+                        status: response.status,
+                        data:   response.data,
+                    },
+                }))
+                return
+            }
+
+            throw this.#dispatchError(`Invalid download type: ${type}`)
         }
         catch (error) {
-            throw this.#dispatchError(error.message)
+            throw this.#dispatchError(error?.message || String(error))
         }
+    }
+
+    /**
+     * Saves a blob using the File System Access API with progress reporting.
+     * Falls back to a single write if streaming is not supported by the UA.
+     * @private
+     */
+    async #saveToLocalFileSystem(blob, suggestedName, mime, onProgress) {
+        const pickerOpts = {
+            suggestedName,
+            types: [{description: 'Video file', accept: {[mime]: [`.${suggestedName.split('.').pop()}`]}}],
+        }
+        const handle = await window.showSaveFilePicker(pickerOpts)
+        const writable = await handle.createWritable()
+
+        // Try streaming write when possible
+        if ('stream' in blob && typeof blob.stream === 'function') {
+            const reader = blob.stream().getReader()
+            let written = 0
+            while (true) {
+                const {done, value} = await reader.read()
+                if (done) {
+                    break
+                }
+                await writable.write(value)
+                written += value?.byteLength || 0
+                if (typeof onProgress === 'function') {
+                    onProgress(Math.min(1, written / blob.size))
+                }
+            }
+            await writable.close()
+            return
+        }
+
+        // Fallback: single write
+        await writable.write(blob)
+        if (typeof onProgress === 'function') {
+            onProgress(1)
+        }
+        await writable.close()
     }
 
     /**

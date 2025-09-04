@@ -15,204 +15,242 @@
  ******************************************************************************/
 
 /**
- * VideoDownloadAndShareDialog  component for previewing and downloading recorded videos
- * @returns {JSX.Element} Video preview dialog with download options
+ * VideoDownloadAndShareDialog - Component for previewing and downloading recorded videos.
+ * @returns {JSX.Element} Dialog with video preview and download/share options.
  */
-import { LGSScrollbars }                                                from '@Components/MainUI/LGSScrollbars'
-import { APP_KEY }                                                      from '@Core/constants'
-import { VideoConverter }                                               from '@Core/ui/video/converter/VideoConverter'
-import { VideoRecorder }                                                from '@Core/ui/video/recorder/VideoRecorder'
-import { faDownload, faXmark, faShareAlt, faFilm }                      from '@fortawesome/pro-regular-svg-icons'
+import { LGSScrollbars }                            from '@Components/MainUI/LGSScrollbars'
+import { APP_KEY }                                  from '@Core/constants'
+import { VideoRecorder }                            from '@Core/ui/video/recorder/VideoRecorder'
+import { faDownload, faXmark, faShareAlt, faFilm }  from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDialog, SlIcon, SlIconButton, SlInput, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                        from '@Utils/FA2SL'
-import { useCallback, useEffect, useRef, useState }                     from 'react'
-import { useSnapshot }                                                  from 'valtio/index'
+import { FA2SL }                                    from '@Utils/FA2SL'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSnapshot }                              from 'valtio'
 import './style.css'
-
 
 export const VideoDownloadAndShareDialog = () => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
-
-    const [dialogOpen, setDialogOPen] = useState(false)
-    const _converter = useRef(null)
+    const [dialogOpen, setDialogOpen] = useState(false)
+    const [filename, setFilename] = useState('')
     const _mainVideo = useRef(null)
     const _blurredVideo = useRef(null)
     const _videoBlob = useRef({})
-    const [filename, setFilename] = useState('')
 
     /**
-     * Initialize VideoConverter and handle stop recording event
+     * Initialize and handle stop recording event.
      */
     useEffect(() => {
         const handleStopRecording = ({detail: {blob, metadata, duration, totalBytes, timestamp}}) => {
             if (!(blob instanceof Blob) || blob.size === 0) {
-                console.error(`Error: Invalid video blob (type: ${blob?.type}, size: ${blob?.size})`)
+                console.error(`Invalid video blob (type: ${blob?.type}, size: ${blob?.size})`)
                 return
             }
             const url = URL.createObjectURL(blob)
-            _videoBlob.current = {
-                blob:     blob,
-                filename: __.recorder.filename({}),
+            let recorderFilename = 'video-temp'
+            if (window.__?.recorder && typeof window.__.recorder.filename === 'function') {
+                recorderFilename = window.__.recorder.filename({})
             }
+            else {
+                console.error('__recorder.filename non disponible:', window.__.recorder)
+            }
+            _videoBlob.current = {blob, filename: recorderFilename, url}
             setFilename(_videoBlob.current.filename)
-
-            setDialogOPen(true)
-
+            setDialogOpen(true)
             console.log(`Video blob received: type=${blob.type}, size=${(blob.size / 1000000).toFixed(2)}MB`)
         }
+
         __.recorder.addEventListener(VideoRecorder.events.STOP, handleStopRecording)
 
         return () => {
             __.recorder.removeEventListener(VideoRecorder.events.STOP, handleStopRecording)
-            // Removed URL.revokeObjectURL for video.conversion.videoUrl and convertedVideoUrl
-            if (_converter.current) {
-                _converter.current.destroy()
-                _converter.current = null
+            if (_videoBlob.current.url) {
+                URL.revokeObjectURL(_videoBlob.current.url)
             }
         }
     }, [])
 
     /**
-     * Synchronize blurred video with main video and start playback
+     * Synchronize blurred video with main video and start playback.
      */
     useEffect(() => {
         const mainVideo = _mainVideo.current
         const blurredVideo = _blurredVideo.current
-
-        // Removed condition checking video.conversion.videoUrl and convertedVideoUrl
         if (!mainVideo || !blurredVideo) {
             return
         }
 
-        const syncVideos = () => {
-            blurredVideo.currentTime = mainVideo.currentTime
+        const syncTime = () => {
+            try {
+                if (Math.abs(blurredVideo.currentTime - mainVideo.currentTime) > 0.05) {
+                    blurredVideo.currentTime = mainVideo.currentTime
+                }
+            }
+            catch (e) {
+                // no-op: Safari may throw during scrubbing
+            }
         }
 
         const handlePlay = () => {
-            blurredVideo.play().catch((error) => {
-                // Removed setConversionLogs and video.conversion.errorMessage
-                console.log(`Error playing blurred video: ${error.message}`)
-            })
+            blurredVideo.play().catch(error => console.error(`Error playing blurred video: ${error.message}`))
+            syncTime()
         }
 
         const handlePause = () => {
             blurredVideo.pause()
         }
 
-        mainVideo.play().catch((error) => {
-            // Removed setConversionLogs and video.conversion.errorMessage
-            console.log(`Error playing main video: ${error.message}`)
-        })
+        const handleRateChange = () => {
+            blurredVideo.playbackRate = mainVideo.playbackRate
+        }
+
+        const handleLoadedMeta = () => {
+            blurredVideo.muted = true
+            blurredVideo.playbackRate = mainVideo.playbackRate
+            syncTime()
+        }
+
+        const handleSeeking = () => {
+            syncTime()
+        }
+
+        mainVideo.play().catch(error => console.error(`Error playing main video: ${error.message}`))
 
         mainVideo.addEventListener('play', handlePlay)
         mainVideo.addEventListener('pause', handlePause)
-        mainVideo.addEventListener('timeupdate', syncVideos)
+        mainVideo.addEventListener('timeupdate', syncTime)
+        mainVideo.addEventListener('ratechange', handleRateChange)
+        mainVideo.addEventListener('loadedmetadata', handleLoadedMeta)
+        mainVideo.addEventListener('seeking', handleSeeking)
 
         return () => {
             mainVideo.removeEventListener('play', handlePlay)
             mainVideo.removeEventListener('pause', handlePause)
-            mainVideo.removeEventListener('timeupdate', syncVideos)
+            mainVideo.removeEventListener('timeupdate', syncTime)
+            mainVideo.removeEventListener('ratechange', handleRateChange)
+            mainVideo.removeEventListener('loadedmetadata', handleLoadedMeta)
+            mainVideo.removeEventListener('seeking', handleSeeking)
         }
     }, [])
 
-
     /**
-     * Handle filename input changes
+     * Handle filename input changes.
      */
     const handleFilenameChange = (e) => {
-        _videoBlob.current.filename = e.target.value
-        if (_videoBlob.current.filename.length === 0) {
-            _videoBlob.current.filename = __.recorder.filename({filename: APP_KEY})
+        const val = e.target?.value ?? ''
+        _videoBlob.current.filename = val
+        if (!val.length) {
+            const rec = window.__?.recorder
+            _videoBlob.current.filename = typeof rec?.filename === 'function'
+                                          ? rec.filename({filename: APP_KEY})
+                                          : APP_KEY
         }
         setFilename(_videoBlob.current.filename)
-
     }
 
     /**
-     * Handle share action
+     * Handle share action.
      */
     const handleShare = useCallback(async () => {
         try {
+            const blob = _videoBlob.current?.blob
+            const filename = `${(_videoBlob.current?.filename).sanitize()}.${lgs.settings.ui.video.format}`
+            console.log(filename)
+            const file = new File([blob], filename, {type: blob.type || 'video/mp4'})
+
+            if (blob && navigator.canShare && navigator.canShare({files: [file]})) {
+                await navigator.share({
+                                          title: 'LGS1920 Studio Video',
+                                          text:  'Check out my video created with LGS1920 Studio!',
+                                          files: [file],
+                                      })
+                return
+            }
+
             if (navigator.share) {
                 await navigator.share({
                                           title: 'LGS1920 Studio Video',
                                           text:  'Check out my video created with LGS1920 Studio!',
-                                          // Removed video.conversion.convertedVideoUrl
-                                          url: '',
+                                          url: _videoBlob.current.url || '',
                                       })
+            }
+            else {
+                console.error('Web Share API not supported')
             }
         }
         catch (error) {
-            // Removed video.conversion.errorMessage
-            console.log(`Error during share: ${error.message}`)
+            console.log(error)
+            console.error(`Error during share: ${error.message}`)
         }
     }, [])
 
     /**
-     * Handle save action with download
+     * Handle save action with download.
      */
     const handleDownload = async () => {
-        if (!_videoBlob.current || !_videoBlob.current.blob || !(_videoBlob.current.blob instanceof Blob) || _videoBlob.current.blob.size === 0) {
-            // Removed setConversionLogs and video.conversion.errorMessage
-            console.log('Error: Invalid video blob')
+        const blob = _videoBlob.current?.blob
+        if (!(blob instanceof Blob) || blob.size === 0) {
+            console.error('Invalid video blob')
             return
         }
 
         try {
-            let finalBlob = _videoBlob.current.blob
-            // Removed video.conversion.convertedVideoUrl and isConverted
-            const mimeType = 'video/webm' // Fallback MIME type
-            const url = URL.createObjectURL(new Blob([finalBlob], {type: mimeType}))
-            const link = document.createElement('a')
-            link.href = url
-            link.download = _videoBlob.current.filename
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
+            const nameBase = (_videoBlob.current.filename).trim().replace(/[\/\\:*?"<>|]/g, '_')
+            await __.recorder.download({
+                                           filename: nameBase,
+                                           type:     'local-filesystem',
+                                       })
         }
         catch (error) {
-            // Removed video.conversion.errorMessage
-            console.log(`Error during download: ${error.message}`)
+            console.error(`Error during download: ${error.message}`)
         }
     }
 
     /**
-     * Handle cancel action
+     * Handle cancel action.
      */
     const handleCancel = () => {
-
-        // Removed URL.revokeObjectURL for video.conversion.videoUrl and convertedVideoUrl
-        setDialogOPen(false)
+        setDialogOpen(false)
+        if (_videoBlob.current.url) {
+            try {
+                URL.revokeObjectURL(_videoBlob.current.url)
+            }
+            catch {
+            }
+        }
         _videoBlob.current = {}
+        $video.editing = false
     }
 
     /**
-     * Handle continue action after download
+     * Handle continue action after download.
      */
     const handleContinue = useCallback(() => {
-        // Removed video.conversion.isDialogOpen, videoUrl, convertedVideoUrl, isConverted, isConverting,
-        // progress.percentage, errorMessage
         __.recorder.filename = ''
-        // Removed URL.revokeObjectURL for video.conversion.videoUrl and convertedVideoUrl
+        setDialogOpen(false)
+        if (_videoBlob.current.url) {
+            try {
+                URL.revokeObjectURL(_videoBlob.current.url)
+            }
+            catch {
+            }
+        }
+        _videoBlob.current = {}
         $video.editing = false
         console.log('Dialog closed after conversion')
     }, [$video])
 
     /**
-     * Handle dialog close event to prevent closing via ESC or overlay
+     * Handle dialog close event to prevent closing via ESC or overlay.
      */
-    const handleDialogClose = useCallback(
-        (event) => {
-            if (event.detail?.source === 'close-button') {
-                handleCancel()
-            }
-            else {
-                event.preventDefault() // Prevent closing via ESC or overlay
-            }
-        },
-        [handleCancel],
-    )
+    const handleDialogClose = useCallback((event) => {
+        if (event.detail?.source === 'close-button') {
+            handleCancel()
+        }
+        else {
+            event.preventDefault()
+        }
+    }, [handleCancel])
 
     return (
         <SlDialog
@@ -223,22 +261,20 @@ export const VideoDownloadAndShareDialog = () => {
         >
             <div slot="label">
                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFilm)}/>
-                {'Download your video'}
+                Download your video
             </div>
-
-            {/* Removed condition for video.conversion.videoUrl || convertedVideoUrl */}
             <div className="video-container">
                 <video
                     ref={_mainVideo}
+                    src={_videoBlob.current.url}
                     controls
                     autoPlay
-                    // Removed src related to video.conversion.videoUrl or convertedVideoUrl
                     className="main-video"
                 />
                 <div className="blurred-video-wrapper">
                     <video
                         ref={_blurredVideo}
-                        // Removed src related to video.conversion.videoUrl or convertedVideoUrl
+                        src={_videoBlob.current.url}
                         className="blurred-video"
                         muted
                         autoPlay
@@ -247,20 +283,18 @@ export const VideoDownloadAndShareDialog = () => {
             </div>
             <LGSScrollbars autoHide autoHeight>
                 <SlInput
-                    label={'Video file name'}
+                    label="Video file name"
                     size="small"
                     name="video-file-name"
-                    value={_videoBlob.current.filename || ''}
+                    value={filename}
                     onSlInput={handleFilenameChange}
-                >
-                    <div slot="suffix">{`.${lgs.settings.ui.video.format}`}</div>
-                </SlInput>
+                />
             </LGSScrollbars>
             <div slot="footer" id="video-preview-dialog-footer">
-                <SlTooltip content={'Cancel'}>
+                <SlTooltip content="Cancel">
                     <SlButton onClick={handleCancel}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}/>
-                        {'Cancel'}
+                        Cancel
                     </SlButton>
                 </SlTooltip>
                 <SlTooltip content="Share your video">
@@ -270,13 +304,10 @@ export const VideoDownloadAndShareDialog = () => {
                         onClick={handleShare}
                     />
                 </SlTooltip>
-                <SlTooltip content={'Save your video.'}>
-                    <SlButton
-                        variant="primary"
-                        onClick={handleDownload}
-                    >
+                <SlTooltip content="Save your video">
+                    <SlButton variant="primary" onClick={handleDownload}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDownload)}/>
-                        {'Download'}
+                        Download
                     </SlButton>
                 </SlTooltip>
             </div>
