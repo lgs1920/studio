@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-26
- * Last modified: 2025-08-26
+ * Created on: 2025-09-04
+ * Last modified: 2025-09-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -26,9 +26,9 @@ import { MapPOIContextMenu }            from '@Components/MainUI/MapPOI/MapPOICo
 import { MapPOIMonitor }                from '@Components/MainUI/MapPOI/MapPOIMonitor'
 import { RotateButton }                 from '@Components/MainUI/RotateButton'
 import { TrackEditorButton }            from '@Components/MainUI/TrackEditorButton'
-import { VideoButton }       from '@Components/MainUI/video/VideoButton'
-import { VideoConverterAndDownloader } from '@Components/MainUI/video/VideoConverterAndDownloader'
-import { VideoRecorderToolbar }         from '@Components/MainUI/video/VideoRecorderToolbar'
+import { VideoButton }                 from '@Components/MainUI/video/VideoButton'
+import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
+import { VideoRecorderToolbar }        from '@Components/MainUI/video/VideoRecorderToolbar'
 import { Profile }                      from '@Components/Profile/Profile'
 import { ProfileButton }                        from '@Components/Profile/ProfileButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
@@ -255,7 +255,7 @@ export const MainUI = memo(() => {
             <JourneyLoaderUI multiple/>
 
             <MapPOIMonitor/>
-            <VideoConverterAndDownloader/>
+            <VideoDownloadAndShareDialog/>
 
 
         </>

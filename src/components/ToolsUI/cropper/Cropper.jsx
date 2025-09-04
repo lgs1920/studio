@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-30
- * Last modified: 2025-08-30
+ * Created on: 2025-09-04
+ * Last modified: 2025-09-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -45,8 +45,9 @@ export const Cropper = memo(({
                                  source,
                                  container,
                                  className = '',
-                                 CTA = null,
-                                 RatioSelector = null,
+                                 CTA = null, RatioSelector = null,
+                                 QualitySelector = null,
+                                 FPSSelector = null,
                                  store,
                                  options = {},
                              }) => {
@@ -298,6 +299,9 @@ export const Cropper = memo(({
     return (
         <div ref={_cropperContainer} className="crop-container">
             {RatioSelector && <RatioSelector manager={_manager.current}/>}
+            {QualitySelector && <QualitySelector manager={_manager.current}/>}
+            {FPSSelector && <FPSSelector manager={_manager.current}/>}
+
             {CTA && <CTA manager={_manager.current}/>}
             <CropOverlay style={styles.overlayStyle}/>
             <CropCenterLines

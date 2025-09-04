@@ -7,14 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-23
- * Last modified: 2025-08-23
+ * Created on: 2025-09-04
+ * Last modified: 2025-09-04
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 import { CameraAndTargetPanel } from '@Components/cesium/CameraAndTargetPanel/CameraAndTargetPanel'
 import { ContextMenuHook }      from '@Components/MainUI/ContextMenuHook'
+import { VideoFPSSelector }     from '@Components/MainUI/video/VideoFPSSelector'
+import { VideoQualitySelector } from '@Components/MainUI/video/VideoQualitySelector'
 import { VideoRecorderToolbar } from '@Components/MainUI/video/VideoRecorderToolbar'
 import { Cropper }              from '@Components/ToolsUI/cropper/Cropper'
 import { CropRatioSelector }    from '@Components/ToolsUI/cropper/CropRatioSelector'
@@ -36,6 +38,8 @@ export const ToolsUI = () => {
                         store={lgs.stores.ui.video.cropper}
                         CTA={VideoRecordingSettingsToolbar}
                         RatioSelector={CropRatioSelector}
+                        QualitySelector={VideoQualitySelector}
+                        FPSSelector={VideoFPSSelector}
                     />
                 </>
             ) : (
@@ -45,7 +49,7 @@ export const ToolsUI = () => {
                      <CameraAndTargetPanel/>
                      <MapPOIContextMenu/>
                      <ContextMenuHook/>
-                     show && usage && <JourneyToolbar/>
+                     {show && usage && <JourneyToolbar/>}
                  </>
              )}
         </div>

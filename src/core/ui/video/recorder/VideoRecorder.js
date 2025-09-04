@@ -7,52 +7,39 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-03
- * Last modified: 2025-09-03
+ * Created on: 2025-09-04
+ * Last modified: 2025-09-04
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { LGS_PROJECT, SECOND } from '@Core/constants'
-import { DateTime }            from 'luxon'
+/**
+ * VideoRecorder - Singleton class for recording canvas or media streams.
+ * Emits CustomEvents defined in VideoRecorder.events.
+ */
+import { APP_KEY, LGS_PROJECT, SECOND } from '@Core/constants'
+import { DateTime }                     from 'luxon'
 import {
     BufferTarget, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH, QUALITY_LOW, QUALITY_MEDIUM, QUALITY_VERY_HIGH,
-}                              from 'mediabunny'
+}                                       from 'mediabunny'
 
-/**
- * VideoRecorder - Singleton class to record canvas or media stream
- * Emits DOM CustomEvents defined in VideoRecorder.events
- */
 export class VideoRecorder extends EventTarget {
-    /**
-     * Event names for recording lifecycle
-     * @type {Object}
-     * @property {string} START - Fired when recording starts
-     * @property {string} STOP - Fired when recording stops
-     * @property {string} INFO - Fired when new data is available
-     * @property {string} PAUSE - Fired when recording is paused
-     * @property {string} RESUME - Fired when recording resumes
-     * @property {string} SOURCE - Fired when a new source is set
-     * @property {string} ERROR - Fired on recording or download errors
-     * @property {string} DOWNLOAD - Fired when a video is downloaded
-     * @property {string} MAX_DURATION - Fired when maximum duration limit is reached
-     */
     static events = {
-        START:        'video/start',
-        STOP:         'video/stop',
+        START:  'video/start',
+        STOP:   'video/stop',
         INFO: 'video/info',
-        PAUSE:        'video/pause',
-        RESUME:       'video/resume',
-        SOURCE:       'video/source',
-        ERROR:        'video/error',
+        PAUSE:  'video/pause',
+        RESUME: 'video/resume',
+        SOURCE: 'video/source',
+        ERROR:  'video/error',
         DOWNLOAD: 'video/download',
         MAX_DURATION: 'video/max-duration',
     }
 
     static CLASSES = {
-        recording: 'recording-in-progress',
-        paused: 'recording-paused',
+        RECORDING: 'recording-in-progress',
+        PAUSED:    'recording-paused',
     }
 
     static QUALITY = [
@@ -61,42 +48,33 @@ export class VideoRecorder extends EventTarget {
         {value: QUALITY_HIGH, name: 'High Quality', short: 'H'},
         {value: QUALITY_VERY_HIGH, name: 'Very High Quality', short: 'V'},
     ]
-    static DEFAULT_QUALITY
 
     static FPS = [15, 30, 45, 60]
     static DEFAULT_FPS
+    static DEFAULT_QUALITY
 
-    // Private fields for pause and frame loop management
-    #pausedTime = 0
-    #lastPauseTime = 0
+    #blob = null
     #output = null
     #videoSource = null
     #rafId = null
     #currentTimestamp = 0
     #isPaused = false
+    #pausedTime = 0
+    #lastPauseTime = 0
     #lastFrameTime = 0
     #lastCheckTime = 0
+    #lastDrawTime = 0
 
-    /**
-     * Creates a VideoRecorder instance
-     * Use initialize() to configure recording parameters
-     */
     constructor() {
         if (VideoRecorder.instance) {
             return VideoRecorder.instance
         }
         super()
 
-        VideoRecorder.DEFAULT_QUALITY = lgs.settings.ui.video.quality
-        VideoRecorder.DEFAULT_FPS = lgs.settings.ui.video.fps
-
         this.stream = null
-        this.onStop = null
-        this._mimeType = 'video/mp4'
-        this.filename = 'video' // Default filename
-        this.fps = VideoRecorder.FPS[VideoRecorder.DEFAULT_FPS]
-        this.quality = VideoRecorder.QUALITY[VideoRecorder.DEFAULT_QUALITY]
-        this.timeslice = SECOND // Default timeslice for INFO events
+        this.fps = VideoRecorder.FPS[VideoRecorder.DEFAULT_FPS] || 30
+        this.quality = VideoRecorder.QUALITY[VideoRecorder.DEFAULT_QUALITY] || {value: QUALITY_MEDIUM}
+        this.timeslice = SECOND
         this.maxDuration = Infinity
         this.totalBytes = 0
         this.startTime = 0
@@ -106,106 +84,64 @@ export class VideoRecorder extends EventTarget {
         this.video = null
 
         VideoRecorder.instance = this
+        // Ensure global __.recorder is set
+        window.__ = window.__ || {}
+        window.__.recorder = this
     }
 
     /**
-     * Gets the total size recorded in bytes
-     * @returns {number} Total bytes recorded (only accurate after stop in current version)
+     * Gets the recorded size in bytes.
+     * @returns {number} Total bytes recorded.
      */
     get size() {
-        return this.totalBytes || 0
+        return this.totalBytes
     }
 
     /**
-     * Gets the elapsed recording time in milliseconds, excluding paused time
-     * @returns {number} Effective duration in milliseconds
+     * Gets the recording duration in milliseconds, excluding paused time.
+     * @returns {number} Duration in milliseconds.
      */
     get duration() {
         return this.#currentTimestamp * SECOND
     }
 
     /**
-     * Gets the current recording MIME type
-     * @returns {string} MIME type ('video/mp4')
+     * Initializes recording parameters and creates a default canvas if no stream is set.
+     * @param {Object} [options] - Configuration options.
+     * @param {number} [options.maxDuration=Infinity] - Maximum recording duration (ms).
+     * @param {number} [options.fps=30] - Frames per second.
+     * @param {number} [options.timeslice=1000] - Interval for INFO events (ms).
+     * @param {number} [options.quality=QUALITY_MEDIUM] - Recording quality.
+     * @throws {Error} If called during recording.
      */
-    get mimeType() {
-        return this._mimeType
-    }
-
-    /**
-     * Sets the MIME type for recording (must not be recording)
-     * @param {string} value - MIME type ('video/mp4')
-     * @throws {Error} If called while recording or if MIME type is not 'video/mp4'
-     */
-    set mimeType(value) {
+    initialize({
+                   maxDuration = this.maxDuration,
+                   fps = this.fps,
+                   timeslice = this.timeslice,
+                   quality = this.quality,
+               } = {}) {
         if (this.isRecording()) {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new Error('Cannot change MIME type while recording'), timestamp: Date.now()},
-            }))
-            throw new Error('Cannot change MIME type while recording')
-        }
-        if (value !== 'video/mp4') {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new Error('Only video/mp4 is supported'), timestamp: Date.now()},
-            }))
-            throw new Error('Only video/mp4 is supported')
-        }
-        this._mimeType = value
-    }
-
-    /**
-     * Initializes the recorder with configuration parameters
-     * Creates a default 2D canvas if no stream is set
-     * @param {(blob: Blob, duration: number) => void} onStop - Callback invoked when recording stops, receiving the
-     *     recorded Blob and duration
-     * @param {Object} [options] - Configuration options
-     * @param {number} [options.maxDuration=Infinity] - Maximum recording duration in milliseconds
-     * @param {number} [options.fps=30] - Frames per second for the captured stream
-     * @param {number} [options.timeslice=1000] - Interval in milliseconds for periodic INFO events
-     * @param {string} [options.filename='video'] - Base filename for downloads (without date prefix or extension)
-     * @param {number} [options.quality=QUALITY_MEDIUM] - Recording quality (QUALITY_LOW, QUALITY_MEDIUM, QUALITY_HIGH)
-     * @throws {TypeError} If onStop is not a function or quality is invalid
-     * @throws {Error} If called while recording
-     */
-    initialize = (onStop, options = {}) => {
-        const {
-                  maxDuration = this.maxDuration,
-                  fps         = this.fps,
-                  timeslice   = this.timeslice,
-                  filename    = this.filename,
-                  quality     = this.quality,
-              } = options
-
-
-        if (this.isRecording()) {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new Error('Cannot initialize while recording'), timestamp: Date.now()},
-            }))
-            throw new Error('Cannot initialize while recording')
+            throw this.#dispatchError('Cannot initialize while recording')
         }
 
-        this.onStop = onStop
-        Object.assign(this, {maxDuration, fps, timeslice, filename, quality})
-
-        console.log(this)
+        Object.assign(this, {
+            maxDuration,
+            fps,
+            timeslice,
+            quality: VideoRecorder.QUALITY.find(q => q.value === quality) || this.quality,
+        })
 
         if (!this.stream) {
-            // Create a default 2D canvas
             this.outputCanvas = document.createElement('canvas')
             this.outputCanvas.width = 1280
             this.outputCanvas.height = 720
             this.outputCtx = this.outputCanvas.getContext('2d', {alpha: false})
             if (!this.outputCtx) {
-                this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                    detail: {error: new Error('2D context not supported for default stream'), timestamp: Date.now()},
-                }))
-                throw new Error('2D context not supported for default stream')
+                throw this.#dispatchError('2D context not supported')
             }
 
-            // Clear canvas with black background
             this.outputCtx.fillStyle = 'black'
-            this.outputCtx.fillRect(0, 0, this.outputCanvas.width, this.outputCanvas.height)
-
+            this.outputCtx.fillRect(0, 0, 1280, 720)
             this.sourceType = 'canvas'
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.SOURCE, {
                 detail: {type: 'canvas', timestamp: Date.now(), width: 1280, height: 720},
@@ -214,53 +150,26 @@ export class VideoRecorder extends EventTarget {
     }
 
     /**
-     * Sets canvas source(s) to be recorded. If multiple sources are provided, they are merged into a single stream
-     * Uses 2D canvas context for rendering with clipping support
-     * Note: Output canvas is set in physical pixels to preserve quality on high-DPI displays
-     * Clipping parameters (clipX, clipY, clipWidth, clipHeight) are in physical pixels
-     * For best quality, match output width/height to clipWidth/clipHeight
-     * @param {HTMLCanvasElement[]} canvases - Array of canvases to record (dimensions in CSS pixels)
-     * @param {Object} [options] - Configuration options
-     * @param {number} [options.width] - Output width of the composite canvas in physical pixels (defaults to
-     *     clipWidth)
-     * @param {number} [options.height] - Output height of the composite canvas in physical pixels (defaults to
-     *     clipHeight)
-     * @param {number} [options.clipX=0] - X-coordinate of the top-left corner of the clipping region in physical
-     *     pixels
-     * @param {number} [options.clipY=0] - Y-coordinate of the top-left corner of the clipping region in physical
-     *     pixels
-     * @param {number} [options.clipWidth] - Width of the clipping region in physical pixels (defaults to canvas width
-     *     * dpr)
-     * @param {number} [options.clipHeight] - Height of the clipping region in physical pixels (defaults to canvas
-     *     height * dpr)
-     * @throws {Error} If no canvases are provided, recording is active, 2D context is not supported, or clipping
-     *     parameters are invalid
+     * Sets canvas sources for recording, merging multiple canvases into a single stream.
+     * @param {HTMLCanvasElement[]} canvases - Canvases to record.
+     * @param {Object} [options] - Rendering options.
+     * @param {number} [options.width] - Output width in physical pixels.
+     * @param {number} [options.height] - Output height in physical pixels.
+     * @param {number} [options.clipX=0] - Clipping region X-coordinate (physical pixels).
+     * @param {number} [options.clipY=0] - Clipping region Y-coordinate (physical pixels).
+     * @param {number} [options.clipWidth] - Clipping region width (physical pixels).
+     * @param {number} [options.clipHeight] - Clipping region height (physical pixels).
+     * @throws {Error} If canvases are invalid, recording is active, or clipping parameters are incorrect.
      */
-    setSource = (canvases, {
-        width,
-        height,
-        clipX = 0,
-        clipY = 0,
-        clipWidth,
-        clipHeight,
-    } = {}) => {
-        if (!Array.isArray(canvases) || canvases.length === 0) {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new Error('You must provide at least one canvas'), timestamp: Date.now()},
-            }))
-            throw new Error('You must provide at least one canvas')
+    setSource(canvases, {width, height, clipX = 0, clipY = 0, clipWidth, clipHeight} = {}) {
+        if (!Array.isArray(canvases) || !canvases.length) {
+            throw this.#dispatchError('At least one canvas required')
         }
         if (this.isRecording()) {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new Error('Cannot change source while recording'), timestamp: Date.now()},
-            }))
-            throw new Error('Cannot change source while recording')
+            throw this.#dispatchError('Cannot change source while recording')
         }
 
-        // Get device pixel ratio
         const dpr = window.devicePixelRatio || 1
-
-        // Validate clipping parameters for all canvases in physical pixels
         canvases.forEach((canvas, i) => {
             const canvasWidth = canvas.width * dpr
             const canvasHeight = canvas.height * dpr
@@ -268,52 +177,42 @@ export class VideoRecorder extends EventTarget {
             const validatedClipHeight = clipHeight ?? canvasHeight
             if (clipX < 0 || clipY < 0 || validatedClipWidth <= 0 || validatedClipHeight <= 0 ||
                 clipX + validatedClipWidth > canvasWidth || clipY + validatedClipHeight > canvasHeight) {
-                this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                    detail: {
-                        error:     new Error(`Invalid clipping parameters for canvas ${i}`),
-                        timestamp: Date.now(),
-                    }
-                }))
-                throw new Error(`Invalid clipping parameters for canvas ${i}`)
+                throw this.#dispatchError(`Invalid clipping parameters for canvas ${i}`)
             }
         })
 
-        // Default clip dimensions to first canvas in physical pixels
         const finalClipWidth = clipWidth ?? canvases[0].width * dpr
         const finalClipHeight = clipHeight ?? canvases[0].height * dpr
-
-        // Default output resolution to clipped region in physical pixels
         const outputWidth = width ?? finalClipWidth
         const outputHeight = height ?? finalClipHeight
 
-        // Create output canvas for final stream in physical pixels
         this.outputCanvas = document.createElement('canvas')
         this.outputCanvas.width = outputWidth
         this.outputCanvas.height = outputHeight
         this.outputCtx = this.outputCanvas.getContext('2d', {alpha: false})
         if (!this.outputCtx) {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new Error('2D context not supported'), timestamp: Date.now()},
-            }))
-            throw new Error('2D context not supported')
+            throw this.#dispatchError('2D context not supported')
         }
-        // Disable image smoothing for sharp rendering
         this.outputCtx.imageSmoothingEnabled = false
 
-        // Render single or multiple canvases
-        let rafId
-        const draw = () => {
-            this.outputCtx.clearRect(0, 0, outputWidth, outputHeight)
-            canvases.forEach((canvas) => {
-                this.outputCtx.drawImage(
-                    canvas,
-                    clipX / dpr, clipY / dpr, finalClipWidth / dpr, finalClipHeight / dpr,
-                    0, 0, outputWidth, outputHeight,
-                )
-            })
-            rafId = requestAnimationFrame(draw)
+        if (this.#rafId) {
+            cancelAnimationFrame(this.#rafId)
         }
-        draw()
+        const frameDuration = SECOND / this.fps
+        this.#lastDrawTime = 0
+        const draw = (currentTime) => {
+            if (currentTime - this.#lastDrawTime < frameDuration) {
+                this.#rafId = requestAnimationFrame(draw)
+                return
+            }
+            this.#lastDrawTime = currentTime
+            this.outputCtx.clearRect(0, 0, outputWidth, outputHeight)
+            canvases.forEach(canvas => {
+                this.outputCtx.drawImage(canvas, clipX / dpr, clipY / dpr, finalClipWidth / dpr, finalClipHeight / dpr, 0, 0, outputWidth, outputHeight)
+            })
+            this.#rafId = requestAnimationFrame(draw)
+        }
+        this.#rafId = requestAnimationFrame(draw)
 
         this.sourceType = 'canvas'
         this.dispatchEvent(new CustomEvent(VideoRecorder.events.SOURCE, {
@@ -327,28 +226,22 @@ export class VideoRecorder extends EventTarget {
                 clipY,
                 clipWidth:  finalClipWidth,
                 clipHeight: finalClipHeight,
-            }
+            },
         }))
     }
 
     /**
-     * Sets a MediaStream directly as the recording source, drawing to canvas for capture
-     * @param {MediaStream} stream - MediaStream to record (e.g., from webcam or screen)
-     * @throws {TypeError} If stream is not a MediaStream
-     * @throws {Error} If called while recording
+     * Sets a MediaStream as the recording source.
+     * @param {MediaStream} stream - Stream to record (e.g., webcam, screen).
+     * @throws {TypeError} If stream is not a MediaStream.
+     * @throws {Error} If called during recording.
      */
-    setStream = async (stream) => {
+    async setStream(stream) {
         if (!(stream instanceof MediaStream)) {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new TypeError('stream must be a MediaStream'), timestamp: Date.now()},
-            }))
-            throw new TypeError('stream must be a MediaStream')
+            throw this.#dispatchError('Stream must be a MediaStream', TypeError)
         }
         if (this.isRecording()) {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new Error('Cannot change stream while recording'), timestamp: Date.now()},
-            }))
-            throw new Error('Cannot change stream while recording')
+            throw this.#dispatchError('Cannot change stream while recording')
         }
 
         this.video = document.createElement('video')
@@ -357,53 +250,56 @@ export class VideoRecorder extends EventTarget {
         this.video.playsInline = true
         await this.video.play()
 
-        const videoTrack = stream.getVideoTracks()[0]
-        const {width, height} = videoTrack.getSettings()
-
+        const {width, height} = stream.getVideoTracks()[0].getSettings()
         this.outputCanvas = document.createElement('canvas')
         this.outputCanvas.width = width
         this.outputCanvas.height = height
         this.outputCtx = this.outputCanvas.getContext('2d', {alpha: false})
-
-        let rafId
-        const draw = () => {
-            this.outputCtx.drawImage(this.video, 0, 0, width, height)
-            rafId = requestAnimationFrame(draw)
+        if (!this.outputCtx) {
+            throw this.#dispatchError('2D context not supported')
         }
-        draw()
+
+        if (this.#rafId) {
+            cancelAnimationFrame(this.#rafId)
+        }
+        const frameDuration = SECOND / this.fps
+        this.#lastDrawTime = 0
+        const draw = (currentTime) => {
+            if (currentTime - this.#lastDrawTime < frameDuration) {
+                this.#rafId = requestAnimationFrame(draw)
+                return
+            }
+            this.#lastDrawTime = currentTime
+            this.outputCtx.drawImage(this.video, 0, 0, width, height)
+            this.#rafId = requestAnimationFrame(draw)
+        }
+        this.#rafId = requestAnimationFrame(draw)
 
         this.stream = stream
         this.sourceType = 'stream'
-
         this.dispatchEvent(new CustomEvent(VideoRecorder.events.SOURCE, {
             detail: {type: 'stream', timestamp: Date.now(), width, height},
         }))
     }
 
     /**
-     * Checks if recording is ongoing (not paused)
-     * @returns {boolean} True if recording is active (not paused or inactive)
+     * Checks if recording is active (not paused).
+     * @returns {boolean} True if recording is active.
      */
-    isRecording = () => {
+    isRecording() {
         return !!this.#output && !this.#isPaused
     }
 
     /**
-     * Starts recording and emits START event
-     * @throws {Error} If no active source is available or recording fails
+     * Starts recording and emits START event.
+     * @throws {Error} If no source is set or recording fails.
      */
-    start = async () => {
+    async start() {
         if (this.isRecording()) {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new Error('Recording already in progress'), timestamp: Date.now()},
-            }))
-            return
+            throw this.#dispatchError('Recording already in progress')
         }
         if (!this.outputCanvas) {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new Error('No source set'), timestamp: Date.now()},
-            }))
-            throw new Error('No source set')
+            throw this.#dispatchError('No source set')
         }
 
         try {
@@ -416,33 +312,24 @@ export class VideoRecorder extends EventTarget {
             this.#lastFrameTime = 0
             this.#lastCheckTime = 0
 
-            this.#output = new Output({
-                                          format: new Mp4OutputFormat(),
-                                          target: new BufferTarget(),
-                                      })
-
-            console.log(this.quality)
+            this.#output = new Output({format: new Mp4OutputFormat(), target: new BufferTarget()})
             this.#videoSource = new CanvasSource(this.outputCanvas, {
-                codec:       'vp9',
-                bitrate:     this.quality,
+                codec:   'vp9',
+                bitrate: this.quality.value,
                 latencyMode: 'quality',
                 keyFrameInterval: 5,
             })
 
             this.#output.addVideoTrack(this.#videoSource)
-
             await this.#output.start()
+            document.body.classList.add(VideoRecorder.CLASSES.RECORDING)
 
-            document.body.classList.add(VideoRecorder.CLASSES.recording)
-
-            // Frame-based loop for adding frames and checking limits
             const frameDuration = SECOND / this.fps
             const frameLoop = async (currentTime) => {
                 if (!this.#output || this.#isPaused) {
                     return
                 }
 
-                // Add frame if enough time has elapsed for the next frame
                 if (currentTime - this.#lastFrameTime >= frameDuration) {
                     try {
                         await this.#videoSource.add(this.#currentTimestamp, frameDuration / SECOND)
@@ -450,33 +337,25 @@ export class VideoRecorder extends EventTarget {
                         this.#lastFrameTime = currentTime
                     }
                     catch (e) {
-                        this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                            detail: {error: e, timestamp: Date.now()},
-                        }))
-                        this.stop()
+                        this.#dispatchError(e.message)
+                        await this.stop()
                         return
                     }
                 }
 
-                // Check limits and emit INFO if timeslice has elapsed
                 if (currentTime - this.#lastCheckTime >= this.timeslice) {
                     this.totalBytes = this.#output.target.buffer?.byteLength || 0
                     this.dispatchEvent(new CustomEvent(VideoRecorder.events.INFO, {
-                        detail: {
-                            totalBytes: this.totalBytes,
-                            duration:   this.duration,
-                            timestamp:  Date.now(),
-                        },
+                        detail: {totalBytes: this.totalBytes, duration: this.duration, timestamp: Date.now()},
                     }))
 
                     if (this.duration >= this.maxDuration) {
                         this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_DURATION, {
                             detail: {duration: this.duration, timestamp: Date.now()},
                         }))
-                        this.stop()
+                        await this.stop()
                         return
                     }
-
                     this.#lastCheckTime = currentTime
                 }
 
@@ -484,24 +363,20 @@ export class VideoRecorder extends EventTarget {
             }
 
             this.#rafId = requestAnimationFrame(frameLoop)
-
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.START, {
                 detail: {timestamp: this.startTime},
             }))
         }
         catch (error) {
-            this.cleanBodyClasses()
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error, timestamp: Date.now()},
-            }))
-            throw error
+            this.#cleanBodyClasses()
+            throw this.#dispatchError(error.message)
         }
     }
 
     /**
-     * Stops the recording and emits STOP event
+     * Stops recording and emits STOP event with the recorded blob.
      */
-    stop = async () => {
+    async stop() {
         if (this.#rafId) {
             cancelAnimationFrame(this.#rafId)
             this.#rafId = null
@@ -512,225 +387,205 @@ export class VideoRecorder extends EventTarget {
         }
         if (this.#output && this.#output.state !== 'finalized') {
             await this.#output.finalize()
-            const buffer = this.#output.target?.buffer
-            const blob = new Blob([buffer], {type: this._mimeType})
-            const duration = this.duration
-            this.totalBytes = buffer?.byteLength || 0
-            const totalBytes = this.totalBytes
+            this.#blob = this.#output.target?.buffer ? new Blob([this.#output.target.buffer], {type: 'video/mp4'}) : null
+            this.totalBytes = this.#blob?.size || 0
 
             const metadata = {
-                artist:      lgs.servers.studio.name,
-                date:        DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss'),
+                artist: lgs.servers.studio.name,
+                date:   DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss'),
                 description: `Visit ${lgs.servers.site.protocol}://${lgs.servers.site.domain}`,
-                album:       LGS_PROJECT,
-                genre:       'Adventure',
+                album:  LGS_PROJECT,
+                genre:  'Adventure',
             }
 
-            this.onStop?.({blob, metadata, duration, totalBytes, timestamp: Date.now()})
-
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.STOP, {
-                detail: {blob, metadata, duration, totalBytes},
+                detail: {
+                    blob:       this.#blob,
+                    metadata,
+                    duration:   this.duration,
+                    totalBytes: this.totalBytes,
+                    timestamp:  Date.now(),
+                },
             }))
-
-            // Destroy output
             this.#output = null
         }
         else {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new Error('No active recording to stop'), timestamp: Date.now()},
-            }))
+            this.#dispatchError('No active recording to stop')
+        }
+        this.#cleanBodyClasses()
+    }
+
+    /**
+     * Pauses recording and emits PAUSE event.
+     */
+    pause() {
+        if (!this.isRecording()) {
+            return this.#dispatchError('Cannot pause: not recording')
+        }
+        this.#isPaused = true
+        this.#lastPauseTime = Date.now()
+        this.#setPauseBodyClasses()
+        this.dispatchEvent(new CustomEvent(VideoRecorder.events.PAUSE, {
+            detail: {timestamp: Date.now(), duration: this.duration},
+        }))
+    }
+
+    /**
+     * Resumes paused recording and emits RESUME event.
+     */
+    resume() {
+        if (!this.#isPaused) {
+            return this.#dispatchError('Cannot resume: not paused')
+        }
+        this.#pausedTime += Date.now() - this.#lastPauseTime
+        this.#isPaused = false
+        this.#setRecordingBodyClasses()
+        this.dispatchEvent(new CustomEvent(VideoRecorder.events.RESUME, {
+            detail: {timestamp: Date.now(), duration: this.duration},
+        }))
+    }
+
+    /**
+     * Downloads the recorded video.
+     * @param {Object} [options] - Download options.
+     * @param {string} [options.filename] - Filename without extension (defaults to timestamped name).
+     * @param {string} [options.type='local'] - Download type ('local', 'local-filesystem', 'remote').
+     * @param {string} [options.url] - URL for remote upload (required for 'remote').
+     * @param {Object} [options.headers] - HTTP headers for remote upload.
+     * @param {string} [options.path] - File path for local-filesystem download.
+     * @throws {Error} If no recorded data, invalid type, or required options missing.
+     */
+    async download({filename = this.filename({}), type = 'local', url, headers, path} = {}) {
+        if (!this.#blob) {
+            throw this.#dispatchError('No recorded data to download')
         }
 
-        this.cleanBodyClasses()
-    }
+        const finalFilename = filename.endsWith('.mp4') ? filename : `${filename}.mp4`
+        const detail = {type: this.sourceType, downloadType: type, timestamp: Date.now(), filename: finalFilename}
 
-    /**
-     * Cleans the body classes to remove the recording indicators
-     */
-    cleanBodyClasses = () => {
-        document.body.classList.remove(VideoRecorder.CLASSES.recording)
-        document.body.classList.remove(VideoRecorder.CLASSES.paused)
-    }
-
-    /**
-     * Sets body classes for paused state
-     */
-    setPauseBodyClasses = () => {
-        document.body.classList.remove(VideoRecorder.CLASSES.recording)
-        document.body.classList.add(VideoRecorder.CLASSES.paused)
-    }
-
-    /**
-     * Sets body classes for recording state
-     */
-    setRecordingBodyClasses = () => {
-        document.body.classList.remove(VideoRecorder.CLASSES.paused)
-        document.body.classList.add(VideoRecorder.CLASSES.recording)
-    }
-
-    /**
-     * Pauses the recording and emits PAUSE event
-     */
-    pause = () => {
-        if (this.isRecording()) {
-            this.#isPaused = true
-            this.#lastPauseTime = Date.now()
-            this.setPauseBodyClasses()
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.PAUSE, {
-                detail: {timestamp: Date.now(), duration: this.duration},
-            }))
-        }
-        else {
-            this.cleanBodyClasses()
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new Error('Cannot pause: not recording'), timestamp: Date.now()},
-            }))
-        }
-    }
-
-    /**
-     * Resumes a paused recording and emits RESUME event
-     */
-    resume = () => {
-        if (this.#isPaused) {
-            this.#pausedTime += Date.now() - this.#lastPauseTime
-            this.#isPaused = false
-            this.setRecordingBodyClasses()
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.RESUME, {
-                detail: {timestamp: Date.now(), duration: this.duration},
-            }))
-        }
-        else {
-            this.cleanBodyClasses()
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error: new Error('Cannot resume: not paused'), timestamp: Date.now()},
-            }))
-        }
-    }
-
-    /**
-     * Triggers a download of the recorded video and emits DOWNLOAD event
-     * Supports local download (via link or UI-provided path) and remote upload via HTTP
-     * Uses format yyyymmddhhmmss-filename with extension mp4
-     * @param {Object} [targetOptions] - Download target options
-     * @param {string} [targetOptions.type='local'] - Download type ('local', 'local-filesystem', 'remote')
-     * @param {string} [targetOptions.url] - URL for remote upload (required if type is 'remote')
-     * @param {Object} [targetOptions.headers] - HTTP headers for remote upload (e.g., { Authorization: 'Bearer token'
-     *     })
-     * @param {string} [targetOptions.path] - File path for local-filesystem (required if type is 'local-filesystem')
-     * @throws {Error} If no recorded data, invalid target type, or required options are missing
-     */
-    download = async ({type = 'local', url, headers, path} = {}) => {
         try {
-            if (!this.#output) {
-                this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                    detail: {error: new Error('No recorded data to download'), timestamp: Date.now()},
-                }))
-                throw new Error('No recorded data to download')
-            }
-
-            const ext = 'mp4'
-            const now = new Date()
-            const datePrefix = now.toISOString().replace(/[-:T.]/g, '').slice(0, 12) // yyyymmddhhmm
-            const fullFilename = `${datePrefix}${now.getSeconds().toString().padStart(2, '0')}-${this.filename}.${ext}`
-            const detail = {
-                type:         this.sourceType,
-                downloadType: type,
-                timestamp:    Date.now(),
-                filename:     fullFilename,
-            }
-
-            const buffer = this.#output.target.buffer
-            const blob = new Blob([buffer], {type: this._mimeType})
-
             if (type === 'local') {
-                // Local download via link
-                const url = URL.createObjectURL(blob)
+                const url = URL.createObjectURL(this.#blob)
                 const link = document.createElement('a')
                 link.href = url
-                link.download = fullFilename
+                link.download = finalFilename
                 document.body.appendChild(link)
                 link.click()
                 document.body.removeChild(link)
                 setTimeout(() => URL.revokeObjectURL(url), 2000)
-                detail.size = blob.size
+                detail.size = this.#blob.size
             }
             else if (type === 'local-filesystem') {
-                // Local download with UI-provided path
                 if (!path || typeof path !== 'string') {
-                    this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                        detail: {
-                            error:     new Error('Path is required for local-filesystem download'),
-                            timestamp: Date.now(),
-                        },
-                    }))
-                    throw new Error('Path is required for local-filesystem download')
+                    throw this.#dispatchError('Path required for local-filesystem download')
                 }
-                detail.blob = blob
+                detail.blob = this.#blob
                 detail.path = path
-                detail.size = blob.size
+                detail.size = this.#blob.size
             }
             else if (type === 'remote') {
-                // Remote upload using fetch
                 if (!url || !url.startsWith('https://')) {
-                    this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                        detail: {
-                            error:     new Error('Valid HTTPS URL required for remote download'),
-                            timestamp: Date.now(),
-                        },
-                    }))
-                    throw new Error('Valid HTTPS URL required for remote download')
+                    throw this.#dispatchError('Valid HTTPS URL required for remote download')
                 }
                 const formData = new FormData()
-                formData.append('file', blob, fullFilename)
-                const response = await fetch(url, {
-                    method:  'POST',
-                    headers: headers || {},
-                    body:    formData,
-                })
+                formData.append('file', this.#blob, finalFilename)
+                const response = await fetch(url, {method: 'POST', headers: headers || {}, body: formData})
                 if (!response.ok) {
-                    throw new Error(`Remote upload failed: ${response.status} ${response.statusText}`)
+                    throw this.#dispatchError(`Remote upload failed: ${response.status} ${response.statusText}`)
                 }
-                detail.size = blob.size
+                detail.size = this.#blob.size
                 detail.url = url
             }
             else {
-                this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                    detail: {error: new Error(`Invalid download type: ${type}`), timestamp: Date.now()},
-                }))
-                throw new Error(`Invalid download type: ${type}`)
+                throw this.#dispatchError(`Invalid download type: ${type}`)
             }
 
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.DOWNLOAD, {detail}))
         }
         catch (error) {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
-                detail: {error, timestamp: Date.now()},
-            }))
-            throw error
+            throw this.#dispatchError(error.message)
         }
     }
 
     /**
-     * Cleans up resources and stops any ongoing operations
+     * Cleans up resources and stops operations.
      */
-    dispose = () => {
-        this.stop()
+    dispose() {
+        if (this.#rafId) {
+            cancelAnimationFrame(this.#rafId)
+        }
+        if (this.#videoSource) {
+            this.#videoSource.close()
+        }
+        if (this.#output) {
+            this.#output.finalize()
+        }
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop())
-            this.stream = null
         }
         if (this.video) {
             this.video.pause()
-            this.video = null
         }
+        if (this.#blob) {
+            this.#blob = null
+        }
+
         this.#output = null
-        this.totalBytes = 0
-        this.startTime = 0
-        this.#pausedTime = 0
-        this.#lastPauseTime = 0
-        this.sourceType = 'unknown'
+        this.#videoSource = null
+        this.#rafId = null
+        this.stream = null
+        this.video = null
         this.outputCanvas = null
         this.outputCtx = null
+        this.totalBytes = 0
+        this.startTime = 0
+        this.sourceType = 'unknown'
+        this.#pausedTime = 0
+        this.#lastPauseTime = 0
+        this.#lastFrameTime = 0
+        this.#lastCheckTime = 0
+        this.#lastDrawTime = 0
+        this.#cleanBodyClasses()
+    }
+
+    /**
+     * Generates a filename with optional timestamp prefix.
+     * @param {Object} [options] - Filename options.
+     * @param {string} [options.filename=APP_KEY] - Base filename.
+     * @param {boolean} [options.useTimestamp=true] - Include timestamp prefix.
+     * @returns {string} Formatted filename without extension.
+     */
+    filename = ({filename = APP_KEY, useTimestamp = true}) => {
+        const timestamp = useTimestamp ? DateTime.local().toFormat('yyyyLLddHHmm') : ''
+        return `${timestamp}${timestamp ? '-' : ''}${filename}`
+    }
+
+    /**
+     * Dispatches an ERROR event and returns the error.
+     * @param {string} message - Error message.
+     * @param {Function} [ErrorType=Error] - Error constructor.
+     * @returns {Error} The created error.
+     * @private
+     */
+    #dispatchError(message, ErrorType = Error) {
+        const error = new ErrorType(message)
+        this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {
+            detail: {error, timestamp: Date.now()},
+        }))
+        return error
+    }
+
+    #cleanBodyClasses() {
+        document.body.classList.remove(VideoRecorder.CLASSES.RECORDING, VideoRecorder.CLASSES.PAUSED)
+    }
+
+    #setPauseBodyClasses() {
+        document.body.classList.remove(VideoRecorder.CLASSES.RECORDING)
+        document.body.classList.add(VideoRecorder.CLASSES.PAUSED)
+    }
+
+    #setRecordingBodyClasses() {
+        document.body.classList.remove(VideoRecorder.CLASSES.PAUSED)
+        document.body.classList.add(VideoRecorder.CLASSES.RECORDING)
     }
 }

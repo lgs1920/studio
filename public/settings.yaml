@@ -326,6 +326,7 @@ ui:
 
   ## Video
   video:
+    format: mp4        #
     maxDuration: 5     # minutes
     maxSize: 200       # MB
     fps: 1             # 0:15, 1:30, 3:45, 4:60 => VideoRecorder.FPS
