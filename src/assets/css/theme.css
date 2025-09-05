@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-27
- * Last modified: 2025-08-27
+ * Created on: 2025-09-05
+ * Last modified: 2025-09-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -1199,6 +1199,23 @@ h3 {
     stroke: chartreuse
 }
 
+/*******************************************************************************
+ * Blinking
+ ******************************************************************************/
+
+:root {
+    --blink-speed: 1s
+}
+
+.blinking {
+    animation: blink var(--blink-speed) step-start infinite
+}
+
+@keyframes blink {
+    50% {
+        opacity: 0
+    }
+}
 
 /*******************************************************************************
  * Console
