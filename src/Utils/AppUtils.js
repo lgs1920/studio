@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-03
- * Last modified: 2025-09-03
+ * Created on: 2025-09-05
+ * Last modified: 2025-09-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -256,6 +256,22 @@ export class AppUtils {
             }
         }
 
+        //sanitize strings
+        Object.defineProperty(String.prototype, 'sanitize', {
+            value:        function () {
+                return this
+                    .normalize('NFKD')                  // Removes accents and special Unicode characters
+                    .replace(/[\u0300-\u036f]/g, '')    // Strips diacritics (accent marks)
+                    .trim()                             // Removes leading and trailing spaces
+                    .replace(/[\/\\:*?"<>|]/g, '_')     // Replaces forbidden filename characters
+                    .replace(/[\s]+/g, '_')             // Converts multiple spaces to a single underscore
+                    .replace(/_+/g, '_')                // Collapses consecutive underscores
+                    .replace(/^_+|_+$/g, '')           // Removes leading and trailing underscores
+            },
+            writable:     false,
+            configurable: false,
+        })
+
 
         // Ping server
         const server = await __.app.pingBackend()
@@ -310,6 +326,7 @@ export class AppUtils {
                 error: new Error(`${lgs.settings.applicationName} Backend server seems to be unreachable!${info}`),
             }
         }
+
 
     }
 
@@ -580,6 +597,28 @@ export class AppUtils {
         const contextMenuHook = document.getElementById(LGS_CONTEXT_MENU_HOOK)
         contextMenuHook.style.top = `${event.position.y}px`
         contextMenuHook.style.left = `${event.position.x}px`
+    }
+
+    /**
+     * Checks whether the Web Share API is available and can share files if requested
+     * @returns {boolean} True if sharing is supported (with or without files)
+     */
+    static canShare() {
+        if (!navigator.share) {
+            return false
+        }
+
+        if (navigator.canShare) {
+            try {
+                const testFile = new File(['test'], 'test.mp4', {type: 'video/mp4'})
+                return navigator.canShare({files: [testFile]})
+            }
+            catch (e) {
+                return false
+            }
+        }
+
+        return true
     }
 
 
