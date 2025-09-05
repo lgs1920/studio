@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-04
- * Last modified: 2025-09-04
+ * Created on: 2025-09-05
+ * Last modified: 2025-09-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,9 +19,8 @@
  * @returns {JSX.Element} Dialog with video preview and download/share options.
  */
 import { LGSScrollbars }                            from '@Components/MainUI/LGSScrollbars'
-import { APP_KEY }                                  from '@Core/constants'
 import { VideoRecorder }                            from '@Core/ui/video/recorder/VideoRecorder'
-import { faDownload, faXmark, faShareAlt, faFilm }  from '@fortawesome/pro-regular-svg-icons'
+import { faDownload, faFilm, faShareAlt, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlDialog, SlIcon, SlIconButton, SlInput, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                    from '@Utils/FA2SL'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -33,6 +32,8 @@ export const VideoDownloadAndShareDialog = () => {
     const video = useSnapshot($video)
     const [dialogOpen, setDialogOpen] = useState(false)
     const [filename, setFilename] = useState('')
+    const [canDownloadAndShare, setCanDownloadAndShare] = useState(true)
+    const [canShare] = useState(!!(navigator.canShare && navigator.canShare({files: []})))
     const _mainVideo = useRef(null)
     const _blurredVideo = useRef(null)
     const _videoBlob = useRef({})
@@ -47,17 +48,11 @@ export const VideoDownloadAndShareDialog = () => {
                 return
             }
             const url = URL.createObjectURL(blob)
-            let recorderFilename = 'video-temp'
-            if (window.__?.recorder && typeof window.__.recorder.filename === 'function') {
-                recorderFilename = window.__.recorder.filename({})
-            }
-            else {
-                console.error('__recorder.filename non disponible:', window.__.recorder)
-            }
+            const recorderFilename = __.recorder.filename({})
+
             _videoBlob.current = {blob, filename: recorderFilename, url}
             setFilename(_videoBlob.current.filename)
             setDialogOpen(true)
-            console.log(`Video blob received: type=${blob.type}, size=${(blob.size / 1000000).toFixed(2)}MB`)
         }
 
         __.recorder.addEventListener(VideoRecorder.events.STOP, handleStopRecording)
@@ -136,15 +131,9 @@ export const VideoDownloadAndShareDialog = () => {
     /**
      * Handle filename input changes.
      */
-    const handleFilenameChange = (e) => {
-        const val = e.target?.value ?? ''
-        _videoBlob.current.filename = val
-        if (!val.length) {
-            const rec = window.__?.recorder
-            _videoBlob.current.filename = typeof rec?.filename === 'function'
-                                          ? rec.filename({filename: APP_KEY})
-                                          : APP_KEY
-        }
+    const handleFilenameChange = (event) => {
+        _videoBlob.current.filename = event.target?.value
+        setCanDownloadAndShare(_videoBlob.current.filename.length > 0)
         setFilename(_videoBlob.current.filename)
     }
 
@@ -155,7 +144,6 @@ export const VideoDownloadAndShareDialog = () => {
         try {
             const blob = _videoBlob.current?.blob
             const filename = `${(_videoBlob.current?.filename).sanitize()}.${lgs.settings.ui.video.format}`
-            console.log(filename)
             const file = new File([blob], filename, {type: blob.type || 'video/mp4'})
 
             if (blob && navigator.canShare && navigator.canShare({files: [file]})) {
@@ -195,9 +183,8 @@ export const VideoDownloadAndShareDialog = () => {
         }
 
         try {
-            const nameBase = (_videoBlob.current.filename).trim().replace(/[\/\\:*?"<>|]/g, '_')
             await __.recorder.download({
-                                           filename: nameBase,
+                                           filename: `${_videoBlob.current.filename}.${lgs.settings.ui.video.format}`,
                                            type:     'local-filesystem',
                                        })
         }
@@ -222,23 +209,6 @@ export const VideoDownloadAndShareDialog = () => {
         $video.editing = false
     }
 
-    /**
-     * Handle continue action after download.
-     */
-    const handleContinue = useCallback(() => {
-        __.recorder.filename = ''
-        setDialogOpen(false)
-        if (_videoBlob.current.url) {
-            try {
-                URL.revokeObjectURL(_videoBlob.current.url)
-            }
-            catch {
-            }
-        }
-        _videoBlob.current = {}
-        $video.editing = false
-        console.log('Dialog closed after conversion')
-    }, [$video])
 
     /**
      * Handle dialog close event to prevent closing via ESC or overlay.
@@ -297,15 +267,17 @@ export const VideoDownloadAndShareDialog = () => {
                         Cancel
                     </SlButton>
                 </SlTooltip>
+                {__.app.canShare() &&
                 <SlTooltip content="Share your video">
-                    <SlIconButton
-                        library="fa"
-                        name={FA2SL.set(faShareAlt)}
-                        onClick={handleShare}
+                    <SlIconButton disabled={!canDownloadAndShare}
+                                  library="fa"
+                                  name={FA2SL.set(faShareAlt)}
+                                  onClick={handleShare}
                     />
                 </SlTooltip>
+                }
                 <SlTooltip content="Save your video">
-                    <SlButton variant="primary" onClick={handleDownload}>
+                    <SlButton variant="primary" onClick={handleDownload} disabled={!canDownloadAndShare}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDownload)}/>
                         Download
                     </SlButton>
