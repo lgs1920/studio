@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-02
- * Last modified: 2025-09-02
+ * Created on: 2025-09-05
+ * Last modified: 2025-09-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -130,7 +130,6 @@ export const CropRatioSelector = memo(({manager}) => {
     // Handle crop updates
     useEffect(() => {
         const handleCropUpdate = (event) => {
-            console.debug('CropRatioSelector: onCropUpdate received:', event.detail)
             setForceRender((prev) => prev + 1) // Force local re-render
             updatePosition(manager.getSourceBounds()) // Update position with new bounds
         }
