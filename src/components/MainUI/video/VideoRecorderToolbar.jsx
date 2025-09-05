@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-31
- * Last modified: 2025-08-31
+ * Created on: 2025-09-05
+ * Last modified: 2025-09-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,21 +21,21 @@
  * @param {Object} props.toolbar - Toolbar element reference
  * @returns {JSX.Element} Video recorder toolbar UI
  */
-import { FontAwesomeIcon } from '@Components/FontAwesomeIcon'
-import { CropOverlay }     from '@Components/ToolsUI/cropper/CropOverlay'
-import { DefinedCropZone } from '@Components/ToolsUI/cropper/DefinedCropZone'
-import { DragHandler }     from '@Core/ui/drag-handler/DragHandler'
-import { VideoRecorder }   from '@Core/ui/video/recorder/VideoRecorder'
+import { FontAwesomeIcon }         from '@Components/FontAwesomeIcon'
+import { CropOverlay }             from '@Components/ToolsUI/cropper/CropOverlay'
+import { DefinedCropZone }         from '@Components/ToolsUI/cropper/DefinedCropZone'
+import { DragHandler }             from '@Core/ui/drag-handler/DragHandler'
+import { VideoRecorder }           from '@Core/ui/video/recorder/VideoRecorder'
+import { faCircle }                from '@fortawesome/duotone-regular-svg-icons'
 import { faPause, faPlay, faStop } from '@fortawesome/pro-regular-svg-icons'
-import { faCircle }        from '@fortawesome/duotone-regular-svg-icons'
 import { SlIconButton, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { FA2SL }           from '@Utils/FA2SL'
-import { UIToast }         from '@Utils/UIToast'
-import { UnitUtils }       from '@Utils/UnitUtils'
-import classNames          from 'classnames'
+import { FA2SL }                   from '@Utils/FA2SL'
+import { UIToast }                 from '@Utils/UIToast'
+import { UnitUtils }               from '@Utils/UnitUtils'
+import classNames                  from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { useSnapshot }     from 'valtio'
+import { useSnapshot }             from 'valtio'
 
 /**
  * RecorderControls - Renders play/pause and stop buttons for the recorder
@@ -44,7 +44,8 @@ import { useSnapshot }     from 'valtio'
  * @param {boolean} props.paused - Whether recording is paused
  * @param {Object} props.recorder - Recorder instance
  */
-const RecorderControls = memo(({recording, paused, recorder}) => {
+const RecorderControls = memo(({recording, paused, recorder, finalisation}) => {
+
     // Memoized click handlers
     const handlePlayPause = useCallback(() => {
         if (recorder) {
@@ -53,8 +54,10 @@ const RecorderControls = memo(({recording, paused, recorder}) => {
     }, [recorder, paused])
 
     const handleStop = useCallback(() => {
+        finalisation(true)
         recorder?.stop()
     }, [recorder])
+
 
     return (
         <>
@@ -66,8 +69,9 @@ const RecorderControls = memo(({recording, paused, recorder}) => {
                     disabled={!recorder}
                 />
             </SlTooltip>
+
             {recording && !paused && (
-                <SlTooltip content={'Click to stop'}>
+                <SlTooltip content="Click to stop">
                     <SlIconButton
                         library="fa"
                         name={FA2SL.set(faStop)}
@@ -102,7 +106,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     // Local state for UI updates
     const [recordedDuration, setRecordedDuration] = useState(0)
     const [recordedSize, setRecordedSize] = useState(0)
-    const [lastSizeEventTime, setLastSizeEventTime] = useState(0)
+    const [, setLastSizeEventTime] = useState(0)
+    const [finalisation, setFinalisation] = useState(false)
 
     const _toolbar = useRef(toolbar)
     const _container = useRef(null)
@@ -181,7 +186,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         // Handle size update events
         const handleInfo = (e) => {
             setLastSizeEventTime(Date.now())
-            setRecordedSize(e.detail.totalBytes)
+            setRecordedSize(e.detail.size)
             setRecordedDuration(e.detail.duration)
         }
 
@@ -311,6 +316,10 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         }
     }, [toolbars.opacity])
 
+    const finalise = (state) => {
+        setFinalisation(state)
+    }
+
     // Render toolbar only when recording is active
     return (
         <>
@@ -361,11 +370,17 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                                      className={classNames(video.paused ? '' : 'fa-beat', 'video-recorder-indicator')}/>
                     <span className="duration">{formatDuration(recordedDuration)}</span>
                     <span className="size">{formatSize(recordedSize)}</span>
+                    {finalisation ? (
+                        <div className="blinking">{'Finalisation...'}</div>
+                    ) : (
                     <RecorderControls
                         recording={video.recording}
                         paused={video.paused}
                         recorder={__.recorder}
+                        finalisation={finalise}
                     />
+                     )
+                    }
                 </div>
             </div>
         </>
