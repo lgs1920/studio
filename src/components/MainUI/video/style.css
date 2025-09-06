@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-04
- * Last modified: 2025-09-04
+ * Created on: 2025-09-06
+ * Last modified: 2025-09-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -114,36 +114,52 @@
     gap: var(--lgs-gutter-s);
 }
 
+/* Container for both videos, ensuring it takes full available space with max height */
 .video-container {
     position: relative;
     display: flex;
+    overflow: hidden;
     align-items: center;
-    flex-direction: column;
-    margin-bottom: var(--lgs-gutter)
-
+    justify-content: center;
+    width: 100%;
+    height: auto;
+    max-height: var(--max-video-height);
+    margin-bottom: var(--lgs-gutter);
+    --max-video-height: 50vh;
 }
 
+/* Main video, fits inside container without cropping.
+   - landscape: grows to width; if height would exceed max, it scales down
+   - portrait/square: limited by max height, uses as much width as possible */
 .main-video {
-    z-index: +2;
-    max-width: 400px;
-    max-height: 400px;
+    z-index: 1;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: var(--max-video-height);
+    object-fit: contain;
 }
 
+/* Wrapper for blurred video, filling the entire container */
 .blurred-video-wrapper {
     position: absolute;
-    overflow: hidden;
+    z-index: 0;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
     height: 100%;
-    border-radius: var(--lgs-border-radius-xs);
 }
 
+/* Blurred video, scaled to cover container with blur effect */
 .blurred-video {
-    position: absolute;
-    z-index: -1;
     width: 100%;
     height: 100%;
+    opacity: 0.5;
     object-fit: cover;
-    filter: blur(5px); /* Adjust blur radius as needed */
+    filter: blur(3px);
 }
 
 .blurred-video-wrapper::before {
@@ -153,13 +169,44 @@
     width: 100%;
     height: 100%;
     content: '';
-    background-color: var(--lgs-dark-color-50);
+    background-color: var(--lgs-dark-color-75);
 
 }
-
 
 #video-preview-dialog-footer {
     display: flex;
     justify-content: space-between;
     text-align: unset;
 }
+
+/***************************************
+ * Video info
+ */
+
+.video-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lgs-gutter);
+}
+
+.video-info sl-icon {
+    font-size: var(--lgs-font-size-m) !important;
+    margin-right: var(--lgs-gutter-xs);
+}
+
+.video-info sl-input {
+    max-width: 100px;
+}
+
+.video-info > div {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+
+.video-info > div > span {
+    display: inline-flex;
+    align-items: center;
+}
+
