@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-05
- * Last modified: 2025-09-05
+ * Created on: 2025-09-06
+ * Last modified: 2025-09-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,11 +18,11 @@
  * VideoRecorder - Singleton class for recording canvas or media streams.
  * Emits CustomEvents defined in VideoRecorder.events.
  */
-import { APP_KEY, LGS_PROJECT, SECOND } from '@Core/constants'
-import { DateTime }                     from 'luxon'
+import { APP_KEY, SECOND } from '@Core/constants'
+import { DateTime }        from 'luxon'
 import {
     BufferTarget, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH, QUALITY_LOW, QUALITY_MEDIUM, QUALITY_VERY_HIGH,
-}                                       from 'mediabunny'
+}                          from 'mediabunny'
 
 export class VideoRecorder extends EventTarget {
     /**
@@ -229,6 +229,13 @@ export class VideoRecorder extends EventTarget {
     #startTime = 0
 
     /**
+     * User-provided metadata to embed in the output container.
+     * @private
+     * @type {Record<string, any>}
+     */
+    #metadata = {}
+
+    /**
      * Type of recording source ('canvas' or 'stream').
      * @private
      * @type {string}
@@ -295,6 +302,7 @@ export class VideoRecorder extends EventTarget {
      * @param {number} [options.timeslice=1000] - Interval for INFO events (ms).
      * @param {number} [options.quality=QUALITY_MEDIUM] - Recording quality.
      * @param {number} [options.maxSize=Infinity] - Maximum recording size (bytes).
+     * @param {Object} [options.metadata={}] - Container metadata tags (artist, album, date, description, genre, ...).
      * @throws {Error} If called during recording.
      */
     initialize = ({
@@ -303,19 +311,19 @@ export class VideoRecorder extends EventTarget {
                       timeslice = this.#timeslice,
                       quality = this.#quality,
                       maxSize = this.#maxSize,
+                      metadata = {},
                   } = {}) => {
         if (this.isRecording()) {
             throw this.#dispatchError('Cannot initialize while recording')
         }
 
-        // Update recording parameters
-        Object.assign(this, {
-            '#maxDuration': maxDuration,
-            '#maxSize':     maxSize,
-            '#fps':         fps,
-            '#timeslice':   timeslice,
-            '#quality':     VideoRecorder.QUALITY.find(q => q.value === quality) || this.#quality,
-        })
+        // Update recording parameters (use direct assignments; private fields cannot be set via Object.assign)
+        this.#maxDuration = maxDuration
+        this.#maxSize = maxSize
+        this.#fps = fps
+        this.#timeslice = timeslice
+        this.#quality = VideoRecorder.QUALITY.find(q => q.value === quality) || this.#quality
+        this.#metadata = metadata || {date: new Date()}
 
         if (!this.#stream) {
             // Create default canvas if no stream is set
@@ -517,6 +525,9 @@ export class VideoRecorder extends EventTarget {
                                           target: new BufferTarget(),
                                       })
 
+            // Apply user metadata before starting encoding
+            await this.#setMetadata()
+
             // Configure video source
             this.#videoSource = new CanvasSource(this.#outputCanvas, {
                 codec:   'av1',
@@ -640,14 +651,6 @@ export class VideoRecorder extends EventTarget {
         }
 
         if (this.#output && this.#output.state !== 'finalized') {
-            //TODO metadata
-            const metadata = {
-                artist:      lgs.servers.studio.name,
-                date:        DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss'),
-                description: `Visit ${lgs.servers.site.protocol}://${lgs.servers.site.domain}`,
-                album:       LGS_PROJECT,
-                genre:       'Adventure',
-            }
 
             // Finalize output and create blob
             await this.#output.finalize()
@@ -659,7 +662,7 @@ export class VideoRecorder extends EventTarget {
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.FINALIZED, {
                 detail: {
                     blob:       this.#blob,
-                    metadata,
+                    metadata: this.#metadata,
                     duration:   this.#duration,
                     totalBytes: this.#size,
                     timestamp:  start,
@@ -673,7 +676,7 @@ export class VideoRecorder extends EventTarget {
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.STOP, {
                 detail: {
                     blob:       this.#blob,
-                    metadata,
+                    metadata: this.#metadata,
                     duration:   this.#duration,
                     totalBytes: this.#size,
                     timestamp:  Date.now(),
@@ -958,5 +961,24 @@ export class VideoRecorder extends EventTarget {
     #setRecordingBodyClasses = () => {
         document.body.classList.remove(VideoRecorder.CLASSES.PAUSED)
         document.body.classList.add(VideoRecorder.CLASSES.RECORDING)
+    }
+
+    /**
+     * Apply container metadata to the output (called before starting the output).
+     * @private
+     * @returns {Promise<void>}
+     */
+    #setMetadata = async () => {
+        if (!this.#output) {
+            throw this.#dispatchError('Output not initialized for metadata')
+        }
+
+        try {
+            await this.#output.setMetadataTags(this.#metadata)
+        }
+        catch (e) {
+            // Non-fatal: report via ERROR event but continue
+            this.#dispatchError(`Failed to set metadata: ${e?.message || String(e)}`)
+        }
     }
 }

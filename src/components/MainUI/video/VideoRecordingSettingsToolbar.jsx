@@ -7,18 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-03
- * Last modified: 2025-09-03
+ * Created on: 2025-09-06
+ * Last modified: 2025-09-06
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { Tunnel }                               from '@Components/Tunnel/Tunnel'
-import { APP_KEY, MINUTE }                      from '@Core/constants'
+import { APP_KEY, LGS_PROJECT, MINUTE } from '@Core/constants'
 import { DragHandler }                          from '@Core/ui/drag-handler/DragHandler'
 import { VideoRecorder }                        from '@Core/ui/video/recorder/VideoRecorder'
-import { faGear } from '@fortawesome/pro-regular-svg-icons'
+import { faGear }                       from '@fortawesome/pro-regular-svg-icons'
 import { faPhotoFilm, faVideo }                 from '@fortawesome/pro-solid-svg-icons'
 import { UIToast }                              from '@Utils/UIToast'
 import { memo, useCallback, useEffect, useRef } from 'react'
@@ -187,14 +187,19 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
         lgs.settings.ui.video.fps = $video.fps
 
         // Configure recorder
-        __.recorder.initialize((blob, duration) => {
-        }, {
+        __.recorder.initialize({
                                    maxSize:     settings.maxSize * 1048576,      // MB
                                    maxDuration: settings.maxDuration * MINUTE,   // MilliSeconds
-                                   quality: VideoRecorder.QUALITY[$video.quality].value,
+                                   quality:  VideoRecorder.QUALITY[$video.quality].value,
                                    filename:    APP_KEY,
-                                   fps:     VideoRecorder.FPS[$video.fps],
-
+                                   fps:      VideoRecorder.FPS[$video.fps],
+                                   metadata: {
+                                       artist:      lgs.servers.studio.name,
+                                       date:        new Date(),
+                                       description: `Visit ${lgs.servers.site.protocol}://${lgs.servers.site.domain}`,
+                                       album:       LGS_PROJECT,
+                                       genre:       'Adventure',
+                                   },
                                    useWebGL: true,
 
                                })
