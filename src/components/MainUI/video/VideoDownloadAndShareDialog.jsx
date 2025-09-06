@@ -239,6 +239,7 @@ export const VideoDownloadAndShareDialog = () => {
                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFilm)}/>
                 {`Download ${__.app.canShare() ? 'and Share ' : ''}your video`}
             </div>
+            <div></div>
             <div className="video-container">
                 <video
                     ref={_mainVideo}
@@ -257,7 +258,6 @@ export const VideoDownloadAndShareDialog = () => {
                     />
                 </div>
             </div>
-            <LGSScrollbars autoHide autoHeight>
                 <div className="video-info">
                     <div>
 
@@ -265,6 +265,7 @@ export const VideoDownloadAndShareDialog = () => {
                             size="small"
                             name="video-file-name"
                             onSlInput={handleFilenameChange}
+                            value={filename}
                         >
                             <SlIcon library="fa" slot="prefix" name={FA2SL.set(faFloppyDisk)}/>
                             <span slot="suffix">{`.${lgs.settings.ui.video.format}`}</span></SlInput>
@@ -279,7 +280,6 @@ export const VideoDownloadAndShareDialog = () => {
                                       name={FA2SL.set(faClock)}/>{__.convert(__.recorder.duration).toTime()}</span>
                     </div>
                 </div>
-            </LGSScrollbars>
             <div slot="footer" id="video-preview-dialog-footer">
                 <SlTooltip content="Cancel">
                     <SlButton onClick={handleCancel}>
