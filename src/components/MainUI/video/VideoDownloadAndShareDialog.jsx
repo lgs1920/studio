@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-05
- * Last modified: 2025-09-05
+ * Created on: 2025-09-06
+ * Last modified: 2025-09-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,9 +19,15 @@
  * @returns {JSX.Element} Dialog with video preview and download/share options.
  */
 import { LGSScrollbars }                            from '@Components/MainUI/LGSScrollbars'
-import { VideoRecorder }                            from '@Core/ui/video/recorder/VideoRecorder'
-import { faDownload, faFilm, faShareAlt, faXmark } from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlDialog, SlIcon, SlIconButton, SlInput, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import {
+    VideoRecorder,
+} from '@Core/ui/video/recorder/VideoRecorder'
+import {
+    faClock, faDownload, faFile, faFilm, faFloppyDisk, faShareAlt, faXmark,
+} from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlButton, SlDialog, SlIcon, SlInput, SlTooltip,
+} from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                    from '@Utils/FA2SL'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                              from 'valtio'
@@ -231,7 +237,7 @@ export const VideoDownloadAndShareDialog = () => {
         >
             <div slot="label">
                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFilm)}/>
-                Download your video
+                {`Download ${__.app.canShare() ? 'and Share ' : ''}your video`}
             </div>
             <div className="video-container">
                 <video
@@ -252,36 +258,54 @@ export const VideoDownloadAndShareDialog = () => {
                 </div>
             </div>
             <LGSScrollbars autoHide autoHeight>
-                <SlInput
-                    label="Video file name"
-                    size="small"
-                    name="video-file-name"
-                    value={filename}
-                    onSlInput={handleFilenameChange}
-                />
+                <div className="video-info">
+                    <div>
+
+                        <SlInput
+                            size="small"
+                            name="video-file-name"
+                            onSlInput={handleFilenameChange}
+                        >
+                            <SlIcon library="fa" slot="prefix" name={FA2SL.set(faFloppyDisk)}/>
+                            <span slot="suffix">{`.${lgs.settings.ui.video.format}`}</span></SlInput>
+                    </div>
+
+                    <div>
+
+                        <span><SlIcon library="fa"
+                                      name={FA2SL.set(faFile)}/>{__.convert(__.recorder.size).toBytesUnit()}</span>
+
+                        <span><SlIcon library="fa"
+                                      name={FA2SL.set(faClock)}/>{__.convert(__.recorder.duration).toTime()}</span>
+                    </div>
+                </div>
             </LGSScrollbars>
             <div slot="footer" id="video-preview-dialog-footer">
                 <SlTooltip content="Cancel">
                     <SlButton onClick={handleCancel}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}/>
-                        Cancel
+                        {'Close'}
                     </SlButton>
                 </SlTooltip>
+                <div>
                 {__.app.canShare() &&
-                <SlTooltip content="Share your video">
-                    <SlIconButton disabled={!canDownloadAndShare}
-                                  library="fa"
-                                  name={FA2SL.set(faShareAlt)}
-                                  onClick={handleShare}
-                    />
-                </SlTooltip>
+                    <SlTooltip content="Share your video">
+                        <SlButton disabled={!canDownloadAndShare} onClick={handleShare}>
+                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faShareAlt)}/>
+                            {`Share`}
+                            {canShare &&
+                                <SlIcon slot="prefix" library="fa" name={FA2SL.set(faShareAlt)}/>
+                            }
+                        </SlButton>
+                    </SlTooltip>
                 }
                 <SlTooltip content="Save your video">
                     <SlButton variant="primary" onClick={handleDownload} disabled={!canDownloadAndShare}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDownload)}/>
-                        Download
+                        {'Download'}
                     </SlButton>
                 </SlTooltip>
+                </div>
             </div>
         </SlDialog>
     )
