@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-13
- * Last modified: 2025-07-13
+ * Created on: 2025-09-06
+ * Last modified: 2025-09-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -141,7 +141,7 @@ export class UnitUtils {
              * MB, GB, TB show one decimal place; B, KB show no decimal places.
              * @returns {string} Formatted size string
              */
-            toSize: () => {
+            toBytesUnit: () => {
                 if (!input || isNaN(input) || input < 0) {
                     return '0B'
                 }

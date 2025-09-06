@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-05
- * Last modified: 2025-09-05
+ * Created on: 2025-09-06
+ * Last modified: 2025-09-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -129,7 +129,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
      * @returns {string} Formatted size (e.g., '1.4MB')
      */
     const formatSize = useCallback((bytes) => {
-        return UnitUtils.convert(bytes).toSize()
+        return UnitUtils.convert(bytes).toBytesUnit()
     }, [])
 
     /**
