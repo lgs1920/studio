@@ -41,6 +41,7 @@ export class VideoRecorder extends EventTarget {
         MAX_DURATION: 'video/max-duration',
         MAX_SIZE:  'video/max-size',
         FINALIZE: 'video/finalize',
+        CANCEL: 'video/cancel',
     }
 
     /**
@@ -666,7 +667,7 @@ export class VideoRecorder extends EventTarget {
             await this.#output.finalize()
 
             this.#blob = this.#output.target?.buffer ? new Blob([this.#output.target.buffer], {type: 'video/mp4'}) : null
-            this.#output = null
+
 
             console.log('Finalized output', (Date.now() - start) / 1000)
 
@@ -682,12 +683,61 @@ export class VideoRecorder extends EventTarget {
                     timestamp:  Date.now(),
                 },
             }))
-
+            this.#output = null
         }
         else {
             this.#dispatchError('No active recording to stop')
         }
         this.#cleanBodyClasses()
+    }
+
+    /**
+     * Cancels an ongoing recording without finalizing or producing any output.
+     * - Does not emit STOP or FINALIZE
+     * - Leaves the current source (canvas/stream) intact so recording can restart later
+     * - Resets recording state and CSS classes
+     */
+    cancel = async () => {
+        // Stop the recording frame loop (if any)
+        if (this.#rafId) {
+            cancelAnimationFrame(this.#rafId)
+            this.#rafId = null
+        }
+
+        // Close the current encoding video source (not the UI/source compositor loop)
+        if (this.#videoSource) {
+            try {
+                await this.#videoSource.close()
+            }
+            catch (_) {
+                // swallow
+            }
+            this.#videoSource = null
+        }
+
+        // Abort/dispose the encoder output without finalize
+        if (this.#output) {
+            await this.#output.cancel()
+            this.#output = null
+        }
+
+        // Ensure no partial data remains
+        this.#blob = null
+        this.#size = 0
+        this.#duration = 0
+        this.#isPaused = false
+        this.#lastFrameTime = 0
+        this.#lastCheckTime = 0
+        this.#lastWriteLogTime = 0
+        this.#currentTimestamp = 0
+
+        // Clean body classes
+        this.#cleanBodyClasses()
+
+        // Inform listeners that the recording was canceled
+        this.dispatchEvent(new CustomEvent(VideoRecorder.events.CANCEL, {
+            detail: {timestamp: Date.now()},
+        }))
     }
 
     /**

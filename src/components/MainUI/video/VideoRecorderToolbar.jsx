@@ -21,21 +21,21 @@
  * @param {Object} props.toolbar - Toolbar element reference
  * @returns {JSX.Element} Video recorder toolbar UI
  */
-import { FontAwesomeIcon }         from '@Components/FontAwesomeIcon'
-import { CropOverlay }             from '@Components/ToolsUI/cropper/CropOverlay'
-import { DefinedCropZone }         from '@Components/ToolsUI/cropper/DefinedCropZone'
-import { DragHandler }             from '@Core/ui/drag-handler/DragHandler'
-import { VideoRecorder }           from '@Core/ui/video/recorder/VideoRecorder'
-import { faCircle }                from '@fortawesome/duotone-regular-svg-icons'
-import { faPause, faPlay, faStop } from '@fortawesome/pro-regular-svg-icons'
-import { SlIconButton, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FontAwesomeIcon }                  from '@Components/FontAwesomeIcon'
+import { CropOverlay }                      from '@Components/ToolsUI/cropper/CropOverlay'
+import { DefinedCropZone }                  from '@Components/ToolsUI/cropper/DefinedCropZone'
+import { DragHandler }                      from '@Core/ui/drag-handler/DragHandler'
+import { VideoRecorder }                    from '@Core/ui/video/recorder/VideoRecorder'
+import { faCircle }                         from '@fortawesome/duotone-regular-svg-icons'
+import { faPause, faPlay, faStop, faXmark } from '@fortawesome/pro-regular-svg-icons'
+import { SlIconButton, SlTooltip }          from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { FA2SL }                   from '@Utils/FA2SL'
-import { UIToast }                 from '@Utils/UIToast'
-import { UnitUtils }               from '@Utils/UnitUtils'
-import classNames                  from 'classnames'
+import { FA2SL }                            from '@Utils/FA2SL'
+import { UIToast }                          from '@Utils/UIToast'
+import { UnitUtils }                        from '@Utils/UnitUtils'
+import classNames                           from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { useSnapshot }             from 'valtio'
+import { useSnapshot }                      from 'valtio'
 
 /**
  * RecorderControls - Renders play/pause and stop buttons for the recorder
@@ -113,6 +113,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     const _container = useRef(null)
     const _cropZone = useRef(null)
     const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
+    const caption = 'Video Recording'
 
     /**
      * Formats duration in milliseconds to human readable format
@@ -163,7 +164,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         if (!__.recorder) {
             return
         }
-        const caption = 'Video Recording'
 
         // Handle recording start event
         const handleStart = () => {
@@ -178,6 +178,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             setRecordedDuration(0)
             setRecordedSize(0)
             setLastSizeEventTime(Date.now())
+
             UIToast.warning({
                                 caption: caption,
                                 text: 'ON AIR !',
@@ -331,6 +332,25 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         setFinalisation(state)
     }
 
+    const handleCancel = async () => {
+        $video.recording = false
+        $video.paused = false
+        $video.size = 0
+        $video.editing = true
+        setRecordedDuration(0)
+        setRecordedSize(0)
+        setLastSizeEventTime(0)
+        setFinalisation(false)
+
+        await __.recorder.cancel()
+
+        UIToast.warning({
+                            caption: caption,
+                            text:    'Recording has been canceled!',
+                        })
+
+    }
+
     // Render toolbar only when recording is active
     return (
         <>
@@ -393,14 +413,20 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                     {finalisation ? (
                         <div className="blinking">{'Finalisation...'}</div>
                     ) : (
-                    <RecorderControls
-                        recording={video.recording}
-                        paused={video.paused}
-                        recorder={__.recorder}
-                        finalisation={finalise}
-                    />
+                        <RecorderControls
+                            recording={video.recording}
+                            paused={video.paused}
+                            recorder={__.recorder}
+                            finalisation={finalise}
+                        />
                      )
+
                     }
+                    <span/>
+                    <SlTooltip content={'Cancel'} placement="top">
+                        <SlIconButton onClick={handleCancel} className="lgs-cancel-recording" library="fa"
+                                      name={FA2SL.set(faXmark)}/>
+                    </SlTooltip>
                 </div>
             </div>
         </>

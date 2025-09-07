@@ -62,10 +62,17 @@
 .video-recorder-toolbar span {
     width: max-content;
     margin-right: var(--lgs-gutter-s);
-    border-right: 1px solid var(--lgs-card-on-map-border-color);padding-inline-end: var(--lgs-gutter-s);
+    border-right: 1px solid var(--lgs-card-on-map-border-color);
+    padding-inline-end: var(--lgs-gutter-s);
 }
 
 .video-recorder-toolbar button {margin: 0;}
+
+.video-recorder-toolbar .lgs-cancel-recording {
+    font-size: var(--lgs-font-size-s);
+    border-right: none;
+    border-left: 1px solid var(--lgs-card-on-map-border-color);
+}
 
 .video-recorder-indicator {
     font-size: var(--lgs-font-size);
