@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-06
- * Last modified: 2025-09-06
+ * Created on: 2025-09-07
+ * Last modified: 2025-09-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -120,7 +120,7 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
         }
         // Handle size updates
         const handleSizeUpdate = (e) => {
-            $video.totalBytes = e.detail.totalBytes
+            $video.size = e.detail.size
         }
         // Handle pause
         const handlePause = () => {
@@ -134,42 +134,52 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
         const handleStop = () => {
             $video.recording = false
             $video.paused = false
-            $video.totalBytes = 0
+            $video.size = 0
         }
         // Handle max size limit
         const handleMaxSize = () => {
             $video.recording = false
             $video.paused = false
-            $video.totalBytes = 0
+            $video.size = 0
         }
         // Handle max duration limit
         const handleMaxDuration = () => {
             $video.recording = false
             $video.paused = false
-            $video.totalBytes = 0
+            $video.size = 0
         }
 
-        // Add event listeners
-        __.recorder.addEventListener(VideoRecorder.events.SIZE, handleSizeUpdate)
-        __.recorder.addEventListener(VideoRecorder.events.PAUSE, handlePause)
-        __.recorder.addEventListener(VideoRecorder.events.RESUME, handleResume)
-        __.recorder.addEventListener(VideoRecorder.events.STOP, handleStop)
-        __.recorder.addEventListener(VideoRecorder.events.MAX_SIZE, handleMaxSize)
-        __.recorder.addEventListener(VideoRecorder.events.MAX_DURATION, handleMaxDuration)
+        const handleFinalize = () => {
+            $video.finalizing = true
+            console.log('ok')
+        }
+
+        // // Add event listeners
+        // __.recorder.addEventListener(VideoRecorder.events.INFO, handleSizeUpdate)
+        // __.recorder.addEventListener(VideoRecorder.events.PAUSE, handlePause)
+        // __.recorder.addEventListener(VideoRecorder.events.RESUME, handleResume)
+        // __.recorder.addEventListener(VideoRecorder.events.STOP, handleStop)
+        // __.recorder.addEventListener(VideoRecorder.events.MAX_SIZE, handleMaxSize)
+        // __.recorder.addEventListener(VideoRecorder.events.MAX_DURATION, handleMaxDuration)
+        // __.recorder.addEventListener(VideoRecorder.events.FINALIZE, handleFinalize)
+
         // Clean up
         return () => {
-            __.recorder.removeEventListener(VideoRecorder.events.SIZE, handleSizeUpdate)
-            __.recorder.removeEventListener(VideoRecorder.events.PAUSE, handlePause)
-            __.recorder.removeEventListener(VideoRecorder.events.RESUME, handleResume)
-            __.recorder.removeEventListener(VideoRecorder.events.STOP, handleStop)
-            __.recorder.removeEventListener(VideoRecorder.events.MAX_SIZE, handleMaxSize)
-            __.recorder.removeEventListener(VideoRecorder.events.MAX_DURATION, handleMaxDuration)
-            if (video.recording && __.recorder) {
-                __.recorder.stop()
-                $video.recording = false
-                $video.paused = false
-                $video.totalBytes = 0
-            }
+            // __.recorder.removeEventListener(VideoRecorder.events.INFO, handleSizeUpdate)
+            // __.recorder.removeEventListener(VideoRecorder.events.PAUSE, handlePause)
+            // __.recorder.removeEventListener(VideoRecorder.events.RESUME, handleResume)
+            // __.recorder.removeEventListener(VideoRecorder.events.STOP, handleStop)
+            // __.recorder.removeEventListener(VideoRecorder.events.MAX_SIZE, handleMaxSize)
+            // __.recorder.removeEventListener(VideoRecorder.events.MAX_DURATION, handleMaxDuration)
+            // __.recorder.removeEventListener(VideoRecorder.events.FINALIZE, handleFinalize)
+
+            // if (video.recording && __.recorder) {
+            //     __.recorder.stop()
+            //     $video.finalizing = false
+            //     $video.recording = false
+            //     $video.paused = false
+            //     $video.size = 0
+            // }
         }
     }, [__.recorder])
 
@@ -232,7 +242,7 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
         catch (error) {
             $video.recording = false
             $video.paused = false
-            $video.totalBytes = 0
+            $video.size = 0
 
             UIToast.error({
                               caption: `Video capture`,
@@ -276,6 +286,7 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
             className: 'lgs-video-recording-trigger',
             onClick: (index, event) => {
                 $video.editing = false
+                $video.finalizing = false
                 steps[index].done = true
                 handleVideoRecording(event)
             },

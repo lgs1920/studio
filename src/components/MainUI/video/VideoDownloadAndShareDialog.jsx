@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-06
- * Last modified: 2025-09-06
+ * Created on: 2025-09-07
+ * Last modified: 2025-09-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -48,7 +48,7 @@ export const VideoDownloadAndShareDialog = () => {
      * Initialize and handle stop recording event.
      */
     useEffect(() => {
-        const handleStopRecording = ({detail: {blob, metadata, duration, totalBytes, timestamp}}) => {
+        const handleStopRecording = ({detail: {blob}}) => {
             if (!(blob instanceof Blob) || blob.size === 0) {
                 console.error(`Invalid video blob (type: ${blob?.type}, size: ${blob?.size})`)
                 return
@@ -77,9 +77,6 @@ export const VideoDownloadAndShareDialog = () => {
     useEffect(() => {
         const mainVideo = _mainVideo.current
         const blurredVideo = _blurredVideo.current
-        if (!mainVideo || !blurredVideo) {
-            return
-        }
 
         const syncTime = () => {
             try {

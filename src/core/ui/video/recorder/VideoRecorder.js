@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-06
- * Last modified: 2025-09-06
+ * Created on: 2025-09-07
+ * Last modified: 2025-09-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -40,7 +40,7 @@ export class VideoRecorder extends EventTarget {
         DOWNLOAD: 'video/download',
         MAX_DURATION: 'video/max-duration',
         MAX_SIZE:  'video/max-size',
-        FINALIZED: 'video/finalized',
+        FINALIZE: 'video/finalize',
     }
 
     /**
@@ -651,23 +651,23 @@ export class VideoRecorder extends EventTarget {
         }
 
         if (this.#output && this.#output.state !== 'finalized') {
-
+            const start = Date.now()
             // Finalize output and create blob
+            this.dispatchEvent(new CustomEvent(VideoRecorder.events.FINALIZE, {
+                detail: {
+                    blob:      this.#blob,
+                    metadata:  this.#metadata,
+                    duration:  this.#duration,
+                    size:      this.#size,
+                    timestamp: start,
+                },
+            }))
+
             await this.#output.finalize()
 
             this.#blob = this.#output.target?.buffer ? new Blob([this.#output.target.buffer], {type: 'video/mp4'}) : null
             this.#output = null
 
-            const start = Date.now()
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.FINALIZED, {
-                detail: {
-                    blob:       this.#blob,
-                    metadata: this.#metadata,
-                    duration:   this.#duration,
-                    totalBytes: this.#size,
-                    timestamp:  start,
-                },
-            }))
             console.log('Finalized output', (Date.now() - start) / 1000)
 
             // Update size from blob as final check
@@ -678,7 +678,7 @@ export class VideoRecorder extends EventTarget {
                     blob:       this.#blob,
                     metadata: this.#metadata,
                     duration:   this.#duration,
-                    totalBytes: this.#size,
+                    size: this.#size,
                     timestamp:  Date.now(),
                 },
             }))

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-06
- * Last modified: 2025-09-06
+ * Created on: 2025-09-07
+ * Last modified: 2025-09-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -76,18 +76,27 @@
     --fa-secondary-opacity: 1;
 }
 
+.video-recorder-indicator.finalizing {
+    --fa-primary-color: var(--lgs-video-finalizing-color);
+    --fa-secondary-color: var(--lgs-video-finalizing-bg-color);
+}
+
 .video-recording-in-progress {
     padding: 20px;
     animation: border-dance var(--border-dance-duration) infinite linear;
     animation-play-state: running;
     border: none;
     border-width: var(--border-width);
-    background: linear-gradient(90deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(90deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(0deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(0deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%);
+    background-image: linear-gradient(90deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(90deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(0deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(0deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%);
     background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
     background-size: var(--dashing-width) var(--border-width), var(--dashing-width) var(--border-width), var(--border-width) var(--dashing-width), var(--border-width) var(--dashing-width);
     --border-width: 4px;
     --dashing-width: 25px;
     --border-dance-duration: 15s;
+}
+
+.video-recording-in-progress.finalizing {
+    background-image: linear-gradient(90deg, var(--lgs-video-finalizing-bg-color) 50%, var(--lgs-video-finalizing-color) 50%), linear-gradient(90deg, var(--lgs-video-finalizing-bg-color) 50%, var(--lgs-video-finalizing-color) 50%), linear-gradient(0deg, var(--lgs-video-finalizing-bg-color) 50%, var(--lgs-video-finalizing-color) 50%), linear-gradient(0deg, var(--lgs-video-finalizing-bg-color) 50%, var(--lgs-video-finalizing-color) 50%);
 }
 
 @keyframes border-dance {

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-06
- * Last modified: 2025-09-06
+ * Created on: 2025-09-07
+ * Last modified: 2025-09-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -172,8 +172,9 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             }
             const startTime = Date.now()
             $video.recording = true
+            $video.finalizing = false
             $video.paused = false
-            $video.totalBytes = 0
+            $video.size = 0
             setRecordedDuration(0)
             setRecordedSize(0)
             setLastSizeEventTime(Date.now())
@@ -220,6 +221,14 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                             })
         }
 
+        // Handle Finalize event
+        const handleFinalize = (event) => {
+            if ($video.finalizing) {
+                return
+            }
+            $video.finalizing = true
+        }
+
         // Handle recording stop events (stop, max-size, or max-duration)
         const handleStop = (event) => {
             if ((__.recorder && __.recorder.isRecording()) || $video.paused) {
@@ -227,7 +236,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             }
             $video.recording = false
             $video.paused = false
-            $video.totalBytes = 0
+            $video.size = 0
             setRecordedDuration(0)
             setRecordedSize(0)
             setLastSizeEventTime(0)
@@ -289,6 +298,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         __.recorder.addEventListener(VideoRecorder.events.MAX_DURATION, handleStop)
         __.recorder.addEventListener(VideoRecorder.events.STOP, handleStop)
         __.recorder.addEventListener(VideoRecorder.events.DOWNLOAD, handleDownload)
+        __.recorder.addEventListener(VideoRecorder.events.FINALIZE, handleFinalize)
 
         // Clean up function
         return () => {
@@ -304,6 +314,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 __.recorder.removeEventListener(VideoRecorder.events.MAX_DURATION, handleStop)
                 __.recorder.removeEventListener(VideoRecorder.events.STOP, handleStop)
                 __.recorder.removeEventListener(VideoRecorder.events.DOWNLOAD, handleDownload)
+                __.recorder.removeEventListener(VideoRecorder.events.FINALIZE, handleFinalize)
             }
             window.removeEventListener('resize', handleResize)
         }
@@ -359,7 +370,13 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 return (
                     <>
                         <CropOverlay style={overlayStyle}/>
-                        <DefinedCropZone cssCrop={cssCrop} className="video-recording-in-progress" ref={_cropZone}/>
+                        <DefinedCropZone cssCrop={cssCrop}
+                                         className={
+                                             classNames('video-recording-in-progress',
+                                                        {'finalizing': video.finalizing},
+                                             )
+                                         }
+                                         ref={_cropZone}/>
                     </>
                 )
             })()}
@@ -367,7 +384,10 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 <div ref={_toolbar}
                      className="lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map">
                     <FontAwesomeIcon icon={faCircle}
-                                     className={classNames(video.paused ? '' : 'fa-beat', 'video-recorder-indicator')}/>
+                                     className={classNames({
+                                                               'fa-beat':    video.paused || video.finalizing,
+                                                               'finalizing': video.finalizing,
+                                                           }, 'video-recorder-indicator')}/>
                     <span className="duration">{formatDuration(recordedDuration)}</span>
                     <span className="size">{formatSize(recordedSize)}</span>
                     {finalisation ? (
