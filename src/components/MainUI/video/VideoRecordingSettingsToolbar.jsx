@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-07
- * Last modified: 2025-09-07
+ * Created on: 2025-09-08
+ * Last modified: 2025-09-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -226,7 +226,7 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
     /**
      * Toggles video recording
      */
-    const handleVideoRecording = (event) => {
+    const handleVideoRecording = async (event) => {
         // Ensure recorder exists
         if (!__.recorder) {
             return
@@ -234,7 +234,7 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
 
         try {
             initializeRecorder()
-            __.recorder.start()
+            await __.recorder.start()
             $video.recording = true
             $video.paused = false
             $video.position = {x: event.clientX, y: event.clientY}
