@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-07
- * Last modified: 2025-09-07
+ * Created on: 2025-09-08
+ * Last modified: 2025-09-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -109,6 +109,14 @@ export class VideoRecorder extends EventTarget {
      * @type {number|null}
      */
     #rafId = null
+
+    /**
+     * Simplified timers for frame push and info updates.
+     * @private
+     * @type {number|null}
+     */
+    #frameTimer = null
+    #infoTimer = null
 
     /**
      * Current frame timestamp (frame count).
@@ -531,11 +539,12 @@ export class VideoRecorder extends EventTarget {
 
             // Configure video source
             this.#videoSource = new CanvasSource(this.#outputCanvas, {
-                codec:   'av1',
+                codec: 'vp9',
                 bitrate: this.#quality.value,
                 latencyMode: 'quality',
-                keyFrameInterval: 5,
             })
+
+            console.log(this.#outputCanvas, this.#videoSource)
 
             this.#output.addVideoTrack(this.#videoSource)
 
@@ -551,80 +560,58 @@ export class VideoRecorder extends EventTarget {
             await this.#output.start()
             this.#setRecordingBodyClasses()
 
-            // Start frame rendering loop
-            const frameDuration = SECOND / this.#fps
-            const frameLoop = (currentTime) => {
+            const frameDuration = Math.max(1, Math.floor(1000 / this.#fps))
+            this.#frameTimer = window.setInterval(async () => {
                 if (!this.#output) {
                     return
                 }
-
-                // Skip frames while paused but keep RAF going
                 if (this.#isPaused) {
-                    this.#rafId = requestAnimationFrame(frameLoop)
                     return
                 }
-
-                if (currentTime - this.#lastFrameTime >= frameDuration) {
-                    try {
-                        const ptsSec = this.#currentTimestamp / this.#fps
-                        const durSec = 1 / this.#fps
-                        this.#videoSource.add(ptsSec, durSec)
-
-                        // Update duration and advance frame count
-                        this.#duration = Math.round((this.#currentTimestamp / this.#fps) * SECOND)
-                        this.#currentTimestamp += 1
-                        this.#lastFrameTime = currentTime
-                    }
-                    catch (e) {
-                        this.#dispatchError(e?.message || String(e))
-                        return
-                    }
+                try {
+                    // Let mediabunny handle timestamps; we just push a frame
+                    await this.#videoSource.add(this.#currentTimestamp / this.#fps, 1 / this.#fps)
+                    this.#currentTimestamp++
+                    this.#duration = Math.round((this.#currentTimestamp / this.#fps) * SECOND)
                 }
+                catch (e) {
+                    this.#dispatchError(e?.message || String(e))
+                }
+            }, frameDuration)
 
-                // Periodic INFO updates and max-duration/size cutoff
+            // Periodic INFO updates and cutoff checks
+            this.#infoTimer = window.setInterval(() => {
+                if (!this.#output) {
+                    return
+                }
                 const now = Date.now()
-                if (now - this.#lastCheckTime >= this.#timeslice) {
-                    this.#lastCheckTime = now
-                    this.dispatchEvent(new CustomEvent(VideoRecorder.events.INFO, {
-                        detail: {
-                            timestamp: this.#lastCheckTime,
-                            duration: this.#duration,
-                            size:     this.#size,
-                            fps:      this.#fps,
-                            quality:  this.#quality,
-                        },
+                this.#lastCheckTime = now
+                this.dispatchEvent(new CustomEvent(VideoRecorder.events.INFO, {
+                    detail: {
+                        timestamp: now,
+                        duration:  this.#duration,
+                        size:      this.#size,
+                        fps:       this.#fps,
+                        quality:   this.#quality,
+                    },
+                }))
+
+                if (this.#duration >= this.#maxDuration) {
+                    this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_DURATION, {
+                        detail: {timestamp: now, duration: this.#duration, max: this.#maxDuration},
                     }))
-
-                    if (this.#duration >= this.#maxDuration) {
-                        this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_DURATION, {
-                            detail: {
-                                timestamp: now,
-                                duration:  this.#duration,
-                                max:       this.#maxDuration,
-                            },
-                        }))
-                        this.stop().catch(() => {
-                        })
-                        return
-                    }
-
-                    if (this.#size >= this.#maxSize) {
-                        this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_SIZE, {
-                            detail: {
-                                timestamp: now,
-                                size:      this.#size,
-                                max:       this.#maxSize,
-                            },
-                        }))
-                        this.stop().catch(() => {
-                        })
-                        return
-                    }
+                    this.stop().catch(() => {
+                    })
                 }
+                else if (this.#size >= this.#maxSize) {
+                    this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_SIZE, {
+                        detail: {timestamp: now, size: this.#size, max: this.#maxSize},
+                    }))
+                    this.stop().catch(() => {
+                    })
+                }
+            }, this.#timeslice)
 
-                this.#rafId = requestAnimationFrame(frameLoop)
-            }
-            this.#rafId = requestAnimationFrame(frameLoop)
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.START, {
                 detail: {timestamp: this.#startTime},
             }))
@@ -643,6 +630,15 @@ export class VideoRecorder extends EventTarget {
         if (this.#rafId) {
             cancelAnimationFrame(this.#rafId)
             this.#rafId = null
+        }
+        // Clear simplified timers
+        if (this.#frameTimer !== null) {
+            window.clearInterval(this.#frameTimer)
+            this.#frameTimer = null
+        }
+        if (this.#infoTimer !== null) {
+            window.clearInterval(this.#infoTimer)
+            this.#infoTimer = null
         }
 
         // Close video source
@@ -698,26 +694,43 @@ export class VideoRecorder extends EventTarget {
      * - Resets recording state and CSS classes
      */
     cancel = async () => {
-        // Stop the recording frame loop (if any)
+        // Stop animation frame loop
         if (this.#rafId) {
             cancelAnimationFrame(this.#rafId)
             this.#rafId = null
         }
+        // Clear timers
+        if (this.#frameTimer !== null) {
+            window.clearInterval(this.#frameTimer)
+            this.#frameTimer = null
+        }
+        if (this.#infoTimer !== null) {
+            window.clearInterval(this.#infoTimer)
+            this.#infoTimer = null
+        }
 
-        // Close the current encoding video source (not the UI/source compositor loop)
+        // Close the current encoding video source
         if (this.#videoSource) {
             try {
                 await this.#videoSource.close()
             }
             catch (_) {
-                // swallow
             }
             this.#videoSource = null
         }
 
-        // Abort/dispose the encoder output without finalize
+        // Abort/close the encoder output without finalize
         if (this.#output) {
-            await this.#output.cancel()
+            try {
+                if (typeof this.#output.abort === 'function') {
+                    await this.#output.abort()
+                }
+                else if (typeof this.#output.close === 'function') {
+                    await this.#output.close()
+                }
+            }
+            catch (_) {
+            }
             this.#output = null
         }
 
@@ -912,6 +925,15 @@ export class VideoRecorder extends EventTarget {
         // Stop animation frame loop
         if (this.#rafId) {
             cancelAnimationFrame(this.#rafId)
+        }
+        // Clear simplified timers
+        if (this.#frameTimer !== null) {
+            window.clearInterval(this.#frameTimer)
+            this.#frameTimer = null
+        }
+        if (this.#infoTimer !== null) {
+            window.clearInterval(this.#infoTimer)
+            this.#infoTimer = null
         }
 
         // Close video source
