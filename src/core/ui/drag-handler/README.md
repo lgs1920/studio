@@ -57,7 +57,7 @@ compatibility with both mouse and touch events using `PointerEvent`s.
            if (toolbarRef.current) {
                const dragHandler = new DragHandler({
                    grabber: toolbarRef.current,
-                   parent: toolbarRef.current,
+                   target: toolbarRef.current,
                    container: window
                })
 
@@ -130,7 +130,7 @@ Manages drag interactions for a movable element.
 #### Constructor
 
 ```javascript
-new DragHandler({grabber, dragger, parent, container = window})
+new DragHandler({grabber, dragger, target, container = window})
 ```
 
 - **Parameters**:
@@ -180,7 +180,7 @@ const MyComponent = () => {
         if (toolbarRef.current) {
             const dragHandler = new DragHandler({
                                                     grabber:   toolbarRef.current,
-                                                    parent:    toolbarRef.current,
+                                                    target: toolbarRef.current,
                                                     container: window
                                                 })
 

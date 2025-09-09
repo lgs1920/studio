@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-07
- * Last modified: 2025-09-07
+ * Created on: 2025-09-09
+ * Last modified: 2025-09-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,10 +18,7 @@
 .video-recording-settings-toolbar {
     position: relative;
     z-index: calc(var(--crop-zindex) + 2);
-    top: 66%;
-    left: 50%;
 }
-
 
 .lgs-video-recording-trigger-actions {
     display: flex;
@@ -55,7 +52,6 @@
     z-index: calc(var(--crop-zindex) + 2);
     display: flex;
     flex-direction: row;
-    transform: translate(-50%, -50%);
     gap: 0;
 }
 
@@ -226,3 +222,58 @@
     align-items: center;
 }
 
+/***************************************
+ * Video quality toolbar
+ */
+
+.video-quality-selector-container {
+    position: absolute;
+    z-index: calc(var(--crop-zindex) + 2);
+    top: 50%;
+    left: 33%;
+}
+
+.video-quality-selector {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-direction: var(--buttons-bar-on-map-direction);
+    width: auto;
+    padding: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}
+
+.video-quality-selector.lgs-toolbar {
+    opacity: 1;
+}
+
+/***************************************
+ * Video fps selector
+ */
+
+.video-fps-selector-container {
+    position: absolute;
+    z-index: calc(var(--crop-zindex) + 2);
+}
+
+.video-fps-selector {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-direction: var(--buttons-bar-on-map-direction);
+    width: auto;
+    padding: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}
+
+.video-fps-selector {
+    --buttons-bar-on-map-direction: row;
+}
+
+.video-fps-selector.lgs-toolbar {
+    opacity: 1;
+}
+
+.video-fps-selector .grabber {
+    rotate: 90deg;
+}

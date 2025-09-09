@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-08
- * Last modified: 2025-09-08
+ * Created on: 2025-09-09
+ * Last modified: 2025-09-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,6 @@
 
 import { Tunnel }                               from '@Components/Tunnel/Tunnel'
 import { APP_KEY, LGS_PROJECT, MINUTE } from '@Core/constants'
-import { DragHandler }                          from '@Core/ui/drag-handler/DragHandler'
 import { VideoRecorder }                        from '@Core/ui/video/recorder/VideoRecorder'
 import { faGear }                       from '@fortawesome/pro-regular-svg-icons'
 import { faPhotoFilm, faVideo }                 from '@fortawesome/pro-solid-svg-icons'
@@ -52,6 +51,12 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
     const $cropper = manager?.store
     const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
 
+    const START = {
+        left: '50%',
+        top:  (__.device.isMobile && __.device.isPortrait ? '30%' : '60%'),
+    }
+
+
     /**
      * Handles canceling the video editing process
      * @function
@@ -60,128 +65,6 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
         $video.editing = false
     }, [])
 
-    /**
-     * Updates menu position based on container bounds
-     * @function
-     * @param {Object} bounds - Container bounds from manager.getSourceBounds()
-     */
-    const updatePosition = (bounds) => {
-        if (!_tunnel.current) {
-            return
-        }
-        _tunnel.current.style.position = 'absolute'
-        _tunnel.current.style.left = `${bounds.width * POSITIONING.X_PERCENTAGE}px`
-        _tunnel.current.style.top = `${bounds.height * POSITIONING.Y_PERCENTAGE}px`
-        _tunnel.current.style.width = 'auto'
-        _tunnel.current.style.opacity = toolbars.opacity || 1
-    }
-
-
-    // Initialize drag handler and position updates
-    useEffect(() => {
-        if (!_tunnel.current || !manager) {
-            return
-        }
-
-        const getCoordinates = (event) => {
-            $video.toolbarPosition = event.detail.value
-        }
-
-        // Set initial toolbar opacity
-        _tunnel.current.style.opacity = toolbars.opacity || 1
-
-        // Set initial position
-        const bounds = manager.getSourceBounds()
-        updatePosition(bounds)
-
-        // Initialize drag handler
-        _tunnel.current._dragHandler = new DragHandler({
-                                                           grabber:   _tunnel.current,
-                                                           parent:    _tunnel.current,
-                                                           container: lgs.canvas,
-                                                       })
-        _tunnel.current.addEventListener(DragHandler.AFTER_DRAG, getCoordinates)
-
-
-        // Cleanup on unmount or when ratioEditor changes
-        return () => {
-            if (_tunnel.current?._dragHandler) {
-                _tunnel.current._dragHandler.destroy()
-                _tunnel.current.removeListener(DragHandler.AFTER_DRAG, getCoordinates)
-            }
-        }
-    }, [manager, toolbars.opacity])
-
-    // Manage recorder events
-    useEffect(() => {
-        // Ensure recorder exists
-        if (!__.recorder) {
-            return
-        }
-        // Handle size updates
-        const handleSizeUpdate = (e) => {
-            $video.size = e.detail.size
-        }
-        // Handle pause
-        const handlePause = () => {
-            $video.paused = true
-        }
-        // Handle resume
-        const handleResume = () => {
-            $video.paused = false
-        }
-        // Handle stop
-        const handleStop = () => {
-            $video.recording = false
-            $video.paused = false
-            $video.size = 0
-        }
-        // Handle max size limit
-        const handleMaxSize = () => {
-            $video.recording = false
-            $video.paused = false
-            $video.size = 0
-        }
-        // Handle max duration limit
-        const handleMaxDuration = () => {
-            $video.recording = false
-            $video.paused = false
-            $video.size = 0
-        }
-
-        const handleFinalize = () => {
-            $video.finalizing = true
-            console.log('ok')
-        }
-
-        // // Add event listeners
-        // __.recorder.addEventListener(VideoRecorder.events.INFO, handleSizeUpdate)
-        // __.recorder.addEventListener(VideoRecorder.events.PAUSE, handlePause)
-        // __.recorder.addEventListener(VideoRecorder.events.RESUME, handleResume)
-        // __.recorder.addEventListener(VideoRecorder.events.STOP, handleStop)
-        // __.recorder.addEventListener(VideoRecorder.events.MAX_SIZE, handleMaxSize)
-        // __.recorder.addEventListener(VideoRecorder.events.MAX_DURATION, handleMaxDuration)
-        // __.recorder.addEventListener(VideoRecorder.events.FINALIZE, handleFinalize)
-
-        // Clean up
-        return () => {
-            // __.recorder.removeEventListener(VideoRecorder.events.INFO, handleSizeUpdate)
-            // __.recorder.removeEventListener(VideoRecorder.events.PAUSE, handlePause)
-            // __.recorder.removeEventListener(VideoRecorder.events.RESUME, handleResume)
-            // __.recorder.removeEventListener(VideoRecorder.events.STOP, handleStop)
-            // __.recorder.removeEventListener(VideoRecorder.events.MAX_SIZE, handleMaxSize)
-            // __.recorder.removeEventListener(VideoRecorder.events.MAX_DURATION, handleMaxDuration)
-            // __.recorder.removeEventListener(VideoRecorder.events.FINALIZE, handleFinalize)
-
-            // if (video.recording && __.recorder) {
-            //     __.recorder.stop()
-            //     $video.finalizing = false
-            //     $video.recording = false
-            //     $video.paused = false
-            //     $video.size = 0
-            // }
-        }
-    }, [__.recorder])
 
     /**
      * Initializes VideoRecorder with Cesium canvas
@@ -300,6 +183,7 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
                     className="lgs-toolbar lgs-toolbar-horizontal"
                     steps={steps ?? {}}
                     onCancel={handleCancel}
+                    start={START}
                 />
 
             }

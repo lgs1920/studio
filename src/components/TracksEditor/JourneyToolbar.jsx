@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-24
- * Last modified: 2025-07-24
+ * Created on: 2025-09-09
+ * Last modified: 2025-09-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -244,7 +244,7 @@ export const JourneyToolbar = (props) => {
         // Configure InteractionHandler for dragging
         const dragHandler = new DragHandler({
                                                 grabber:   toolbar,
-                                                parent:    toolbar,
+                                                target: toolbar,
                                                 container: lgs.canvas,
 
                                             })
