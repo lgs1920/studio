@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-04
- * Last modified: 2025-09-04
+ * Created on: 2025-09-10
+ * Last modified: 2025-09-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -26,9 +26,8 @@ import { JourneyToolbar }       from '@Editor/JourneyToolbar'
 import { useSnapshot }          from 'valtio/index'
 
 export const ToolsUI = () => {
-    const {show, usage} = useSnapshot(lgs.settings.ui.journeyToolbar)
-    const {device, video} = useSnapshot(lgs.stores.ui)
-
+    const {usage} = useSnapshot(lgs.settings.ui.journeyToolbar)
+    const {video} = useSnapshot(lgs.stores.ui)
     return (
         <div id="lgs-tools-ui">
             {video.editing ? (
@@ -49,7 +48,7 @@ export const ToolsUI = () => {
                      <CameraAndTargetPanel/>
                      <MapPOIContextMenu/>
                      <ContextMenuHook/>
-                     {show && usage && <JourneyToolbar/>}
+                     {usage && <JourneyToolbar/>}
                  </>
              )}
         </div>
