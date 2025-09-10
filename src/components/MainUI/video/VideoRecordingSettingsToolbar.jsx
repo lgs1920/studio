@@ -188,11 +188,11 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
             done:      false,
             mandatory: false,
             className: 'lgs-video-recording-trigger',
-            onClick: (index, event) => {
+            onClick: async (index, event) => {
                 $video.editing = false
                 $video.finalizing = false
                 steps[index].done = true
-                handleVideoRecording(event)
+                await handleVideoRecording(event)
             },
 
         },
