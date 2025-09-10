@@ -317,8 +317,8 @@ ui:
     usage: true           # Can we use it
     show: true            # Toggle visibility
 
-    x: null
-    y: null
+    top: '50%'
+    left: '50%'
 
   ## Compass
   compass:
