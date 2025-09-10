@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-09
- * Last modified: 2025-09-09
+ * Created on: 2025-09-10
+ * Last modified: 2025-09-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,8 +17,10 @@
 /**
  * A class to handle drag and resize interactions for a movable toolbar element
  * Provides functionality for dragging a toolbar within a container, managing cursor
- * behavior with an overlay, and suppressing clicks after a drag
+ * behavior with an overlay, suppressing clicks after a drag, and resetting to initial position
  */
+import { v4 as uuidv4 } from 'uuid'
+
 export class DragHandler {
     // Static constants for event types
     static BEFORE_DRAG = 'beforeDrag'
@@ -27,6 +29,9 @@ export class DragHandler {
     static DRAG_STOP = 'dragstop'
     static AFTER_DRAG = 'afterDrag'
 
+    // Static Map to store draggable elements' data
+    static #draggableElements = new Map()
+
     /**
      * Creates a new DragHandler instance
      * @param {Object} options - Configuration options for the drag handler
@@ -34,10 +39,13 @@ export class DragHandler {
      * @param {HTMLElement} [options.dragger] - Alias for grabber (optional)
      * @param {HTMLElement} options.target - Element to be moved
      * @param {HTMLElement|Window} [options.container=window] - Container for bounds
-     * @param {string} [options.left="50%"] - Initial left position (e.g., "50%", "250px")
-     * @param {string} [options.top="33%"] - Initial top position (e.g., "33%", "250px")
+     * @param {Object} [options.position={placement: 'center'}] - Positioning configuration
+     * @param {string} [options.position.placement='center'] - Placement point ('top-right', 'top', 'top-left', 'left',
+     *     'center', 'right', 'bottom-left', 'bottom', 'bottom-right')
+     * @param {string|number} [options.position.top] - Initial top position (e.g., '33%', '250px')
+     * @param {string|number} [options.position.left] - Initial left position (e.g., '50%', '250px')
      */
-    constructor({grabber, dragger, target, container = window, left = '50%', top = '33%'}) {
+    constructor({grabber, dragger, target, container = window, position = {placement: 'center'}}) {
         const grabberElement = grabber || dragger || target
         if (!(grabberElement instanceof HTMLElement)) {
             throw new Error('grabber (or dragger or target) must be an HTMLElement')
@@ -49,8 +57,12 @@ export class DragHandler {
             throw new Error('container must be window or an HTMLElement')
         }
 
-        this.startLeft = left
-        this.startTop = top
+        this.id = uuidv4() // Generate unique ID for this instance
+        this.position = {
+            placement: position.placement || 'center',
+            top:       position.top,
+            left:      position.left,
+        }
 
         this.grabber = grabberElement
         this.target = target
@@ -58,8 +70,10 @@ export class DragHandler {
         this.dragging = false
         this.startX = -1
         this.startY = -1
-        this.startLeft = left
-        this.startTop = top
+        this.startLeft = this.position.left
+        this.startTop = this.position.top
+        this.longPressTimer = null // Timer for long press detection
+        this.longPressDuration = 500 // Duration in ms for long press
 
         this.movementThreshold = 5 // Pixels to detect drag vs click
         this.hasMoved = false // Tracks if movement exceeded threshold
@@ -73,10 +87,26 @@ export class DragHandler {
         this.dragStartVisualX = 0
         this.dragStartVisualY = 0
 
+        // Store initial and current position in static Map
+        const initialRect = this.target.getBoundingClientRect()
+        DragHandler.#draggableElements.set(this.id, {
+            initialPosition: {
+                top:       this.position.top,
+                left:      this.position.left,
+                placement: this.position.placement,
+            },
+            currentPosition: {
+                top:       initialRect.top,
+                left:      initialRect.left,
+                placement: this.position.placement,
+            },
+        })
+
         this.handleBefore = this.handleBefore.bind(this)
         this.handleStart = this.handleStart.bind(this)
         this.handleMove = this.handleMove.bind(this)
         this.handleEnd = this.handleEnd.bind(this)
+        this.handleLongPressOrShiftClick = this.handleLongPressOrShiftClick.bind(this)
 
         // Set initial cursor style
         this.grabber.style.cursor = 'grab'
@@ -133,7 +163,6 @@ export class DragHandler {
         let left = rect.left - containerRect.left
         let top = rect.top - containerRect.top
 
-
         // Adjust for scroll position if container is not window
         if (this.container !== window) {
             left += this.container.scrollLeft
@@ -175,6 +204,7 @@ export class DragHandler {
 
         return 0
     }
+
     /**
      * Sets the element position using the most appropriate method
      * @private
@@ -186,6 +216,18 @@ export class DragHandler {
         this.target.style.left = `${x}px`
         this.target.style.top = `${y}px`
         this.target.style.transform = '' // Clear transform to avoid conflicts
+
+        // Update current position in static Map
+        const rect = this.target.getBoundingClientRect()
+        const data = DragHandler.#draggableElements.get(this.id)
+        if (data) {
+            data.currentPosition = {
+                top:       rect.top,
+                left:      rect.left,
+                placement: this.position.placement,
+            }
+            DragHandler.#draggableElements.set(this.id, data)
+        }
     }
 
     /**
@@ -224,7 +266,7 @@ export class DragHandler {
 
     /**
      * Ensures the target element stays fully within the container's bounds
-     * Initializes position if not set and adjusts on resize to keep element fully visible
+     * Initializes position based on top/left or placement point and adjusts on resize to keep element fully visible
      * @private
      */
     #ensureWithinBounds() {
@@ -237,47 +279,122 @@ export class DragHandler {
 
         // Position the element the first time
         if (this.startX === -1 && this.startY === -1) {
-            const center = {
-                x: this.#parsePositionValue(this.startLeft, bounds.width),
-                y: this.#parsePositionValue(this.startTop, bounds.height),
+            const {width: containerWidth, height: containerHeight} = bounds
+            const {width: targetWidth, height: targetHeight} = currentRect
+
+            // Check if top and left are explicitly provided
+            if (this.position.top !== undefined && this.position.left !== undefined) {
+                // Parse provided position
+                const anchorX = this.#parsePositionValue(this.position.left, containerWidth)
+                const anchorY = this.#parsePositionValue(this.position.top, containerHeight)
+
+                // Adjust position based on placement point
+                switch (this.position.placement) {
+                    case 'top-right':
+                        left = bounds.left + anchorX - targetWidth
+                        top = bounds.top + anchorY
+                        break
+                    case 'top':
+                        left = bounds.left + anchorX - targetWidth / 2
+                        top = bounds.top + anchorY
+                        break
+                    case 'top-left':
+                        left = bounds.left + anchorX
+                        top = bounds.top + anchorY
+                        break
+                    case 'left':
+                        left = bounds.left + anchorX
+                        top = bounds.top + anchorY - targetHeight / 2
+                        break
+                    case 'center':
+                        left = bounds.left + anchorX - targetWidth / 2
+                        top = bounds.top + anchorY - targetHeight / 2
+                        break
+                    case 'right':
+                        left = bounds.left + anchorX - targetWidth
+                        top = bounds.top + anchorY - targetHeight / 2
+                        break
+                    case 'bottom-left':
+                        left = bounds.left + anchorX
+                        top = bounds.top + anchorY - targetHeight
+                        break
+                    case 'bottom':
+                        left = bounds.left + anchorX - targetWidth / 2
+                        top = bounds.top + anchorY - targetHeight
+                        break
+                    case 'bottom-right':
+                        left = bounds.left + anchorX - targetWidth
+                        top = bounds.top + anchorY - targetHeight
+                        break
+                    default:
+                        left = bounds.left + anchorX - targetWidth / 2
+                        top = bounds.top + anchorY - targetHeight / 2
+                }
             }
-            left = bounds.left + center.x - (currentRect.width / 2)
-            top = bounds.top + center.y - (currentRect.height / 2)
+            else {
+                // Use current element position and adjust according to placement
+                const currentLeft = currentPosition.left
+                const currentTop = currentPosition.top
+
+                switch (this.position.placement) {
+                    case 'top-right':
+                        left = currentLeft
+                        top = currentTop
+                        break
+                    case 'top':
+                        left = currentLeft + targetWidth / 2
+                        top = currentTop
+                        break
+                    case 'top-left':
+                        left = currentLeft
+                        top = currentTop
+                        break
+                    case 'left':
+                        left = currentLeft
+                        top = currentTop + targetHeight / 2
+                        break
+                    case 'center':
+                        left = currentLeft + targetWidth / 2
+                        top = currentTop + targetHeight / 2
+                        break
+                    case 'right':
+                        left = currentLeft + targetWidth
+                        top = currentTop + targetHeight / 2
+                        break
+                    case 'bottom-left':
+                        left = currentLeft
+                        top = currentTop + targetHeight
+                        break
+                    case 'bottom':
+                        left = currentLeft + targetWidth / 2
+                        top = currentTop + targetHeight
+                        break
+                    case 'bottom-right':
+                        left = currentLeft + targetWidth
+                        top = currentTop + targetHeight
+                        break
+                    default:
+                        left = currentLeft + targetWidth / 2
+                        top = currentTop + targetHeight / 2
+                }
+            }
         }
 
         // Ensure the entire element stays within bounds
-        // Adjust x to keep the right edge within bounds.right
         if (left + currentRect.width > bounds.right) {
             left = bounds.right - currentRect.width
         }
-        // Adjust y to keep the bottom edge within bounds.bottom
         if (top + currentRect.height > bounds.bottom) {
             top = bounds.bottom - currentRect.height
         }
-        // Ensure left edge is not before bounds.left
         if (left < bounds.left) {
             left = bounds.left
         }
-        // Ensure top edge is not before bounds.top
         if (top < bounds.top) {
             top = bounds.top
         }
 
         this.#setElementPosition(left, top)
-
-        const finalRect = this.target.getBoundingClientRect()
-        if (this.hasMoved) {
-            this.target.dispatchEvent(new CustomEvent(DragHandler.DRAG, {
-                detail: {
-                    value: {
-                        x:     finalRect.left,
-                        y:     finalRect.top,
-                        width: finalRect.width,
-                        height: finalRect.height,
-                    },
-                },
-            }))
-        }
     }
 
     /**
@@ -318,7 +435,55 @@ export class DragHandler {
     }
 
     /**
-     * Handles the pointerdown or touchstart event, dispatching beforeDrag
+     * Handles Shift+Click or long press to reset element to initial position
+     * @private
+     * @param {Event} event - The pointerup or touchend event
+     */
+    #handleLongPressOrShiftClick = (event) => {
+        // Handle Shift+Click
+        if (event.shiftKey && event.type === 'click') {
+            this.#resetToInitialPosition()
+            event.preventDefault()
+            event.stopPropagation()
+            return
+        }
+
+        // Handle long press (already triggered via timer in handleBefore)
+        if (event.type === 'longpress') {
+            this.#resetToInitialPosition()
+            event.preventDefault()
+            event.stopPropagation()
+        }
+    }
+
+    /**
+     * Resets the element to its initial position and placement
+     * @private
+     */
+    #resetToInitialPosition() {
+        const data = DragHandler.#draggableElements.get(this.id)
+        if (data) {
+            // Restore initial position and placement
+            this.position.top = data.initialPosition.top
+            this.position.left = data.initialPosition.left
+            this.position.placement = data.initialPosition.placement
+
+            // Recompute position to apply initial settings
+            this.#ensureWithinBounds()
+
+            // Update current position in Map
+            const rect = this.target.getBoundingClientRect()
+            data.currentPosition = {
+                top:       rect.top,
+                left:      rect.left,
+                placement: this.position.placement,
+            }
+            DragHandler.#draggableElements.set(this.id, data)
+        }
+    }
+
+    /**
+     * Handles the pointerdown or touchstart event, dispatching beforeDrag and setting up long press detection
      * @param {Event} event - The pointerdown or touchstart event
      */
     handleBefore = (event) => {
@@ -333,6 +498,13 @@ export class DragHandler {
                 },
             },
         }))
+
+        // Setup long press detection
+        this.longPressTimer = setTimeout(() => {
+            const longPressEvent = new CustomEvent('longpress', {bubbles: true})
+            this.grabber.dispatchEvent(longPressEvent)
+        }, this.longPressDuration)
+
         this.handleStart(event)
     }
 
@@ -373,6 +545,12 @@ export class DragHandler {
         const clientY = event.type === 'touchmove' ? event.touches[0].clientY : event.clientY
         const deltaX = Math.abs(clientX - this.startX)
         const deltaY = Math.abs(clientY - this.startY)
+
+        // Cancel long press timer if movement occurs
+        if (this.longPressTimer && (deltaX > this.movementThreshold || deltaY > this.movementThreshold)) {
+            clearTimeout(this.longPressTimer)
+            this.longPressTimer = null
+        }
 
         if (!this.hasMoved && (deltaX > this.movementThreshold || deltaY > this.movementThreshold)) {
             this.dragging = true
@@ -435,6 +613,12 @@ export class DragHandler {
      * @param {Event} event - The pointerup or touchend event
      */
     handleEnd = (event) => {
+        // Clear long press timer
+        if (this.longPressTimer) {
+            clearTimeout(this.longPressTimer)
+            this.longPressTimer = null
+        }
+
         document.removeEventListener('pointermove', this.handleMove)
         document.removeEventListener('touchmove', this.handleMove)
         document.removeEventListener('pointerup', this.handleEnd)
@@ -466,7 +650,7 @@ export class DragHandler {
             this.target.dispatchEvent(new CustomEvent(DragHandler.DRAG_STOP, {
                 detail: {
                     value: {
-                        x:      Rect.left,
+                        x: targetRect.left,
                         y:      targetRect.top,
                         width:  targetRect.width,
                         height: targetRect.height,
@@ -526,7 +710,7 @@ export class DragHandler {
     }
 
     /**
-     * Attaches event listeners for drag, click, and resize events
+     * Attaches event listeners for drag, click, long press, and resize events
      */
     attachEvents() {
         if (!this.grabber) {
@@ -536,6 +720,8 @@ export class DragHandler {
         this.grabber.addEventListener('pointerdown', this.handleBefore, {passive: false})
         this.grabber.addEventListener('touchstart', this.handleBefore, {passive: false})
         this.grabber.addEventListener('click', this.#handleClick, {passive: false})
+        this.grabber.addEventListener('click', this.#handleLongPressOrShiftClick, {passive: false})
+        this.grabber.addEventListener('longpress', this.#handleLongPressOrShiftClick, {passive: false})
 
         if (this.container === window) {
             window.addEventListener('resize', this.#handleResize)
@@ -550,13 +736,15 @@ export class DragHandler {
     }
 
     /**
-     * Cleans up event listeners, removes overlay, and removes draggable class
+     * Cleans up event listeners, removes overlay, removes draggable class, and removes from static Map
      */
     destroy() {
         if (this.grabber) {
             this.grabber.removeEventListener('pointerdown', this.handleBefore)
             this.grabber.removeEventListener('touchstart', this.handleBefore)
             this.grabber.removeEventListener('click', this.#handleClick)
+            this.grabber.removeEventListener('click', this.#handleLongPressOrShiftClick)
+            this.grabber.removeEventListener('longpress', this.#handleLongPressOrShiftClick)
             this.grabber.style.cursor = ''
             this.grabber.style.touchAction = ''
         }
@@ -576,5 +764,8 @@ export class DragHandler {
         if (this.targetResizeObserver) {
             this.targetResizeObserver.disconnect()
         }
+
+        // Remove from static Map
+        DragHandler.#draggableElements.delete(this.id)
     }
 }
