@@ -374,7 +374,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                     </>
                 )
             })()}
-            <div className="video-recorder-toolbar-container" ref={_container}>
+            <div className="lgs-toolbar-container" ref={_container}>
                 <div ref={_toolbar}
                      className="video-recorder-toolbar lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map">
                     <FontAwesomeIcon icon={faCircle}

@@ -68,7 +68,7 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
                                                                    placement: 'top',
                                                                },
                                                            })
-            _toolbar.current.style.opacity = toolbars.opacity || 1
+            _tunnel.current.style.opacity = toolbars.opacity || 1
         }, 100)
         return () => {
             clearTimeout(timeoutId)
@@ -198,7 +198,7 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
         },
     ]
     return (
-        <div ref={_tunnel} className="video-recording-settings-toolbar-container">
+        <div ref={_tunnel} className="lgs-toolbar-container">
             {video.editing &&
                 <Tunnel
                     className="video-recording-settings-toolbar lgs-toolbar lgs-toolbar-horizontal"

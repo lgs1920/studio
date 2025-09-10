@@ -106,7 +106,7 @@ export const VideoQualitySelector = memo(({manager}) => {
     return (
         <>
             {cropper.qualityEditor && (
-                <div className="video-quality-selector-container" ref={_toolbar}>
+                <div className="lgs-toolbar-container" ref={_toolbar}>
                     <div className="video-quality-selector lgs-toolbar lgs-card on-map">
                         {/* Drag handle for moving the toolbar */}
                         <SlTooltip content="Drag me">

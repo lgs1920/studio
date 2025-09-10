@@ -103,7 +103,7 @@ export const VideoFPSSelector = memo(({manager}) => {
     return (
         <>
             {cropper.fpsEditor && (
-                <div className="video-fps-selector-container" ref={_toolbar}>
+                <div className="lgs-toolbar-container" ref={_toolbar}>
                     <div className="video-fps-selector lgs-toolbar lgs-card on-map">
                         {/* Drag handle for moving the toolbar */}
                         <SlTooltip content="Drag me">

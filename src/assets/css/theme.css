@@ -1110,6 +1110,12 @@ h3 {
  * toolbar
  ******************************************************************************/
 
+
+.lgs-toolbar-container {
+    position: absolute;
+    z-index: calc(var(--crop-zindex) + 2);
+}
+
 .lgs-toolbar {
     position: absolute;
     display: flex;
@@ -1119,7 +1125,6 @@ h3 {
     width: auto;
     margin: var(--lgs-gutter-xs);
     pointer-events: auto;
-    opacity: 0;
     gap: var(--lgs-gutter-xs);
 }
 
