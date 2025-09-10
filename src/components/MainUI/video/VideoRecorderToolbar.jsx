@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-07
- * Last modified: 2025-09-07
+ * Created on: 2025-09-10
+ * Last modified: 2025-09-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -115,6 +115,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
     const caption = 'Video Recording'
 
+    const startPosition = {left: '50%', top: '60%'}
+
     /**
      * Formats duration in milliseconds to human readable format
      * @param {number} ms - Duration in milliseconds
@@ -133,30 +135,30 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         return UnitUtils.convert(bytes).toBytesUnit()
     }, [])
 
-    /**
-     * Updates toolbar position based on canvas bounds
-     * @param {Object} bounds - Canvas bounds {width, height}
-     */
-    const updatePosition = useCallback((bounds) => {
-        if (!_toolbar.current || !bounds) {
-            return
-        }
-        const cssBounds = {
-            width:  Math.floor(bounds.width / __.device.dpr),
-            height: Math.floor(bounds.height / __.device.dpr),
-        }
-        const isMobilePortrait = __.device.isMobile && __.device.isPortrait
-        // Position at 50% left, 66% top, adjusted for mobile portrait
-        const left = cssBounds.width * 0.5
-        //const top = isMobilePortrait ? cssBounds.height * 0.5 : cssBounds.height * 0.66
-        _container.current.style.top = `${$video.position.y}px`
-        _container.current.style.left = `${$video.position.x}px`
-    }, [])
-
     // Initial poitioning
     useEffect(() => {
-        _toolbar.current.style.opacity = toolbars.opacity || 1
-    }, [toolbars.opacity])
+
+                  // Add drag capacity to the container
+                  const timeoutId = setTimeout(() => {
+                      _container.current._dragHandler = new DragHandler({
+                                                                            target:    _container.current,
+                                                                            container: lgs.canvas,
+                                                                            position:  {
+                                                                                left: $video.position.left,
+                                                                                top:  $video.position.top,
+                                                                            },
+                                                                        })
+                      _toolbar.current.style.opacity = toolbars.opacity || 1
+                  }, 100)
+
+                  return () => {
+                      clearTimeout(timeoutId)
+                      if (_container.current?._dragHandler) {
+                          _container.current._dragHandler.destroy()
+                      }
+                  }
+              }, [toolbars.opacity],
+    )
 
     // Manage recorder events, state, and toolbar position
     useEffect(() => {
@@ -270,26 +272,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                             })
         }
 
-        // Initialize position
-        const canvasBounds = lgs.canvas.getBoundingClientRect()
-        updatePosition(canvasBounds)
-
-        // Add drag capacity to the container
-        if (_container.current) {
-            _container.current._dragHandler = new DragHandler({
-                                                                  grabber:   _container.current,
-                                                                  parent:    _container.current,
-                                                                  container: lgs.canvas,
-                                                              })
-        }
-
-        // Update position on resize
-        const handleResize = () => {
-            const bounds = lgs.canvas.getBoundingClientRect()
-            updatePosition(bounds)
-        }
-        window.addEventListener('resize', handleResize)
-
         // Add event listeners
         __.recorder.addEventListener(VideoRecorder.events.START, handleStart)
         __.recorder.addEventListener(VideoRecorder.events.INFO, handleInfo)
@@ -317,16 +299,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 __.recorder.removeEventListener(VideoRecorder.events.DOWNLOAD, handleDownload)
                 __.recorder.removeEventListener(VideoRecorder.events.FINALIZE, handleFinalize)
             }
-            window.removeEventListener('resize', handleResize)
         }
-    }, [__.recorder, updatePosition])
-
-    // Update toolbar opacity when needed
-    useEffect(() => {
-        if (_toolbar.current) {
-            _toolbar.current.style.opacity = toolbars.opacity
-        }
-    }, [toolbars.opacity])
+    }, [__.recorder])
 
     const finalise = (state) => {
         setFinalisation(state)
@@ -400,9 +374,9 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                     </>
                 )
             })()}
-            <div className="video-recorder-toolbar" ref={_container}>
+            <div className="video-recorder-toolbar-container" ref={_container}>
                 <div ref={_toolbar}
-                     className="lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map">
+                     className="video-recorder-toolbar lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map">
                     <FontAwesomeIcon icon={faCircle}
                                      className={classNames({
                                                                'fa-beat':    video.paused || video.finalizing,

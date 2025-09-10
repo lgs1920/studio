@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-09
- * Last modified: 2025-09-09
+ * Created on: 2025-09-10
+ * Last modified: 2025-09-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -42,11 +42,6 @@ export const VideoFPSSelector = memo(({manager}) => {
     // Reference to the toolbar DOM element
     const _toolbar = useRef(null)
 
-    const START = {
-        TOP:  '30%',
-        LEFT: '50%',
-    }
-
     /**
      * Initialize default FPS from settings
      */
@@ -68,20 +63,21 @@ export const VideoFPSSelector = memo(({manager}) => {
             _toolbar.current._dragHandler = new DragHandler({
                                                                 target:    _toolbar.current,
                                                                 container: lgs.canvas,
-                                                                left:      START.LEFT,
-                                                                top:       START.TOP,
+                                                                position: {
+                                                                    left:      '50%',
+                                                                    top:       '30%',
+                                                                    placement: 'bottom',
+                                                                },
+
                                                             })
             // Update opacity
             _toolbar.current.style.opacity = toolbars.opacity || 1
         }, 100)
 
-
-        // Cleanup on unmount or when dependencies change
         return () => {
             clearTimeout(timeoutId)
             if (_toolbar.current?._dragHandler) {
                 _toolbar.current._dragHandler.destroy()
-                console.log('DragHandler destroyed')
             }
         }
     }, [manager, cropper.fpsEditor, toolbars.opacity])

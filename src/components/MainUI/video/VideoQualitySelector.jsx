@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-09
- * Last modified: 2025-09-09
+ * Created on: 2025-09-10
+ * Last modified: 2025-09-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,15 +23,14 @@
  * @param {Object} props.manager.store - Valtio store with crop state (qualityEditor, etc.)
  * @returns {JSX.Element} Draggable crop Quality selector UI
  */
-import { DragHandler }                                              from '@Core/ui/drag-handler/DragHandler'
-import { VideoRecorder } from '@Core/ui/video/recorder/VideoRecorder'
-import { faCropSimple, faRectangle, faRectangleVertical, faSquare } from '@fortawesome/pro-regular-svg-icons'
-import { faGripDots }                                               from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlTooltip }                                        from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                    from '@Utils/FA2SL'
-import classNames        from 'classnames'
-import { memo, useCallback, useEffect, useRef, useState }           from 'react'
-import { useSnapshot }                                              from 'valtio'
+import { DragHandler }                                    from '@Core/ui/drag-handler/DragHandler'
+import { VideoRecorder }                                  from '@Core/ui/video/recorder/VideoRecorder'
+import { faGripDots }                                     from '@fortawesome/pro-solid-svg-icons'
+import { SlIcon, SlTooltip }                              from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                          from '@Utils/FA2SL'
+import classNames                                         from 'classnames'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { useSnapshot }                                    from 'valtio'
 import './style.css'
 
 
@@ -52,11 +51,6 @@ export const VideoQualitySelector = memo(({manager}) => {
     // Track selected quality, defaulting to first video format
     const defaultQuality = VideoRecorder.DEFAULT_QUALITY
 
-    const START = {
-        LEFT: (__.device.isMobile && __.device.isPortrait ? '15%' : '30%'),
-        TOP:  '50%',
-    }
-
 
     // Initialize position and drag handler, handle resize
     useEffect(() => {
@@ -64,19 +58,24 @@ export const VideoQualitySelector = memo(({manager}) => {
             return
         }
         const timeoutId = setTimeout(() => {
-            // Store drag handler on the toolbar element
-            _toolbar.current._dragHandler = new DragHandler({
-                                                                target:    _toolbar.current,
-                                                                container: lgs.canvas,
-                                                                left:      START.LEFT,
-                                                                top:       START.TOP,
-                                                            })
-            // Update opacity
-            _toolbar.current.style.opacity = toolbars.opacity || 1
-        }, 100)
+                                         // Store drag handler on the toolbar element
+                                         _toolbar.current._dragHandler = new DragHandler({
+                                                                                             target:    _toolbar.current,
+                                                                                             container: lgs.canvas,
+                                                                                             position:  {
+                                                                                                 left:      (__.device.isMobile && __.device.isPortrait ? '15%' : '30%'),
+                                                                                                 top:       '50%',
+                                                                                                 placement: 'left',
+                                                                                             },
+                                                                                         })
+                                         // Update opacity
+                                         _toolbar.current.style.opacity = toolbars.opacity || 1
+                                     },
+                                     100,
+        )
 
-        // Cleanup on unmount or when qualityEditor changes
         return () => {
+            clearTimeout(timeoutId)
             if (_toolbar.current?._dragHandler) {
                 _toolbar.current._dragHandler.destroy()
             }
@@ -115,17 +114,17 @@ export const VideoQualitySelector = memo(({manager}) => {
                         </SlTooltip>
                         <div className="buttons-bar-on-map">
                             {VideoRecorder.QUALITY.map(({value, name, short}, index) => (
-                                    <SlTooltip
-                                        key={index}
-                                        content={name}
-                                        placement="left"
-                                    >
-                                        <div
-                                            className={classNames('lgs-one-line-card on-map', {'selected': index === video.quality})}
-                                            onClick={event => handleChangeQuality(index, event)}>
-                                            {short}
-                                        </div>
-                                    </SlTooltip>
+                                <SlTooltip
+                                    key={index}
+                                    content={name}
+                                    placement="left"
+                                >
+                                    <div
+                                        className={classNames('lgs-one-line-card on-map', {'selected': index === video.quality})}
+                                        onClick={event => handleChangeQuality(index, event)}>
+                                        {short}
+                                    </div>
+                                </SlTooltip>
                             ))}
                         </div>
                     </div>

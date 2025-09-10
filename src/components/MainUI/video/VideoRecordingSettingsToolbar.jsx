@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-09
- * Last modified: 2025-09-09
+ * Created on: 2025-09-10
+ * Last modified: 2025-09-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,6 +16,7 @@
 
 import { Tunnel }                               from '@Components/Tunnel/Tunnel'
 import { APP_KEY, LGS_PROJECT, MINUTE } from '@Core/constants'
+import { DragHandler } from '@Core/ui/drag-handler/DragHandler'
 import { VideoRecorder }                        from '@Core/ui/video/recorder/VideoRecorder'
 import { faGear }                       from '@fortawesome/pro-regular-svg-icons'
 import { faPhotoFilm, faVideo }                 from '@fortawesome/pro-solid-svg-icons'
@@ -51,11 +52,31 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
     const $cropper = manager?.store
     const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
 
-    const START = {
-        left: '50%',
-        top:  (__.device.isMobile && __.device.isPortrait ? '30%' : '60%'),
-    }
 
+    // Initial poitioning
+    useEffect(() => {
+
+        // Add drag capacity to the container
+        const timeoutId = setTimeout(() => {
+            console.log()
+            _tunnel.current._dragHandler = new DragHandler({
+                                                               target:    _tunnel.current,
+                                                               container: lgs.canvas,
+                                                               position:  {
+                                                                   left:      '50%',
+                                                                   top:       (__.device.isMobile && __.device.isPortrait) ? '80%' : '60%',
+                                                                   placement: 'top',
+                                                               },
+                                                           })
+            _toolbar.current.style.opacity = toolbars.opacity || 1
+        }, 100)
+        return () => {
+            clearTimeout(timeoutId)
+            if (_tunnel.current?._dragHandler) {
+                _tunnel.current._dragHandler.destroy()
+            }
+        }
+    }, [toolbars.opacity])
 
     /**
      * Handles canceling the video editing process
@@ -120,7 +141,7 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
             await __.recorder.start()
             $video.recording = true
             $video.paused = false
-            $video.position = {x: event.clientX, y: event.clientY}
+            $video.position = {left: event.clientX, top: event.clientY}
         }
         catch (error) {
             $video.recording = false
@@ -177,17 +198,15 @@ export const VideoRecordingSettingsToolbar = memo(({manager}) => {
         },
     ]
     return (
-        <div ref={_tunnel} className="video-recording-settings-toolbar">
+        <div ref={_tunnel} className="video-recording-settings-toolbar-container">
             {video.editing &&
                 <Tunnel
-                    className="lgs-toolbar lgs-toolbar-horizontal"
+                    className="video-recording-settings-toolbar lgs-toolbar lgs-toolbar-horizontal"
                     steps={steps ?? {}}
                     onCancel={handleCancel}
-                    start={START}
                 />
 
             }
-            {/* <VideoRecorderToolbar toolbar={_toolbar}/> */}
         </div>
     )
 })

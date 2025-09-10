@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-09
- * Last modified: 2025-09-09
+ * Created on: 2025-09-10
+ * Last modified: 2025-09-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -64,11 +64,6 @@ export const CropRatioSelector = memo(({manager}) => {
     // Track selected ratio, defaulting to first video format
     const defaultRatio = __.device.isPortrait ? '9x16' : '16x9'
 
-    const START = {
-        LEFT: (__.device.isMobile && __.device.isPortrait ? '85%' : '70%'),
-        TOP:  '50%',
-    }
-
     // Initialize position and drag handler, handle resize
     useEffect(() => {
         if (!manager || !cropper.ratioEditor || !_toolbar.current) {
@@ -77,10 +72,13 @@ export const CropRatioSelector = memo(({manager}) => {
 
         // Initialize drag handler
         _toolbar.current._dragHandler = new DragHandler({
-                                                            target: _toolbar.current,
+                                                            target:   _toolbar.current,
                                                             container: lgs.canvas,
-                                                            top:    START.TOP,
-                                                            left:   START.LEFT,
+                                                            position: {
+                                                                left:      (__.device.isMobile && __.device.isPortrait ? '85%' : '70%'),
+                                                                top:       '50%',
+                                                                placement: 'lrft',
+                                                            },
                                                         })
 
 
