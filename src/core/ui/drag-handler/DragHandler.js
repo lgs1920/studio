@@ -17,7 +17,7 @@
 /**
  * A class to handle drag and resize interactions for a movable toolbar element
  * Provides functionality for dragging a toolbar within a container, managing cursor
- * behavior with an overlay, suppressing clicks after a drag, and resetting to initial position
+ * behavior with an overlay, and suppressing clicks after a drag
  */
 import { v4 as uuidv4 } from 'uuid'
 
@@ -60,8 +60,8 @@ export class DragHandler {
         this.id = uuidv4() // Generate unique ID for this instance
         this.position = {
             placement: position.placement || 'center',
-            top:       position.top,
-            left:      position.left,
+            top:  position.top,
+            left: position.left,
         }
 
         this.grabber = grabberElement
@@ -72,8 +72,6 @@ export class DragHandler {
         this.startY = -1
         this.startLeft = this.position.left
         this.startTop = this.position.top
-        this.longPressTimer = null // Timer for long press detection
-        this.longPressDuration = 500 // Duration in ms for long press
 
         this.movementThreshold = 5 // Pixels to detect drag vs click
         this.hasMoved = false // Tracks if movement exceeded threshold
@@ -99,14 +97,13 @@ export class DragHandler {
                 top:       initialRect.top,
                 left:      initialRect.left,
                 placement: this.position.placement,
-            },
+            }
         })
 
         this.handleBefore = this.handleBefore.bind(this)
         this.handleStart = this.handleStart.bind(this)
         this.handleMove = this.handleMove.bind(this)
         this.handleEnd = this.handleEnd.bind(this)
-        this.handleLongPressOrShiftClick = this.handleLongPressOrShiftClick.bind(this)
 
         // Set initial cursor style
         this.grabber.style.cursor = 'grab'
@@ -435,55 +432,7 @@ export class DragHandler {
     }
 
     /**
-     * Handles Shift+Click or long press to reset element to initial position
-     * @private
-     * @param {Event} event - The pointerup or touchend event
-     */
-    #handleLongPressOrShiftClick = (event) => {
-        // Handle Shift+Click
-        if (event.shiftKey && event.type === 'click') {
-            this.#resetToInitialPosition()
-            event.preventDefault()
-            event.stopPropagation()
-            return
-        }
-
-        // Handle long press (already triggered via timer in handleBefore)
-        if (event.type === 'longpress') {
-            this.#resetToInitialPosition()
-            event.preventDefault()
-            event.stopPropagation()
-        }
-    }
-
-    /**
-     * Resets the element to its initial position and placement
-     * @private
-     */
-    #resetToInitialPosition() {
-        const data = DragHandler.#draggableElements.get(this.id)
-        if (data) {
-            // Restore initial position and placement
-            this.position.top = data.initialPosition.top
-            this.position.left = data.initialPosition.left
-            this.position.placement = data.initialPosition.placement
-
-            // Recompute position to apply initial settings
-            this.#ensureWithinBounds()
-
-            // Update current position in Map
-            const rect = this.target.getBoundingClientRect()
-            data.currentPosition = {
-                top:       rect.top,
-                left:      rect.left,
-                placement: this.position.placement,
-            }
-            DragHandler.#draggableElements.set(this.id, data)
-        }
-    }
-
-    /**
-     * Handles the pointerdown or touchstart event, dispatching beforeDrag and setting up long press detection
+     * Handles the pointerdown or touchstart event, dispatching beforeDrag
      * @param {Event} event - The pointerdown or touchstart event
      */
     handleBefore = (event) => {
@@ -498,13 +447,6 @@ export class DragHandler {
                 },
             },
         }))
-
-        // Setup long press detection
-        this.longPressTimer = setTimeout(() => {
-            const longPressEvent = new CustomEvent('longpress', {bubbles: true})
-            this.grabber.dispatchEvent(longPressEvent)
-        }, this.longPressDuration)
-
         this.handleStart(event)
     }
 
@@ -545,12 +487,6 @@ export class DragHandler {
         const clientY = event.type === 'touchmove' ? event.touches[0].clientY : event.clientY
         const deltaX = Math.abs(clientX - this.startX)
         const deltaY = Math.abs(clientY - this.startY)
-
-        // Cancel long press timer if movement occurs
-        if (this.longPressTimer && (deltaX > this.movementThreshold || deltaY > this.movementThreshold)) {
-            clearTimeout(this.longPressTimer)
-            this.longPressTimer = null
-        }
 
         if (!this.hasMoved && (deltaX > this.movementThreshold || deltaY > this.movementThreshold)) {
             this.dragging = true
@@ -613,12 +549,6 @@ export class DragHandler {
      * @param {Event} event - The pointerup or touchend event
      */
     handleEnd = (event) => {
-        // Clear long press timer
-        if (this.longPressTimer) {
-            clearTimeout(this.longPressTimer)
-            this.longPressTimer = null
-        }
-
         document.removeEventListener('pointermove', this.handleMove)
         document.removeEventListener('touchmove', this.handleMove)
         document.removeEventListener('pointerup', this.handleEnd)
@@ -710,7 +640,7 @@ export class DragHandler {
     }
 
     /**
-     * Attaches event listeners for drag, click, long press, and resize events
+     * Attaches event listeners for drag and resize events
      */
     attachEvents() {
         if (!this.grabber) {
@@ -720,8 +650,6 @@ export class DragHandler {
         this.grabber.addEventListener('pointerdown', this.handleBefore, {passive: false})
         this.grabber.addEventListener('touchstart', this.handleBefore, {passive: false})
         this.grabber.addEventListener('click', this.#handleClick, {passive: false})
-        this.grabber.addEventListener('click', this.#handleLongPressOrShiftClick, {passive: false})
-        this.grabber.addEventListener('longpress', this.#handleLongPressOrShiftClick, {passive: false})
 
         if (this.container === window) {
             window.addEventListener('resize', this.#handleResize)
@@ -743,8 +671,6 @@ export class DragHandler {
             this.grabber.removeEventListener('pointerdown', this.handleBefore)
             this.grabber.removeEventListener('touchstart', this.handleBefore)
             this.grabber.removeEventListener('click', this.#handleClick)
-            this.grabber.removeEventListener('click', this.#handleLongPressOrShiftClick)
-            this.grabber.removeEventListener('longpress', this.#handleLongPressOrShiftClick)
             this.grabber.style.cursor = ''
             this.grabber.style.touchAction = ''
         }
