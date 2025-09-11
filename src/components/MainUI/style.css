@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-10
- * Last modified: 2025-09-10
+ * Created on: 2025-09-11
+ * Last modified: 2025-09-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -275,7 +275,10 @@ html {
 
 .main-actions.call-for-actions {
     position: absolute;
-    top: 75dvh;
+    z-index: var(--lgs-ui-layer-zindex);
+    top: 75%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 /*******************************************************************************
  * Scene Mode Selector
