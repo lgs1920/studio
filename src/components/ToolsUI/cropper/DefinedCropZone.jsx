@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-31
- * Last modified: 2025-08-31
+ * Created on: 2025-09-11
+ * Last modified: 2025-09-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,29 +27,21 @@
  */
 import { memo } from 'react'
 
-export const DefinedCropZone = memo(({
-                                         cssCrop,
-                                         className = '',
-                                         showInfo = true,
-                                         ref,
-                                     }) => {
+export const DefinedCropZone = ({
+                                    cssCrop,
+                                    className = '',
+                                    innerRef,
+                                }) => {
     return (
         <div
-            ref={ref}
-            className={`crop-zone defined-crop-zone ${className}`}
+            ref={innerRef}
+            className={`crop-zone defined ${className}`}
             style={{
                 left:   cssCrop.x,
                 top:    cssCrop.y,
                 width:  cssCrop.width,
                 height: cssCrop.height,
             }}
-        >
-            {showInfo && (
-                <div className="crop-info lgs-one-line-card on-map small">
-                    {Math.round(cssCrop.x)}×{Math.round(cssCrop.y)} |{' '}
-                    {Math.round(cssCrop.width)}×{Math.round(cssCrop.height)}
-                </div>
-            )}
-        </div>
+        />
     )
-})
+}

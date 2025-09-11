@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-10
- * Last modified: 2025-09-10
+ * Created on: 2025-09-11
+ * Last modified: 2025-09-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,31 +25,20 @@ import { memo, useCallback, useEffect, useRef } from 'react'
 import { useSnapshot }                          from 'valtio'
 
 /**
- * Positioning constants for CropRatioSelector placement
- * @type {Object.<string, number>}
- * @constant
- */
-const POSITIONING = {
-    Y_PERCENTAGE: 0.66,
-    X_PERCENTAGE: 0.5,
-}
-
-/**
  * VideoRecordingSettingsToolbar renders a call-to-action bar for the video cropper interface
  * @component
  * @param {Object} props - Component props
- * @param {Object} props.manager - CropperManager instance for controlling crop state
- * @param {Object} props.manager.store - Valtio store with crop state (x, y, width, height, ratioEditor, etc.)
+ * @param {Object} props.store - Valtio store with crop state (x, y, width, height, ratioEditor, etc.)
  * @returns {JSX.Element} The rendered toolbar component
  */
-export const VideoRecordingSettingsToolbar = memo(({manager}) => {
+export const VideoRecordingSettingsToolbar = memo(({store}) => {
     // Access reactive video state from Valtio store
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
     const settings = useSnapshot(lgs.settings.ui.video)
     const _tunnel = useRef(null)
     const _toolbar = useRef(null)
-    const $cropper = manager?.store
+    const $cropper = store
     const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
 
 

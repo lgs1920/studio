@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-10
- * Last modified: 2025-09-10
+ * Created on: 2025-09-11
+ * Last modified: 2025-09-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,8 +18,7 @@
  * VideoFPSSelector renders a draggable toolbar for selecting video FPS
  * @component
  * @param {Object} props - Component props
- * @param {Object} props.manager - CropperManager instance for crop operations
- * @param {Object} props.manager.store - Valtio store with crop state (fpsEditor, etc.)
+ * @param {Object} props.store - Valtio store with crop state (fpsEditor, etc.)
  * @returns {JSX.Element} Draggable video FPS selector UI
  */
 import { DragHandler }                          from '@Core/ui/drag-handler/DragHandler'
@@ -32,9 +31,9 @@ import { memo, useCallback, useEffect, useRef } from 'react'
 import { useSnapshot }                          from 'valtio'
 import './style.css'
 
-export const VideoFPSSelector = memo(({manager}) => {
+export const VideoFPSSelector = memo(({store}) => {
     // Access reactive cropper and video states
-    const $cropper = manager?.store
+    const $cropper = store
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
     const cropper = useSnapshot($cropper || {}, {sync: true})
@@ -53,8 +52,7 @@ export const VideoFPSSelector = memo(({manager}) => {
      * Initialize drag handler and handle cleanup
      */
     useEffect(() => {
-        if (!manager || !cropper.fpsEditor || !_toolbar.current) {
-            console.log('Skipping DragHandler init: missing manager, fpsEditor, or toolbar')
+        if (!cropper.fpsEditor || !_toolbar.current) {
             return
         }
 
@@ -80,7 +78,7 @@ export const VideoFPSSelector = memo(({manager}) => {
                 _toolbar.current._dragHandler.destroy()
             }
         }
-    }, [manager, cropper.fpsEditor, toolbars.opacity])
+    }, [cropper.fpsEditor, toolbars.opacity])
 
     /**
      * Handles selection of a FPS value
@@ -89,15 +87,14 @@ export const VideoFPSSelector = memo(({manager}) => {
      * @param {Event} event - Click event from icon
      */
     const handleChangeFPS = useCallback((index, event) => {
-        if (!_toolbar.current || !manager) {
-            console.warn('Cannot change FPS: missing toolbar or manager')
+        if (!_toolbar.current) {
             return
         }
         // Update store to keep fpsEditor active
         $cropper.fpsEditor = true
         $video.fps = index
         lgs.settings.ui.video.fps = index
-    }, [manager, $cropper])
+    }, [$cropper])
 
     // Render draggable toolbar with FPS options
     return (

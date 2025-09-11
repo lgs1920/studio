@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-30
- * Last modified: 2025-08-30
+ * Created on: 2025-09-11
+ * Last modified: 2025-09-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -33,17 +33,16 @@ import { CropperManager } from './CropperManager'
 
 export const CropZone = memo(({
                                   cssCrop,
-                                  manager,
                                   cropper,
                                   interactionState,
                                   className,
                                   onStart,
                                   onDoubleClick,
-                                  ref,
+                                  innerRef,
                               }) => {
     return (
         <div
-            ref={ref}
+            ref={innerRef}
             className={`crop-zone ${className}`}
             style={{
                 left:   cssCrop.x,

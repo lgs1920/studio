@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-10
- * Last modified: 2025-09-10
+ * Created on: 2025-09-11
+ * Last modified: 2025-09-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -28,18 +28,16 @@ import { useSnapshot }          from 'valtio/index'
 export const ToolsUI = () => {
     const {usage} = useSnapshot(lgs.settings.ui.journeyToolbar)
     const {video} = useSnapshot(lgs.stores.ui)
+    const $cropper = lgs.stores.ui.video.cropper
+    const cropper = useSnapshot($cropper)
     return (
         <div id="lgs-tools-ui">
             {video.editing ? (
                 <>
-                    <Cropper
-                        source={lgs.canvas}
-                        store={lgs.stores.ui.video.cropper}
-                        CTA={VideoRecordingSettingsToolbar}
-                        RatioSelector={CropRatioSelector}
-                        QualitySelector={VideoQualitySelector}
-                        FPSSelector={VideoFPSSelector}
-                    />
+                    <Cropper source={lgs.canvas} store={$cropper}/>
+                    <VideoRecordingSettingsToolbar store={$cropper}/>
+                    <VideoQualitySelector store={$cropper}/>
+                    <VideoFPSSelector store={$cropper}/>
                 </>
             ) : (
                  <>

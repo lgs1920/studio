@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-10
- * Last modified: 2025-09-10
+ * Created on: 2025-09-11
+ * Last modified: 2025-09-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,8 +19,7 @@
  *
  * @component
  * @param {Object} props - Component props
- * @param {Object} props.manager - CropperManager instance for crop opeQualityns
- * @param {Object} props.manager.store - Valtio store with crop state (qualityEditor, etc.)
+ * @param {Object} props.store - Valtio store with crop state (qualityEditor, etc.)
  * @returns {JSX.Element} Draggable crop Quality selector UI
  */
 import { DragHandler }                                    from '@Core/ui/drag-handler/DragHandler'
@@ -37,9 +36,9 @@ import './style.css'
 /**
  * CropQualitySelector component
  */
-export const VideoQualitySelector = memo(({manager}) => {
+export const VideoQualitySelector = memo(({store}) => {
     // Access reactive cropper and toolbar states
-    const $cropper = manager?.store
+    const $cropper = store
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
     const cropper = useSnapshot($cropper || {}, {sync: true})
@@ -54,7 +53,7 @@ export const VideoQualitySelector = memo(({manager}) => {
 
     // Initialize position and drag handler, handle resize
     useEffect(() => {
-        if (!manager || !cropper.qualityEditor || !_toolbar.current) {
+        if (!cropper.qualityEditor || !_toolbar.current) {
             return
         }
         const timeoutId = setTimeout(() => {
@@ -80,7 +79,7 @@ export const VideoQualitySelector = memo(({manager}) => {
                 _toolbar.current._dragHandler.destroy()
             }
         }
-    }, [manager, cropper.qualityEditor])
+    }, [cropper.qualityEditor])
 
     /**
      * Handles selection of a crop quality key
@@ -90,13 +89,13 @@ export const VideoQualitySelector = memo(({manager}) => {
      * @param {Event} event - Click event from icon
      */
     const handleChangeQuality = useCallback((index, event) => {
-        if (!_toolbar.current || !manager) {
+        if (!_toolbar.current) {
             return
         }
         // Update store to keep qualityEditor active
         $cropper.qualityEditor = true
         $video.quality = index
-    }, [manager, $cropper])
+    }, [$cropper])
 
     useEffect(() => {
         $video.quality = lgs.settings.ui.video.quality
