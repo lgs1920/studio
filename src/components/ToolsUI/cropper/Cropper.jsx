@@ -37,6 +37,7 @@ import { CropOverlay }       from './CropOverlay'
 import { CropperManager }    from './CropperManager'
 import { CropZone }          from './CropZone'
 import './style.css'
+import { DragHandler } from '../../../core/ui/drag-handler/DragHandler'
 
 // Positioning constants
 const CROP_X_PERCENTAGE = 1 // Crop region center at 100% width
@@ -104,6 +105,14 @@ export const Cropper = memo(({
     const _cropperContainer = useRef(null)
     const _cropZone = useRef(null)
     const _manager = useRef(null)
+    const _dragHandler = useRef(null)
+    const _centerLinesTimer = useRef(null)
+    const _lockHTimer = useRef(null)
+    const _lockVTimer = useRef(null)
+    // Ajouts: drapeaux pour bloquer le drag pendant/juste après un resize
+    const _isResizing = useRef(false)
+    const _suppressDrag = useRef(false)
+    const _dhTargetResizePaused = useRef(false)
 
     /**
      * Memoize CropperManager options to prevent unnecessary recreations
@@ -144,25 +153,51 @@ export const Cropper = memo(({
         }
     }, [])
 
-    /**
-     * Handles pointer/touch start events for drag or resize
-     * Initializes interaction via manager
-     * @param {string} action - Action type ('drag' or 'resize-<direction>')
-     * @param {Event} event - DOM pointer/touch event
-     */
     const handleStart = useCallback((action, event) => {
         if (!_manager.current || _manager.current.isDestroyed) {
             return
         }
+        if (action === 'drag') {
+            return
+        }
+        if (action && action.startsWith('resize-')) {
+            _isResizing.current = true
+            _suppressDrag.current = true
+
+            // 1) End any drag immediately
+            try {
+                if (_dragHandler.current && typeof _dragHandler.current.handleEnd === 'function') {
+                    _dragHandler.current.handleEnd(new Event('pointerup'))
+                }
+            }
+            catch {
+            }
+
+            // 2) Pause DragHandler's target resize observer (prevents automatic reposition on size change)
+            try {
+                if (_dragHandler.current && _dragHandler.current.targetResizeObserver && !_dhTargetResizePaused.current) {
+                    _dragHandler.current.targetResizeObserver.disconnect()
+                    _dhTargetResizePaused.current = true
+                }
+            }
+            catch {
+            }
+
+            // 3) Block drag on the zone but keep handles usable
+            const zone = _cropZone.current
+            if (zone) {
+                zone.style.pointerEvents = 'none'
+                // re-enable pointer events on handles
+                zone.querySelectorAll('.crop-handle').forEach(h => (h.style.pointerEvents = 'auto'))
+            }
+        }
+
         const result = _manager.current.handleStart(action, event, cropper)
         if (result && typeof result === 'object') {
             setCrop(result)
             setCssCrop(_manager.current.cssCrop || cssCrop)
-            if (action === 'drag') {
-                updateCursor(event.ctrlKey && !event.touches ? 'crosshair' : 'grabbing')
-            }
         }
-    }, [cropper, updateCursor, cssCrop])
+    }, [cropper, cssCrop])
 
     /**
      * Handles double-click to maximize or restore crop area
@@ -214,34 +249,14 @@ export const Cropper = memo(({
             const newManager = new CropperManager(source, boundsContainer, store, memoizedOptions)
             _manager.current = newManager
 
-            // Initialize crop position
-            const bounds = newManager.getSourceBounds()
-            const initScale = (navigator.userAgent.includes('Mobile') || navigator.userAgent.includes('Tablet'))
-                              ? 1
-                              : CropperManager.INIT_CROP_SCALE_FACTOR
-            const containerWidth = bounds.width
-            const containerHeight = bounds.height
-            const initialWidth = (store.width ?? containerWidth) * initScale
-            const initialHeight = (store.height ?? (store.aspectRatio ? initialWidth / store.aspectRatio : containerHeight)) * initScale
-            const initialX = store.x ?? (containerWidth * CROP_X_PERCENTAGE - initialWidth) / 2
-            const initialY = store.y ?? (containerHeight * CROP_Y_PERCENTAGE - initialHeight) / 2
-            const initialCrop = {
-                x: initialX,
-                y: initialY,
-                width: initialWidth,
-                height: initialHeight,
-            }
-            const initialCssCrop = {
-                x:      Math.floor(initialX * newManager.dpr),
-                y:      Math.floor(initialY * newManager.dpr),
-                width:  Math.floor(initialWidth * newManager.dpr),
-                height: Math.floor(initialHeight * newManager.dpr),
-            }
+            // Let manager compute a centered initial crop
+            newManager.resetCrop({
+                                     aspectRatio: store.aspectRatio ?? null,
+                                     options:     {lockRatio: store.lockRatio},
+                                 })
 
-            newManager.crop = initialCrop
-            newManager.cssCrop = initialCssCrop
-            setCrop(initialCrop)
-            setCssCrop(initialCssCrop)
+            setCrop({...newManager.crop})
+            setCssCrop({...newManager.cssCrop})
         }
 
         /**
@@ -276,87 +291,241 @@ export const Cropper = memo(({
         }
     }, [source, container, isSourceLoaded, memoizedOptions, store])
 
-    /**
-     * Cleanup CropperManager on source or container change
-     * Prevents memory leaks
-     */
+    // Install DragHandler ONCE for CropZone, and sync cssCrop/store on movement
     useEffect(() => {
+        const zoneEl = _cropZone.current
+        const containerEl = _cropperContainer.current
+        if (!zoneEl || !containerEl || !_manager.current) {
+            return
+        }
+        if (_dragHandler.current) {
+            return
+        }
+
+        _dragHandler.current = new DragHandler({
+                                                   grabber:   zoneEl,
+                                                   target:    zoneEl,
+                                                   container: containerEl,
+                                                   position:  {placement: 'top-left', left: cssCrop.x, top: cssCrop.y},
+                                               })
+
+        const dpr = window.devicePixelRatio || 1
+        const toPhysical = (rectCss) => ({
+            x:      Math.floor(rectCss.x * dpr),
+            y:      Math.floor(rectCss.y * dpr),
+            width:  Math.floor(rectCss.width * dpr),
+            height: Math.floor(rectCss.height * dpr),
+        })
+
+        const updateFromDrag = ({x, y, width, height}) => {
+            // Bloque toute MAJ venant de DragHandler pendant un resize ou la période de suppression
+            if (_isResizing.current || _suppressDrag.current) {
+                return
+            }
+            // Update CSS crop (UI)
+            setCssCrop({x: Math.floor(x), y: Math.floor(y), width: Math.floor(width), height: Math.floor(height)})
+
+            // Sync manager values (no logic, just so overlay/lines compute correctly)
+            const phys = toPhysical({x, y, width, height})
+            if (_manager.current && !_manager.current.isDestroyed) {
+                _manager.current.crop = {..._manager.current.crop, ...phys}
+                _manager.current.cssCrop = _manager.current.crop
+            }
+
+            // Update store (logical pixels)
+            store.x = phys.x
+            store.y = phys.y
+            store.width = phys.width
+            store.height = phys.height
+        }
+
+        const onStart = (e) => {
+            if (_isResizing.current || _suppressDrag.current) {
+                return
+            }
+            const r = e.detail.value
+            updateFromDrag(r)
+        }
+        const onMove = (e) => {
+            if (_isResizing.current || _suppressDrag.current) {
+                return
+            }
+            const r = e.detail.value
+            updateFromDrag(r)
+        }
+        const onStop = (e) => {
+            if (_isResizing.current || _suppressDrag.current) {
+                return
+            }
+            const r = e.detail.value
+            updateFromDrag(r)
+        }
+
+        zoneEl.addEventListener(DragHandler.DRAG_START, onStart)
+        zoneEl.addEventListener(DragHandler.DRAG, onMove)
+        zoneEl.addEventListener(DragHandler.DRAG_STOP, onStop)
+
         return () => {
-            if (_manager.current && !_manager.current.isDestroyed) {
-                _manager.current.destroy()
-                _manager.current = null
-            }
+            zoneEl.removeEventListener(DragHandler.DRAG_START, onStart)
+            zoneEl.removeEventListener(DragHandler.DRAG, onMove)
+            zoneEl.removeEventListener(DragHandler.DRAG_STOP, onStop)
+            _dragHandler.current = null
         }
-    }, [source, container])
+        // do not depend on cssCrop to avoid re-creating handler per frame
+    }, [_cropZone.current, _cropperContainer.current, _manager.current, store])
 
-    /**
-     * Handle window resize events
-     * Updates crop position on source bounds change (debounced)
-     */
+    // Keep DOM position in sync with cssCrop when not dragging
     useEffect(() => {
-        if (!_manager.current || _manager.current.isDestroyed) {
+        const el = _cropZone.current
+        const dh = _dragHandler.current
+        if (!el) {
             return
         }
-        const handleResize = () => {
-            if (_manager.current && !_manager.current.isDestroyed) {
-                const newCrop = _manager.current.updateCropOnSourceChange(cropper)
-                setCrop(newCrop)
-                setCssCrop(_manager.current.cssCrop || cssCrop)
-            }
-        }
-        const debouncedResize = _manager.current.debounce(handleResize, CropperManager.RESIZE_DEBOUNCE_MS)
-        window.addEventListener('resize', debouncedResize)
-        return () => window.removeEventListener('resize', debouncedResize)
-    }, [cropper, _manager])
-
-    /**
-     * Reset centering lines on mount
-     * Initializes interaction state
-     */
-    useEffect(() => {
-        if (!_manager.current || _manager.current.isDestroyed) {
+        if (dh && dh.dragging) {
             return
         }
-        return _manager.current.resetCentering(setInteractionState)
-    }, [_manager])
+        el.style.left = `${cssCrop.x}px`
+        el.style.top = `${cssCrop.y}px`
+        el.style.width = `${cssCrop.width}px`
+        el.style.height = `${cssCrop.height}px`
+    }, [cssCrop])
 
     /**
      * Handle global pointer/touch move and end events
-     * Tracks drag/resize interactions across the window
+     * Tracks resize interactions across the window (dragging is handled by DragHandler)
      */
     useEffect(() => {
         if (!_manager.current || _manager.current.isDestroyed) {
             return
         }
         const handleMove = (e) => {
-            if (_manager.current.isDestroyed) {
-                return
-            }
             const bounds = _manager.current.getSourceBounds()
             const {crop: newCrop, interaction} = _manager.current.handleMove(e, cropper, bounds)
+
+            // Update overlay/calc state
+            const nextCss = _manager.current.cssCrop || cssCrop
             setCrop(newCrop)
-            setCssCrop(_manager.current.cssCrop || cssCrop)
+            setCssCrop(nextCss)
             setInteractionState(interaction)
-        }
-        const handleEnd = () => {
-            if (_manager.current.isDestroyed) {
-                return
+
+            // Force DOM sync of the crop zone to stay center-anchored like overlay
+            const el = _cropZone.current
+            if (el) {
+                el.style.position = 'absolute'
+                el.style.transform = ''
+                el.style.left = `${Math.floor(nextCss.x)}px`
+                el.style.top = `${Math.floor(nextCss.y)}px`
+                el.style.width = `${Math.floor(nextCss.width)}px`
+                el.style.height = `${Math.floor(nextCss.height)}px`
             }
-            setInteractionState(_manager.current.handleEnd())
-            updateCursor('grab')
         }
-        const eventOptions = {passive: false}
-        window.addEventListener('pointermove', handleMove, eventOptions)
-        window.addEventListener('pointerup', handleEnd)
-        window.addEventListener('touchmove', handleMove, eventOptions)
-        window.addEventListener('touchend', handleEnd)
+        const releaseDragSuppression = () => {
+            _suppressDrag.current = false
+        }
+        const handleEnd = (e) => {
+            const newInteraction = _manager.current.handleEnd(e)
+            setInteractionState(newInteraction)
+            _isResizing.current = false
+
+            // 1) Resume DragHandler's target resize observer
+            try {
+                if (_dragHandler.current && _dragHandler.current.targetResizeObserver && _dhTargetResizePaused.current && _cropZone.current) {
+                    _dragHandler.current.targetResizeObserver.observe(_cropZone.current)
+                    _dhTargetResizePaused.current = false
+                }
+            }
+            catch {
+            }
+
+            // 2) Restore pointer events on the zone
+            const zone = _cropZone.current
+            if (zone) {
+                zone.style.pointerEvents = 'auto'
+                zone.querySelectorAll('.crop-handle').forEach(h => (h.style.pointerEvents = ''))
+            }
+
+            // 3) Suppress reflex drag until the next real pointerup
+            _suppressDrag.current = true
+            const onceUp = () => {
+                releaseDragSuppression()
+                document.removeEventListener('pointerup', onceUp, true)
+                document.removeEventListener('touchend', onceUp, true)
+            }
+            document.addEventListener('pointerup', onceUp, true)
+            document.addEventListener('touchend', onceUp, true)
+            setTimeout(() => {
+                if (_suppressDrag.current) {
+                    _suppressDrag.current = false
+                }
+            }, 300)
+        }
+        const options = {passive: false, capture: true}
+
+        document.addEventListener('pointermove', handleMove, options)
+        document.addEventListener('pointerup', handleEnd, options)
+        document.addEventListener('pointercancel', handleEnd, options)
+        document.addEventListener('touchmove', handleMove, options)
+        document.addEventListener('touchend', handleEnd, options)
+        document.addEventListener('touchcancel', handleEnd, options)
+        document.addEventListener('keyup', handleEnd, options)
+
         return () => {
-            window.removeEventListener('pointermove', handleMove)
-            window.removeEventListener('pointerup', handleEnd)
-            window.removeEventListener('touchmove', handleMove)
-            window.removeEventListener('touchend', handleEnd)
+            document.removeEventListener('pointermove', handleMove, options)
+            document.removeEventListener('pointerup', handleEnd, options)
+            document.removeEventListener('pointercancel', handleEnd, options)
+            document.removeEventListener('touchmove', handleMove, options)
+            document.removeEventListener('touchend', handleEnd, options)
+            document.removeEventListener('touchcancel', handleEnd, options)
+            document.removeEventListener('keyup', handleEnd, options)
         }
-    }, [cropper, updateCursor, cssCrop, _manager])
+    }, [cropper, cssCrop, _manager])
+
+    // ADD: stop any drag when pointer/mouse leaves the window or page loses focus
+    useEffect(() => {
+        const endAllDrags = () => {
+            // Stop DragHandler drag (if any)
+            try {
+                if (_dragHandler.current && typeof _dragHandler.current.handleEnd === 'function') {
+                    _dragHandler.current.handleEnd(new Event('pointerup'))
+                }
+            }
+            catch {
+            }
+            // Stop CropperManager interactions (resizes)
+            if (_manager.current && !_manager.current.isDestroyed) {
+                setInteractionState(_manager.current.handleEnd())
+            }
+        }
+
+        const onVisibility = () => {
+            if (document.hidden) {
+                endAllDrags()
+            }
+        }
+
+        const onPointerOut = (e) => {
+            // When leaving the window (relatedTarget === null), stop drag
+            if (!e.relatedTarget) {
+                endAllDrags()
+            }
+        }
+
+        window.addEventListener('blur', endAllDrags)
+        document.addEventListener('visibilitychange', onVisibility)
+        window.addEventListener('mouseleave', endAllDrags)
+        window.addEventListener('pointercancel', endAllDrags)
+        window.addEventListener('touchcancel', endAllDrags)
+        window.addEventListener('pointerout', onPointerOut)
+
+        return () => {
+            window.removeEventListener('blur', endAllDrags)
+            document.removeEventListener('visibilitychange', onVisibility)
+            window.removeEventListener('mouseleave', endAllDrags)
+            window.removeEventListener('pointercancel', endAllDrags)
+            window.removeEventListener('touchcancel', endAllDrags)
+            window.removeEventListener('pointerout', onPointerOut)
+        }
+    }, [])
 
     /**
      * Set initial cursor style on mount
