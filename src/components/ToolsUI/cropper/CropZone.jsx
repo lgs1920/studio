@@ -39,6 +39,7 @@ export const CropZone = memo(({
                                   onStart,
                                   onDoubleClick,
                                   innerRef,
+                                  manager, // ensure this prop is provided by parent
                               }) => {
     return (
         <div
@@ -51,13 +52,11 @@ export const CropZone = memo(({
                 height: cssCrop.height,
                 cursor: 'grab',
             }}
-            onPointerDown={(e) => onStart('drag', e)}
-            onTouchStart={(e) => onStart('drag', e)}
+            // Remove drag start from the main zone; DragHandler will handle it.
             onDoubleClick={onDoubleClick}
             onContextMenu={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                onStart('drag', e)
             }}
         >
             <div className="crop-info lgs-one-line-card on-map small">
@@ -79,6 +78,38 @@ export const CropZone = memo(({
                         onTouchStart={(e) => {
                             e.stopPropagation()
                             onStart(`resize-${dir}`, e)
+                        }}
+                        onPointerUp={(e) => {
+                            e.stopPropagation()
+                            try {
+                                manager && manager.handleEnd && manager.handleEnd(e)
+                            }
+                            catch {
+                            }
+                        }}
+                        onTouchEnd={(e) => {
+                            e.stopPropagation()
+                            try {
+                                manager && manager.handleEnd && manager.handleEnd(e)
+                            }
+                            catch {
+                            }
+                        }}
+                        onPointerCancel={(e) => {
+                            e.stopPropagation()
+                            try {
+                                manager && manager.handleEnd && manager.handleEnd(e)
+                            }
+                            catch {
+                            }
+                        }}
+                        onTouchCancel={(e) => {
+                            e.stopPropagation()
+                            try {
+                                manager && manager.handleEnd && manager.handleEnd(e)
+                            }
+                            catch {
+                            }
                         }}
                     />
                 ))}
