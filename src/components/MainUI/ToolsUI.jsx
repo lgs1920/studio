@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-11
- * Last modified: 2025-09-11
+ * Created on: 2025-09-12
+ * Last modified: 2025-09-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,6 +18,7 @@ import { ContextMenuHook }      from '@Components/MainUI/ContextMenuHook'
 import { VideoFPSSelector }     from '@Components/MainUI/video/VideoFPSSelector'
 import { VideoQualitySelector } from '@Components/MainUI/video/VideoQualitySelector'
 import { VideoRecorderToolbar } from '@Components/MainUI/video/VideoRecorderToolbar'
+import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
 import { Cropper }              from '@Components/ToolsUI/cropper/Cropper'
 import { CropRatioSelector }    from '@Components/ToolsUI/cropper/CropRatioSelector'
 import { MapPOIContextMenu }    from '@Components/MainUI/MapPOI/MapPOIContextMenu'
@@ -34,7 +35,7 @@ export const ToolsUI = () => {
         <div id="lgs-tools-ui">
             {video.editing ? (
                 <>
-                    <Cropper source={lgs.canvas} store={$cropper}/>
+                    <Cropper source={lgs.canvas} store={$cropper} options={{infoComponent: <VideoSettingsInfo/>}}/>
                     <VideoRecordingSettingsToolbar store={$cropper}/>
                     <VideoQualitySelector store={$cropper}/>
                     <VideoFPSSelector store={$cropper}/>

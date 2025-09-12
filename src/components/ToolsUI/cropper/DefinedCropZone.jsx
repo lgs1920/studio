@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-11
- * Last modified: 2025-09-11
+ * Created on: 2025-09-12
+ * Last modified: 2025-09-12
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { CropZoneInfo } from '@Components/ToolsUI/cropper/CropZoneInfo'
 /**
  * DefinedCropZone component for displaying a static crop area without handles or dragging
  * @component
@@ -30,8 +31,12 @@ import { memo } from 'react'
 export const DefinedCropZone = ({
                                     cssCrop,
                                     className = '',
+                                    infoComponent = null,
+                                    infoPosition = true,
                                     innerRef,
                                 }) => {
+
+    console.error('DefinedCropZone', infoComponent, infoPosition)
     return (
         <div
             ref={innerRef}
@@ -42,6 +47,20 @@ export const DefinedCropZone = ({
                 width:  cssCrop.width,
                 height: cssCrop.height,
             }}
-        />
+        >
+            {/* Position information display */}
+            {infoPosition && (
+                <div className="crop-info lgs-one-line-card on-map small">
+                    <CropZoneInfo info={cssCrop}/>
+                </div>
+            )}
+
+            {/* Custom info component */}
+            {infoComponent && (
+                <div className="crop-info-custom lgs-one-line-card on-map small">
+                    {infoComponent}
+                </div>
+            )}
+        </div>
     )
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-10
- * Last modified: 2025-09-10
+ * Created on: 2025-09-12
+ * Last modified: 2025-09-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,6 +22,7 @@
  * @returns {JSX.Element} Video recorder toolbar UI
  */
 import { FontAwesomeIcon }                  from '@Components/FontAwesomeIcon'
+import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
 import { CropOverlay }                      from '@Components/ToolsUI/cropper/CropOverlay'
 import { DefinedCropZone }                  from '@Components/ToolsUI/cropper/DefinedCropZone'
 import { DragHandler }                      from '@Core/ui/drag-handler/DragHandler'
@@ -370,6 +371,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                                                         {'finalizing': video.finalizing},
                                              )
                                          }
+                                         infoComponent={<VideoSettingsInfo/>}
                                          ref={_cropZone}/>
                     </>
                 )
