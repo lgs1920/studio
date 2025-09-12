@@ -7,110 +7,143 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-11
- * Last modified: 2025-09-11
+ * Created on: 2025-09-12
+ * Last modified: 2025-09-12
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 /**
- * CropZone component for the interactive crop area with handles
- * @component
+ * CropZone.jsx
+ * A React component for an interactive crop area with resizable handles
+ * Renders a draggable and resizable crop zone with position info and handles
+ * @module CropZone
+ * @requires react
+ * @requires @shoelace-style/shoelace
+ * @requires @fortawesome/react-fontawesome
+ * @requires @fortawesome/pro-regular-svg-icons
+ * @requires ./CropperManager
+ */
+
+import { memo, useRef }    from 'react'
+import { SlCard }          from '@shoelace-style/shoelace/dist/react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faInfoCircle }    from '@fortawesome/pro-regular-svg-icons'
+import { CropperManager }  from './CropperManager'
+
+/**
+ * A memoized React component that renders an interactive crop zone with handles
  * @param {Object} props - Component props
- * @param {Object} props.cssCrop - Crop dimensions and position in CSS units
- * @param {Object} props.manager - CropperManager instance
+ * @param {Object} props.cssCrop - Crop dimensions and position in CSS units { x, y, width, height }
+ * @param {Object} props.manager - CropperManager instance for handling interactions
  * @param {Object} props.cropper - Cropper state from store
  * @param {Object} props.interactionState - Current interaction state
- * @param {string} props.className - Additional CSS classes
- * @param {Function} props.onStart - Handler for drag/resize start
- * @param {Function} props.onDoubleClick - Handler for double-click
- * @param {Object} props.ref - Ref for the crop zone element
+ * @param {string} [props.className=''] - Additional CSS classes for the crop zone
+ * @param {Function} props.onStart - Handler for drag/resize start events
+ * @param {Function} props.onDoubleClick - Handler for double-click events
+ * @param {Object} [props.innerRef] - Ref for the crop zone element
+ * @param {JSX.Element} [props.infoComponent=null] - Custom component for additional crop info
+ * @param {boolean} [props.infoPosition=true] - Whether to show position info
  * @returns {JSX.Element} The interactive crop zone with handles
  */
-import { memo } from 'react'
-import { CropperManager } from './CropperManager'
-
 export const CropZone = memo(({
                                   cssCrop,
+                                  manager,
                                   cropper,
                                   interactionState,
-                                  className,
+                                  className = '',
                                   onStart,
                                   onDoubleClick,
                                   innerRef,
-                                  manager, // ensure this prop is provided by parent
+                                  infoComponent = null,
+                                  infoPosition = true,
                               }) => {
+    // Ref to track the crop zone element if innerRef is not provided
+    const _cropZone = useRef(null)
+
+    /**
+     * Prevents default context menu behavior
+     * @param {Event} event - The context menu event
+     * @private
+     */
+    const handleContextMenu = (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+    }
+
+    /**
+     * Initiates resizing on pointer down
+     * @param {string} direction - The handle direction (e.g., 'top-left')
+     * @returns {Function} Event handler for pointer down
+     * @private
+     */
+    const handlePointerDown = (direction) => (event) => {
+        event.stopPropagation()
+        onStart(`resize-${direction}`, event)
+    }
+
+    /**
+     * Initiates resizing on touch start
+     * @param {string} direction - The handle direction (e.g., 'top-left')
+     * @returns {Function} Event handler for touch start
+     * @private
+     */
+    const handleTouchStart = (direction) => (event) => {
+        event.stopPropagation()
+        onStart(`resize-${direction}`, event)
+    }
+
+    /**
+     * Handles end of pointer or touch interactions
+     * @param {Event} event - The pointer or touch event
+     * @private
+     */
+    const handleEnd = (event) => {
+        event.stopPropagation()
+        manager.handleEnd(event)
+    }
+
     return (
         <div
-            ref={innerRef}
+            ref={innerRef || _cropZone}
             className={`crop-zone ${className}`}
-            style={{
-                left:   cssCrop.x,
-                top:    cssCrop.y,
-                width:  cssCrop.width,
-                height: cssCrop.height,
-                cursor: 'grab',
-            }}
-            // Remove drag start from the main zone; DragHandler will handle it.
             onDoubleClick={onDoubleClick}
-            onContextMenu={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-            }}
+            onContextMenu={handleContextMenu}
         >
-            <div className="crop-info lgs-one-line-card on-map small">
-                {Math.round(cssCrop.x)}×{Math.round(cssCrop.y)} |{' '}
-                {Math.round(cssCrop.width)}×{Math.round(cssCrop.height)}
-            </div>
+            {/* Position information display */}
+            {infoPosition && (
+                <div className="crop-info lgs-one-line-card on-map small">
+                    {Math.round(cssCrop.x)}×{Math.round(cssCrop.y)} | {Math.round(cssCrop.width)}×{Math.round(cssCrop.height)}
+                </div>
+            )}
+
+            {/* Custom info component */}
+            {infoComponent && (
+                <div className="cromp-info-custom lgs-one-line-card on-map small">
+                    {infoComponent}
+                </div>
+            )}
+
+            {/* Horizontal center line */}
             {interactionState.showHCenterLine && <div className="center-line-inner-horizontal" />}
+
+            {/* Vertical center line */}
             {interactionState.showVCenterLine && <div className="center-line-inner-vertical" />}
+
+            {/* Resizable handles */}
             {cropper.resizable &&
                 CropperManager.handleMap.map(([dir, cursor]) => (
                     <div
                         key={dir}
                         className={`crop-handle handle-${dir}`}
                         style={{ cursor }}
-                        onPointerDown={(e) => {
-                            e.stopPropagation()
-                            onStart(`resize-${dir}`, e)
-                        }}
-                        onTouchStart={(e) => {
-                            e.stopPropagation()
-                            onStart(`resize-${dir}`, e)
-                        }}
-                        onPointerUp={(e) => {
-                            e.stopPropagation()
-                            try {
-                                manager && manager.handleEnd && manager.handleEnd(e)
-                            }
-                            catch {
-                            }
-                        }}
-                        onTouchEnd={(e) => {
-                            e.stopPropagation()
-                            try {
-                                manager && manager.handleEnd && manager.handleEnd(e)
-                            }
-                            catch {
-                            }
-                        }}
-                        onPointerCancel={(e) => {
-                            e.stopPropagation()
-                            try {
-                                manager && manager.handleEnd && manager.handleEnd(e)
-                            }
-                            catch {
-                            }
-                        }}
-                        onTouchCancel={(e) => {
-                            e.stopPropagation()
-                            try {
-                                manager && manager.handleEnd && manager.handleEnd(e)
-                            }
-                            catch {
-                            }
-                        }}
+                        onPointerDown={handlePointerDown(dir)}
+                        onTouchStart={handleTouchStart(dir)}
+                        onPointerUp={handleEnd}
+                        onTouchEnd={handleEnd}
+                        onPointerCancel={handleEnd}
+                        onTouchCancel={handleEnd}
                     />
                 ))}
         </div>
