@@ -114,13 +114,13 @@ export const CropZone = memo(({
             {/* Position information display */}
             {infoPosition && (
                 <div className="crop-info lgs-one-line-card on-map small">
-                    {Math.round(cssCrop.x)}×{Math.round(cssCrop.y)} | {Math.round(cssCrop.width)}×{Math.round(cssCrop.height)}
+                    {cssCrop.x}×{cssCrop.y} | {cssCrop.width}×{cssCrop.height}
                 </div>
             )}
 
             {/* Custom info component */}
             {infoComponent && (
-                <div className="cromp-info-custom lgs-one-line-card on-map small">
+                <div className="crop-info-custom lgs-one-line-card on-map small">
                     {infoComponent}
                 </div>
             )}
