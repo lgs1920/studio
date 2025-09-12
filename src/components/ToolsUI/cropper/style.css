@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-09
- * Last modified: 2025-09-09
+ * Created on: 2025-09-12
+ * Last modified: 2025-09-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -126,14 +126,21 @@
 /***************************************
  *  On map crop info
  **************************************/
-.crop-info {
+.crop-info, .crop-info-custom {
     font-size: var(--lgs-font-size-s);
     position: absolute;
     z-index: calc(var(--crop-zindex) + 1);
     top: var(--lgs-gutter-xs);
-    left: var(--lgs-gutter-xs);
     width: max-content;
     pointer-events: none;
+}
+
+.crop-info {
+    left: var(--lgs-gutter-xs);
+}
+
+.crop-info-custom {
+    right: var(--lgs-gutter-xs);
 }
 
 /***************************************
