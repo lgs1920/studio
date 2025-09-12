@@ -131,8 +131,11 @@
     position: absolute;
     z-index: calc(var(--crop-zindex) + 1);
     top: var(--lgs-gutter-xs);
+    display: flex;
+    align-items: center;
     width: max-content;
     pointer-events: none;
+    gap: var(--lgs-gutter-xs);
 }
 
 .crop-info {
@@ -141,6 +144,11 @@
 
 .crop-info-custom {
     right: var(--lgs-gutter-xs);
+}
+
+[class^="crop-info"] :not(span:last-child) {
+    border-right: 1px solid var(--lgs-card-on-map-border-color);
+    padding-inline-end: var(--lgs-gutter-s);
 }
 
 /***************************************

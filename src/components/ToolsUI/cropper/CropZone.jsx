@@ -26,6 +26,7 @@
  * @requires ./CropperManager
  */
 
+import { CropZoneInfo } from '@Components/ToolsUI/cropper/CropZoneInfo'
 import { memo, useRef }    from 'react'
 import { SlCard }          from '@shoelace-style/shoelace/dist/react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -110,11 +111,17 @@ export const CropZone = memo(({
             className={`crop-zone ${className}`}
             onDoubleClick={onDoubleClick}
             onContextMenu={handleContextMenu}
+            style={{
+                left:   cssCrop.x,
+                top:    cssCrop.y,
+                width:  cssCrop.width,
+                height: cssCrop.height,
+            }}
         >
             {/* Position information display */}
             {infoPosition && (
                 <div className="crop-info lgs-one-line-card on-map small">
-                    {cssCrop.x}×{cssCrop.y} | {cssCrop.width}×{cssCrop.height}
+                    <CropZoneInfo info={cssCrop}/>
                 </div>
             )}
 
