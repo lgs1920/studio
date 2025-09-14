@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-10
- * Last modified: 2025-09-10
+ * Created on: 2025-09-14
+ * Last modified: 2025-09-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -55,10 +55,6 @@ export const CropRatioSelector = memo(({manager}) => {
     const cropper = useSnapshot($cropper || {}, {sync: true})
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video || {}, {sync: true})
-
-    const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
-    const [forceRender, setForceRender] = useState(0)
-    // Reference to the cropper menu DOM element
     const _toolbar = useRef(null)
 
     // Track selected ratio, defaulting to first video format
@@ -77,7 +73,7 @@ export const CropRatioSelector = memo(({manager}) => {
                                                             position: {
                                                                 left:      (__.device.isMobile && __.device.isPortrait ? '85%' : '70%'),
                                                                 top:       '50%',
-                                                                placement: 'lrft',
+                                                                placement: 'right',
                                                             },
                                                         })
 
