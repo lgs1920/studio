@@ -23,7 +23,7 @@ To use the LGS1920 Studio Cropper in your project, follow these steps:
 
 2. **Import the CropperManager**:
    ```javascript
-   import { CropperManager } from './CropperManager.js'
+   import { CropperHandler } from './CropperHandler.js'
    ```
 
 3. **Dependencies**:
@@ -40,14 +40,14 @@ the provided store.
 
 ```javascript
 import { proxy }          from 'valtio'
-import { CropperManager } from './CropperManager.js'
+import { CropperHandler } from './CropperHandler.js'
 
 // Initialize the source element and store
 const source = document.querySelector('canvas')
 const store = proxy({x: 0, y: 0, width: 512, height: 360})
 
 // Create a CropperManager instance
-const cropper = new CropperManager(source, null, store, {
+const cropper = new CropperHandler(source, null, store, {
     draggable:     true,
     resizable:     true,
     lockCentering: true,
@@ -111,7 +111,7 @@ The `CropperManager` supports the following user interactions:
 **Constructor**:
 
 ```javascript
-new CropperManager(source, container, store, options)
+new CropperHandler(source, container, store, options)
 ```
 
 - **Parameters**:

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-13
- * Last modified: 2025-09-13
+ * Created on: 2025-09-14
+ * Last modified: 2025-09-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -131,6 +131,7 @@ export class CropperHandler {
      * @returns {boolean} True if resizing is active
      */
     get cropping() {
+        console.log('cropping', this.interactionState)
         return this.interactionState.action?.startsWith('resize-') ?? false
     }
 
@@ -156,7 +157,6 @@ export class CropperHandler {
      * @returns {Object} CSS crop values
      */
     toCssCrop = (crop) => {
-        console.log('CropperHandler: toCssCrop', {input: crop})
         return {
             x:      Math.floor(crop.x / this.dpr),
             y:      Math.floor(crop.y / this.dpr),
@@ -171,7 +171,6 @@ export class CropperHandler {
      * @returns {Object} Physical crop values
      */
     toPhysicalCrop = (cssCrop) => {
-        console.log('CropperHandler: toPhysicalCrop', {input: cssCrop})
         return {
             x:      Math.floor(cssCrop.x * this.dpr),
             y:      Math.floor(cssCrop.y * this.dpr),
@@ -431,7 +430,7 @@ export class CropperHandler {
      * @param {Object} interactionState - Current interaction state
      * @returns {Object} Styles for crop elements
      */
-    getStyles = (crop, interactionState) => {
+    getStyles = (crop, interactionState = this.interactionState) => {
         const sourceBounds = this.getSourceBounds()
         // Use cssCrop directly for styling
         const cropX = this.cssCrop.x
@@ -531,7 +530,6 @@ export class CropperHandler {
             return this.crop
         }
 
-        console.log('CropperHandler: handleStart', {action, cropping: this.cropping})
         this.interactionState.action = action
         this.source.classList.add('cropping') // Add cropping class
         const aspectRatio = cropper.lockRatio
@@ -572,8 +570,6 @@ export class CropperHandler {
         if (!this.interactionState.action || !this.interactionState.action.startsWith('resize-') || cropper.recording || this.isDestroyed) {
             return {crop: this.crop, interaction: this.interactionState}
         }
-
-        console.log('CropperHandler: handleMove', {cropping: this.cropping})
 
         // Mouse safety: if buttons == 0, the mouse is up; end the resize now.
         if ('buttons' in event && event.buttons === 0) {
@@ -825,7 +821,6 @@ export class CropperHandler {
         if (this.isDestroyed) {
             return this.interactionState
         }
-        console.log('CropperHandler: handleEnd', {cropping: this.cropping})
         this.#longTapTimer && clearTimeout(this.#longTapTimer)
         this.#longTapTimer = null
         this.#centeringLinesTimer && clearTimeout(this.#centeringLinesTimer)

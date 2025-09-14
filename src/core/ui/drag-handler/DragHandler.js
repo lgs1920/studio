@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-10
- * Last modified: 2025-09-10
+ * Created on: 2025-09-14
+ * Last modified: 2025-09-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -57,10 +57,10 @@ export class DragHandler {
             throw new Error('container must be window or an HTMLElement')
         }
 
-        this.id = uuidv4() // Generate unique ID for this instance
+        this.id = uuidv4()
         this.position = {
             placement: position.placement || 'center',
-            top:  position.top,
+            top: position.top,
             left: position.left,
         }
 
@@ -68,36 +68,34 @@ export class DragHandler {
         this.target = target
         this.container = container
         this.dragging = false
+        this.isEnding = false // Guard against multiple handleEnd calls
         this.startX = -1
         this.startY = -1
         this.startLeft = this.position.left
         this.startTop = this.position.top
+        this.movementThreshold = 5
+        this.hasMoved = false
+        this.wasDragging = false
+        this.overlay = null
 
-        this.movementThreshold = 5 // Pixels to detect drag vs click
-        this.hasMoved = false // Tracks if movement exceeded threshold
-        this.wasDragging = false // Tracks if drag occurred for click suppression
-        this.overlay = null // Overlay div for cursor during drag
-
-        // Transform-aware mode: preserve existing transforms (e.g., translate(-50%,-50%))
+        // Transform-aware mode
         const computedTransform = getComputedStyle(this.target).transform
         this.useTransformMode = (this.target.style.transform && this.target.style.transform !== '') || (computedTransform && computedTransform !== 'none')
-        this.baseTransform = this.target.style.transform || '' // inline base we keep/extend
-        this.dragStartVisualX = 0
-        this.dragStartVisualY = 0
+        this.baseTransform = this.target.style.transform || ''
 
-        // Store initial and current position in static Map
+        // Store initial and current position
         const initialRect = this.target.getBoundingClientRect()
         DragHandler.#draggableElements.set(this.id, {
             initialPosition: {
-                top:       this.position.top,
-                left:      this.position.left,
+                top:  this.position.top,
+                left: this.position.left,
                 placement: this.position.placement,
             },
             currentPosition: {
-                top:       initialRect.top,
-                left:      initialRect.left,
+                top:  initialRect.top,
+                left: initialRect.left,
                 placement: this.position.placement,
-            }
+            },
         })
 
         this.handleBefore = this.handleBefore.bind(this)
@@ -105,10 +103,7 @@ export class DragHandler {
         this.handleMove = this.handleMove.bind(this)
         this.handleEnd = this.handleEnd.bind(this)
 
-        // Set initial cursor style
         this.grabber.style.cursor = 'grab'
-
-        // Add draggable class to target
         this.target.classList.add('draggable')
 
         this.#ensureWithinBounds()
@@ -117,30 +112,25 @@ export class DragHandler {
     }
 
     /**
-     * Retrieves the top, left, width, and height of a given HTML element or window.
-     * If the element is window, returns { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight }.
-     * @param {HTMLElement | Window} element - The HTML element or window to measure.
-     * @returns {{ top: number, left: number, width: number, height: number }} - The position and dimensions of the
-     *     element or window.
+     * Retrieves the top, left, width, and height of a given HTML element or window
+     * @private
+     * @param {HTMLElement | Window} element - The HTML element or window to measure
+     * @returns {{ top: number, left: number, width: number, height: number }}
      */
-    #computeElementBounds = (element) => {
-        // Check if the element is window
+    #computeElementBounds = element => {
         if (element === window) {
             return {
-                top:    0,
-                left:   0,
-                width:  window.innerWidth,
+                top:   0,
+                left:  0,
+                width: window.innerWidth,
                 height: window.innerHeight,
             }
         }
-
-        // Get the bounding rectangle of the HTML element
         const rect = element.getBoundingClientRect()
-
         return {
-            top:    rect.top,
-            left:   rect.left,
-            width:  rect.width,
+            top:   rect.top,
+            left:  rect.left,
+            width: rect.width,
             height: rect.height,
         }
     }
@@ -152,26 +142,18 @@ export class DragHandler {
      */
     #getElementPosition() {
         const rect = this.target.getBoundingClientRect()
-        const containerRect = this.container !== window ? this.container.getBoundingClientRect() : {
-            left: 0,
-            top: 0,
-        }
-
+        const containerRect = this.container !== window ? this.container.getBoundingClientRect() : {left: 0, top: 0}
         let left = rect.left - containerRect.left
         let top = rect.top - containerRect.top
-
-        // Adjust for scroll position if container is not window
         if (this.container !== window) {
             left += this.container.scrollLeft
             top += this.container.scrollTop
         }
-
         return {left, top}
     }
 
     /**
      * Parses a position value and returns its pixel equivalent
-     * Accepts numbers, 'xxpx', or 'yy%' strings
      * @private
      * @param {number|string} position - The position value to parse
      * @param {number} containerDimension - The reference dimension for percentage values
@@ -181,24 +163,19 @@ export class DragHandler {
         if (typeof position === 'number') {
             return position
         }
-
         if (typeof position === 'string') {
             const trimmed = position.trim()
-
             if (trimmed.endsWith('px')) {
                 const px = parseFloat(trimmed)
                 return isNaN(px) ? 0 : px
             }
-
             if (trimmed.endsWith('%')) {
                 const percent = parseFloat(trimmed)
                 return isNaN(percent) ? 0 : containerDimension * (percent / 100)
             }
-
             const numeric = parseFloat(trimmed)
             return isNaN(numeric) ? 0 : numeric
         }
-
         return 0
     }
 
@@ -212,15 +189,13 @@ export class DragHandler {
         this.target.style.position = 'absolute'
         this.target.style.left = `${x}px`
         this.target.style.top = `${y}px`
-        this.target.style.transform = '' // Clear transform to avoid conflicts
-
-        // Update current position in static Map
+        this.target.style.transform = ''
         const rect = this.target.getBoundingClientRect()
         const data = DragHandler.#draggableElements.get(this.id)
         if (data) {
             data.currentPosition = {
-                top:       rect.top,
-                left:      rect.left,
+                top:  rect.top,
+                left: rect.left,
                 placement: this.position.placement,
             }
             DragHandler.#draggableElements.set(this.id, data)
@@ -228,7 +203,7 @@ export class DragHandler {
     }
 
     /**
-     * Gets the bounding rectangle of the container, adjusted for padding and borders
+     * Gets the bounding rectangle of the container
      * @private
      * @returns {Object} Bounds with left, top, right, bottom, width, and height properties
      */
@@ -239,7 +214,7 @@ export class DragHandler {
                 top:   0,
                 right: window.innerWidth,
                 bottom: window.visualViewport ? window.visualViewport.height : window.innerHeight,
-                width:  window.innerWidth,
+                width: window.innerWidth,
                 height: window.innerHeight,
             }
         }
@@ -252,40 +227,32 @@ export class DragHandler {
         const borderLeft = parseFloat(styles.borderLeftWidth) || 0
         const borderTop = parseFloat(styles.borderTopWidth) || 0
         return {
-            left:   paddingLeft + borderLeft,
-            top:    paddingTop + borderTop,
-            right:  rect.width - paddingRight - borderLeft,
+            left:  paddingLeft + borderLeft,
+            top:   paddingTop + borderTop,
+            right: rect.width - paddingRight - borderLeft,
             bottom: rect.height - paddingBottom - borderTop,
-            width:  rect.width,
+            width: rect.width,
             height: rect.height,
         }
     }
 
     /**
-     * Ensures the target element stays fully within the container's bounds
-     * Initializes position based on top/left or placement point and adjusts on resize to keep element fully visible
+     * Ensures the target element stays within bounds
      * @private
      */
     #ensureWithinBounds() {
         const bounds = this.#getBounds()
         const currentPosition = this.#getElementPosition()
         const currentRect = this.target.getBoundingClientRect()
-
         let left = currentPosition.left
         let top = currentPosition.top
 
-        // Position the element the first time
         if (this.startX === -1 && this.startY === -1) {
             const {width: containerWidth, height: containerHeight} = bounds
             const {width: targetWidth, height: targetHeight} = currentRect
-
-            // Check if top and left are explicitly provided
             if (this.position.top !== undefined && this.position.left !== undefined) {
-                // Parse provided position
                 const anchorX = this.#parsePositionValue(this.position.left, containerWidth)
                 const anchorY = this.#parsePositionValue(this.position.top, containerHeight)
-
-                // Adjust position based on placement point
                 switch (this.position.placement) {
                     case 'top-right':
                         left = bounds.left + anchorX - targetWidth
@@ -329,10 +296,8 @@ export class DragHandler {
                 }
             }
             else {
-                // Use current element position and adjust according to placement
                 const currentLeft = currentPosition.left
                 const currentTop = currentPosition.top
-
                 switch (this.position.placement) {
                     case 'top-right':
                         left = currentLeft
@@ -377,7 +342,6 @@ export class DragHandler {
             }
         }
 
-        // Ensure the entire element stays within bounds
         if (left + currentRect.width > bounds.right) {
             left = bounds.right - currentRect.width
         }
@@ -390,23 +354,22 @@ export class DragHandler {
         if (top < bounds.top) {
             top = bounds.top
         }
-
         this.#setElementPosition(left, top)
     }
 
     /**
-     * Handles resize of the target element to keep it within bounds
+     * Handles resize of the target element
      * @private
      */
-    #handleTargetResize() {
+    #handleTargetResize = () => {
         this.#ensureWithinBounds()
     }
 
     /**
-     * Creates a transparent overlay div to manage cursor during drag
+     * Creates a transparent overlay for cursor management
      * @private
      */
-    #createOverlay() {
+    #createOverlay = () => {
         this.overlay = document.createElement('div')
         const targetRect = this.target.getBoundingClientRect()
         this.overlay.style.position = 'absolute'
@@ -421,10 +384,10 @@ export class DragHandler {
     }
 
     /**
-     * Removes the overlay div after drag ends
+     * Removes the overlay
      * @private
      */
-    #removeOverlay() {
+    #removeOverlay = () => {
         if (this.overlay) {
             this.overlay.remove()
             this.overlay = null
@@ -432,17 +395,18 @@ export class DragHandler {
     }
 
     /**
-     * Handles the pointerdown or touchstart event, dispatching beforeDrag
+     * Handles pointerdown or touchstart, dispatching beforeDrag
      * @param {Event} event - The pointerdown or touchstart event
      */
-    handleBefore = (event) => {
+    handleBefore = event => {
+        console.log('DragHandler: handleBefore', {event: event.type})
         const targetRect = this.target.getBoundingClientRect()
         this.target.dispatchEvent(new CustomEvent(DragHandler.BEFORE_DRAG, {
             detail: {
                 value: {
-                    x:      targetRect.left,
-                    y:      targetRect.top,
-                    width:  targetRect.width,
+                    x:     targetRect.left,
+                    y:     targetRect.top,
+                    width: targetRect.width,
                     height: targetRect.height,
                 },
             },
@@ -451,10 +415,15 @@ export class DragHandler {
     }
 
     /**
-     * Handles the start of a drag interaction (called after beforeDrag)
+     * Handles the start of a drag interaction
      * @param {Event} event - The pointerdown or touchstart event
      */
-    handleStart = (event) => {
+    handleStart = event => {
+        console.log('DragHandler: handleStart', {event: event.type})
+        if (this.dragging || this.isEnding) {
+            console.log('DragHandler: handleStart skipped, already dragging or ending')
+            return
+        }
         this.dragging = false
         this.hasMoved = false
         this.wasDragging = false
@@ -462,12 +431,9 @@ export class DragHandler {
         const clientY = event.type === 'touchstart' ? event.touches[0].clientY : event.clientY
         this.startX = clientX
         this.startY = clientY
-
-        // Get the current effective position
         const currentPosition = this.#getElementPosition()
         this.startLeft = currentPosition.left
         this.startTop = currentPosition.top
-
         this.grabber.style.cursor = 'grab'
         this.grabber.style.touchAction = 'none'
 
@@ -475,69 +441,70 @@ export class DragHandler {
         document.addEventListener('touchmove', this.handleMove, {passive: false})
         document.addEventListener('pointerup', this.handleEnd, {passive: false})
         document.addEventListener('touchend', this.handleEnd, {passive: false})
+        document.addEventListener('pointercancel', this.handleEnd, {passive: false})
+        document.addEventListener('touchcancel', this.handleEnd, {passive: false})
     }
 
     /**
-     * Handles drag movement (pointermove or touchmove)
-     * Creates overlay and updates position if movement threshold is exceeded
+     * Handles drag movement
      * @param {Event} event - The pointermove or touchmove event
      */
-    handleMove = (event) => {
-        const clientX = event.type === 'touchmove' ? event.touches[0].clientX : event.clientX
-        const clientY = event.type === 'touchmove' ? event.touches[0].clientY : event.clientY
-        const deltaX = Math.abs(clientX - this.startX)
-        const deltaY = Math.abs(clientY - this.startY)
-
-        if (!this.hasMoved && (deltaX > this.movementThreshold || deltaY > this.movementThreshold)) {
-            this.dragging = true
-            this.hasMoved = true
-            this.wasDragging = true
-            this.#createOverlay()
-            document.body.classList.add('no-select')
-            this.target.classList.add('drag-in-progress') // Add drag-in-progress class
-
-            const targetRect = this.target.getBoundingClientRect()
-            this.target.dispatchEvent(new CustomEvent(DragHandler.DRAG_START, {
-                detail: {
-                    value: {
-                        x:      targetRect.left,
-                        y:      targetRect.top,
-                        width:  targetRect.width,
-                        height: targetRect.height,
+    handleMove = event => {
+        if (!this.dragging && !this.hasMoved) {
+            const clientX = event.type === 'touchmove' ? event.touches[0].clientX : event.clientX
+            const clientY = event.type === 'touchmove' ? event.touches[0].clientY : event.clientY
+            const deltaX = Math.abs(clientX - this.startX)
+            const deltaY = Math.abs(clientY - this.startY)
+            if (deltaX > this.movementThreshold || deltaY > this.movementThreshold) {
+                console.log('DragHandler: handleMove, drag started', {event: event.type})
+                this.dragging = true
+                this.hasMoved = true
+                this.wasDragging = true
+                this.#createOverlay()
+                document.body.classList.add('no-select')
+                this.target.classList.add('dragging')
+                const targetRect = this.target.getBoundingClientRect()
+                this.target.dispatchEvent(new CustomEvent(DragHandler.DRAG_START, {
+                    detail: {
+                        value: {
+                            x:      targetRect.left,
+                            y:      targetRect.top,
+                            width:  targetRect.width,
+                            height: targetRect.height,
+                        },
                     },
-                },
-            }))
+                }))
+            }
         }
 
         if (!this.dragging) {
+            console.log('DragHandler: handleMove skipped, not dragging')
             return
         }
 
+        console.log('DragHandler: handleMove', {event: event.type, dragging: this.dragging})
         event.preventDefault()
+        const clientX = event.type === 'touchmove' ? event.touches[0].clientX : event.clientX
+        const clientY = event.type === 'touchmove' ? event.touches[0].clientY : event.clientY
         let newX = this.startLeft + (clientX - this.startX)
         let newY = this.startTop + (clientY - this.startY)
         const bounds = this.#getBounds()
         const targetRect = this.target.getBoundingClientRect()
-
-        // Apply bounds constraints to keep element fully visible
         newX = Math.max(bounds.left, Math.min(newX, bounds.right - targetRect.width))
         newY = Math.max(bounds.top, Math.min(newY, bounds.bottom - targetRect.height))
-
         this.#setElementPosition(newX, newY)
-
         if (this.overlay) {
             const updatedRect = this.target.getBoundingClientRect()
             this.overlay.style.width = `${updatedRect.width}px`
             this.overlay.style.height = `${updatedRect.height}px`
         }
-
         const updatedtargetRect = this.target.getBoundingClientRect()
         this.target.dispatchEvent(new CustomEvent(DragHandler.DRAG, {
             detail: {
                 value: {
-                    x:      updatedtargetRect.left,
-                    y:      updatedtargetRect.top,
-                    width:  updatedtargetRect.width,
+                    x:     updatedtargetRect.left,
+                    y:     updatedtargetRect.top,
+                    width: updatedtargetRect.width,
                     height: updatedtargetRect.height,
                 },
             },
@@ -545,44 +512,48 @@ export class DragHandler {
     }
 
     /**
-     * Handles the end of a drag (pointerup or touchend), dispatching dragstop and afterDrag
-     * @param {Event} event - The pointerup or touchend event
+     * Handles the end of a drag
+     * @param {Event} event - The pointerup, touchend, pointercancel, or touchcancel event
      */
-    handleEnd = (event) => {
-        document.removeEventListener('pointermove', this.handleMove)
-        document.removeEventListener('touchmove', this.handleMove)
-        document.removeEventListener('pointerup', this.handleEnd)
-        document.removeEventListener('touchend', this.handleEnd)
-        this.#removeOverlay()
-        this.target.classList.remove('drag-in-progress') // Remove drag-in-progress class
+    handleEnd = event => {
+        if (this.isEnding) {
+            console.log('DragHandler: handleEnd skipped, already ending', {event: event.type})
+            return
+        }
+        this.isEnding = true
+        console.log('DragHandler: handleEnd', {event: event.type, dragging: this.dragging, hasMoved: this.hasMoved})
 
+        // Remove all global event listeners
+        document.removeEventListener('pointermove', this.handleMove, {passive: false})
+        document.removeEventListener('touchmove', this.handleMove, {passive: false})
+        document.removeEventListener('pointerup', this.handleEnd, {passive: false})
+        document.removeEventListener('touchend', this.handleEnd, {passive: false})
+        document.removeEventListener('pointercancel', this.handleEnd, {passive: false})
+        document.removeEventListener('touchcancel', this.handleEnd, {passive: false})
+        this.#removeOverlay()
+        this.target.classList.remove('dragging')
         const targetRect = this.target.getBoundingClientRect()
+
         if (this.hasMoved) {
             event.preventDefault()
             event.stopPropagation()
             document.addEventListener('click', this.#handleDocumentClick, {capture: true, once: true})
-            setTimeout(() => {
-                this.wasDragging = false
-            }, 300)
             this.dragging = false
             this.hasMoved = false
+            this.wasDragging = true
             this.grabber.style.cursor = 'grab'
             document.body.classList.remove('no-select')
             this.grabber.style.touchAction = ''
-
-            // Persist new base transform in transform mode
             if (this.useTransformMode) {
                 this.baseTransform = this.target.style.transform || this.baseTransform || ''
             }
-
             this.#ensureWithinBounds()
-
             this.target.dispatchEvent(new CustomEvent(DragHandler.DRAG_STOP, {
                 detail: {
                     value: {
                         x: targetRect.left,
-                        y:      targetRect.top,
-                        width:  targetRect.width,
+                        y:     targetRect.top,
+                        width: targetRect.width,
                         height: targetRect.height,
                     },
                 },
@@ -591,6 +562,7 @@ export class DragHandler {
         else {
             this.dragging = false
             this.hasMoved = false
+            this.wasDragging = false
             this.grabber.style.cursor = 'grab'
             this.grabber.style.touchAction = ''
         }
@@ -598,13 +570,14 @@ export class DragHandler {
         this.target.dispatchEvent(new CustomEvent(DragHandler.AFTER_DRAG, {
             detail: {
                 value: {
-                    x:      targetRect.left,
-                    y:      targetRect.top,
-                    width:  targetRect.width,
+                    x:     targetRect.left,
+                    y:     targetRect.top,
+                    width: targetRect.width,
                     height: targetRect.height,
                 },
             },
         }))
+        this.isEnding = false
     }
 
     /**
@@ -612,8 +585,9 @@ export class DragHandler {
      * @private
      * @param {Event} event - The click event
      */
-    #handleClick = (event) => {
+    #handleClick = event => {
         if (this.wasDragging) {
+            console.log('DragHandler: handleClick prevented due to wasDragging')
             event.preventDefault()
             event.stopPropagation()
         }
@@ -624,15 +598,17 @@ export class DragHandler {
      * @private
      * @param {Event} event - The click event
      */
-    #handleDocumentClick = (event) => {
+    #handleDocumentClick = event => {
         if (this.wasDragging) {
+            console.log('DragHandler: handleDocumentClick prevented due to wasDragging')
             event.preventDefault()
             event.stopPropagation()
         }
+        this.wasDragging = false // Reset immediately after handling
     }
 
     /**
-     * Handles window or container resize to keep target within bounds
+     * Handles window or container resize
      * @private
      */
     #handleResize = () => {
@@ -644,13 +620,12 @@ export class DragHandler {
      */
     attachEvents() {
         if (!this.grabber) {
-            console.warn('grabber is undefined, cannot attach events')
+            console.warn('DragHandler: grabber is undefined, cannot attach events')
             return
         }
         this.grabber.addEventListener('pointerdown', this.handleBefore, {passive: false})
         this.grabber.addEventListener('touchstart', this.handleBefore, {passive: false})
         this.grabber.addEventListener('click', this.#handleClick, {passive: false})
-
         if (this.container === window) {
             window.addEventListener('resize', this.#handleResize)
         }
@@ -658,15 +633,15 @@ export class DragHandler {
             this.resizeObserver = new ResizeObserver(() => this.#handleResize())
             this.resizeObserver.observe(this.container)
         }
-
         this.targetResizeObserver = new ResizeObserver(() => this.#handleTargetResize())
         this.targetResizeObserver.observe(this.target)
     }
 
     /**
-     * Cleans up event listeners, removes overlay, removes draggable class, and removes from static Map
+     * Cleans up event listeners and resources
      */
     destroy() {
+        console.log('DragHandler: destroy', {id: this.id})
         if (this.grabber) {
             this.grabber.removeEventListener('pointerdown', this.handleBefore)
             this.grabber.removeEventListener('touchstart', this.handleBefore)
@@ -674,13 +649,15 @@ export class DragHandler {
             this.grabber.style.cursor = ''
             this.grabber.style.touchAction = ''
         }
-        document.removeEventListener('pointermove', this.handleMove)
-        document.removeEventListener('touchmove', this.handleMove)
-        document.removeEventListener('pointerup', this.handleEnd)
-        document.removeEventListener('touchend', this.handleEnd)
-        document.removeEventListener('click', this.#handleDocumentClick)
+        document.removeEventListener('pointermove', this.handleMove, {passive: false})
+        document.removeEventListener('touchmove', this.handleMove, {passive: false})
+        document.removeEventListener('pointerup', this.handleEnd, {passive: false})
+        document.removeEventListener('touchend', this.handleEnd, {passive: false})
+        document.removeEventListener('pointercancel', this.handleEnd, {passive: false})
+        document.removeEventListener('touchcancel', this.handleEnd, {passive: false})
+        document.removeEventListener('click', this.#handleDocumentClick, {capture: true})
         this.#removeOverlay()
-        this.target.classList.remove('draggable', 'drag-in-progress') // Remove both classes
+        this.target.classList.remove('draggable', 'dragging')
         if (this.container === window) {
             window.removeEventListener('resize', this.#handleResize)
         }
@@ -690,8 +667,10 @@ export class DragHandler {
         if (this.targetResizeObserver) {
             this.targetResizeObserver.disconnect()
         }
-
-        // Remove from static Map
         DragHandler.#draggableElements.delete(this.id)
+        this.dragging = false
+        this.isEnding = false
+        this.hasMoved = false
+        this.wasDragging = false
     }
 }

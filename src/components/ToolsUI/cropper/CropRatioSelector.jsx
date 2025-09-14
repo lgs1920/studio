@@ -55,6 +55,10 @@ export const CropRatioSelector = memo(({manager}) => {
     const cropper = useSnapshot($cropper || {}, {sync: true})
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video || {}, {sync: true})
+
+    const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
+    const [forceRender, setForceRender] = useState(0)
+    // Reference to the cropper menu DOM element
     const _toolbar = useRef(null)
 
     // Track selected ratio, defaulting to first video format
@@ -84,7 +88,7 @@ export const CropRatioSelector = memo(({manager}) => {
                 _toolbar.current._dragHandler.destroy()
             }
         }
-    }, [manager, cropper.ratioEditor])
+    }, [manager])
 
     // Handle crop updates
     useEffect(() => {

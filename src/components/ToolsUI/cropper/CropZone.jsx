@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-12
- * Last modified: 2025-09-12
+ * Created on: 2025-09-14
+ * Last modified: 2025-09-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -26,22 +26,21 @@
  * @requires ./CropperManager
  */
 
-import { CropZoneInfo } from '@Components/ToolsUI/cropper/CropZoneInfo'
-import { memo, useRef }    from 'react'
-import { SlCard }          from '@shoelace-style/shoelace/dist/react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faInfoCircle }    from '@fortawesome/pro-regular-svg-icons'
-import { CropperManager }  from './CropperManager'
+import { CropZoneInfo }              from '@Components/ToolsUI/cropper/CropZoneInfo'
+import { memo, useCallback, useRef } from 'react'
+import { CropperHandler }            from './CropperHandler'
 
 /**
  * A memoized React component that renders an interactive crop zone with handles
  * @param {Object} props - Component props
  * @param {Object} props.cssCrop - Crop dimensions and position in CSS units { x, y, width, height }
- * @param {Object} props.manager - CropperManager instance for handling interactions
+ * @param {Object} props.manager - CropperHandler instance for handling interactions
  * @param {Object} props.cropper - Cropper state from store
  * @param {Object} props.interactionState - Current interaction state
  * @param {string} [props.className=''] - Additional CSS classes for the crop zone
  * @param {Function} props.onStart - Handler for drag/resize start events
+ * @param {Function} props.onMove - Handler for drag/resize move events
+ * @param {Function} props.onEnd - Handler for drag/resize end events
  * @param {Function} props.onDoubleClick - Handler for double-click events
  * @param {Object} [props.innerRef] - Ref for the crop zone element
  * @param {JSX.Element} [props.infoComponent=null] - Custom component for additional crop info
@@ -50,11 +49,14 @@ import { CropperManager }  from './CropperManager'
  */
 export const CropZone = memo(({
                                   cssCrop,
+                                  style,
                                   manager,
                                   cropper,
                                   interactionState,
                                   className = '',
                                   onStart,
+                                  onMove,
+                                  onEnd,
                                   onDoubleClick,
                                   innerRef,
                                   infoComponent = null,
@@ -68,10 +70,10 @@ export const CropZone = memo(({
      * @param {Event} event - The context menu event
      * @private
      */
-    const handleContextMenu = (event) => {
+    const handleContextMenu = useCallback(event => {
         event.preventDefault()
         event.stopPropagation()
-    }
+    }, [])
 
     /**
      * Initiates resizing on pointer down
@@ -96,14 +98,24 @@ export const CropZone = memo(({
     }
 
     /**
+     * Handles movement during resizing or dragging
+     * @param {Event} event - The pointer or touch event
+     * @private
+     */
+    const handleMove = useCallback(event => {
+        event.stopPropagation()
+        onMove?.(interactionState.action, event)
+    }, [onMove, manager.cropping])
+
+    /**
      * Handles end of pointer or touch interactions
      * @param {Event} event - The pointer or touch event
      * @private
      */
-    const handleEnd = (event) => {
+    const handleEnd = useCallback(event => {
         event.stopPropagation()
-        manager.handleEnd(event)
-    }
+        onEnd?.(interactionState.action, event)
+    }, [onEnd, manager.cropping])
 
     return (
         <div
@@ -111,12 +123,15 @@ export const CropZone = memo(({
             className={`crop-zone ${className}`}
             onDoubleClick={onDoubleClick}
             onContextMenu={handleContextMenu}
-            style={{
-                left:   cssCrop.x,
-                top:    cssCrop.y,
-                width:  cssCrop.width,
-                height: cssCrop.height,
-            }}
+            onPointerDown={handlePointerDown}
+            onTouchStart={handleTouchStart}
+            onPointerMove={handleMove}
+            onTouchMove={handleMove}
+            onPointerUp={handleEnd}
+            onTouchEnd={handleEnd}
+            onPointerCancel={handleEnd}
+            onTouchCancel={handleEnd}
+            style={style}
         >
             {/* Position information display */}
             {infoPosition && (
@@ -133,20 +148,22 @@ export const CropZone = memo(({
             )}
 
             {/* Horizontal center line */}
-            {interactionState.showHCenterLine && <div className="center-line-inner-horizontal" />}
+            {interactionState.showHCenterLine && <div className="center-line-inner-horizontal"/>}
 
             {/* Vertical center line */}
-            {interactionState.showVCenterLine && <div className="center-line-inner-vertical" />}
+            {interactionState.showVCenterLine && <div className="center-line-inner-vertical"/>}
 
             {/* Resizable handles */}
             {cropper.resizable &&
-                CropperManager.handleMap.map(([dir, cursor]) => (
+                CropperHandler.handleMap.map(([dir, cursor]) => (
                     <div
                         key={dir}
                         className={`crop-handle handle-${dir}`}
                         style={{ cursor }}
                         onPointerDown={handlePointerDown(dir)}
                         onTouchStart={handleTouchStart(dir)}
+                        onPointerMove={handleMove}
+                        onTouchMove={handleMove}
                         onPointerUp={handleEnd}
                         onTouchEnd={handleEnd}
                         onPointerCancel={handleEnd}

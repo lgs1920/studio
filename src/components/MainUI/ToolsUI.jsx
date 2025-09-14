@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-12
- * Last modified: 2025-09-12
+ * Created on: 2025-09-14
+ * Last modified: 2025-09-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -35,7 +35,8 @@ export const ToolsUI = () => {
         <div id="lgs-tools-ui">
             {video.editing ? (
                 <>
-                    <Cropper source={lgs.canvas} store={$cropper} options={{infoComponent: <VideoSettingsInfo/>}}/>
+                    <Cropper overlay source={lgs.canvas} store={$cropper}
+                             options={{infoComponent: <VideoSettingsInfo/>}}/>
                     <VideoRecordingSettingsToolbar store={$cropper}/>
                     <VideoQualitySelector store={$cropper}/>
                     <VideoFPSSelector store={$cropper}/>
