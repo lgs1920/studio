@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-08
- * Last modified: 2025-09-08
+ * Created on: 2025-09-15
+ * Last modified: 2025-09-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -283,8 +283,7 @@ export class VideoRecorder extends EventTarget {
 
         // Set singleton instance and expose globally
         VideoRecorder.instance = this
-        window.__ = window.__ || {}
-        window.__.recorder = this
+        __.recorder = this
     }
 
     /**

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-15
- * Last modified: 2025-08-15
+ * Created on: 2025-09-15
+ * Last modified: 2025-09-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,6 +22,7 @@ import { StoresManager }     from '@Core/stores/StoresManager'
 import { AppToolsManager }   from '@Core/ui/AppToolsManager'
 import { AppUpdateManager }  from '@Core/ui/AppUpdateManager'
 import { DeviceManager }     from '@Core/ui/DeviceManager'
+import { Draggable }         from '@Core/ui/drag-handler/Draggable'
 import { Geocoder }          from '@Core/ui/Geocoder'
 import { MenuManager }       from '@Core/ui/MenuManager'
 import { POIManager }        from '@Core/ui/POIManager'
@@ -373,8 +374,8 @@ export class LGS1920Context {
         __.ui.drawerManager = new PanelManager()
         __.ui.sceneManager = new SceneManager()
         __.ui.menuManager = new MenuManager()
+        __.ui.draggable = new Draggable()        // Init POI management
 
-        // Init POI management
         __.ui.poiManager = new POIManager()
         __.ui.geocoder = new Geocoder()
 
@@ -382,6 +383,8 @@ export class LGS1920Context {
         __.device = new DeviceManager()
         __.recorder = new VideoRecorder()
         __.updater = new AppUpdateManager()
+
+
     }
 
 

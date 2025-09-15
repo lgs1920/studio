@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-14
- * Last modified: 2025-09-14
+ * Created on: 2025-09-15
+ * Last modified: 2025-09-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -90,7 +90,6 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
      */
     const syncCrop = useCallback(
         (cssCrop, context = 'drag', updateState = false) => {
-            console.log('Cropper.jsx: syncCrop', {cssCrop, context, updateState})
             if (!_cropperHandler.current || _cropperHandler.current.isDestroyed) {
                 console.warn('CropperHandler is null or destroyed')
                 return
@@ -137,7 +136,6 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
                     store.width !== physicalCrop.width ||
                     store.height !== physicalCrop.height
                 ) {
-                    console.log('Cropper.jsx: Updating store with physical crop:', physicalCrop)
                     Object.assign(store, physicalCrop)
                 }
 
@@ -162,20 +160,12 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
      */
     const handleStart = useCallback(
         (action, event) => {
-            console.log('Cropper.jsx: handleStart', {
-                action,
-                dragging: _dragHandler.current?.dragging,
-                cropping: _cropperHandler.current?.cropping,
-            })
+
             if (!_cropperHandler.current || _cropperHandler.current.isDestroyed) {
-                console.warn('CropperHandler is null or destroyed')
                 return
             }
             if (_dragHandler.current?.dragging) {
-                console.log('Cropper.jsx: handleStart skipped', {
-                    dragging: _dragHandler.current?.dragging,
-                    cropping: _cropperHandler.current.cropping,
-                })
+
                 return
             }
 
@@ -223,11 +213,7 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
      */
     const handleMove = useCallback(
         (action, event) => {
-            console.log('Cropper.jsx: handleMove', {
-                action,
-                dragging: _dragHandler.current?.dragging,
-                cropping: _cropperHandler.current?.cropping,
-            })
+
             if (!_cropperHandler.current || _cropperHandler.current.isDestroyed) {
                 console.warn('CropperHandler is null or destroyed')
                 return
@@ -235,7 +221,6 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
             if (action === 'drag' && _dragHandler.current?.dragging) {
                 const rect = _cropZone.current?.getBoundingClientRect()
                 if (rect && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) {
-                    console.log('Cropper.jsx: Drag move skipped: outside cropZone')
                     _dragHandler.current?.handleEnd(new Event('pointerup'))
                     return
                 }
@@ -268,11 +253,6 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
      */
     const handleEnd = useCallback(
         (action, event) => {
-            console.log('Cropper.jsx: handleEnd', {
-                action,
-                dragging: _dragHandler.current?.dragging,
-                cropping: _cropperHandler.current?.cropping,
-            })
             if (!_cropperHandler.current || _cropperHandler.current.isDestroyed) {
                 console.warn('CropperHandler is null or destroyed')
                 return
@@ -289,7 +269,6 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
                              }, 'drag', true)
                 }
                 else {
-                    console.warn('Cropper.jsx: handleEnd drag - invalid css coordinates, using fallback')
                     syncCrop({
                                  x:      cssCrop?.x || cropper.x / (_cropperHandler.current?.dpr || 1),
                                  y:      cssCrop?.y || cropper.y / (_cropperHandler.current?.dpr || 1),
@@ -315,7 +294,6 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
      * Handles double-click to maximize or restore crop area
      */
     const handleDoubleClick = useCallback(() => {
-        console.log('Cropper.jsx: handleDoubleClick')
         if (!_cropperHandler.current || _cropperHandler.current.isDestroyed) {
             console.warn('CropperHandler is null or destroyed')
             return
@@ -421,10 +399,8 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
         // Define event handlers
         const onStart = e => {
             if (_cropperHandler.current.cropping) {
-                console.log('Cropper.jsx: Drag start skipped: cropping')
                 return
             }
-            console.log('Cropper.jsx: Drag start', {event: e.type, handlerDragging: _dragHandler.current.dragging})
             updateCursor('grabbing')
             syncCrop({
                          x:      e.detail.value?.x ?? cssCrop?.x ?? cropper.x / (_cropperHandler.current?.dpr || 1),
@@ -436,7 +412,6 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
             // Fallback timeout to ensure drag stops
             setTimeout(() => {
                 if (_dragHandler.current?.dragging) {
-                    console.log('Cropper.jsx: Forcing drag stop due to timeout')
                     onStop(new Event('timeout'))
                     _dragHandler.current?.handleEnd(new Event('pointerup'))
                 }
@@ -445,16 +420,11 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
 
         const onMove = e => {
             if (_cropperHandler.current.cropping || !_dragHandler.current?.dragging) {
-                console.log('Cropper.jsx: Drag move skipped', {
-                    cropping:        _cropperHandler.current.cropping,
-                    handlerDragging: _dragHandler.current?.dragging,
-                })
                 return
             }
 
             const rect = _cropZone.current?.getBoundingClientRect()
             if (rect && (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom)) {
-                console.log('Cropper.jsx: Drag move skipped: outside cropZone')
                 _dragHandler.current?.handleEnd(new Event('pointerup'))
                 return
             }
@@ -470,18 +440,13 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
                     width:  cssCrop?.width || cropper.width / (_cropperHandler.current?.dpr || 1),
                     height: cssCrop?.height || cropper.height / (_cropperHandler.current?.dpr || 1),
                 }
-                console.log('Cropper.jsx: Drag move', {css, dragging: _dragHandler.current.dragging})
                 syncCrop(css, 'drag', true)
                 _rafId.current = null
             })
         }
 
         const onStop = e => {
-            console.log('Cropper.jsx: Drag stop', {
-                event:           e.type,
-                handlerDragging: _dragHandler.current?.dragging,
-                cropping:        _cropperHandler.current.cropping,
-            })
+
             if (_rafId.current) {
                 cancelAnimationFrame(_rafId.current)
                 _rafId.current = null
@@ -503,7 +468,6 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
 
         // Cleanup function
         return () => {
-            console.log('Cropper.jsx: DragHandler cleanup')
             cropZone.removeEventListener(DragHandler.DRAG_START, onStart)
             cropZone.removeEventListener(DragHandler.DRAG, onMove)
             cropZone.removeEventListener(DragHandler.DRAG_STOP, onStop)
@@ -522,10 +486,7 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
     // Effect to handle window blur and visibility change
     useEffect(() => {
         const endAllInteractions = () => {
-            console.log('Cropper.jsx: endAllInteractions', {
-                dragging: _dragHandler.current?.dragging,
-                cropping: _cropperHandler.current?.cropping,
-            })
+
             try {
                 if (_dragHandler.current?.dragging) {
                     _dragHandler.current.handleEnd(new Event('pointerup'))
@@ -572,7 +533,6 @@ export const Cropper = memo(({overlay = false, source, container, className = ''
                 cssCrop?.width !== newCssCrop.width ||
                 cssCrop?.height !== newCssCrop.height
             ) {
-                console.log('Cropper.jsx: Syncing cssCrop with store', {newCssCrop})
                 setCssCrop(newCssCrop)
             }
         }
