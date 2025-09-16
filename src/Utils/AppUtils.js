@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-05
- * Last modified: 2025-09-05
+ * Created on: 2025-09-16
+ * Last modified: 2025-09-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -217,6 +217,18 @@ export class AppUtils {
         // Default POI colors
         lgs.colors.poiDefaultBackground = lgs.colors.light
         lgs.colors.poiDefault = lgs.colors.dark
+
+
+        /**************************************
+         * Some dimension
+         */
+        lgs.gutter = {
+            s:  __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter-s')),
+            xs: __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter-xs')),
+            l:  __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter-l')),
+            m:  __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter-m')),
+            n:  __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter')),
+        }
 
         /***************************************
          * Application settings
