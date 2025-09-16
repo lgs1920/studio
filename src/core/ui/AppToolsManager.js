@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-27
- * Last modified: 2025-06-27
+ * Created on: 2025-09-16
+ * Last modified: 2025-09-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -99,13 +99,6 @@ export class AppToolsManager {
         })
     }
 
-    rem2px = (remString, stringify = false) => {
-        const root = document.documentElement
-        const baseFontSize = parseFloat(getComputedStyle(root).fontSize)
-        const remValue = parseFloat(remString)
-        const pixelValue = remValue * baseFontSize
-        return stringify ? `${pixelValue}px` : pixelValue
-    }
 
     toDMS(coordinate) {
         const degrees = Math.floor(coordinate)
