@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-20
- * Last modified: 2025-08-20
+ * Created on: 2025-09-19
+ * Last modified: 2025-09-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -209,6 +209,33 @@ main-logo.xlarge {
 .drawer-wrapper.horizontal {
     left: var(--left);
     max-width: var(--lgs-horizontal-panel-width);
+}
+
+/*******************************************************************************
+ * Drag, Resize Rotate
+ ******************************************************************************/
+.moveable-control-box {
+    transition: opacity 0.2s ease-in-out;
+}
+
+.dragging .moveable-control-box {
+    opacity: 0;
+}
+
+.moveable-line {
+    --moveable-color: var(--lgs-light-color-50);
+}
+
+.moveable-guideline {
+    background-color: #0000ff; /* bleu */
+}
+
+.moveable-snap-line {
+    background-color: #ff0000; /* rouge */
+}
+
+.moveable-snap-guideline {
+    background-color: #00ff00; /* vert */
 }
 
 
