@@ -7,20 +7,20 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-19
- * Last modified: 2025-09-19
+ * Created on: 2025-09-22
+ * Last modified: 2025-09-22
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import classNames                                          from 'classnames'
-import React, { useCallback, useRef, useEffect, useState } from 'react'
-import Moveable                                            from 'react-moveable'
 import { Draggable }                                       from '@Core/ui/drag-handler/Draggable'
+import classNames                                          from 'classnames'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import Moveable                                            from 'react-moveable'
 
 /**
- * Generic component for rendering a draggable toolbar UI
+ * Generic component for rendering a draggable toolbar UI with snapping
  * @component
  * @param {Object} props - Component props
  * @param {boolean} props.isVisible - Whether the toolbar should be visible
@@ -31,88 +31,215 @@ import { Draggable }                                       from '@Core/ui/drag-h
  * @param {string|number} props.config.top - Initial top position (e.g., '50%' or 100)
  * @param {string} [props.config.attachTo] - Anchor point for positioning ('center', 'top', 'left', 'right', 'bottom',
  *     'top-left', 'top-right', 'bottom-left', 'bottom-right')
+ * @param {Object} [props.config.snapGrid] - Custom snap grid configuration (e.g., { x: 50, y: 50 } for 50px grid,
+ *     centered on container)
+ * @param {string} [props.config.snapSensitivity] - Snapping sensitivity ('low', 'medium', 'high'), defaults to
+ *     'medium'
  * @returns {JSX.Element} Draggable toolbar UI
  */
 export const DraggableToolbar = ({isVisible, className = '', children, config}) => {
-    // Reference to the toolbar element
     const _toolbar = useRef(null)
-    // Reference to Moveable instance
+    const _toolbarOverlay = useRef(null)
     const _moveable = useRef(null)
-    // Timer for hiding control box
     const _controlBoxTimer = useRef(null)
-    // Dynamic bounds for the container
+    const _longPressTimer = useRef(null)
     const [bounds, setBounds] = useState({
                                              left:   0,
                                              top:    0,
                                              right:  0,
                                              bottom: 0,
                                          })
-    // Current position of the toolbar
     const [, setPosition] = useState({left: 0, top: 0})
-    // Control box visibility props
     const [controlBoxProps, setControlBoxProps] = useState({
                                                                renderDirections: [],
-                                                               zoom:             0,
+                                                               zoom:    0,
+                                                               opacity: 0,
                                                            })
-    // Instance of Draggable singleton
+    const [guidelines, setGuidelines] = useState({
+                                                     verticalGuidelines:   [],
+                                                     horizontalGuidelines: [],
+                                                 })
+    const [isMouseOver, setIsMouseOver] = useState(false)
+    const [isReadyToDrag, setIsReadyToDrag] = useState(false)
+    const [isDragging, setIsDragging] = useState(false)
     const draggable = new Draggable()
-    // Track if initialization was performed
     const _initialized = useRef(false)
 
-    /**
-     * Handles the drag event to update the toolbar position
-     * @param {Object} e - Drag event from react-moveable
-     */
-    const handleDrag = useCallback(e => {
+    const getSnapSettings = useCallback(() => {
+        const sensitivity = config?.snapSensitivity || 'medium'
+        switch (sensitivity) {
+            case 'low':
+                return {snapThreshold: 15, snapGap: true}
+            case 'high':
+                return {snapThreshold: 5, snapGap: false}
+            case 'medium':
+            default:
+                return {snapThreshold: 10, snapGap: true}
+        }
+    }, [config?.snapSensitivity])
+
+    const getCenterGuidelines = useCallback(() => {
+        const container = lgs.canvas
+        if (!container) {
+            console.warn('No container found for snapping')
+            return {verticalGuidelines: [], horizontalGuidelines: []}
+        }
+        const {width, height} = container.getBoundingClientRect()
+        return {
+            verticalGuidelines:   [width / 2],
+            horizontalGuidelines: [height / 2],
+        }
+    }, [])
+
+    const getCustomGridGuidelines = useCallback(() => {
+        if (!config?.snapGrid || !lgs.canvas) {
+            console.warn('No snapGrid config or container found')
+            return {verticalGuidelines: [], horizontalGuidelines: []}
+        }
+        const {x: gridX = 0, y: gridY = 0} = config.snapGrid
+        const {width, height} = lgs.canvas.getBoundingClientRect()
+        const verticalGuidelines = []
+        const horizontalGuidelines = []
+
+        const centerX = width / 2
+        const centerY = height / 2
+
+        if (gridX > 0) {
+            verticalGuidelines.push(centerX)
+            for (let x = centerX + gridX; x <= width; x += gridX) {
+                verticalGuidelines.push(x)
+            }
+            for (let x = centerX - gridX; x >= 0; x -= gridX) {
+                verticalGuidelines.push(x)
+            }
+        }
+
+        if (gridY > 0) {
+            horizontalGuidelines.push(centerY)
+            for (let y = centerY + gridY; y <= height; y += gridY) {
+                horizontalGuidelines.push(y)
+            }
+            for (let y = centerY - gridY; y >= 0; y -= gridY) {
+                horizontalGuidelines.push(y)
+            }
+        }
+
+        return {verticalGuidelines, horizontalGuidelines}
+    }, [config?.snapGrid])
+
+    useEffect(() => {
+        const updateGuidelines = () => {
+            const {verticalGuidelines: centerVertical, horizontalGuidelines: centerHorizontal} = getCenterGuidelines()
+            const {verticalGuidelines: gridVertical, horizontalGuidelines: gridHorizontal} = getCustomGridGuidelines()
+            const verticalGuidelines = [...new Set([...centerVertical, ...gridVertical])].sort((a, b) => a - b)
+            const horizontalGuidelines = [...new Set([...centerHorizontal, ...gridHorizontal])].sort((a, b) => a - b)
+            setGuidelines({verticalGuidelines, horizontalGuidelines})
+            if (_moveable.current) {
+                _moveable.current.updateRect()
+            }
+        }
+
+        updateGuidelines()
+
+        const container = lgs.canvas
+        if (container) {
+            const resizeObserver = new ResizeObserver(() => {
+                updateGuidelines()
+            })
+            resizeObserver.observe(container)
+            return () => resizeObserver.unobserve(container)
+        }
+    }, [getCenterGuidelines, getCustomGridGuidelines])
+
+    const handleDrag = useCallback(event => {
         draggable.updatePosition(
             _toolbar.current,
-            {left: e.left, top: e.top},
+            event.transform,
             _moveable,
             true,
             setControlBoxProps,
         )
     }, [])
 
-    /**
-     * Handles drag start and shows control box if enabled
-     * @param {Object} e - Drag start event
-     */
-    const handleDragStart = useCallback(e => {
-        draggable.startHandler(e)
-        _moveable.current.target = e.target
+    const handleDragStart = useCallback(event => {
+        draggable.dragStartHandler(event)
+        _toolbarOverlay.current.classList.remove('ready-to-drag')
+        setIsReadyToDrag(false)
+        setIsDragging(true)
         draggable.handleControlBoxVisibility(
             _moveable,
             setControlBoxProps,
             _controlBoxTimer,
-            config.showControlBox || false,
+            true,
+            isMouseOver,
         )
-    }, [])
+    }, [isMouseOver])
 
-    /**
-     * Handles drag end
-     * @param {Object} e - Drag end event
-     */
-    const handleDragEnd = useCallback(e => {
-        draggable.stopHandler(e)
-        _moveable.current.target = e.target
+    const handleDragEnd = useCallback(event => {
+        draggable.dragStopHandler(event)
+        setIsDragging(false)
         draggable.handleControlBoxVisibility(
             _moveable,
             setControlBoxProps,
             _controlBoxTimer,
             false,
+            isMouseOver,
+        )
+    }, [isMouseOver])
+
+    const handleMouseEnter = useCallback(() => {
+        setIsMouseOver(true)
+        draggable.handleControlBoxVisibility(
+            _moveable,
+            setControlBoxProps,
+            _controlBoxTimer,
+            false,
+            true,
         )
     }, [])
 
-    // Initialize position, bounds, and observe resize when toolbar is mounted
+    const handleMouseOut = useCallback(() => {
+        setIsMouseOver(false)
+        draggable.handleControlBoxVisibility(
+            _moveable,
+            setControlBoxProps,
+            _controlBoxTimer,
+            false,
+            false,
+        )
+    }, [])
+
+    const handleMouseDown = useCallback(() => {
+        _longPressTimer.current = setTimeout(() => {
+            setIsReadyToDrag(true)
+            _toolbarOverlay.current.classList.add('ready-to-drag')
+        }, 300)
+    }, [])
+
+    const handleMouseUp = useCallback(() => {
+        if (_longPressTimer.current) {
+            clearTimeout(_longPressTimer.current)
+            _longPressTimer.current = null
+        }
+        // if (!isReadyToDrag) {
+        //     draggable.handleControlBoxVisibility(
+        //         _moveable,
+        //         setControlBoxProps,
+        //         _controlBoxTimer,
+        //         true,
+        //         isMouseOver,
+        //     )
+        // }
+        setIsReadyToDrag(false)
+        _toolbarOverlay.current.classList.remove('ready-to-drag')
+    }, [isReadyToDrag, isMouseOver])
+
     useEffect(() => {
         if (!config || !isVisible || !_toolbar.current) {
             return
         }
-        // Attempt to initialize Draggable with retry until valid dimensions
         const attemptInitialize = () => {
-
             const rect = _toolbar.current.getBoundingClientRect()
-            // Consider dimensions valid if width and height are above a threshold (e.g., 15px)
             const hasValidDimensions = rect.width > 15 && rect.height > 15
 
             const success = hasValidDimensions && draggable.initialize(
@@ -123,7 +250,7 @@ export const DraggableToolbar = ({isVisible, className = '', children, config}) 
                     left:             config.left,
                     top:              config.top,
                     attachTo:         config.attachTo,
-                    containerPadding: lgs.gutter.s,
+                    containerPadding: lgs.gutter.xs,
                     opacity:          lgs.settings.ui.toolbars.opacity,
                 },
                 setBounds,
@@ -132,62 +259,96 @@ export const DraggableToolbar = ({isVisible, className = '', children, config}) 
             )
             _initialized.current = true
 
-            // Update Moveable target and rect on initialization
             if (success) {
-                _moveable.current.setState({target: _toolbar.current})
                 _moveable.current.updateRect()
             }
             else {
-                // Retry after 100ms if initialization fails or dimensions are too small
                 const timer = setTimeout(attemptInitialize, 100)
                 return () => clearTimeout(timer)
             }
         }
-
         attemptInitialize()
 
-        // Cleanup on unmount
         return () => {
-            clearTimeout(attemptInitialize.timer)
             clearTimeout(_controlBoxTimer.current)
-            if (_initialized.current) {
+            clearTimeout(_longPressTimer.current)
+            if (_initialized.current && _toolbar.current) {
                 draggable.cleanup(_toolbar.current)
             }
         }
-    }, [isVisible, config, _toolbar.current])
+    }, [isVisible, config])
 
-    // Render draggable toolbar with children
+    const {snapThreshold, snapGap} = getSnapSettings()
+
     return (
         <>
             {isVisible && (
                 <div className="lgs-toolbar-container">
-                    <div className={classNames('lgs-toolbar', {
-                        [className]:        className,
-                        'show-control-box': config?.showControlBox || false,
-                    })} ref={_toolbar}>
+                    <div
+                        className={classNames('lgs-toolbar', {
+                            [className]: className,
+                        })}
+                        ref={_toolbar}
+                        onMouseDown={handleMouseDown}
+                        onMouseUp={handleMouseUp}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseOut={handleMouseOut}
+                    >
                         {children}
+                        <div className={'lgs-toolbar-overlay'} ref={_toolbarOverlay}
+                             style={{
+                                 position:      'absolute',
+                                 top:           0,
+                                 left:          0,
+                                 width:         '100%',
+                                 height:        '100%',
+                                 zIndex:        '+1',
+                                 pointerEvents: isDragging ? 'auto' : 'none',
+                             }}
+                        />
                     </div>
+
                     <Moveable
                         ref={_moveable}
                         target={_toolbar}
+                        container={lgs.canvas}
+                        origin={false}
+
                         draggable={true}
+                        edgeDraggable={false}
                         throttleDrag={0}
                         onDrag={handleDrag}
                         onDragStart={handleDragStart}
                         onDragEnd={handleDragEnd}
-                        container={lgs.canvas}
-                        origin={false}
-                        snappable={true}
+
+                        resizable={config?.resizable || false}
+                        resizeDirections={['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']}
+
+                        onResizeStart={(event) => console.log('resize start', event)}
+                        onResize={(event) => console.log('resize', event)}
+                        onResizeEnd={(event) => console.log('resize end', event)}
+
+                        scalable={config?.scalable || false}
+
+                        snappable={config?.snappable || true}
+                        snapThreshold={snapThreshold}
+                        snapCenter={true}
+                        snapElement={true}
+                        verticalGuidelines={guidelines.verticalGuidelines}
+                        horizontalGuidelines={guidelines.horizontalGuidelines}
                         snapDirections={{
-                            top:    true,
-                            bottom: true,
-                            left:   true,
-                            right:  true,
+                            left: true, top: true, right: true, bottom: true, center: true, middle: true,
                         }}
+
                         elementGuidelines={[lgs.canvas]}
                         bounds={bounds}
                         renderDirections={controlBoxProps.renderDirections}
                         zoom={controlBoxProps.zoom}
+                        onRender={(e) => {
+                            e.target.style.opacity = lgs.settings.ui.toolbars.opacity
+                        }}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseOut={handleMouseOut}
                     />
                 </div>
             )}

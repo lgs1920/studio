@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-19
- * Last modified: 2025-09-19
+ * Created on: 2025-09-22
+ * Last modified: 2025-09-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -222,23 +222,32 @@ main-logo.xlarge {
     opacity: 0;
 }
 
+.moveable-control {
+    width: var(--lgs-gutter) !important;
+    height: var(--lgs-gutter) !important;
+    border: 1px solid var(--lgs-dark-color) !important;
+    border-radius: var(--lgs-border-radius-s) !important;
+    background: var(--moveable-color);
+    --moveable-color: var(--lgs-light-color);
+}
+
 .moveable-line {
-    --moveable-color: var(--lgs-light-color-50);
+    background: var(--lgs-light-color-75) !important;
 }
 
 .moveable-guideline {
-    background-color: #0000ff; /* bleu */
+    background: var(--lgs-third-color-75) !important;
 }
 
-.moveable-snap-line {
-    background-color: #ff0000; /* rouge */
+/* snap inside a target */
+.moveable-bold:not(.moveable-bounds) {
+    display: none;
 }
 
-.moveable-snap-guideline {
-    background-color: #00ff00; /* vert */
+/* snap target on bounds. */
+.moveable-bold.moveable-bounds {
+    background-color: var(--lgs-first-color-90) !important;
 }
-
-
 /*******************************************************************************
  * VideoLayer component
  ******************************************************************************/
