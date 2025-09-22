@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: DraggableToolbar.jsx
+ * File: DraggableUIWidget.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -20,7 +20,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Moveable                                            from 'react-moveable'
 
 /**
- * Generic component for rendering a draggable toolbar UI with snapping
+ * Generic component for rendering a draggable element with snapping, rotating, resizing ...
  * @component
  * @param {Object} props - Component props
  * @param {boolean} props.isVisible - Whether the toolbar should be visible
@@ -37,7 +37,7 @@ import Moveable                                            from 'react-moveable'
  *     'medium'
  * @returns {JSX.Element} Draggable toolbar UI
  */
-export const DraggableToolbar = ({isVisible, className = '', children, config}) => {
+export const DraggableUIWidget = ({isVisible, className = '', children, config}) => {
     const _toolbar = useRef(null)
     const _toolbarOverlay = useRef(null)
     const _moveable = useRef(null)
