@@ -26,7 +26,7 @@ export class Draggable {
     static instance = null
 
     // Delay for hiding control box (3 seconds)
-    HIDE_DELAY = 3000 * SECOND
+    HIDE_DELAY = 2 * SECOND
 
     // Attribute name used to identify draggable elements
     #ID = 'data-LGS-ID'
