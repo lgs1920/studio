@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-22
- * Last modified: 2025-09-22
+ * Created on: 2025-09-23
+ * Last modified: 2025-09-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,8 +19,8 @@
  * @component
  * @returns {JSX.Element} Video quality toolbar UI
  */
-import React, { useCallback } from 'react'
-import { SlIcon, SlTooltip }  from '@shoelace-style/shoelace/dist/react'
+import { useCallback, useEffect } from 'react'
+import { SlIcon, SlTooltip }      from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }              from '@Utils/FA2SL'
 import { faGripDots }         from '@fortawesome/pro-solid-svg-icons'
 import classNames             from 'classnames'
@@ -42,6 +42,14 @@ export const VideoQualityToolbar = () => {
         lgs.stores.ui.video.quality = index
     }, [])
 
+    /**
+     * Initialize default Quality from settings
+     */
+    useEffect(() => {
+        $video.quality = lgs.settings.ui.video.quality
+    }, [])
+
+
     return (
         <div className="video-quality-selector lgs-card on-map">
             <SlTooltip content="Drag me">
@@ -54,10 +62,8 @@ export const VideoQualityToolbar = () => {
                         content={name}
                         placement="left"
                     >
-                        <div className={classNames(
-                            'lgs-one-line-card',
-                            'on-map',
-                            {'selected': index === video.quality})}
+                        <div
+                            className={classNames('lgs-one-line-card', 'on-map', {'selected': index === video.quality})}
                              onClick={(event) => handleChangeQuality(index, event)}>
                             {short}
                         </div>
