@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-22
- * Last modified: 2025-09-22
+ * Created on: 2025-09-23
+ * Last modified: 2025-09-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -62,7 +62,8 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
     const [isMouseOver, setIsMouseOver] = useState(false)
     const [isReadyToDrag, setIsReadyToDrag] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
-    const draggable = new Draggable()
+    // const draggable = new Draggable()
+    const _draggable = useRef(null)
     const _initialized = useRef(false)
 
     const getSnapSettings = useCallback(() => {
@@ -151,8 +152,14 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
         }
     }, [getCenterGuidelines, getCustomGridGuidelines])
 
+    useEffect(() => {
+        if (!_draggable.current) {
+            _draggable.current = new Draggable()
+        }
+    }, [])
+
     const handleDrag = useCallback(event => {
-        draggable.updatePosition(
+        _draggable.current.updatePosition(
             _toolbar.current,
             event.transform,
             _moveable,
@@ -162,11 +169,11 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
     }, [])
 
     const handleDragStart = useCallback(event => {
-        draggable.dragStartHandler(event)
+        _draggable.current.dragStartHandler(event)
         _toolbarOverlay.current.classList.remove('ready-to-drag')
         setIsReadyToDrag(false)
         setIsDragging(true)
-        draggable.handleControlBoxVisibility(
+        _draggable.current.handleControlBoxVisibility(
             _moveable,
             setControlBoxProps,
             _controlBoxTimer,
@@ -176,9 +183,9 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
     }, [isMouseOver])
 
     const handleDragEnd = useCallback(event => {
-        draggable.dragStopHandler(event)
+        _draggable.current.dragStopHandler(event)
         setIsDragging(false)
-        draggable.handleControlBoxVisibility(
+        _draggable.current.handleControlBoxVisibility(
             _moveable,
             setControlBoxProps,
             _controlBoxTimer,
@@ -189,7 +196,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
 
     const handleMouseEnter = useCallback(() => {
         setIsMouseOver(true)
-        draggable.handleControlBoxVisibility(
+        _draggable.current.handleControlBoxVisibility(
             _moveable,
             setControlBoxProps,
             _controlBoxTimer,
@@ -200,7 +207,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
 
     const handleMouseOut = useCallback(() => {
         setIsMouseOver(false)
-        draggable.handleControlBoxVisibility(
+        _draggable.current.handleControlBoxVisibility(
             _moveable,
             setControlBoxProps,
             _controlBoxTimer,
@@ -221,32 +228,26 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
             clearTimeout(_longPressTimer.current)
             _longPressTimer.current = null
         }
-        // if (!isReadyToDrag) {
-        //     draggable.handleControlBoxVisibility(
-        //         _moveable,
-        //         setControlBoxProps,
-        //         _controlBoxTimer,
-        //         true,
-        //         isMouseOver,
-        //     )
-        // }
         setIsReadyToDrag(false)
         _toolbarOverlay.current.classList.remove('ready-to-drag')
     }, [isReadyToDrag, isMouseOver])
 
     useEffect(() => {
-        if (!config || !isVisible || !_toolbar.current) {
+        if (!isVisible || !config) {
             return
         }
-        const attemptInitialize = () => {
-            const rect = _toolbar.current.getBoundingClientRect()
-            const hasValidDimensions = rect.width > 15 && rect.height > 15
+        let cancelled = false
+        let mo
 
-            const success = hasValidDimensions && draggable.initialize(
+        const tryInit = () => {
+            if (cancelled || !_toolbar.current || !lgs?.canvas) {
+                return
+            }
+            const ok = _draggable.current.initialize(
                 _toolbar.current,
                 {
-                    container:        lgs.canvas,
-                    showControlBox:   config.showControlBox || false,
+                    container:      lgs.canvas,
+                    showControlBox: !!config.showControlBox,
                     left:             config.left,
                     top:              config.top,
                     attachTo:         config.attachTo,
@@ -256,27 +257,32 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
                 setBounds,
                 setPosition,
                 _moveable,
-            )
-            _initialized.current = true
+            );
+            if (ok) {
+                _moveable.current?.updateRect()
+            }
+        };
 
-            if (success) {
-                _moveable.current.updateRect()
+        if (_toolbar.current) {
+            // If already in DOM, init next frame
+            if (document.body.contains(_toolbar.current)) {
+                requestAnimationFrame(tryInit)
             }
             else {
-                const timer = setTimeout(attemptInitialize, 100)
-                return () => clearTimeout(timer)
+                mo = new MutationObserver(() => {
+                    if (document.body.contains(_toolbar.current)) {
+                        tryInit()
+                    }
+                })
+                mo.observe(document.body, {childList: true, subtree: true})
             }
         }
-        attemptInitialize()
 
         return () => {
-            clearTimeout(_controlBoxTimer.current)
-            clearTimeout(_longPressTimer.current)
-            if (_initialized.current && _toolbar.current) {
-                draggable.cleanup(_toolbar.current)
-            }
+            cancelled = true
+            mo?.disconnect()
         }
-    }, [isVisible, config])
+    }, [isVisible, config]);
 
     const {snapThreshold, snapGap} = getSnapSettings()
 
