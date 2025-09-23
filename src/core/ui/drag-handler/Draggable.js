@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-22
- * Last modified: 2025-09-22
+ * Created on: 2025-09-23
+ * Last modified: 2025-09-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -200,7 +200,6 @@ export class Draggable {
     handleControlBoxVisibility = (moveable, setControlBoxProps, controlBoxTimer, show, isMouseOver) => {
         const elementId = this.getId(moveable.current.target)
         const config = this.#configs.get(elementId)
-        console.log(config.showControlBox)
         if (!config || !config.showControlBox) {
             // Immediately hide control box if config is missing or showControlBox is false
             setControlBoxProps({
