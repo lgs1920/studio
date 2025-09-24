@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-23
- * Last modified: 2025-09-23
+ * Created on: 2025-09-24
+ * Last modified: 2025-09-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -26,7 +26,7 @@ import { faGripDots }                           from '@fortawesome/pro-solid-svg
 import { SlIcon, SlTooltip }                    from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                from '@Utils/FA2SL'
 import classNames                               from 'classnames'
-import { memo, useCallback, useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect } from 'react'
 import { useSnapshot }                          from 'valtio'
 import './style.css'
 
@@ -34,8 +34,6 @@ export const VideoFPSToolbar = memo(() => {
     // Access reactive cropper and video states
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
-    // Reference to the toolbar DOM element
-    const _toolbar = useRef(null)
 
     /**
      * Initialize default FPS from settings
@@ -51,20 +49,20 @@ export const VideoFPSToolbar = memo(() => {
      * @param {number} index - Index of the selected FPS
      * @param {Event} event - Click event from icon
      */
-    const handleChangeFPS = useCallback((index, event) => {
-        lgs.settings.ui.video.fps = index
+    const handleChangeFPS = useCallback(index => {
+        lgs.stores.ui.video.fps = index
     }, [])
 
     // Render draggable toolbar with FPS options
     return (
-        <div className="video-fps-selector lgs-toolbar lgs-card on-map">
+        <div className="video-fps-selector lgs-card on-map">
             <SlTooltip content="Drag me">
                 <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
             </SlTooltip>
             <div className="buttons-bar-on-map">
                 {VideoRecorder.FPS.map((fps, index) => (
                     <SlTooltip
-                        key={fps}
+                        key={index}
                         content={`FPS: ${fps}`}
                         placement="top"
                     >
