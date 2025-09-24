@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-23
- * Last modified: 2025-09-23
+ * Created on: 2025-09-24
+ * Last modified: 2025-09-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -153,6 +153,10 @@ export class Draggable {
         element.style.opacity = initialConfig.opacity || 1
         element.style.transformOrigin = '0 0' // Ensure left/top refer to the top-left corner
         this.observeResize(config, setBounds, moveable, element, setPosition)
+
+        if (!config.overlay) {
+            this.#createOverlay(element)
+        }
         return true
     }
 
@@ -451,6 +455,7 @@ export class Draggable {
         e.target.classList.add('dragging')
         this.#isDragging = true
         const elementId = this.getId(e.target)
+
         this.#configs.forEach((cfg, id) => {
             cfg.current = (id === elementId)
         })
@@ -463,5 +468,61 @@ export class Draggable {
     dragStopHandler = e => {
         e.target.classList.remove('dragging')
         this.#isDragging = false
+    }
+
+    /**
+     * Retrieves the top, left, width, and height of a given HTML element or window
+     * @private
+     * @param {HTMLElement | Window} element - The HTML element or window to measure
+     * @returns {{ top: number, left: number, width: number, height: number }}
+     */
+    #computeElementBounds = element => {
+        if (element === window) {
+            return {
+                top:    0,
+                left:   0,
+                width:  window.innerWidth,
+                height: window.innerHeight,
+            }
+        }
+        const rect = element.getBoundingClientRect()
+        return {
+            top:    rect.top,
+            left:   rect.left,
+            width:  rect.width,
+            height: rect.height,
+        }
+    }
+
+    /**
+     * Creates a transparent overlay that covers element and adds it to the config.
+     * We need it to manage event propagation and for cursor management.
+     * @private
+     * @param {HTMLElement | Window} element - The HTML element
+     */
+    #createOverlay = (element) => {
+        const overlay = document.createElement('div')
+        const elementId = element.getAttribute(this.#ID)
+        const config = this.#configs.get(elementId)
+        config.overlay = overlay
+        const targetRect = this.#computeElementBounds(element)
+        Object.assign(overlay.style, {
+            width:  `${targetRect.width}px`,
+            height: `${targetRect.height}px`,
+        })
+        overlay.classList.add('lgs-toolbar-overlay')
+        element.appendChild(overlay)
+    }
+
+    /**
+     * Return the overlay child
+     * @param {HTMLElement | Window} element - The HTML element
+     * @return {HTMLElement}
+     */
+
+    getOverlay(element) {
+        const elementId = element.getAttribute(this.#ID)
+        const config = this.#configs.get(elementId)
+        return config.overlay
     }
 }
