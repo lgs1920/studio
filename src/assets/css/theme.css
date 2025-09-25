@@ -1141,7 +1141,7 @@ h3 {
     z-index: calc(var(--crop-zindex) + 2);
 }
 
-.lgs-toolbar {
+.lgs-widget {
     position: absolute;
     display: flex;
     align-items: center;
@@ -1153,7 +1153,7 @@ h3 {
     gap: var(--lgs-gutter-xs);
 }
 
-.lgs-toolbar-overlay {
+.lgs-widget-overlay {
     position: absolute;
     z-index: 9999;
     top: 0;
@@ -1167,7 +1167,7 @@ h3 {
 }
 
 
-.dragging .lgs-toolbar-overlay {
+.dragging .lgs-widget-overlay {
     display: block;
     cursor: grabbing !important;
     pointer-events: none;
@@ -1177,27 +1177,27 @@ h3 {
     background-color: var(--lgs-dark-color-15);
 }
 
-.dragging.lgs-toolbar *, .dragging.lgs-toolbar ::part(base), .dragging.lgs-toolbar ::part(combobox) {
+.dragging.lgs-widget *, .dragging.lgs-widget ::part(base), .dragging.lgs-widget ::part(combobox) {
     cursor: grabbing !important;
 }
 
-.lgs-toolbar .grabber {
+.lgs-widget .grabber {
     font-size: var(--lgs-font-size) !important;
     flex-shrink: 0;
     cursor: grab;
 }
 
-.lgs-toolbar .grabber::part(base) {
+.lgs-widget .grabber::part(base) {
     font-size: var(--lgs-font-size);
     padding-right: 0;
     padding-left: 0;
 }
 
-.lgs-toolbar.dragging .grabber {
+.lgs-widget.dragging .grabber {
     cursor: grabbing;
 }
 
-.lgs-toolbar sl-button::part(base) {
+.lgs-widget sl-button::part(base) {
     border: none;
     background: transparent;
 }
