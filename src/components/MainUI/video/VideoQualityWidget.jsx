@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: VideoQualitySelector.jsx
+ * File: VideoQualityWidget.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-22
- * Last modified: 2025-09-22
+ * Created on: 2025-09-25
+ * Last modified: 2025-09-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,7 +23,7 @@ import { VideoQualityToolbar } from './VideoQualityToolbar'
  * @component
  * @returns {JSX.Element} Draggable video quality selector UI
  */
-export const VideoQualitySelector = () => {
+export const VideoQualityWidget = () => {
     // Stabilize config with useMemo
     const config = useMemo(() => {
         const myConfig = {
