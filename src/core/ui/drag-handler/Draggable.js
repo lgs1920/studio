@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-24
- * Last modified: 2025-09-24
+ * Created on: 2025-09-25
+ * Last modified: 2025-09-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -510,7 +510,7 @@ export class Draggable {
             width:  `${targetRect.width}px`,
             height: `${targetRect.height}px`,
         })
-        overlay.classList.add('lgs-toolbar-overlay')
+        overlay.classList.add('lgs-widget-overlay')
         element.appendChild(overlay)
     }
 
