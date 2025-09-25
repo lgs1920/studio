@@ -14,10 +14,10 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 import { CameraAndTargetPanel } from '@Components/cesium/CameraAndTargetPanel/CameraAndTargetPanel'
-import { ContextMenuHook }      from '@Components/MainUI/ContextMenuHook'
-import { VideoFPSSelector }     from '@Components/MainUI/video/VideoFPSSelector'
-import { VideoFPSToolbar } from '@Components/MainUI/video/VideoFPSToolbar'
-import { VideoQualitySelector } from '@Components/MainUI/video/VideoQualitySelector'
+import { ContextMenuHook }    from '@Components/MainUI/ContextMenuHook'
+import { VideoFPSWidget }     from '@Components/MainUI/video/VideoFPSWidget'
+import { VideoFPSToolbar }    from '@Components/MainUI/video/VideoFPSToolbar'
+import { VideoQualityWidget } from '@Components/MainUI/video/VideoQualityWidget'
 import { VideoRecorderToolbar } from '@Components/MainUI/video/VideoRecorderToolbar'
 import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
 import { Cropper }              from '@Components/ToolsUI/cropper/Cropper'
@@ -39,8 +39,8 @@ export const ToolsUI = () => {
                     <Cropper overlay source={lgs.canvas} store={$cropper}
                              options={{infoComponent: <VideoSettingsInfo/>}}/>
                     <VideoRecordingSettingsToolbar store={$cropper}/>
-                    <VideoQualitySelector store={$cropper}/>
-                    <VideoFPSSelector store={$cropper}/>
+                    <VideoQualityWidget store={$cropper}/>
+                    <VideoFPSWidget store={$cropper}/>
                 </>
             ) : (
                  <>
