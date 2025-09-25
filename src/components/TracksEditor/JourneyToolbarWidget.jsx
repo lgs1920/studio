@@ -16,6 +16,7 @@
 
 
 import { DraggableUIWidget } from '@Components/MainUI/DraggableUIWidget'
+import { LGS_TOOLBAR } from '@Core/constants'
 import { JourneyToolbar }    from '@Editor/JourneyToolbar'
 import React, { useMemo }    from 'react'
 import { useSnapshot }       from 'valtio'
@@ -40,6 +41,7 @@ export const JourneyToolbarWidget = () => {
             opacity:  lgs.settings.ui.toolbars.opacity,
             left:     '50%',
             attachTo: 'bottom',
+            type: LGS_TOOLBAR,
         }
         return myConfig
     }, [])

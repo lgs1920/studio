@@ -235,6 +235,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
                     attachTo:       config.attachTo,
                     containerPadding: lgs.gutter.xs,
                     opacity:        lgs.settings.ui.toolbars.opacity,
+                    type: LGS_WIDGET,
                 },
                 setBounds,
                 setPosition,
@@ -276,7 +277,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
                     <div
                         className={classNames(LGS_WIDGET, {
                                                   [className]:   !!className,
-                                                  [LGS_TOOLBAR]: !className || config?.type === LGS_TOOLBAR,
+                            [LGS_TOOLBAR]: config?.type === LGS_TOOLBAR,
                                               },
                         )}
                         ref={_toolbar}
