@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-22
- * Last modified: 2025-09-22
+ * Created on: 2025-09-25
+ * Last modified: 2025-09-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,7 +24,7 @@ import { Cropper }              from '@Components/ToolsUI/cropper/Cropper'
 import { CropRatioSelector }    from '@Components/ToolsUI/cropper/CropRatioSelector'
 import { MapPOIContextMenu }    from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/VideoRecordingSettingsToolbar'
-import { JourneyToolbar }       from '@Editor/JourneyToolbar'
+import { JourneyToolbarWidget } from '@Editor/JourneyToolbarWidget'
 import { useSnapshot }          from 'valtio/index'
 
 export const ToolsUI = () => {
@@ -49,7 +49,7 @@ export const ToolsUI = () => {
                      <CameraAndTargetPanel/>
                      <MapPOIContextMenu/>
                      <ContextMenuHook/>
-                     {usage && <JourneyToolbar/>}
+                     {usage && <JourneyToolbarWidget/>}
                  </>
              )}
         </div>
