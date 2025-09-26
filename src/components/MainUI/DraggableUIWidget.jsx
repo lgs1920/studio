@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-25
- * Last modified: 2025-09-25
+ * Created on: 2025-09-26
+ * Last modified: 2025-09-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -229,7 +229,9 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
                 _toolbar.current,
                 {
                     container:      lgs.canvas,
-                    showControlBox: config.showControlBox || false,
+                    // Although the visibility of th ControlBox is managed, we force it to show
+                    // but frame is forced to be tranparent
+                    showControlBox: true,
                     left:           config.left,
                     top:            config.top,
                     attachTo:       config.attachTo,
@@ -293,7 +295,9 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
                         ref={_moveable}
                         target={_toolbar}
                         container={lgs.canvas}
+                        className="lgs-draggable-widget"
                         origin={false}
+
                         draggable={true}
                         edgeDraggable={false}
                         throttleDrag={0}
@@ -301,9 +305,12 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
                         onDrag={handleDrag}
                         onDragStart={handleDragStart}
                         onDragEnd={handleDragEnd}
+
                         resizable={config?.resizable || false}
                         resizeDirections={['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']}
+
                         scalable={config?.scalable || false}
+
                         snappable={config?.snappable ?? true}
                         snapThreshold={snapThreshold}
                         snapGap={snapGap}
@@ -315,6 +322,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
                             left: true, top: true, right: true, bottom: true, center: true, middle: true,
                         }}
                         elementGuidelines={[lgs.canvas]}
+
                         bounds={bounds}
                         renderDirections={controlBoxProps.renderDirections}
                         zoom={controlBoxProps.zoom}

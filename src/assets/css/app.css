@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-22
- * Last modified: 2025-09-22
+ * Created on: 2025-09-26
+ * Last modified: 2025-09-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -214,15 +214,15 @@ main-logo.xlarge {
 /*******************************************************************************
  * Drag, Resize Rotate
  ******************************************************************************/
-.moveable-control-box {
+.lgs-draggable-widget .moveable-control-box {
     transition: opacity 0.2s ease-in-out;
 }
 
-.dragging .moveable-control-box {
+.dragging .lgs-draggable-widget .moveable-control-box {
     opacity: 0;
 }
 
-.moveable-control {
+.lgs-draggable-widget .moveable-control {
     width: var(--lgs-gutter) !important;
     height: var(--lgs-gutter) !important;
     border: 1px solid var(--lgs-dark-color) !important;
@@ -231,21 +231,22 @@ main-logo.xlarge {
     --moveable-color: var(--lgs-light-color);
 }
 
-.moveable-line {
-    background: var(--lgs-light-color-75) !important;
+.lgs-draggable-widget .moveable-line {
+    /* Always transparent whatever show control box parameter */
+    background: transparent !important /*var(--lgs-light-color-75) !important;*/
 }
 
-.moveable-guideline {
+.lgs-draggable-widget .moveable-guideline {
     background: var(--lgs-third-color-75) !important;
 }
 
 /* snap inside a target */
-.moveable-bold:not(.moveable-bounds) {
+.lgs-draggable-widget .moveable-bold:not(.moveable-bounds) {
     display: none;
 }
 
 /* snap target on bounds. */
-.moveable-bold.moveable-bounds {
+.lgs-draggable-widget .moveable-bold.moveable-bounds {
     background-color: var(--lgs-first-color-90) !important;
 }
 /*******************************************************************************
