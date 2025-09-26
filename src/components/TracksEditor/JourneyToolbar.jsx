@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-25
- * Last modified: 2025-09-25
+ * Created on: 2025-09-26
+ * Last modified: 2025-09-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,7 +17,6 @@
 import { FAButton }                                                             from '@Components/FAButton'
 import { ToggleStateIcon }                                                      from '@Components/ToggleStateIcon'
 import { APP_EVENT, CURRENT_JOURNEY, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
-import { DragHandler }                                                          from '@Core/ui/drag-handler/DragHandler'
 import { JourneySelector }                                                      from '@Editor/journey/JourneySelector'
 import { Utils }                                                                from '@Editor/Utils'
 import {
