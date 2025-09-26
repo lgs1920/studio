@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-23
- * Last modified: 2025-09-23
+ * Created on: 2025-09-26
+ * Last modified: 2025-09-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -220,11 +220,11 @@
  * Video quality toolbar
  */
 
-.video-quality-selector-container {
+.video-quality-widget-container {
     z-index: calc(var(--crop-zindex) + 2);
 }
 
-.video-quality-selector {
+.video-quality-widget {
     position: relative;
     display: flex;
     align-items: center;
@@ -234,7 +234,7 @@
     gap: var(--lgs-gutter-xs);
 }
 
-.video-quality-selector.lgs-toolbar {
+.video-quality-widget.lgs-toolbar {
     opacity: 1;
 }
 
@@ -242,7 +242,7 @@
  * Video fps selector
  */
 
-.video-fps-selector {
+.video-fps-widget {
     position: relative;
     display: flex;
     align-items: center;
@@ -253,10 +253,10 @@
     --buttons-bar-on-map-direction: row;
 }
 
-.video-fps-selector.lgs-toolbar {
+.video-fps-widget.lgs-toolbar {
     opacity: 1;
 }
 
-.video-fps-selector .grabber {
+.video-fps-widget .grabber {
     rotate: 90deg;
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-24
- * Last modified: 2025-09-24
+ * Created on: 2025-09-26
+ * Last modified: 2025-09-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -55,7 +55,7 @@ export const VideoFPSToolbar = memo(() => {
 
     // Render draggable toolbar with FPS options
     return (
-        <div className="video-fps-selector lgs-card on-map">
+        <div className="video-fps-widget lgs-card on-map">
             <SlTooltip content="Drag me">
                 <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
             </SlTooltip>

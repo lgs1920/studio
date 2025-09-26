@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-23
- * Last modified: 2025-09-23
+ * Created on: 2025-09-26
+ * Last modified: 2025-09-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -51,7 +51,7 @@ export const VideoQualityToolbar = () => {
 
 
     return (
-        <div className="video-quality-selector lgs-card on-map">
+        <div className="video-quality-widget lgs-card on-map">
             <SlTooltip content="Drag me">
                 <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
             </SlTooltip>
