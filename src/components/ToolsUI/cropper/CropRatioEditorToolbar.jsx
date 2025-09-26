@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: CropRatioSelector.jsx
+ * File: CropRatioEditorToolbar.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-14
- * Last modified: 2025-09-14
+ * Created on: 2025-09-26
+ * Last modified: 2025-09-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -49,7 +49,7 @@ const ICONS = {
 /**
  * CropRatioSelector component
  */
-export const CropRatioSelector = memo(({manager}) => {
+export const CropRatioEditorToolbar = memo(({manager}) => {
     // Access reactive cropper and toolbar states
     const $cropper = manager?.store
     const cropper = useSnapshot($cropper || {}, {sync: true})
@@ -63,32 +63,6 @@ export const CropRatioSelector = memo(({manager}) => {
 
     // Track selected ratio, defaulting to first video format
     const defaultRatio = __.device.isPortrait ? '9x16' : '16x9'
-
-    // Initialize position and drag handler, handle resize
-    useEffect(() => {
-        if (!manager || !cropper.ratioEditor || !_toolbar.current) {
-            return
-        }
-
-        // Initialize drag handler
-        _toolbar.current._dragHandler = new DragHandler({
-                                                            target:   _toolbar.current,
-                                                            container: lgs.canvas,
-                                                            position: {
-                                                                left:      (__.device.isMobile && __.device.isPortrait ? '85%' : '70%'),
-                                                                top:       '50%',
-                                                                placement: 'right',
-                                                            },
-                                                        })
-
-
-        // Cleanup on unmount or when ratioEditor changes
-        return () => {
-            if (_toolbar.current?._dragHandler) {
-                _toolbar.current._dragHandler.destroy()
-            }
-        }
-    }, [manager])
 
     // Handle crop updates
     useEffect(() => {
@@ -115,10 +89,6 @@ export const CropRatioSelector = memo(({manager}) => {
      * @param {Event} event - Click event from icon
      */
     const handleChangeRatio = useCallback((preset, event) => {
-        if (!_toolbar.current || !manager || !lgs.canvas) {
-            return
-        }
-
         $video.ratio = preset.value
 
         // Parse ratio and reset crop
@@ -173,34 +143,31 @@ export const CropRatioSelector = memo(({manager}) => {
         return preset.visibility.includes(device) || preset.visibility.includes(key)
     }, [])
 
-    // Render draggable toolbar with ratio preset icons
     return (
         <>
             {cropper.ratioEditor && (
-                <div className="crop-ratio-selector-container" ref={_toolbar}>
-                    <div className="crop-ratio-selector lgs-toolbar lgs-card on-map">
-                        {/* Drag handle for moving the toolbar */}
-                        <SlTooltip content="Drag me">
-                            <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
-                        </SlTooltip>
-                        <div className="buttons-bar-on-map">
-                            {lgs.configuration.videoFormats.map(preset => (
-                                isPresetVisible(preset) && (
-                                    <SlTooltip
-                                        key={preset.value}
-                                        content={`${preset.label}: ${preset.description}`}
-                                        placement="right"
-                                    >
-                                        <SlIcon
-                                            library="fa"
-                                            className={classNames('lgs-one-line-card on-map', {'selected': preset.value === video.ratio})}
-                                            onClick={event => handleChangeRatio(preset, event)}
-                                            name={FA2SL.set(ICONS[preset.value] || faSquare)}
-                                        />
-                                    </SlTooltip>
-                                )
-                            ))}
-                        </div>
+                <div className="crop-ratio-widget lgs-toolbar lgs-card on-map">
+                    {/* Drag handle for moving the toolbar */}
+                    <SlTooltip content="Drag me">
+                        <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
+                    </SlTooltip>
+                    <div className="buttons-bar-on-map">
+                        {lgs.configuration.videoFormats.map(preset => (
+                            isPresetVisible(preset) && (
+                                <SlTooltip
+                                    key={preset.value}
+                                    content={`${preset.label}: ${preset.description}`}
+                                    placement="right"
+                                >
+                                    <SlIcon
+                                        library="fa"
+                                        className={classNames('lgs-one-line-card on-map', {'selected': preset.value === video.ratio})}
+                                        onClick={event => handleChangeRatio(preset, event)}
+                                        name={FA2SL.set(ICONS[preset.value] || faSquare)}
+                                    />
+                                </SlTooltip>
+                            )
+                        ))}
                     </div>
                 </div>
             )}

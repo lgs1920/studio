@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-04
- * Last modified: 2025-09-04
+ * Created on: 2025-09-26
+ * Last modified: 2025-09-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,8 +17,8 @@
 import { Compass }                      from '@Components/cesium/CompassUI/Compass'
 import { FullScreenButton }                     from '@Components/FullScreenButton/FullScreenButton'
 import { ContextMenuHook }              from '@Components/MainUI/ContextMenuHook'
-import { Cropper }           from '@Components/ToolsUI/cropper/Cropper'
-import { CropRatioSelector } from '@Components/ToolsUI/cropper/CropRatioSelector'
+import { Cropper }                from '@Components/ToolsUI/cropper/Cropper'
+import { CropRatioEditorToolbar } from '@Components/ToolsUI/cropper/CropRatioEditorToolbar'
 import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/VideoRecordingSettingsToolbar'
 import { GeocodingButton }     from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'
