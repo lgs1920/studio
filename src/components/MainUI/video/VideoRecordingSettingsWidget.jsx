@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-25
- * Last modified: 2025-09-25
+ * Created on: 2025-09-26
+ * Last modified: 2025-09-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -28,8 +28,8 @@ export const VideoRecordingSettingsWidget = () => {
     // Stabilize config with useMemo
     const config = useMemo(() => {
         const myConfig = {
-            left:     __.device.isMobile && __.device.isPortrait ? '85%' : '60%',
-            top:      '50%',
+            left: '50%',
+            top:  __.device.isMobile && __.device.isPortrait ? '85%' : '70%',
             attachTo: 'bottom',
             opacity:  lgs.settings.ui.toolbars.opacity,
         }

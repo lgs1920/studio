@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-11
- * Last modified: 2025-09-11
+ * Created on: 2025-09-26
+ * Last modified: 2025-09-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,6 @@
 
 import { Tunnel }                               from '@Components/Tunnel/Tunnel'
 import { APP_KEY, LGS_PROJECT, MINUTE } from '@Core/constants'
-import { DragHandler } from '@Core/ui/drag-handler/DragHandler'
 import { VideoRecorder }                        from '@Core/ui/video/recorder/VideoRecorder'
 import { faGear }                       from '@fortawesome/pro-regular-svg-icons'
 import { faPhotoFilm, faVideo }                 from '@fortawesome/pro-solid-svg-icons'
@@ -31,41 +30,11 @@ import { useSnapshot }                          from 'valtio'
  * @param {Object} props.store - Valtio store with crop state (x, y, width, height, ratioEditor, etc.)
  * @returns {JSX.Element} The rendered toolbar component
  */
-export const VideoRecordingSettingsToolbar = memo(({store}) => {
-    // Access reactive video state from Valtio store
+export const VideoRecordingSettingsToolbar = memo(() => {
+
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
     const settings = useSnapshot(lgs.settings.ui.video)
-    const _tunnel = useRef(null)
-    const _toolbar = useRef(null)
-    const $cropper = store
-    const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
-
-
-    // Initial poitioning
-    useEffect(() => {
-
-        // Add drag capacity to the container
-        const timeoutId = setTimeout(() => {
-            console.log()
-            _tunnel.current._dragHandler = new DragHandler({
-                                                               target:    _tunnel.current,
-                                                               container: lgs.canvas,
-                                                               position:  {
-                                                                   left:      '50%',
-                                                                   top:       (__.device.isMobile && __.device.isPortrait) ? '80%' : '60%',
-                                                                   placement: 'top',
-                                                               },
-                                                           })
-            _tunnel.current.style.opacity = toolbars.opacity || 1
-        }, 100)
-        return () => {
-            clearTimeout(timeoutId)
-            if (_tunnel.current?._dragHandler) {
-                _tunnel.current._dragHandler.destroy()
-            }
-        }
-    }, [toolbars.opacity])
 
     /**
      * Handles canceling the video editing process
@@ -108,10 +77,10 @@ export const VideoRecordingSettingsToolbar = memo(({store}) => {
                                })
         // Set canvas source
         __.recorder.setSource([lgs.canvas], {
-            clipWidth:     $cropper.width,
-            clipHeight:    $cropper.height,
-            clipX:         $cropper.x,
-            clipY:         $cropper.y,
+            clipWidth:  $video.cropper.width,
+            clipHeight: $video.cropper.height,
+            clipX:      $video.cropper.x,
+            clipY:      $video.cropper.y,
             preserveAlpha: true,
         })
     }
@@ -150,14 +119,14 @@ export const VideoRecordingSettingsToolbar = memo(({store}) => {
             done:       false,
             mandatory:  false,
             beforeStep: (index) => {
-                $cropper.ratioEditor = true
-                $cropper.qualityEditor = true
-                $cropper.fpsEditor = true
+                $video.cropper.ratioEditor = true
+                $video.cropper.qualityEditor = true
+                $video.cropper.fpsEditor = true
             },
             afterStep:  (index) => {
-                $cropper.ratioEditor = false
-                $cropper.qualityEditor = false
-                $cropper.fpsEditor = false
+                $video.cropper.ratioEditor = false
+                $video.cropper.qualityEditor = false
+                $video.cropper.fpsEditor = false
 
                 steps[index].done = true
             },
@@ -187,7 +156,7 @@ export const VideoRecordingSettingsToolbar = memo(({store}) => {
         },
     ]
     return (
-        <div ref={_tunnel} className="lgs-toolbar-container">
+        <>
             {video.editing &&
                 <Tunnel
                     className="video-recording-settings-toolbar lgs-toolbar lgs-toolbar-horizontal"
@@ -196,6 +165,6 @@ export const VideoRecordingSettingsToolbar = memo(({store}) => {
                 />
 
             }
-        </div>
+        </>
     )
 })
