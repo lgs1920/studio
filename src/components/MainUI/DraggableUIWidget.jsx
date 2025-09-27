@@ -7,17 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-26
- * Last modified: 2025-09-26
+ * Created on: 2025-09-27
+ * Last modified: 2025-09-27
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { LGS_TOOLBAR, LGS_WIDGET }                                                 from '@Core/constants'
+import { LGS_ANIMATION_DRAGGING, LGS_TOOLBAR, LGS_WIDGET } from '@Core/constants'
 import {
     Draggable,
-}                                                                                  from '@Core/ui/drag-handler/Draggable'
+}                                                          from '@Core/ui/drag-handler/Draggable'
 import classNames                                                                  from 'classnames'
 import React, { Children, cloneElement, useCallback, useEffect, useRef, useState } from 'react'
 import Moveable                                                                    from 'react-moveable'
@@ -228,16 +228,19 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
             const ok = _draggable.current.initialize(
                 _toolbar.current,
                 {
-                    container:      lgs.canvas,
-                    // Although the visibility of th ControlBox is managed, we force it to show
+                    container: lgs.canvas,
+                    // Although the visibility of the ControlBox is managed, we force it to show
                     // but frame is forced to be tranparent
-                    showControlBox: true,
-                    left:           config.left,
-                    top:            config.top,
-                    attachTo:       config.attachTo,
-                    containerPadding: lgs.gutter.xs,
-                    opacity:        lgs.settings.ui.toolbars.opacity,
-                    type: LGS_WIDGET,
+                    showControlBox:        true,
+                    left:                  config.left,
+                    top:                   config.top,
+                    attachTo:              config.attachTo,
+                    containerPadding:      lgs.gutter.xs,
+                    opacity:               lgs.settings.ui.toolbars.opacity,
+                    type:                  LGS_WIDGET,
+                    animationWhenDragging: (config.animationWhenDragging ?? null) !== null
+                                           ? config.animationWhenDragging
+                                           : config.type === LGS_TOOLBAR,
                 },
                 setBounds,
                 setPosition,
@@ -278,8 +281,9 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
                 <div className="lgs-widget-container">
                     <div
                         className={classNames(LGS_WIDGET, {
-                                                  [className]:   !!className,
-                            [LGS_TOOLBAR]: config?.type === LGS_TOOLBAR,
+                            [className]:              !!className,
+                            [LGS_TOOLBAR]:            config?.type === LGS_TOOLBAR,
+                            [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
                                               },
                         )}
                         ref={_toolbar}
@@ -295,7 +299,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
                         ref={_moveable}
                         target={_toolbar}
                         container={lgs.canvas}
-                        className="lgs-draggable-widget"
+                        className="lgs-widget-control-box"
                         origin={false}
 
                         draggable={true}

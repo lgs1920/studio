@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-26
- * Last modified: 2025-09-26
+ * Created on: 2025-09-27
+ * Last modified: 2025-09-27
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { VideoFPSToolbar }     from '@Components/MainUI/video/VideoFPSToolbar'
+import { LGS_TOOLBAR } from '@Core/constants'
 import React, { useMemo }      from 'react'
 import { DraggableUIWidget }   from '@Components/MainUI/DraggableUIWidget'
 import { useSnapshot } from 'valtio'
@@ -36,6 +37,7 @@ export const VideoFPSWidget = () => {
             opacity:  lgs.settings.ui.toolbars.opacity,
             left:     '50%',
             attachTo: 'top',
+            type: LGS_TOOLBAR,
         }
         return myConfig
     }, [])

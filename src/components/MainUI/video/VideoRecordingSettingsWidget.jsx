@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-26
- * Last modified: 2025-09-26
+ * Created on: 2025-09-27
+ * Last modified: 2025-09-27
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/VideoRecordingSettingsToolbar'
+import { LGS_TOOLBAR } from '@Core/constants'
 import React, { useMemo }                from 'react'
 import { DraggableUIWidget }             from '@Components/MainUI/DraggableUIWidget'
 import { VideoQualityToolbar }           from './VideoQualityToolbar'

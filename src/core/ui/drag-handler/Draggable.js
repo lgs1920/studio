@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-25
- * Last modified: 2025-09-25
+ * Created on: 2025-09-27
+ * Last modified: 2025-09-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -272,6 +272,7 @@ export class Draggable {
                 showControlBox:   initialConfig.showControlBox,
                 containerPadding: initialConfig.containerPadding,
                 current: false, // Initialize as not current
+                animationWhenDragging: initialConfig.animationWhenDragging ?? false,
             })
         }
         return this.#configs.get(elementId)
@@ -453,6 +454,11 @@ export class Draggable {
      */
     dragStartHandler = e => {
         e.target.classList.add('dragging')
+        const config = this.getConfig(e.target)
+        if (config.animationWhenDragging) {
+            e.target.classList.add('dragging-animation')
+
+        }
         this.#isDragging = true
         const elementId = this.getId(e.target)
 
@@ -466,7 +472,7 @@ export class Draggable {
      * @param {Object} e - Drag end event from Moveable
      */
     dragStopHandler = e => {
-        e.target.classList.remove('dragging')
+        e.target.classList.remove('dragging', 'dragging-animation')
         this.#isDragging = false
     }
 
