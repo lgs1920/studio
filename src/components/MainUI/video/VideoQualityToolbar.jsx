@@ -45,7 +45,7 @@ export const VideoQualityToolbar = () => {
      * Initialize default Quality from settings
      */
     useEffect(() => {
-        $video.quality = lgs.settings.ui.video.quality
+        $video.quality = lgs.settings.ui.video.quality ?? VideoRecorder.QUALITY[0].value
     }, [])
 
 
@@ -63,7 +63,7 @@ export const VideoQualityToolbar = () => {
                     >
                         <div
                             className={classNames('lgs-one-line-card', 'on-map', {'selected': index === video.quality})}
-                             onClick={(event) => handleChangeQuality(index, event)}>
+                            onPointerDown={(event) => handleChangeQuality(index, event)}>
                             {short}
                         </div>
                     </SlTooltip>

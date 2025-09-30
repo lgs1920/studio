@@ -162,7 +162,7 @@ export const CropRatioEditorToolbar = memo(({manager}) => {
                                     <SlIcon
                                         library="fa"
                                         className={classNames('lgs-one-line-card on-map', {'selected': preset.value === video.ratio})}
-                                        onClick={event => handleChangeRatio(preset, event)}
+                                        onPointerDown={event => handleChangeRatio(preset, event)}
                                         name={FA2SL.set(ICONS[preset.value] || faSquare)}
                                     />
                                 </SlTooltip>

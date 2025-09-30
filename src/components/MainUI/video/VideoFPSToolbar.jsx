@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-26
- * Last modified: 2025-09-26
+ * Created on: 2025-09-30
+ * Last modified: 2025-09-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -39,7 +39,7 @@ export const VideoFPSToolbar = memo(() => {
      * Initialize default FPS from settings
      */
     useEffect(() => {
-        $video.fps = lgs.settings.ui.video.fps
+        $video.fps = lgs.settings.ui.video.fps ?? VideoRecorder.FPS[0]
     }, [])
 
 
@@ -68,7 +68,7 @@ export const VideoFPSToolbar = memo(() => {
                     >
                         <div
                             className={classNames('lgs-one-line-card on-map', {'selected': index === video.fps})}
-                            onClick={event => handleChangeFPS(index, event)}
+                            onPointerDown={event => handleChangeFPS(index, event)}
                         >
                             {fps}
                         </div>
