@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-27
- * Last modified: 2025-09-27
+ * Created on: 2025-09-30
+ * Last modified: 2025-09-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -29,7 +29,7 @@ export class Draggable {
     HIDE_DELAY = 2 * SECOND
 
     // Attribute name used to identify draggable elements
-    #ID = 'data-LGS-ID'
+    #ID_KEY = 'data-LGS-ID'
 
     // Private map to store configurations for elements, keyed by data-LGS-ID
     #configs = new Map()
@@ -42,6 +42,8 @@ export class Draggable {
 
     // Map to store control box timers for each element
     #controlBoxTimers = new Map()
+
+    #current = null
 
     /**
      * Creates or returns the singleton instance
@@ -59,7 +61,7 @@ export class Draggable {
      * @returns {string|null} The element's ID or null if not found
      */
     getId = element => {
-        return element.getAttribute(this.#ID)
+        return element.getAttribute(this.#ID_KEY)
     }
 
     /**
@@ -94,7 +96,7 @@ export class Draggable {
             return
         }
         // If element is not current, hide control box immediately
-        if (!config.current) {
+        if (this.#current !== config.id) {
             setControlBoxProps({
                                    renderDirections: [],
                                    zoom:             0,
@@ -127,6 +129,7 @@ export class Draggable {
         if (!element || !initialConfig?.container) {
             return false
         }
+
         // Check if element is rendered (has valid dimensions)
         const elementRect = element.getBoundingClientRect()
         if (elementRect.width === 0 || elementRect.height === 0) {
@@ -134,14 +137,18 @@ export class Draggable {
         }
 
         // Generate or retrieve ID from data-LGS-ID
-        let elementId = element.getAttribute(this.#ID)
+        let elementId = element.getAttribute(this.#ID_KEY)
         if (!elementId) {
             elementId = uuidv4()
-            element.setAttribute(this.#ID, elementId)
+            element.setAttribute(this.#ID_KEY, elementId)
         }
         moveable.current.target = element
 
-        // save initial controlBoxVisibility
+        moveable.current.onRender = e => {
+            e.target.style.opacity = lgs.settings.ui.toolbars.opacity
+        }
+
+        // Save initial controlBoxVisibility
         initialConfig.controlBoxVisibility = initialConfig.showControlBox || false
 
         const config = this.getConfig(element, initialConfig)
@@ -152,7 +159,7 @@ export class Draggable {
         element.style.transform = 'none'
         element.style.opacity = initialConfig.opacity || 1
         element.style.transformOrigin = '0 0' // Ensure left/top refer to the top-left corner
-        this.observeResize(config, setBounds, moveable, element, setPosition)
+        this.observeContainerResize(config, setBounds, moveable, element, setPosition)
 
         if (!config.overlay) {
             this.#createOverlay(element)
@@ -163,7 +170,7 @@ export class Draggable {
     /**
      * Updates element position and Moveable rectangle
      * @param {HTMLElement} element - The draggable element
-     * @param {Object} position - New position with left and top coordinates
+     * @param {Object|string} position - New position with left and top coordinates or CSS transform
      * @param {Object} moveable - Moveable instance
      * @param {boolean} isDragging - Whether the element is currently being dragged
      * @param {Function} setControlBoxProps - Function to update control box properties in component state
@@ -173,17 +180,21 @@ export class Draggable {
         if (!config) {
             return
         }
+
+        // During drag we receive a CSS transform rule from Moveable
         if (typeof position === 'string') {
-            // We assume a CSS transform
             element.style.transform = position
+            config.transform = position
         }
+        // During initialisation we receive an Object {left,top}
         else if (typeof position === 'object') {
-            // Else it is an Object {left,top}
             element.style.left = `${position.left}px`
             element.style.top = `${position.top}px`
+            config.position = position
         }
-        config.position = position
+
         moveable.current.updateRect()
+
         if (config.showControlBox && isDragging) {
             setControlBoxProps({
                                    renderDirections: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
@@ -222,9 +233,7 @@ export class Draggable {
 
         // If show is true (click or drag start), mark this element as current and others as non-current
         if (show) {
-            this.#configs.forEach((cfg, id) => {
-                cfg.current = (id === elementId)
-            })
+            this.#current = elementId
         }
 
         if (show) {
@@ -259,6 +268,8 @@ export class Draggable {
                         ? initialConfig.position
                         : 'top-left'
             this.#configs.set(elementId, {
+                id:          elementId,
+                boundStatus: {left: false, top: false, right: false, bottom: false},
                 container:        initialConfig.container,
                 isMobile:         initialConfig.isMobile,
                 bounds:           {left: 0, top: 0, right: 0, bottom: 0},
@@ -271,7 +282,6 @@ export class Draggable {
                 observer:         null,
                 showControlBox:   initialConfig.showControlBox,
                 containerPadding: initialConfig.containerPadding,
-                current: false, // Initialize as not current
                 animationWhenDragging: initialConfig.animationWhenDragging ?? false,
             })
         }
@@ -290,11 +300,11 @@ export class Draggable {
             return {left: 0, top: 0}
         }
 
-        const canvasRect = config.container.getBoundingClientRect()
-        const toolbarRect = element.getBoundingClientRect()
+        const container = config.container.getBoundingClientRect()
+        const widget = element.getBoundingClientRect()
 
         // Check for unrendered element
-        if (toolbarRect.width === 0 || toolbarRect.height === 0) {
+        if (widget.width === 0 || widget.height === 0) {
             return {left: 0, top: 0}
         }
 
@@ -314,73 +324,64 @@ export class Draggable {
             return numValue
         }
 
-        let newLeft = parsePosition(config.left, canvasRect.width)
-        let newTop = parsePosition(config.top, canvasRect.height)
+        let left = parsePosition(config.left, container.width)
+        let top = parsePosition(config.top, container.height)
 
         // Adjust position based on attachTo using a map for scalability
         const attachTo = config.attachTo || 'top-left'
         const adjustments = {
             center:         () => ({
-                left: newLeft - toolbarRect.width / 2,
-                top:  newTop - toolbarRect.height / 2,
+                left: left - widget.width / 2,
+                top:  top - widget.height / 2,
             }),
             top:            () => ({
-                left: newLeft - toolbarRect.width / 2,
-                top:  newTop,
+                left: left - widget.width / 2,
+                top:  top,
             }),
             left:           () => ({
-                left: newLeft,
-                top:  newTop - toolbarRect.height / 2,
+                left: left,
+                top:  top - widget.height / 2,
             }),
             right:          () => ({
-                left: newLeft - toolbarRect.width,
-                top:  newTop - toolbarRect.height / 2,
+                left: left - widget.width,
+                top:  top - widget.height / 2,
             }),
             bottom:         () => ({
-                left: newLeft - toolbarRect.width / 2,
-                top:  newTop - toolbarRect.height,
+                left: left - widget.width / 2,
+                top:  top - widget.height,
             }),
             'top-left':     () => ({
-                left: newLeft,
-                top:  newTop,
+                left: left,
+                top:  top,
             }),
             'top-right':    () => ({
-                left: newLeft - toolbarRect.width,
-                top:  newTop,
+                left: left - widget.width,
+                top:  top,
             }),
             'bottom-left':  () => ({
-                left: newLeft,
-                top:  newTop - toolbarRect.height,
+                left: left,
+                top:  top - widget.height,
             }),
             'bottom-right': () => ({
-                left: newLeft - toolbarRect.width,
-                top:  newTop - toolbarRect.height,
+                left: left - widget.width,
+                top:  top - widget.height,
             }),
         }
 
-        if (isResize && config.position.left !== 0 && config.position.top !== 0) {
-            // Preserve relative position on resize
-            const relativeLeft = config.position.left / config.bounds.right
-            const relativeTop = config.position.top / config.bounds.bottom
-            newLeft = relativeLeft * canvasRect.width
-            newTop = relativeTop * canvasRect.height
-        }
-        else {
-            // Apply anchor adjustment
-            const adjust = adjustments[attachTo]
-            if (adjust) {
-                const adjusted = adjust()
-                newLeft = adjusted.left
-                newTop = adjusted.top
-            }
+        // Apply anchor adjustment
+        const adjust = adjustments[attachTo]
+        if (adjust) {
+            const adjusted = adjust()
+            left = adjusted.left
+            top = adjusted.top
         }
 
         // Ensure left and top are within bounds
-        newLeft = Math.min(Math.max(newLeft, config.bounds.left), config.bounds.right - toolbarRect.width)
-        newTop = Math.min(Math.max(newTop, config.bounds.top), config.bounds.bottom - toolbarRect.height)
+        left = Math.min(Math.max(left, config.bounds.left), config.bounds.right - widget.width)
+        top = Math.min(Math.max(top, config.bounds.top), config.bounds.bottom - widget.height)
 
-        config.position = {left: newLeft, top: newTop}
-        config.dimensions = {width: toolbarRect.width, height: toolbarRect.height}
+        config.position = {left: left, top: top}
+        config.dimensions = {width: widget.width, height: widget.height}
 
         return config.position
     }
@@ -392,15 +393,29 @@ export class Draggable {
      * @returns {Object} Updated bounds
      */
     updateBounds = (config, moveable) => {
-        const canvasRect = config.container.getBoundingClientRect()
+        const container = config.container.getBoundingClientRect()
         config.bounds = {
             left:   config.containerPadding,
             top:    config.containerPadding,
-            right:  canvasRect.width - config.containerPadding,
-            bottom: canvasRect.height - config.containerPadding,
+            right:  container.width - config.containerPadding,
+            bottom: container.height - config.containerPadding,
         }
         return config.bounds
     }
+
+    updateBoundStatus = (element, config) => {
+        const container = config.container.getBoundingClientRect()
+        const target = element.getBoundingClientRect()
+
+        config.boundStatus = {
+            top:    target.top <= container.top,
+            bottom: target.bottom >= container.bottom,
+            left:   target.left <= container.left,
+            right:  target.right >= container.right,
+        }
+        return config.boundStatus
+    }
+
 
     /**
      * Observes container resize and updates bounds and element position
@@ -410,19 +425,128 @@ export class Draggable {
      * @param {HTMLElement} element - The draggable element
      * @param {Function} setPosition - Function to update position in component state
      */
-    observeResize = (config, setBounds, moveable, element, setPosition) => {
+    observeContainerResize = (config, setBounds, moveable, element, setPosition) => {
         if (config.observer) {
-            config.observer.disconnect()
+            return
         }
 
-        const handleResize = this.throttle(() => {
-            const newBounds = this.updateBounds(config, moveable)
-            setBounds(newBounds)
-            const newPosition = this.calculateInitialPosition(config, element, true)
-            setPosition(newPosition)
-            moveable.current.updateRect()
-        }, 100)
+        /**
+         * Handles container resize events, updating bounds and element position
+         * Elements bound to right or bottom edges only adjust position on container shrink
+         * @private
+         */
+        const handleResize = (() => {
+            let rafId = null
+            let pending = false
+            let lastComputed = {
+                right:      null,
+                bottom:     null,
+                translateX: null,
+                translateY: null,
+            }
 
+            const computeAndApply = () => {
+                // Store previous bounds for delta calculations
+                const oldBounds = {...config.bounds}
+
+                // Update bounds based on new container dimensions
+                const newBounds = this.updateBounds(config, moveable)
+                // Avoid React/state churn if bounds are identical
+                if (
+                    newBounds.left === oldBounds.left &&
+                    newBounds.top === oldBounds.top &&
+                    newBounds.right === oldBounds.right &&
+                    newBounds.bottom === oldBounds.bottom
+                ) {
+                    // Nothing changed; still ensure pending is cleared
+                    pending = false
+                    rafId = null
+                    return
+                }
+                setBounds(newBounds)
+
+                // Update bound status
+                this.updateBoundStatus(element, config)
+
+                // Calculate deltas for right and bottom boundaries
+                const deltaRight = newBounds.right - oldBounds.right
+                const deltaBottom = newBounds.bottom - oldBounds.bottom
+
+                // Only adjust position when container shrinks and element is bound to right or bottom
+                const isShrinking = deltaRight < 0 || deltaBottom < 0
+
+                if (config.transform) {
+                    const match = config.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
+                    if (match) {
+                        // Extract current translate values
+                        const translateX = parseFloat(match[1])
+                        const translateY = parseFloat(match[2])
+
+                        // Initialize new translation values
+                        let newTranslateX = translateX
+                        let newTranslateY = translateY
+
+                        // Adjust position only if container is shrinking and element is bound
+                        if (isShrinking) {
+                            if (config.boundStatus.right) {
+                                newTranslateX = translateX + deltaRight
+                            }
+                            if (config.boundStatus.bottom) {
+                                newTranslateY = translateY + deltaBottom
+                            }
+                        }
+                        else {
+                            // On both sides, we reset the bound status if needed
+                            if (deltaRight > 0) {
+                                config.boundStatus.right = false
+                            }
+                            if (deltaBottom > 0) {
+                                config.boundStatus.bottom = false
+                            }
+                        }
+
+                        // Skip DOM write if nothing actually changed
+                        if (newTranslateX !== translateX || newTranslateY !== translateY) {
+                            // Avoid redundant style writes (compare to last committed)
+                            if (
+                                lastComputed.translateX !== newTranslateX ||
+                                lastComputed.translateY !== newTranslateY
+                            ) {
+                                config.transform = `translate(${newTranslateX}px, ${newTranslateY}px)`
+                                element.style.transform = config.transform
+                                lastComputed.translateX = newTranslateX
+                                lastComputed.translateY = newTranslateY
+                            }
+                        }
+                    }
+                }
+
+                // Update Moveable's rectangle only if right/bottom bounds changed vs last
+                const rightChanged = lastComputed.right !== newBounds.right
+                const bottomChanged = lastComputed.bottom !== newBounds.bottom
+                if (rightChanged || bottomChanged) {
+                    moveable.current.updateRect()
+                    lastComputed.right = newBounds.right
+                    lastComputed.bottom = newBounds.bottom
+                }
+
+                pending = false
+                rafId = null
+            }
+
+            return () => {
+                if (pending) {
+                    return
+                }
+                pending = true
+                if (rafId !== null) {
+                    cancelAnimationFrame(rafId)
+                }
+                rafId = requestAnimationFrame(computeAndApply)
+            }
+        })()
+
+        // Initialize and start ResizeObserver
         config.observer = new ResizeObserver(handleResize)
         config.observer.observe(config.container)
     }
@@ -432,7 +556,7 @@ export class Draggable {
      * @param {HTMLElement} element - The draggable element
      */
     cleanup = element => {
-        const elementId = element.getAttribute(this.#ID)
+        const elementId = element.getAttribute(this.#ID_KEY)
         const config = this.#configs.get(elementId)
         if (!config) {
             return
@@ -457,14 +581,10 @@ export class Draggable {
         const config = this.getConfig(e.target)
         if (config.animationWhenDragging) {
             e.target.classList.add('dragging-animation')
-
         }
         this.#isDragging = true
         const elementId = this.getId(e.target)
-
-        this.#configs.forEach((cfg, id) => {
-            cfg.current = (id === elementId)
-        })
+        this.#current = elementId
     }
 
     /**
@@ -506,9 +626,9 @@ export class Draggable {
      * @private
      * @param {HTMLElement | Window} element - The HTML element
      */
-    #createOverlay = (element) => {
+    #createOverlay = element => {
         const overlay = document.createElement('div')
-        const elementId = element.getAttribute(this.#ID)
+        const elementId = element.getAttribute(this.#ID_KEY)
         const config = this.#configs.get(elementId)
         config.overlay = overlay
         const targetRect = this.#computeElementBounds(element)
@@ -521,14 +641,25 @@ export class Draggable {
     }
 
     /**
-     * Return the overlay child
+     * Returns the overlay child
      * @param {HTMLElement | Window} element - The HTML element
-     * @return {HTMLElement}
+     * @returns {HTMLElement} The overlay element
      */
-
-    getOverlay(element) {
-        const elementId = element.getAttribute(this.#ID)
+    getOverlay = element => {
+        const elementId = element.getAttribute(this.#ID_KEY)
         const config = this.#configs.get(elementId)
         return config.overlay
+    }
+
+    /**
+     * Updates the bound status of the current element
+     * @param {Object} boundStatus - Object containing bound status (left, top, right, bottom)
+     */
+    handleBound = boundStatus => {
+        const config = this.#configs.get(this.#current)
+        if (!config) {
+            return
+        }
+        config.boundStatus = boundStatus
     }
 }

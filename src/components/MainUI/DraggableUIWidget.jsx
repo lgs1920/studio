@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-27
- * Last modified: 2025-09-27
+ * Created on: 2025-09-30
+ * Last modified: 2025-09-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -275,6 +275,9 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
         _moveable.current?.updateRect()
     }, [bounds])
 
+    const handleOnBound = ({bounds}) => {
+        _draggable.current.handleBound(bounds)
+    }
     return (
         <>
             {isVisible && (
@@ -328,11 +331,10 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
                         elementGuidelines={[lgs.canvas]}
 
                         bounds={bounds}
+                        onBound={handleOnBound}
+
                         renderDirections={controlBoxProps.renderDirections}
                         zoom={controlBoxProps.zoom}
-                        onRender={(e) => {
-                            e.target.style.opacity = lgs.settings.ui.toolbars.opacity
-                        }}
                     />
                 </div>
             )}
