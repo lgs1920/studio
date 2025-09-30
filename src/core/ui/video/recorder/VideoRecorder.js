@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-15
- * Last modified: 2025-09-15
+ * Created on: 2025-09-30
+ * Last modified: 2025-09-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -542,8 +542,6 @@ export class VideoRecorder extends EventTarget {
                 bitrate: this.#quality.value,
                 latencyMode: 'quality',
             })
-
-            console.log(this.#outputCanvas, this.#videoSource)
 
             this.#output.addVideoTrack(this.#videoSource)
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-07
- * Last modified: 2025-09-07
+ * Created on: 2025-09-30
+ * Last modified: 2025-09-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -170,7 +170,6 @@ export const VideoDownloadAndShareDialog = () => {
             }
         }
         catch (error) {
-            console.log(error)
             console.error(`Error during share: ${error.message}`)
         }
     }, [])
