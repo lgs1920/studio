@@ -308,7 +308,6 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
                         draggable={true}
                         edgeDraggable={false}
                         throttleDrag={0}
-                        startDragDistance={DRAG_START_THRESHOLD}
                         onDrag={handleDrag}
                         onDragStart={handleDragStart}
                         onDragEnd={handleDragEnd}
