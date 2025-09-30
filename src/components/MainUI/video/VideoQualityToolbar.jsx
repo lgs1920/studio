@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-26
- * Last modified: 2025-09-26
+ * Created on: 2025-09-30
+ * Last modified: 2025-09-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,7 +38,6 @@ export const VideoQualityToolbar = () => {
      * @param {Event} event - Click event from icon
      */
     const handleChangeQuality = useCallback((index, event) => {
-        console.log('handleChangeQuality', index)
         lgs.stores.ui.video.quality = index
     }, [])
 

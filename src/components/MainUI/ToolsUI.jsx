@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-26
- * Last modified: 2025-09-26
+ * Created on: 2025-09-30
+ * Last modified: 2025-09-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,7 +17,7 @@ import { CameraAndTargetPanel } from '@Components/cesium/CameraAndTargetPanel/Ca
 import { ContextMenuHook }    from '@Components/MainUI/ContextMenuHook'
 import { VideoFPSWidget }     from '@Components/MainUI/video/VideoFPSWidget'
 import { VideoQualityWidget } from '@Components/MainUI/video/VideoQualityWidget'
-import { VideoRecorderToolbar } from '@Components/MainUI/video/VideoRecorderToolbar'
+import { VideoRecorderWidget } from '@Components/MainUI/video/VideoRecorderWidget'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/VideoRecordingSettingsWidget'
 import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
 import { Cropper }              from '@Components/ToolsUI/cropper/Cropper'
@@ -42,8 +42,7 @@ export const ToolsUI = () => {
                 </>
             ) : (
                  <>
-                     {video.recording && <VideoRecorderToolbar/>}
-
+                     {video.recording && <VideoRecorderWidget/>}
                      <CameraAndTargetPanel/>
                      <MapPOIContextMenu/>
                      <ContextMenuHook/>

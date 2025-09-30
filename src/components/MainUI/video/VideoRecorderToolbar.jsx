@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-12
- * Last modified: 2025-09-12
+ * Created on: 2025-09-30
+ * Last modified: 2025-09-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,7 +25,6 @@ import { FontAwesomeIcon }                  from '@Components/FontAwesomeIcon'
 import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
 import { CropOverlay }                      from '@Components/ToolsUI/cropper/CropOverlay'
 import { DefinedCropZone }                  from '@Components/ToolsUI/cropper/DefinedCropZone'
-import { DragHandler }                      from '@Core/ui/drag-handler/DragHandler'
 import { VideoRecorder }                    from '@Core/ui/video/recorder/VideoRecorder'
 import { faCircle }                         from '@fortawesome/duotone-regular-svg-icons'
 import { faPause, faPlay, faStop, faXmark } from '@fortawesome/pro-regular-svg-icons'
@@ -111,12 +110,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     const [finalisation, setFinalisation] = useState(false)
 
     const _toolbar = useRef(toolbar)
-    const _container = useRef(null)
-    const _cropZone = useRef(null)
-    const toolbars = useSnapshot(lgs.settings.ui.toolbars || {})
+    // Removed _cropZone and overlay/crop UI responsibilities from this component
     const caption = 'Video Recording'
-
-    const startPosition = {left: '50%', top: '60%'}
 
     /**
      * Formats duration in milliseconds to human readable format
@@ -135,31 +130,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     const formatSize = useCallback((bytes) => {
         return UnitUtils.convert(bytes).toBytesUnit()
     }, [])
-
-    // Initial poitioning
-    useEffect(() => {
-
-                  // Add drag capacity to the container
-                  const timeoutId = setTimeout(() => {
-                      _container.current._dragHandler = new DragHandler({
-                                                                            target:    _container.current,
-                                                                            container: lgs.canvas,
-                                                                            position:  {
-                                                                                left: $video.position.left,
-                                                                                top:  $video.position.top,
-                                                                            },
-                                                                        })
-                      _toolbar.current.style.opacity = toolbars.opacity || 1
-                  }, 100)
-
-                  return () => {
-                      clearTimeout(timeoutId)
-                      if (_container.current?._dragHandler) {
-                          _container.current._dragHandler.destroy()
-                      }
-                  }
-              }, [toolbars.opacity],
-    )
 
     // Manage recorder events, state, and toolbar position
     useEffect(() => {
@@ -201,8 +171,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 return
             }
             $video.paused = true
-            _cropZone.current.style.animationPlayState = 'paused'
-
+            // Removed _cropZone animation control (now handled in VideoRecordingArea)
             setRecordedDuration(__.recorder.duration)
             UIToast.warning({
                                 caption: caption,
@@ -216,8 +185,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 return
             }
             $video.paused = false
-            _cropZone.current.style.animationPlayState = 'running'
-
+            // Removed _cropZone animation control (now handled in VideoRecordingArea)
             setRecordedDuration(__.recorder.duration)
             UIToast.success({
                                 caption: caption,
@@ -286,9 +254,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
 
         // Clean up function
         return () => {
-            if (_container.current?._dragHandler) {
-                _container.current._dragHandler.destroy()
-            }
             if (__.recorder) {
                 __.recorder.removeEventListener(VideoRecorder.events.START, handleStart)
                 __.recorder.removeEventListener(VideoRecorder.events.INFO, handleInfo)
@@ -326,84 +291,34 @@ export const VideoRecorderToolbar = ({toolbar}) => {
 
     }
 
-    // Render toolbar only when recording is active
     return (
         <>
-            {video.recording && (() => {
-                // Access crop only when recording to avoid unnecessary re-renders/subscriptions
-                const crop = video.cropper
-
-                // Robust validation: allow x or y = 0, require positive width/height
-                const isValidCrop =
-                          crop &&
-                          Number.isFinite(crop.x) &&
-                          Number.isFinite(crop.y) &&
-                          Number.isFinite(crop.width) &&
-                          Number.isFinite(crop.height) &&
-                          crop.width > 0 &&
-                          crop.height > 0
-
-                if (!isValidCrop) {
-                    return null
+            {/* Only the toolbar remains here */}
+            <div ref={_toolbar}
+                 className="video-recorder-toolbar lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map">
+                <FontAwesomeIcon icon={faCircle}
+                                 className={classNames({
+                                                           'fa-beat':    video.paused || video.finalizing,
+                                                           'finalizing': video.finalizing,
+                                                       }, 'video-recorder-indicator')}/>
+                <span className="duration">{formatDuration(recordedDuration)}</span>
+                <span className="size">{formatSize(recordedSize)}</span>
+                {finalisation ? (
+                    <div className="blinking">{'Finalisation...'}</div>
+                ) : (
+                     <RecorderControls
+                         recording={video.recording}
+                         paused={video.paused}
+                         recorder={__.recorder}
+                         finalisation={finalise}
+                     />
+                 )
                 }
-
-                const dpr = __.device.dpr
-                // Compute CSS crop from physical data
-                const cssCrop = toCssCrop(crop, dpr)
-                // Memoize style for overlay
-                const overlayStyle = {
-                    clipPath: `polygon(
-                        0% 0%, 100% 0%, 100% 100%, 0% 100%,
-                        0% ${cssCrop.y}px,
-                        ${cssCrop.x}px ${cssCrop.y}px,
-                        ${cssCrop.x}px ${cssCrop.y + cssCrop.height}px,
-                        ${cssCrop.x + cssCrop.width}px ${cssCrop.y + cssCrop.height}px,
-                        ${cssCrop.x + cssCrop.width}px ${cssCrop.y}px,
-                        0% ${cssCrop.y}px
-                    )`,
-                }
-                return (
-                    <>
-                        <CropOverlay style={overlayStyle}/>
-                        <DefinedCropZone cssCrop={cssCrop}
-                                         className={
-                                             classNames('video-recording-in-progress',
-                                                        {'finalizing': video.finalizing},
-                                             )
-                                         }
-                                         infoComponent={<VideoSettingsInfo/>}
-                                         ref={_cropZone}/>
-                    </>
-                )
-            })()}
-            <div className="lgs-toolbar-container" ref={_container}>
-                <div ref={_toolbar}
-                     className="video-recorder-toolbar lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map">
-                    <FontAwesomeIcon icon={faCircle}
-                                     className={classNames({
-                                                               'fa-beat':    video.paused || video.finalizing,
-                                                               'finalizing': video.finalizing,
-                                                           }, 'video-recorder-indicator')}/>
-                    <span className="duration">{formatDuration(recordedDuration)}</span>
-                    <span className="size">{formatSize(recordedSize)}</span>
-                    {finalisation ? (
-                        <div className="blinking">{'Finalisation...'}</div>
-                    ) : (
-                        <RecorderControls
-                            recording={video.recording}
-                            paused={video.paused}
-                            recorder={__.recorder}
-                            finalisation={finalise}
-                        />
-                     )
-
-                    }
-                    <span/>
-                    <SlTooltip content={'Cancel'} placement="top">
-                        <SlIconButton onClick={handleCancel} className="lgs-cancel-recording" library="fa"
-                                      name={FA2SL.set(faXmark)}/>
-                    </SlTooltip>
-                </div>
+                <span/>
+                <SlTooltip content={'Cancel'} placement="top">
+                    <SlIconButton onClick={handleCancel} className="lgs-cancel-recording" library="fa"
+                                  name={FA2SL.set(faXmark)}/>
+                </SlTooltip>
             </div>
         </>
     )

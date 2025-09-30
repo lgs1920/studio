@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-26
- * Last modified: 2025-09-26
+ * Created on: 2025-09-30
+ * Last modified: 2025-09-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -67,7 +67,7 @@ export const CropRatioEditorToolbar = memo(({manager}) => {
     // Handle crop updates
     useEffect(() => {
         const handleCropUpdate = (event) => {
-            setForceRender((prev) => prev + 1) // Force local re-render
+            // setForceRender((prev) => prev + 1) // Force local re-render
         }
         document.addEventListener('onCropUpdate', handleCropUpdate)
         return () => document.removeEventListener('onCropUpdate', handleCropUpdate)
@@ -109,7 +109,7 @@ export const CropRatioEditorToolbar = memo(({manager}) => {
         $cropper.aspectRatio = w / h
 
         // Trigger a render update
-        setForceRender((prev) => prev + 1)
+        // setForceRender((prev) => prev + 1)
 
         // Simulate pointer event to trigger resize
         const rect = lgs.canvas.getBoundingClientRect()
