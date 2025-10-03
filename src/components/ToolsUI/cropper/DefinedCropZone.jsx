@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-12
- * Last modified: 2025-09-12
+ * Created on: 2025-10-03
+ * Last modified: 2025-10-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -36,22 +36,15 @@ export const DefinedCropZone = ({
                                     innerRef,
                                 }) => {
 
-    console.error('DefinedCropZone', infoComponent, infoPosition)
     return (
         <div
             ref={innerRef}
             className={`crop-zone defined ${className}`}
-            style={{
-                left:   cssCrop.x,
-                top:    cssCrop.y,
-                width:  cssCrop.width,
-                height: cssCrop.height,
-            }}
         >
             {/* Position information display */}
             {infoPosition && (
                 <div className="crop-info lgs-one-line-card on-map small">
-                    <CropZoneInfo info={cssCrop}/>
+                    <CropZoneInfo info={{left: 0, top: 0, width: 0, height: 0}}/>
                 </div>
             )}
 

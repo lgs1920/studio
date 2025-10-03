@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-30
- * Last modified: 2025-09-30
+ * Created on: 2025-10-03
+ * Last modified: 2025-10-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -47,10 +47,6 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
     const [guidelines, setGuidelines] = useState({verticalGuidelines: [], horizontalGuidelines: []})
     const [isMouseOver, setIsMouseOver] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
-
-
-    // Drag settings
-    const DRAG_START_THRESHOLD = 20 // Minimum pixels to start drag
 
     /**
      * Get snap settings based on configuration
@@ -154,7 +150,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
      */
     const handleMouseEnter = useCallback(() => {
         setIsMouseOver(true)
-        _draggable.current.handleControlBoxVisibility(_moveable, setControlBoxProps, _controlBoxTimer, false, true)
+        _draggable.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, true)
     }, [])
 
     /**
@@ -169,7 +165,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
             return
         }
         setIsMouseOver(false)
-        _draggable.current.handleControlBoxVisibility(_moveable, setControlBoxProps, _controlBoxTimer, false, false)
+        _draggable.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, false)
     }, [isDragging])
 
     /**
@@ -177,7 +173,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
      * @param {Object} event - The drag event
      */
     const handleDrag = useCallback(event => {
-        _draggable.current.updatePosition(_toolbar.current, event.transform, _moveable, true, setControlBoxProps)
+        _draggable.current.applyPosition(_toolbar.current, event.transform, _moveable, true, setControlBoxProps)
         if (_children.current?.handleDrag) {
             _children.current.handleDrag(event)
         }
@@ -189,13 +185,13 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
      */
     const handleDragStart = useCallback(event => {
         setIsDragging(true)
-        if (_children.current?.handleDragStart) {
-            _children.current.handleDragStart(event)
+        if (_children.current?.onDragStart) {
+            _children.current.onDragStart(event)
         }
-        _draggable.current.dragStartHandler(event)
+        _draggable.current.onDragStart(event)
         _toolbar.current?.classList.add('dragging')
 
-        _draggable.current.handleControlBoxVisibility(_moveable, setControlBoxProps, _controlBoxTimer, true, isMouseOver)
+        _draggable.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, true, isMouseOver)
     }, [isMouseOver, isDragging])
 
     /**
@@ -204,13 +200,13 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
      */
     const handleDragEnd = useCallback(event => {
         setIsDragging(false)
-        if (_children.current?.handleDragEnd) {
-            _children.current.handleDragEnd(event)
+        if (_children.current?.onDragEnd) {
+            _children.current.onDragEnd(event)
         }
-        _draggable.current.dragStopHandler(event)
+        _draggable.current.onDragEnd(event)
         _toolbar.current?.classList.remove('dragging')
 
-        _draggable.current.handleControlBoxVisibility(_moveable, setControlBoxProps, _controlBoxTimer, false, isMouseOver)
+        _draggable.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, isMouseOver)
     }, [isMouseOver, isDragging])
 
     /**
@@ -225,22 +221,22 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
             if (cancelled || !_toolbar.current || !lgs?.canvas) {
                 return
             }
-            const ok = _draggable.current.initialize(
+            const ok = _draggable.current.setupElement(
                 _toolbar.current,
                 {
-                    container: lgs.canvas,
-                    // Although the visibility of the ControlBox is managed, we force it to show
-                    // but frame is forced to be tranparent
-                    showControlBox:        true,
+                    container:        lgs.canvas,
+                    isCropper:        config.isCropper ?? false,
+                    showControlBox:   true, // used only for snap lines
                     left:                  config.left,
                     top:                   config.top,
                     attachTo:              config.attachTo,
-                    containerPadding:      lgs.gutter.xs,
-                    opacity:               lgs.settings.ui.toolbars.opacity,
+                    containerPadding: config.containerPadding ?? 0,
+                    opacity:          config.opacity ?? lgs.settings.ui.toolbars.opacity,
                     type:                  LGS_WIDGET,
                     animationWhenDragging: (config.animationWhenDragging ?? null) !== null
                                            ? config.animationWhenDragging
                                            : config.type === LGS_TOOLBAR,
+                    outsideOverlay:   config.outsideOverlay ?? false,
                 },
                 setBounds,
                 setPosition,
@@ -259,7 +255,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
             cancelled = true
             clearTimeout(_controlBoxTimer.current)
             if (_initialized.current && _toolbar.current) {
-                _draggable.current.cleanup(_toolbar.current)
+                _draggable.current.disposeElement(_toolbar.current)
                 _initialized.current = false
             }
         }
@@ -276,7 +272,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config})
     }, [bounds])
 
     const handleOnBound = ({bounds}) => {
-        _draggable.current.handleBound(bounds)
+        _draggable.current.setBoundStatus(bounds)
     }
     return (
         <>

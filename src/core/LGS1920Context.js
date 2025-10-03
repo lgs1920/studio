@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-15
- * Last modified: 2025-09-15
+ * Created on: 2025-10-03
+ * Last modified: 2025-10-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -374,7 +374,7 @@ export class LGS1920Context {
         __.ui.drawerManager = new PanelManager()
         __.ui.sceneManager = new SceneManager()
         __.ui.menuManager = new MenuManager()
-        __.ui.draggable = new Draggable()        // Init POI management
+        __.ui.draggable = new Draggable()
 
         __.ui.poiManager = new POIManager()
         __.ui.geocoder = new Geocoder()

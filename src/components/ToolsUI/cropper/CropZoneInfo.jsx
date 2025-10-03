@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-12
- * Last modified: 2025-09-12
+ * Created on: 2025-10-03
+ * Last modified: 2025-10-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,7 +17,7 @@
 export const CropZoneInfo = ({info}) => {
     return (
         <>
-            <span>{info.x}×{info.y}</span><span>{info.width}×{info.height}</span>
+            <span>{info.left}×{info.left}</span><span>{info.width}×{info.height}</span>
         </>
     )
 }

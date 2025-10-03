@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-14
- * Last modified: 2025-09-14
+ * Created on: 2025-10-03
+ * Last modified: 2025-10-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -26,9 +26,9 @@
  * @requires ./CropperManager
  */
 
-import { CropZoneInfo }              from '@Components/ToolsUI/cropper/CropZoneInfo'
-import { memo, useCallback, useRef } from 'react'
-import { CropperHandler }            from './CropperHandler'
+import { DraggableUIWidget }                  from '@Components/MainUI/DraggableUIWidget'
+import { CropZoneInfo }                       from '@Components/ToolsUI/cropper/CropZoneInfo'
+import { memo, useCallback, useMemo, useRef } from 'react'
 
 /**
  * A memoized React component that renders an interactive crop zone with handles
@@ -48,22 +48,15 @@ import { CropperHandler }            from './CropperHandler'
  * @returns {JSX.Element} The interactive crop zone with handles
  */
 export const CropZone = memo(({
-                                  cssCrop,
-                                  style,
-                                  manager,
-                                  cropper,
-                                  interactionState,
                                   className = '',
-                                  onStart,
-                                  onMove,
-                                  onEnd,
                                   onDoubleClick,
-                                  innerRef,
                                   infoComponent = null,
                                   infoPosition = true,
+                                  overlay,
                               }) => {
     // Ref to track the crop zone element if innerRef is not provided
     const _cropZone = useRef(null)
+
 
     /**
      * Prevents default context menu behavior
@@ -75,101 +68,41 @@ export const CropZone = memo(({
         event.stopPropagation()
     }, [])
 
-    /**
-     * Initiates resizing on pointer down
-     * @param {string} direction - The handle direction (e.g., 'top-left')
-     * @returns {Function} Event handler for pointer down
-     * @private
-     */
-    const handlePointerDown = (direction) => (event) => {
-        event.stopPropagation()
-        onStart(`resize-${direction}`, event)
-    }
-
-    /**
-     * Initiates resizing on touch start
-     * @param {string} direction - The handle direction (e.g., 'top-left')
-     * @returns {Function} Event handler for touch start
-     * @private
-     */
-    const handleTouchStart = (direction) => (event) => {
-        event.stopPropagation()
-        onStart(`resize-${direction}`, event)
-    }
-
-    /**
-     * Handles movement during resizing or dragging
-     * @param {Event} event - The pointer or touch event
-     * @private
-     */
-    const handleMove = useCallback(event => {
-        event.stopPropagation()
-        onMove?.(interactionState.action, event)
-    }, [onMove, manager.cropping])
-
-    /**
-     * Handles end of pointer or touch interactions
-     * @param {Event} event - The pointer or touch event
-     * @private
-     */
-    const handleEnd = useCallback(event => {
-        event.stopPropagation()
-        onEnd?.(interactionState.action, event)
-    }, [onEnd, manager.cropping])
+    const config = useMemo(() => {
+        return {
+            left:             '20%',
+            top:              '30%',
+            attachTo:         'top-left',
+            isCropper:        true,
+            resizable:        true,
+            draggable:        true,
+            outsideOverlay:   overlay ?? false,
+            containerPadding: lgs.gutter.xs,
+        }
+    }, [overlay])
 
     return (
-        <div
-            ref={innerRef || _cropZone}
-            className={`crop-zone ${className}`}
-            onDoubleClick={onDoubleClick}
-            onContextMenu={handleContextMenu}
-            onPointerDown={handlePointerDown}
-            onTouchStart={handleTouchStart}
-            onPointerMove={handleMove}
-            onTouchMove={handleMove}
-            onPointerUp={handleEnd}
-            onTouchEnd={handleEnd}
-            onPointerCancel={handleEnd}
-            onTouchCancel={handleEnd}
-            style={style}
-        >
-            {/* Position information display */}
-            {infoPosition && (
-                <div className="crop-info lgs-one-line-card on-map small">
-                    <CropZoneInfo info={cssCrop}/>
-                </div>
-            )}
+        <DraggableUIWidget isVisible={true} config={config} className={className}>
+            <div
+                ref={_cropZone}
+                className={`crop-zone`}
+                onDoubleClick={onDoubleClick}
+                onContextMenu={handleContextMenu}
+            >
+                {/* Position information display */}
+                {infoPosition && (
+                    <div className="crop-info lgs-one-line-card on-map small">
+                        <CropZoneInfo info={{left: 0, top: 0, width: 0, height: 0}}/>
+                    </div>
+                )}
 
-            {/* Custom info component */}
-            {infoComponent && (
-                <div className="crop-info-custom lgs-one-line-card on-map small">
-                    {infoComponent}
-                </div>
-            )}
-
-            {/* Horizontal center line */}
-            {interactionState.showHCenterLine && <div className="center-line-inner-horizontal"/>}
-
-            {/* Vertical center line */}
-            {interactionState.showVCenterLine && <div className="center-line-inner-vertical"/>}
-
-            {/* Resizable handles */}
-            {cropper.resizable &&
-                CropperHandler.handleMap.map(([dir, cursor]) => (
-                    <div
-                        key={dir}
-                        className={`crop-handle handle-${dir}`}
-                        style={{ cursor }}
-                        onPointerDown={handlePointerDown(dir)}
-                        onTouchStart={handleTouchStart(dir)}
-                        onPointerMove={handleMove}
-                        onTouchMove={handleMove}
-                        onPointerUp={handleEnd}
-                        onTouchEnd={handleEnd}
-                        onPointerCancel={handleEnd}
-                        onTouchCancel={handleEnd}
-                    />
-                ))}
-        </div>
+                {/* Custom info component */}
+                {infoComponent && (
+                    <div className="crop-info-custom lgs-one-line-card on-map small">
+                        {infoComponent}
+                    </div>
+                )}
+            </div>
+        </DraggableUIWidget>
     )
 })

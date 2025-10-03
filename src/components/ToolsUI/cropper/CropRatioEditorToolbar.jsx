@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-30
- * Last modified: 2025-09-30
+ * Created on: 2025-10-03
+ * Last modified: 2025-10-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -49,9 +49,9 @@ const ICONS = {
 /**
  * CropRatioSelector component
  */
-export const CropRatioEditorToolbar = memo(({manager}) => {
+export const CropRatioEditorToolbar = memo(({context}) => {
     // Access reactive cropper and toolbar states
-    const $cropper = manager?.store
+    const $cropper = context
     const cropper = useSnapshot($cropper || {}, {sync: true})
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video || {}, {sync: true})
@@ -71,7 +71,7 @@ export const CropRatioEditorToolbar = memo(({manager}) => {
         }
         document.addEventListener('onCropUpdate', handleCropUpdate)
         return () => document.removeEventListener('onCropUpdate', handleCropUpdate)
-    }, [manager])
+    }, [context])
 
     useEffect(() => {
         $video.ratio = cropper.ratioEditor
@@ -93,16 +93,16 @@ export const CropRatioEditorToolbar = memo(({manager}) => {
 
         // Parse ratio and reset crop
         const [w, h] = preset.value.split('x').map(Number)
-        const newCrop = manager.resetCrop({aspectRatio: w / h, lockRatio: preset.locked})
-
-        // Update cssCrop using setter
-        if (newCrop) {
-            manager.cssCrop = newCrop
-        }
-        else {
-            console.warn('CropRatioSelector: Failed to update cssCrop, newCrop is invalid')
-            return
-        }
+        // const newCrop = manager.resetCrop({aspectRatio: w / h, lockRatio: preset.locked})
+        //
+        // // Update cssCrop using setter
+        // if (newCrop) {
+        //     manager.cssCrop = newCrop
+        // }
+        // else {
+        //     console.warn('CropRatioSelector: Failed to update cssCrop, newCrop is invalid')
+        //     return
+        // }
 
         // Update store to keep ratioEditor active
         $cropper.ratioEditor = true
@@ -114,8 +114,8 @@ export const CropRatioEditorToolbar = memo(({manager}) => {
         // Simulate pointer event to trigger resize
         const rect = lgs.canvas.getBoundingClientRect()
         const cssRect = {
-            left: Math.floor(rect.left / manager.dpr),
-            top:  Math.floor(rect.top / manager.dpr),
+            left: Math.floor(rect.left / __.device.dpr),
+            top:  Math.floor(rect.top / __.device.dpr),
         }
         const pointerMoveEvent = new PointerEvent('pointermove', {
             bubbles: true,
@@ -124,7 +124,7 @@ export const CropRatioEditorToolbar = memo(({manager}) => {
             clientY: cssRect.top + 1,
         })
         lgs.canvas.dispatchEvent(pointerMoveEvent)
-    }, [manager, $cropper])
+    }, [$cropper])
 
     /**
      * Determines if a given preset is visible on the current device and orientation
