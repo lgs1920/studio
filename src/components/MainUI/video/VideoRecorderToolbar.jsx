@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-30
- * Last modified: 2025-09-30
+ * Created on: 2025-10-03
+ * Last modified: 2025-10-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,9 +22,6 @@
  * @returns {JSX.Element} Video recorder toolbar UI
  */
 import { FontAwesomeIcon }                  from '@Components/FontAwesomeIcon'
-import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
-import { CropOverlay }                      from '@Components/ToolsUI/cropper/CropOverlay'
-import { DefinedCropZone }                  from '@Components/ToolsUI/cropper/DefinedCropZone'
 import { VideoRecorder }                    from '@Core/ui/video/recorder/VideoRecorder'
 import { faCircle }                         from '@fortawesome/duotone-regular-svg-icons'
 import { faPause, faPlay, faStop, faXmark } from '@fortawesome/pro-regular-svg-icons'

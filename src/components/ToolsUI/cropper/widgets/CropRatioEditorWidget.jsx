@@ -14,11 +14,11 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { DraggableUIWidget } from '@Components/MainUI/DraggableUIWidget'
-import { CropRatioEditorToolbar } from '@Components/ToolsUI/cropper/CropRatioEditorToolbar'
-import { LGS_TOOLBAR }       from '@Core/constants'
+import { DraggableUIWidget }      from '@Components/MainUI/DraggableUIWidget'
+import { LGS_TOOLBAR }            from '@Core/constants'
 import React, { useMemo }         from 'react'
 import { useSnapshot }            from 'valtio'
+import { CropRatioEditorToolbar } from './CropRatioEditorToolbar'
 
 /**
  * Component for selecting video quality with draggable toolbar

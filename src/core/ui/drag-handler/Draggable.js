@@ -455,7 +455,8 @@ export class Draggable {
      * @param {Object} config - Element configuration
      * @returns {Object} Updated bound status
      */
-    setBoundStatus = (element, config) => {
+    setBoundStatus = (element, config = this.#configs.get(this.#current)) => {
+
         const container = config.container.getBoundingClientRect()
         const target = element.getBoundingClientRect()
 

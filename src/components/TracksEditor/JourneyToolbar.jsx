@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-26
- * Last modified: 2025-09-26
+ * Created on: 2025-10-03
+ * Last modified: 2025-10-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -40,13 +40,9 @@ import { useSnapshot }                                                          
 export const JourneyToolbar = (props) => {
     const $journeyToolbar = lgs.settings.ui.journeyToolbar
     const journeyToolbar = useSnapshot($journeyToolbar)
-    const toolbars = useSnapshot(lgs.settings.ui.toolbars)
-
 
     const _journeyToolbar = useRef(null)
     const _journeySelector = useRef(null)
-
-    const toolbarMoved = useRef(false)
 
     const $journeyEditor = lgs.mainProxy.components.journeyEditor
     const journeyEditor = useSnapshot($journeyEditor)

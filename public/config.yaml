@@ -34,7 +34,7 @@ videoFormats:
     orientation: "portrait"
     visibility: [ "tablet","desktop","mobile-portrait" ]
     description: "TikTok, Shorts, Stories, Reels"
-  - label: "1x1"
+  - label: "Square"
     value: "1x1"
     aspectRatio: 1.0
     locked: true

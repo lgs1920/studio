@@ -14,7 +14,7 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { CropZoneInfo } from '@Components/ToolsUI/cropper/CropZoneInfo'
+import { CropZoneInfo } from './CropZoneInfo'
 /**
  * DefinedCropZone component for displaying a static crop area without handles or dragging
  * @component

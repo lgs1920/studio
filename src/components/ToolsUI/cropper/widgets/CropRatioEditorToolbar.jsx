@@ -30,7 +30,7 @@ import { FA2SL }                                                    from '@Utils
 import classNames from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState }           from 'react'
 import { useSnapshot }                                              from 'valtio'
-import './style.css'
+import '../style.css'
 
 
 /**

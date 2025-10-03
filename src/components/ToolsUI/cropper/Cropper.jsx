@@ -14,7 +14,7 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { CropRatioEditorWidget }             from '@Components/ToolsUI/cropper/CropRatioEditorWidget'
+import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropRatioEditorWidget'
 /**
  * Cropper component for interactive crop region selection over canvas, video, or image elements.
  * Provides a draggable and resizable crop area with visual feedback and center alignment guides.
@@ -28,10 +28,10 @@ import { CropRatioEditorWidget }             from '@Components/ToolsUI/cropper/C
  * @param {JSX.Element|string} [props.children] - Additional UI elements (e.g., CTA buttons)
  * @returns {JSX.Element|null} Cropper UI or null if source is not loaded
  */
-import { DefinedCropZone }                   from '@Components/ToolsUI/cropper/DefinedCropZone'
+import { DefinedCropZone }       from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
 import { memo, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                       from 'valtio'
-import { CropZone }                          from './CropZone'
+import { CropZoneWidget }        from './widgets/CropZoneWidget'
 import './style.css'
 
 export const Cropper = memo(({overlay = false, className = '', context, options = {}, children}) => {
@@ -58,7 +58,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
             <div ref={_cropperContainer} className="crop-container">
                 {overlayElement && cropper.ratioEditor ? (
                 <>
-                    <CropZone
+                    <CropZoneWidget
                         className={className}
                         infoPosition={options.infoPosition}
                         infoComponent={options.infoComponent}
