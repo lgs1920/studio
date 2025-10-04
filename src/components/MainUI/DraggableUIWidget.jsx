@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-10-04
+ * Last modified: 2025-10-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -72,7 +72,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
      */
     useEffect(() => {
         if (!_draggable.current) {
-            _draggable.current = new Draggable()
+            _draggable.current = __.ui.draggable
         }
     }, [])
 
@@ -210,12 +210,53 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
         _draggable.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, isMouseOver)
     }, [isMouseOver, isDragging])
 
-    const handleResize = event => {
-        _draggable.current.applyPosition(_widget.current, event.transform, _moveable, true, setControlBoxProps)
-        if (_children.current?.handleResize) {
-            _children.current.handleResize(event)
+    const handleResize = useCallback((e) => {
+        // e has: width, height, drag (with beforeTranslate), and target is the element
+        const target = _widget.current
+        if (!target) {
+            return
         }
-    }
+
+        const [tx, ty] = e.drag?.beforeTranslate || [0, 0]
+        const baseLeft = parseInt(target.style.left || '0', 10)
+        const baseTop = parseInt(target.style.top || '0', 10)
+        const finalLeft = Math.round(baseLeft + tx)
+        const finalTop = Math.round(baseTop + ty)
+
+        // Commit styles so they reflect the latest box
+        target.style.left = `${finalLeft}px`
+        target.style.top = `${finalTop}px`
+        target.style.width = `${Math.round(e.width)}px`
+        target.style.height = `${Math.round(e.height)}px`
+        target.style.transform = 'none'
+
+        // Sync overlay
+        const draggable = _draggable.current
+        if (draggable) {
+            const id = draggable.retrieveElementId(target)
+            const cfg = draggable.getConfig(id)
+            if (cfg?.isCropper) {
+                cfg.element = target
+                cfg.cropDimensions = {
+                    left:   finalLeft,
+                    top:    finalTop,
+                    width:  Math.round(e.width),
+                    height: Math.round(e.height),
+                }
+                draggable.applyCropToOverlay(cfg)
+            }
+        }
+
+        // Let child update info UI
+        if (_children.current?.handleResize) {
+            _children.current.handleResize({
+                                               left:   finalLeft,
+                                               top:    finalTop,
+                                               width:  Math.round(e.width),
+                                               height: Math.round(e.height),
+                                           })
+        }
+    }, [])
 
 
     /**

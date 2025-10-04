@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-10-04
+ * Last modified: 2025-10-04
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { DraggableUIWidget } from '@Components/MainUI/DraggableUIWidget'
 import React, { memo, useMemo } from 'react'
-import { DraggableUIWidget }    from '@Components/MainUI/DraggableUIWidget'
 import { CropZone }             from './CropZone'
 
 /**
@@ -49,7 +49,10 @@ export const CropZoneWidget = memo(function CropZoneWidget({
 
     return (
         <DraggableUIWidget isVisible={true} config={config} className={className}>
-            <CropZone onDoubleClick={onDoubleClick} infoComponent={infoComponent} infoPosition={infoPosition}/>
+            <CropZone onDoubleClick={onDoubleClick}
+                      infoComponent={infoComponent}
+                      infoPosition={infoPosition}
+                      overlay={overlay}/>
         </DraggableUIWidget>
     )
 })

@@ -7,45 +7,71 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-10-04
+ * Last modified: 2025-10-04
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import React, { forwardRef, useEffect, useRef, useCallback } from 'react'
-import { CropZoneInfo }                                      from './CropZoneInfo'
+import React, { forwardRef, useEffect, useRef, useCallback, useState } from 'react'
+import { CropZoneInfo }                                                from './CropZoneInfo'
+
+const toClipPath = ({left, top, width, height}) => {
+    const x1 = Math.floor(left)
+    const y1 = Math.floor(top)
+    const x2 = Math.floor(left + width)
+    const y2 = Math.floor(top + height)
+    return `polygon(
+    0% 0%, 100% 0%, 100% 100%, 0% 100%,
+    0% ${y1}px,
+    ${x1}px ${y1}px,
+    ${x1}px ${y2}px,
+    ${x2}px ${y2}px,
+    ${x2}px ${y1}px,
+    0% ${y1}px
+  )`
+}
 
 /**
  * CropZone component for rendering the crop zone content with imperative API.
- * @param {Object} props - Component properties
- * @param {Function} [props.onDoubleClick] - Handler for double click events
- * @param {React.ReactNode} [props.infoComponent] - Custom info component
- * @param {boolean} [props.infoPosition] - Show default info position
- * @param {React.Ref} ref - Forwarded ref for imperative API
- * @returns {JSX.Element} The rendered crop zone content
  */
 export const CropZone = forwardRef(function CropZone(props, ref) {
-    const {onDoubleClick, infoComponent, infoPosition} = props
+    const {onDoubleClick, infoComponent, infoPosition, overlay} = props
     const _root = useRef(null)
+    const [info, setInfo] = useState(null)
 
-    // Prevent default context menu behavior
     const handleContextMenu = useCallback((e) => {
         e.preventDefault()
         e.stopPropagation()
     }, [])
 
-    // Expose imperative API through ref
+    // Expose imperative API through ref for DraggableUIWidget
     useEffect(() => {
         if (!ref) {
             return
         }
+
+        const setPosition = event => {
+            const position = {left: event.left, top: event.top, width: event.width, height: event.height}
+            // Live sync overlay during drag/resize for smoothness
+            if (overlay) {
+                overlay.style.clipPath = toClipPath(position)
+            }
+            setInfo({...position})
+        }
+
         const api = {
-            handleDrag:      (event) => console.log('CropZone handleDrag', event),
-            handleResize:    (event) => console.log('CropZone handleResize', event),
-            handleDragStart: (event) => console.log('CropZone handleDragStart', event),
-            handleDragEnd:   (event) => console.log('CropZone handleDragEnd', event),
+            handleDrag:      (event) => {
+                setPosition(event)
+            },
+            handleResize:    (event) => {
+                setPosition(event)
+            },
+            handleDragStart: () => {
+            },
+            handleDragEnd:   () => {
+            },
         }
         if (typeof ref === 'function') {
             ref(api)
@@ -57,7 +83,7 @@ export const CropZone = forwardRef(function CropZone(props, ref) {
                 ref.current = null
             }
         }
-    }, [ref])
+    }, [ref, overlay])
 
     return (
         <div
@@ -68,7 +94,7 @@ export const CropZone = forwardRef(function CropZone(props, ref) {
         >
             {infoPosition && (
                 <div className="crop-info lgs-one-line-card on-map small">
-                    <CropZoneInfo info={{left: 0, top: 0, width: 0, height: 0}}/>
+                    <CropZoneInfo info={info}/>
                 </div>
             )}
             {infoComponent && (

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-10-04
+ * Last modified: 2025-10-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -33,7 +33,7 @@ export class Draggable {
     #ID_KEY = 'data-LGS-ID'
 
     // Private map to store configurations for elements, keyed by data-LGS-ID
-    #configs = new Map()
+    #widgets
 
     // Valid anchor positions for element placement
     #validPositions = ['center', 'top', 'left', 'right', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
@@ -56,12 +56,14 @@ export class Draggable {
     /**
      * Creates or returns the singleton instance of Draggable.
      * @constructor
+     * @param {Object} store - Valtio store (proxyMap)
      * @returns {Draggable} The singleton instance
      */
-    constructor() {
+    constructor(store) {
         if (Draggable.instance) {
             return Draggable.instance
         }
+        this.#widgets = new Map()
         Draggable.instance = this
     }
 
@@ -138,23 +140,29 @@ export class Draggable {
      */
     setupElement = (element, initialConfig, setBounds, setPosition, moveable) => {
         // Validate required inputs
-        if (!element || !initialConfig?.container) {
+        if (!element || !initialConfig?.container || !moveable.current) {
             return false
         }
 
-        // Check if element is rendered (has valid dimensions)
-        const elementRect = element.getBoundingClientRect()
-        if (!initialConfig.isCropper && (elementRect.width === 0 || elementRect.height === 0)) {
-            return false
-        }
+        // Keep element reference
+        initialConfig.element = element
 
-        // Generate or retrieve element ID
+        // Assign a unique ID to the element if it doesn't have one
         let elementId = this.retrieveElementId(element)
         if (!elementId) {
             elementId = uuidv4()
+
+            // Keep reference to the DOM element for later exact reads
+            initialConfig.element = element
             element.setAttribute(this.#ID_KEY, elementId)
         }
         moveable.current.target = element
+
+        // const setPosition = event => {
+        //     const position = {left: event.left, top: event.top, width: event.width, height: event.height}
+        //     // clipPath handled by Draggable; only update info state here
+        //     setInfo({...position})
+        // }
 
         // Force opacity during rendering
         moveable.current.onRender = e => {
@@ -166,14 +174,7 @@ export class Draggable {
 
         // Create and adapt configuration for this element
         const config = this.retrieveConfig(element, initialConfig)
-        if (config.isCropper) {
-
-            this.cropDimensions(config)
-
-            if (config.outsideOverlay) {
-                config.outsideOverlay.style.clipPath = this.cropperWindowStyle(config.cropDimensions)
-            }
-        }
+        this.applyCropToOverlay(config)
 
         // Update bounds and position
         const newBounds = this.refreshBounds(config, moveable)
@@ -183,6 +184,8 @@ export class Draggable {
             element.style.top = `${config.cropDimensions.top}px`
             element.style.width = `${config.cropDimensions.width}px`
             element.style.height = `${config.cropDimensions.height}px`
+            // Ensure overlay matches final styles
+            this.applyCropToOverlay(config)
         }
         else {
             const newPosition = this.computeInitialPosition(config, element, false)
@@ -204,6 +207,31 @@ export class Draggable {
         return true
     }
 
+    applyCropToOverlay = config => {
+        if (!config?.isCropper) {
+            return
+        }
+        // Prefer current element styles if available
+        if (config.element) {
+            const left = parseInt(config.element.style.left || '0', 10)
+            const top = parseInt(config.element.style.top || '0', 10)
+            const width = parseInt(config.element.style.width || '0', 10)
+            const height = parseInt(config.element.style.height || '0', 10)
+            if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+                config.cropDimensions = {left, top, width, height}
+            }
+            else {
+                this.cropDimensions(config)
+            }
+        }
+        else {
+            this.cropDimensions(config)
+        }
+        if (config.outsideOverlay) {
+            config.outsideOverlay.style.clipPath = this.openWindowInOverlay(config.cropDimensions)
+        }
+    }
+
     /**
      * Applies a new position to the element and updates the Moveable rectangle.
      * @param {HTMLElement} element - The draggable element
@@ -213,7 +241,7 @@ export class Draggable {
      * @param {Function} setControlBoxProps - Function to update control box properties
      */
     applyPosition = (element, position, moveable, isDragging, setControlBoxProps) => {
-        const config = this.#configs.get(this.retrieveElementId(element))
+        const config = this.getConfig(this.retrieveElementId(element))
         if (!config) {
             return
         }
@@ -252,7 +280,7 @@ export class Draggable {
      */
     manageControlBox = (moveable, setControlBoxProps, _controlBoxTimer, show, isMouseOver) => {
         const elementId = this.retrieveElementId(moveable.current.target)
-        const config = this.#configs.get(elementId)
+        const config = this.getConfig(elementId)
         if (!config || !config.showControlBox) {
             // Hide control box immediately if config is missing or disabled
             setControlBoxProps({
@@ -299,7 +327,7 @@ export class Draggable {
      */
     retrieveConfig = (element, initialConfig = {}) => {
         const elementId = this.retrieveElementId(element)
-        if (!this.#configs.has(elementId)) {
+        if (!this.#widgets.has(elementId)) {
             const anchor =
                       (initialConfig.attachTo && this.#validPositions.includes(initialConfig.attachTo))
                       ? initialConfig.attachTo
@@ -308,7 +336,7 @@ export class Draggable {
                         : 'top-left'
 
             const ratio = __.device.isPortrait ? '9x16' : '16x9'
-            this.#configs.set(elementId, {
+            this.#widgets.set(elementId, {
                 id:             elementId,
                 boundStatus:    {left: false, top: false, right: false, bottom: false},
                 container:      initialConfig.container,
@@ -331,7 +359,7 @@ export class Draggable {
                 outsideOverlay: initialConfig.outsideOverlay,
             })
         }
-        return this.#configs.get(elementId)
+        return this.getConfig(elementId)
     }
 
     /**
@@ -455,7 +483,7 @@ export class Draggable {
      * @param {Object} config - Element configuration
      * @returns {Object} Updated bound status
      */
-    setBoundStatus = (element, config = this.#configs.get(this.#current)) => {
+    setBoundStatus = (element, config = this.getConfig(this.#current)) => {
 
         const container = config.container.getBoundingClientRect()
         const target = element.getBoundingClientRect()
@@ -485,9 +513,6 @@ export class Draggable {
      * @returns {Object} Crop dimensions and position { left, top, width, height }
      */
     cropDimensions = (config) => {
-        if (config.cropDimensions) {
-            return config.cropDimensions
-        }
 
         const container = this.refreshBounds(config)
         container.width = container.right - container.left
@@ -538,11 +563,11 @@ export class Draggable {
     }
 
     /**
-     * Generates styles for the cropper window using a clip-path.
+     * Open a window in the cropper outside overlay using a clip-path.
      * @param {Object} crop - Crop dimensions { left, top, width, height }
      * @returns {Object} Style object with clipPath property
      */
-    cropperWindowStyle = (crop) => {
+    openWindowInOverlay = (crop) => {
         return `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%,
         0% ${crop.top}px,
         ${crop.left}px ${crop.top}px,
@@ -597,18 +622,6 @@ export class Draggable {
                 }
                 setBounds(newBounds)
 
-                // If cropper, recompute crop dims and update overlay
-                if (config.isCropper) {
-                    config.cropDimensions = this.cropDimensions(config)
-                    element.style.left = `${config.cropDimensions.left}px`
-                    element.style.top = `${config.cropDimensions.top}px`
-                    element.style.width = `${config.cropDimensions.width}px`
-                    element.style.height = `${config.cropDimensions.height}px`
-                    if (config.outsideOverlay) {
-                        config.outsideOverlay.style.clipPath = this.cropperWindowStyle(config.cropDimensions)
-                    }
-                }
-
                 // Update bound status
                 this.setBoundStatus(element, config)
 
@@ -656,6 +669,13 @@ export class Draggable {
                             }
                         }
                     }
+
+
+                    // If cropper, re-apply overlay to match current styles or recompute
+                    if (config.isCropper) {
+                        config.element = element
+                        this.applyCropToOverlay(config)
+                    }
                 }
 
                 // Update Moveable rectangle if bounds changed
@@ -694,14 +714,14 @@ export class Draggable {
      */
     disposeElement = element => {
         const elementId = this.retrieveElementId(element)
-        const config = this.#configs.get(elementId)
+        const config = this.getConfig(elementId)
         if (!config) {
             return
         }
         if (config.observer) {
             config.observer.disconnect()
         }
-        this.#configs.delete(elementId)
+        this.#widgets.delete(elementId)
         const timer = this.#controlBoxTimers.get(elementId)
         if (timer) {
             clearTimeout(timer)
@@ -722,6 +742,11 @@ export class Draggable {
         this.#isDragging = true
         const elementId = this.retrieveElementId(e.target)
         this.#current = elementId
+
+        // Ensure we reference the actual element for style reads during this drag session
+        if (config?.isCropper) {
+            config.element = e.target
+        }
     }
 
     /**
@@ -731,6 +756,38 @@ export class Draggable {
     onDragEnd = e => {
         e.target.classList.remove('dragging', 'dragging-animation')
         this.#isDragging = false
+
+        // Persist final styles into config and re-sync overlay to avoid stale values next session
+        const config = this.retrieveConfig(e.target)
+        if (config?.isCropper) {
+            // If we were dragging via transform, convert it to left/top before reading styles
+            const currentTransform = e.target.style.transform || ''
+            const match = currentTransform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
+            if (match) {
+                const dx = parseFloat(match[1]) || 0
+                const dy = parseFloat(match[2]) || 0
+                const baseLeft = parseInt(e.target.style.left || '0', 10)
+                const baseTop = parseInt(e.target.style.top || '0', 10)
+                const finalLeft = Math.round(baseLeft + dx)
+                const finalTop = Math.round(baseTop + dy)
+                e.target.style.left = `${finalLeft}px`
+                e.target.style.top = `${finalTop}px`
+                e.target.style.transform = 'none'
+                config.transform = undefined
+                config.position = {left: finalLeft, top: finalTop}
+            }
+
+            // Now read committed styles
+            config.element = e.target
+            const left = parseInt(e.target.style.left || '0', 10)
+            const top = parseInt(e.target.style.top || '0', 10)
+            const width = parseInt(e.target.style.width || '0', 10)
+            const height = parseInt(e.target.style.height || '0', 10)
+            if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+                config.cropDimensions = {left, top, width, height}
+            }
+            this.applyCropToOverlay(config)
+        }
     }
 
     /**
@@ -765,7 +822,7 @@ export class Draggable {
     #createInnerOverlay = element => {
         const overlay = document.createElement('div')
         const elementId = this.retrieveElementId(element)
-        const config = this.#configs.get(elementId)
+        const config = this.getConfig(elementId)
         config.overlay = overlay
         const targetRect = this.#computeElementBounds(element)
         Object.assign(overlay.style, {
@@ -783,8 +840,16 @@ export class Draggable {
      */
     getInnerOverlay = element => {
         const elementId = this.retrieveElementId(element)
-        const config = this.#configs.get(elementId)
+        const config = this.getConfig(elementId)
         return config.overlay
+    }
+
+    getConfig = (elementId) => {
+        return this.#widgets.get(elementId)
+    }
+
+    setConfig = (elementId, config) => {
+        this.#widgets.set(elementId, config)
     }
 
 }
