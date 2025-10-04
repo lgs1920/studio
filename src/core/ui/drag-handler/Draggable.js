@@ -156,6 +156,7 @@ export class Draggable {
         this.applyCropToOverlay(config)
 
         // Update bounds and position/crop
+        moveable.current.keepRatio = config.ratio.locked
         const newBounds = this.refreshBounds(config, moveable)
         setBounds(newBounds)
         if (config.isCropper) {
@@ -311,6 +312,7 @@ export class Draggable {
                 useRatio:       initialConfig.useRatio ?? true,
                 minCropSize:    initialConfig.minCropSize ?? this.#MIN_CROP_SIZE,
                 outsideOverlay: initialConfig.outsideOverlay,
+                lockedOnCenter: initialConfig.lockedOnCenter ?? false, // keep center fixed on resize
             })
         }
         return this.getConfig(elementId)
@@ -502,14 +504,21 @@ export class Draggable {
             }
 
             const computeAndApply = () => {
+                // Trace entry
+                // console.debug('[Draggable] computeAndApply enter')
+
                 const oldBounds = {...config.bounds}
                 const newBounds = this.refreshBounds(config, moveable)
+
+                // console.debug('[Draggable] bounds old->new', oldBounds, newBounds)
+
                 if (
                     newBounds.left === oldBounds.left &&
                     newBounds.top === oldBounds.top &&
                     newBounds.right === oldBounds.right &&
                     newBounds.bottom === oldBounds.bottom
                 ) {
+                    // console.debug('[Draggable] computeAndApply no-op (same bounds)')
                     pending = false
                     rafId = null
                     return
@@ -521,7 +530,6 @@ export class Draggable {
                 const deltaBottom = newBounds.bottom - oldBounds.bottom
                 const isShrinking = deltaRight < 0 || deltaBottom < 0
 
-                // Adjust current transform when shrinking on bound edges
                 if (config.transform) {
                     const match = config.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
                     if (match) {
@@ -558,7 +566,6 @@ export class Draggable {
                     }
                 }
 
-                // Clamp/resize crop to new bounds (respect ratio lock if set)
                 if (config.isCropper) {
                     const t = element.style.transform || ''
                     const m = t.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
@@ -571,7 +578,25 @@ export class Draggable {
                     let width = parseInt(element.style.width || '0', 10)
                     let height = parseInt(element.style.height || '0', 10)
 
-                    // Clamp position
+                    if (config.lockedOnCenter && width > 0 && height > 0) {
+                        const cx = left + width / 2
+                        const cy = top + height / 2
+                        if (cx - width / 2 < newBounds.left) {
+                            left += newBounds.left - (cx - width / 2)
+                        }
+                        if (cy - height / 2 < newBounds.top) {
+                            top += newBounds.top - (cy - height / 2)
+                        }
+                        if (cx + width / 2 > newBounds.right) {
+                            left -= (cx + width / 2) - newBounds.right
+                        }
+                        if (cy + height / 2 > newBounds.bottom) {
+                            top -= (cy + height / 2) - newBounds.bottom
+                        }
+                        left = Math.round(cx - width / 2)
+                        top = Math.round(cy - height / 2)
+                    }
+
                     const maxLeft = Math.max(newBounds.left, newBounds.right - width)
                     const maxTop = Math.max(newBounds.top, newBounds.bottom - height)
                     if (left < newBounds.left) {
@@ -587,50 +612,13 @@ export class Draggable {
                         top = maxTop
                     }
 
-                    // Fit size to remaining space
-                    const maxWidth = newBounds.right - left
-                    const maxHeight = newBounds.bottom - top
-
-                    if (config.useRatio && config.ratio?.locked && config.ratio?.aspectRatio > 0) {
-                        const ar = config.ratio.aspectRatio
-                        let targetWidth = Math.min(width || maxWidth, maxWidth)
-                        let targetHeight = Math.min(height || maxHeight, maxHeight)
-                        targetHeight = Math.floor(targetWidth / ar)
-                        if (targetHeight > maxHeight) {
-                            targetHeight = maxHeight
-                            targetWidth = Math.floor(targetHeight * ar)
-                        }
-                        if (config.minCropSize) {
-                            targetWidth = Math.max(config.minCropSize.width || 0, targetWidth)
-                            targetHeight = Math.max(config.minCropSize.height || 0, targetHeight)
-                        }
-                        width = targetWidth
-                        height = targetHeight
-                    }
-                    else {
-                        if (width > maxWidth) {
-                            width = maxWidth
-                        }
-                        if (height > maxHeight) {
-                            height = maxHeight
-                        }
-                        if (config.minCropSize) {
-                            width = Math.max(config.minCropSize.width || 0, width)
-                            height = Math.max(config.minCropSize.height || 0, height)
-                        }
-                    }
-
-                    // Commit and clear transform
                     element.style.left = `${left}px`
                     element.style.top = `${top}px`
-                    element.style.width = `${width}px`
-                    element.style.height = `${height}px`
                     element.style.transform = 'none'
                     config.transform = undefined
                     config.position = {left, top}
                     config.element = element
                     config.cropDimensions = {left, top, width, height}
-
                     this.applyCropToOverlay(config)
                 }
 
@@ -646,6 +634,7 @@ export class Draggable {
 
                 pending = false
                 rafId = null
+                // console.debug('[Draggable] computeAndApply done')
             }
 
             return () => {
@@ -660,8 +649,14 @@ export class Draggable {
             }
         })()
 
-        config.observer = new ResizeObserver(handleResize)
-        config.observer.observe(config.container)
+        // Safety: verify container exists before observing
+        if (config.container) {
+            config.observer = new ResizeObserver(handleResize)
+            config.observer.observe(config.container)
+        }
+        else {
+            // console.warn('[Draggable] No container to observe')
+        }
     }
 
     /**

@@ -45,6 +45,7 @@ export const CropZoneWidget = memo(function CropZoneWidget({
         draggable:        true,
         outsideOverlay:   overlay ?? false,
         containerPadding: (lgs?.gutter?.xs ?? 8),
+        lockedOnCenter: true,
     }), [overlay])
 
     return (

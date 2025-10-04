@@ -39,6 +39,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
     const _controlBoxTimer = useRef(null)
     const _draggable = useRef(null)
     const _initialized = useRef(false)
+    const _resizeRaf = useRef(0)
     const _children = childRef ?? useRef(null)
 
     const [bounds, setBounds] = useState({left: 0, top: 0, right: 0, bottom: 0})
@@ -78,7 +79,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
 
     /**
      * Get center guidelines for snapping
-     * @returns {Object} Vertical and horizontal guidelines
+     * @returns {{verticalGuidelines: [], horizontalGuidelines: []}} Vertical and horizontal guidelines
      */
     const getCenterGuidelines = useCallback(() => {
         const container = lgs.canvas
@@ -258,6 +259,14 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
         }
     }, [])
 
+    useEffect(() => {
+        return () => {
+            if (_resizeRaf.current) {
+                cancelAnimationFrame(_resizeRaf.current)
+                _resizeRaf.current = 0
+            }
+        }
+    }, [])
 
     /**
      * Initialize draggable widget and handle cleanup
@@ -287,6 +296,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
                                            ? config.animationWhenDragging
                                            : config.type === LGS_TOOLBAR,
                     outsideOverlay:   config.outsideOverlay ?? false,
+                    lockedOnCenter: config.lockedOnCenter ?? false,
                 },
                 setBounds,
                 setPosition,
@@ -329,8 +339,9 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
             {isVisible && (
                 <div className="lgs-widget-container">
                     <div
-                        className={classNames(LGS_WIDGET, {
-                            [className]:              !!className,
+                        className={classNames(
+                            LGS_WIDGET, {
+                                [className]: !!className,
                             [LGS_TOOLBAR]:            config?.type === LGS_TOOLBAR,
                             [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
                                               },
@@ -361,6 +372,8 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
                         resizable={config?.resizable || false}
                         resizeDirections={['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']}
                         onResize={handleResize}
+                        keepRatio={config?.ratio?.locked || true}
+                        throttleResize={2}
 
                         scalable={config?.scalable || false}
 
