@@ -18,46 +18,50 @@ import { SECOND }       from '@Core/constants'
 import { v4 as uuidv4 } from 'uuid'
 
 /**
- * Singleton class for managing draggable elements' calculations, bounds, snapping, and resize observation.
- * Reusable for multiple elements with unique identifiers.
- * @class
+ * Singleton that manages draggable widgets: bounds, snapping, movement, and crop overlay sync.
+ * It also observes container resize and keeps widgets clamped within bounds.
+ *
+ * Key responsibilities:
+ * - Initialize draggable elements and assign unique IDs.
+ * - Compute and apply initial position or crop dimensions.
+ * - Apply transform or left/top during drag; collapse transform to styles on end.
+ * - Keep an outside overlay clip-path synchronized with crop zone box.
+ * - On container resize, clamp/resize the crop zone (respecting aspect ratio lock).
  */
 export class Draggable {
-    // Private static instance for singleton pattern
+    // Singleton instance
     static instance = null
 
-    // Delay for hiding control box (3 seconds)
+    // Delay before hiding control box
     HIDE_DELAY = 2 * SECOND
 
-    // Attribute name used to identify draggable elements
+    // Internal attribute used for element IDs
     #ID_KEY = 'data-LGS-ID'
 
-    // Private map to store configurations for elements, keyed by data-LGS-ID
+    // Elements configurations by ID
     #widgets
 
-    // Valid anchor positions for element placement
+    // Valid anchor positions
     #validPositions = ['center', 'top', 'left', 'right', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
 
-    // Tracks whether an element is currently being dragged
+    // Whether any element is being dragged
     #isDragging = false
 
-    // Map to store control box timers for each element
+    // Control box timers by element
     #controlBoxTimers = new Map()
 
-    // Current element being interacted with
+    // Current active element ID
     #current = null
 
-    // Scale factor for cropper dimensions
+    // Crop scale factor inside container (1 = full)
     #CROP_SCALE_FACTOR = 1
 
-    // Minimum crop size
+    // Minimal crop size
     #MIN_CROP_SIZE = {width: 0, height: 0}
 
     /**
-     * Creates or returns the singleton instance of Draggable.
-     * @constructor
-     * @param {Object} store - Valtio store (proxyMap)
-     * @returns {Draggable} The singleton instance
+     * Create or return the singleton instance.
+     * @param {Object} store - Optional shared store (not required).
      */
     constructor(store) {
         if (Draggable.instance) {
@@ -68,19 +72,19 @@ export class Draggable {
     }
 
     /**
-     * Retrieves the ID of an element from its data-LGS-ID attribute.
-     * @param {HTMLElement} element - The draggable element
-     * @returns {string|null} The element's ID or null if not found
+     * Get element ID from its data attribute.
+     * @param {HTMLElement} element
+     * @returns {string|null}
      */
     retrieveElementId = element => {
         return element.getAttribute(this.#ID_KEY)
     }
 
     /**
-     * Restricts the execution rate of a function to prevent excessive calls.
-     * @param {Function} func - The function to restrict
-     * @param {number} limit - The time limit in milliseconds
-     * @returns {Function} The rate-restricted function
+     * Throttle calls to a function.
+     * @param {Function} func
+     * @param {number} limit
+     * @returns {Function}
      */
     restrictRate = (func, limit) => {
         let inThrottle
@@ -94,52 +98,36 @@ export class Draggable {
     }
 
     /**
-     * Sets up a timer to hide the control box after a delay, unless the element is being dragged or the mouse is over
-     * it.
+     * Internal helper that hides control box after delay if applicable.
      * @private
-     * @param {Object} moveable - The Moveable instance
-     * @param {Object} config - The element's configuration
-     * @param {Function} setControlBoxProps - Function to update control box properties
-     * @param {boolean} isMouseOver - Whether the mouse is over the element or its control box
-     * @returns {number|undefined} Timer ID or undefined if no timer is set
      */
     #hideControlBoxWithTimer = (moveable, config, setControlBoxProps, isMouseOver) => {
-        // Prevent hiding if dragging, control box is disabled, or mouse is over
         if (this.#isDragging || !config.showControlBox || isMouseOver) {
             return
         }
-        // Hide immediately if the element is not the current one
         if (this.#current !== config.id) {
-            setControlBoxProps({
-                                   renderDirections: [],
-                                   zoom:    0,
-                                   opacity: 0,
-                               })
+            setControlBoxProps({renderDirections: [], zoom: 0, opacity: 0})
             return
         }
-        // Schedule hiding after delay for the current element
         return setTimeout(() => {
-            setControlBoxProps({
-                                   renderDirections: [],
-                                   zoom: 0,
-                                   opacity: 0,
-                               })
+            setControlBoxProps({renderDirections: [], zoom: 0, opacity: 0})
             const elementId = this.retrieveElementId(moveable.current.target)
             this.#controlBoxTimers.delete(elementId)
         }, this.HIDE_DELAY)
     }
 
     /**
-     * Sets up a draggable element with position, bounds, and resize observer.
-     * @param {HTMLElement} element - The draggable element
-     * @param {Object} initialConfig - Initial configuration (container, left, top, attachTo, etc.)
-     * @param {Function} setBounds - Function to update bounds in component state
-     * @param {Function} setPosition - Function to update position in component state
-     * @param {Object} moveable - Moveable instance
-     * @returns {boolean} Whether setup was successful
+     * Initialize a draggable element, compute its initial position/crop,
+     * and start observing container resize.
+     *
+     * @param {HTMLElement} element
+     * @param {Object} initialConfig
+     * @param {Function} setBounds
+     * @param {Function} setPosition
+     * @param {Object} moveable
+     * @returns {boolean}
      */
     setupElement = (element, initialConfig, setBounds, setPosition, moveable) => {
-        // Validate required inputs
         if (!element || !initialConfig?.container || !moveable.current) {
             return false
         }
@@ -147,36 +135,27 @@ export class Draggable {
         // Keep element reference
         initialConfig.element = element
 
-        // Assign a unique ID to the element if it doesn't have one
+        // Ensure ID
         let elementId = this.retrieveElementId(element)
         if (!elementId) {
             elementId = uuidv4()
-
-            // Keep reference to the DOM element for later exact reads
             initialConfig.element = element
             element.setAttribute(this.#ID_KEY, elementId)
         }
         moveable.current.target = element
 
-        // const setPosition = event => {
-        //     const position = {left: event.left, top: event.top, width: event.width, height: event.height}
-        //     // clipPath handled by Draggable; only update info state here
-        //     setInfo({...position})
-        // }
-
-        // Force opacity during rendering
+        // Force opacity while Moveable renders
         moveable.current.onRender = e => {
             e.target.style.opacity = initialConfig.opacity
         }
 
-        // Store initial control box visibility
         initialConfig.controlBoxVisibility = initialConfig.showControlBox || false
 
-        // Create and adapt configuration for this element
+        // Create config if needed
         const config = this.retrieveConfig(element, initialConfig)
         this.applyCropToOverlay(config)
 
-        // Update bounds and position
+        // Update bounds and position/crop
         const newBounds = this.refreshBounds(config, moveable)
         setBounds(newBounds)
         if (config.isCropper) {
@@ -184,7 +163,6 @@ export class Draggable {
             element.style.top = `${config.cropDimensions.top}px`
             element.style.width = `${config.cropDimensions.width}px`
             element.style.height = `${config.cropDimensions.height}px`
-            // Ensure overlay matches final styles
             this.applyCropToOverlay(config)
         }
         else {
@@ -192,26 +170,30 @@ export class Draggable {
             this.applyPosition(element, newPosition, moveable, false, setPosition)
         }
 
-        // Set initial styles
+        // Base styles
         element.style.transform = 'none'
         element.style.opacity = initialConfig.opacity || 1
-        element.style.transformOrigin = '0 0' // Ensure left/top refer to the top-left corner
+        element.style.transformOrigin = '0 0'
 
-        // Set up resize monitoring
+        // Observe container resize
         this.monitorContainerResize(config, setBounds, moveable, element, setPosition)
 
-        // Create overlay if not present
+        // Create inner overlay if missing
         if (!config.overlay) {
             this.#createInnerOverlay(element)
         }
         return true
     }
 
+    /**
+     * Update outside overlay clip-path based on config.cropDimensions or element styles.
+     * Keeps overlay "window" aligned with the crop box.
+     * @param {Object} config
+     */
     applyCropToOverlay = config => {
         if (!config?.isCropper) {
             return
         }
-        // Prefer current element styles if available
         if (config.element) {
             const left = parseInt(config.element.style.left || '0', 10)
             const top = parseInt(config.element.style.top || '0', 10)
@@ -233,20 +215,14 @@ export class Draggable {
     }
 
     /**
-     * Applies a new position to the element and updates the Moveable rectangle.
-     * @param {HTMLElement} element - The draggable element
-     * @param {Object|string} position - New position with left and top coordinates or CSS transform
-     * @param {Object} moveable - Moveable instance
-     * @param {boolean} isDragging - Whether the element is currently being dragged
-     * @param {Function} setControlBoxProps - Function to update control box properties
+     * Apply position either as transform (during drag) or as left/top (init).
+     * Also updates Moveable rect and control box when dragging.
      */
     applyPosition = (element, position, moveable, isDragging, setControlBoxProps) => {
         const config = this.getConfig(this.retrieveElementId(element))
         if (!config) {
             return
         }
-
-        // Apply position as transform (during drag) or left/top (during initialization)
         if (typeof position === 'string') {
             element.style.transform = position
             config.transform = position
@@ -256,11 +232,9 @@ export class Draggable {
             element.style.top = `${position.top}px`
             config.position = position
         }
-
-        // Update Moveable rectangle
-        moveable.current.updateRect()
-
-        // Show control box during drag if enabled
+        if (moveable?.current) {
+            moveable.current.updateRect()
+        }
         if (config.showControlBox && isDragging) {
             setControlBoxProps({
                                    renderDirections: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
@@ -271,39 +245,22 @@ export class Draggable {
     }
 
     /**
-     * Manages the visibility of the control box during drag or click events.
-     * @param {Object} moveable - Moveable instance
-     * @param {Function} setControlBoxProps - Function to update control box properties
-     * @param {Object} _controlBoxTimer - React useRef for the control box timer
-     * @param {boolean} show - Whether to show or hide the control box
-     * @param {boolean} isMouseOver - Whether the mouse is over the element or its control box
+     * Show/hide control box with delay and state handling.
      */
     manageControlBox = (moveable, setControlBoxProps, _controlBoxTimer, show, isMouseOver) => {
         const elementId = this.retrieveElementId(moveable.current.target)
         const config = this.getConfig(elementId)
         if (!config || !config.showControlBox) {
-            // Hide control box immediately if config is missing or disabled
-            setControlBoxProps({
-                                   renderDirections: [],
-                                   zoom:    0,
-                                   opacity: 0,
-                               })
+            setControlBoxProps({renderDirections: [], zoom: 0, opacity: 0})
             clearTimeout(_controlBoxTimer.current)
             this.#controlBoxTimers.delete(elementId)
             return
         }
-
-        // Clear existing timer
         clearTimeout(_controlBoxTimer.current)
         this.#controlBoxTimers.delete(elementId)
 
-        // Mark as current element if showing
         if (show) {
             this.#current = elementId
-        }
-
-        if (show) {
-            // Show control box
             setControlBoxProps({
                                    renderDirections: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
                                    zoom: 1,
@@ -311,7 +268,6 @@ export class Draggable {
                                })
         }
         else {
-            // Schedule hiding of control box
             _controlBoxTimer.current = this.#hideControlBoxWithTimer(moveable, config, setControlBoxProps, isMouseOver)
             if (_controlBoxTimer.current) {
                 this.#controlBoxTimers.set(elementId, _controlBoxTimer.current)
@@ -320,10 +276,8 @@ export class Draggable {
     }
 
     /**
-     * Retrieves or creates configuration for an element using its data-LGS-ID.
-     * @param {HTMLElement} element - The draggable element
-     * @param {Object} initialConfig - Initial configuration (container, left, top, attachTo, etc.)
-     * @returns {Object} Configuration for the element
+     * Get or create configuration for an element.
+     * Adds crop-related options including aspect ratio and min size.
      */
     retrieveConfig = (element, initialConfig = {}) => {
         const elementId = this.retrieveElementId(element)
@@ -363,86 +317,41 @@ export class Draggable {
     }
 
     /**
-     * Computes the initial position based on percentages or pixels, preserving relative position.
-     * @param {Object} config - Element configuration
-     * @param {HTMLElement} element - The draggable element
-     * @param {boolean} isResize - Whether the calculation is triggered by a resize
-     * @returns {Object} Calculated position with left and top coordinates
+     * Compute initial left/top from given config (supports percentage values) and clamp to bounds.
      */
     computeInitialPosition = (config, element, isResize = false) => {
         if (!config.container || !element) {
             return {left: 0, top: 0}
         }
-
         const container = config.container.getBoundingClientRect()
         const widget = element.getBoundingClientRect()
-
-        // Check for unrendered element
         if (widget.width === 0 || widget.height === 0) {
             return {left: 0, top: 0}
         }
-
-        // Convert percentage string or number to pixel value relative to container
         const parsePosition = (value, maxDimension) => {
             if (typeof value === 'string' && value.endsWith('%')) {
                 const percent = parseFloat(value)
-                if (isNaN(percent)) {
-                    return 0
-                }
-                return (percent / 100) * maxDimension
+                return isNaN(percent) ? 0 : (percent / 100) * maxDimension
             }
             const numValue = typeof value === 'number' ? value : parseFloat(value)
-            if (isNaN(numValue)) {
-                return 0
-            }
-            return numValue
+            return isNaN(numValue) ? 0 : numValue
         }
 
         let left = parsePosition(config.left, container.width)
         let top = parsePosition(config.top, container.height)
 
-        // Adjust position based on attachTo using a map for scalability
         const attachTo = config.attachTo || 'top-left'
         const adjustments = {
-            center:         () => ({
-                left: left - widget.width / 2,
-                top: top - widget.height / 2,
-            }),
-            top:            () => ({
-                left: left - widget.width / 2,
-                top: top,
-            }),
-            left:           () => ({
-                left: left,
-                top: top - widget.height / 2,
-            }),
-            right:          () => ({
-                left: left - widget.width,
-                top: top - widget.height / 2,
-            }),
-            bottom:         () => ({
-                left: left - widget.width / 2,
-                top: top - widget.height,
-            }),
-            'top-left':     () => ({
-                left: left,
-                top: top,
-            }),
-            'top-right':    () => ({
-                left: left - widget.width,
-                top: top,
-            }),
-            'bottom-left':  () => ({
-                left: left,
-                top: top - widget.height,
-            }),
-            'bottom-right': () => ({
-                left: left - widget.width,
-                top: top - widget.height,
-            }),
+            center:         () => ({left: left - widget.width / 2, top: top - widget.height / 2}),
+            top:            () => ({left: left - widget.width / 2, top: top}),
+            left:           () => ({left: left, top: top - widget.height / 2}),
+            right:          () => ({left: left - widget.width, top: top - widget.height / 2}),
+            bottom:         () => ({left: left - widget.width / 2, top: top - widget.height}),
+            'top-left':     () => ({left, top}),
+            'top-right':    () => ({left: left - widget.width, top}),
+            'bottom-left':  () => ({left, top: top - widget.height}),
+            'bottom-right': () => ({left: left - widget.width, top: top - widget.height}),
         }
-
-        // Apply anchor adjustment
         const adjust = adjustments[attachTo]
         if (adjust) {
             const adjusted = adjust()
@@ -450,44 +359,39 @@ export class Draggable {
             top = adjusted.top
         }
 
-        // Ensure left and top are within bounds
         left = Math.min(Math.max(left, config.bounds.left), config.bounds.right - widget.width)
         top = Math.min(Math.max(top, config.bounds.top), config.bounds.bottom - widget.height)
 
-        config.position = {left: left, top: top}
+        config.position = {left, top}
         config.dimensions = {width: widget.width, height: widget.height}
-
         return config.position
     }
 
     /**
-     * Refreshes bounds based on container dimensions, applying margin from containerPadding.
-     * @param {Object} config - Element configuration
-     * @param {Object} moveable - Moveable instance
-     * @returns {Object} Updated bounds
+     * Refresh container bounds (in pixels relative to container).
+     * @param {Object} config
+     * @returns {{left:number,top:number,right:number,bottom:number}}
      */
     refreshBounds = (config, moveable) => {
         const container = config.container.getBoundingClientRect()
         config.bounds = {
-            left:   0,//config.containerPadding,
-            top:    0, //config.containerPadding,
-            right:  container.width/*  - config.containerPadding */,
-            bottom: container.height/*  - config.containerPadding */,
+            left:   0,
+            top:    0,
+            right:  container.width,
+            bottom: container.height,
         }
         return config.bounds
     }
 
     /**
-     * Updates the bound status of an element (whether it touches container edges).
-     * @param {HTMLElement} element - The draggable element
-     * @param {Object} config - Element configuration
-     * @returns {Object} Updated bound status
+     * Update edge-bound flags (touching top/bottom/left/right).
+     * @param {HTMLElement} element
+     * @param {Object} config
+     * @returns {{left:boolean,top:boolean,right:boolean,bottom:boolean}}
      */
     setBoundStatus = (element, config = this.getConfig(this.#current)) => {
-
         const container = config.container.getBoundingClientRect()
         const target = element.getBoundingClientRect()
-
         config.boundStatus = {
             top:   target.top <= container.top,
             bottom: target.bottom >= container.bottom,
@@ -498,22 +402,20 @@ export class Draggable {
     }
 
     /**
-     * Retrieves the aspect ratio configuration for a given ratio identifier.
-     * @param {string} ratio - The ratio identifier (e.g., '16x9')
-     * @returns {Object} The ratio configuration
+     * Map ratio identifier to config (includes aspectRatio and optional locked flag).
+     * @param {string} ratio
+     * @returns {{aspectRatio:number,locked?:boolean}}
      */
     getRatio = (ratio) => {
         return lgs.configuration.videoFormats.find(p => p.value === ratio)
     }
 
     /**
-     * Computes the dimensions and position of the crop area based on the provided configuration.
-     * Ensures the crop area respects the container bounds, scale factor, and optional aspect ratio.
-     * @param {Object} config - Configuration object for cropping
-     * @returns {Object} Crop dimensions and position { left, top, width, height }
+     * Compute default crop dimensions centered within container, honoring useRatio/minCropSize.
+     * @param {Object} config
+     * @returns {{left:number,top:number,width:number,height:number}}
      */
     cropDimensions = (config) => {
-
         const container = this.refreshBounds(config)
         container.width = container.right - container.left
         container.height = container.bottom - container.top
@@ -563,9 +465,9 @@ export class Draggable {
     }
 
     /**
-     * Open a window in the cropper outside overlay using a clip-path.
-     * @param {Object} crop - Crop dimensions { left, top, width, height }
-     * @returns {Object} Style object with clipPath property
+     * Produce clip-path polygon that opens a window matching the crop box.
+     * @param {{left:number,top:number,width:number,height:number}} crop
+     * @returns {string}
      */
     openWindowInOverlay = (crop) => {
         return `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%,
@@ -576,39 +478,31 @@ export class Draggable {
         ${crop.left + crop.width}px ${crop.top}px,
         0% ${crop.top}px
     )`
-
-
     }
 
     /**
-     * Monitors container resize events and updates bounds and element position.
-     * @param {Object} config - Element configuration
-     * @param {Function} setBounds - Function to update bounds in component state
-     * @param {Object} moveable - Moveable instance
-     * @param {HTMLElement} element - The draggable element
-     * @param {Function} setPosition - Function to update position in component state
+     * Observe container resize and:
+     * - Recompute bounds
+     * - Clamp or resize the crop zone to fit (keeping aspect ratio when locked)
+     * - Re-sync overlay
      */
     monitorContainerResize = (config, setBounds, moveable, element, setPosition) => {
         if (config.observer) {
             return
         }
 
-        // Handle resize events with requestAnimationFrame to avoid excessive updates
         const handleResize = (() => {
             let rafId = null
             let pending = false
             let lastComputed = {
-                right:  null,
+                right: null,
                 bottom: null,
                 translateX: null,
                 translateY: null,
             }
 
             const computeAndApply = () => {
-                // Store previous bounds
                 const oldBounds = {...config.bounds}
-
-                // Update bounds
                 const newBounds = this.refreshBounds(config, moveable)
                 if (
                     newBounds.left === oldBounds.left &&
@@ -621,15 +515,13 @@ export class Draggable {
                     return
                 }
                 setBounds(newBounds)
-
-                // Update bound status
                 this.setBoundStatus(element, config)
 
-                // Calculate deltas for right and bottom
                 const deltaRight = newBounds.right - oldBounds.right
                 const deltaBottom = newBounds.bottom - oldBounds.bottom
                 const isShrinking = deltaRight < 0 || deltaBottom < 0
 
+                // Adjust current transform when shrinking on bound edges
                 if (config.transform) {
                     const match = config.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
                     if (match) {
@@ -638,7 +530,6 @@ export class Draggable {
                         let newTranslateX = translateX
                         let newTranslateY = translateY
 
-                        // Adjust position on shrink if bound to right/bottom
                         if (isShrinking) {
                             if (config.boundStatus.right) {
                                 newTranslateX = translateX + deltaRight
@@ -656,12 +547,8 @@ export class Draggable {
                             }
                         }
 
-                        // Apply new transform if changed
                         if (newTranslateX !== translateX || newTranslateY !== translateY) {
-                            if (
-                                lastComputed.translateX !== newTranslateX ||
-                                lastComputed.translateY !== newTranslateY
-                            ) {
+                            if (lastComputed.translateX !== newTranslateX || lastComputed.translateY !== newTranslateY) {
                                 config.transform = `translate(${newTranslateX}px, ${newTranslateY}px)`
                                 element.style.transform = config.transform
                                 lastComputed.translateX = newTranslateX
@@ -669,20 +556,90 @@ export class Draggable {
                             }
                         }
                     }
-
-
-                    // If cropper, re-apply overlay to match current styles or recompute
-                    if (config.isCropper) {
-                        config.element = element
-                        this.applyCropToOverlay(config)
-                    }
                 }
 
-                // Update Moveable rectangle if bounds changed
+                // Clamp/resize crop to new bounds (respect ratio lock if set)
+                if (config.isCropper) {
+                    const t = element.style.transform || ''
+                    const m = t.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
+                    const baseLeft = parseInt(element.style.left || '0', 10)
+                    const baseTop = parseInt(element.style.top || '0', 10)
+                    const dx = m ? parseFloat(m[1]) || 0 : 0
+                    const dy = m ? parseFloat(m[2]) || 0 : 0
+                    let left = Math.round(baseLeft + dx)
+                    let top = Math.round(baseTop + dy)
+                    let width = parseInt(element.style.width || '0', 10)
+                    let height = parseInt(element.style.height || '0', 10)
+
+                    // Clamp position
+                    const maxLeft = Math.max(newBounds.left, newBounds.right - width)
+                    const maxTop = Math.max(newBounds.top, newBounds.bottom - height)
+                    if (left < newBounds.left) {
+                        left = newBounds.left
+                    }
+                    if (top < newBounds.top) {
+                        top = newBounds.top
+                    }
+                    if (left > maxLeft) {
+                        left = maxLeft
+                    }
+                    if (top > maxTop) {
+                        top = maxTop
+                    }
+
+                    // Fit size to remaining space
+                    const maxWidth = newBounds.right - left
+                    const maxHeight = newBounds.bottom - top
+
+                    if (config.useRatio && config.ratio?.locked && config.ratio?.aspectRatio > 0) {
+                        const ar = config.ratio.aspectRatio
+                        let targetWidth = Math.min(width || maxWidth, maxWidth)
+                        let targetHeight = Math.min(height || maxHeight, maxHeight)
+                        targetHeight = Math.floor(targetWidth / ar)
+                        if (targetHeight > maxHeight) {
+                            targetHeight = maxHeight
+                            targetWidth = Math.floor(targetHeight * ar)
+                        }
+                        if (config.minCropSize) {
+                            targetWidth = Math.max(config.minCropSize.width || 0, targetWidth)
+                            targetHeight = Math.max(config.minCropSize.height || 0, targetHeight)
+                        }
+                        width = targetWidth
+                        height = targetHeight
+                    }
+                    else {
+                        if (width > maxWidth) {
+                            width = maxWidth
+                        }
+                        if (height > maxHeight) {
+                            height = maxHeight
+                        }
+                        if (config.minCropSize) {
+                            width = Math.max(config.minCropSize.width || 0, width)
+                            height = Math.max(config.minCropSize.height || 0, height)
+                        }
+                    }
+
+                    // Commit and clear transform
+                    element.style.left = `${left}px`
+                    element.style.top = `${top}px`
+                    element.style.width = `${width}px`
+                    element.style.height = `${height}px`
+                    element.style.transform = 'none'
+                    config.transform = undefined
+                    config.position = {left, top}
+                    config.element = element
+                    config.cropDimensions = {left, top, width, height}
+
+                    this.applyCropToOverlay(config)
+                }
+
                 const rightChanged = lastComputed.right !== newBounds.right
                 const bottomChanged = lastComputed.bottom !== newBounds.bottom
                 if (rightChanged || bottomChanged) {
-                    moveable.current.updateRect()
+                    if (moveable && moveable.current) {
+                        moveable.current.updateRect()
+                    }
                     lastComputed.right = newBounds.right
                     lastComputed.bottom = newBounds.bottom
                 }
@@ -703,14 +660,13 @@ export class Draggable {
             }
         })()
 
-        // Initialize and start ResizeObserver
         config.observer = new ResizeObserver(handleResize)
         config.observer.observe(config.container)
     }
 
     /**
-     * Disposes of configuration and observer for an element.
-     * @param {HTMLElement} element - The draggable element
+     * Dispose a draggable element: stop observing, clear timers and config.
+     * @param {HTMLElement} element
      */
     disposeElement = element => {
         const elementId = this.retrieveElementId(element)
@@ -719,7 +675,13 @@ export class Draggable {
             return
         }
         if (config.observer) {
+            try {
+                config.observer.unobserve(config.container)
+            }
+            catch (_) {
+            }
             config.observer.disconnect()
+            config.observer = null
         }
         this.#widgets.delete(elementId)
         const timer = this.#controlBoxTimers.get(elementId)
@@ -730,8 +692,8 @@ export class Draggable {
     }
 
     /**
-     * Handles drag start by adding classes and setting dragging state.
-     * @param {Object} e - Drag start event from Moveable
+     * Begin drag: mark current element and apply drag styles.
+     * @param {Object} e - Moveable dragStart event (contains target)
      */
     onDragStart = e => {
         e.target.classList.add('dragging')
@@ -742,25 +704,21 @@ export class Draggable {
         this.#isDragging = true
         const elementId = this.retrieveElementId(e.target)
         this.#current = elementId
-
-        // Ensure we reference the actual element for style reads during this drag session
         if (config?.isCropper) {
             config.element = e.target
         }
     }
 
     /**
-     * Handles drag end by removing classes and clearing dragging state.
-     * @param {Object} e - Drag end event from Moveable
+     * End drag: collapse transform to left/top, update cropDimensions, and re-sync overlay.
+     * @param {Object} e - Moveable dragEnd event
      */
     onDragEnd = e => {
         e.target.classList.remove('dragging', 'dragging-animation')
         this.#isDragging = false
 
-        // Persist final styles into config and re-sync overlay to avoid stale values next session
         const config = this.retrieveConfig(e.target)
         if (config?.isCropper) {
-            // If we were dragging via transform, convert it to left/top before reading styles
             const currentTransform = e.target.style.transform || ''
             const match = currentTransform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
             if (match) {
@@ -777,7 +735,6 @@ export class Draggable {
                 config.position = {left: finalLeft, top: finalTop}
             }
 
-            // Now read committed styles
             config.element = e.target
             const left = parseInt(e.target.style.left || '0', 10)
             const top = parseInt(e.target.style.top || '0', 10)
@@ -791,33 +748,20 @@ export class Draggable {
     }
 
     /**
-     * Computes the bounds (top, left, width, height) of an element or window.
+     * Compute DOM bounds for an element or the window.
      * @private
-     * @param {HTMLElement|Window} element - The element or window to measure
-     * @returns {Object} Bounds { top, left, width, height }
      */
     #computeElementBounds = element => {
         if (element === window) {
-            return {
-                top:   0,
-                left:  0,
-                width: window.innerWidth,
-                height: window.innerHeight,
-            }
+            return {top: 0, left: 0, width: window.innerWidth, height: window.innerHeight}
         }
         const rect = element.getBoundingClientRect()
-        return {
-            top:   rect.top,
-            left:  rect.left,
-            width: rect.width,
-            height: rect.height,
-        }
+        return {top: rect.top, left: rect.left, width: rect.width, height: rect.height}
     }
 
     /**
-     * Creates a transparent overlay for the element to manage event propagation and cursor.
+     * Create an inner overlay DIV (transparent) inside the widget for event/cursor management.
      * @private
-     * @param {HTMLElement} element - The draggable element
      */
     #createInnerOverlay = element => {
         const overlay = document.createElement('div')
@@ -834,9 +778,9 @@ export class Draggable {
     }
 
     /**
-     * Retrieves the overlay element for a given draggable element.
-     * @param {HTMLElement} element - The draggable element
-     * @returns {HTMLElement} The overlay element
+     * Get inner overlay of a given element.
+     * @param {HTMLElement} element
+     * @returns {HTMLElement}
      */
     getInnerOverlay = element => {
         const elementId = this.retrieveElementId(element)
@@ -844,10 +788,20 @@ export class Draggable {
         return config.overlay
     }
 
+    /**
+     * Retrieve config by element ID.
+     * @param {string} elementId
+     * @returns {Object|undefined}
+     */
     getConfig = (elementId) => {
         return this.#widgets.get(elementId)
     }
 
+    /**
+     * Set config for element ID.
+     * @param {string} elementId
+     * @param {Object} config
+     */
     setConfig = (elementId, config) => {
         this.#widgets.set(elementId, config)
     }
