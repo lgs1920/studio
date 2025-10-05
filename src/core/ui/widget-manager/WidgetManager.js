@@ -921,9 +921,9 @@ export class WidgetManager {
      * @param {Object} e - Moveable doubleClick event
      * @param {Function} setPosition - Function to update position state
      */
-    onDoubleClick = (e, setPosition) => {
+    onDoubleClick = (e, setPosition, moveable) => {
         const config = this.retrieveConfig(e.target)
-        if (!config?.isCropper || !e.isDouble) {
+        if (!config?.isCropper) {
             return
         }
 
@@ -936,41 +936,45 @@ export class WidgetManager {
             }
         }
         else {
-            // Store current dimensions before maximizing
+            // Maximize
             config.previousCropDimensions = {...config.cropDimensions}
-            // Maximize crop dimensions
             this.cropDimensions(config, true)
             config.isMaximized = true
+
+            // After 5s, finalize current dimensions
+            clearTimeout(config.restoreTimeoutId)
+            config.restoreTimeoutId = setTimeout(() => {
+                config.previousCropDimensions = null
+                config.isMaximized = false
+            }, 5000)
         }
 
-        // Apply new dimensions and position
+        // Apply dimensions
         const {left, top, width, height} = config.cropDimensions
-        e.target.style.left = `${left}px`
-        e.target.style.top = `${top}px`
-        e.target.style.width = `${width}px`
-        e.target.style.height = `${height}px`
-        e.target.style.transform = 'none'
+        Object.assign(e.target.style, {
+            left:      `${left}px`,
+            top:       `${top}px`,
+            width:     `${width}px`,
+            height:    `${height}px`,
+            transform: 'none',
+        })
+
         config.transform = undefined
         config.position = {left, top}
 
-        // Update centerRatio for centering
         const container = config.container.getBoundingClientRect()
         config.centerRatio = {
             x: (left + width / 2) / container.width,
             y: (top + height / 2) / container.height,
-        }
+        };
 
-        // Sync overlay
         this.applyCropToOverlay(config)
-
-        // Update position state
         setPosition({left, top})
-
-        // Update Moveable
-        if (e.moveable) {
-            e.moveable.updateRect()
+        if (moveable && moveable.current) {
+            moveable.current.updateRect()
         }
-    }
+    };
+
 
     /**
      * Compute DOM bounds for an element or the window.
