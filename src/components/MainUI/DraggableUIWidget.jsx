@@ -7,20 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-04
- * Last modified: 2025-10-04
+ * Created on: 2025-10-05
+ * Last modified: 2025-10-05
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { LGS_ANIMATION_DRAGGING, LGS_TOOLBAR, LGS_WIDGET } from '@Core/constants'
-import {
-    Draggable,
-}                                                          from '@Core/ui/drag-handler/Draggable'
-import classNames                                                                  from 'classnames'
+import { Draggable } from '@Core/ui/drag-handler/Draggable'
+import classNames    from 'classnames'
 import React, { Children, cloneElement, useCallback, useEffect, useRef, useState } from 'react'
-import Moveable                                                                    from 'react-moveable'
+import Moveable      from 'react-moveable'
 
 /**
  * Generic component for rendering a draggable element with snapping, rotating, resizing ...
@@ -30,6 +28,7 @@ import Moveable                                                                 
  * @param {string} [props.className=''] - Additional CSS class names
  * @param {React.ReactNode} props.children - Child elements to render inside the widget
  * @param {Object} props.config - Configuration object for draggable settings
+ * @param {React.RefObject} [props.childRef] - Optional ref for child component
  * @returns {JSX.Element} The rendered draggable UI widget
  */
 export const DraggableUIWidget = ({isVisible, className = '', children, config, childRef}) => {
@@ -43,7 +42,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
     const _children = childRef ?? useRef(null)
 
     const [bounds, setBounds] = useState({left: 0, top: 0, right: 0, bottom: 0})
-    const [, setPosition] = useState({left: 0, top: 0})
+    const [position, setPosition] = useState({left: 0, top: 0})
     const [controlBoxProps, setControlBoxProps] = useState({renderDirections: [], zoom: 0, opacity: 0})
     const [guidelines, setGuidelines] = useState({verticalGuidelines: [], horizontalGuidelines: []})
     const [isMouseOver, setIsMouseOver] = useState(false)
@@ -174,89 +173,73 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
      * @param {Object} event - The drag event
      */
     const handleDrag = useCallback(event => {
+        console.log(`[DraggableUIWidget] Drag: transform=${event.transform}`)
         _draggable.current.applyPosition(_widget.current, event.transform, _moveable, true, setControlBoxProps)
         if (_children.current?.handleDrag) {
             _children.current.handleDrag(event)
         }
-    }, [isDragging])
-
+    }, [])
 
     /**
      * Handle drag start event
      * @param {Object} event - The drag start event
      */
     const handleDragStart = useCallback(event => {
+        console.log('[DraggableUIWidget] Drag start')
         setIsDragging(true)
         if (_children.current?.onDragStart) {
             _children.current.onDragStart(event)
         }
         _draggable.current.onDragStart(event)
         _widget.current?.classList.add('dragging')
-
         _draggable.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, true, isMouseOver)
-    }, [isMouseOver, isDragging])
+    }, [isMouseOver])
 
     /**
      * Handle drag end event
      * @param {Object} event - The drag end event
      */
     const handleDragEnd = useCallback(event => {
+        console.log('[DraggableUIWidget] Drag end')
         setIsDragging(false)
-        if (_children.current?.onDragEnd) {
-            _children.current.onDragEnd(event)
-        }
-        _draggable.current.onDragEnd(event)
         _widget.current?.classList.remove('dragging')
-
+        _draggable.current.onDragEnd(event)
         _draggable.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, isMouseOver)
-    }, [isMouseOver, isDragging])
+    }, [isMouseOver])
 
-    const handleResize = useCallback((e) => {
-        // e has: width, height, drag (with beforeTranslate), and target is the element
-        const target = _widget.current
-        if (!target) {
-            return
+    /**
+     * Handle resize event
+     * @param {Object} event - The resize event
+     */
+    const handleResize = useCallback(event => {
+        console.log(`[DraggableUIWidget] Resize: width=${event.width}, height=${event.height}, direction=${JSON.stringify(event.direction)}`)
+        event.target.style.width = `${event.width}px`
+        event.target.style.height = `${event.height}px`
+        _draggable.current.onResize(event, {widget: _widget, child: _children}, setPosition)
+    }, [])
+
+    /**
+     * Handle resize start event
+     * @param {Object} event - The resize start event
+     */
+    const handleResizeStart = useCallback(event => {
+        console.log('[DraggableUIWidget] Resize start')
+        if (_children.current?.onResizeStart) {
+            _children.current.onResizeStart(event)
         }
+        _draggable.current.onResizeStart(event)
+    }, [])
 
-        const [tx, ty] = e.drag?.beforeTranslate || [0, 0]
-        const baseLeft = parseInt(target.style.left || '0', 10)
-        const baseTop = parseInt(target.style.top || '0', 10)
-        const finalLeft = Math.round(baseLeft + tx)
-        const finalTop = Math.round(baseTop + ty)
-
-        // Commit styles so they reflect the latest box
-        target.style.left = `${finalLeft}px`
-        target.style.top = `${finalTop}px`
-        target.style.width = `${Math.round(e.width)}px`
-        target.style.height = `${Math.round(e.height)}px`
-        target.style.transform = 'none'
-
-        // Sync overlay
-        const draggable = _draggable.current
-        if (draggable) {
-            const id = draggable.retrieveElementId(target)
-            const cfg = draggable.getConfig(id)
-            if (cfg?.isCropper) {
-                cfg.element = target
-                cfg.cropDimensions = {
-                    left:   finalLeft,
-                    top:    finalTop,
-                    width:  Math.round(e.width),
-                    height: Math.round(e.height),
-                }
-                draggable.applyCropToOverlay(cfg)
-            }
+    /**
+     * Handle resize end event
+     * @param {Object} event - The resize end event
+     */
+    const handleResizeEnd = useCallback(event => {
+        console.log('[DraggableUIWidget] Resize end')
+        if (_children.current?.onResizeEnd) {
+            _children.current.onResizeEnd(event)
         }
-
-        // Let child update info UI
-        if (_children.current?.handleResize) {
-            _children.current.handleResize({
-                                               left:   finalLeft,
-                                               top:    finalTop,
-                                               width:  Math.round(e.width),
-                                               height: Math.round(e.height),
-                                           })
-        }
+        _draggable.current.onResizeEnd(event)
     }, [])
 
     useEffect(() => {
@@ -285,18 +268,18 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
                 {
                     container:        lgs.canvas,
                     isCropper:        config.isCropper ?? false,
-                    showControlBox:   true, // used only for snap lines
-                    left:                  config.left,
-                    top:                   config.top,
-                    attachTo:              config.attachTo,
+                    showControlBox:   true,
+                    left:             config.left,
+                    top:              config.top,
+                    attachTo:         config.attachTo,
                     containerPadding: config.containerPadding ?? 0,
                     opacity:          config.opacity ?? lgs.settings.ui.toolbars.opacity,
-                    type:                  LGS_WIDGET,
+                    type:             LGS_WIDGET,
                     animationWhenDragging: (config.animationWhenDragging ?? null) !== null
                                            ? config.animationWhenDragging
                                            : config.type === LGS_TOOLBAR,
                     outsideOverlay:   config.outsideOverlay ?? false,
-                    lockedOnCenter: config.lockedOnCenter ?? false,
+                    resizeFromCenter: config.resizeFromCenter ?? false,
                 },
                 setBounds,
                 setPosition,
@@ -334,17 +317,19 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
     const handleOnBound = ({bounds}) => {
         _draggable.current.setBoundStatus(_widget.current)
     }
+
     return (
         <>
             {isVisible && (
                 <div className="lgs-widget-container">
                     <div
                         className={classNames(
-                            LGS_WIDGET, {
+                            LGS_WIDGET,
+                            {
                                 [className]: !!className,
-                            [LGS_TOOLBAR]:            config?.type === LGS_TOOLBAR,
-                            [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
-                                              },
+                                [LGS_TOOLBAR]:            config?.type === LGS_TOOLBAR,
+                                [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
+                            }
                         )}
                         ref={_widget}
                         onMouseEnter={handleMouseEnter}
@@ -361,37 +346,38 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
                         container={lgs.canvas}
                         className="lgs-widget-control-box"
                         origin={false}
-
                         draggable={true}
                         edgeDraggable={false}
-                        throttleDrag={0}
+                        throttleDrag={1}
                         onDrag={handleDrag}
                         onDragStart={handleDragStart}
                         onDragEnd={handleDragEnd}
-
                         resizable={config?.resizable || false}
                         resizeDirections={['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']}
                         onResize={handleResize}
+                        onResizeStart={handleResizeStart}
+                        onResizeEnd={handleResizeEnd}
                         keepRatio={config?.ratio?.locked || true}
                         throttleResize={2}
-
                         scalable={config?.scalable || false}
-
                         snappable={config?.snappable ?? true}
                         snapThreshold={snapThreshold}
                         snapGap={snapGap}
-                        snapCenter={true}
+                        snapCenter={true} // Disable snap to center to prevent recentering
                         snapElement={true}
                         verticalGuidelines={guidelines.verticalGuidelines}
                         horizontalGuidelines={guidelines.horizontalGuidelines}
                         snapDirections={{
-                            left: true, top: true, right: true, bottom: true, center: true, middle: true,
+                            left:   true,
+                            top:    true,
+                            right:  true,
+                            bottom: true,
+                            center: true,
+                            middle: true,
                         }}
                         elementGuidelines={[lgs.canvas]}
-
                         bounds={bounds}
                         onBound={handleOnBound}
-
                         renderDirections={controlBoxProps.renderDirections}
                         zoom={controlBoxProps.zoom}
                     />
