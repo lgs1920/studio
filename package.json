@@ -45,7 +45,7 @@
     "@turf/nearest-point-on-line": "^7.2.0",
     "@turf/point-to-line-distance": "^7.2.0",
     "@turf/transform-rotate": "^7.2.0",
-    "@zumer/snapdom": "1.9.11",
+    "@zumer/snapdom": "1.9.13",
     "argparse": "^2.0.1",
     "axios": "^1.12.2",
     "babel-plugin-module-resolver": "^5.0.2",
