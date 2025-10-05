@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: DraggableUIWidget.jsx
+ * File: Widget.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -15,8 +15,8 @@
  ******************************************************************************/
 
 import { LGS_ANIMATION_DRAGGING, LGS_TOOLBAR, LGS_WIDGET } from '@Core/constants'
-import { Draggable } from '@Core/ui/drag-handler/Draggable'
-import classNames    from 'classnames'
+import { WidgetManager } from '@Core/ui/widget-manager/WidgetManager'
+import classNames        from 'classnames'
 import React, { Children, cloneElement, useCallback, useEffect, useRef, useState } from 'react'
 import Moveable      from 'react-moveable'
 
@@ -31,12 +31,12 @@ import Moveable      from 'react-moveable'
  * @param {React.RefObject} [props.childRef] - Optional ref for child component
  * @returns {JSX.Element} The rendered draggable UI widget
  */
-export const DraggableUIWidget = ({isVisible, className = '', children, config, childRef}) => {
+export const Widget = ({isVisible, className = '', children, config, childRef}) => {
     // Ref for the draggable element
     const _widget = useRef(null)
     const _moveable = useRef(null)
     const _controlBoxTimer = useRef(null)
-    const _draggable = useRef(null)
+    const _widgetManager = useRef(null)
     const _initialized = useRef(false)
     const _resizeRaf = useRef(0)
     const _children = childRef ?? useRef(null)
@@ -71,8 +71,8 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
      * Initialize Draggable instance
      */
     useEffect(() => {
-        if (!_draggable.current) {
-            _draggable.current = __.ui.draggable
+        if (!_widgetManager.current) {
+            _widgetManager.current = __.ui.widgetManager
         }
     }, [])
 
@@ -150,7 +150,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
      */
     const handleMouseEnter = useCallback(() => {
         setIsMouseOver(true)
-        _draggable.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, true)
+        _widgetManager.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, true)
     }, [])
 
     /**
@@ -165,7 +165,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
             return
         }
         setIsMouseOver(false)
-        _draggable.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, false)
+        _widgetManager.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, false)
     }, [isDragging])
 
     /**
@@ -174,7 +174,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
      */
     const handleDrag = useCallback(event => {
         console.log(`[DraggableUIWidget] Drag: transform=${event.transform}`)
-        _draggable.current.applyPosition(_widget.current, event.transform, _moveable, true, setControlBoxProps)
+        _widgetManager.current.applyPosition(_widget.current, event.transform, _moveable, true, setControlBoxProps)
         if (_children.current?.handleDrag) {
             _children.current.handleDrag(event)
         }
@@ -190,9 +190,9 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
         if (_children.current?.onDragStart) {
             _children.current.onDragStart(event)
         }
-        _draggable.current.onDragStart(event)
+        _widgetManager.current.onDragStart(event)
         _widget.current?.classList.add('dragging')
-        _draggable.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, true, isMouseOver)
+        _widgetManager.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, true, isMouseOver)
     }, [isMouseOver])
 
     /**
@@ -203,8 +203,8 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
         console.log('[DraggableUIWidget] Drag end')
         setIsDragging(false)
         _widget.current?.classList.remove('dragging')
-        _draggable.current.onDragEnd(event)
-        _draggable.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, isMouseOver)
+        _widgetManager.current.onDragEnd(event)
+        _widgetManager.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, isMouseOver)
     }, [isMouseOver])
 
     /**
@@ -215,7 +215,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
         console.log(`[DraggableUIWidget] Resize: width=${event.width}, height=${event.height}, direction=${JSON.stringify(event.direction)}`)
         event.target.style.width = `${event.width}px`
         event.target.style.height = `${event.height}px`
-        _draggable.current.onResize(event, {widget: _widget, child: _children}, setPosition)
+        _widgetManager.current.onResize(event, {widget: _widget, child: _children}, setPosition)
     }, [])
 
     /**
@@ -227,7 +227,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
         if (_children.current?.onResizeStart) {
             _children.current.onResizeStart(event)
         }
-        _draggable.current.onResizeStart(event)
+        _widgetManager.current.onResizeStart(event)
     }, [])
 
     /**
@@ -239,7 +239,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
         if (_children.current?.onResizeEnd) {
             _children.current.onResizeEnd(event)
         }
-        _draggable.current.onResizeEnd(event)
+        _widgetManager.current.onResizeEnd(event)
     }, [])
 
     useEffect(() => {
@@ -263,7 +263,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
             if (cancelled || !_widget.current || !lgs?.canvas) {
                 return
             }
-            const ok = _draggable.current.setupElement(
+            const ok = _widgetManager.current.setupElement(
                 _widget.current,
                 {
                     container:        lgs.canvas,
@@ -298,7 +298,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
             cancelled = true
             clearTimeout(_controlBoxTimer.current)
             if (_initialized.current && _widget.current) {
-                _draggable.current.disposeElement(_widget.current)
+                _widgetManager.current.disposeElement(_widget.current)
                 _initialized.current = false
             }
         }
@@ -315,7 +315,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
     }, [bounds])
 
     const handleOnBound = ({bounds}) => {
-        _draggable.current.setBoundStatus(_widget.current)
+        _widgetManager.current.setBoundStatus(_widget.current)
     }
 
     return (
@@ -334,6 +334,8 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
                         ref={_widget}
                         onMouseEnter={handleMouseEnter}
                         onMouseOut={handleMouseOut}
+                        onDoubleClick={event => __.ui.widgetManager.onDoubleClick(event, setPosition)}
+
                     >
                         {Children.count(children) === 1 && React.isValidElement(children)
                          ? cloneElement(children, {ref: _children})
@@ -346,12 +348,16 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
                         container={lgs.canvas}
                         className="lgs-widget-control-box"
                         origin={false}
+
+                        // Dragging
                         draggable={true}
                         edgeDraggable={false}
                         throttleDrag={1}
                         onDrag={handleDrag}
                         onDragStart={handleDragStart}
                         onDragEnd={handleDragEnd}
+
+                        // Resizing
                         resizable={config?.resizable || false}
                         resizeDirections={['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']}
                         onResize={handleResize}
@@ -359,7 +365,11 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
                         onResizeEnd={handleResizeEnd}
                         keepRatio={config?.ratio?.locked || true}
                         throttleResize={2}
+
+                        // Scaling
                         scalable={config?.scalable || false}
+
+                        // Snapping
                         snappable={config?.snappable ?? true}
                         snapThreshold={snapThreshold}
                         snapGap={snapGap}
@@ -379,6 +389,7 @@ export const DraggableUIWidget = ({isVisible, className = '', children, config, 
                         bounds={bounds}
                         onBound={handleOnBound}
                         renderDirections={controlBoxProps.renderDirections}
+
                         zoom={controlBoxProps.zoom}
                     />
                 </div>

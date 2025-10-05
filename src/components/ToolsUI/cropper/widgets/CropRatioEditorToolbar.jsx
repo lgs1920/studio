@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-10-05
+ * Last modified: 2025-10-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,7 +22,6 @@
  * @param {Object} props.manager.store - Valtio store with crop state (ratioEditor, etc.)
  * @returns {JSX.Element} Draggable crop ratio selector UI
  */
-import { DragHandler }                                              from '@Core/ui/drag-handler/DragHandler'
 import { faCropSimple, faRectangle, faRectangleVertical, faSquare } from '@fortawesome/pro-regular-svg-icons'
 import { faGripDots }                                               from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlTooltip }                                        from '@shoelace-style/shoelace/dist/react'
