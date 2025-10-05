@@ -14,7 +14,7 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { DraggableUIWidget } from '@Components/MainUI/DraggableUIWidget'
+import { Widget } from '@Components/MainUI/Widget'
 import React, { memo, useMemo } from 'react'
 import { CropZone }             from './CropZone'
 
@@ -49,11 +49,11 @@ export const CropZoneWidget = memo(function CropZoneWidget({
     }), [overlay])
 
     return (
-        <DraggableUIWidget isVisible={true} config={config} className={className}>
+        <Widget isVisible={true} config={config} className={className}>
             <CropZone onDoubleClick={onDoubleClick}
                       infoComponent={infoComponent}
                       infoPosition={infoPosition}
                       overlay={overlay}/>
-        </DraggableUIWidget>
+        </Widget>
     )
 })

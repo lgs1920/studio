@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-30
- * Last modified: 2025-09-30
+ * Created on: 2025-10-05
+ * Last modified: 2025-10-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,9 +17,9 @@
 import { VideoRecorderToolbar }     from '@Components/MainUI/video/VideoRecorderToolbar'
 import { VideoRecordingScreenArea } from '@Components/ToolsUI/cropper/VideoRecordingScreenArea'
 import { LGS_TOOLBAR }              from '@Core/constants'
-import React, { useMemo }           from 'react'
-import { DraggableUIWidget }        from '@Components/MainUI/DraggableUIWidget'
-import { useSnapshot }              from 'valtio'
+import React, { useMemo } from 'react'
+import { Widget }         from '@Components/MainUI/Widget'
+import { useSnapshot }    from 'valtio'
 
 /**
  * Component for selecting video quality with draggable toolbar
@@ -48,9 +48,9 @@ export const VideoRecorderWidget = () => {
     return (
         <>
             <VideoRecordingScreenArea/>
-            <DraggableUIWidget isVisible={true} config={config}>
+            <Widget isVisible={true} config={config}>
                 <VideoRecorderToolbar/>
-            </DraggableUIWidget>
+            </Widget>
         </>
     )
 }

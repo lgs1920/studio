@@ -7,17 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-27
- * Last modified: 2025-09-27
+ * Created on: 2025-10-05
+ * Last modified: 2025-10-05
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { LGS_TOOLBAR } from '@Core/constants'
-import React, { useMemo }      from 'react'
-import { DraggableUIWidget } from '@Components/MainUI/DraggableUIWidget'
-import { useSnapshot } from 'valtio'
+import React, { useMemo } from 'react'
+import { Widget }         from '@Components/MainUI/Widget'
+import { useSnapshot }    from 'valtio'
 import { VideoQualityToolbar } from './VideoQualityToolbar'
 
 /**
@@ -42,8 +42,8 @@ export const VideoQualityWidget = () => {
     }, [])
 
     return (
-        <DraggableUIWidget isVisible={video.cropper.qualityEditor} config={config}>
+        <Widget isVisible={video.cropper.qualityEditor} config={config}>
             <VideoQualityToolbar/>
-        </DraggableUIWidget>
+        </Widget>
     )
 }

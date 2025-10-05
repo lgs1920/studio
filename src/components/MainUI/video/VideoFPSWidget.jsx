@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-27
- * Last modified: 2025-09-27
+ * Created on: 2025-10-05
+ * Last modified: 2025-10-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,9 +16,9 @@
 
 import { VideoFPSToolbar }     from '@Components/MainUI/video/VideoFPSToolbar'
 import { LGS_TOOLBAR } from '@Core/constants'
-import React, { useMemo }      from 'react'
-import { DraggableUIWidget }   from '@Components/MainUI/DraggableUIWidget'
-import { useSnapshot } from 'valtio'
+import React, { useMemo } from 'react'
+import { Widget }         from '@Components/MainUI/Widget'
+import { useSnapshot }    from 'valtio'
 import { VideoQualityToolbar } from './VideoQualityToolbar'
 
 /**
@@ -43,8 +43,8 @@ export const VideoFPSWidget = () => {
     }, [])
 
     return (
-        <DraggableUIWidget isVisible={video.cropper.fpsEditor} config={config}>
+        <Widget isVisible={video.cropper.fpsEditor} config={config}>
             <VideoFPSToolbar/>
-        </DraggableUIWidget>
+        </Widget>
     )
 }

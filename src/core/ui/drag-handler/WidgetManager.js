@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: Draggable.js
+ * File: WidgetManager.js
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -27,8 +27,9 @@ import { v4 as uuidv4 } from 'uuid'
  * - Apply transform or left/top during drag; collapse transform to styles on end.
  * - Keep an outside overlay clip-path synchronized with crop zone box.
  * - On container resize, clamp/resize the crop zone (respecting aspect ratio lock).
+ * - Handle double-click/tap on cropzone to toggle between max size and previous size.
  */
-export class Draggable {
+export class WidgetManager {
     // Singleton instance
     static instance = null
 
@@ -67,11 +68,11 @@ export class Draggable {
      * @param {Object} store - Optional shared store (not required).
      */
     constructor(store) {
-        if (Draggable.instance) {
-            return Draggable.instance
+        if (WidgetManager.instance) {
+            return WidgetManager.instance
         }
         this.#widgets = new Map()
-        Draggable.instance = this
+        WidgetManager.instance = this
     }
 
     /**
@@ -186,6 +187,12 @@ export class Draggable {
         if (!config.overlay) {
             this.#createInnerOverlay(element)
         }
+
+        // Attach double-click/tap event for cropzone if isCropper and resizable
+        if (config.isCropper && moveable.current.resizable) {
+            moveable.current.onDoubleClick = e => this.onDoubleClick(e, setPosition)
+        }
+
         return true
     }
 
@@ -411,7 +418,9 @@ export class Draggable {
                 minCropSize:    initialConfig.minCropSize ?? this.#MIN_CROP_SIZE,
                 outsideOverlay: initialConfig.outsideOverlay,
                 resizeFromCenter: initialConfig.resizeFromCenter ?? false,
-                centerRatio:      {x: 0.5, y: 0.5},
+                centerRatio:            {x: 0.5, y: 0.5},
+                previousCropDimensions: null, // Store previous dimensions for double-click toggle
+                isMaximized:            false, // Track if cropzone is maximized
             })
         }
         return this.getConfig(elementId)
@@ -522,7 +531,7 @@ export class Draggable {
      * @param {Object} config
      * @returns {{left:number,top:number,width:number,height:number}}
      */
-    cropDimensions = (config) => {
+    cropDimensions = (config, maximize = false) => {
         const container = this.refreshBounds(config)
         container.width = container.right - container.left
         container.height = container.bottom - container.top
@@ -537,38 +546,70 @@ export class Draggable {
         const maxWidth = Math.floor(paddedWidth * this.#CROP_SCALE_FACTOR)
         const maxHeight = Math.floor(paddedHeight * this.#CROP_SCALE_FACTOR)
 
-        if (config.useRatio) {
-            const ratio = config.ratio.aspectRatio
-            if (ratio === 1) {
-                width = height = Math.floor(Math.max(config.minCropSize.width, Math.min(maxWidth, maxHeight)))
-            }
-            else if (ratio < 1) {
-                height = Math.floor(Math.max(config.minCropSize.height, maxHeight))
-                width = Math.floor(Math.max(config.minCropSize.width, height * ratio))
-                if (width > maxWidth) {
-                    width = maxWidth
-                    height = Math.floor(width / ratio)
+        if (maximize) {
+            // Maximize dimensions while respecting ratio and minCropSize
+            if (config.useRatio) {
+                const ratio = config.ratio.aspectRatio
+                if (ratio === 1) {
+                    width = height = Math.floor(Math.max(config.minCropSize.width, Math.min(maxWidth, maxHeight)))
+                }
+                else if (ratio < 1) {
+                    height = Math.floor(Math.max(config.minCropSize.height, maxHeight))
+                    width = Math.floor(Math.max(config.minCropSize.width, height * ratio))
+                    if (width > maxWidth) {
+                        width = maxWidth
+                        height = Math.floor(width / ratio)
+                    }
+                }
+                else {
+                    width = Math.floor(Math.max(config.minCropSize.width, maxWidth))
+                    height = Math.floor(Math.max(config.minCropSize.height, width / ratio))
+                    if (height > maxHeight) {
+                        height = maxHeight
+                        width = Math.floor(height * ratio)
+                    }
                 }
             }
             else {
-                width = Math.floor(Math.max(config.minCropSize.width, maxWidth))
-                height = Math.floor(Math.max(config.minCropSize.height, width / ratio))
-                if (height > maxHeight) {
-                    height = maxHeight
-                    width = Math.floor(height * ratio)
-                }
+                width = maxWidth
+                height = maxHeight
             }
         }
         else {
-            width = maxWidth
-            height = maxHeight
+            // Default behavior (non-maximized)
+            if (config.useRatio) {
+                const ratio = config.ratio.aspectRatio
+                if (ratio === 1) {
+                    width = height = Math.floor(Math.max(config.minCropSize.width, Math.min(maxWidth, maxHeight)))
+                }
+                else if (ratio < 1) {
+                    height = Math.floor(Math.max(config.minCropSize.height, maxHeight))
+                    width = Math.floor(Math.max(config.minCropSize.width, height * ratio))
+                    if (width > maxWidth) {
+                        width = maxWidth
+                        height = Math.floor(width / ratio)
+                    }
+                }
+                else {
+                    width = Math.floor(Math.max(config.minCropSize.width, maxWidth))
+                    height = Math.floor(Math.max(config.minCropSize.height, width / ratio))
+                    if (height > maxHeight) {
+                        height = maxHeight
+                        width = Math.floor(height * ratio)
+                    }
+                }
+            }
+            else {
+                width = maxWidth
+                height = maxHeight
+            }
         }
 
         const left = Math.floor((paddedWidth - width) / 2) + padding
         const top = Math.floor((paddedHeight - height) / 2) + padding
 
         config.cropDimensions = {left, top, width, height}
-        if (config.resizeFromCenter && !config.position) {
+        if (config.resizeFromCenter) {
             config.centerRatio = {x: 0.5, y: 0.5}
         }
         return config.cropDimensions
@@ -706,7 +747,6 @@ export class Draggable {
                     element.style.transform = 'none'
                     config.transform = undefined
                     config.position = {left, top}
-                    config.element = element
                     config.cropDimensions = {left, top, width, height}
                     this.applyCropToOverlay(config)
                 }
@@ -872,6 +912,63 @@ export class Draggable {
             const height = parseInt(e.target.style.height || '0', 10)
             config.cropDimensions = {left, top, width, height}
             this.applyCropToOverlay(config)
+        }
+    }
+
+    /**
+     * Handle double-click/tap on cropzone: toggle between maximized size (respecting ratio and centered) and previous
+     * size.
+     * @param {Object} e - Moveable doubleClick event
+     * @param {Function} setPosition - Function to update position state
+     */
+    onDoubleClick = (e, setPosition) => {
+        const config = this.retrieveConfig(e.target)
+        if (!config?.isCropper || !e.isDouble) {
+            return
+        }
+
+        if (config.isMaximized) {
+            // Restore previous dimensions
+            if (config.previousCropDimensions) {
+                config.cropDimensions = {...config.previousCropDimensions}
+                config.previousCropDimensions = null
+                config.isMaximized = false
+            }
+        }
+        else {
+            // Store current dimensions before maximizing
+            config.previousCropDimensions = {...config.cropDimensions}
+            // Maximize crop dimensions
+            this.cropDimensions(config, true)
+            config.isMaximized = true
+        }
+
+        // Apply new dimensions and position
+        const {left, top, width, height} = config.cropDimensions
+        e.target.style.left = `${left}px`
+        e.target.style.top = `${top}px`
+        e.target.style.width = `${width}px`
+        e.target.style.height = `${height}px`
+        e.target.style.transform = 'none'
+        config.transform = undefined
+        config.position = {left, top}
+
+        // Update centerRatio for centering
+        const container = config.container.getBoundingClientRect()
+        config.centerRatio = {
+            x: (left + width / 2) / container.width,
+            y: (top + height / 2) / container.height,
+        }
+
+        // Sync overlay
+        this.applyCropToOverlay(config)
+
+        // Update position state
+        setPosition({left, top})
+
+        // Update Moveable
+        if (e.moveable) {
+            e.moveable.updateRect()
         }
     }
 

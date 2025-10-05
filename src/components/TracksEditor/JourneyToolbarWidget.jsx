@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-25
- * Last modified: 2025-09-25
+ * Created on: 2025-10-05
+ * Last modified: 2025-10-05
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 
-import { DraggableUIWidget } from '@Components/MainUI/DraggableUIWidget'
+import { Widget } from '@Components/MainUI/Widget'
 import { LGS_TOOLBAR } from '@Core/constants'
 import { JourneyToolbar }    from '@Editor/JourneyToolbar'
 import React, { useMemo }    from 'react'
@@ -47,9 +47,9 @@ export const JourneyToolbarWidget = () => {
     }, [])
 
     return (
-        <DraggableUIWidget isVisible={journeyEditor.list.length > 0 && journeyToolbar.show}
-                           config={config} className="">
+        <Widget isVisible={journeyEditor.list.length > 0 && journeyToolbar.show}
+                config={config} className="">
             <JourneyToolbar/>
-        </DraggableUIWidget>
+        </Widget>
     )
 }
