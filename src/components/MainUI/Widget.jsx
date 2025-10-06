@@ -292,6 +292,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     outsideOverlay: config.outsideOverlay ?? false,
                     resizeFromCenter: config.resizeFromCenter ?? false,
                     resizable:      config.resizable ?? false,
+                    forceEven: config.forceEven ?? false, // NEW: pass-through
                 },
                 setBounds,
                 setPosition,

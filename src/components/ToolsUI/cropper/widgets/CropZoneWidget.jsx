@@ -47,7 +47,8 @@ export const CropZoneWidget = memo(function CropZoneWidget({
         outsideOverlay:   overlay ?? false,
         containerPadding: (lgs?.gutter?.xs ?? 8),
         resizeFromCenter: true,
-        id, // ensure stable id is passed
+        id:        id,
+        forceEven: lgs?.stores?.ui?.video?.cropper?.forceEven ?? false, // NEW: default binding (optional)
     }), [overlay, id])
 
     return (

@@ -541,7 +541,13 @@ export class WidgetManager {
                 moveable:    initialConfig.moveable,
                 setPosition: initialConfig.setPosition,
                 element:     initialConfig.element, // Ensure element is stored
+                forceEven: initialConfig.forceEven ?? false, // NEW: force even dimensions
             })
+        }
+        else {
+            // Update mutable flags when reusing config
+            const cfg = this.#widgets.get(elementId)
+            cfg.forceEven = initialConfig.forceEven ?? cfg.forceEven ?? false
         }
         return this.getConfig(elementId)
     }
