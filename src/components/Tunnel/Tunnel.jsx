@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-31
- * Last modified: 2025-08-31
+ * Created on: 2025-09-30
+ * Last modified: 2025-09-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -129,7 +129,7 @@ export const Tunnel = ({steps, onCancel, className}) => {
                                         ${isCurrent ? 'lgs-tunnel-element-active' : ''}
                                         ${isBlocked ? 'lgs-tunnel-element-blocked' : ''}
                                   `}
-                                    onClick={(event) => handleStepClick(index, event)}
+                                    onPointerDown={(event) => handleStepClick(index, event)}
                                     disabled={isBlocked}
                                     library="fa" name={FA2SL.set(step.icon)}
                                 >
@@ -143,7 +143,7 @@ export const Tunnel = ({steps, onCancel, className}) => {
                 {/* Exit button */}
                 <SlTooltip content={'Cancel'} placement="top">
                     <SlIconButton className="lgs-tunnel-cancel lgs-tunnel-element"
-                                  onClick={onCancel}
+                                  onPointerDown={onCancel}
                                   library="fa" name={FA2SL.set(faXmark)}/>
                 </SlTooltip>
                 <div className="lgs-tunnel-bar-spacer"/>

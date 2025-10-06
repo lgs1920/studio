@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-20
- * Last modified: 2025-08-20
+ * Created on: 2025-09-27
+ * Last modified: 2025-09-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -211,7 +211,44 @@ main-logo.xlarge {
     max-width: var(--lgs-horizontal-panel-width);
 }
 
+/*******************************************************************************
+ * Drag, Resize Rotate
+ ******************************************************************************/
+.lgs-widget-control-box * {
+    transition: opacity 0.2s ease-in-out;
+}
 
+.dragging .lgs-draggable-widget .moveable-control-box {
+    opacity: 0;
+}
+
+.lgs-widget-control-box .moveable-control {
+    width: var(--lgs-gutter) !important;
+    height: var(--lgs-gutter) !important;
+    border: 1px solid var(--lgs-dark-color) !important;
+    border-radius: var(--lgs-border-radius-s) !important;
+    background: var(--moveable-color);
+    --moveable-color: var(--lgs-light-color);
+}
+
+.lgs-widget-control-box .moveable-line {
+    /* Always transparent whatever show control box parameter */
+    background: transparent !important /*var(--lgs-light-color-75) !important;*/
+}
+
+.lgs-widget-control-box .moveable-guideline {
+    background: var(--lgs-third-color-75) !important;
+}
+
+/* snap inside a target */
+.lgs-widget-control-box .moveable-bold:not(.moveable-bounds) {
+    display: none;
+}
+
+/* snap target on bounds. */
+.lgs-widget-control-box .moveable-bold.moveable-bounds {
+    background-color: var(--lgs-first-color-90) !important;
+}
 /*******************************************************************************
  * VideoLayer component
  ******************************************************************************/

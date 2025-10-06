@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-22
- * Last modified: 2025-07-22
+ * Created on: 2025-09-16
+ * Last modified: 2025-09-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -194,7 +194,7 @@ export const GeocodingUI = () => {
                      className={'lgs-theme'}
                      anchor="launch-the-geocoder"
                      placement={settings.toolBar.fromStart ? 'left-start' : 'right-start'}
-                     distance={__.tools.rem2px(__.ui.css.getCSSVariable('lgs-gutter-xs'))}
+                     distance={__.ui.css.rem2px(__.ui.css.getCSSVariable('lgs-gutter-xs'))}
             >
 
                 <div className="geocoding-dialog">

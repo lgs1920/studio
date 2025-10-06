@@ -7,48 +7,48 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-14
- * Last modified: 2025-09-14
+ * Created on: 2025-10-06
+ * Last modified: 2025-10-06
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 import { CameraAndTargetPanel } from '@Components/cesium/CameraAndTargetPanel/CameraAndTargetPanel'
-import { ContextMenuHook }      from '@Components/MainUI/ContextMenuHook'
-import { VideoFPSSelector }     from '@Components/MainUI/video/VideoFPSSelector'
-import { VideoQualitySelector } from '@Components/MainUI/video/VideoQualitySelector'
-import { VideoRecorderToolbar } from '@Components/MainUI/video/VideoRecorderToolbar'
+import { ContextMenuHook }    from '@Components/MainUI/ContextMenuHook'
+import { VideoFPSWidget }     from '@Components/MainUI/video/VideoFPSWidget'
+import { VideoQualityWidget } from '@Components/MainUI/video/VideoQualityWidget'
+import { VideoRecorderWidget } from '@Components/MainUI/video/VideoRecorderWidget'
+import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/VideoRecordingSettingsWidget'
 import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
 import { Cropper }              from '@Components/ToolsUI/cropper/Cropper'
-import { CropRatioSelector }    from '@Components/ToolsUI/cropper/CropRatioSelector'
 import { MapPOIContextMenu }    from '@Components/MainUI/MapPOI/MapPOIContextMenu'
-import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/VideoRecordingSettingsToolbar'
-import { JourneyToolbar }       from '@Editor/JourneyToolbar'
+import { VIDEO_CROP_ZONE } from '@Core/constants'
+import { JourneyToolbarWidget } from '@Editor/JourneyToolbarWidget'
 import { useSnapshot }          from 'valtio/index'
 
 export const ToolsUI = () => {
     const {usage} = useSnapshot(lgs.settings.ui.journeyToolbar)
     const {video} = useSnapshot(lgs.stores.ui)
     const $cropper = lgs.stores.ui.video.cropper
-    const cropper = useSnapshot($cropper)
+    $cropper.id = VIDEO_CROP_ZONE
     return (
         <div id="lgs-tools-ui">
             {video.editing ? (
                 <>
-                    <Cropper overlay source={lgs.canvas} store={$cropper}
+                    <Cropper overlay source={lgs.canvas}
+                             context={$cropper} className="video-cropper"
                              options={{infoComponent: <VideoSettingsInfo/>}}/>
-                    <VideoRecordingSettingsToolbar store={$cropper}/>
-                    <VideoQualitySelector store={$cropper}/>
-                    <VideoFPSSelector store={$cropper}/>
+                    <VideoFPSWidget/>
+                    <VideoQualityWidget/>
+                    <VideoRecordingSettingsWidget/>
                 </>
             ) : (
                  <>
-                     {video.recording && <VideoRecorderToolbar/>}
-
+                     {video.recording && <VideoRecorderWidget/>}
                      <CameraAndTargetPanel/>
                      <MapPOIContextMenu/>
                      <ContextMenuHook/>
-                     {usage && <JourneyToolbar/>}
+                     {usage && <JourneyToolbarWidget/>}
                  </>
              )}
         </div>

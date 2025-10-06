@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-12
- * Last modified: 2025-09-12
+ * Created on: 2025-10-03
+ * Last modified: 2025-10-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,7 +20,6 @@ import { useSnapshot }         from 'valtio'
 
 export const VideoSettingsInfo = () => {
     const $video = lgs.stores.ui.video
-
     const video = useSnapshot($video)
     const [quality, setQuality] = useState($video.quality)
     const [fps, setFps] = useState($video.fps)
@@ -34,8 +33,10 @@ export const VideoSettingsInfo = () => {
         setQuality(VideoRecorder.QUALITY[video.quality])
     }, [video.quality])
 
+    // Recompute current format when ratio changes and guard when not found
     useEffect(() => {
-        setRatio($video.ratio === '4x3' ? 'Free' : $video.ratio)
+        const fmt = lgs.configuration.videoFormats.find(f => f.value === video.ratio)
+        setRatio(fmt?.label ?? String(video.ratio))
     }, [video.ratio])
 
     return (

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-10
- * Last modified: 2025-09-10
+ * Created on: 2025-10-03
+ * Last modified: 2025-10-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,9 +38,6 @@
     --lgs-dimension: 2.4rem;
     --lgs-dimension-s: calc(var(--lgs-dimension) * 0.625);
     --lgs-line-dimension: var(--lgs-dimension);
-}
-
-:root {
 
     --lgs-dark-ui-primary-color: var(--sl-color-sky-800);
     --lgs-dark-ui-secondary-color: var(--sl-color-sky-600);
@@ -81,18 +78,46 @@
     --lgs-border-width-s: 1px;
     --lgs-border-s: var(--lgs-border-width-s) solid var(--sl-color-gray-400);
 
-    --lgs-light-color: hsla(39 100% 87%/1);
+    /* === LIGHT COLOR === */
+    --lgs-light-color: hsla(39 100% 87% / 1);
+    --lgs-light-color-90: hsla(39 100% 87% / 0.9);
+    --lgs-light-color-75: hsla(39 100% 87% / 0.75);
+    --lgs-light-color-50: hsla(39 100% 87% / 0.5);
+    --lgs-light-color-25: hsla(39 100% 87% / 0.25);
+    --lgs-light-color-15: hsla(39 100% 87% / 0.15);
+
+    /* === DARK COLOR === */
     --lgs-dark-color: hsla(125 87% 18% / 1);
-    --lgs-light-color-90: hsla(39 100% 87%/0.9);
-    --lgs-dark-color-90: hsla(125 87% 18% /0.9);
-    --lgs-light-color-75: hsla(39 100% 87%/0.75);
-    --lgs-dark-color-75: hsla(125 87% 18% /0.75);
-    --lgs-light-color-50: hsla(39 100% 87%/0.5);
+    --lgs-dark-color-90: hsla(125 87% 18% / 0.9);
+    --lgs-dark-color-75: hsla(125 87% 18% / 0.75);
     --lgs-dark-color-50: hsla(125 87% 18% / 0.5);
-    --lgs-light-color-25: hsla(39 100% 87%/0.25);
     --lgs-dark-color-25: hsla(125 87% 18% / 0.25);
-    --lgs-light-color-15: hsla(39 100% 87%/0.15);
     --lgs-dark-color-15: hsla(125 87% 18% / 0.15);
+
+    /* === THIRD COLOR === */
+    --lgs-third-color: hsla(42 91% 59% / 1);
+    --lgs-third-color-90: hsla(42 91% 59% / 0.9);
+    --lgs-third-color-75: hsla(42 91% 59% / 0.75);
+    --lgs-third-color-50: hsla(42 91% 59% / 0.5);
+    --lgs-third-color-25: hsla(42 91% 59% / 0.25);
+    --lgs-third-color-15: hsla(42 91% 59% / 0.15);
+
+    /* === FIRST COLOR === */
+    --lgs-first-color: hsla(35 93% 40% / 1);
+    --lgs-first-color-90: hsla(35 93% 40% / 0.9);
+    --lgs-first-color-75: hsla(35 93% 40% / 0.75);
+    --lgs-first-color-50: hsla(35 93% 40% / 0.5);
+    --lgs-first-color-25: hsla(35 93% 40% / 0.25);
+    --lgs-first-color-15: hsla(35 93% 40% / 0.15);
+
+    /* === SECOND COLOR === */
+    --lgs-second-color: hsla(35 93% 40% / 0.25);
+    --lgs-second-color-90: hsla(35 93% 40% / 0.225);
+    --lgs-second-color-75: hsla(35 93% 40% / 0.1875);
+    --lgs-second-color-50: hsla(35 93% 40% / 0.125);
+    --lgs-second-color-25: hsla(35 93% 40% / 0.0625);
+    --lgs-second-color-15: hsla(35 93% 40% / 0.0375);
+
 
     --lgs-ocean-color: hsla(196 86% 69% / 1);
     --lgs-ground-color: var(--lgs-dark-color);
@@ -120,8 +145,8 @@
     --lgs-information-border-color: hsla(214.3 94.6% 92.7%/0.25);
 
     --lgs-tooltip-color: var(--lgs-text-on-color);
-    --lgs-tooltip-bg-color: rgba(194, 124, 8, 0.9);
-    --lgs-tooltip-border-color: rgba(194, 124, 8, 0.25);
+    --lgs-tooltip-bg-color: var(--lgs-first-color-90);
+    --lgs-tooltip-border-color: var(--lgs-third-color-90);
 
     --lgs-hover-color: var(--sl-color-primary-500);
     --lgs-hover-bg-color: var(--sl-color-primary-100);
@@ -135,8 +160,8 @@
 
     --lgs-theme-background-image: var(--lgs-theme-gradient-1);
 
-    --lgs-signage-bg-color: #f3bb35;
-    --lgs-signage-border-color: #2b1f02;
+    --lgs-signage-bg-color: var(--lgs-third-color);
+    --lgs-signage-border-color: var(--lgs-second-color);
     --lgs-signage-color: black;
     --lgs-signage-disabled-color: var(--sl-color-gray-400);
 
@@ -1107,16 +1132,17 @@ h3 {
 }
 
 /*******************************************************************************
- * toolbar
+ * Widgets and toolbars
  ******************************************************************************/
 
-
-.lgs-toolbar-container {
+.lgs-widget-container {
     position: absolute;
     z-index: calc(var(--crop-zindex) + 2);
+    /*width: 100%;*/
+    /*height: 100%;*/
 }
 
-.lgs-toolbar {
+.lgs-widget {
     position: absolute;
     display: flex;
     align-items: center;
@@ -1128,27 +1154,48 @@ h3 {
     gap: var(--lgs-gutter-xs);
 }
 
-.lgs-toolbar.dragging {
-    background-color: var(--lgs-dark-color-15);
+.lgs-widget-inner-overlay {
+    position: absolute;
+    z-index: 9999;
+    top: 0;
+    left: 0;
+    display: none;
+    width: 100%;
+    height: 100%;
+    cursor: grabbing !important;
+    pointer-events: auto;
+    background: transparent;
 }
 
-.lgs-toolbar .grabber {
+
+.dragging .lgs-widget-inner-overlay {
+    display: block;
+    cursor: grabbing !important;
+    pointer-events: none;
+}
+
+
+.dragging.lgs-widget *, .dragging.lgs-widget ::part(base), .dragging.lgs-widget ::part(combobox) {
+    cursor: grabbing !important;
+}
+
+.lgs-widget .grabber {
     font-size: var(--lgs-font-size) !important;
     flex-shrink: 0;
     cursor: grab;
 }
 
-.lgs-toolbar .grabber::part(base) {
+.lgs-widget .grabber::part(base) {
     font-size: var(--lgs-font-size);
     padding-right: 0;
     padding-left: 0;
 }
 
-.lgs-toolbar.dragging .grabber {
-    cursor: grabbing;
+.lgs-widget.dragging .grabber {
+    cursor: grabbing !important;
 }
 
-.lgs-toolbar sl-button::part(base) {
+.lgs-widget sl-button::part(base) {
     border: none;
     background: transparent;
 }
@@ -1158,6 +1205,18 @@ h3 {
     align-items: center;
     border-left: 1px solid var(--lgs-card-on-map-border-color);
     border-radius: 0;
+}
+
+.lgs-widget-container ::part(listbox) {
+    opacity: 1;
+}
+
+.lgs-widget-container .dragging ::part(listbox) {
+    opacity: 0;
+}
+
+.lgs-toolbar.dragging-animation {
+    background-color: var(--lgs-light-color-25);
 }
 
 /*******************************************************************************

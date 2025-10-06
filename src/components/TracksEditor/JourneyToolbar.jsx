@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-10
- * Last modified: 2025-09-10
+ * Created on: 2025-10-03
+ * Last modified: 2025-10-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,7 +17,6 @@
 import { FAButton }                                                             from '@Components/FAButton'
 import { ToggleStateIcon }                                                      from '@Components/ToggleStateIcon'
 import { APP_EVENT, CURRENT_JOURNEY, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
-import { DragHandler }                                                          from '@Core/ui/drag-handler/DragHandler'
 import { JourneySelector }                                                      from '@Editor/journey/JourneySelector'
 import { Utils }                                                                from '@Editor/Utils'
 import {
@@ -41,13 +40,9 @@ import { useSnapshot }                                                          
 export const JourneyToolbar = (props) => {
     const $journeyToolbar = lgs.settings.ui.journeyToolbar
     const journeyToolbar = useSnapshot($journeyToolbar)
-    const toolbars = useSnapshot(lgs.settings.ui.toolbars)
-
 
     const _journeyToolbar = useRef(null)
     const _journeySelector = useRef(null)
-
-    const toolbarMoved = useRef(false)
 
     const $journeyEditor = lgs.mainProxy.components.journeyEditor
     const journeyEditor = useSnapshot($journeyEditor)
@@ -63,7 +58,7 @@ export const JourneyToolbar = (props) => {
     let rotationAllowed = false
     const manualRotate = useRef(null)
 
-    const [init, setInit] = useState(false)
+    const [isDragging, setIsDragging] = useState(false)
 
     /**
      * Opens the journey loader by setting its visibility to true.
@@ -161,88 +156,49 @@ export const JourneyToolbar = (props) => {
         $journeyToolbar.show = false
     }
 
-    const setToolbarOpacity = () => {
-        if (_journeyToolbar.current) {
-            _journeyToolbar.current.style.opacity = toolbars.opacity
-        }
-    }
-
-    /**
-     * Handles the start of a drag interaction, disabling SlSelect elements.
-     * @param {Event} event - The dragstart event
-     */
-    const handleDragStart = (event) => {
-        if (_journeySelector.current) {
-            _journeySelector.current.disabled = true
-        }
-    }
-
-    /**
-     * Handles drag movement, updating toolbar position.
-     * @param {Event} event - The drag event
-     */
-    const handleDrag = (event) => {
-        $journeyToolbar.x = event.detail.value.x
-        $journeyToolbar.y = event.detail.value.y // Fixed typo (was .x)
-    }
-
-    const handleDragStop = (event) => {
-        if (_journeySelector.current) {
-            _journeySelector.current.disabled = false
-        }
-    }
-
-
     useEffect(() => {
+        if (props.ref) {
+            props.ref.current = {
 
-        if (journeyEditor.list.length === 0) {
-            return
+                // We do not need handleDragStart here
+
+                /**
+                 * Handles drag movement, updating toolbar position.
+                 * If target is the journey selector, hide it.
+                 * @param {Event} event - The drag event
+                 */
+                handleDrag: event => {
+                    $journeyToolbar.x = event.left
+                    $journeyToolbar.y = event.top
+                    if (_journeySelector.current && !isDragging) {
+                        _journeySelector.current.hide()
+                    }
+                    setIsDragging(true)
+
+                },
+
+                /**
+                 * Handles the drag end event. it will display journey selector options
+                 * if it's only a click.
+                 * @param {Object} event - The drag end event object.
+                 */
+                handleDragEnd: event => {
+                    if (_journeySelector.current && isDragging) {
+                        _journeySelector.current.show()
+                    }
+                    setIsDragging(false)
+                },
+            }
         }
-        const timeoutId = setTimeout(() => {
-            if (!_journeyToolbar.current.dragHandler) {
-                _journeyToolbar.current.dragHandler = new DragHandler({
-                                                                          target:    _journeyToolbar.current,
-                                                                          container: lgs.canvas,
-                                                                          position:  {
-                                                                              top:  $journeyToolbar.top ?? '70%',
-                                                                              left: $journeyToolbar.left ?? '50%',
-                                                                          },
-                                                                      })
-                _journeyToolbar.current.addEventListener(DragHandler.DRAG_START, handleDragStart)
-                _journeyToolbar.current.addEventListener(DragHandler.DRAG, handleDrag)
-                _journeyToolbar.current.addEventListener(DragHandler.DRAG_STOP, handleDragStop)
-
-                // Attach dragging events
-                _journeyToolbar.current.dragHandler.attachEvents()
-            }
-            if (!init) {
-                window.addEventListener(APP_EVENT.WELCOME.HIDE, setToolbarOpacity)
-                setInit(true)
-            }
-            else {
-                setToolbarOpacity()
-            }
-        }, 100)
-
-        // Cleanup: detach events when the component unmounts or conditions change
-        return () => {
-            if (_journeyToolbar.current) {
-                _journeyToolbar.current.dragHandler?.destroy()
-                _journeyToolbar.current.removeEventListener(DragHandler.DRAG_START, handleDragStart)
-                _journeyToolbar.current.removeEventListener(DragHandler.DRAG, handleDrag)
-                _journeyToolbar.current.removeEventListener(DragHandler.DRAG_STOP, handleDragStop)
-            }
-            window.removeEventListener(APP_EVENT.WELCOME.HIDE, setToolbarOpacity)
-        }
-    }, [journeyEditor.list.length, journeyToolbar.show, journeyToolbar.usage])
+    }, [props.ref])
 
     const textVisibilityJourney = sprintf('%s Journey', editorStore?.journey?.visible ? 'Hide' : 'Show')
 
     return (
         <>
             {journeyEditor.list.length > 0 && journeyToolbar.show &&
-                <div className="lgs-toolbar-container" ref={_journeyToolbar}>
-                    <div className="journey-toolbar lgs-toolbar lgs-toolbar-horizontal lgs-card on-map">
+                <div className="journey-toolbar lgs-card on-map"
+                     ref={_journeyToolbar}>
                         <SlTooltip hoist content={'Drag me'}>
                             <SlIcon className="grabber" library="fa"
                                     name={FA2SL.set(faGripDotsVertical)}/>
@@ -313,7 +269,6 @@ export const JourneyToolbar = (props) => {
                             </SlTooltip>
                         </>
                     </div>
-                </div>
             }
         </>
     )

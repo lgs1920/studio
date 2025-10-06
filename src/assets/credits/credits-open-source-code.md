@@ -14,11 +14,12 @@ The application, including studio, backend,APIs, is based on :
 
 ### User interface:
 * [React](https://react.dev/) - UI creation
-* [Valtio](https://valtio.pmnd.rs) - state management
+* [Valtio](https://valtio.pmnd.rs) - State management
 * [Shoelace](https://shoelace.style/) - The web components used for UI
 * [FontAwesome](https://fontawesome.com/) - The icons library
 * [echarts](https://echarts.apache.org/) - Chart library
 * [mediabunny](https://mediabunny.dev/) - Video reading/writing/encoding
+* [Moveable](https://daybrush.com/moveable/) - Drag and drop library (React package)
 
 ### Deployment
 
