@@ -306,6 +306,19 @@ export class WidgetManager {
         if (config.moveable.current) {
             config.moveable.current.updateRect()
         }
+
+        // Notify listeners (e.g., CropZoneInfo) that crop has changed
+        try {
+            document.dispatchEvent(new CustomEvent('onCropUpdate', {
+                detail: {
+                    id:    cropzoneId,
+                    crop:  {left, top, width, height},
+                    ratio: {aspectRatio, locked: lockRatio},
+                },
+            }))
+        }
+        catch (_) { /* no-op */
+        }
     }
 
     /**

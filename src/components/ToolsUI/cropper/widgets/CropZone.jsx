@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-04
- * Last modified: 2025-10-04
+ * Created on: 2025-10-06
+ * Last modified: 2025-10-06
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { VIDEO_CROP_ZONE } from '@Core/constants'
 import React, { forwardRef, useEffect, useRef, useCallback, useState } from 'react'
 import { CropZoneInfo }                                                from './CropZoneInfo'
 
@@ -94,7 +95,7 @@ export const CropZone = forwardRef(function CropZone(props, ref) {
         >
             {infoPosition && (
                 <div className="crop-info lgs-one-line-card on-map small">
-                    <CropZoneInfo info={info}/>
+                    <CropZoneInfo id={VIDEO_CROP_ZONE}/>
                 </div>
             )}
             {infoComponent && (

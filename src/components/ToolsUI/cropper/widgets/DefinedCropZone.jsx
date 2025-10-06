@@ -14,47 +14,91 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+/*******************************************************************************
+ *
+ * DefinedCropZone.jsx
+ * Static crop zone display (no drag/resize), modeled after CropZone rendering
+ *
+ ******************************************************************************/
+
+import React, { memo, useEffect, useRef, useState } from 'react'
 import { CropZoneInfo } from './CropZoneInfo'
-/**
- * DefinedCropZone component for displaying a static crop area without handles or dragging
- * @component
- * @param {Object} props - Component props
- * @param {Object} props.cssCrop - Crop dimensions and position in CSS units
- * @param {Object} props.manager - CropperManager instance
- * @param {string} props.className - Additional CSS classes
- * @param {boolean} [props.showInfo=true] - Whether to show crop info
- * @param {Object} props.ref - Ref for the crop zone element
- * @returns {JSX.Element} The static crop zone without interaction
- */
-import { memo, useEffect, useState } from 'react'
 
-export const DefinedCropZone = ({
-                                    cssCrop,
-                                    className = '',
-                                    infoComponent = null,
-                                    infoPosition = true,
-                                    innerRef,
-                                    id,
-                                }) => {
-
-    const [position, setPosition] = useState({left: 0, top: 0, width: 0, height: 0})
-    useEffect(() => {
-        const widget = __.ui.widgetManager.getConfig(id)
-        setPosition(widget.cropDimensions)
+export const DefinedCropZone = memo(function DefinedCropZone({
+                                                                 className = '',
+                                                                 infoComponent = null,
+                                                                 infoPosition = true,
+                                                                 overlay,
+                                                                 id,
+                                                             }) {
+    const _zoneRef = useRef(null)
+    const [crop, setCrop] = useState(() => {
+        const cfg = __.ui.widgetManager.getConfig(id)
+        return cfg?.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0}
     })
+
+    useEffect(() => {
+        const sync = () => {
+            const cfg = __.ui.widgetManager.getConfig(id)
+            if (!cfg?.cropDimensions) {
+                return
+            }
+            setCrop({...cfg.cropDimensions})
+        }
+        // initial
+        sync()
+        // live updates
+        const onUpdate = (e) => {
+            if (!e?.detail || e.detail.id === id) {
+                sync()
+            }
+        }
+        document.addEventListener('onCropUpdate', onUpdate)
+        return () => document.removeEventListener('onCropUpdate', onUpdate)
+    }, [id])
+
+    // Apply DOM styles for the static crop box
+    useEffect(() => {
+        if (!_zoneRef.current) {
+            return
+        }
+        const el = _zoneRef.current
+        el.style.left = `${crop.left}px`
+        el.style.top = `${crop.top}px`
+        el.style.width = `${crop.width}px`
+        el.style.height = `${crop.height}px`
+        el.style.position = 'absolute'
+        el.style.transform = 'none'
+    }, [crop])
+
+    // Keep outside overlay in sync if provided
+    useEffect(() => {
+        if (!overlay) {
+            return
+        }
+        try {
+            const cfg = __.ui.widgetManager.getConfig(id)
+            if (cfg) {
+                cfg.outsideOverlay = overlay
+                __.ui.widgetManager.applyCropToOverlay({...cfg, cropDimensions: crop})
+            }
+        }
+        catch (_) {
+        }
+    }, [overlay, id, crop])
+
     return (
         <div
-            ref={innerRef}
+            ref={_zoneRef}
             className={`crop-zone defined ${className}`}
+            aria-label="defined-crop-zone"
         >
-            {/* Position information display */}
             {infoPosition && (
                 <div className="crop-info lgs-one-line-card on-map small">
-                    <CropZoneInfo info={__.ui.widgetManager.getConfig(id).cropDimensions}/>
+                    <CropZoneInfo id={id}/>
                 </div>
             )}
 
-            {/* Custom info component */}
             {infoComponent && (
                 <div className="crop-info-custom lgs-one-line-card on-map small">
                     {infoComponent}
@@ -62,4 +106,4 @@ export const DefinedCropZone = ({
             )}
         </div>
     )
-}
+})
