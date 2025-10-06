@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-05
- * Last modified: 2025-10-05
+ * Created on: 2025-10-06
+ * Last modified: 2025-10-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -34,6 +34,7 @@ export const CropZoneWidget = memo(function CropZoneWidget({
                                                                infoComponent = null,
                                                                infoPosition = true,
                                                                overlay,
+                                                               id,
                                                            }) {
     // Memoized configuration for DraggableUIWidget
     const config = useMemo(() => ({
@@ -46,7 +47,8 @@ export const CropZoneWidget = memo(function CropZoneWidget({
         outsideOverlay:   overlay ?? false,
         containerPadding: (lgs?.gutter?.xs ?? 8),
         resizeFromCenter: true,
-    }), [overlay])
+        id, // ensure stable id is passed
+    }), [overlay, id])
 
     return (
         <Widget isVisible={true} config={config} className={className}>

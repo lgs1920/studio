@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-05
- * Last modified: 2025-10-05
+ * Created on: 2025-10-06
+ * Last modified: 2025-10-06
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { LGS_ANIMATION_DRAGGING, LGS_TOOLBAR, LGS_WIDGET } from '@Core/constants'
-import classNames                 from 'classnames'
+import { LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_WIDGET } from '@Core/constants'
+import classNames                                                                  from 'classnames'
 import React, { Children, cloneElement, useCallback, useEffect, useRef, useState } from 'react'
 import Moveable                   from 'react-moveable'
 import { useSingleOrDoubleEvent } from '@Core/events/useSingleOrDoubleEvent'
@@ -277,6 +277,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 _widget.current,
                 {
                     container:      lgs.canvas,
+                    id: config.id ?? null,
                     isCropper:      config.isCropper ?? false,
                     showControlBox: true,
                     left:           config.left,
@@ -340,6 +341,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                                 [className]: !!className,
                                 [LGS_TOOLBAR]:            config?.type === LGS_TOOLBAR,
                                 [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
+                                [LGS_ANIMATION_RESIZING]: config.animationWhenResizing,
+
                             }
                         )}
                         ref={_widget}
@@ -370,7 +373,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         onResize={handleResize}
                         onResizeStart={handleResizeStart}
                         onResizeEnd={handleResizeEnd}
-                        keepRatio={config?.ratio?.locked || true}
+                        keepRatio={Boolean(
+                            __.ui.widgetManager.getConfig(config?.id)?.ratio?.locked ??
+                            config?.ratio?.locked,
+                        )}
                         throttleResize={2}
                         scalable={config?.scalable || false}
                         snappable={config?.snappable ?? true}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-10-06
+ * Last modified: 2025-10-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -26,7 +26,7 @@ import { CropZoneInfo } from './CropZoneInfo'
  * @param {Object} props.ref - Ref for the crop zone element
  * @returns {JSX.Element} The static crop zone without interaction
  */
-import { memo } from 'react'
+import { memo, useEffect, useState } from 'react'
 
 export const DefinedCropZone = ({
                                     cssCrop,
@@ -34,8 +34,14 @@ export const DefinedCropZone = ({
                                     infoComponent = null,
                                     infoPosition = true,
                                     innerRef,
+                                    id,
                                 }) => {
 
+    const [position, setPosition] = useState({left: 0, top: 0, width: 0, height: 0})
+    useEffect(() => {
+        const widget = __.ui.widgetManager.getConfig(id)
+        setPosition(widget.cropDimensions)
+    })
     return (
         <div
             ref={innerRef}
@@ -44,7 +50,7 @@ export const DefinedCropZone = ({
             {/* Position information display */}
             {infoPosition && (
                 <div className="crop-info lgs-one-line-card on-map small">
-                    <CropZoneInfo info={{left: 0, top: 0, width: 0, height: 0}}/>
+                    <CropZoneInfo info={__.ui.widgetManager.getConfig(id).cropDimensions}/>
                 </div>
             )}
 

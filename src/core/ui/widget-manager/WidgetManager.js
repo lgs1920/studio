@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-05
- * Last modified: 2025-10-05
+ * Created on: 2025-10-06
+ * Last modified: 2025-10-06
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { SECOND }       from '@Core/constants'
-import { v4 as uuidv4 } from 'uuid'
+import { LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, SECOND } from '@Core/constants'
+import { v4 as uuidv4 }                                           from 'uuid'
 
 /**
  * Singleton that manages draggable widgets: bounds, snapping, movement, and crop overlay sync.
@@ -28,6 +28,7 @@ import { v4 as uuidv4 } from 'uuid'
  * - Keep an outside overlay clip-path synchronized with crop zone box.
  * - On container resize, clamp/resize the crop zone (respecting aspect ratio lock).
  * - Handle double-click/tap on cropzone to toggle between max size and previous size.
+ * - Update crop ratio for the active cropzone when requested.
  */
 export class WidgetManager {
     // Singleton instance
@@ -136,16 +137,20 @@ export class WidgetManager {
             return false
         }
 
-        // Keep element reference
+        // Keep element, moveable, and setPosition references
         initialConfig.element = element
+        initialConfig.moveable = moveable
+        initialConfig.setPosition = setPosition
 
-        // Ensure ID
-        let elementId = this.retrieveElementId(element)
-        if (!elementId) {
-            elementId = uuidv4()
-            initialConfig.element = element
-            element.setAttribute(this.#ID_KEY, elementId)
-        }
+        // Use initialConfig.id if provided, otherwise check data-LGS-ID or generate UUID
+        let elementId = initialConfig.id && typeof initialConfig.id === 'string' && initialConfig.id.trim()
+                        ? initialConfig.id
+                        : this.retrieveElementId(element) || uuidv4()
+
+        // Set data-LGS-ID on element
+        element.setAttribute(this.#ID_KEY, elementId)
+
+        // Ensure moveable target
         moveable.current.target = element
 
         // Force opacity while Moveable renders
@@ -155,12 +160,17 @@ export class WidgetManager {
 
         initialConfig.controlBoxVisibility = initialConfig.showControlBox || false
 
-        // Create config if needed
+        // Create or update config
         const config = this.retrieveConfig(element, initialConfig)
         this.applyCropToOverlay(config)
 
         // Update bounds and position/crop
-        moveable.current.keepRatio = config.ratio.locked
+        moveable.current.request('resizable', {
+            keepRatio:   config.ratio.locked,
+            deltaWidth:  0,
+            deltaHeight: 0,
+        }, true)
+
         const newBounds = this.refreshBounds(config, moveable)
         setBounds(newBounds)
         if (config.isCropper) {
@@ -194,6 +204,108 @@ export class WidgetManager {
         }
 
         return true
+    }
+
+    /**
+     * Update the aspect ratio of the specified cropzone and adjust its dimensions.
+     * @param {string} cropzoneId - ID of the cropzone to update
+     * @param {number} aspectRatio - New aspect ratio (width / height)
+     * @param {boolean} lockRatio - Whether to lock the aspect ratio
+     */
+    updateCropRatio = (cropzoneId, aspectRatio, lockRatio) => {
+        // Retrieve the cropzone configuration
+        const config = this.getConfig(cropzoneId)
+        if (!config || !config.isCropper) {
+            console.warn('[WidgetManager] No valid cropzone found for ID:', cropzoneId)
+            return
+        }
+
+        // Ensure config.element is valid
+        if (!config.element) {
+            const element = document.querySelector(`[${this.#ID_KEY}="${cropzoneId}"]`)
+            if (element) {
+                config.element = element
+            }
+            else {
+                console.warn('[WidgetManager] No element found for cropzone ID:', cropzoneId)
+                return
+            }
+        }
+
+        // Update #current to the cropzone
+        this.#current = cropzoneId
+
+        // We need to reset maximisation if it's in progress
+        config.isMaximized = false
+
+        // Update ratio
+        config.ratio = {aspectRatio, locked: lockRatio}
+        if (config.moveable.current) {
+            config.moveable.current.request('resizable', {
+                keepRatio:   lockRatio,
+                deltaWidth:  0,
+                deltaHeight: 0,
+            }, true)
+        }
+
+        // Recalculate dimensions to fit new ratio, keeping center
+        const container = config.container.getBoundingClientRect()
+        const padding = config.containerPadding || 0
+        const paddedWidth = container.width - 2 * padding
+        const paddedHeight = container.height - 2 * padding
+        const maxWidth = Math.floor(paddedWidth * this.#CROP_SCALE_FACTOR)
+        const maxHeight = Math.floor(paddedHeight * this.#CROP_SCALE_FACTOR)
+
+        let width, height
+        if (aspectRatio === 1) {
+            width = height = Math.floor(Math.max(config.minCropSize.width, Math.min(maxWidth, maxHeight)))
+        }
+        else if (aspectRatio < 1) {
+            height = Math.floor(Math.max(config.minCropSize.height, maxHeight))
+            width = Math.floor(Math.max(config.minCropSize.width, height * aspectRatio))
+            if (width > maxWidth) {
+                width = maxWidth
+                height = Math.floor(width / aspectRatio)
+            }
+        }
+        else {
+            width = Math.floor(Math.max(config.minCropSize.width, maxWidth))
+            height = Math.floor(Math.max(config.minCropSize.height, width / aspectRatio))
+            if (height > maxHeight) {
+                height = maxHeight
+                width = Math.floor(height * aspectRatio)
+            }
+        }
+
+        // Center the cropzone
+        const left = Math.floor((paddedWidth - width) / 2) + padding
+        const top = Math.floor((paddedHeight - height) / 2) + padding
+
+        // Update cropDimensions
+        config.cropDimensions = {left, top, width, height}
+        config.position = {left, top}
+        config.centerRatio = {x: (left + width / 2) / container.width, y: (top + height / 2) / container.height}
+
+        // Apply styles to element
+        const element = config.element
+        element.style.left = `${left}px`
+        element.style.top = `${top}px`
+        element.style.width = `${width}px`
+        element.style.height = `${height}px`
+        element.style.transform = 'none'
+
+        // Sync overlay
+        this.applyCropToOverlay(config)
+
+        // Update position state
+        if (config.setPosition) {
+            config.setPosition({left, top})
+        }
+
+        // Update Moveable
+        if (config.moveable.current) {
+            config.moveable.current.updateRect()
+        }
     }
 
     /**
@@ -384,9 +496,14 @@ export class WidgetManager {
     /**
      * Get or create configuration for an element.
      * Adds crop-related options including aspect ratio and min size.
+     * Uses initialConfig.id as the widget ID and key in #widgets if provided.
      */
     retrieveConfig = (element, initialConfig = {}) => {
-        const elementId = this.retrieveElementId(element)
+        // Use initialConfig.id if provided, otherwise fall back to element's data-LGS-ID
+        const elementId = initialConfig.id && typeof initialConfig.id === 'string' && initialConfig.id.trim()
+                          ? initialConfig.id
+                          : this.retrieveElementId(element) || uuidv4()
+
         if (!this.#widgets.has(elementId)) {
             const anchor =
                       (initialConfig.attachTo && this.#validPositions.includes(initialConfig.attachTo))
@@ -418,9 +535,12 @@ export class WidgetManager {
                 minCropSize:    initialConfig.minCropSize ?? this.#MIN_CROP_SIZE,
                 outsideOverlay: initialConfig.outsideOverlay,
                 resizeFromCenter: initialConfig.resizeFromCenter ?? false,
-                centerRatio:            {x: 0.5, y: 0.5},
+                centerRatio: {x: 0.5, y: 0.5},
                 previousCropDimensions: null, // Store previous dimensions for double-click toggle
-                isMaximized:            false, // Track if cropzone is maximized
+                isMaximized: false, // Track if cropzone is maximized
+                moveable:    initialConfig.moveable,
+                setPosition: initialConfig.setPosition,
+                element:     initialConfig.element, // Ensure element is stored
             })
         }
         return this.getConfig(elementId)
@@ -818,14 +938,11 @@ export class WidgetManager {
         e.target.classList.add('dragging')
         const config = this.retrieveConfig(e.target)
         if (config.animationWhenDragging) {
-            e.target.classList.add('dragging-animation')
+            e.target.classList.add(LGS_ANIMATION_DRAGGING)
         }
         this.#isDragging = true
         const elementId = this.retrieveElementId(e.target)
         this.#current = elementId
-        if (config?.isCropper) {
-            config.element = e.target
-        }
     }
 
     /**
@@ -833,7 +950,7 @@ export class WidgetManager {
      * @param {Object} e - Moveable dragEnd event
      */
     onDragEnd = e => {
-        e.target.classList.remove('dragging', 'dragging-animation')
+        e.target.classList.remove('dragging', LGS_ANIMATION_DRAGGING)
         this.#isDragging = false
 
         const config = this.retrieveConfig(e.target)
@@ -882,7 +999,7 @@ export class WidgetManager {
         e.target.classList.add('resizing')
         const config = this.retrieveConfig(e.target)
         if (config.animationWhenResizing) {
-            e.target.classList.add('resizing-animation')
+            e.target.classList.add(LGS_ANIMATION_RESIZING)
         }
     }
 
@@ -902,7 +1019,7 @@ export class WidgetManager {
      */
     onResizeEnd = e => {
         this.#isResizing = false
-        e.target.classList.remove('resizing', 'resizing-animation')
+        e.target.classList.remove('resizing', LGS_ANIMATION_RESIZING)
         const config = this.retrieveConfig(e.target)
         if (config?.isCropper) {
             config.element = e.target
@@ -966,15 +1083,14 @@ export class WidgetManager {
         config.centerRatio = {
             x: (left + width / 2) / container.width,
             y: (top + height / 2) / container.height,
-        };
+        }
 
         this.applyCropToOverlay(config)
         setPosition({left, top})
         if (moveable && moveable.current) {
             moveable.current.updateRect()
         }
-    };
-
+    }
 
     /**
      * Compute DOM bounds for an element or the window.
@@ -1022,7 +1138,7 @@ export class WidgetManager {
      * @param {string} elementId
      * @returns {Object|undefined}
      */
-    getConfig = (elementId) => {
+    getConfig = elementId => {
         return this.#widgets.get(elementId)
     }
 

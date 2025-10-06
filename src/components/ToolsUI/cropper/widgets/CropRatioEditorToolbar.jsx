@@ -7,21 +7,13 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-05
- * Last modified: 2025-10-05
+ * Created on: 2025-10-06
+ * Last modified: 2025-10-06
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-/**
- * CropRatioSelector renders a draggable toolbar for selecting crop ratios
- * @component
- * @param {Object} props - Component props
- * @param {Object} props.manager - CropperManager instance for crop operations
- * @param {Object} props.manager.store - Valtio store with crop state (ratioEditor, etc.)
- * @returns {JSX.Element} Draggable crop ratio selector UI
- */
 import { faCropSimple, faRectangle, faRectangleVertical, faSquare } from '@fortawesome/pro-regular-svg-icons'
 import { faGripDots }                                               from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlTooltip }                                        from '@shoelace-style/shoelace/dist/react'
@@ -30,7 +22,6 @@ import classNames from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState }           from 'react'
 import { useSnapshot }                                              from 'valtio'
 import '../style.css'
-
 
 /**
  * Icon mappings for crop ratio presets
@@ -46,9 +37,14 @@ const ICONS = {
 }
 
 /**
- * CropRatioSelector component
+ * CropRatioEditorToolbar renders a draggable toolbar for selecting crop ratios
+ * @component
+ * @param {Object} props - Component props
+ * @param {Object} props.context - Valtio store with crop state (ratioEditor, etc.)
+ * @param {string} props.cropzoneId - ID of the cropzone to update
+ * @returns {JSX.Element} Draggable crop ratio selector UI
  */
-export const CropRatioEditorToolbar = memo(({context}) => {
+export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
     // Access reactive cropper and toolbar states
     const $cropper = context
     const cropper = useSnapshot($cropper || {}, {sync: true})
@@ -90,40 +86,15 @@ export const CropRatioEditorToolbar = memo(({context}) => {
     const handleChangeRatio = useCallback((preset, event) => {
         $video.ratio = preset.value
 
-        // Parse ratio and reset crop
+        // Parse ratio and update cropzone
         const [w, h] = preset.value.split('x').map(Number)
-        // const newCrop = manager.resetCrop({aspectRatio: w / h, lockRatio: preset.locked})
-        //
-        // // Update cssCrop using setter
-        // if (newCrop) {
-        //     manager.cssCrop = newCrop
-        // }
-        // else {
-        //     console.warn('CropRatioSelector: Failed to update cssCrop, newCrop is invalid')
-        //     return
-        // }
+        __.ui.widgetManager.updateCropRatio(cropzoneId, w / h, preset.locked)
 
         // Update store to keep ratioEditor active
         $cropper.ratioEditor = true
         $cropper.aspectRatio = w / h
 
-        // Trigger a render update
-        // setForceRender((prev) => prev + 1)
-
-        // Simulate pointer event to trigger resize
-        const rect = lgs.canvas.getBoundingClientRect()
-        const cssRect = {
-            left: Math.floor(rect.left / __.device.dpr),
-            top:  Math.floor(rect.top / __.device.dpr),
-        }
-        const pointerMoveEvent = new PointerEvent('pointermove', {
-            bubbles: true,
-            cancelable: true,
-            clientX: cssRect.left + 1,
-            clientY: cssRect.top + 1,
-        })
-        lgs.canvas.dispatchEvent(pointerMoveEvent)
-    }, [$cropper])
+    }, [$cropper, cropzoneId])
 
     /**
      * Determines if a given preset is visible on the current device and orientation

@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-05
- * Last modified: 2025-10-05
+ * Created on: 2025-10-06
+ * Last modified: 2025-10-06
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { Widget }      from '@Components/MainUI/Widget'
+import { Widget }         from '@Components/MainUI/Widget'
 import { LGS_TOOLBAR } from '@Core/constants'
-import React, { useMemo }         from 'react'
+import React, { useMemo } from 'react'
 import { useSnapshot }            from 'valtio'
 import { CropRatioEditorToolbar } from './CropRatioEditorToolbar'
 
@@ -40,7 +40,7 @@ export const CropRatioEditorWidget = ({context}) => {
 
     return (
         <Widget isVisible={context.ratioEditor} config={config}>
-            <CropRatioEditorToolbar context={context}/>
+            <CropRatioEditorToolbar context={context} cropzoneId={context.id}/>
         </Widget>
     )
 }

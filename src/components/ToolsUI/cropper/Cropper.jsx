@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-10-06
+ * Last modified: 2025-10-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -57,25 +57,27 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
 
             <div ref={_cropperContainer} className="crop-container">
                 {overlayElement && cropper.ratioEditor ? (
-                <>
-                    <CropZoneWidget
-                        className={className}
-                        infoPosition={options.infoPosition}
-                        infoComponent={options.infoComponent}
-                        overlay={overlayElement}
-                    />
-                </>
+                    <>
+                        <CropZoneWidget
+                            className={className}
+                            infoPosition={options.infoPosition}
+                            infoComponent={options.infoComponent}
+                            overlay={overlayElement}
+                            id={context.id}
+                        />
+                    </>
                 ) : overlayElement ? (
                     <DefinedCropZone
                         className={className}
                         infoPosition={options.infoPosition}
                         infoComponent={options.infoComponent}
                         overlay={overlayElement}
+                        id={context.id}
                     />
                 ) : null}
                 {overlay && <div className="crop-overlay" ref={_overlay}/>}
-            {children}
-        </div>
+                {children}
+            </div>
         </>
     )
 })

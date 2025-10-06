@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-10-06
+ * Last modified: 2025-10-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,6 +22,7 @@ import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/VideoReco
 import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
 import { Cropper }              from '@Components/ToolsUI/cropper/Cropper'
 import { MapPOIContextMenu }    from '@Components/MainUI/MapPOI/MapPOIContextMenu'
+import { VIDEO_CROP_ZONE } from '@Core/constants'
 import { JourneyToolbarWidget } from '@Editor/JourneyToolbarWidget'
 import { useSnapshot }          from 'valtio/index'
 
@@ -29,6 +30,7 @@ export const ToolsUI = () => {
     const {usage} = useSnapshot(lgs.settings.ui.journeyToolbar)
     const {video} = useSnapshot(lgs.stores.ui)
     const $cropper = lgs.stores.ui.video.cropper
+    $cropper.id = VIDEO_CROP_ZONE
     return (
         <div id="lgs-tools-ui">
             {video.editing ? (
