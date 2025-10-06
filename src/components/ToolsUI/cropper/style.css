@@ -51,6 +51,7 @@
     right: 0;
     bottom: 0;
     left: 0;
+    overflow: hidden;
     box-sizing: border-box;
     user-select: none;
     pointer-events: none;
@@ -72,7 +73,7 @@
     font-size: var(--lgs-font-size-s);
     position: absolute;
     z-index: calc(var(--crop-zindex) + 1);
-    top: var(--lgs-gutter-xs);
+
     display: flex;
     align-items: center;
     width: max-content;
@@ -81,11 +82,13 @@
 }
 
 .crop-info {
+    top: var(--lgs-gutter-xs);
     left: var(--lgs-gutter-xs);
 }
 
 .crop-info-custom {
     right: var(--lgs-gutter-xs);
+    bottom: var(--lgs-gutter-xs);
 }
 
 [class^="crop-info"] span {
