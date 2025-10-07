@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-09
- * Last modified: 2025-09-09
+ * Created on: 2025-10-07
+ * Last modified: 2025-10-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,8 +22,11 @@
     --lgs-tunnel-bg-blocked-color: var(--lgs-dark-color-50);
     --lgs-tunnel-blocked-color: var(--lgs-light-color-50);
 
-    --lgs-tunnel-bg-active-color: var(--lgs-dark-color);
-    --lgs-tunnel-active-color: var(--lgs-light-color);
+    --lgs-tunnel-bg-active-color: var(--lgs-third-color);
+    --lgs-tunnel-active-color: var(--lgs-dark-color);
+
+    --lgs-tunnel-bg-done-color: var(--lgs-dark-color);
+    --lgs-tunnel-done-color: var(--lgs-light-color);
 
     --lgs-tunnel-hover-bg-color: var(--lgs-dark-color);
     --lgs-tunnel-hover-color: var(--lgs-light-color);
@@ -68,9 +71,15 @@
 }
 
 .lgs-tunnel-element-active {
-    color: var(--lgs-tunnel-active-color);
-    border-color: var(--lgs-tunnel-active-color);
-    background-color: var(--lgs-tunnel-bg-active-color);
+    color: var(--lgs-tunnel-active-color) !important;
+    border-color: var(--lgs-tunnel-active-color) !important;
+    background-color: var(--lgs-tunnel-bg-active-color) !important;
+}
+
+.lgs-tunnel-element-done {
+    color: var(--lgs-tunnel-done-color);
+    border-color: var(--lgs-tunnel-done-color);
+    background-color: var(--lgs-tunnel-bg-done-color);
 }
 
 .lgs-tunnel-bar-spacer {
