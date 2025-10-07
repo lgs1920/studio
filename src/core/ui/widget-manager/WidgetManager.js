@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-06
- * Last modified: 2025-10-06
+ * Created on: 2025-10-07
+ * Last modified: 2025-10-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -189,17 +189,14 @@ export class WidgetManager {
             }
         }
 
+        document.dispatchEvent(new CustomEvent('onBeforeCropUpdate', {
+            detail: {
+                id: cropzoneId,
+            },
+        }))
+
         this.#current = cropzoneId
         config.isMaximized = false
-
-        config.ratio = {aspectRatio, locked: lockRatio}
-        if (config.moveable.current) {
-            config.moveable.current.request('resizable', {
-                keepRatio:   lockRatio,
-                deltaWidth:  0,
-                deltaHeight: 0,
-            }, true)
-        }
 
         const container = config.container.getBoundingClientRect()
         const padding = config.containerPadding || 0
