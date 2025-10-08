@@ -315,7 +315,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 _initialized.current = false
             }
         }
-    }, [isVisible, config])
+    }, [isVisible, config?.id, config?.left, config?.top, config?.attachTo, config?.opacity, config?.animationWhenDragging, config?.resizable, config?.resizeFromCenter, config?.containerPadding, config?.outsideOverlay, config?.type])
 
     /**
      * Update Moveable rect when bounds change
