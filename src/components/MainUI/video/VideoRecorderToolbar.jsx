@@ -80,18 +80,6 @@ const RecorderControls = memo(({recording, paused, recorder, finalisation}) => {
     )
 })
 
-/**
- * Converts physical crop values to CSS crop values
- * @param {Object} crop - Physical crop values {x, y, width, height}
- * @param {number} dpr - Device pixel ratio
- * @returns {Object} CSS crop values {x, y, width, height}
- */
-const toCssCrop = (crop, dpr) => ({
-    x:      crop?.x == null ? 0 : Math.floor(crop.x / dpr),
-    y:      crop?.y == null ? 0 : Math.floor(crop.y / dpr),
-    width:  crop?.width == null ? 0 : Math.floor(crop.width / dpr),
-    height: crop?.height == null ? 0 : Math.floor(crop.height / dpr),
-})
 
 /**
  * VideoRecorderToolbar component
