@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-10-08
+ * Last modified: 2025-10-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,5 +24,5 @@
 import { memo } from 'react'
 
 export const CropOverlay = memo(({ style }) => {
-    return <div className="crop-overlay"/>
+    return <div className="crop-overlay" style={style}/>
 })
