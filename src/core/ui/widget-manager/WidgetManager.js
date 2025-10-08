@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-07
- * Last modified: 2025-10-07
+ * Created on: 2025-10-08
+ * Last modified: 2025-10-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -325,12 +325,12 @@ export class WidgetManager {
         }
         else {
             // Merge-in mutable runtime props if provided (e.g., outsideOverlay)
-            const cfg = this.#widgets.get(elementId)
+            const widget = this.#widgets.get(elementId)
             if (initialConfig.outsideOverlay) {
-                cfg.outsideOverlay = initialConfig.outsideOverlay
+                widget.outsideOverlay = initialConfig.outsideOverlay
             }
             if (initialConfig.container) {
-                cfg.container = initialConfig.container
+                widget.container = initialConfig.container
             }
         }
         return this.getConfig(elementId)

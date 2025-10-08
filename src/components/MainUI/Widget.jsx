@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-06
- * Last modified: 2025-10-06
+ * Created on: 2025-10-08
+ * Last modified: 2025-10-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -292,7 +292,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     outsideOverlay: config.outsideOverlay ?? false,
                     resizeFromCenter: config.resizeFromCenter ?? false,
                     resizable:      config.resizable ?? false,
-                    forceEven: config.forceEven ?? false, // NEW: pass-through
+                    forceEven: config.forceEven ?? false,
                 },
                 setBounds,
                 setPosition,
