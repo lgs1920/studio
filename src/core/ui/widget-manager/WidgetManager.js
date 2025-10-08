@@ -398,16 +398,28 @@ export class WidgetManager {
         }
         const container = config.container.getBoundingClientRect()
         const widget = element.getBoundingClientRect()
-        if (widget.width === 0 || widget.height === 0) {
-            return {left: 0, top: 0}
-        }
         const parsePosition = (value, maxDimension) => {
             if (typeof value === 'string' && value.endsWith('%')) {
                 const percent = parseFloat(value)
                 return isNaN(percent) ? 0 : (percent / 100) * maxDimension
             }
+            if (typeof value === 'string' && value.endsWith('px')) {
+                return parseFloat(value) || 0
+            }
             const numValue = typeof value === 'number' ? value : parseFloat(value)
             return isNaN(numValue) ? 0 : numValue
+        }
+
+        // If size is not yet known, but explicit left/top are provided, use them directly to avoid (0,0)
+        if (widget.width === 0 || widget.height === 0) {
+            if (config.left != null && config.top != null) {
+                config.position = {
+                    left: parsePosition(config.left, container.width),
+                    top:  parsePosition(config.top, container.height),
+                }
+                return config.position
+            }
+            return {left: 0, top: 0}
         }
 
         let left = parsePosition(config.left, container.width)
