@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-10-08
+ * Last modified: 2025-10-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -292,7 +292,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         <>
             {/* Only the toolbar remains here */}
             <div ref={_toolbar}
-                 className="video-recorder-toolbar lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map">
+                 className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map">
                 <FontAwesomeIcon icon={faCircle}
                                  className={classNames({
                                                            'fa-beat':    video.paused || video.finalizing,
