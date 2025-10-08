@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-10-08
+ * Last modified: 2025-10-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,27 +18,21 @@
 import { VideoSettingsInfo }                             from '@Components/MainUI/video/VideoSettingsInfo'
 import { CropOverlay }                                   from '@Components/ToolsUI/cropper/CropOverlay'
 import { DefinedCropZone } from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
-import classNames                                        from 'classnames'
-import React, { forwardRef, useEffect, useMemo, useRef } from 'react'
-import { useSnapshot }                                   from 'valtio'
-
-const toCssCrop = (crop, dpr) => ({
-    x:      crop?.x == null ? 0 : Math.floor(crop.x / dpr),
-    y:      crop?.y == null ? 0 : Math.floor(crop.y / dpr),
-    width:  crop?.width == null ? 0 : Math.floor(crop.width / dpr),
-    height: crop?.height == null ? 0 : Math.floor(crop.height / dpr),
-})
+import { VIDEO_CROP_ZONE }                                         from '@Core/constants'
+import classNames                                                  from 'classnames'
+import React, { forwardRef, useEffect, useMemo, useRef, useState } from 'react'
+import { useSnapshot }                                             from 'valtio'
 
 export const VideoRecordingScreenArea = () => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
     const _cropZone = useRef(null)
+    const [crop, setCrop] = useState({x: 0, y: 0, width: 0, height: 0})
 
-    const cssCrop = useMemo(() => {
-        const crop = video.cropper
-        const dpr = __.device.dpr
-        return toCssCrop(crop, dpr)
-    }, [video.cropper?.x, video.cropper?.y, video.cropper?.width, video.cropper?.height, __.device?.dpr])
+    useEffect(() => {
+        const widget = __.ui.widgetManager.getConfig(VIDEO_CROP_ZONE)
+        setCrop(widget.cropDimensions)
+    }, [])
 
     useEffect(() => {
         // control animation from store flags
@@ -48,12 +42,12 @@ export const VideoRecordingScreenArea = () => {
     }, [video.paused])
 
     const isValid =
-              Number.isFinite(cssCrop.x) &&
-              Number.isFinite(cssCrop.y) &&
-              Number.isFinite(cssCrop.width) &&
-              Number.isFinite(cssCrop.height) &&
-              cssCrop.width > 0 &&
-              cssCrop.height > 0
+              Number.isFinite(crop.left) &&
+              Number.isFinite(crop.top) &&
+              Number.isFinite(crop.width) &&
+              Number.isFinite(crop.height) &&
+              crop.width > 0 &&
+              crop.height > 0
 
     if (!isValid) {
         return null
@@ -62,12 +56,12 @@ export const VideoRecordingScreenArea = () => {
     const overlayStyle = {
         clipPath: `polygon(
         0% 0%, 100% 0%, 100% 100%, 0% 100%,
-        0% ${cssCrop.y}px,
-        ${cssCrop.x}px ${cssCrop.y}px,
-        ${cssCrop.x}px ${cssCrop.y + cssCrop.height}px,
-        ${cssCrop.x + cssCrop.width}px ${cssCrop.y + cssCrop.height}px,
-        ${cssCrop.x + cssCrop.width}px ${cssCrop.y}px,
-        0% ${cssCrop.y}px
+        0% ${crop.top}px,
+        ${crop.left}px ${crop.top}px,
+        ${crop.left}px ${crop.top + crop.height}px,
+        ${crop.left + crop.width}px ${crop.top + crop.height}px,
+        ${crop.left + crop.width}px ${crop.top}px,
+        0% ${crop.top}px
     )`,
     }
 
@@ -75,7 +69,7 @@ export const VideoRecordingScreenArea = () => {
         <>
             <CropOverlay style={overlayStyle}/>
             <DefinedCropZone
-                cssCrop={cssCrop}
+                id={VIDEO_CROP_ZONE}
                 className={classNames('video-recording-in-progress', {finalizing: video.finalizing})}
                 infoComponent={<VideoSettingsInfo/>}
                 ref={_cropZone}

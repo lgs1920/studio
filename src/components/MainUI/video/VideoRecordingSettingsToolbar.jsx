@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-26
- * Last modified: 2025-09-26
+ * Created on: 2025-10-08
+ * Last modified: 2025-10-08
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { Tunnel }                               from '@Components/Tunnel/Tunnel'
-import { APP_KEY, LGS_PROJECT, MINUTE } from '@Core/constants'
-import { VideoRecorder }                        from '@Core/ui/video/recorder/VideoRecorder'
+import { Tunnel }                                        from '@Components/Tunnel/Tunnel'
+import { APP_KEY, LGS_PROJECT, MINUTE, VIDEO_CROP_ZONE } from '@Core/constants'
+import { VideoRecorder }                                 from '@Core/ui/video/recorder/VideoRecorder'
 import { faGear }                       from '@fortawesome/pro-regular-svg-icons'
 import { faPhotoFilm, faVideo }                 from '@fortawesome/pro-solid-svg-icons'
 import { UIToast }                              from '@Utils/UIToast'
@@ -76,11 +76,15 @@ export const VideoRecordingSettingsToolbar = memo(() => {
 
                                })
         // Set canvas source
+
+        const widget = __.ui.widgetManager.getConfig(VIDEO_CROP_ZONE)
+        const {top, left, width, height} = widget.cropDimensions
+
         __.recorder.setSource([lgs.canvas], {
-            clipWidth:  $video.cropper.width,
-            clipHeight: $video.cropper.height,
-            clipX:      $video.cropper.x,
-            clipY:      $video.cropper.y,
+            clipWidth:  width,
+            clipHeight: height,
+            clipX:      left,
+            clipY:      top,
             preserveAlpha: true,
         })
     }
