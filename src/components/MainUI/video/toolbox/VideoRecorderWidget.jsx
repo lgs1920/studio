@@ -14,8 +14,8 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { VideoQualityToolbar }                from '@Components/MainUI/video/VideoQualityToolbar'
-import { VideoRecorderToolbar }               from '@Components/MainUI/video/VideoRecorderToolbar'
+import { VideoQualityToolbar }  from '@Components/MainUI/video/toolbox/VideoQualityToolbar'
+import { VideoRecorderToolbar } from '@Components/MainUI/video/toolbox/VideoRecorderToolbar'
 import { LGS_TOOLBAR }                        from '@Core/constants'
 import React, { useEffect, useRef, useState } from 'react'
 import { Widget }                             from '@Components/MainUI/Widget'

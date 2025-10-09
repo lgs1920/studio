@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-30
- * Last modified: 2025-09-30
+ * Created on: 2025-10-09
+ * Last modified: 2025-10-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,12 +20,12 @@
  * @returns {JSX.Element} Video quality toolbar UI
  */
 import { useCallback, useEffect } from 'react'
-import { SlIcon, SlTooltip }      from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }              from '@Utils/FA2SL'
-import { faGripDots }         from '@fortawesome/pro-solid-svg-icons'
-import classNames             from 'classnames'
-import { VideoRecorder }      from '@Core/ui/video/recorder/VideoRecorder'
-import { useSnapshot }        from 'valtio'
+import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }             from '@Utils/FA2SL'
+import { faGripDots }        from '@fortawesome/pro-solid-svg-icons'
+import classNames            from 'classnames'
+import { VideoRecorder }     from '@Core/ui/video/recorder/VideoRecorder'
+import { useSnapshot }       from 'valtio'
 
 export const VideoQualityToolbar = () => {
     // Access reactive video state

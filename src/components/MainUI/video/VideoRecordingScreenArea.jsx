@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 
-import { VideoRecorderWidget } from '@Components/MainUI/video/VideoRecorderWidget'
+import { VideoRecorderWidget } from '@Components/MainUI/video/toolbox/VideoRecorderWidget'
 import { VideoSettingsInfo }   from '@Components/MainUI/video/VideoSettingsInfo'
 import { CropOverlay }         from '@Components/ToolsUI/cropper/CropOverlay'
 import { DefinedCropZone }     from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'

@@ -21,18 +21,18 @@
  * @param {Object} props.toolbar - Toolbar element reference
  * @returns {JSX.Element} Video recorder toolbar UI
  */
-import { FontAwesomeIcon }                                from '@Components/FontAwesomeIcon'
-import { SlIconButton, SlTooltip }                        from '@shoelace-style/shoelace/dist/react'
+import { FontAwesomeIcon }         from '@Components/FontAwesomeIcon'
+import { SlIconButton, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { faCircle }                                       from '@fortawesome/duotone-regular-svg-icons'
 import { faPause, faPlay, faStop, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                    from 'valtio'
-import classNames                                         from 'classnames'
-import { FA2SL }                                          from '@Utils/FA2SL'
-import { UIToast }                                        from '@Utils/UIToast'
-import { UnitUtils }                                      from '@Utils/UnitUtils'
-import { VideoRecorder }                                  from '@Core/ui/video/recorder/VideoRecorder'
-import './style.css'
+import classNames                  from 'classnames'
+import { FA2SL }                   from '@Utils/FA2SL'
+import { UIToast }                 from '@Utils/UIToast'
+import { UnitUtils }               from '@Utils/UnitUtils'
+import { VideoRecorder }           from '@Core/ui/video/recorder/VideoRecorder'
+import '../style.css'
 
 /**
  * RecorderControls - Renders play/pause and stop buttons for the recorder

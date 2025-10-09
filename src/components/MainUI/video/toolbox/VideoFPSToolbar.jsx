@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-30
- * Last modified: 2025-09-30
+ * Created on: 2025-10-09
+ * Last modified: 2025-10-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,14 +21,14 @@
  * @param {Object} props.store - Valtio store with crop state (fpsEditor, etc.)
  * @returns {JSX.Element} Draggable video FPS selector UI
  */
-import { VideoRecorder }                        from '@Core/ui/video/recorder/VideoRecorder'
-import { faGripDots }                           from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlTooltip }                    from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                from '@Utils/FA2SL'
-import classNames                               from 'classnames'
+import { VideoRecorder }     from '@Core/ui/video/recorder/VideoRecorder'
+import { faGripDots }        from '@fortawesome/pro-solid-svg-icons'
+import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }             from '@Utils/FA2SL'
+import classNames            from 'classnames'
 import { memo, useCallback, useEffect } from 'react'
-import { useSnapshot }                          from 'valtio'
-import './style.css'
+import { useSnapshot }       from 'valtio'
+import '../style.css'
 
 export const VideoFPSToolbar = memo(() => {
     // Access reactive cropper and video states

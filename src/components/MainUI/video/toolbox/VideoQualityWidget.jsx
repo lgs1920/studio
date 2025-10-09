@@ -2,19 +2,18 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: VideoFPSWidget.jsx
+ * File: VideoQualityWidget.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-05
- * Last modified: 2025-10-05
+ * Created on: 2025-10-09
+ * Last modified: 2025-10-09
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { VideoFPSToolbar }     from '@Components/MainUI/video/VideoFPSToolbar'
 import { LGS_TOOLBAR } from '@Core/constants'
 import React, { useMemo } from 'react'
 import { Widget }         from '@Components/MainUI/Widget'
@@ -26,25 +25,25 @@ import { VideoQualityToolbar } from './VideoQualityToolbar'
  * @component
  * @returns {JSX.Element} Draggable video quality selector UI
  */
-export const VideoFPSWidget = () => {
+export const VideoQualityWidget = () => {
 
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
     const config = useMemo(() => {
         const myConfig = {
-            top:      (__.device.isMobile && __.device.isPortrait) ? '15%' : '30%',
-            opacity:  lgs.settings.ui.toolbars.opacity,
-            left:     '50%',
-            attachTo: 'top',
+            left:           __.device.isMobile && __.device.isPortrait ? '15%' : '30%',
+            top:            '50%',
+            attachTo:       'left',
+            opacity:        lgs.settings.ui.toolbars.opacity,
             type: LGS_TOOLBAR,
         }
         return myConfig
     }, [])
 
     return (
-        <Widget isVisible={video.cropper.fpsEditor} config={config}>
-            <VideoFPSToolbar/>
+        <Widget isVisible={video.cropper.qualityEditor} config={config}>
+            <VideoQualityToolbar/>
         </Widget>
     )
 }

@@ -7,18 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-05
- * Last modified: 2025-10-05
+ * Created on: 2025-10-09
+ * Last modified: 2025-10-09
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/VideoRecordingSettingsToolbar'
-import { LGS_TOOLBAR } from '@Core/constants'
-import React, { useMemo }      from 'react'
-import { Widget }              from '@Components/MainUI/Widget'
-import { VideoQualityToolbar } from './VideoQualityToolbar'
+import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar'
+import { LGS_TOOLBAR }                   from '@Core/constants'
+import React, { useMemo }                from 'react'
+import { Widget }                        from '@Components/MainUI/Widget'
+import { VideoQualityToolbar }           from './VideoQualityToolbar'
 
 /**
  * Component for selecting video quality with draggable toolbar
