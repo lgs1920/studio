@@ -7,17 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-08
- * Last modified: 2025-10-08
+ * Created on: 2025-10-09
+ * Last modified: 2025-10-09
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 
-import { VideoSettingsInfo }                             from '@Components/MainUI/video/VideoSettingsInfo'
-import { CropOverlay }                                   from '@Components/ToolsUI/cropper/CropOverlay'
-import { DefinedCropZone } from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
+import { VideoRecorderWidget } from '@Components/MainUI/video/VideoRecorderWidget'
+import { VideoSettingsInfo }   from '@Components/MainUI/video/VideoSettingsInfo'
+import { CropOverlay }         from '@Components/ToolsUI/cropper/CropOverlay'
+import { DefinedCropZone }     from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
 import { VIDEO_CROP_ZONE }                                         from '@Core/constants'
 import classNames                                                  from 'classnames'
 import React, { forwardRef, useEffect, useMemo, useRef, useState } from 'react'
@@ -68,6 +69,7 @@ export const VideoRecordingScreenArea = () => {
     return (
         <>
             <CropOverlay style={overlayStyle}/>
+            <VideoRecorderWidget/>
             <DefinedCropZone
                 id={VIDEO_CROP_ZONE}
                 className={classNames('video-recording-in-progress', {finalizing: video.finalizing})}

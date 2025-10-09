@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-08
- * Last modified: 2025-10-08
+ * Created on: 2025-10-09
+ * Last modified: 2025-10-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,18 +21,18 @@
  * @param {Object} props.toolbar - Toolbar element reference
  * @returns {JSX.Element} Video recorder toolbar UI
  */
-import { FontAwesomeIcon }                  from '@Components/FontAwesomeIcon'
-import { VideoRecorder }                    from '@Core/ui/video/recorder/VideoRecorder'
-import { faCircle }                         from '@fortawesome/duotone-regular-svg-icons'
+import { FontAwesomeIcon }                                from '@Components/FontAwesomeIcon'
+import { SlIconButton, SlTooltip }                        from '@shoelace-style/shoelace/dist/react'
+import { faCircle }                                       from '@fortawesome/duotone-regular-svg-icons'
 import { faPause, faPlay, faStop, faXmark } from '@fortawesome/pro-regular-svg-icons'
-import { SlIconButton, SlTooltip }          from '@shoelace-style/shoelace/dist/react'
-import './style.css'
-import { FA2SL }                            from '@Utils/FA2SL'
-import { UIToast }                          from '@Utils/UIToast'
-import { UnitUtils }                        from '@Utils/UnitUtils'
-import classNames                           from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { useSnapshot }                      from 'valtio'
+import { useSnapshot }                                    from 'valtio'
+import classNames                                         from 'classnames'
+import { FA2SL }                                          from '@Utils/FA2SL'
+import { UIToast }                                        from '@Utils/UIToast'
+import { UnitUtils }                                      from '@Utils/UnitUtils'
+import { VideoRecorder }                                  from '@Core/ui/video/recorder/VideoRecorder'
+import './style.css'
 
 /**
  * RecorderControls - Renders play/pause and stop buttons for the recorder
@@ -40,9 +40,10 @@ import { useSnapshot }                      from 'valtio'
  * @param {boolean} props.recording - Whether recording is active
  * @param {boolean} props.paused - Whether recording is paused
  * @param {Object} props.recorder - Recorder instance
+ * @param {Function} props.onFinalize - Callback to set finalizing state
+ * @returns {JSX.Element} Recorder controls UI
  */
-const RecorderControls = memo(({recording, paused, recorder, finalisation}) => {
-
+const RecorderControls = memo(({recording, paused, recorder, onFinalize}) => {
     // Memoized click handlers
     const handlePlayPause = useCallback(() => {
         if (recorder) {
@@ -51,10 +52,9 @@ const RecorderControls = memo(({recording, paused, recorder, finalisation}) => {
     }, [recorder, paused])
 
     const handleStop = useCallback(() => {
-        finalisation(true)
+        onFinalize(true)
         recorder?.stop()
-    }, [recorder])
-
+    }, [recorder, onFinalize])
 
     return (
         <>
@@ -66,7 +66,6 @@ const RecorderControls = memo(({recording, paused, recorder, finalisation}) => {
                     disabled={!recorder}
                 />
             </SlTooltip>
-
             {recording && !paused && (
                 <SlTooltip content="Click to stop">
                     <SlIconButton
@@ -80,7 +79,6 @@ const RecorderControls = memo(({recording, paused, recorder, finalisation}) => {
     )
 })
 
-
 /**
  * VideoRecorderToolbar component
  */
@@ -88,223 +86,218 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     // Access global video settings
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
-    // Local state for UI updates
-    const [recordedDuration, setRecordedDuration] = useState(0)
-    const [recordedSize, setRecordedSize] = useState(0)
-    const [, setLastSizeEventTime] = useState(0)
-    const [finalisation, setFinalisation] = useState(false)
 
-    const _toolbar = useRef(toolbar)
-    // Removed _cropZone and overlay/crop UI responsibilities from this component
+    // Consolidated state for performance
+    const [state, setState] = useState({
+                                           recordedDuration: 0,
+                                           recordedSize:     0,
+                                           finalizing:       false,
+                                       })
+
+    // Ref for toolbar
+    const _toolbar = useRef(toolbar || null)
+
+    // Memoized caption for toasts
     const caption = 'Video Recording'
 
     /**
-     * Formats duration in milliseconds to human readable format
+     * Formats duration in milliseconds to human-readable format
      * @param {number} ms - Duration in milliseconds
      * @returns {string} Formatted duration (e.g., '1h 05m 05s')
      */
-    const formatDuration = useCallback((ms) => {
-        return UnitUtils.convert(ms).toTime()
-    }, [])
+    const formatDuration = useCallback((ms) => UnitUtils.convert(ms).toTime(), [])
 
     /**
-     * Formats size in bytes to human readable format
+     * Formats size in bytes to human-readable format
      * @param {number} bytes - Size in bytes
      * @returns {string} Formatted size (e.g., '1.4MB')
      */
-    const formatSize = useCallback((bytes) => {
-        return UnitUtils.convert(bytes).toBytesUnit()
+    const formatSize = useCallback((bytes) => UnitUtils.convert(bytes).toBytesUnit(), [])
+
+    /**
+     * Updates video and local state
+     * @param {Object} updates - State updates
+     */
+    const updateState = useCallback((updates) => {
+        console.log('Updating state', {updates})
+        Object.assign($video, updates)
+        setState((prev) => ({...prev, ...updates}))
     }, [])
 
-    // Manage recorder events, state, and toolbar position
+    /**
+     * Shows toast notification
+     * @param {string} type - Toast type ('success' or 'warning')
+     * @param {string} text - Toast message
+     */
+    const showToast = useCallback((type, text) => {
+        console.log('Showing toast', {type, text})
+        UIToast[type]({caption, text})
+    }, [])
+
+    // Manage recorder events
     useEffect(() => {
-        // Ensure recorder exists
         if (!__.recorder) {
+            console.warn('Recorder not initialized')
             return
         }
 
-        // Handle recording start event
+        console.log('Setting up recorder event listeners', {recorder: __.recorder})
+
+        // Event handlers
         const handleStart = () => {
             if ($video.recording) {
                 return
             }
-            const startTime = Date.now()
-            $video.recording = true
-            $video.finalizing = false
-            $video.paused = false
-            $video.size = 0
-            setRecordedDuration(0)
-            setRecordedSize(0)
-            setLastSizeEventTime(Date.now())
-
-            UIToast.warning({
-                                caption: caption,
-                                text: 'ON AIR !',
-                            })
+            updateState({
+                            recording:        true,
+                            finalizing:       false,
+                            paused:           false,
+                            size:             0,
+                            recordedDuration: 0,
+                            recordedSize:     0,
+                        })
+            showToast('warning', 'ON AIR !')
         }
 
-        // Handle size update events
-        const handleInfo = (e) => {
-            setLastSizeEventTime(Date.now())
-            setRecordedSize(e.detail.size)
-            setRecordedDuration(e.detail.duration)
+        const handleInfo = (event) => {
+            setState((prev) => ({
+                ...prev,
+                recordedSize:     event.detail.size,
+                recordedDuration: event.detail.duration,
+            }))
         }
 
-        // Handle recording pause event
         const handlePause = () => {
             if ($video.paused) {
                 return
             }
-            $video.paused = true
-            // Removed _cropZone animation control (now handled in VideoRecordingArea)
-            setRecordedDuration(__.recorder.duration)
-            UIToast.warning({
-                                caption: caption,
-                                text: `Paused`,
-                            })
+            updateState({paused: true, recordedDuration: __.recorder.duration})
+            showToast('warning', 'Paused')
         }
 
-        // Handle recording resume event
         const handleResume = () => {
             if (!$video.paused) {
                 return
             }
-            $video.paused = false
-            // Removed _cropZone animation control (now handled in VideoRecordingArea)
-            setRecordedDuration(__.recorder.duration)
-            UIToast.success({
-                                caption: caption,
-                                text: `Resumed`,
-                            })
+            updateState({paused: false, recordedDuration: __.recorder.duration})
+            showToast('success', 'Resumed')
         }
 
-        // Handle Finalize event
-        const handleFinalize = (event) => {
+        const handleFinalize = () => {
             if ($video.finalizing) {
                 return
             }
-            $video.finalizing = true
+            updateState({finalizing: true})
         }
 
-        // Handle recording stop events (stop, max-size, or max-duration)
         const handleStop = (event) => {
-            if ((__.recorder && __.recorder.isRecording()) || $video.paused) {
+            if (__.recorder?.isRecording() || $video.paused) {
                 __.recorder.stop()
             }
-            $video.recording = false
-            $video.paused = false
-            $video.size = 0
-            setRecordedDuration(0)
-            setRecordedSize(0)
-            setLastSizeEventTime(0)
+            updateState({
+                            recording:        false,
+                            paused:           false,
+                            size:             0,
+                            recordedDuration: 0,
+                            recordedSize:     0,
+                            finalizing:       false,
+                        })
             switch (event.type) {
                 case VideoRecorder.events.STOP:
-                    UIToast.success({
-                                        caption: caption,
-                                        text: `Done. Waiting...`,
-                                    })
+                    showToast('success', 'Done. Waiting...')
                     break
                 case VideoRecorder.events.MAX_SIZE:
-                    UIToast.warning({
-                                        caption: caption,
-                                        text: `Stopped due to max size limit (${video.maxSize}${'MB'}). Waiting...`,
-                                    })
+                    showToast('warning', `Stopped due to max size limit (${video.maxSize}MB). Waiting...`)
                     break
                 case VideoRecorder.events.MAX_DURATION:
-                    UIToast.warning({
-                                        caption: caption,
-                                        text: `Stopped due to max duration limit (${video.maxDuration}m). Waiting...`,
-                                    })
+                    showToast('warning', `Stopped due to max duration limit (${video.maxDuration}m). Waiting...`)
+                    break
             }
         }
 
-        // Handle download completion event
         const handleDownload = (event) => {
-            UIToast.success({
-                                caption: caption,
-                                text: `Saved in ${event.detail.filename}`,
-                            })
+            showToast('success', `Saved in ${event.detail.filename}`)
         }
+
+        // Event mappings
+        const events = [
+            [VideoRecorder.events.START, handleStart],
+            [VideoRecorder.events.INFO, handleInfo],
+            [VideoRecorder.events.PAUSE, handlePause],
+            [VideoRecorder.events.RESUME, handleResume],
+            [VideoRecorder.events.MAX_SIZE, handleStop],
+            [VideoRecorder.events.MAX_DURATION, handleStop],
+            [VideoRecorder.events.STOP, handleStop],
+            [VideoRecorder.events.DOWNLOAD, handleDownload],
+            [VideoRecorder.events.FINALIZE, handleFinalize],
+        ]
 
         // Add event listeners
-        __.recorder.addEventListener(VideoRecorder.events.START, handleStart)
-        __.recorder.addEventListener(VideoRecorder.events.INFO, handleInfo)
-        __.recorder.addEventListener(VideoRecorder.events.PAUSE, handlePause)
-        __.recorder.addEventListener(VideoRecorder.events.RESUME, handleResume)
-        __.recorder.addEventListener(VideoRecorder.events.MAX_SIZE, handleStop)
-        __.recorder.addEventListener(VideoRecorder.events.MAX_DURATION, handleStop)
-        __.recorder.addEventListener(VideoRecorder.events.STOP, handleStop)
-        __.recorder.addEventListener(VideoRecorder.events.DOWNLOAD, handleDownload)
-        __.recorder.addEventListener(VideoRecorder.events.FINALIZE, handleFinalize)
+        events.forEach(([event, handler]) => __.recorder.addEventListener(event, handler))
 
-        // Clean up function
+        // Cleanup
         return () => {
             if (__.recorder) {
-                __.recorder.removeEventListener(VideoRecorder.events.START, handleStart)
-                __.recorder.removeEventListener(VideoRecorder.events.INFO, handleInfo)
-                __.recorder.removeEventListener(VideoRecorder.events.PAUSE, handlePause)
-                __.recorder.removeEventListener(VideoRecorder.events.RESUME, handleResume)
-                __.recorder.removeEventListener(VideoRecorder.events.MAX_SIZE, handleStop)
-                __.recorder.removeEventListener(VideoRecorder.events.MAX_DURATION, handleStop)
-                __.recorder.removeEventListener(VideoRecorder.events.STOP, handleStop)
-                __.recorder.removeEventListener(VideoRecorder.events.DOWNLOAD, handleDownload)
-                __.recorder.removeEventListener(VideoRecorder.events.FINALIZE, handleFinalize)
+                console.log('Cleaning up recorder event listeners')
+                events.forEach(([event, handler]) => __.recorder.removeEventListener(event, handler))
             }
         }
-    }, [__.recorder])
+    }, [__.recorder, updateState, showToast, video.maxSize, video.maxDuration])
 
-    const finalise = (state) => {
-        setFinalisation(state)
-    }
-
-    const handleCancel = async () => {
-        $video.recording = false
-        $video.paused = false
-        $video.size = 0
-        $video.editing = true
-        setRecordedDuration(0)
-        setRecordedSize(0)
-        setLastSizeEventTime(0)
-        setFinalisation(false)
-
-        await __.recorder.cancel()
-
-        UIToast.warning({
-                            caption: caption,
-                            text:    'Recording has been canceled!',
-                        })
-
-    }
+    // Handle cancel
+    const handleCancel = useCallback(async () => {
+        if (__.recorder) {
+            console.log('Canceling recording')
+            await __.recorder.cancel()
+        }
+        updateState({
+                        recording:        false,
+                        paused:           false,
+                        size:             0,
+                        editing:          true,
+                        recordedDuration: 0,
+                        recordedSize:     0,
+                        finalizing:       false,
+                    })
+        showToast('warning', 'Recording has been canceled!')
+    }, [__.recorder, updateState, showToast])
 
     return (
-        <>
-            {/* Only the toolbar remains here */}
-            <div ref={_toolbar}
-                 className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map">
-                <FontAwesomeIcon icon={faCircle}
-                                 className={classNames({
-                                                           'fa-beat':    video.paused || video.finalizing,
-                                                           'finalizing': video.finalizing,
-                                                       }, 'video-recorder-indicator')}/>
-                <span className="duration">{formatDuration(recordedDuration)}</span>
-                <span className="size">{formatSize(recordedSize)}</span>
-                {finalisation ? (
-                    <div className="blinking">{'Finalisation...'}</div>
-                ) : (
-                     <RecorderControls
-                         recording={video.recording}
-                         paused={video.paused}
-                         recorder={__.recorder}
-                         finalisation={finalise}
-                     />
-                 )
-                }
-                <span/>
-                <SlTooltip content={'Cancel'} placement="top">
-                    <SlIconButton onClick={handleCancel} className="lgs-cancel-recording" library="fa"
-                                  name={FA2SL.set(faXmark)}/>
-                </SlTooltip>
-            </div>
-        </>
+        <div
+            ref={_toolbar}
+            className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map"
+        >
+            <FontAwesomeIcon
+                icon={faCircle}
+                className={classNames(
+                    {
+                        'fa-beat':  video.paused || video.finalizing,
+                        finalizing: video.finalizing,
+                    },
+                    'video-recorder-indicator',
+                )}
+            />
+            <span className="duration">{formatDuration(state.recordedDuration)}</span>
+            <span className="size">{formatSize(state.recordedSize)}</span>
+            {state.finalizing ? (
+                <div className="blinking">Finalisation...</div>
+            ) : (
+                 <RecorderControls
+                     recording={video.recording}
+                     paused={video.paused}
+                     recorder={__.recorder}
+                     onFinalize={(value) => setState((prev) => ({...prev, finalizing: value}))}
+                 />
+             )}
+            <span/>
+            <SlTooltip content="Cancel" placement="top">
+                <SlIconButton
+                    onClick={handleCancel}
+                    className="lgs-cancel-recording"
+                    library="fa"
+                    name={FA2SL.set(faXmark)}
+                />
+            </SlTooltip>
+        </div>
     )
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-08
- * Last modified: 2025-10-08
+ * Created on: 2025-10-09
+ * Last modified: 2025-10-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -269,11 +269,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             return
         }
         let cancelled = false
-        const tryInit = () => {
+        const tryInit = async () => {
             if (cancelled || !_widget.current || !lgs?.canvas) {
                 return
             }
-            const ok = _widgetManager.current.setupElement(
+            const ok = await _widgetManager.current.setupElement(
                 _widget.current,
                 {
                     container:      lgs.canvas,
