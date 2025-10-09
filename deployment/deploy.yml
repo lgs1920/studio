@@ -95,17 +95,17 @@ remote:
   # so we need only one set of information per server
   production:
     user: p5077
-    host: p5077.webmo.fr
+    host: p5077.phpnet.org
     path: /home/www/lgs1920
 
   staging:
     user: p5077
-    host: p5077.webmo.fr
+    host: p5077.phpnet.org
     path: /home/www/lgs1920
 
   test:
     user: p5077
-    host: p5077.webmo.fr
+    host: p5077.phpnet.org
     path: /home/www/lgs1920
 
 
