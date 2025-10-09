@@ -62,7 +62,7 @@ const RecorderControls = memo(({recording, paused, recorder, onFinalize}) => {
                 <SlIconButton
                     library="fa"
                     name={FA2SL.set(paused ? faPlay : faPause)}
-                    onClick={handlePlayPause}
+                    onPointerDown={handlePlayPause}
                     disabled={!recorder}
                 />
             </SlTooltip>
@@ -71,7 +71,7 @@ const RecorderControls = memo(({recording, paused, recorder, onFinalize}) => {
                     <SlIconButton
                         library="fa"
                         name={FA2SL.set(faStop)}
-                        onClick={handleStop}
+                        onPointerDown={handleStop}
                     />
                 </SlTooltip>
             )}
@@ -292,7 +292,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             <span/>
             <SlTooltip content="Cancel" placement="top">
                 <SlIconButton
-                    onClick={handleCancel}
+                    onPointerDown={handleCancel}
                     className="lgs-cancel-recording"
                     library="fa"
                     name={FA2SL.set(faXmark)}
