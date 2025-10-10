@@ -14,8 +14,9 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { Widget } from '@Components/MainUI/Widget'
-import React, { memo, useMemo } from 'react'
+import { Widget }                                                                         from '@Components/MainUI/Widget'
+import { VIDEO_TOOLS_WIDGET_GROUP, VIDEO_ELEMENTS_WIDGET_GROUP, CROP_TOOLS_WIDGET_GROUP } from '@Core/constants'
+import React, { memo, useMemo }                                                           from 'react'
 import { CropZone }             from './CropZone'
 
 /**
@@ -50,6 +51,7 @@ export const CropZoneWidget = memo(function CropZoneWidget({
         id:        id,
         forceEven: lgs?.stores?.ui?.video?.cropper?.forceEven ?? false,
         persistInTable: true,
+        group: CROP_TOOLS_WIDGET_GROUP,
     }), [overlay, id])
 
     return (

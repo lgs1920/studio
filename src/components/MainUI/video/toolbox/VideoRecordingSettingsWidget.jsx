@@ -14,9 +14,9 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar'
-import { LGS_TOOLBAR }                   from '@Core/constants'
-import React, { useMemo }                from 'react'
+import { VideoRecordingSettingsToolbar }         from '@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar'
+import { LGS_TOOLBAR, VIDEO_TOOLS_WIDGET_GROUP } from '@Core/constants'
+import React, { useMemo }                        from 'react'
 import { Widget }                        from '@Components/MainUI/Widget'
 import { VideoQualityToolbar }           from './VideoQualityToolbar'
 
@@ -35,6 +35,7 @@ export const VideoRecordingSettingsWidget = ({id}) => {
             opacity:  lgs.settings.ui.toolbars.opacity,
             id:             id,
             persistInTable: true,
+            group: VIDEO_TOOLS_WIDGET_GROUP,
         }
     }, [])
 

@@ -299,6 +299,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     resizable:      config.resizable ?? false,
                     forceEven: config.forceEven ?? false,
                     persistInTable: config.persistInTable ?? false,
+                    group: config.group ?? null,
                 },
                 setBounds,
                 setPosition,
@@ -427,7 +428,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         onResizeStart={handleResizeStart}
                         onResizeEnd={handleResizeEnd}
                         keepRatio={Boolean(
-                            __.ui.widgetManager.getConfig(config?.id)?.ratio?.locked ??
+                            __.ui.widgetManager.getWidgetConfig(config?.id)?.ratio?.locked ??
                             config?.ratio?.locked,
                         )}
                         throttleResize={2}

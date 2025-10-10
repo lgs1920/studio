@@ -473,3 +473,6 @@ export const LGS_ANIMATION_DRAGGING = 'lgs-animation-dragging'
 export const LGS_ANIMATION_RESIZING = 'lgs-animation-resizing'
 
 export const VIDEO_CROP_ZONE = `video-crop-zone`
+export const VIDEO_TOOLS_WIDGET_GROUP = `video-tools-widget-group`
+export const CROP_TOOLS_WIDGET_GROUP = `crop-tools-widget-group`
+export const VIDEO_ELEMENTS_WIDGET_GROUP = `video-element-widget-group`

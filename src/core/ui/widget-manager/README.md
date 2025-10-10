@@ -4,8 +4,8 @@
 
 `WidgetManager` is a singleton class in the `LGS1920/studio` project designed to manage draggable and resizable widgets
 within a container. It handles widget positioning, bounds enforcement, snapping, resizing, and synchronization of crop
-overlays. Additionally, it supports container resize observation and double-click/tap events for toggling crop zones
-between maximized and previous sizes.
+overlays. Additionally, it supports container resize observation, double-click/tap events for toggling crop zones
+between maximized and previous sizes, and group-based widget management.
 
 ### Key Responsibilities
 
@@ -19,6 +19,7 @@ between maximized and previous sizes.
 - **Double-Click/Tap Support**: Toggles crop zones between maximized and previous dimensions on double-click or tap.
 - **Aspect Ratio Management**: Updates crop zone dimensions based on specified aspect ratios while maintaining container
   constraints.
+- **Group Management**: Supports grouping of widgets for collective retrieval and disposal.
 
 ## Installation
 
@@ -73,7 +74,8 @@ const success = widgetManager.setupElement(
             ratio:            '16x9',
             minCropSize:      {width: 100, height: 100},
             outsideOverlay:   document.querySelector('#overlay'),
-            resizeFromCenter: true
+            resizeFromCenter: true,
+            group:            'video-tools' // Group identifier
         },
         setBounds,
         setPosition,
@@ -93,6 +95,26 @@ To update the aspect ratio of a crop zone, use the `updateCropRatio` method.
  * @param {boolean} lockRatio - Whether to lock the aspect ratio
  */
 widgetManager.updateCropRatio('widget-1', 16 / 9, true)
+```
+
+### Managing Widgets by Group
+
+To retrieve all widget configurations in a group or dispose of them:
+
+```javascript
+/**
+ * Retrieve widget configurations by group ID
+ * @param {string} groupId - The group identifier
+ * @returns {Object[]} Array of widget configurations
+ */
+const configs = widgetManager.getWidgetConfigByGroup('video-tools')
+
+/**
+ * Dispose widgets by group ID
+ * @param {string} groupId - The group identifier
+ * @param {boolean} usePersist - Whether to respect persistInTable flag
+ */
+widgetManager.disposeByGroup('video-tools', true)
 ```
 
 ### Handling Events
@@ -138,6 +160,8 @@ The `initialConfig` object passed to `setupElement` supports the following prope
 | `left`                  | number/string | Initial left position (pixels or percentage).                                |
 | `top`                   | number/string | Initial top position (pixels or percentage).                                 |
 | `attachTo`              | string        | Anchor position (e.g., 'center', 'top-left', 'bottom-right').                |
+| `group`                 | string/null   | Group identifier for collective widget management.                           |
+| `persistInTable`        | boolean       | Whether to persist widget in table (respected by `disposeByGroup`).          |
 
 ## Methods
 
@@ -153,6 +177,8 @@ Below are the key public methods of the `WidgetManager` class:
 - **disposeElement(element)**: Cleans up a widget and its resources.
 - **getConfig(elementId)**: Retrieves the configuration for a widget.
 - **setConfig(elementId, config)**: Sets the configuration for a widget.
+- **getWidgetConfigByGroup(groupId)**: Retrieves all widget configurations in a group.
+- **disposeByGroup(groupId, usePersist)**: Disposes all widgets in a group, optionally respecting `persistInTable`.
 
 ## Event Handling
 
@@ -173,6 +199,7 @@ The `WidgetManager` supports the following Moveable events:
 - The singleton ensures only one instance manages all widgets, preventing conflicts.
 - The `containerPadding` and `minCropSize` properties help enforce constraints for crop zones.
 - Aspect ratio handling respects the `useRatio` and `ratio` configuration to maintain consistent proportions.
+- Group management allows for efficient handling of related widgets (e.g., disposing all widgets in a group).
 
 ## License
 

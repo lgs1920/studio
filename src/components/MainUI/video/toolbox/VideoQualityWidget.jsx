@@ -14,8 +14,8 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { LGS_TOOLBAR } from '@Core/constants'
-import React, { useMemo } from 'react'
+import { LGS_TOOLBAR, VIDEO_TOOLS_WIDGET_GROUP } from '@Core/constants'
+import React, { useMemo }                        from 'react'
 import { Widget }         from '@Components/MainUI/Widget'
 import { useSnapshot }    from 'valtio'
 import { VideoQualityToolbar } from './VideoQualityToolbar'
@@ -38,6 +38,7 @@ export const VideoQualityWidget = ({id}) => {
             opacity:        lgs.settings.ui.toolbars.opacity,
             type: LGS_TOOLBAR,
             id: id,
+            group: VIDEO_TOOLS_WIDGET_GROUP,
         }
     }, [])
 

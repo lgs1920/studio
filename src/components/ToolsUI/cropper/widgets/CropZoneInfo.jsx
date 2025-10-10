@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-06
- * Last modified: 2025-10-06
+ * Created on: 2025-10-10
+ * Last modified: 2025-10-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,13 +25,13 @@ import React, { memo, useEffect, useState } from 'react'
 
 export const CropZoneInfo = memo(function CropZoneInfo({id}) {
     const [info, setInfo] = useState(() => {
-        const cfg = __.ui.widgetManager.getConfig(id)
+        const cfg = __.ui.widgetManager.getWidgetConfig(id)
         return cfg?.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0}
     })
 
     useEffect(() => {
         const update = () => {
-            const cfg = __.ui.widgetManager.getConfig(id)
+            const cfg = __.ui.widgetManager.getWidgetConfig(id)
             if (cfg?.cropDimensions) {
                 setInfo({...cfg.cropDimensions})
             }

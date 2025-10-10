@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-06
- * Last modified: 2025-10-06
+ * Created on: 2025-10-10
+ * Last modified: 2025-10-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -33,13 +33,13 @@ export const DefinedCropZone = memo(function DefinedCropZone({
                                                              }) {
     const _zoneRef = useRef(null)
     const [crop, setCrop] = useState(() => {
-        const cfg = __.ui.widgetManager.getConfig(id)
+        const cfg = __.ui.widgetManager.getWidgetConfig(id)
         return cfg?.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0}
     })
 
     useEffect(() => {
         const sync = () => {
-            const cfg = __.ui.widgetManager.getConfig(id)
+            const cfg = __.ui.widgetManager.getWidgetConfig(id)
             if (!cfg?.cropDimensions) {
                 return
             }
@@ -77,7 +77,7 @@ export const DefinedCropZone = memo(function DefinedCropZone({
             return
         }
         try {
-            const cfg = __.ui.widgetManager.getConfig(id)
+            const cfg = __.ui.widgetManager.getWidgetConfig(id)
             if (cfg) {
                 cfg.outsideOverlay = overlay
                 __.ui.widgetManager.applyCropToOverlay({...cfg, cropDimensions: crop})

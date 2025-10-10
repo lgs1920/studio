@@ -16,7 +16,7 @@
 
 import { VideoRecorderToolbar } from '@Components/MainUI/video/toolbox/VideoRecorderToolbar'
 import { Widget }                                      from '@Components/MainUI/Widget'
-import { LGS_TOOLBAR }                                 from '@Core/constants'
+import { LGS_TOOLBAR, VIDEO_TOOLS_WIDGET_GROUP } from '@Core/constants'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                 from 'valtio'
 
@@ -32,7 +32,7 @@ export const VideoRecorderWidget = ({id}) => {
             opacity:        lgs.settings.ui.toolbars.opacity,
             type:           LGS_TOOLBAR,
             id:             id,
-            persistInTable: true,
+            group: VIDEO_TOOLS_WIDGET_GROUP,
         }
     }, [$video.position])
 

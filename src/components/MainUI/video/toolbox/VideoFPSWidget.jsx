@@ -14,9 +14,9 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { VideoFPSToolbar } from '@Components/MainUI/video/toolbox/VideoFPSToolbar'
-import { LGS_TOOLBAR }     from '@Core/constants'
-import React, { useMemo }  from 'react'
+import { VideoFPSToolbar }                       from '@Components/MainUI/video/toolbox/VideoFPSToolbar'
+import { LGS_TOOLBAR, VIDEO_TOOLS_WIDGET_GROUP } from '@Core/constants'
+import React, { useMemo }                        from 'react'
 import { Widget }          from '@Components/MainUI/Widget'
 import { useSnapshot }     from 'valtio'
 import { VideoQualityToolbar } from './VideoQualityToolbar'
@@ -39,6 +39,7 @@ export const VideoFPSWidget = ({id}) => {
             attachTo: 'top',
             type: LGS_TOOLBAR,
             id: id,
+            group: VIDEO_TOOLS_WIDGET_GROUP,
         }
     }, [])
 

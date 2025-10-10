@@ -18,9 +18,9 @@
 import { VideoRecorderWidget } from '@Components/MainUI/video/toolbox/VideoRecorderWidget'
 import { VideoSettingsInfo }   from '@Components/MainUI/video/VideoSettingsInfo'
 import { CropOverlay }         from '@Components/ToolsUI/cropper/CropOverlay'
-import { DefinedCropZone }     from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
-import { VIDEO_CROP_ZONE }                                         from '@Core/constants'
-import classNames                                                  from 'classnames'
+import { DefinedCropZone }                                                    from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
+import { CROP_TOOLS_WIDGET_GROUP, VIDEO_CROP_ZONE, VIDEO_TOOLS_WIDGET_GROUP } from '@Core/constants'
+import classNames                                                             from 'classnames'
 import React, { forwardRef, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                             from 'valtio'
 
@@ -31,8 +31,12 @@ export const VideoRecordingScreenArea = () => {
     const [crop, setCrop] = useState({x: 0, y: 0, width: 0, height: 0})
 
     useEffect(() => {
-        const widget = __.ui.widgetManager.getConfig(VIDEO_CROP_ZONE)
+        const widget = __.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE)
         setCrop(widget.cropDimensions)
+        return () => {
+            __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGET_GROUP, false)
+            __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGET_GROUP, false)
+        }
     }, [])
 
     useEffect(() => {
