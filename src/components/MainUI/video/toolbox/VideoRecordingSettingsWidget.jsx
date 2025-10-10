@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-09
- * Last modified: 2025-10-09
+ * Created on: 2025-10-10
+ * Last modified: 2025-10-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,16 +25,17 @@ import { VideoQualityToolbar }           from './VideoQualityToolbar'
  * @component
  * @returns {JSX.Element} Draggable video quality selector UI
  */
-export const VideoRecordingSettingsWidget = () => {
+export const VideoRecordingSettingsWidget = ({id}) => {
     // Stabilize config with useMemo
     const config = useMemo(() => {
-        const myConfig = {
+        return {
             left: '50%',
             top:  __.device.isMobile && __.device.isPortrait ? '85%' : '70%',
             attachTo: 'bottom',
             opacity:  lgs.settings.ui.toolbars.opacity,
+            id:             id,
+            persistInTable: true,
         }
-        return myConfig
     }, [])
 
     return (

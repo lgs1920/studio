@@ -7,17 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-09
- * Last modified: 2025-10-09
+ * Created on: 2025-10-10
+ * Last modified: 2025-10-10
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_WIDGET } from '@Core/constants'
-import classNames                                                                  from 'classnames'
+import classNames from 'classnames'
 import React, { Children, cloneElement, useCallback, useEffect, useRef, useState } from 'react'
-import Moveable                   from 'react-moveable'
+import Moveable   from 'react-moveable'
 import { useSingleOrDoubleEvent } from '@Core/events/useSingleOrDoubleEvent'
 
 /**
@@ -268,11 +268,16 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (!config || !isVisible) {
             return
         }
+
         let cancelled = false
+        let resizeObserver = null
+        let widgetElement = null // Store DOM element for cleanup
+
         const tryInit = async () => {
             if (cancelled || !_widget.current || !lgs?.canvas) {
                 return
             }
+            widgetElement = _widget.current // Capture DOM element
             const ok = await _widgetManager.current.setupElement(
                 _widget.current,
                 {
@@ -293,6 +298,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     resizeFromCenter: config.resizeFromCenter ?? false,
                     resizable:      config.resizable ?? false,
                     forceEven: config.forceEven ?? false,
+                    persistInTable: config.persistInTable ?? false,
                 },
                 setBounds,
                 setPosition,
@@ -306,16 +312,63 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 requestAnimationFrame(tryInit)
             }
         }
+
+        // Initialize widget
         requestAnimationFrame(() => requestAnimationFrame(tryInit))
+
+        // Cleanup function
         return () => {
             cancelled = true
-            clearTimeout(_controlBoxTimer.current)
-            if (_initialized.current && _widget.current) {
-                _widgetManager.current.disposeElement(_widget.current)
+
+            // Clear control box timer
+            if (_controlBoxTimer.current) {
+                clearTimeout(_controlBoxTimer.current)
+                _controlBoxTimer.current = null
+            }
+
+            // Clear resize animation frame
+            if (_resizeRaf.current) {
+                cancelAnimationFrame(_resizeRaf.current)
+                _resizeRaf.current = 0
+            }
+
+            // Dispose widget from WidgetManager if not persistent
+            if (_initialized.current && widgetElement && _widgetManager.current && !config?.persistInTable) {
+                try {
+                    _widgetManager.current.disposeElement(widgetElement)
+                }
+                catch (error) {
+                    console.error('Error disposing widget:', error)
+                }
                 _initialized.current = false
             }
+
+            // Clear widget reference
+            _widget.current = null
+            widgetElement = null
+
+            // Disconnect resize observer if it exists
+            if (resizeObserver && lgs.canvas) {
+                resizeObserver.unobserve(lgs.canvas)
+                resizeObserver = null
+            }
         }
-    }, [isVisible, config?.id, config?.left, config?.top, config?.attachTo, config?.opacity, config?.animationWhenDragging, config?.resizable, config?.resizeFromCenter, config?.containerPadding, config?.outsideOverlay, config?.type])
+    }, [
+                  isVisible,
+                  config?.id,
+                  config?.left,
+                  config?.top,
+                  config?.attachTo,
+                  config?.opacity,
+                  config?.animationWhenDragging,
+                  config?.resizable,
+                  config?.resizeFromCenter,
+                  config?.containerPadding,
+                  config?.outsideOverlay,
+                  config?.type,
+                  config?.persistInTable,
+                  config?.isCropper,
+              ])
 
     /**
      * Update Moveable rect when bounds change
@@ -340,10 +393,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                             LGS_WIDGET,
                             {
                                 [className]: !!className,
-                                [LGS_TOOLBAR]:            config?.type === LGS_TOOLBAR,
+                                [LGS_TOOLBAR]: config?.type === LGS_TOOLBAR,
                                 [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
                                 [LGS_ANIMATION_RESIZING]: config.animationWhenResizing,
-
                             }
                         )}
                         ref={_widget}
@@ -388,9 +440,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         verticalGuidelines={guidelines.verticalGuidelines}
                         horizontalGuidelines={guidelines.horizontalGuidelines}
                         snapDirections={{
-                            left:   true,
-                            top:    true,
-                            right:  true,
+                            left:  true,
+                            top:   true,
+                            right: true,
                             bottom: true,
                             center: true,
                             middle: true,

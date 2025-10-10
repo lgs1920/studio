@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-09
- * Last modified: 2025-10-09
+ * Created on: 2025-10-10
+ * Last modified: 2025-10-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -119,7 +119,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
      * @param {Object} updates - State updates
      */
     const updateState = useCallback((updates) => {
-        console.log('Updating state', {updates})
         Object.assign($video, updates)
         setState((prev) => ({...prev, ...updates}))
     }, [])
@@ -130,7 +129,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
      * @param {string} text - Toast message
      */
     const showToast = useCallback((type, text) => {
-        console.log('Showing toast', {type, text})
         UIToast[type]({caption, text})
     }, [])
 
@@ -140,8 +138,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             console.warn('Recorder not initialized')
             return
         }
-
-        console.log('Setting up recorder event listeners', {recorder: __.recorder})
 
         // Event handlers
         const handleStart = () => {
@@ -238,7 +234,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         // Cleanup
         return () => {
             if (__.recorder) {
-                console.log('Cleaning up recorder event listeners')
                 events.forEach(([event, handler]) => __.recorder.removeEventListener(event, handler))
             }
         }
@@ -247,7 +242,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     // Handle cancel
     const handleCancel = useCallback(async () => {
         if (__.recorder) {
-            console.log('Canceling recording')
             await __.recorder.cancel()
         }
         updateState({

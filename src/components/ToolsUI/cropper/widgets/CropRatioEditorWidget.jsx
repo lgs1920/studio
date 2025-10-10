@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-06
- * Last modified: 2025-10-06
+ * Created on: 2025-10-10
+ * Last modified: 2025-10-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,7 +25,7 @@ import { CropRatioEditorToolbar } from './CropRatioEditorToolbar'
  * @component
  * @returns {JSX.Element} Draggable video quality selector UI
  */
-export const CropRatioEditorWidget = ({context}) => {
+export const CropRatioEditorWidget = ({context, id}) => {
     const video = useSnapshot(context)
 
     const config = useMemo(() => {
@@ -35,6 +35,7 @@ export const CropRatioEditorWidget = ({context}) => {
             attachTo: 'right',
             opacity:  lgs.settings.ui.toolbars.opacity,
             type: LGS_TOOLBAR,
+            id: id,
         }
     }, [])
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-05
- * Last modified: 2025-10-05
+ * Created on: 2025-10-10
+ * Last modified: 2025-10-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -26,7 +26,7 @@ import { useSnapshot }       from 'valtio'
  * @component
  * @returns {JSX.Element} Draggable video quality selector UI
  */
-export const JourneyToolbarWidget = () => {
+export const JourneyToolbarWidget = ({id}) => {
 
     const $journeyEditor = lgs.mainProxy.components.journeyEditor
     const journeyEditor = useSnapshot($journeyEditor)
@@ -36,14 +36,14 @@ export const JourneyToolbarWidget = () => {
 
     // Stabilize config with useMemo
     const config = useMemo(() => {
-        const myConfig = {
+        return {
             top:      '70%',
             opacity:  lgs.settings.ui.toolbars.opacity,
             left:     '50%',
             attachTo: 'bottom',
             type: LGS_TOOLBAR,
+            id: id,
         }
-        return myConfig
     }, [])
 
     return (

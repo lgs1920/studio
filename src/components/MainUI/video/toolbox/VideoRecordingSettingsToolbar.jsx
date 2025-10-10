@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-09
- * Last modified: 2025-10-09
+ * Created on: 2025-10-10
+ * Last modified: 2025-10-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -77,6 +77,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                                })
         // Set canvas source
 
+
         const widget = __.ui.widgetManager.getConfig(VIDEO_CROP_ZONE)
         const {top, left, width, height} = widget.cropDimensions
 
@@ -126,12 +127,12 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                 $video.cropper.ratioEditor = true
                 $video.cropper.qualityEditor = true
                 $video.cropper.fpsEditor = true
+                $video.cropper.widgetEditor = false
             },
             afterStep:  (index) => {
                 $video.cropper.ratioEditor = false
                 $video.cropper.qualityEditor = false
                 $video.cropper.fpsEditor = false
-
                 steps[index].done = true
             },
         },
@@ -142,6 +143,11 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             mandatory:  true,
             beforeStep: (index) => {
                 steps[index].done = true
+                $video.cropper.widgetEditor = true
+            },
+
+            afterStep: (index) => {
+                $video.cropper.widgetEditor = false
             },
         },
         {
@@ -150,6 +156,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             done:      false,
             mandatory: false,
             className: 'lgs-video-recording-trigger',
+
             onClick: async (index, event) => {
                 $video.editing = false
                 $video.finalizing = false

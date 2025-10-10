@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-06
- * Last modified: 2025-10-06
+ * Created on: 2025-10-10
+ * Last modified: 2025-10-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -52,7 +52,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
     return (
         <>
             {overlayElement && cropper.ratioEditor &&
-                <CropRatioEditorWidget context={context}/>
+                <CropRatioEditorWidget context={context} id="crop-ratio-editor"/>
             }
 
             <div ref={_cropperContainer} className="crop-container">

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-08
- * Last modified: 2025-10-08
+ * Created on: 2025-10-10
+ * Last modified: 2025-10-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -321,6 +321,8 @@ export class WidgetManager {
                 setPosition: initialConfig.setPosition,
                 element:                initialConfig.element,
                 cropDimensions:         initialConfig.cropDimensions, // allow injection if provided
+                persistInTable: initialConfig.persistInTable ?? false,
+
             })
         }
         else {

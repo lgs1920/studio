@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-09
- * Last modified: 2025-10-09
+ * Created on: 2025-10-10
+ * Last modified: 2025-10-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -69,7 +69,7 @@ export const VideoRecordingScreenArea = () => {
     return (
         <>
             <CropOverlay style={overlayStyle}/>
-            <VideoRecorderWidget/>
+            <VideoRecorderWidget id="video-recorder-widget"/>
             <DefinedCropZone
                 id={VIDEO_CROP_ZONE}
                 className={classNames('video-recording-in-progress', {finalizing: video.finalizing})}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-06
- * Last modified: 2025-10-06
+ * Created on: 2025-10-10
+ * Last modified: 2025-10-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,7 +22,6 @@ import {
 }                                                 from '@fortawesome/duotone-regular-svg-icons'
 import { faAndroid, faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
 import { faDesktop }                              from '@fortawesome/pro-solid-svg-icons'
-import { v4 as uuid }                             from 'uuid'
 
 export const SLOGAN = 'Replay Your Adventures!'
 /*******************************************************************************
@@ -473,4 +472,4 @@ export const LGS_WIDGET = 'lgs-widget'
 export const LGS_ANIMATION_DRAGGING = 'lgs-animation-dragging'
 export const LGS_ANIMATION_RESIZING = 'lgs-animation-resizing'
 
-export const VIDEO_CROP_ZONE = `video-crop-zone-${uuid()}`
+export const VIDEO_CROP_ZONE = `video-crop-zone`
