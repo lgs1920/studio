@@ -46,4 +46,4 @@ videoFormats:
     locked: false
     orientation: "paysage"
     description: "Define your own"
-    visibility: [ "tablet","desktop" ]
+    visibility: [ "tablet","desktop","mobile" ]
