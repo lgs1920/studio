@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-09
- * Last modified: 2025-10-09
+ * Created on: 2025-10-11
+ * Last modified: 2025-10-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -193,19 +193,21 @@ export class Deployment {
     }
 
     /**
-     * Unzips the release package on the remote server.
+     * Unzips the release package on the remote server after removing the destination directory if it exists.
      *
      * @param {SSH2} connection - The SSH2 connection object.
      * @returns {Promise<void>} Resolves when the unzip operation is complete.
-     * @throws {Error} If the unzip operation fails.
+     * @throws {Error} If the unzip operation or directory removal fails.
      * @private
      */
     unzip = async (connection) => {
         console.log(`    > Unzipping release on ${this.platform}`)
         return new Promise((resolve, reject) => {
-            connection.exec(`unzip -o ${this.remoteReleasePath}/${this.version}.zip -d ${this.remoteReleasePath}/${this.version}`, (err, stream) => {
+            // Command to remove the destination directory if it exists and then unzip
+            const command = `rm -rf ${this.remoteReleasePath}/${this.version} && unzip -o ${this.remoteReleasePath}/${this.version}.zip -d ${this.remoteReleasePath}/${this.version}`
+            connection.exec(command, (err, stream) => {
                 if (err) {
-                    console.error(`${this.red}Unzip failed: ${err}${this.reset}`)
+                    console.error(`${this.red}Unzip or directory removal failed: ${err}${this.reset}`)
                     reject(err)
                     return
                 }
@@ -488,7 +490,13 @@ export class Deployment {
             this.configuration.remote.current
         )
         // Save server configuration to servers.json
-        fs.writeFileSync(`${this.localDistPath}/servers.json`, JSON.stringify({}), 'utf8')
+        fs.writeFileSync(`${this.localDistPath}/servers.json`, JSON.stringify({
+                                                                                  platform: this.platform,
+                                                                                  backend:  this.configuration.backend[this.platform],
+                                                                                  studio:   this.configuration.studio[this.platform],
+                                                                                  site:     this.configuration.site[this.platform],
+                                                                                  ffmpeg:   this.configuration.backend[this.platform].ffmpeg,
+                                                                              }), 'utf8')
         console.log(`    > ${this.yellow}Server configuration saved to servers.json${this.reset}`)
         // Save build date to build.json
         fs.writeFileSync(`${this.localDistPath}/build.json`, JSON.stringify({date: Date.now()}))
