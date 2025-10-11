@@ -665,9 +665,8 @@ export class WidgetManager {
         if (config.animationWhenDragging) {
             event.target.classList.add(LGS_ANIMATION_DRAGGING)
         }
-        this.#isDragging = true
-        const elementId = this.retrieveElementId(event.target)
-        this.#current = elementId
+        !this.#isDragging
+        this.#current = this.retrieveElementId(event.target)
     }
 
     /**
