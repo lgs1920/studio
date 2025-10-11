@@ -176,6 +176,7 @@ Below are the key public methods of the `WidgetManager` class:
   visibility.
 - **disposeElement(element)**: Cleans up a widget and its resources.
 - **getConfig(elementId)**: Retrieves the configuration for a widget.
+- **getElementById(id)**: Retrieves a widget element by ID.
 - **setConfig(elementId, config)**: Sets the configuration for a widget.
 - **getWidgetConfigByGroup(groupId)**: Retrieves all widget configurations in a group.
 - **disposeByGroup(groupId, usePersist)**: Disposes all widgets in a group, optionally respecting `persistInTable`.

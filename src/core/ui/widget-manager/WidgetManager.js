@@ -826,7 +826,7 @@ export class WidgetManager {
 
         // Ensure element exists
         if (!config.element) {
-            const element = document.querySelector(`[${this.#ID_KEY}="${cropzoneId}"]`)
+            const element = this.getElementById(cropzoneId)
             if (element) {
                 config.element = element
             }
@@ -939,6 +939,13 @@ export class WidgetManager {
      * @returns {Object|undefined} Widget configuration or undefined if not found
      */
     getWidgetConfig = elementId => this.#widgets.get(elementId)
+
+    /**
+     * Get the widget element by Id
+     * @param id
+     * @return {HTMLElement}
+     */
+    getElementById = id => document.querySelector(`[${this.#ID_KEY}="${id}"]`)
 
     /**
      * Handles resize operations, throttled to prevent excessive updates.
