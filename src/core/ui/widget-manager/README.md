@@ -3,23 +3,33 @@
 ## Overview
 
 `WidgetManager` is a singleton class in the `LGS1920/studio` project designed to manage draggable and resizable widgets
-within a container. It handles widget positioning, bounds enforcement, snapping, resizing, and synchronization of crop
-overlays. Additionally, it supports container resize observation, double-click/tap events for toggling crop zones
-between maximized and previous sizes, and group-based widget management.
+within a container. It delegates drag functionality to `WidgetDraggable`, resize functionality to `WidgetResizable`, and
+cropping functionality to `WidgetCropper`. The class handles widget positioning, bounds enforcement, snapping, control
+box visibility, and group-based widget management, ensuring a transparent interface for components that interact with
+it.
 
 ### Key Responsibilities
 
-- **Widget Initialization**: Sets up draggable elements with unique IDs, applies initial positions or crop dimensions,
-  and ensures elements stay within container bounds.
-- **Drag and Resize Handling**: Manages drag and resize operations, applying transforms during drag and collapsing to
-  `left`/`top` styles on drag end.
-- **Crop Overlay Synchronization**: Updates an outside overlay's `clip-path` to align with the crop zone's dimensions.
-- **Container Resize Observation**: Monitors container size changes and adjusts widget positions or crop zones,
-  respecting aspect ratio locks.
-- **Double-Click/Tap Support**: Toggles crop zones between maximized and previous dimensions on double-click or tap.
-- **Aspect Ratio Management**: Updates crop zone dimensions based on specified aspect ratios while maintaining container
-  constraints.
+- **Widget Initialization**: Sets up draggable and resizable elements with unique IDs, applies initial positions, and
+  ensures elements stay within container bounds.
+- **Drag and Resize Delegation**: Delegates drag and resize operations to `WidgetDraggable` and `WidgetResizable`,
+  maintaining state for dragging and resizing.
+- **Crop Management**: Delegates cropping operations (e.g., crop dimensions, overlay synchronization, double-click
+  toggling) to `WidgetCropper`.
+- **Container Resize Observation**: Monitors container size changes and adjusts widget positions, coordinating with
+  `WidgetCropper` for crop zones.
 - **Group Management**: Supports grouping of widgets for collective retrieval and disposal.
+
+### Classes Overview
+
+- **`WidgetManager`**: Central singleton that orchestrates widget management, delegating specific behaviors to
+  `WidgetDraggable`, `WidgetResizable`, and `WidgetCropper`.
+- **`WidgetDraggable`**: Singleton responsible for handling drag start and end events, updating widget positions, and
+  coordinating with `WidgetCropper` for crop zones.
+- **`WidgetResizable`**: Singleton responsible for handling resize events, updating widget dimensions, and coordinating
+  with `WidgetCropper` for crop zones.
+- **`WidgetCropper`**: Singleton responsible for managing crop zone dimensions, overlay synchronization, aspect ratio
+  updates, and double-click toggling.
 
 ## Installation
 
@@ -32,18 +42,21 @@ Ensure the following dependencies are included in your project:
 npm install uuid
 ```
 
-Include the `WidgetManager.js` file in your project:
+Include the necessary files in your project:
 
 ```javascript
 import { WidgetManager } from './WidgetManager.js'
+import { WidgetDraggable } from './WidgetDraggable.js'
+import { WidgetResizable } from './WidgetResizable.js'
+import { WidgetCropper }   from './WidgetCropper.js'
 ```
 
 ## Usage
 
 ### Creating the Singleton Instance
 
-The `WidgetManager` is a singleton, so you only need to instantiate it once. You can optionally pass a shared store
-during initialization.
+`WidgetManager` is a singleton, so you only need to instantiate it once. You can optionally pass a shared store during
+initialization.
 
 ```javascript
 const widgetManager = new WidgetManager(store)
@@ -51,7 +64,7 @@ const widgetManager = new WidgetManager(store)
 
 ### Setting Up a Widget
 
-To initialize a draggable or resizable widget, call the `setupElement` method with the required parameters.
+To initialize a draggable, resizable, or croppable widget, call the `setupElement` method with the required parameters.
 
 ```javascript
 /**
@@ -85,7 +98,7 @@ const success = widgetManager.setupElement(
 
 ### Updating Crop Aspect Ratio
 
-To update the aspect ratio of a crop zone, use the `updateCropRatio` method.
+To update the aspect ratio of a crop zone, use the `updateCropRatio` method, which is delegated to `WidgetCropper`.
 
 ```javascript
 /**
@@ -99,7 +112,7 @@ widgetManager.updateCropRatio('widget-1', 16 / 9, true)
 
 ### Managing Widgets by Group
 
-To retrieve all widget configurations in a group or dispose of them:
+To retrieve or dispose of widgets in a group:
 
 ```javascript
 /**
@@ -119,8 +132,8 @@ widgetManager.disposeByGroup('video-tools', true)
 
 ### Handling Events
 
-The `WidgetManager` emits custom events (`onCropUpdate`) during crop-related changes. Listen for these events to
-synchronize your application state.
+`WidgetManager` emits custom events (`onCropUpdate`) via `WidgetCropper` during crop-related changes. Listen for these
+events to synchronize your application state.
 
 ```javascript
 document.addEventListener('onCropUpdate', event => {
@@ -165,42 +178,81 @@ The `initialConfig` object passed to `setupElement` supports the following prope
 
 ## Methods
 
-Below are the key public methods of the `WidgetManager` class:
+### WidgetManager
 
 - **retrieveElementId(element)**: Retrieves the unique ID of an element.
 - **setupElement(element, initialConfig, setBounds, setPosition, moveable)**: Initializes a widget.
-- **updateCropRatio(cropzoneId, aspectRatio, lockRatio)**: Updates the crop zone's aspect ratio.
+- **updateCropRatio(cropzoneId, aspectRatio, lockRatio)**: Updates the crop zone's aspect ratio (delegates to
+  `WidgetCropper`).
 - **applyPosition(element, position, moveable, isDragging, setControlBoxProps)**: Applies position styles (transform or
   left/top).
 - **manageControlBox(moveable, setControlBoxProps, _controlBoxTimer, show, isMouseOver)**: Manages control box
   visibility.
 - **disposeElement(element)**: Cleans up a widget and its resources.
-- **getConfig(elementId)**: Retrieves the configuration for a widget.
+- **getWidgetConfig(elementId)**: Retrieves the configuration for a widget.
 - **getElementById(id)**: Retrieves a widget element by ID.
 - **setConfig(elementId, config)**: Sets the configuration for a widget.
 - **getWidgetConfigByGroup(groupId)**: Retrieves all widget configurations in a group.
 - **disposeByGroup(groupId, usePersist)**: Disposes all widgets in a group, optionally respecting `persistInTable`.
+- **onDragStart(event)**: Handles drag start (delegates to `WidgetDraggable`).
+- **onDragEnd(event)**: Handles drag end (delegates to `WidgetDraggable`).
+- **onResizeStart(event)**: Handles resize start (delegates to `WidgetResizable`).
+- **onResize(event, refs, setPosition)**: Handles resize (delegates to `WidgetResizable`).
+- **onResizeEnd(event)**: Handles resize end (delegates to `WidgetResizable`).
+- **onDoubleClick(event, setPosition)**: Handles double-click for crop toggling (delegates to `WidgetCropper`).
+- **cropDimensions(config, maximize)**: Computes crop dimensions (delegates to `WidgetCropper`).
+- **applyCropToOverlay(config)**: Applies crop to overlay (delegates to `WidgetCropper`).
+- **openWindowInOverlay(crop)**: Creates clip-path for overlay (delegates to `WidgetCropper`).
+
+### WidgetDraggable
+
+- **onDragStart(event)**: Applies drag styles and sets the dragging state.
+- **onDragEnd(event)**: Collapses transform to `left`/`top`, updates crop dimensions, and syncs overlay via
+  `WidgetCropper`.
+
+### WidgetResizable
+
+- **onResizeStart(event)**: Applies resize styles and sets the resizing state.
+- **onResize(event, refs, setPosition)**: Updates element styles and overlay during resize.
+- **onResizeEnd(event)**: Cleans up styles and finalizes crop dimensions via `WidgetCropper`.
+
+### WidgetCropper
+
+- **setupCropper(element, config)**: Initializes crop-specific properties for an element.
+- **applyCropToOverlay(config)**: Updates an outside overlay's `clip-path` to align with crop dimensions.
+- **cropDimensions(config, maximize)**: Computes crop dimensions based on container and aspect ratio.
+- **openWindowInOverlay(crop)**: Creates a CSS clip-path for the crop overlay.
+- **onDoubleClick(event, setPosition)**: Toggles crop zone between maximized and previous dimensions.
+- **updateCropRatio(cropzoneId, aspectRatio, lockRatio)**: Updates crop zone dimensions and aspect ratio.
+- **dispatchCropUpdate(config, phase)**: Dispatches `onCropUpdate` events for crop changes.
 
 ## Event Handling
 
-The `WidgetManager` supports the following Moveable events:
+The `WidgetCropper` class emits `onCropUpdate` events during crop-related changes, with the following details:
 
-- **onDragStart**: Applies drag styles and sets the dragging flag.
-- **onDragEnd**: Collapses transform to `left`/`top`, updates crop dimensions, and syncs overlay.
-- **onResizeStart**: Applies resize styles and sets the resizing flag.
-- **onResize**: Updates element styles and overlay during resize.
-- **onResizeEnd**: Cleans up styles and finalizes crop dimensions.
-- **onDoubleClick**: Toggles crop zone between maximized and previous dimensions.
+- `id`: The widget's unique ID.
+- `crop`: Object containing `{ left, top, width, height }` of the crop zone.
+- `ratio`: Object containing `{ aspectRatio, locked }` for the crop zone.
+- `phase`: String indicating the event phase (`init`, `resize`, `ratio`, `container-resize`, `end`, `toggle`).
+
+Example:
+
+```javascript
+document.addEventListener('onCropUpdate', event => {
+    const {id, crop, ratio, phase} = event.detail
+    console.log(`Crop updated for ${id}:`, crop, ratio, phase)
+})
+```
 
 ## Notes
 
 - The `WidgetManager` assumes the presence of a `Moveable` library for drag and resize functionality.
-- The `onCropUpdate` event provides details about crop changes, including the widget ID, crop dimensions, aspect ratio,
-  and phase (`init`, `resize`, `ratio`, `container-resize`, `end`, `toggle`).
-- The singleton ensures only one instance manages all widgets, preventing conflicts.
-- The `containerPadding` and `minCropSize` properties help enforce constraints for crop zones.
+- The singleton pattern ensures only one instance of each class (`WidgetManager`, `WidgetDraggable`, `WidgetResizable`,
+  `WidgetCropper`) manages all widgets, preventing conflicts.
+- The `containerPadding` and `minCropSize` properties enforce constraints for crop zones, handled by `WidgetCropper`.
 - Aspect ratio handling respects the `useRatio` and `ratio` configuration to maintain consistent proportions.
 - Group management allows for efficient handling of related widgets (e.g., disposing all widgets in a group).
+- The interface remains transparent, so components interact only with `WidgetManager`, unaware of the delegated classes.
 
 ## License
 

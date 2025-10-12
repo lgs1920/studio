@@ -13,12 +13,16 @@
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
-import { LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, SECOND } from '@Core/constants'
-import { v4 as uuidv4 }                                           from 'uuid'
+
+import { SECOND }          from '@Core/constants'
+import { v4 as uuidv4 }    from 'uuid'
+import { WidgetCropper }   from './WidgetCropper'
+import { WidgetDraggable } from './WidgetDraggable'
+import { WidgetResizable } from './WidgetResizable'
 
 /**
- * Singleton class that manages draggable widgets and crop zones.
- * Handles positioning, resizing, and cropping functionality for DOM elements.
+ * Singleton class that manages draggable and resizable widgets.
+ * Handles positioning and delegates cropping functionality to WidgetCropper.
  */
 export class WidgetManager {
     // Singleton instance
@@ -48,11 +52,14 @@ export class WidgetManager {
     /** @type {string|null} ID of the currently active widget */
     #current = null
 
-    /** @type {number} Scale factor for crop dimensions */
-    #CROP_SCALE_FACTOR = 1
+    /** @type {WidgetDraggable} Instance of WidgetDraggable */
+    #draggable
 
-    /** @type {{width: number, height: number}} Minimum crop size */
-    #MIN_CROP_SIZE = {width: 0, height: 0}
+    /** @type {WidgetResizable} Instance of WidgetResizable */
+    #resizable
+
+    /** @type {WidgetCropper} Instance of WidgetCropper */
+    #cropper
 
     /**
      * Creates or returns the singleton instance of WidgetManager.
@@ -63,6 +70,9 @@ export class WidgetManager {
             return WidgetManager.#instance
         }
         this.#widgets = new Map()
+        this.#cropper = new WidgetCropper(this)
+        this.#draggable = new WidgetDraggable(this, this.#cropper)
+        this.#resizable = new WidgetResizable(this, this.#cropper)
         WidgetManager.#instance = this
     }
 
@@ -116,7 +126,7 @@ export class WidgetManager {
     }
 
     /**
-     * Sets up a DOM element as a widget with moveable and crop functionality.
+     * Sets up a DOM element as a widget with moveable functionality.
      * @param {HTMLElement} element - The DOM element to set up
      * @param {Object} initialConfig - Initial widget configuration
      * @param {Function} setBounds - Function to update bounds
@@ -151,28 +161,10 @@ export class WidgetManager {
             config.ratio = this.getRatio(initialConfig.ratio ?? fallback)
         }
 
-        // Initialize crop dimensions if not persisted
-        const hasPersistedCrop =
-                  config?.cropDimensions &&
-                  Number.isFinite(config.cropDimensions.left) &&
-                  Number.isFinite(config.cropDimensions.top) &&
-                  Number.isFinite(config.cropDimensions.width) &&
-                  Number.isFinite(config.cropDimensions.height) &&
-                  config.cropDimensions.width > 0 &&
-                  config.cropDimensions.height > 0
-        if (!hasPersistedCrop) {
-            this.cropDimensions(config)
-        }
-
         // Apply crop dimensions for cropper elements
         if (config.isCropper) {
-            element.style.left = `${config.cropDimensions.left}px`
-            element.style.top = `${config.cropDimensions.top}px`
-            element.style.width = `${config.cropDimensions.width}px`
-            element.style.height = `${config.cropDimensions.height}px`
-            element.style.transform = 'none'
-            config.position = {left: config.cropDimensions.left, top: config.cropDimensions.top}
-            this.applyCropToOverlay(config)
+            this.#cropper.setupCropper(element, config)
+            moveable.current.onDoubleClick = e => this.onDoubleClick(e, setPosition)
         }
 
         // Configure moveable for resizing with ratio lock
@@ -201,46 +193,12 @@ export class WidgetManager {
             this.#createInnerOverlay(element)
         }
 
-        // Add double-click handler for croppers
-        if (config.isCropper && moveable.current.resizable) {
-            moveable.current.onDoubleClick = e => this.onDoubleClick(e, setPosition)
-        }
-
         // Dispatch initial crop event for croppers
-        try {
-            if (config.isCropper && config.cropDimensions) {
-                document.dispatchEvent(new CustomEvent('onCropUpdate', {
-                    detail: {
-                        id:    config.id,
-                        crop:  {...config.cropDimensions},
-                        ratio: {aspectRatio: config?.ratio?.aspectRatio, locked: config?.ratio?.locked},
-                        phase: 'init',
-                    },
-                }))
-            }
-        }
-        catch (_) {
+        if (config.isCropper && config.cropDimensions) {
+            this.#cropper.dispatchCropUpdate(config, 'init')
         }
 
         return true
-    }
-
-    /**
-     * Applies crop dimensions to the overlay element.
-     * @param {Object} config - Widget configuration
-     */
-    applyCropToOverlay = config => {
-        if (!config?.isCropper || !config.outsideOverlay) {
-            return
-        }
-        const {left, top, width, height} = config.cropDimensions || {}
-        if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
-            config.outsideOverlay.style.clipPath = this.openWindowInOverlay({left, top, width, height})
-        }
-        else {
-            this.cropDimensions(config)
-            config.outsideOverlay.style.clipPath = this.openWindowInOverlay(config.cropDimensions)
-        }
     }
 
     /**
@@ -280,7 +238,7 @@ export class WidgetManager {
                 animationWhenDragging: initialConfig.animationWhenDragging ?? false,
                 ratio:          this.getRatio(initialConfig.ratio ?? ratio),
                 useRatio:       initialConfig.useRatio ?? true,
-                minCropSize:    initialConfig.minCropSize ?? this.#MIN_CROP_SIZE,
+                minCropSize: initialConfig.minCropSize ?? {width: 0, height: 0},
                 outsideOverlay: initialConfig.outsideOverlay,
                 resizeFromCenter: initialConfig.resizeFromCenter ?? false,
                 centerRatio:    {x: 0.5, y: 0.5},
@@ -337,7 +295,7 @@ export class WidgetManager {
         if (config.showControlBox && isDragging) {
             setControlBoxProps({
                                    renderDirections: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
-                                   zoom:    1,
+                                   zoom: 1,
                                    opacity: 1,
                                })
         }
@@ -366,7 +324,7 @@ export class WidgetManager {
             this.#current = elementId
             setControlBoxProps({
                                    renderDirections: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
-                                   zoom:    1,
+                                   zoom: 1,
                                    opacity: 1,
                                })
         }
@@ -499,77 +457,6 @@ export class WidgetManager {
     }
 
     /**
-     * Computes crop dimensions
-     * @param {Object} config - Widget configuration
-     * @param {boolean} maximize - Whether to maximize crop
-     * @returns {Object} Crop dimensions
-     */
-    cropDimensions = (config, maximize = false) => {
-        const container = this.refreshBounds(config)
-        container.width = container.right - container.left
-        container.height = container.bottom - container.top
-        const padding = config.containerPadding || 0
-        const paddedWidth = container.width - 2 * padding
-        const paddedHeight = container.height - 2 * padding
-        let width = 0
-        let height = 0
-        const maxWidth = Math.floor(paddedWidth * this.#CROP_SCALE_FACTOR)
-        const maxHeight = Math.floor(paddedHeight * this.#CROP_SCALE_FACTOR)
-        if (!config.useRatio || !config.ratio?.locked) {
-            // Free ratio: maximize to full container size
-            width = Math.max(config.minCropSize.width, maxWidth)
-            height = Math.max(config.minCropSize.height, maxHeight)
-        }
-        else {
-            // Locked ratio: respect aspect ratio
-            const ratio = config.ratio.aspectRatio
-            if (ratio === 1) {
-                width = height = Math.floor(Math.max(config.minCropSize.width, Math.min(maxWidth, maxHeight)))
-            }
-            else if (ratio < 1) {
-                height = Math.floor(Math.max(config.minCropSize.height, maxHeight))
-                width = Math.floor(Math.max(config.minCropSize.width, height * ratio))
-                if (width > maxWidth) {
-                    width = maxWidth
-                    height = Math.floor(width / ratio)
-                }
-            }
-            else {
-                width = Math.floor(Math.max(config.minCropSize.width, maxWidth))
-                height = Math.floor(Math.max(config.minCropSize.height, width / ratio))
-                if (height > maxHeight) {
-                    height = maxHeight
-                    width = Math.floor(height * ratio)
-                }
-            }
-        }
-        const left = Math.floor((paddedWidth - width) / 2) + padding
-        const top = Math.floor((paddedHeight - height) / 2) + padding
-        config.cropDimensions = {left, top, width, height}
-        if (config.resizeFromCenter) {
-            config.centerRatio = {x: 0.5, y: 0.5}
-        }
-        // Update ratio to reflect new dimensions
-        config.ratio = {...config.ratio, aspectRatio: width / height, locked: config.ratio?.locked ?? true}
-        return config.cropDimensions
-    }
-
-    /**
-     * Creates a clip path for the overlay based on crop dimensions.
-     * @param {Object} crop - Crop dimensions object
-     * @returns {string} CSS clip-path string
-     */
-    openWindowInOverlay = crop => {
-        return `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 
-      0% ${crop.top}px, 
-      ${crop.left}px ${crop.top}px, 
-      ${crop.left}px ${crop.top + crop.height}px, 
-      ${crop.left + crop.width}px ${crop.top + crop.height}px, 
-      ${crop.left + crop.width}px ${crop.top}px, 
-      0% ${crop.top}px)`
-    }
-
-    /**
      * Creates an inner overlay element for the widget.
      * @private
      * @param {HTMLElement} element - The DOM element
@@ -659,71 +546,19 @@ export class WidgetManager {
      * Handles the start of a drag event.
      * @param {Object} event - Drag event
      */
-    onDragStart = event => {
-        event.target.classList.add('dragging')
-        const config = this.retrieveConfig(event.target)
-        if (config.animationWhenDragging) {
-            event.target.classList.add(LGS_ANIMATION_DRAGGING)
-        }
-        !this.#isDragging
-        this.#current = this.retrieveElementId(event.target)
-    }
+    onDragStart = event => this.#draggable.onDragStart(event)
 
     /**
      * Handles the end of a drag event.
      * @param {Object} event - Drag event
      */
-    onDragEnd = event => {
-        event.target.classList.remove('dragging', LGS_ANIMATION_DRAGGING)
-        this.#isDragging = false
-        const config = this.retrieveConfig(event.target)
-        if (config?.isCropper) {
-            const currentTransform = event.target.style.transform || ''
-            const match = currentTransform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
-            if (match) {
-                const dx = parseFloat(match[1]) || 0
-                const dy = parseFloat(match[2]) || 0
-                const baseLeft = parseInt(event.target.style.left || '0', 10)
-                const baseTop = parseInt(event.target.style.top || '0', 10)
-                const finalLeft = Math.round(baseLeft + dx)
-                const finalTop = Math.round(baseTop + dy)
-                event.target.style.left = `${finalLeft}px`
-                event.target.style.top = `${finalTop}px`
-                event.target.style.transform = 'none'
-                config.transform = undefined
-                config.position = {left: finalLeft, top: finalTop}
-            }
-            config.element = event.target
-            const left = parseInt(event.target.style.left || '0', 10)
-            const top = parseInt(event.target.style.top || '0', 10)
-            const width = parseInt(event.target.style.width || '0', 10)
-            const height = parseInt(event.target.style.height || '0', 10)
-            if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
-                config.cropDimensions = {left, top, width, height}
-            }
-            if (config.resizeFromCenter) {
-                const container = config.container.getBoundingClientRect()
-                config.centerRatio = {
-                    x: (left + width / 2) / container.width,
-                    y: (top + height / 2) / container.height,
-                }
-            }
-            this.applyCropToOverlay(config)
-        }
-    }
+    onDragEnd = event => this.#draggable.onDragEnd(event)
 
     /**
      * Handles the start of a resize event.
      * @param {Object} event - Resize event
      */
-    onResizeStart = event => {
-        this.#isResizing = true
-        event.target.classList.add('resizing')
-        const config = this.retrieveConfig(event.target)
-        if (config.animationWhenResizing) {
-            event.target.classList.add(LGS_ANIMATION_RESIZING)
-        }
-    }
+    onResizeStart = event => this.#resizable.onResizeStart(event)
 
     /**
      * Handles resize events, updating element dimensions and position.
@@ -731,85 +566,20 @@ export class WidgetManager {
      * @param {Object} refs - References object
      * @param {Function} setPosition - Function to set position
      */
-    onResize = (event, refs, setPosition) => {
-        this.#handleResize(event, refs.widget.current, setPosition, refs.child)
-    }
+    onResize = (event, refs, setPosition) => this.#resizable.onResize(event, refs, setPosition)
 
     /**
      * Handles the end of a resize event.
      * @param {Object} event - Resize event
      */
-    onResizeEnd = event => {
-        this.#isResizing = false
-        event.target.classList.remove('resizing', LGS_ANIMATION_RESIZING)
-        const config = this.retrieveConfig(event.target)
-        if (config?.isCropper) {
-            config.element = event.target
-            const left = parseInt(event.target.style.left || '0', 10)
-            const top = parseInt(event.target.style.top || '0', 10)
-            const width = parseInt(event.target.style.width || '0', 10)
-            const height = parseInt(event.target.style.height || '0', 10)
-            config.cropDimensions = {left, top, width, height}
-            this.applyCropToOverlay(config)
-            try {
-                document.dispatchEvent(new CustomEvent('onCropUpdate', {
-                    detail: {
-                        id:    config.id,
-                        crop:  {left, top, width, height},
-                        ratio: {aspectRatio: config?.ratio?.aspectRatio, locked: config?.ratio?.locked},
-                        phase: 'end',
-                    },
-                }))
-            }
-            catch (_) {
-            }
-        }
-    }
+    onResizeEnd = event => this.#resizable.onResizeEnd(event)
 
     /**
-     * Handles double-click events, maximizing the crop zone using cropDimensions.
+     * Handles double-click events, maximizing the crop zone.
      * @param {Object} event - Click event
      * @param {Function} setPosition - Function to set position
-     * @param {Object} moveable - Moveable instance
      */
-    onDoubleClick = (event, setPosition, moveable) => {
-        const config = this.retrieveConfig(event.target)
-        if (!config?.isCropper || this.#isDragging || this.#isResizing) {
-            return
-        }
-
-        // Maximize using cropDimensions
-        this.cropDimensions(config, true)
-
-        // Apply styles and update state
-        const {left, top, width, height} = config.cropDimensions
-        Object.assign(event.target.style, {
-            left:   `${left}px`,
-            top:    `${top}px`,
-            width:  `${width}px`,
-            height: `${height}px`,
-            transform: 'none',
-        })
-        config.transform = undefined
-        config.position = {left, top}
-        this.applyCropToOverlay(config)
-        setPosition({left, top})
-        if (moveable && moveable.current) {
-            moveable.current.updateRect()
-        }
-        try {
-            document.dispatchEvent(new CustomEvent('onCropUpdate', {
-                detail: {
-                    id:    config.id,
-                    crop:  {left, top, width, height},
-                    ratio: {aspectRatio: config.ratio.aspectRatio, locked: config.ratio.locked},
-                    phase: 'toggle',
-                },
-            }))
-        }
-        catch (_) {
-        }
-    }
+    onDoubleClick = (event, setPosition) => this.#cropper.onDoubleClick(event, setPosition)
 
     /**
      * Updates the crop zone ratio and dimensions.
@@ -817,107 +587,28 @@ export class WidgetManager {
      * @param {number} aspectRatio - The new aspect ratio
      * @param {boolean} lockRatio - Whether to lock the ratio
      */
-    updateCropRatio = (cropzoneId, aspectRatio, lockRatio) => {
-        const config = this.getWidgetConfig(cropzoneId)
-        if (!config || !config.isCropper) {
-            console.warn('[WidgetManager] No valid cropzone found for ID:', cropzoneId)
-            return
-        }
+    updateCropRatio = (cropzoneId, aspectRatio, lockRatio) => this.#cropper.updateCropRatio(cropzoneId, aspectRatio, lockRatio)
 
-        // Ensure element exists
-        if (!config.element) {
-            const element = this.getElementById(cropzoneId)
-            if (element) {
-                config.element = element
-            }
-            else {
-                console.warn('[WidgetManager] No element found for cropzone ID:', cropzoneId)
-                return
-            }
-        }
+    /**
+     * Computes crop dimensions.
+     * @param {Object} config - Widget configuration
+     * @param {boolean} maximize - Whether to maximize crop
+     * @returns {Object} Crop dimensions
+     */
+    cropDimensions = (config, maximize = false) => this.#cropper.cropDimensions(config, maximize)
 
-        // Dispatch pre-update event
-        document.dispatchEvent(new CustomEvent('onBeforeCropUpdate', {
-            detail: {
-                id: cropzoneId,
-            },
-        }))
+    /**
+     * Applies crop dimensions to the overlay element.
+     * @param {Object} config - Widget configuration
+     */
+    applyCropToOverlay = config => this.#cropper.applyCropToOverlay(config)
 
-        // Clear previousCropDimensions and timeout to avoid stale state
-        clearTimeout(config.restoreTimeoutId)
-        config.restoreTimeoutId = null
-        config.previousCropDimensions = null
-        this.#current = cropzoneId
-
-        // Calculate new dimensions based on aspect ratio
-        const container = config.container.getBoundingClientRect()
-        const padding = config.containerPadding || 0
-        const paddedWidth = container.width - 2 * padding
-        const paddedHeight = container.height - 2 * padding
-        const maxWidth = Math.floor(paddedWidth * this.#CROP_SCALE_FACTOR)
-        const maxHeight = Math.floor(paddedHeight * this.#CROP_SCALE_FACTOR)
-        let width, height
-        if (aspectRatio === 1) {
-            width = height = Math.floor(Math.max(config.minCropSize.width, Math.min(maxWidth, maxHeight)))
-        }
-        else if (aspectRatio < 1) {
-            height = Math.floor(Math.max(config.minCropSize.height, maxHeight))
-            width = Math.floor(Math.max(config.minCropSize.width, height * aspectRatio))
-            if (width > maxWidth) {
-                width = maxWidth
-                height = Math.floor(width / aspectRatio)
-            }
-        }
-        else {
-            width = Math.floor(Math.max(config.minCropSize.width, maxWidth))
-            height = Math.floor(Math.max(config.minCropSize.height, width / aspectRatio))
-            if (height > maxHeight) {
-                height = maxHeight
-                width = Math.floor(height * aspectRatio)
-            }
-        }
-
-        // Center the crop zone
-        const left = Math.floor((paddedWidth - width) / 2) + padding
-        const top = Math.floor((paddedHeight - height) / 2) + padding
-        config.cropDimensions = {left, top, width, height}
-        config.position = {left, top}
-        config.centerRatio = {x: (left + width / 2) / container.width, y: (top + height / 2) / container.height}
-        // Update config.ratio to ensure synchronization
-        config.ratio = {aspectRatio, locked: lockRatio}
-
-        // Apply styles to element
-        const element = config.element
-        element.style.left = `${left}px`
-        element.style.top = `${top}px`
-        element.style.width = `${width}px`
-        element.style.height = `${height}px`
-        element.style.transform = 'none'
-
-        // Update overlay and position
-        this.applyCropToOverlay(config)
-        if (config.setPosition) {
-            config.setPosition({left, top})
-        }
-        if (config.moveable.current) {
-            config.moveable.current.updateRect()
-        }
-
-        // Dispatch crop update event
-        try {
-            document.dispatchEvent(new CustomEvent('onCropUpdate', {
-                detail: {
-                    id:    cropzoneId,
-                    crop:  {left, top, width, height},
-                    ratio: {aspectRatio, locked: lockRatio},
-                    phase: 'ratio',
-                },
-            }))
-        }
-        catch (_) {
-        }
-    }
-
+    /**
+     * Creates a clip path for the overlay based on crop dimensions.
+     * @param {Object} crop - Crop dimensions object
+     * @returns {string} CSS clip-path string
+     */
+    openWindowInOverlay = crop => this.#cropper.openWindowInOverlay(crop)
 
     /**
      * Computes bounds for an element or window.
@@ -950,131 +641,9 @@ export class WidgetManager {
     getIdFromElement = element => element.getAttribute(this.#ID_KEY)
 
     /**
-     * Handles resize operations, throttled to prevent excessive updates.
-     * @private
-     * @param {Object} event - Resize event
-     * @param {HTMLElement} target - Target element
-     * @param {Function} setPosition - Function to set position
-     * @param {Object} childRef - Child reference
-     */
-    #handleResize = this.#throttle((event, target, setPosition, childRef) => {
-        if (!target || !event) {
-            return
-        }
-        this.#isResizing = true
-        const width = Math.round(event.width)
-        const height = Math.round(event.height)
-        const config = this.getWidgetConfig(this.retrieveElementId(target))
-        const prevCropDimensions = config.isCropper ? {...config.cropDimensions} : {}
-        const baseLeft = parseInt(target.style.left || '0', 10)
-        const baseTop = parseInt(target.style.top || '0', 10)
-        const currentWidth = config.isCropper ? prevCropDimensions?.width || width : parseInt(target.style.width || '0', 10) || width
-        const currentHeight = config.isCropper ? prevCropDimensions?.height || height : parseInt(target.style.height || '0', 10) || height
-        let finalLeft = baseLeft
-        let finalTop = baseTop
-
-        // Adjust position for center-based resizing
-        if (config?.resizeFromCenter) {
-            finalLeft = Math.round(baseLeft + (currentWidth - width) / 2)
-            finalTop = Math.round(baseTop + (currentHeight - height) / 2)
-            const container = config.container.getBoundingClientRect()
-            config.centerRatio = {
-                x: (finalLeft + width / 2) / container.width,
-                y: (finalTop + height / 2) / container.height,
-            }
-        }
-        else {
-            const [dx, dy] = event.direction
-            const directionMap = {
-                '1,1':   {left: baseLeft, top: baseTop},
-                '1,-1':  {left: baseLeft, top: baseTop + (currentHeight - height)},
-                '-1,1':  {left: baseLeft + (currentWidth - width), top: baseTop},
-                '-1,-1': {left: baseLeft + (currentWidth - width), top: baseTop + (currentHeight - height)},
-                '-1,0':  {left: baseLeft + (currentWidth - width), top: baseTop},
-                '1,0':   {left: baseLeft, top: baseTop},
-                '0,1':   {left: baseLeft, top: baseTop},
-                '0,-1':  {left: baseLeft, top: baseTop + (currentHeight - height)},
-            }
-            const k = `${dx},${dy}`
-            const d = directionMap[k] || directionMap['1,1']
-            finalLeft = d.left
-            finalTop = d.top
-        }
-
-        // Constrain position within bounds
-        const maxLeft = Math.max(config.bounds.left, config.bounds.right - width)
-        const maxTop = Math.max(config.bounds.top, config.bounds.bottom - height)
-        finalLeft = Math.min(Math.max(finalLeft, config.bounds.left), maxLeft)
-        finalTop = Math.min(Math.max(finalTop, config.bounds.top), maxTop)
-
-        // Apply styles
-        target.style.left = `${finalLeft}px`
-        target.style.top = `${finalTop}px`
-        target.style.width = `${width}px`
-        target.style.height = `${height}px`
-        target.style.transform = 'none'
-
-        // Update crop dimensions and dispatch event
-        if (config.isCropper) {
-            const before = prevCropDimensions
-            const after = {left: finalLeft, top: finalTop, width, height}
-            config.cropDimensions = after
-            if (!before ||
-                before.left !== after.left ||
-                before.top !== after.top ||
-                before.width !== after.width ||
-                before.height !== after.height) {
-                try {
-                    document.dispatchEvent(new CustomEvent('onCropUpdate', {
-                        detail: {
-                            id:    config.id,
-                            crop:  {...after},
-                            ratio: {aspectRatio: config?.ratio?.aspectRatio, locked: config?.ratio?.locked},
-                            phase: 'resize',
-                        },
-                    }))
-                }
-                catch (_) {
-                }
-            }
-        }
-
-        // Update overlay and child component
-        if (config?.isCropper) {
-            config.element = target
-            this.applyCropToOverlay(config)
-        }
-        setPosition({left: finalLeft, top: finalTop})
-        if (childRef.current?.handleResize) {
-            childRef.current.handleResize({left: finalLeft, top: finalTop, width, height})
-        }
-        this.#isResizing = false
-    }, 16)
-
-    /**
-     * Retrieves the inner overlay element for a widget.
-     * @param {HTMLElement} element - The DOM element
-     * @returns {HTMLElement|undefined} Overlay element or undefined
-     */
-    getInnerOverlay = element => {
-        const elementId = this.retrieveElementId(element)
-        const config = this.getWidgetConfig(elementId)
-        return config.overlay
-    }
-
-    /**
-     * Sets widget configuration for an element ID.
-     * @param {string} elementId - The element ID
-     * @param {Object} config - Widget configuration
-     */
-    setConfig = (elementId, config) => {
-        this.#widgets.set(elementId, config)
-    }
-
-    /**
      * Monitors container resize events and updates widget bounds and position.
      * @param {Object} config - Widget configuration
-     * @param {Function} setBounds - Function to set bounds
+     * @param {Function} setBounds - Function to update bounds
      * @param {Object} moveable - Moveable instance
      * @param {HTMLElement} element - The DOM element
      * @param {Function} setPosition - Function to set position
@@ -1144,41 +713,7 @@ export class WidgetManager {
 
                 // Update cropper position and dimensions
                 if (config.isCropper) {
-                    const t = element.style.transform || ''
-                    const m = t.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
-                    const baseLeft = parseInt(element.style.left || '0', 10)
-                    const baseTop = parseInt(element.style.top || '0', 10)
-                    const dx = m ? parseFloat(m[1]) || 0 : 0
-                    const dy = m ? parseFloat(m[2]) || 0 : 0
-                    let left = Math.round(baseLeft + dx)
-                    let top = Math.round(baseTop + dy)
-                    let width = Number(config.cropDimensions?.width) || parseInt(element.style.width || '0', 10)
-                    let height = Number(config.cropDimensions?.height) || parseInt(element.style.height || '0', 10)
-                    width = Math.max(0, width)
-                    height = Math.max(0, height)
-                    const maxLeft = Math.max(newBounds.left, newBounds.right - width)
-                    const maxTop = Math.max(newBounds.top, newBounds.bottom - height)
-                    left = Math.min(Math.max(left, newBounds.left), maxLeft)
-                    top = Math.min(Math.max(top, newBounds.top), maxTop)
-                    element.style.left = `${left}px`
-                    element.style.top = `${top}px`
-                    element.style.transform = 'none'
-                    config.transform = undefined
-                    config.position = {left, top}
-                    config.cropDimensions = {left, top, width, height}
-                    this.applyCropToOverlay(config)
-                    try {
-                        document.dispatchEvent(new CustomEvent('onCropUpdate', {
-                            detail: {
-                                id:    config.id,
-                                crop:  {left, top, width, height},
-                                ratio: {aspectRatio: config?.ratio?.aspectRatio, locked: config?.ratio?.locked},
-                                phase: 'container-resize',
-                            },
-                        }))
-                    }
-                    catch (_) {
-                    }
+                    this.#cropper.handleContainerResize(config, element, moveable, setPosition)
                 }
                 const rightChanged = lastComputed.right !== newBounds.right
                 const bottomChanged = lastComputed.bottom !== newBounds.bottom
@@ -1207,5 +742,25 @@ export class WidgetManager {
             config.observer = new ResizeObserver(handleResize)
             config.observer.observe(config.container)
         }
+    }
+
+    /**
+     * Retrieves the inner overlay element for a widget.
+     * @param {HTMLElement} element - The DOM element
+     * @returns {HTMLElement|undefined} Overlay element or undefined
+     */
+    getInnerOverlay = element => {
+        const elementId = this.retrieveElementId(element)
+        const config = this.getWidgetConfig(elementId)
+        return config.overlay
+    }
+
+    /**
+     * Sets widget configuration for an element ID.
+     * @param {string} elementId - The element ID
+     * @param {Object} config - Widget configuration
+     */
+    setConfig = (elementId, config) => {
+        this.#widgets.set(elementId, config)
     }
 }
