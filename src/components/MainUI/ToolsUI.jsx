@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-10
- * Last modified: 2025-10-10
+ * Created on: 2025-10-12
+ * Last modified: 2025-10-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -32,11 +32,8 @@ export const ToolsUI = () => {
     const {usage} = useSnapshot(lgs.settings.ui.journeyToolbar)
     const {video} = useSnapshot(lgs.stores.ui)
     const $cropper = lgs.stores.ui.video.cropper
-    $cropper.id = VIDEO_CROP_ZONE
     return (
         <div id="lgs-tools-ui">
-            {video.cropper.widgetEditor && <CompassWidget/>
-            }
             {video.editing ? (
                 <>
                     <Cropper overlay source={lgs.canvas}
@@ -45,7 +42,6 @@ export const ToolsUI = () => {
                     <VideoFPSWidget id="video-fps-widget"/>
                     <VideoQualityWidget id="video-quality-widget"/>
                     <VideoRecordingSettingsWidget id="video-recording-settings-widget"/>
-                    <CompassWidget id="video-compass-element"/>
                 </>
             ) : (
 

@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-06
- * Last modified: 2025-10-06
+ * Created on: 2025-10-12
+ * Last modified: 2025-10-12
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { VIDEO_CROP_ZONE } from '@Core/constants'
-import React, { forwardRef, useEffect, useRef, useCallback, useState } from 'react'
+import React, { useEffect, useRef, useCallback, useState } from 'react'
 import { CropZoneInfo }                                                from './CropZoneInfo'
 
 const toClipPath = ({left, top, width, height}) => {
@@ -37,58 +37,17 @@ const toClipPath = ({left, top, width, height}) => {
 /**
  * CropZone component for rendering the crop zone content with imperative API.
  */
-export const CropZone = forwardRef(function CropZone(props, ref) {
-    const {onDoubleClick, infoComponent, infoPosition, overlay} = props
-    const _root = useRef(null)
-    const [info, setInfo] = useState(null)
+export const CropZone = ({onDoubleClick, infoComponent, infoPosition, overlay, children, context}) => {
+    const _cropZone = useRef(null)
 
     const handleContextMenu = useCallback((e) => {
         e.preventDefault()
         e.stopPropagation()
     }, [])
 
-    // Expose imperative API through ref for DraggableUIWidget
-    useEffect(() => {
-        if (!ref) {
-            return
-        }
-
-        const setPosition = event => {
-            const position = {left: event.left, top: event.top, width: event.width, height: event.height}
-            // Live sync overlay during drag/resize for smoothness
-            if (overlay) {
-                overlay.style.clipPath = toClipPath(position)
-            }
-            setInfo({...position})
-        }
-
-        const api = {
-            handleDrag:      (event) => {
-                setPosition(event)
-            },
-            handleResize:    (event) => {
-                setPosition(event)
-            },
-            handleDragStart: () => {
-            },
-            handleDragEnd:   () => {
-            },
-        }
-        if (typeof ref === 'function') {
-            ref(api)
-            return () => ref(null)
-        }
-        else {
-            ref.current = api
-            return () => {
-                ref.current = null
-            }
-        }
-    }, [ref, overlay])
-
     return (
         <div
-            ref={_root}
+            ref={_cropZone}
             className="crop-zone"
             onDoubleClick={onDoubleClick}
             onContextMenu={handleContextMenu}
@@ -103,6 +62,7 @@ export const CropZone = forwardRef(function CropZone(props, ref) {
                     {infoComponent}
                 </div>
             )}
+            {children}
         </div>
     )
-})
+}

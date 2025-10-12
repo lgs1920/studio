@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-10
- * Last modified: 2025-10-10
+ * Created on: 2025-10-12
+ * Last modified: 2025-10-12
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropRatioEditorWidget'
+import { CompassWidget }                            from '@Components/MainUI/video/widgets/CompassWidget'
+import { CropRatioEditorWidget }                    from '@Components/ToolsUI/cropper/widgets/CropRatioEditorWidget'
 /**
  * Cropper component for interactive crop region selection over canvas, video, or image elements.
  * Provides a draggable and resizable crop area with visual feedback and center alignment guides.
@@ -28,9 +29,9 @@ import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropR
  * @param {JSX.Element|string} [props.children] - Additional UI elements (e.g., CTA buttons)
  * @returns {JSX.Element|null} Cropper UI or null if source is not loaded
  */
-import { DefinedCropZone }       from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
-import { memo, useEffect, useRef, useState } from 'react'
-import { useSnapshot }                       from 'valtio'
+import { DefinedCropZone }                          from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
+import React, { memo, useEffect, useRef, useState } from 'react'
+import { useSnapshot }                              from 'valtio'
 import { CropZoneWidget }        from './widgets/CropZoneWidget'
 import './style.css'
 
@@ -63,7 +64,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                             infoPosition={options.infoPosition}
                             infoComponent={options.infoComponent}
                             overlay={overlayElement}
-                            id={context.id}
+                            context={context}
                         />
                     </>
                 ) : overlayElement ? (
@@ -72,11 +73,13 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                         infoPosition={options.infoPosition}
                         infoComponent={options.infoComponent}
                         overlay={overlayElement}
-                        id={context.id}
-                    />
+                        context={context}>
+                    </DefinedCropZone>
                 ) : null}
                 {overlay && <div className="crop-overlay" ref={_overlay}/>}
                 {children}
+                <CompassWidget id="video-compass-element" context={context}/>
+
             </div>
         </>
     )

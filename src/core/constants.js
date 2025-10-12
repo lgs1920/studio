@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-10
- * Last modified: 2025-10-10
+ * Created on: 2025-10-12
+ * Last modified: 2025-10-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -472,7 +472,7 @@ export const LGS_WIDGET = 'lgs-widget'
 export const LGS_ANIMATION_DRAGGING = 'lgs-animation-dragging'
 export const LGS_ANIMATION_RESIZING = 'lgs-animation-resizing'
 
-export const VIDEO_CROP_ZONE = `video-crop-zone`
-export const VIDEO_TOOLS_WIDGET_GROUP = `video-tools-widget-group`
-export const CROP_TOOLS_WIDGET_GROUP = `crop-tools-widget-group`
-export const VIDEO_ELEMENTS_WIDGET_GROUP = `video-element-widget-group`
+export const VIDEO_CROP_ZONE = 'video-crop-zone'
+export const VIDEO_TOOLS_WIDGET_GROUP = 'video-tools-widget-group'
+export const CROP_TOOLS_WIDGET_GROUP = 'crop-tools-widget-group'
+export const VIDEO_ELEMENTS_WIDGET_GROUP = 'video-element-widget-group'

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-10
- * Last modified: 2025-10-10
+ * Created on: 2025-10-12
+ * Last modified: 2025-10-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -281,7 +281,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             const ok = await _widgetManager.current.setupElement(
                 _widget.current,
                 {
-                    container:      lgs.canvas,
+                    container: config.container ?? lgs.canvas,
                     id: config.id ?? null,
                     isCropper:      config.isCropper ?? false,
                     showControlBox: true,
@@ -413,6 +413,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     <Moveable
                         ref={_moveable}
                         target={_widget}
+                        preventDefault={true}
+                        stopPropagation={true}
                         container={lgs.canvas}
                         className="lgs-widget-control-box"
                         origin={false}

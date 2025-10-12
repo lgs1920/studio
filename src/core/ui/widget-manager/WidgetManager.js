@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-11
- * Last modified: 2025-10-11
+ * Created on: 2025-10-12
+ * Last modified: 2025-10-12
  *
  *
  * Copyright © 2025 LGS1920
@@ -472,10 +472,10 @@ export class WidgetManager {
     refreshBounds = (config, moveable) => {
         const container = config.container.getBoundingClientRect()
         config.bounds = {
-            left: 0,
-            top:  0,
-            right: container.width,
-            bottom: container.height,
+            left:   container.left,
+            top:    container.top,
+            bottom: container.bottom,
+            right:  container.right,
         }
         return config.bounds
     }
@@ -946,6 +946,8 @@ export class WidgetManager {
      * @return {HTMLElement}
      */
     getElementById = id => document.querySelector(`[${this.#ID_KEY}="${id}"]`)
+
+    getIdFromElement = element => element.getAttribute(this.#ID_KEY)
 
     /**
      * Handles resize operations, throttled to prevent excessive updates.
