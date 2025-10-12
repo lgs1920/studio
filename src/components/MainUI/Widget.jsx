@@ -187,6 +187,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
      */
     const handleDrag = useCallback((event) => {
         _widgetManager.current.applyPosition(_widget.current, event.transform, _moveable, true, setControlBoxProps)
+        _widgetManager.current.onDrag(event)
         if (_children.current?.handleDrag) {
             _children.current.handleDrag(event)
         }

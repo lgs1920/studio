@@ -14,11 +14,11 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { LGS_ANIMATION_RESIZING } from '@Core/constants'
-
 /**
  * Singleton class that manages resizable functionality for widgets.
  */
+import { LGS_ANIMATION_RESIZING } from '@Core/constants'
+
 export class WidgetResizable {
     // Singleton instance
     static #instance = null
@@ -126,7 +126,8 @@ export class WidgetResizable {
         target.style.height = `${height}px`
         target.style.transform = 'none'
 
-        // Update crop dimensions and dispatch event
+        // Update config.position and crop dimensions
+        config.position = {left: finalLeft, top: finalTop}
         if (config.isCropper) {
             const before = prevCropDimensions
             const after = {left: finalLeft, top: finalTop, width, height}
@@ -138,13 +139,10 @@ export class WidgetResizable {
                 before.height !== after.height) {
                 this.#widgetCropper.dispatchCropUpdate(config, 'resize')
             }
+            this.#widgetCropper.applyCropToOverlay(config)
         }
 
         // Update overlay and child component
-        if (config?.isCropper) {
-            config.element = target
-            this.#widgetCropper.applyCropToOverlay(config)
-        }
         setPosition({left: finalLeft, top: finalTop})
         if (childRef.current?.handleResize) {
             childRef.current.handleResize({left: finalLeft, top: finalTop, width, height})
@@ -187,8 +185,9 @@ export class WidgetResizable {
             config.element = event.target
             const left = parseInt(event.target.style.left || '0', 10)
             const top = parseInt(event.target.style.top || '0', 10)
-            const width = parseInt(event.target.style.width || '0', 10)
-            const height = parseInt(event.target.style.height || '0', 10)
+            const width = parseInt(event.target.style.width || '0', 10) || event.target.getBoundingClientRect().width || 200
+            const height = parseInt(event.target.style.height || '0', 10) || event.target.getBoundingClientRect().height || 200
+            config.position = {left, top}
             config.cropDimensions = {left, top, width, height}
             this.#widgetCropper.applyCropToOverlay(config)
             this.#widgetCropper.dispatchCropUpdate(config, 'end')

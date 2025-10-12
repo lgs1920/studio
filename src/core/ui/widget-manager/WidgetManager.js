@@ -14,16 +14,16 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+/**
+ * Singleton class that manages draggable and resizable widgets.
+ * Handles positioning and delegates cropping functionality to WidgetCropper.
+ */
 import { SECOND }          from '@Core/constants'
 import { v4 as uuidv4 }    from 'uuid'
 import { WidgetCropper }   from './WidgetCropper'
 import { WidgetDraggable } from './WidgetDraggable'
 import { WidgetResizable } from './WidgetResizable'
 
-/**
- * Singleton class that manages draggable and resizable widgets.
- * Handles positioning and delegates cropping functionality to WidgetCropper.
- */
 export class WidgetManager {
     // Singleton instance
     static #instance = null
@@ -177,9 +177,24 @@ export class WidgetManager {
         // Set initial bounds and position
         const newBounds = this.refreshBounds(config, moveable)
         setBounds(newBounds)
-        if (!config.isCropper) {
-            const newPosition = this.computeInitialPosition(config, element, false)
-            this.applyPosition(element, newPosition, moveable, false, setPosition)
+        // Initialize position for all elements
+        const newPosition = this.computeInitialPosition(config, element, false)
+        this.applyPosition(element, newPosition, moveable, false, setPosition)
+
+        // Initialize cropDimensions for croppers
+        if (config.isCropper) {
+            const rect = element.getBoundingClientRect()
+            const width = Number.isFinite(initialConfig.cropDimensions?.width) ? initialConfig.cropDimensions.width : (rect.width || 200)
+            const height = Number.isFinite(initialConfig.cropDimensions?.height) ? initialConfig.cropDimensions.height : (rect.height || 200)
+            config.cropDimensions = {
+                left: newPosition.left,
+                top:  newPosition.top,
+                width,
+                height,
+            }
+            element.style.width = `${width}px`
+            element.style.height = `${height}px`
+            this.#cropper.applyCropToOverlay(config)
         }
 
         // Set default styles
@@ -212,12 +227,13 @@ export class WidgetManager {
                           ? initialConfig.id
                           : this.retrieveElementId(element) || uuidv4()
         if (!this.#widgets.has(elementId)) {
-            const anchor =
-                      (initialConfig.attachTo && this.#validPositions.includes(initialConfig.attachTo))
-                      ? initialConfig.attachTo
-                      : (initialConfig.position && this.#validPositions.includes(initialConfig.position))
-                        ? initialConfig.position
-                        : 'top-left'
+            const anchor = initialConfig.isCropper
+                           ? (initialConfig.attachTo && this.#validPositions.includes(initialConfig.attachTo) ? initialConfig.attachTo : 'center')
+                           : (initialConfig.attachTo && this.#validPositions.includes(initialConfig.attachTo)
+                              ? initialConfig.attachTo
+                              : (initialConfig.position && this.#validPositions.includes(initialConfig.position))
+                                ? initialConfig.position
+                                : 'top-left')
             const ratio = __.device.isPortrait ? '9x16' : '16x9'
             this.#widgets.set(elementId, {
                 id:             elementId,
@@ -337,6 +353,12 @@ export class WidgetManager {
     }
 
     /**
+     * Handles drag events, updating crop overlay in real-time.
+     * @param {Object} event - Drag event from Moveable
+     */
+    onDrag = event => this.#draggable.onDrag(event)
+
+    /**
      * Retrieves video format ratio configuration.
      * @param {string} ratio - Ratio identifier (e.g., '16x9')
      * @returns {Object} Ratio configuration object
@@ -356,6 +378,8 @@ export class WidgetManager {
         }
         const container = config.container.getBoundingClientRect()
         const widget = element.getBoundingClientRect()
+        const defaultWidth = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : (widget.width || 200)
+        const defaultHeight = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : (widget.height || 200)
 
         // Parse position values (supports px, %, or numbers)
         const parsePosition = (value, maxDimension) => {
@@ -370,33 +394,25 @@ export class WidgetManager {
             return isNaN(numValue) ? 0 : numValue
         }
 
-        // Use provided left/top or default to 0
-        if (widget.width === 0 || widget.height === 0) {
-            if (config.left != null && config.top != null) {
-                config.position = {
-                    left: parsePosition(config.left, container.width),
-                    top: parsePosition(config.top, container.height),
-                }
-                return config.position
-            }
-            return {left: 0, top: 0}
-        }
+        // Use provided left/top or center for croppers
+        let left = config.isCropper ? (container.width - defaultWidth) / 2 : parsePosition(config.left ?? '10%', container.width)
+        let top = config.isCropper ? (container.height - defaultHeight) / 2 : parsePosition(config.top ?? '10%', container.height)
+        const attachTo = config.attachTo || (config.isCropper ? 'center' : 'top-left')
 
-        let left = parsePosition(config.left, container.width)
-        let top = parsePosition(config.top, container.height)
-        const attachTo = config.attachTo || 'top-left'
-
-        // Adjust position based on anchor point
+        // Adjust position based on anchor point, skip center adjustment for croppers
         const adjustments = {
-            center:         () => ({left: left - widget.width / 2, top: top - widget.height / 2}),
-            top:            () => ({left: left - widget.width / 2, top: top}),
-            left:           () => ({left: left, top: top - widget.height / 2}),
-            right:          () => ({left: left - widget.width, top: top - widget.height / 2}),
-            bottom:         () => ({left: left - widget.width / 2, top: top - widget.height}),
+            center:         () => config.isCropper ? ({left, top}) : ({
+                left: left - defaultWidth / 2,
+                top:  top - defaultHeight / 2,
+            }),
+            top:            () => ({left: left - defaultWidth / 2, top: top}),
+            left:           () => ({left: left, top: top - defaultHeight / 2}),
+            right:          () => ({left: left - defaultWidth, top: top - defaultHeight / 2}),
+            bottom:         () => ({left: left - defaultWidth / 2, top: top - defaultHeight}),
             'top-left':     () => ({left, top}),
-            'top-right':    () => ({left: left - widget.width, top}),
-            'bottom-left':  () => ({left, top: top - widget.height}),
-            'bottom-right': () => ({left: left - widget.width, top: top - widget.height}),
+            'top-right':    () => ({left: left - defaultWidth, top}),
+            'bottom-left':  () => ({left, top: top - defaultHeight}),
+            'bottom-right': () => ({left: left - defaultWidth, top: top - defaultHeight}),
         }
         const adjust = adjustments[attachTo]
         if (adjust) {
@@ -406,16 +422,16 @@ export class WidgetManager {
         }
 
         // Constrain position within bounds
-        left = Math.min(Math.max(left, config.bounds.left), config.bounds.right - widget.width)
-        top = Math.min(Math.max(top, config.bounds.top), config.bounds.bottom - widget.height)
+        left = Math.min(Math.max(left, config.bounds.left), config.bounds.right - defaultWidth)
+        top = Math.min(Math.max(top, config.bounds.top), config.bounds.bottom - defaultHeight)
         config.position = {left, top}
-        config.dimensions = {width: widget.width, height: widget.height}
+        config.dimensions = {width: defaultWidth, height: defaultHeight}
 
         // Update center ratio if resizing from center
         if (config.resizeFromCenter) {
             config.centerRatio = {
-                x: (left + widget.width / 2) / container.width,
-                y: (top + widget.height / 2) / container.height,
+                x: (left + defaultWidth / 2) / container.width,
+                y: (top + defaultHeight / 2) / container.height,
             }
         }
         return config.position
@@ -467,7 +483,7 @@ export class WidgetManager {
         const config = this.getWidgetConfig(elementId)
         config.overlay = overlay
         const targetRect = this.#computeElementBounds(element)
-        Object.assign(overlay.style, {width: `${targetRect.width}px`, height: `${targetRect.height}px`})
+        Object.assign(overlay.style, {width: `${targetRect.width || 200}px`, height: `${targetRect.height || 200}px`})
         overlay.classList.add('lgs-widget-inner-overlay')
         element.appendChild(overlay)
     }
@@ -638,6 +654,11 @@ export class WidgetManager {
      */
     getElementById = id => document.querySelector(`[${this.#ID_KEY}="${id}"]`)
 
+    /**
+     * Get the widget ID from element
+     * @param {HTMLElement} element
+     * @return {string}
+     */
     getIdFromElement = element => element.getAttribute(this.#ID_KEY)
 
     /**

@@ -14,11 +14,11 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { LGS_ANIMATION_DRAGGING } from '@Core/constants'
-
 /**
  * Singleton class that manages draggable functionality for widgets.
  */
+import { LGS_ANIMATION_DRAGGING } from '@Core/constants'
+
 export class WidgetDraggable {
     // Singleton instance
     static #instance = null
@@ -58,6 +58,27 @@ export class WidgetDraggable {
     }
 
     /**
+     * Handles drag events, updating crop overlay in real-time.
+     * @param {Object} event - Drag event from Moveable
+     */
+    onDrag = event => {
+        const config = this.#widgetManager.retrieveConfig(event.target)
+        if (config?.isCropper && config.outsideOverlay) {
+            const [dx, dy] = event.translate || [0, 0]
+            const baseLeft = parseInt(event.target.style.left || '0', 10)
+            const baseTop = parseInt(event.target.style.top || '0', 10)
+            const left = baseLeft + dx
+            const top = baseTop + dy
+            const width = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : parseInt(event.target.style.width || '0', 10) || event.target.getBoundingClientRect().width || 200
+            const height = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : parseInt(event.target.style.height || '0', 10) || event.target.getBoundingClientRect().height || 200
+            if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+                config.cropDimensions = {left, top, width, height}
+                this.#widgetCropper.applyCropToOverlay(config)
+            }
+        }
+    }
+
+    /**
      * Handles the end of a drag event.
      * @param {Object} event - Drag event
      */
@@ -84,8 +105,8 @@ export class WidgetDraggable {
             config.element = event.target
             const left = parseInt(event.target.style.left || '0', 10)
             const top = parseInt(event.target.style.top || '0', 10)
-            const width = parseInt(event.target.style.width || '0', 10)
-            const height = parseInt(event.target.style.height || '0', 10)
+            const width = parseInt(event.target.style.width || '0', 10) || event.target.getBoundingClientRect().width || 200
+            const height = parseInt(event.target.style.height || '0', 10) || event.target.getBoundingClientRect().height || 200
             if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
                 config.cropDimensions = {left, top, width, height}
             }
