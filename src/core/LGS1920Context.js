@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-05
- * Last modified: 2025-10-05
+ * Created on: 2025-10-13
+ * Last modified: 2025-10-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,7 @@
 
 import {
     APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEYS_STORE, ORIGIN_STORE,
-    platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE,
+    platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE, WIDGETS_STORE,
 }                            from '@Core/constants'
 import { StoresManager }     from '@Core/stores/StoresManager'
 import { AppToolsManager }   from '@Core/ui/AppToolsManager'
@@ -207,9 +207,9 @@ export class LGS1920Context {
         this.db = {
             lgs1920:  new LocalDB({
                                       name:             `${APP_KEY}${dbPrefix}`,
-                                      stores:           [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE],
+                                      stores:  [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE, WIDGETS_STORE],
                                       manageTransients: false,
-                                      version:          4, // integer
+                                      version: 5, // integer
                                   }),
             settings: new LocalDB({
                                       name:    `settings-${APP_KEY}${dbPrefix}`,
