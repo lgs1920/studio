@@ -7,14 +7,12 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-05
- * Last modified: 2025-10-05
+ * Created on: 2025-10-13
+ * Last modified: 2025-10-13
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
-
-import { useEffect, useRef } from 'react'
 
 /**
  * Hook to detect single and/or double interactions (click/tap).
@@ -28,6 +26,8 @@ import { useEffect, useRef } from 'react'
  * }} options - Interaction handlers and config.
  * @returns {(e: MouseEvent | TouchEvent) => void} - Unified event handler for JSX.
  */
+import { useEffect, useRef } from 'react'
+
 export const useSingleOrDoubleEvent = ({onSingle, onDouble, delay = 300}) => {
     const lastTap = useRef(0)
     const timeoutRef = useRef(null)
@@ -50,7 +50,11 @@ export const useSingleOrDoubleEvent = ({onSingle, onDouble, delay = 300}) => {
         }
 
         // Handle touch events (double-tap via onTouchStart)
-        if (e.type === 'touchstart' && e.touches?.length === 1) {
+        if (e.type === 'touchstart') {
+            if (e.touches?.length !== 1) {
+                return
+            }
+
             const now = Date.now()
             const delta = now - lastTap.current
 

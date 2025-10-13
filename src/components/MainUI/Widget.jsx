@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-12
- * Last modified: 2025-10-12
+ * Created on: 2025-10-13
+ * Last modified: 2025-10-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -414,8 +414,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     <Moveable
                         ref={_moveable}
                         target={_widget}
-                        preventDefault={true}
-                        stopPropagation={true}
+
                         container={lgs.canvas}
                         className="lgs-widget-control-box"
                         origin={false}
