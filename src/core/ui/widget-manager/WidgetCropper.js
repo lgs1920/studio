@@ -305,7 +305,8 @@ export class WidgetCropper {
                 },
             }))
         }
-        catch (_) {
+        catch (error) {
+            console.error('[WidgetCropper] Error dispatching crop update event:', error)
         }
     }
 

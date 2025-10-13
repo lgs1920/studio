@@ -74,6 +74,7 @@ export class WidgetDraggable {
             if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
                 config.cropDimensions = {left, top, width, height}
                 this.#widgetCropper.applyCropToOverlay(config)
+                this.#widgetCropper.dispatchCropUpdate(config, 'drag')
             }
         }
     }
@@ -118,6 +119,7 @@ export class WidgetDraggable {
                 }
             }
             this.#widgetCropper.applyCropToOverlay(config)
+            this.#widgetCropper.dispatchCropUpdate(config, 'drag-end')
         }
     }
 }
