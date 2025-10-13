@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-10
- * Last modified: 2025-10-10
+ * Created on: 2025-10-13
+ * Last modified: 2025-10-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -75,7 +75,7 @@ export const VideoRecordingScreenArea = () => {
             <CropOverlay style={overlayStyle}/>
             <VideoRecorderWidget id="video-recorder-widget"/>
             <DefinedCropZone
-                id={VIDEO_CROP_ZONE}
+                context={$video.cropper}
                 className={classNames('video-recording-in-progress', {finalizing: video.finalizing})}
                 infoComponent={<VideoSettingsInfo/>}
                 ref={_cropZone}
