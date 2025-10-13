@@ -673,123 +673,117 @@ export class WidgetManager {
         if (config.observer) {
             return
         }
-        const handleResize = (() => {
-            let rafId = null
-            let pending = false
-            let lastComputed = {right: null, bottom: null, translateX: null, translateY: null}
-            const computeAndApply = () => {
-                if (this.#isResizing) {
-                    pending = false
-                    rafId = null
-                    return
-                }
-                const oldBounds = {...config.bounds}
-                const newBounds = this.refreshBounds(config, moveable)
-                if (newBounds.left === oldBounds.left && newBounds.top === oldBounds.top &&
-                    newBounds.right === oldBounds.right && newBounds.bottom === oldBounds.bottom) {
-                    pending = false
-                    rafId = null
-                    return
-                }
-                setBounds(newBounds)
-                this.setBoundStatus(element, config)
-                // Adjust transform for dragging elements
-                if (config.transform) {
-                    const match = config.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
-                    if (match) {
-                        const translateX = parseFloat(match[1])
-                        const translateY = parseFloat(match[2])
-                        let newTranslateX = translateX
-                        let newTranslateY = translateY
-                        const deltaRight = newBounds.right - oldBounds.right
-                        const deltaBottom = newBounds.bottom - oldBounds.bottom
-                        const isShrinking = deltaRight < 0 || deltaBottom < 0
-                        if (isShrinking) {
-                            if (config.boundStatus.right) {
-                                newTranslateX = translateX + deltaRight
-                            }
-                            if (config.boundStatus.bottom) {
-                                newTranslateY = translateY + deltaBottom
-                            }
+        const handleResize = () => {
+            // Skip if resizing to avoid interference
+            if (this.#isResizing) {
+                return
+            }
+            const oldBounds = {...config.bounds}
+            const newBounds = this.refreshBounds(config, moveable)
+            if (newBounds.left === oldBounds.left && newBounds.top === oldBounds.top &&
+                newBounds.right === oldBounds.right && newBounds.bottom === oldBounds.bottom) {
+                return
+            }
+            setBounds(newBounds)
+            this.setBoundStatus(element, config)
+            // Adjust transform for dragging elements
+            if (config.transform) {
+                const match = config.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
+                if (match) {
+                    const translateX = parseFloat(match[1])
+                    const translateY = parseFloat(match[2])
+                    let newTranslateX = translateX
+                    let newTranslateY = translateY
+                    const deltaRight = newBounds.right - oldBounds.right
+                    const deltaBottom = newBounds.bottom - oldBounds.bottom
+                    const isShrinking = deltaRight < 0 || deltaBottom < 0
+                    if (isShrinking) {
+                        if (config.boundStatus.right) {
+                            newTranslateX = translateX + deltaRight
                         }
-                        else {
-                            if (deltaRight > 0) {
-                                config.boundStatus.right = false
-                            }
-                            if (deltaBottom > 0) {
-                                config.boundStatus.bottom = false
-                            }
-                        }
-                        if (newTranslateX !== translateX || newTranslateY !== translateY) {
-                            if (lastComputed.translateX !== newTranslateX || lastComputed.translateY !== newTranslateY) {
-                                config.transform = `translate(${newTranslateX}px, ${newTranslateY}px)`
-                                element.style.transform = config.transform
-                                lastComputed.translateX = newTranslateX
-                                lastComputed.translateY = newTranslateY
-                            }
-                        }
-                    }
-                }
-                // Update cropper position and dimensions
-                if (config.isCropper) {
-                    // Recalculate crop dimensions based on new container size
-                    const containerRect = config.container.getBoundingClientRect()
-                    const currentWidth = config.cropDimensions?.width || 200
-                    const currentHeight = config.cropDimensions?.height || 200
-                    // Maintain aspect ratio if locked
-                    let newWidth = currentWidth
-                    let newHeight = currentHeight
-                    if (config.ratio?.locked) {
-                        const aspectRatio = config.ratio.aspectRatio
-                        newWidth = Math.min(currentWidth, containerRect.width) // Limit to 90% of container
-                        newHeight = newWidth / aspectRatio
-                        if (newHeight > containerRect.height) {
-                            newHeight = containerRect.height
-                            newWidth = newHeight * aspectRatio
+                        if (config.boundStatus.bottom) {
+                            newTranslateY = translateY + deltaBottom
                         }
                     }
                     else {
-                        newWidth = Math.min(currentWidth, containerRect.width)
-                        newHeight = Math.min(currentHeight, containerRect.height)
+                        if (deltaRight > 0) {
+                            config.boundStatus.right = false
+                        }
+                        if (deltaBottom > 0) {
+                            config.boundStatus.bottom = false
+                        }
                     }
-                    // Update crop dimensions
-                    config.cropDimensions = {
-                        left:   config.position.left,
-                        top:    config.position.top,
-                        width:  newWidth,
-                        height: newHeight,
+                    if (newTranslateX !== translateX || newTranslateY !== translateY) {
+                        config.transform = `translate(${newTranslateX}px, ${newTranslateY}px)`
+                        element.style.transform = config.transform
                     }
-                    // Apply new position and dimensions
-                    const newPosition = this.computeInitialPosition(config, element, false)
-                    this.applyPosition(element, newPosition, moveable, false, setPosition)
-                    element.style.width = `${newWidth}px`
-                    element.style.height = `${newHeight}px`
-                    this.#cropper.applyCropToOverlay(config)
-                    this.#cropper.dispatchCropUpdate(config, 'resize')
                 }
-                const rightChanged = lastComputed.right !== newBounds.right
-                const bottomChanged = lastComputed.bottom !== newBounds.bottom
-                if (rightChanged || bottomChanged) {
-                    if (moveable && moveable.current) {
-                        moveable.current.updateRect()
-                    }
-                    lastComputed.right = newBounds.right
-                    lastComputed.bottom = newBounds.bottom
-                }
-                pending = false
-                rafId = null
             }
-            return () => {
-                if (pending) {
-                    return
+            // Update cropper position and dimensions
+            if (config.isCropper) {
+                const containerRect = config.container.getBoundingClientRect()
+                const currentWidth = config.cropDimensions?.width || 200
+                const currentHeight = config.cropDimensions?.height || 200
+                const margin = Number.isFinite(config.margin) ? config.margin : 0
+                const maxWidth = containerRect.width - 2 * margin
+                const maxHeight = containerRect.height - 2 * margin
+                let newWidth = currentWidth
+                let newHeight = currentHeight
+                // Maintain aspect ratio if locked
+                if (config.ratio?.locked) {
+                    const aspectRatio = config.ratio.aspectRatio
+                    newWidth = Math.min(currentWidth, maxWidth)
+                    newHeight = newWidth / aspectRatio
+                    if (newHeight > maxHeight) {
+                        newHeight = maxHeight
+                        newWidth = newHeight * aspectRatio
+                    }
                 }
-                pending = true
-                if (rafId !== null) {
-                    cancelAnimationFrame(rafId)
+                else {
+                    newWidth = Math.min(currentWidth, maxWidth)
+                    newHeight = Math.min(currentHeight, maxHeight)
                 }
-                rafId = requestAnimationFrame(computeAndApply)
+                // Recalculate centered position for cropper
+                let newLeft, newTop
+                if (config.attachTo === 'center') {
+                    newLeft = (containerRect.width - newWidth) / 2
+                    newTop = (containerRect.height - newHeight) / 2
+                    // Constrain position within bounds
+                    newLeft = Math.min(Math.max(newLeft, newBounds.left + margin), newBounds.right - newWidth - margin)
+                    newTop = Math.min(Math.max(newTop, newBounds.top + margin), newBounds.bottom - newHeight - margin)
+                }
+                else {
+                    newLeft = config.position.left
+                    newTop = config.position.top
+                }
+                // Update crop dimensions and position
+                config.cropDimensions = {
+                    left:   newLeft,
+                    top:    newTop,
+                    width:  newWidth,
+                    height: newHeight,
+                }
+                config.position = {
+                    left: newLeft,
+                    top:  newTop,
+                }
+                // Apply dimensions and position synchronously
+                element.style.width = `${newWidth}px`
+                element.style.height = `${newHeight}px`
+                element.style.left = `${newLeft}px`
+                element.style.top = `${newTop}px`
+
+                // Apply clip-path immediately
+                this.#cropper.applyCropToOverlay(config)
+                // Update Moveable only if necessary
+                if (moveable && moveable.current && (config.transform || config.isCropper)) {
+                    moveable.current.updateRect()
+                }
+                // Dispatch crop update
+                this.#cropper.dispatchCropUpdate(config, 'resize')
+                setPosition(config.position)
             }
-        })()
+        }
         if (config.container) {
             config.observer = new ResizeObserver(handleResize)
             config.observer.observe(config.container)

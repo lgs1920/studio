@@ -76,16 +76,13 @@ export class WidgetCropper {
      * @param {Object} config - Widget configuration
      */
     applyCropToOverlay = config => {
-        if (!config?.isCropper || !config.outsideOverlay) {
+        if (!config?.isCropper || !config.outsideOverlay || !config.cropDimensions) {
             return
         }
-        const {left, top, width, height} = config.cropDimensions || {}
+        const {left, top, width, height} = config.cropDimensions
+        // Ensure dimensions are valid before applying clip-path
         if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
             config.outsideOverlay.style.clipPath = this.openWindowInOverlay({left, top, width, height})
-        }
-        else {
-            this.cropDimensions(config)
-            config.outsideOverlay.style.clipPath = this.openWindowInOverlay(config.cropDimensions)
         }
     }
 
