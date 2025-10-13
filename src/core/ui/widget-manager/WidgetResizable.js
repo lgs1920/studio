@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-12
- * Last modified: 2025-10-12
+ * Created on: 2025-10-13
+ * Last modified: 2025-10-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -73,7 +73,7 @@ export class WidgetResizable {
         if (!target || !event) {
             return
         }
-        this.#widgetManager._isResizing = true
+        this.#widgetManager.isResizing = true
         const width = Math.round(event.width)
         const height = Math.round(event.height)
         const config = this.#widgetManager.getWidgetConfig(this.#widgetManager.retrieveElementId(target))
@@ -147,7 +147,7 @@ export class WidgetResizable {
         if (childRef.current?.handleResize) {
             childRef.current.handleResize({left: finalLeft, top: finalTop, width, height})
         }
-        this.#widgetManager._isResizing = false
+        this.#widgetManager.isResizing = false
     }, 16)
 
     /**
@@ -155,7 +155,7 @@ export class WidgetResizable {
      * @param {Object} event - Resize event
      */
     onResizeStart = event => {
-        this.#widgetManager._isResizing = true
+        this.#widgetManager.isResizing = true
         event.target.classList.add('resizing')
         const config = this.#widgetManager.retrieveConfig(event.target)
         if (config.animationWhenResizing) {
@@ -178,7 +178,7 @@ export class WidgetResizable {
      * @param {Object} event - Resize event
      */
     onResizeEnd = event => {
-        this.#widgetManager._isResizing = false
+        this.#widgetManager.isResizing = false
         event.target.classList.remove('resizing', LGS_ANIMATION_RESIZING)
         const config = this.#widgetManager.retrieveConfig(event.target)
         if (config?.isCropper) {

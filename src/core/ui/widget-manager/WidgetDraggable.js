@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-12
- * Last modified: 2025-10-12
+ * Created on: 2025-10-13
+ * Last modified: 2025-10-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -53,7 +53,7 @@ export class WidgetDraggable {
         if (config.animationWhenDragging) {
             event.target.classList.add(LGS_ANIMATION_DRAGGING)
         }
-        this.#widgetManager._isDragging = true
+        this.#widgetManager.isDragging = true
         this.#widgetManager._current = this.#widgetManager.retrieveElementId(event.target)
     }
 
@@ -84,7 +84,7 @@ export class WidgetDraggable {
      */
     onDragEnd = event => {
         event.target.classList.remove('dragging', LGS_ANIMATION_DRAGGING)
-        this.#widgetManager._isDragging = false
+        this.#widgetManager.isDragging = false
         const config = this.#widgetManager.retrieveConfig(event.target)
         if (config?.isCropper) {
             const currentTransform = event.target.style.transform || ''
