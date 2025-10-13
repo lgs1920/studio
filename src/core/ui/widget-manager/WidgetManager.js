@@ -394,9 +394,9 @@ export class WidgetManager {
             return isNaN(numValue) ? 0 : numValue
         }
 
-        // Use provided left/top or center for croppers
-        let left = config.isCropper ? (container.width - defaultWidth) / 2 : parsePosition(config.left ?? '10%', container.width)
-        let top = config.isCropper ? (container.height - defaultHeight) / 2 : parsePosition(config.top ?? '10%', container.height)
+        // Use provided left/top or center for croppers, relative to the container
+        let left = config.isCropper ? (container.width - defaultWidth) / 2 : container.left + parsePosition(config.left ?? '10%', container.width)
+        let top = config.isCropper ? (container.height - defaultHeight) / 2 : container.top + parsePosition(config.top ?? '10%', container.height)
         const attachTo = config.attachTo || (config.isCropper ? 'center' : 'top-left')
 
         // Adjust position based on anchor point, skip center adjustment for croppers
