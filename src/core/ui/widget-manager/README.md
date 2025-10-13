@@ -83,7 +83,7 @@ const success = widgetManager.setupElement(
             container:        document.querySelector('#container'),
             isCropper:        true,
             showControlBox:   true,
-            containerPadding: 10,
+          margin: 10,
             ratio:            '16x9',
             minCropSize:      {width: 100, height: 100},
             outsideOverlay:   document.querySelector('#overlay'),
@@ -164,7 +164,7 @@ The `initialConfig` object passed to `setupElement` supports the following prope
 | `container`             | HTMLElement   | The container element for bounds and resize observation.                     |
 | `isCropper`             | boolean       | Whether the widget is a crop zone.                                           |
 | `showControlBox`        | boolean       | Whether to display a control box for resizing/dragging.                      |
-| `containerPadding`      | number        | Padding inside the container (in pixels).                                    |
+| `margin`                | number        | Margin around the widget (in pixels).                                        |
 | `ratio`                 | string        | Aspect ratio identifier (e.g., '16x9', '9x16', '1x1').                       |
 | `minCropSize`           | Object        | Minimum crop dimensions `{ width: number, height: number }`.                 |
 | `outsideOverlay`        | HTMLElement   | Overlay element for crop zone clipping.                                      |
@@ -249,7 +249,7 @@ document.addEventListener('onCropUpdate', event => {
 - The `WidgetManager` assumes the presence of a `Moveable` library for drag and resize functionality.
 - The singleton pattern ensures only one instance of each class (`WidgetManager`, `WidgetDraggable`, `WidgetResizable`,
   `WidgetCropper`) manages all widgets, preventing conflicts.
-- The `containerPadding` and `minCropSize` properties enforce constraints for crop zones, handled by `WidgetCropper`.
+- The `margin` and `minCropSize` properties enforce constraints for crop zones, handled by `WidgetCropper`.
 - Aspect ratio handling respects the `useRatio` and `ratio` configuration to maintain consistent proportions.
 - Group management allows for efficient handling of related widgets (e.g., disposing all widgets in a group).
 - The interface remains transparent, so components interact only with `WidgetManager`, unaware of the delegated classes.

@@ -99,7 +99,7 @@ export class WidgetCropper {
         const container = this.#widgetManager.refreshBounds(config)
         container.width = container.right - container.left
         container.height = container.bottom - container.top
-        const padding = config.containerPadding || 0
+        const padding = config.margin || 0
         const paddedWidth = container.width - 2 * padding
         const paddedHeight = container.height - 2 * padding
         let width = 0
@@ -233,7 +233,7 @@ export class WidgetCropper {
 
         // Calculate new dimensions based on aspect ratio
         const container = config.container.getBoundingClientRect()
-        const padding = config.containerPadding || 0
+        const padding = config.margin || 0
         const paddedWidth = container.width - 2 * padding
         const paddedHeight = container.height - 2 * padding
         const maxWidth = Math.floor(paddedWidth * this.#CROP_SCALE_FACTOR)

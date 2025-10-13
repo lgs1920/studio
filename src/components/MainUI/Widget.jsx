@@ -14,8 +14,8 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_WIDGET } from '@Core/constants'
-import classNames from 'classnames'
+import { LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_SNAP, LGS_TOOLBAR, LGS_WIDGET } from '@Core/constants'
+import classNames                                                                            from 'classnames'
 import React, { Children, cloneElement, useCallback, useEffect, useRef, useState } from 'react'
 import Moveable   from 'react-moveable'
 import { useSingleOrDoubleEvent } from '@Core/events/useSingleOrDoubleEvent'
@@ -289,7 +289,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     left:           config.left,
                     top:            config.top,
                     attachTo:       config.attachTo,
-                    containerPadding: config.containerPadding ?? 0,
+                    margin: config.margin ?? 0,
                     opacity:        config.opacity ?? lgs.settings.ui.toolbars.opacity,
                     type:           LGS_WIDGET,
                     animationWhenDragging: (config.animationWhenDragging ?? null) !== null
@@ -365,7 +365,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                   config?.animationWhenDragging,
                   config?.resizable,
                   config?.resizeFromCenter,
-                  config?.containerPadding,
+                  config?.margin,
                   config?.outsideOverlay,
                   config?.type,
                   config?.persistInTable,
@@ -395,7 +395,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                             LGS_WIDGET,
                             {
                                 [className]: !!className,
-                                [LGS_TOOLBAR]: config?.type === LGS_TOOLBAR,
+                                [config?.type]: config?.type && config?.type !== LGS_WIDGET,
                                 [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
                                 [LGS_ANIMATION_RESIZING]: config.animationWhenResizing,
                             }

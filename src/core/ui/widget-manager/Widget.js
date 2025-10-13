@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-09
- * Last modified: 2025-10-09
+ * Created on: 2025-10-13
+ * Last modified: 2025-10-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -91,7 +91,7 @@ export class Widget {
             required,
             container,
             showControlBox:   true,
-            containerPadding: 10,
+            margin: 10,
             isCropper:        false,
             type:             LGS_WIDGET,
             resizable,

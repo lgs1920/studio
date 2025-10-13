@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-12
- * Last modified: 2025-10-12
+ * Created on: 2025-10-13
+ * Last modified: 2025-10-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -250,7 +250,7 @@ export class WidgetManager {
                 dimensions:     {width: 0, height: 0},
                 observer:       null,
                 showControlBox: initialConfig.showControlBox,
-                containerPadding: initialConfig.containerPadding,
+                margin: initialConfig.margin,
                 animationWhenDragging: initialConfig.animationWhenDragging ?? false,
                 ratio:          this.getRatio(initialConfig.ratio ?? ratio),
                 useRatio:       initialConfig.useRatio ?? true,
@@ -693,7 +693,6 @@ export class WidgetManager {
                 }
                 setBounds(newBounds)
                 this.setBoundStatus(element, config)
-
                 // Adjust transform for dragging elements
                 if (config.transform) {
                     const match = config.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
@@ -731,10 +730,42 @@ export class WidgetManager {
                         }
                     }
                 }
-
                 // Update cropper position and dimensions
                 if (config.isCropper) {
-                    this.#cropper.handleContainerResize(config, element, moveable, setPosition)
+                    // Recalculate crop dimensions based on new container size
+                    const containerRect = config.container.getBoundingClientRect()
+                    const currentWidth = config.cropDimensions?.width || 200
+                    const currentHeight = config.cropDimensions?.height || 200
+                    // Maintain aspect ratio if locked
+                    let newWidth = currentWidth
+                    let newHeight = currentHeight
+                    if (config.ratio?.locked) {
+                        const aspectRatio = config.ratio.aspectRatio
+                        newWidth = Math.min(currentWidth, containerRect.width) // Limit to 90% of container
+                        newHeight = newWidth / aspectRatio
+                        if (newHeight > containerRect.height) {
+                            newHeight = containerRect.height
+                            newWidth = newHeight * aspectRatio
+                        }
+                    }
+                    else {
+                        newWidth = Math.min(currentWidth, containerRect.width)
+                        newHeight = Math.min(currentHeight, containerRect.height)
+                    }
+                    // Update crop dimensions
+                    config.cropDimensions = {
+                        left:   config.position.left,
+                        top:    config.position.top,
+                        width:  newWidth,
+                        height: newHeight,
+                    }
+                    // Apply new position and dimensions
+                    const newPosition = this.computeInitialPosition(config, element, false)
+                    this.applyPosition(element, newPosition, moveable, false, setPosition)
+                    element.style.width = `${newWidth}px`
+                    element.style.height = `${newHeight}px`
+                    this.#cropper.applyCropToOverlay(config)
+                    this.#cropper.dispatchCropUpdate(config, 'resize')
                 }
                 const rightChanged = lastComputed.right !== newBounds.right
                 const bottomChanged = lastComputed.bottom !== newBounds.bottom
