@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-13
- * Last modified: 2025-10-13
+ * Created on: 2025-10-14
+ * Last modified: 2025-10-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -263,7 +263,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
-     * Initialize draggable widget and handle cleanup
+     * Initialize the widget and handle cleanup
      */
     useEffect(() => {
         if (!config || !isVisible) {
@@ -299,8 +299,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     resizeFromCenter: config.resizeFromCenter ?? false,
                     resizable:      config.resizable ?? false,
                     forceEven: config.forceEven ?? false,
-                    persistInTable: config.persistInTable ?? false,
                     group: config.group ?? null,
+                    transient: config.transient ?? false,
+                    persist:   config.persist ?? false,
+                    dynamic:   config.dynamic ?? false,
+                    ttl:       config.ttl ?? null,
                 },
                 setBounds,
                 setPosition,
@@ -335,7 +338,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             }
 
             // Dispose widget from WidgetManager if not persistent
-            if (_initialized.current && widgetElement && _widgetManager.current && !config?.persistInTable) {
+            if (_initialized.current && widgetElement && _widgetManager.current && !config?.persist) {
                 try {
                     _widgetManager.current.disposeElement(widgetElement)
                 }
@@ -368,7 +371,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                   config?.margin,
                   config?.outsideOverlay,
                   config?.type,
-                  config?.persistInTable,
+                  config?.transient,
                   config?.isCropper,
               ])
 

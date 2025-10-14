@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-13
- * Last modified: 2025-10-13
+ * Created on: 2025-10-14
+ * Last modified: 2025-10-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -162,8 +162,8 @@ export class WidgetCropper {
      * @param {Object} event - Click event
      * @param {Function} setPosition - Function to set position
      */
-    onDoubleClick = (event, setPosition) => {
-        const config = this.#widgetManager.retrieveConfig(event.target)
+    onDoubleClick = async (event, setPosition) => {
+        const config = await this.#widgetManager.retrieveConfig(event.target)
         if (!config?.isCropper) {
             return
         }

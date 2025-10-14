@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-13
- * Last modified: 2025-10-13
+ * Created on: 2025-10-14
+ * Last modified: 2025-10-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,6 +19,7 @@
  * Handles positioning and delegates cropping functionality to WidgetCropper.
  */
 import { SECOND }          from '@Core/constants'
+import { WidgetDBManager } from '@Core/ui/widget-manager/WidgetDBManager'
 import { v4 as uuidv4 }    from 'uuid'
 import { WidgetCropper }   from './WidgetCropper'
 import { WidgetDraggable } from './WidgetDraggable'
@@ -61,6 +62,9 @@ export class WidgetManager {
     /** @type {WidgetCropper} Instance of WidgetCropper */
     #cropper
 
+    /** @type {WidgetDBManager} Instance of WidgetDBManager */
+    #widgetDB
+
     /**
      * Creates or returns the singleton instance of WidgetManager.
      * @param {Object} store - Application store (currently unused)
@@ -70,6 +74,7 @@ export class WidgetManager {
             return WidgetManager.#instance
         }
         this.#widgets = new Map()
+        this.#widgetDB = new WidgetDBManager(this)
         this.#cropper = new WidgetCropper(this)
         this.#draggable = new WidgetDraggable(this, this.#cropper)
         this.#resizable = new WidgetResizable(this, this.#cropper)
@@ -134,7 +139,7 @@ export class WidgetManager {
      * @param {Object} moveable - Moveable instance reference
      * @returns {boolean} True if setup is successful, false otherwise
      */
-    setupElement = (element, initialConfig, setBounds, setPosition, moveable) => {
+    setupElement = async (element, initialConfig, setBounds, setPosition, moveable) => {
         // Validate inputs
         if (!element || !initialConfig?.container || !moveable.current) {
             return false
@@ -153,7 +158,9 @@ export class WidgetManager {
             e.target.style.opacity = initialConfig.opacity
         }
         initialConfig.controlBoxVisibility = initialConfig.showControlBox || false
-        const config = this.retrieveConfig(element, initialConfig)
+
+        // Get config for this element
+        const config = await this.retrieveConfig(element, initialConfig)
 
         // Set default ratio if none exists
         if (!config?.ratio || !Number.isFinite(config.ratio?.aspectRatio)) {
@@ -217,12 +224,12 @@ export class WidgetManager {
     }
 
     /**
-     * Retrieves or creates widget configuration for an element.
+     * Retrieves or creates widget configuration for an element, including saved positions from browser DB.
      * @param {HTMLElement} element - The DOM element
      * @param {Object} initialConfig - Initial configuration
      * @returns {Object} Widget configuration
      */
-    retrieveConfig = (element, initialConfig = {}) => {
+    retrieveConfig = async (element, initialConfig = {}) => {
         const elementId = initialConfig.id && typeof initialConfig.id === 'string' && initialConfig.id.trim()
                           ? initialConfig.id
                           : this.retrieveElementId(element) || uuidv4()
@@ -235,38 +242,59 @@ export class WidgetManager {
                                 ? initialConfig.position
                                 : 'top-left')
             const ratio = __.device.isPortrait ? '9x16' : '16x9'
-            this.#widgets.set(elementId, {
-                id:             elementId,
-                boundStatus:    {left: false, top: false, right: false, bottom: false},
-                container:      initialConfig.container,
-                isCropper:      initialConfig.isCropper,
-                isMobile:       initialConfig.isMobile,
-                bounds:         {left: 0, top: 0, right: 0, bottom: 0},
-                position:       {left: 0, top: 0},
-                left:           initialConfig.left,
-                top:            initialConfig.top,
-                attachTo:       anchor,
-                snapPoints:     [],
-                dimensions:     {width: 0, height: 0},
-                observer:       null,
-                showControlBox: initialConfig.showControlBox,
-                margin: initialConfig.margin,
+            const config = {
+                id:               elementId,
+                boundStatus:      {left: false, top: false, right: false, bottom: false},
+                container:        initialConfig.container,
+                isCropper:        initialConfig.isCropper,
+                isMobile:         initialConfig.isMobile,
+                bounds:           {left: 0, top: 0, right: 0, bottom: 0},
+                position:         {left: 0, top: 0},
+                left:             initialConfig.left,
+                top:              initialConfig.top,
+                attachTo:         anchor,
+                snapPoints:       [],
+                dimensions:       {width: 0, height: 0},
+                observer:         null,
+                showControlBox:   initialConfig.showControlBox,
+                containerPadding: initialConfig.containerPadding,
                 animationWhenDragging: initialConfig.animationWhenDragging ?? false,
-                ratio:          this.getRatio(initialConfig.ratio ?? ratio),
-                useRatio:       initialConfig.useRatio ?? true,
-                minCropSize: initialConfig.minCropSize ?? {width: 0, height: 0},
-                outsideOverlay: initialConfig.outsideOverlay,
+                ratio:            this.getRatio(initialConfig.ratio ?? ratio),
+                useRatio:         initialConfig.useRatio ?? true,
+                minCropSize:      initialConfig.minCropSize ?? {width: 0, height: 0},
+                outsideOverlay:   initialConfig.outsideOverlay,
                 resizeFromCenter: initialConfig.resizeFromCenter ?? false,
-                centerRatio:    {x: 0.5, y: 0.5},
+                centerRatio:      {x: 0.5, y: 0.5},
                 previousCropDimensions: null,
-                isMaximized:    false,
-                moveable:       initialConfig.moveable,
-                setPosition: initialConfig.setPosition,
-                element:        initialConfig.element,
-                cropDimensions: initialConfig.cropDimensions,
-                persistInTable: initialConfig.persistInTable ?? false,
-                group:          initialConfig.group ?? null,
-            })
+                moveable:         initialConfig.moveable,
+                setPosition:      initialConfig.setPosition,
+                element:          initialConfig.element,
+                cropDimensions:   initialConfig.cropDimensions,
+                group:            initialConfig.group ?? null,
+                persist:          initialConfig.persist ?? null,
+                transient:        initialConfig.transient ?? false,
+                dynamic:          initialConfig.dynamic ?? false,
+                ttl:              initialConfig.ttl ?? this.TTL,
+            }
+            // Restore position from IndexedDB if available
+            if (config.persist) {
+                const savedPosition = await this.getWidgetPosition(elementId)
+                if (savedPosition) {
+                    config.position = {
+                        left: savedPosition.left,
+                        top:  savedPosition.top,
+                    }
+                    config.cropDimensions = config.cropDimensions || {}
+                    config.cropDimensions.width = savedPosition.width
+                    config.cropDimensions.height = savedPosition.height
+                    config.dimensions = {
+                        width:  savedPosition.width,
+                        height: savedPosition.height,
+                    }
+                    config.group = savedPosition.group || config.group
+                }
+            }
+            this.#widgets.set(elementId, config)
         }
         else {
             const widget = this.#widgets.get(elementId)
@@ -531,14 +559,14 @@ export class WidgetManager {
     }
 
     /**
-     * Disposes all widgets in a group, respecting persistInTable flag.
+     * Disposes all widgets in a group, respecting persist flag.
      * @param {string} groupId - The group identifier
-     * @param {boolean} usePersist - Whether to respect persistInTable flag
+     * @param {boolean} usePersist - Whether to respect persist flag
      */
     disposeByGroup = (groupId, usePersist = false) => {
         const elementsToDispose = []
         for (const [elementId, config] of this.#widgets) {
-            if (config.group === groupId && (!usePersist || !config.persistInTable)) {
+            if (config.group === groupId && (!usePersist || !config.persist)) {
                 elementsToDispose.push(elementId)
             }
         }
@@ -648,16 +676,16 @@ export class WidgetManager {
     getWidgetConfig = elementId => this.#widgets.get(elementId)
 
     /**
-     * Get the widget element by Id
-     * @param id
-     * @return {HTMLElement}
+     * Retrieves the widget element by ID.
+     * @param {string} id - The widget ID
+     * @returns {HTMLElement|null} The DOM element or null if not found
      */
     getElementById = id => document.querySelector(`[${this.#ID_KEY}="${id}"]`)
 
     /**
-     * Get the widget ID from element
-     * @param {HTMLElement} element
-     * @return {string}
+     * Retrieves the widget ID from an element.
+     * @param {HTMLElement} element - The DOM element
+     * @returns {string|null} The widget ID or null if not found
      */
     getIdFromElement = element => element.getAttribute(this.#ID_KEY)
 
@@ -809,4 +837,33 @@ export class WidgetManager {
     setConfig = (elementId, config) => {
         this.#widgets.set(elementId, config)
     }
+
+    /**
+     * Saves widget position and dimensions to IndexedDB with a 1-hour TTL.
+     * @param {string} widgetId - The widget ID
+     * @param {Object} config - Widget configuration
+     * @returns {Promise<void>}
+     */
+    saveWidgetPosition = async (widgetId, config) => this.#widgetDB.saveWidgetPosition(widgetId, config)
+
+    /**
+     * Retrieves widget position from IndexedDB if not expired.
+     * @param {string} widgetId - The widget ID
+     * @returns {Promise<Object|null>} Position data or null if not found/expired
+     */
+    getWidgetPosition = async widgetId => this.#widgetDB.getWidgetPosition(widgetId)
+
+    /**
+     * Retrieves all widget positions for a given group from IndexedDB if not expired.
+     * @param {string} groupId - The group ID
+     * @returns {Promise<Object[]>} Array of position data for the group
+     */
+    getWidgetsByGroup = async groupId => this.#widgetDB.getWidgetsByGroup(groupId)
+
+    /**
+     * Deletes all widget positions for a given group from IndexedDB.
+     * @param {string} groupId - The group ID
+     * @returns {Promise<void>}
+     */
+    deleteWidgetsByGroup = async groupId => this.#widgetDB.deleteWidgetsByGroup(groupId)
 }

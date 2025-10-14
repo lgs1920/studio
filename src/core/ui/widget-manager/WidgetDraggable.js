@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-13
- * Last modified: 2025-10-13
+ * Created on: 2025-10-14
+ * Last modified: 2025-10-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -47,9 +47,9 @@ export class WidgetDraggable {
      * Handles the start of a drag event.
      * @param {Object} event - Drag event
      */
-    onDragStart = event => {
+    onDragStart = async event => {
         event.target.classList.add('dragging')
-        const config = this.#widgetManager.retrieveConfig(event.target)
+        const config = await this.#widgetManager.retrieveConfig(event.target)
         if (config.animationWhenDragging) {
             event.target.classList.add(LGS_ANIMATION_DRAGGING)
         }
@@ -61,8 +61,8 @@ export class WidgetDraggable {
      * Handles drag events, updating crop overlay in real-time.
      * @param {Object} event - Drag event from Moveable
      */
-    onDrag = event => {
-        const config = this.#widgetManager.retrieveConfig(event.target)
+    onDrag = async event => {
+        const config = await this.#widgetManager.retrieveConfig(event.target)
         if (config?.isCropper && config.outsideOverlay) {
             const [dx, dy] = event.translate || [0, 0]
             const baseLeft = parseInt(event.target.style.left || '0', 10)
@@ -83,31 +83,32 @@ export class WidgetDraggable {
      * Handles the end of a drag event.
      * @param {Object} event - Drag event
      */
-    onDragEnd = event => {
+    onDragEnd = async event => {
         event.target.classList.remove('dragging', LGS_ANIMATION_DRAGGING)
         this.#widgetManager.isDragging = false
-        const config = this.#widgetManager.retrieveConfig(event.target)
+        const config = await this.#widgetManager.retrieveConfig(event.target)
+        const currentTransform = event.target.style.transform || ''
+        const match = currentTransform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
+        if (match) {
+            const dx = parseFloat(match[1]) || 0
+            const dy = parseFloat(match[2]) || 0
+            const baseLeft = parseInt(event.target.style.left || '0', 10)
+            const baseTop = parseInt(event.target.style.top || '0', 10)
+            const finalLeft = Math.round(baseLeft + dx)
+            const finalTop = Math.round(baseTop + dy)
+            event.target.style.left = `${finalLeft}px`
+            event.target.style.top = `${finalTop}px`
+            event.target.style.transform = 'none'
+            config.transform = undefined
+            config.position = {left: finalLeft, top: finalTop}
+        }
+        config.element = event.target
+        const left = parseInt(event.target.style.left || '0', 10)
+        const top = parseInt(event.target.style.top || '0', 10)
+        const width = parseInt(event.target.style.width || '0', 10) || event.target.getBoundingClientRect().width || 200
+        const height = parseInt(event.target.style.height || '0', 10) || event.target.getBoundingClientRect().height || 200
+
         if (config?.isCropper) {
-            const currentTransform = event.target.style.transform || ''
-            const match = currentTransform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
-            if (match) {
-                const dx = parseFloat(match[1]) || 0
-                const dy = parseFloat(match[2]) || 0
-                const baseLeft = parseInt(event.target.style.left || '0', 10)
-                const baseTop = parseInt(event.target.style.top || '0', 10)
-                const finalLeft = Math.round(baseLeft + dx)
-                const finalTop = Math.round(baseTop + dy)
-                event.target.style.left = `${finalLeft}px`
-                event.target.style.top = `${finalTop}px`
-                event.target.style.transform = 'none'
-                config.transform = undefined
-                config.position = {left: finalLeft, top: finalTop}
-            }
-            config.element = event.target
-            const left = parseInt(event.target.style.left || '0', 10)
-            const top = parseInt(event.target.style.top || '0', 10)
-            const width = parseInt(event.target.style.width || '0', 10) || event.target.getBoundingClientRect().width || 200
-            const height = parseInt(event.target.style.height || '0', 10) || event.target.getBoundingClientRect().height || 200
             if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
                 config.cropDimensions = {left, top, width, height}
             }
@@ -120,6 +121,10 @@ export class WidgetDraggable {
             }
             this.#widgetCropper.applyCropToOverlay(config)
             this.#widgetCropper.dispatchCropUpdate(config, 'drag-end')
+        }
+
+        if (config.persist) {
+            this.#widgetManager.saveWidgetPosition(config.id, config)
         }
     }
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-13
- * Last modified: 2025-10-13
+ * Created on: 2025-10-14
+ * Last modified: 2025-10-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -154,10 +154,10 @@ export class WidgetResizable {
      * Handles the start of a resize event.
      * @param {Object} event - Resize event
      */
-    onResizeStart = event => {
+    onResizeStart = async event => {
         this.#widgetManager.isResizing = true
         event.target.classList.add('resizing')
-        const config = this.#widgetManager.retrieveConfig(event.target)
+        const config = await this.#widgetManager.retrieveConfig(event.target)
         if (config.animationWhenResizing) {
             event.target.classList.add(LGS_ANIMATION_RESIZING)
         }
@@ -177,10 +177,10 @@ export class WidgetResizable {
      * Handles the end of a resize event.
      * @param {Object} event - Resize event
      */
-    onResizeEnd = event => {
+    onResizeEnd = async event => {
         this.#widgetManager.isResizing = false
         event.target.classList.remove('resizing', LGS_ANIMATION_RESIZING)
-        const config = this.#widgetManager.retrieveConfig(event.target)
+        const config = await this.#widgetManager.retrieveConfig(event.target)
         if (config?.isCropper) {
             config.element = event.target
             const left = parseInt(event.target.style.left || '0', 10)
@@ -191,6 +191,10 @@ export class WidgetResizable {
             config.cropDimensions = {left, top, width, height}
             this.#widgetCropper.applyCropToOverlay(config)
             this.#widgetCropper.dispatchCropUpdate(config, 'end')
+        }
+
+        if (config.persist) {
+            this.#widgetManager.saveWidgetPosition(config.id, config)
         }
     }
 }

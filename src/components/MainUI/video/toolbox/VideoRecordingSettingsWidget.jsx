@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-10
- * Last modified: 2025-10-10
+ * Created on: 2025-10-14
+ * Last modified: 2025-10-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -34,7 +34,7 @@ export const VideoRecordingSettingsWidget = ({id}) => {
             attachTo: 'bottom',
             opacity:  lgs.settings.ui.toolbars.opacity,
             id:             id,
-            persistInTable: true,
+            persist: true,
             group: VIDEO_TOOLS_WIDGET_GROUP,
         }
     }, [])
