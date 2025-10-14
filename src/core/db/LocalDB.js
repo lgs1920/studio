@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-22
- * Last modified: 2025-06-22
+ * Created on: 2025-10-14
+ * Last modified: 2025-10-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -29,16 +29,17 @@ const DEFAULT_MAX_RETRIES = 3
  * - TTL (Time-To-Live) support for automatic data expiration
  * - Transaction management with retry logic
  * - Transient data store support
+ * - Index-based search support
  *
  * @example
  * const db = new LocalDB({
  *   name: 'myapp',
- *   stores: ['users', 'settings'],
+ *   stores: [{ name: 'users', indexes: [{ name: 'group', keyPath: 'group' }] }],
  *   manageTransients: true
  * });
  *
- * await db.put('user1', { name: 'John' }, 'users');
- * const user = await db.get('user1', 'users');
+ * await db.put('user1', { name: 'John', group: 'admin' }, 'users');
+ * const users = await db.findByIndex('group', 'admin', 'users');
  */
 export class LocalDB {
     #db = null
@@ -68,7 +69,7 @@ export class LocalDB {
      *
      * @param {Object} options - Configuration options
      * @param {string} [options.name='mydb'] - Database name
-     * @param {string|string[]} [options.stores='mystore'] - Store names
+     * @param {string|string[]|Object[]} [options.stores='mystore'] - Store names or store configurations with indexes
      * @param {boolean} [options.manageTransients=false] - Whether to create a transients store
      * @param {number} [options.version=1] - Database version
      */
@@ -78,25 +79,30 @@ export class LocalDB {
                     manageTransients = false,
                     version = this.#version,
                 }) {
-        if (!(stores instanceof Array)) {
-            stores = [stores]
-        }
+        // Normalize stores to an array of objects with name and optional indexes
+        const normalizedStores = Array.isArray(stores)
+                                 ? stores.map(store => typeof store === 'string' ? {name: store, indexes: []} : store)
+                                 : [{name: stores, indexes: []}]
         if (manageTransients) {
-            stores.push(this.#transients)
+            normalizedStores.push({name: this.#transients, indexes: []})
         }
 
-        this.#stores = stores
+        this.#stores = normalizedStores.map(store => store.name)
+        console.log(`Browser DB ${name} initialized with stores: ${this.#stores}`)
         this.#name = name
         this.#version = version
         this.#deletingKeys = new Set()
         this.#writingKeys = new Map()
 
-        const tables = this.#stores
         this.#db = openDB(this.#name, version, {
             upgrade(db, oldVersion, newVersion) {
-                tables.forEach(table => {
-                    if (!db.objectStoreNames.contains(table)) {
-                        db.createObjectStore(table)
+                normalizedStores.forEach(storeConfig => {
+                    if (!db.objectStoreNames.contains(storeConfig.name)) {
+                        const store = db.createObjectStore(storeConfig.name)
+                        // Create indexes if specified
+                        storeConfig.indexes?.forEach(index => {
+                            store.createIndex(index.name, index.keyPath, index.options || {unique: false})
+                        })
                     }
                 })
                 console.log(`Browser DB ${name} upgraded from version ${oldVersion} to ${newVersion}.`)
@@ -121,7 +127,7 @@ export class LocalDB {
      * @returns {Promise<any>} The value or null if not found/expired
      * @throws {Error} If the operation fails
      */
-    async get(key, store, full = false) {
+    get = async (key, store, full = false) => {
         this.#validateKey(key)
         this.#validateStore(store)
 
@@ -180,7 +186,7 @@ export class LocalDB {
      * @returns {Promise<void>} Resolves when the operation completes
      * @throws {Error} If the operation fails
      */
-    async put(key, value, store, ttl = null) {
+    put = async (key, value, store, ttl = null) => {
         this.#validateKey(key)
         this.#validateStore(store)
 
@@ -231,7 +237,7 @@ export class LocalDB {
      * @returns {Promise<boolean>} True if deleted, false if key didn't exist or already being deleted
      * @throws {Error} If the operation fails
      */
-    async delete(key, store) {
+    delete = async (key, store) => {
         this.#validateKey(key)
         this.#validateStore(store)
 
@@ -274,7 +280,7 @@ export class LocalDB {
      * @returns {Promise<void>} Resolves when the operation completes
      * @throws {Error} If the operation fails
      */
-    async clear(store) {
+    clear = async store => {
         this.#validateStore(store)
         const callId = this.#generateCallId()
 
@@ -303,7 +309,7 @@ export class LocalDB {
      * @returns {Promise<string[]>} Array of keys in the store
      * @throws {Error} If the operation fails
      */
-    async keys(store) {
+    keys = async store => {
         this.#validateStore(store)
         const callId = this.#generateCallId()
 
@@ -320,12 +326,12 @@ export class LocalDB {
 
     /**
      * Checks if a key exists in the store
-     * 
+     *
      * @param {string} key - The key to check
      * @param {string} store - The store name
      * @returns {Promise<boolean>} True if the key exists and is valid, false otherwise
      */
-    async hasKey(key, store) {
+    hasKey = async (key, store) => {
         this.#validateKey(key)
         this.#validateStore(store)
 
@@ -339,11 +345,85 @@ export class LocalDB {
     }
 
     /**
+     * Finds items in a store by index value
+     *
+     * @param {string} indexName - The name of the index to search
+     * @param {any} indexValue - The value to match in the index
+     * @param {string} store - The store name
+     * @param {boolean} [full=false] - Whether to return full metadata or just data
+     * @returns {Promise<Object[]>} Array of matching items
+     * @throws {Error} If the operation fails or index doesn't exist
+     */
+    findByIndex = async (indexName, indexValue, store, full = false) => {
+        this.#validateStore(store)
+
+        const cacheKey = `${store}:index:${indexName}:${indexValue}`
+
+        // Check memory cache first
+        if (this.#memoryCache.has(cacheKey)) {
+            const cached = this.#memoryCache.get(cacheKey)
+            if (cached.timestamp > Date.now() - CACHE_TTL) {
+                return full ? cached.value : cached.value.map(item => item.data)
+            }
+            this.#memoryCache.delete(cacheKey)
+        }
+
+        const callId = this.#generateCallId()
+
+        try {
+            const results = await this.#withTransaction(store, 'readonly', async storeObj => {
+                const index = storeObj.index(indexName)
+                if (!index) {
+                    throw new Error(`Index "${indexName}" does not exist in store "${store}".`)
+                }
+
+                const items = await index.getAll(indexValue)
+                const validItems = []
+                const expiredKeys = []
+
+                for (const item of items) {
+                    if (!this.#isExpired(item)) {
+                        validItems.push(full ? item : item.data)
+                    }
+                    else {
+                        expiredKeys.push(item._key_)
+                    }
+                }
+
+                // Delete expired items
+                if (expiredKeys.length > 0) {
+                    await this.#withTransaction(store, 'readwrite', async storeObj => {
+                        for (const key of expiredKeys) {
+                            await storeObj.delete(key)
+                        }
+                    })
+                }
+
+                return validItems
+            })
+
+            // Cache the results if not empty and cache isn't full
+            if (results.length > 0 && this.#memoryCache.size < this.#cacheMaxSize) {
+                this.#memoryCache.set(cacheKey, {
+                    value:     full ? results : results.map(data => ({data})),
+                    timestamp: Date.now(),
+                })
+            }
+
+            return results
+        }
+        catch (error) {
+            console.error(`[${callId}][${store}] Failed to find by index "${indexName}" with value "${indexValue}":`, error)
+            throw error
+        }
+    }
+
+    /**
      * Deletes the entire database
      *
      * @returns {Promise<number>} 0 on error, 1 on success, 2 if blocked
      */
-    async deleteDB() {
+    deleteDB = async () => {
         return new Promise(async (resolve) => {
             try {
                 const db = await this.#db
@@ -366,10 +446,10 @@ export class LocalDB {
 
     /**
      * Diagnoses the database state and returns diagnostic information
-     * 
+     *
      * @returns {Promise<Object>} Diagnostic information about the database
      */
-    async diagnose() {
+    diagnose = async () => {
         try {
             const db = await this.#getDB()
             const result = {
@@ -386,10 +466,13 @@ export class LocalDB {
             for (const store of this.#stores) {
                 try {
                     const tx = db.transaction(store, 'readonly')
-                    const keys = await tx.objectStore(store).getAllKeys()
+                    const storeObj = tx.objectStore(store)
+                    const keys = await storeObj.getAllKeys()
+                    const indexes = Array.from(storeObj.indexNames)
                     result.stores[store] = {
                         count: keys.length,
                         keys: keys.slice(0, 10), // First 10 for debugging
+                        indexes,
                     }
                     await tx.done
                 }
@@ -408,17 +491,17 @@ export class LocalDB {
     /**
      * Clears the memory cache
      */
-    clearMemoryCache() {
+    clearMemoryCache = () => {
         this.#memoryCache.clear()
         console.log('Memory cache cleared')
     }
 
     /**
      * Retrieves cache statistics
-     * 
+     *
      * @returns {Object} Cache statistics including size, max size, and sample entries
      */
-    getCacheStats() {
+    getCacheStats = () => {
         return {
             size: this.#memoryCache.size,
             maxSize: this.#cacheMaxSize,
@@ -429,7 +512,7 @@ export class LocalDB {
     /**
      * Removes expired entries from the memory cache
      */
-    cleanExpiredCache() {
+    cleanExpiredCache = () => {
         const now = Date.now()
         for (const [key, value] of this.#memoryCache) {
             if (value.timestamp < now - CACHE_TTL) {
@@ -437,8 +520,6 @@ export class LocalDB {
             }
         }
     }
-
-    // Private methods
 
     /**
      * Executes an operation within a transaction with retry logic
@@ -453,7 +534,7 @@ export class LocalDB {
      * @throws {Error} If the transaction fails after all retries
      * @private
      */
-    async #withTransaction(store, mode, operation, options = {}) {
+    #withTransaction = async (store, mode, operation, options = {}) => {
         const {
                   retryDelay = DEFAULT_RETRY_DELAY,
                   maxRetries = DEFAULT_MAX_RETRIES,
@@ -484,7 +565,7 @@ export class LocalDB {
      * @throws {Error} If the database fails to initialize
      * @private
      */
-    async #getDB() {
+    #getDB = async () => {
         try {
             return await this.#db
         }
@@ -501,7 +582,7 @@ export class LocalDB {
      * @throws {Error} If the key is invalid
      * @private
      */
-    #validateKey(key) {
+    #validateKey = key => {
         if (!key || typeof key !== 'string') {
             throw new Error('Invalid key: Key must be a non-empty string.')
         }
@@ -514,7 +595,7 @@ export class LocalDB {
      * @throws {Error} If the store is invalid
      * @private
      */
-    #validateStore(store) {
+    #validateStore = store => {
         if (!store || !this.#stores.includes(store)) {
             throw new Error(`Invalid store: "${store}" is not a valid store.`)
         }
@@ -526,7 +607,7 @@ export class LocalDB {
      * @returns {string} A random 6-character call ID
      * @private
      */
-    #generateCallId() {
+    #generateCallId = () => {
         return Math.random().toString(36).slice(2, 8)
     }
 
@@ -537,7 +618,7 @@ export class LocalDB {
      * @returns {boolean} True if expired, false otherwise
      * @private
      */
-    #isExpired(item) {
+    #isExpired = item => {
         return item._exp_ && Date.now() > item._exp_
     }
 }
