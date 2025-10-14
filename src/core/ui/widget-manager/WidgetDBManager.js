@@ -32,7 +32,7 @@ export class WidgetDBManager {
     }
 
     /**
-     * Saves widget position and dimensions to the widgets DB with a 1-hour TTL.
+     * Saves widget position and dimensions to the widgets DB.
      * @param {string} widgetId - The widget ID
      * @param {Object} config - Widget configuration
      * @returns {Promise<void>}

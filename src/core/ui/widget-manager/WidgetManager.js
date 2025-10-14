@@ -839,7 +839,7 @@ export class WidgetManager {
     }
 
     /**
-     * Saves widget position and dimensions to IndexedDB with a 1-hour TTL.
+     * Saves widget position and dimensions to the widgets DB
      * @param {string} widgetId - The widget ID
      * @param {Object} config - Widget configuration
      * @returns {Promise<void>}
@@ -847,7 +847,7 @@ export class WidgetManager {
     saveWidgetPosition = async (widgetId, config) => this.#widgetDB.saveWidgetPosition(widgetId, config)
 
     /**
-     * Retrieves widget position from IndexedDB if not expired.
+     * Retrieves widget position from the widget DB if not expired.
      * @param {string} widgetId - The widget ID
      * @returns {Promise<Object|null>} Position data or null if not found/expired
      */
@@ -866,4 +866,11 @@ export class WidgetManager {
      * @returns {Promise<void>}
      */
     deleteWidgetsByGroup = async groupId => this.#widgetDB.deleteWidgetsByGroup(groupId)
+
+    /**
+     * Deletes a single widget position from the widgets DB.
+     * @param {string} widgetId - The widget ID
+     * @returns {Promise<void>}
+     */
+    deleteWidgetPosition = async widgetId => this.#widgetDB.deleteWidgetPosition(widgetId)
 }

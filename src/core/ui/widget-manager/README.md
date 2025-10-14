@@ -251,6 +251,7 @@ The `initialConfig` object passed to `setupElement` supports the following prope
 
 - **saveWidgetPosition(widgetId, config)**: Saves widget configuration to IndexedDB.
 - **getWidgetPosition(widgetId)**: Retrieves widget configuration from IndexedDB if not expired.
+- **deleteWidgetPosition(widgetId)**: Deletes widget configuration from IndexedDB.
 - **getWidgetsByGroup(groupId)**: Retrieves all widget configurations for a group from IndexedDB.
 - **deleteWidgetsByGroup(groupId)**: Deletes all widget configurations for a group from IndexedDB.
 
