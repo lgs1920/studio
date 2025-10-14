@@ -67,10 +67,7 @@ export class WidgetDBManager {
      * @returns {Promise<Object[]>} Array of position data for the group
      */
     getWidgetsByGroup = async groupId => {
-
-        const all = await lgs.db.lgs1920.keys(WIDGETS_STORE)
-
-        return validData
+        return await lgs.db.lgs1920.findByIndex('group', groupId, WIDGETS_STORE)
     }
 
     /**
@@ -79,7 +76,6 @@ export class WidgetDBManager {
      * @returns {Promise<void>}
      */
     deleteWidgetsByGroup = async groupId => {
-
         const data = await lgs.db.lgs1920.findByIndex('group', groupId, WIDGETS_STORE)
         for (const id of data) {
             await lgs.db.lgs1920.delete(id, WIDGETS_STORE)
@@ -91,7 +87,7 @@ export class WidgetDBManager {
      * @param {string} widgetId - The widget ID
      * @returns {Promise<void>}
      */
-    #deleteWidget = async widgetId => {
+    deleteWidgetPosition = async widgetId => {
         await lgs.db.lgs1920.delete(widgetId, WIDGETS_STORE)
     }
 }
