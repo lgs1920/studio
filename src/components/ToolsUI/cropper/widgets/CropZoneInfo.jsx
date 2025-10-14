@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-13
- * Last modified: 2025-10-13
+ * Created on: 2025-10-14
+ * Last modified: 2025-10-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -60,7 +60,7 @@ export const CropZoneInfo = memo(function CropZoneInfo({id}) {
 
     return (
         <div className="crop-zone-info">
-            <span>{Math.floor(info.left)}×{Math.floor(info.top)}</span>
+            <span>{Math.max(0, Math.floor(info.left))}×{Math.max(0, Math.floor(info.top))}</span>
             <span>{Math.floor(info.width)}×{Math.floor(info.height)}</span>
         </div>
     )

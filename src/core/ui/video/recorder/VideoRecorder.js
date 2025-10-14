@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-30
- * Last modified: 2025-09-30
+ * Created on: 2025-10-14
+ * Last modified: 2025-10-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -372,16 +372,22 @@ export class VideoRecorder extends EventTarget {
             throw this.#dispatchError('Cannot change source while recording')
         }
 
-        // Validate canvas clipping parameters
+        // Validate canvas clipping parameters with on p of tolerance (due to some  rounding)
         const dpr = window.devicePixelRatio || 1
         canvases.forEach((canvas, i) => {
-            const canvasWidth = canvas.width * dpr
-            const canvasHeight = canvas.height * dpr
-            const validatedClipWidth = clipWidth ?? canvasWidth
-            const validatedClipHeight = clipHeight ?? canvasHeight
-            if (clipX < 0 || clipY < 0 || validatedClipWidth <= 0 || validatedClipHeight <= 0 ||
-                clipX + validatedClipWidth > canvasWidth || clipY + validatedClipHeight > canvasHeight) {
-                throw this.#dispatchError(`Invalid clipping parameters for canvas ${i}`)
+            const scaledWidth = canvas.width * dpr
+            const scaledHeight = canvas.height * dpr
+            const validWidth = clipWidth * dpr
+            const validHeight = clipHeight * dpr
+            if (
+                clipX < -1 ||
+                clipY < -1 ||
+                validWidth <= 0 ||
+                validHeight <= 0 ||
+                clipX + validWidth > scaledWidth + 1 ||
+                clipY + validHeight > scaledHeight + 1
+            ) {
+                throw new Error(`Invalid clipping parameters for canvas ${i}`)
             }
         })
 
