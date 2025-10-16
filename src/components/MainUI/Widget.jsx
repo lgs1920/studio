@@ -7,18 +7,20 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-14
- * Last modified: 2025-10-14
+ * Created on: 2025-10-16
+ * Last modified: 2025-10-16
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_SNAP, LGS_TOOLBAR, LGS_WIDGET } from '@Core/constants'
-import classNames                                                                            from 'classnames'
+import { LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_WIDGET } from '@Core/constants'
+import {
+    useSingleOrDoubleEvent,
+}                                                                                  from '@Core/events/useSingleOrDoubleEvent'
+import classNames                                                                  from 'classnames'
 import React, { Children, cloneElement, useCallback, useEffect, useRef, useState } from 'react'
-import Moveable   from 'react-moveable'
-import { useSingleOrDoubleEvent } from '@Core/events/useSingleOrDoubleEvent'
+import Moveable                                                                    from 'react-moveable'
 
 /**
  * Generic component for rendering a draggable element with snapping, rotating, resizing ...
@@ -250,6 +252,44 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         _widgetManager.current.onResizeEnd(event)
     }, [])
 
+
+    /**
+     * Handle scale event
+     * @param {Object} event - The scale event
+     */
+    const handleScale = useCallback((event) => {
+        const scaleX = event.scale?.[0] ?? 1
+        const scaleY = event.scale?.[1] ?? 1
+
+        event.target.style.transform = event.drag?.transform
+                                       ? `${event.drag.transform} scale(${scaleX}, ${scaleY})`
+                                       : `scale(${scaleX}, ${scaleY})`
+
+        _widgetManager.current.onScale(event, {widget: _widget, child: _children}, setPosition)
+    }, [])
+
+    /**
+     * Handle scale start event
+     * @param {Object} event - The scale start event
+     */
+    const handleScaleStart = useCallback((event) => {
+        if (_children.current?.onScaleStart) {
+            _children.current.onScaleStart(event)
+        }
+        //_widgetManager.current.onScaleStart(event)
+    }, [])
+
+    /**
+     * Handle scale end event
+     * @param {Object} event - The scale end event
+     */
+    const handleScaleEnd = useCallback((event) => {
+        if (_children.current?.onScaleEnd) {
+            _children.current.onScaleEnd(event)
+        }
+        _widgetManager.current.onScaleEnd(event)
+    }, [])
+
     /**
      * Cleanup resize animation frame
      */
@@ -283,13 +323,13 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 _widget.current,
                 {
                     container: config.container ?? lgs.canvas,
-                    id: config.id ?? null,
+                    id:       config.id ?? null,
                     isCropper:      config.isCropper ?? false,
                     showControlBox: true,
                     left:           config.left,
                     top:            config.top,
                     attachTo:       config.attachTo,
-                    margin: config.margin ?? 0,
+                    margin:   config.margin ?? 0,
                     opacity:        config.opacity ?? lgs.settings.ui.toolbars.opacity,
                     type:           LGS_WIDGET,
                     animationWhenDragging: (config.animationWhenDragging ?? null) !== null
@@ -298,8 +338,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     outsideOverlay: config.outsideOverlay ?? false,
                     resizeFromCenter: config.resizeFromCenter ?? false,
                     resizable:      config.resizable ?? false,
+                    scalable: config.scalable ?? false,
                     forceEven: config.forceEven ?? false,
-                    group: config.group ?? null,
+                    group:    config.group ?? null,
                     transient: config.transient ?? false,
                     persist:   config.persist ?? false,
                     dynamic:   config.dynamic ?? false,
@@ -367,6 +408,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                   config?.opacity,
                   config?.animationWhenDragging,
                   config?.resizable,
+                  config?.scalable,
                   config?.resizeFromCenter,
                   config?.margin,
                   config?.outsideOverlay,
@@ -401,7 +443,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                                 [config?.type]: config?.type && config?.type !== LGS_WIDGET,
                                 [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
                                 [LGS_ANIMATION_RESIZING]: config.animationWhenResizing,
-                            }
+                            },
                         )}
                         ref={_widget}
                         onMouseEnter={handleMouseEnter}
@@ -421,14 +463,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         container={lgs.canvas}
                         className="lgs-widget-control-box"
                         origin={false}
+
+                        // Dragging
                         draggable={true}
                         edgeDraggable={false}
                         throttleDrag={1}
                         onDrag={handleDrag}
                         onDragStart={handleDragStart}
                         onDragEnd={handleDragEnd}
+
+                        // Resizing
                         resizable={config?.resizable || false}
-                        resizeDirections={['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']}
                         onResize={handleResize}
                         onResizeStart={handleResizeStart}
                         onResizeEnd={handleResizeEnd}
@@ -437,7 +482,14 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                             config?.ratio?.locked,
                         )}
                         throttleResize={2}
+
+                        // Scaling
                         scalable={config?.scalable || false}
+                        onScale={handleScale}
+                        onScaleStart={handleScaleStart}
+                        onScaleEnd={handleScaleEnd}
+
+                        // Snapping
                         snappable={config?.snappable ?? true}
                         snapThreshold={snapThreshold}
                         snapGap={snapGap}

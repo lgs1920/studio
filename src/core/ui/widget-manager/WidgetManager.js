@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-14
- * Last modified: 2025-10-14
+ * Created on: 2025-10-16
+ * Last modified: 2025-10-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,6 +24,8 @@ import { v4 as uuidv4 }    from 'uuid'
 import { WidgetCropper }   from './WidgetCropper'
 import { WidgetDraggable } from './WidgetDraggable'
 import { WidgetResizable } from './WidgetResizable'
+import { WidgetScalable }  from './WidgetScalable'
+import { WidgetTransform } from './WidgetTransform'
 
 export class WidgetManager {
     // Singleton instance
@@ -47,6 +49,9 @@ export class WidgetManager {
     /** @type {boolean} Indicates if a widget is being resized */
     #isResizing = false
 
+    /** @type {boolean} Indicates if a widget is being scaled */
+    #isScaling = false
+
     /** @type {Map<string, number>} Timers for hiding control boxes */
     #controlBoxTimers = new Map()
 
@@ -65,6 +70,12 @@ export class WidgetManager {
     /** @type {WidgetDBManager} Instance of WidgetDBManager */
     #widgetDB
 
+    /** @type {WidgetScalable} Instance of WidgetScalable */
+    #scalable
+
+    /** @type {WidgetTransform} Instance of WidgetTransform */
+    #transform
+
     /**
      * Creates or returns the singleton instance of WidgetManager.
      * @param {Object} store - Application store (currently unused)
@@ -75,9 +86,11 @@ export class WidgetManager {
         }
         this.#widgets = new Map()
         this.#widgetDB = new WidgetDBManager(this)
+        this.#transform = new WidgetTransform(this)
         this.#cropper = new WidgetCropper(this)
-        this.#draggable = new WidgetDraggable(this, this.#cropper)
+        this.#draggable = new WidgetDraggable(this, this.#cropper, this.#transform)
         this.#resizable = new WidgetResizable(this, this.#cropper)
+        this.#scalable = new WidgetScalable(this, this.#cropper, this.#transform)
         WidgetManager.#instance = this
     }
 
@@ -224,91 +237,27 @@ export class WidgetManager {
     }
 
     /**
-     * Retrieves or creates widget configuration for an element, including saved positions from browser DB.
-     * @param {HTMLElement} element - The DOM element
-     * @param {Object} initialConfig - Initial configuration
-     * @returns {Object} Widget configuration
+     * Getter for isScaling property
+     * @returns {boolean} Whether a widget is being scaled
      */
-    retrieveConfig = async (element, initialConfig = {}) => {
-        const elementId = initialConfig.id && typeof initialConfig.id === 'string' && initialConfig.id.trim()
-                          ? initialConfig.id
-                          : this.retrieveElementId(element) || uuidv4()
-        if (!this.#widgets.has(elementId)) {
-            const anchor = initialConfig.isCropper
-                           ? (initialConfig.attachTo && this.#validPositions.includes(initialConfig.attachTo) ? initialConfig.attachTo : 'center')
-                           : (initialConfig.attachTo && this.#validPositions.includes(initialConfig.attachTo)
-                              ? initialConfig.attachTo
-                              : (initialConfig.position && this.#validPositions.includes(initialConfig.position))
-                                ? initialConfig.position
-                                : 'top-left')
-            const ratio = __.device.isPortrait ? '9x16' : '16x9'
-            const config = {
-                id:               elementId,
-                boundStatus:      {left: false, top: false, right: false, bottom: false},
-                container:        initialConfig.container,
-                isCropper:        initialConfig.isCropper,
-                isMobile:         initialConfig.isMobile,
-                bounds:           {left: 0, top: 0, right: 0, bottom: 0},
-                position:         {left: 0, top: 0},
-                left:             initialConfig.left,
-                top:              initialConfig.top,
-                attachTo:         anchor,
-                snapPoints:       [],
-                dimensions:       {width: 0, height: 0},
-                observer:         null,
-                showControlBox:   initialConfig.showControlBox,
-                containerPadding: initialConfig.containerPadding,
-                animationWhenDragging: initialConfig.animationWhenDragging ?? false,
-                ratio:            this.getRatio(initialConfig.ratio ?? ratio),
-                useRatio:         initialConfig.useRatio ?? true,
-                minCropSize:      initialConfig.minCropSize ?? {width: 0, height: 0},
-                outsideOverlay:   initialConfig.outsideOverlay,
-                resizeFromCenter: initialConfig.resizeFromCenter ?? false,
-                centerRatio:      {x: 0.5, y: 0.5},
-                previousCropDimensions: null,
-                moveable:         initialConfig.moveable,
-                setPosition:      initialConfig.setPosition,
-                element:          initialConfig.element,
-                cropDimensions:   initialConfig.cropDimensions,
-                group:            initialConfig.group ?? null,
-                persist:          initialConfig.persist ?? null,
-                transient:        initialConfig.transient ?? false,
-                dynamic:          initialConfig.dynamic ?? false,
-                ttl:              initialConfig.ttl ?? this.TTL,
-            }
-            // Restore position from IndexedDB if available
-            if (config.persist) {
-                const savedPosition = await this.getWidgetPosition(elementId)
-                if (savedPosition) {
-                    config.position = {
-                        left: savedPosition.left,
-                        top:  savedPosition.top,
-                    }
-                    config.cropDimensions = config.cropDimensions || {}
-                    config.cropDimensions.width = savedPosition.width
-                    config.cropDimensions.height = savedPosition.height
-                    config.dimensions = {
-                        width:  savedPosition.width,
-                        height: savedPosition.height,
-                    }
-                    config.group = savedPosition.group || config.group
-                }
-            }
-            this.#widgets.set(elementId, config)
-        }
-        else {
-            const widget = this.#widgets.get(elementId)
-            if (initialConfig.outsideOverlay) {
-                widget.outsideOverlay = initialConfig.outsideOverlay
-            }
-            if (initialConfig.container) {
-                widget.container = initialConfig.container
-            }
-            if (initialConfig.group !== undefined) {
-                widget.group = initialConfig.group
-            }
-        }
-        return this.getWidgetConfig(elementId)
+    get isResizing() {
+        return this.#isResizing
+    }
+
+    /**
+     * Setter for isResizing property
+     * @param {boolean} value - New value for isResizing
+     */
+    set isResizing(value) {
+        this.#isResizing = value
+    }
+
+    /**
+     * Getter for isScaling property
+     * @returns {boolean} Whether a widget is being scaled
+     */
+    get isDragging() {
+        return this.#isDragging
     }
 
     /**
@@ -873,4 +822,154 @@ export class WidgetManager {
      * @returns {Promise<void>}
      */
     deleteWidgetPosition = async widgetId => this.#widgetDB.deleteWidgetPosition(widgetId)
+
+    /**
+     * Setter for isDragging property
+     * @param {boolean} value - New value for isDragging
+     */
+    set isDragging(value) {
+        this.#isDragging = value
+    }
+
+    /**
+     * Getter for isScaling property
+     * @returns {boolean} Whether a widget is being scaled
+     */
+    get isScaling() {
+        return this.#isScaling
+    }
+
+    /**
+     * Setter for isScaling property
+     * @param {boolean} value - New value for isScaling
+     */
+    set isScaling(value) {
+        this.#isScaling = value
+    }
+
+    /**
+     * Gets the transform helper instance.
+     * @returns {WidgetTransform} The transform helper
+     */
+    get transform() {
+        return this.#transform
+    }
+
+    /**
+     * Retrieves or creates widget configuration for an element, including saved positions from browser DB.
+     * @param {HTMLElement} element - The DOM element
+     * @param {Object} initialConfig - Initial configuration
+     * @returns {Object} Widget configuration
+     */
+    retrieveConfig = async (element, initialConfig = {}) => {
+        const elementId = initialConfig.id && typeof initialConfig.id === 'string' && initialConfig.id.trim()
+                          ? initialConfig.id
+                          : this.retrieveElementId(element) || uuidv4()
+        if (!this.#widgets.has(elementId)) {
+            const anchor = initialConfig.isCropper
+                           ? (initialConfig.attachTo && this.#validPositions.includes(initialConfig.attachTo) ? initialConfig.attachTo : 'center')
+                           : (initialConfig.attachTo && this.#validPositions.includes(initialConfig.attachTo)
+                              ? initialConfig.attachTo
+                              : (initialConfig.position && this.#validPositions.includes(initialConfig.position))
+                                ? initialConfig.position
+                                : 'top-left')
+            const ratio = __.device.isPortrait ? '9x16' : '16x9'
+            const config = {
+                id:                     elementId,
+                boundStatus:            {left: false, top: false, right: false, bottom: false},
+                container:              initialConfig.container,
+                isCropper:              initialConfig.isCropper,
+                isMobile:               initialConfig.isMobile,
+                bounds:                 {left: 0, top: 0, right: 0, bottom: 0},
+                position:               {left: 0, top: 0},
+                left:                   initialConfig.left,
+                top:                    initialConfig.top,
+                attachTo:               anchor,
+                snapPoints:             [],
+                dimensions:             {width: 0, height: 0},
+                observer:               null,
+                showControlBox:         initialConfig.showControlBox,
+                containerPadding:       initialConfig.containerPadding,
+                animationWhenDragging:  initialConfig.animationWhenDragging ?? false,
+                animationWhenScaling:   initialConfig.animationWhenScaling ?? false,
+                ratio:                  this.getRatio(initialConfig.ratio ?? ratio),
+                useRatio:               initialConfig.useRatio ?? true,
+                minCropSize:            initialConfig.minCropSize ?? {width: 0, height: 0},
+                outsideOverlay:         initialConfig.outsideOverlay,
+                resizeFromCenter:       initialConfig.resizeFromCenter ?? false,
+                centerRatio:            {x: 0.5, y: 0.5},
+                previousCropDimensions: null,
+                moveable:               initialConfig.moveable,
+                setPosition:            initialConfig.setPosition,
+                element:                initialConfig.element,
+                cropDimensions:         initialConfig.cropDimensions,
+                group:                  initialConfig.group ?? null,
+                persist:                initialConfig.persist ?? null,
+                transient:              initialConfig.transient ?? false,
+                dynamic:                initialConfig.dynamic ?? false,
+                ttl:                    initialConfig.ttl ?? this.TTL,
+                translate:              initialConfig.translate ?? {x: 0, y: 0},
+                scale:                  initialConfig.scale ?? {x: 1, y: 1},
+                rotate:                 initialConfig.rotate ?? 0,
+            }
+            // Restore position from IndexedDB if available
+            if (config.persist) {
+                const savedPosition = await this.getWidgetPosition(elementId)
+                if (savedPosition) {
+                    config.position = {
+                        left: savedPosition.left,
+                        top:  savedPosition.top,
+                    }
+                    config.cropDimensions = config.cropDimensions || {}
+                    config.cropDimensions.width = savedPosition.width
+                    config.cropDimensions.height = savedPosition.height
+                    config.dimensions = {
+                        width:  savedPosition.width,
+                        height: savedPosition.height,
+                    }
+                    config.group = savedPosition.group || config.group
+                    config.scale = savedPosition.scale || {x: 1, y: 1}
+
+                    // Restore scale transform if saved
+                    if (config.scale.x !== 1 || config.scale.y !== 1) {
+                        this.#transform.setScale(element, config.scale.x, config.scale.y)
+                    }
+                }
+            }
+            this.#widgets.set(elementId, config)
+        }
+        else {
+            const widget = this.#widgets.get(elementId)
+            if (initialConfig.outsideOverlay) {
+                widget.outsideOverlay = initialConfig.outsideOverlay
+            }
+            if (initialConfig.container) {
+                widget.container = initialConfig.container
+            }
+            if (initialConfig.group !== undefined) {
+                widget.group = initialConfig.group
+            }
+        }
+        return this.getWidgetConfig(elementId)
+    }
+
+    /**
+     * Handles the start of a scale event.
+     * @param {Object} event - Scale event
+     */
+    onScaleStart = async event => this.#scalable.onScaleStart(event)
+
+    /**
+     * Handles scale events, updating element scale and position.
+     * @param {Object} event - Scale event
+     * @param {Object} refs - References object
+     * @param {Function} setPosition - Function to set position
+     */
+    onScale = (event, refs, setPosition) => this.#scalable.onScale(event, refs, setPosition)
+
+    /**
+     * Handles the end of a scale event.
+     * @param {Object} event - Scale event
+     */
+    onScaleEnd = async event => this.#scalable.onScaleEnd(event)
 }

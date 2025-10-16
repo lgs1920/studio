@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-14
- * Last modified: 2025-10-14
+ * Created on: 2025-10-16
+ * Last modified: 2025-10-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -47,6 +47,7 @@ export class WidgetDBManager {
             height:    config.cropDimensions?.height || config.dimensions.height,
             transient: config.transient,
             ttl:       config.ttl || null,
+            scale: config.scale || {x: 1, y: 1},
         }
         await lgs.db.lgs1920.put(widgetId, record, WIDGETS_STORE, record.ttl)
 

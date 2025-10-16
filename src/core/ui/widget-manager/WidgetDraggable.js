@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-14
- * Last modified: 2025-10-14
+ * Created on: 2025-10-16
+ * Last modified: 2025-10-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -29,17 +29,22 @@ export class WidgetDraggable {
     /** @type {WidgetCropper} Reference to WidgetCropper instance */
     #widgetCropper
 
+    /** @type {WidgetTransform} Reference to WidgetTransform instance */
+    #widgetTransform
+
     /**
      * Creates or returns the singleton instance of WidgetDraggable.
      * @param {WidgetManager} widgetManager - The WidgetManager instance
      * @param {WidgetCropper} widgetCropper - The WidgetCropper instance
+     * @param {WidgetTransform} widgetTransform - The WidgetTransform instance
      */
-    constructor(widgetManager, widgetCropper) {
+    constructor(widgetManager, widgetCropper, widgetTransform) {
         if (WidgetDraggable.#instance) {
             return WidgetDraggable.#instance
         }
         this.#widgetManager = widgetManager
         this.#widgetCropper = widgetCropper
+        this.#widgetTransform = widgetTransform
         WidgetDraggable.#instance = this
     }
 
@@ -87,21 +92,10 @@ export class WidgetDraggable {
         event.target.classList.remove('dragging', LGS_ANIMATION_DRAGGING)
         this.#widgetManager.isDragging = false
         const config = await this.#widgetManager.retrieveConfig(event.target)
-        const currentTransform = event.target.style.transform || ''
-        const match = currentTransform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
-        if (match) {
-            const dx = parseFloat(match[1]) || 0
-            const dy = parseFloat(match[2]) || 0
-            const baseLeft = parseInt(event.target.style.left || '0', 10)
-            const baseTop = parseInt(event.target.style.top || '0', 10)
-            const finalLeft = Math.round(baseLeft + dx)
-            const finalTop = Math.round(baseTop + dy)
-            event.target.style.left = `${finalLeft}px`
-            event.target.style.top = `${finalTop}px`
-            event.target.style.transform = 'none'
-            config.transform = undefined
-            config.position = {left: finalLeft, top: finalTop}
-        }
+
+        // Use transform helper to commit translate to position
+        this.#widgetTransform.commitTranslateToPosition(event.target)
+
         config.element = event.target
         const left = parseInt(event.target.style.left || '0', 10)
         const top = parseInt(event.target.style.top || '0', 10)
