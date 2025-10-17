@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-14
- * Last modified: 2025-10-14
+ * Created on: 2025-10-17
+ * Last modified: 2025-10-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -278,7 +278,7 @@ export class WidgetCropper {
         if (config.setPosition) {
             config.setPosition({left, top})
         }
-        if (config.moveable.current) {
+        if (config.moveable?.current) {
             config.moveable.current.updateRect()
         }
 

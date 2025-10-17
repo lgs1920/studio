@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-16
- * Last modified: 2025-10-16
+ * Created on: 2025-10-17
+ * Last modified: 2025-10-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,7 +38,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const _widget = useRef(null)
     const _moveable = useRef(null)
     const _controlBoxTimer = useRef(null)
-    const _widgetManager = useRef(null)
     const _initialized = useRef(false)
     const _resizeRaf = useRef(0)
     const _children = childRef ?? useRef(null)
@@ -68,15 +67,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [config?.snapSensitivity])
 
     const {snapThreshold, snapGap} = getSnapSettings()
-
-    /**
-     * Initialize WidgetManager instance
-     */
-    useEffect(() => {
-        if (!_widgetManager.current) {
-            _widgetManager.current = __.ui.widgetManager
-        }
-    }, [])
 
     /**
      * Handle double-click or double-tap event
@@ -165,7 +155,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
      */
     const handleMouseEnter = useCallback(() => {
         setIsMouseOver(true)
-        _widgetManager.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, true)
+        __.ui.widgetManager.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, true)
     }, [])
 
     /**
@@ -180,7 +170,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             return
         }
         setIsMouseOver(false)
-        _widgetManager.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, false)
+        __.ui.widgetManager.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, false)
     }, [isDragging])
 
     /**
@@ -188,8 +178,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
      * @param {Object} event - The drag event
      */
     const handleDrag = useCallback((event) => {
-        _widgetManager.current.applyPosition(_widget.current, event.transform, _moveable, true, setControlBoxProps)
-        _widgetManager.current.onDrag(event)
+        __.ui.widgetManager.applyPosition(_widget.current, event.transform, _moveable, true, setControlBoxProps)
+        __.ui.widgetManager.onDrag(event)
         if (_children.current?.handleDrag) {
             _children.current.handleDrag(event)
         }
@@ -204,9 +194,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (_children.current?.onDragStart) {
             _children.current.onDragStart(event)
         }
-        _widgetManager.current.onDragStart(event)
+        __.ui.widgetManager.onDragStart(event)
         _widget.current?.classList.add('dragging')
-        _widgetManager.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, true, isMouseOver)
+        __.ui.widgetManager.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, true, isMouseOver)
     }, [isMouseOver])
 
     /**
@@ -216,8 +206,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const handleDragEnd = useCallback((event) => {
         setIsDragging(false)
         _widget.current?.classList.remove('dragging')
-        _widgetManager.current.onDragEnd(event)
-        _widgetManager.current.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, isMouseOver)
+        __.ui.widgetManager.onDragEnd(event)
+        __.ui.widgetManager.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, isMouseOver)
     }, [isMouseOver])
 
     /**
@@ -227,7 +217,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const handleResize = useCallback((event) => {
         event.target.style.width = `${event.width}px`
         event.target.style.height = `${event.height}px`
-        _widgetManager.current.onResize(event, {widget: _widget, child: _children}, setPosition)
+        __.ui.widgetManager.onResize(event, {widget: _widget, child: _children}, setPosition)
     }, [])
 
     /**
@@ -238,7 +228,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (_children.current?.onResizeStart) {
             _children.current.onResizeStart(event)
         }
-        _widgetManager.current.onResizeStart(event)
+        __.ui.widgetManager.onResizeStart(event)
     }, [])
 
     /**
@@ -249,7 +239,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (_children.current?.onResizeEnd) {
             _children.current.onResizeEnd(event)
         }
-        _widgetManager.current.onResizeEnd(event)
+        __.ui.widgetManager.onResizeEnd(event)
     }, [])
 
 
@@ -265,7 +255,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                                        ? `${event.drag.transform} scale(${scaleX}, ${scaleY})`
                                        : `scale(${scaleX}, ${scaleY})`
 
-        _widgetManager.current.onScale(event, {widget: _widget, child: _children}, setPosition)
+        __.ui.widgetManager.onScale(event, {widget: _widget, child: _children}, setPosition)
     }, [])
 
     /**
@@ -276,7 +266,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (_children.current?.onScaleStart) {
             _children.current.onScaleStart(event)
         }
-        //_widgetManager.current.onScaleStart(event)
+        //__.ui.widgetManager.onScaleStart(event)
     }, [])
 
     /**
@@ -287,7 +277,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (_children.current?.onScaleEnd) {
             _children.current.onScaleEnd(event)
         }
-        _widgetManager.current.onScaleEnd(event)
+        __.ui.widgetManager.onScaleEnd(event)
     }, [])
 
     /**
@@ -319,37 +309,46 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 return
             }
             widgetElement = _widget.current // Capture DOM element
-            const ok = await _widgetManager.current.setupElement(
+
+            // Load saved position from database if persist is enabled
+            let initialConfig = {
+                container:             config.container ?? lgs.canvas,
+                id:                    config.id ?? null,
+                isCropper:             config.isCropper ?? false,
+                showControlBox:        true,
+                left:                  config.left,
+                top:                   config.top,
+                attachTo:              config.attachTo,
+                ratio:                 config.ratio ?? null,
+                margin:                config.margin ?? 0,
+                opacity:               config.opacity ?? lgs.settings.ui.toolbars.opacity,
+                type:                  LGS_WIDGET,
+                cropDimensions:        config.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0},
+                animationWhenDragging: (config.animationWhenDragging ?? null) !== null
+                                       ? config.animationWhenDragging
+                                       : config.type === LGS_TOOLBAR,
+                outsideOverlay:        config.outsideOverlay ?? false,
+                resizeFromCenter:      config.resizeFromCenter ?? false,
+                resizable:             config.resizable ?? false,
+                scalable:              config.scalable ?? false,
+                forceEven:             config.forceEven ?? false,
+                group:                 config.group ?? null,
+                transient:             config.transient ?? false,
+                persist:               config.persist ?? false,
+                dynamic:               config.dynamic ?? false,
+                ttl:                   config.ttl ?? null,
+            }
+
+            await __.ui.widgetManager.retrieveConfig(widgetElement, initialConfig)
+
+            const ok = __.ui.widgetManager.setupElement(
                 _widget.current,
-                {
-                    container: config.container ?? lgs.canvas,
-                    id:       config.id ?? null,
-                    isCropper:      config.isCropper ?? false,
-                    showControlBox: true,
-                    left:           config.left,
-                    top:            config.top,
-                    attachTo:       config.attachTo,
-                    margin:   config.margin ?? 0,
-                    opacity:        config.opacity ?? lgs.settings.ui.toolbars.opacity,
-                    type:           LGS_WIDGET,
-                    animationWhenDragging: (config.animationWhenDragging ?? null) !== null
-                                           ? config.animationWhenDragging
-                                           : config.type === LGS_TOOLBAR,
-                    outsideOverlay: config.outsideOverlay ?? false,
-                    resizeFromCenter: config.resizeFromCenter ?? false,
-                    resizable:      config.resizable ?? false,
-                    scalable: config.scalable ?? false,
-                    forceEven: config.forceEven ?? false,
-                    group:    config.group ?? null,
-                    transient: config.transient ?? false,
-                    persist:   config.persist ?? false,
-                    dynamic:   config.dynamic ?? false,
-                    ttl:       config.ttl ?? null,
-                },
+                initialConfig,
                 setBounds,
                 setPosition,
                 _moveable,
             )
+
             if (ok) {
                 _initialized.current = true
                 _moveable.current?.updateRect()
@@ -379,9 +378,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             }
 
             // Dispose widget from WidgetManager if not persistent
-            if (_initialized.current && widgetElement && _widgetManager.current && !config?.persist) {
+            if (_initialized.current && widgetElement && __.ui.widgetManager && !config?.persist) {
                 try {
-                    _widgetManager.current.disposeElement(widgetElement)
+                    __.ui.widgetManager.disposeElement(widgetElement)
                 }
                 catch (error) {
                     console.error('Error disposing widget:', error)
@@ -428,7 +427,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [bounds])
 
     const handleOnBound = ({bounds}) => {
-        _widgetManager.current.setBoundStatus(_widget.current)
+        __.ui.widgetManager.setBoundStatus(_widget.current)
     }
 
     return (

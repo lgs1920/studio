@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-16
- * Last modified: 2025-10-16
+ * Created on: 2025-10-17
+ * Last modified: 2025-10-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -187,13 +187,6 @@ export class WidgetManager {
             moveable.current.onDoubleClick = e => this.onDoubleClick(e, setPosition)
         }
 
-        // Configure moveable for resizing with ratio lock
-        moveable.current.request('resizable', {
-            keepRatio: !!config.ratio.locked,
-            deltaWidth: 0,
-            deltaHeight: 0,
-        }, true)
-
         // Set initial bounds and position
         const newBounds = this.refreshBounds(config, moveable)
         setBounds(newBounds)
@@ -204,8 +197,8 @@ export class WidgetManager {
         // Initialize cropDimensions for croppers
         if (config.isCropper) {
             const rect = element.getBoundingClientRect()
-            const width = Number.isFinite(initialConfig.cropDimensions?.width) ? initialConfig.cropDimensions.width : (rect.width || 200)
-            const height = Number.isFinite(initialConfig.cropDimensions?.height) ? initialConfig.cropDimensions.height : (rect.height || 200)
+            const width = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : (rect.width || 200)
+            const height = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : (rect.height || 200)
             config.cropDimensions = {
                 left: newPosition.left,
                 top:  newPosition.top,
@@ -215,12 +208,24 @@ export class WidgetManager {
             element.style.width = `${width}px`
             element.style.height = `${height}px`
             this.#cropper.applyCropToOverlay(config)
+
+            // Configure moveable for resizing with ratio lock
+            moveable.current.request('resizable', {
+                keepRatio:   !!config.ratio.locked,
+                deltaWidth:  0,
+                deltaHeight: 0,
+            }, true)
         }
 
-        // Set default styles
+        // Set default styles BEFORE any transform operations
         element.style.transform = 'none'
         element.style.opacity = initialConfig.opacity || 1
         element.style.transformOrigin = '0 0'
+
+        // Restore scale transform if saved (must be AFTER style initialization)
+        if (config.fromDB && config.scale && (config.scale.x !== 1 || config.scale.y !== 1)) {
+            this.#transform.setScale(element, config.scale.x, config.scale.y)
+        }
 
         // Initialize resize observer and overlay
         this.monitorContainerResize(config, setBounds, moveable, element, setPosition)
@@ -273,15 +278,19 @@ export class WidgetManager {
         if (!config) {
             return
         }
+        // If position is a string, it is something like transform: translate(100px, 100px)
         if (typeof position === 'string') {
             element.style.transform = position
             config.transform = position
         }
+        // Then if it is an objet , it's coordinates
         else if (typeof position === 'object') {
             element.style.left = `${position.left}px`
             element.style.top = `${position.top}px`
             config.position = position
         }
+
+        // Update widget and control box position
         if (moveable?.current) {
             moveable.current.updateRect()
         }
@@ -355,48 +364,48 @@ export class WidgetManager {
         }
         const container = config.container.getBoundingClientRect()
         const widget = element.getBoundingClientRect()
-        const defaultWidth = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : (widget.width || 200)
-        const defaultHeight = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : (widget.height || 200)
 
-        // Parse position values (supports px, %, or numbers)
-        const parsePosition = (value, maxDimension) => {
-            if (typeof value === 'string' && value.endsWith('%')) {
-                const percent = parseFloat(value)
-                return isNaN(percent) ? 0 : (percent / 100) * maxDimension
-            }
-            if (typeof value === 'string' && value.endsWith('px')) {
-                return parseFloat(value) || 0
-            }
-            const numValue = typeof value === 'number' ? value : parseFloat(value)
-            return isNaN(numValue) ? 0 : numValue
+        let defaultWidth = widget.width || 200
+        let defaultHeight = widget.height || 200
+        if (config.isCropper) {
+            defaultWidth = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : (widget.width || 200)
+            defaultHeight = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : (widget.height || 200)
         }
 
-        // Use provided left/top or center for croppers, relative to the container
-        let left = config.isCropper ? (container.width - defaultWidth) / 2 : container.left + parsePosition(config.left ?? '10%', container.width)
-        let top = config.isCropper ? (container.height - defaultHeight) / 2 : container.top + parsePosition(config.top ?? '10%', container.height)
+        // Compute left/top
         const attachTo = config.attachTo || (config.isCropper ? 'center' : 'top-left')
 
-        // Adjust position based on anchor point, skip center adjustment for croppers
-        const adjustments = {
-            center:         () => config.isCropper ? ({left, top}) : ({
-                left: left - defaultWidth / 2,
-                top:  top - defaultHeight / 2,
-            }),
-            top:            () => ({left: left - defaultWidth / 2, top: top}),
-            left:           () => ({left: left, top: top - defaultHeight / 2}),
-            right:          () => ({left: left - defaultWidth, top: top - defaultHeight / 2}),
-            bottom:         () => ({left: left - defaultWidth / 2, top: top - defaultHeight}),
-            'top-left':     () => ({left, top}),
-            'top-right':    () => ({left: left - defaultWidth, top}),
-            'bottom-left':  () => ({left, top: top - defaultHeight}),
-            'bottom-right': () => ({left: left - defaultWidth, top: top - defaultHeight}),
+        let {left, top} = config.position
+        if (config.fromDB) {
+            // Use saved position from DB, relative to the container
+            // We do not need to adjust position, it's always left,top
+            left = config.position.left
+            top = config.position.top
         }
-        const adjust = adjustments[attachTo]
-        if (adjust) {
-            const adjusted = adjust()
-            left = adjusted.left
-            top = adjusted.top
+        else {
+            // Use provided left/top or center for croppers, relative to the container
+            left = config.isCropper ? (container.width - defaultWidth) / 2 : container.left + this.#transform.parsePosition(config.left ?? '50%', container.width)
+            top = config.isCropper ? (container.height - defaultHeight) / 2 : container.top + this.#transform.parsePosition(config.top ?? '50%', container.height)
+            // Adjust position based on anchor point, skip center adjustment for croppers
+            const adjustments = {
+                center:         () => config.isCropper ? ({left, top}) : ({
+                    left: left - defaultWidth / 2,
+                    top:  top - defaultHeight / 2,
+                }),
+                top:            () => ({left: left - defaultWidth / 2, top: top}),
+                left:           () => ({left: left, top: top - defaultHeight / 2}),
+                right:          () => ({left: left - defaultWidth, top: top - defaultHeight / 2}),
+                bottom:         () => ({left: left - defaultWidth / 2, top: top - defaultHeight}),
+                'top-left':     () => ({left, top}),
+                'top-right':    () => ({left: left - defaultWidth, top}),
+                'bottom-left':  () => ({left, top: top - defaultHeight}),
+                'bottom-right': () => ({left: left - defaultWidth, top: top - defaultHeight}),
+            }
+            if (adjustments[attachTo]) {
+                ({left, top} = adjustments[attachTo]())
+            }
         }
+
 
         // Constrain position within bounds
         left = Math.min(Math.max(left, config.bounds.left), config.bounds.right - defaultWidth)
@@ -665,21 +674,22 @@ export class WidgetManager {
             this.setBoundStatus(element, config)
             // Adjust transform for dragging elements
             if (config.transform) {
-                const match = config.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
-                if (match) {
-                    const translateX = parseFloat(match[1])
-                    const translateY = parseFloat(match[2])
-                    let newTranslateX = translateX
-                    let newTranslateY = translateY
+                const transforms = this.#transform.parseTransform(config.transform)
+
+                if (transforms.translate.x !== 0 || transforms.translate.y !== 0) {
+                    let newTranslateX = transforms.translate.x
+                    let newTranslateY = transforms.translate.y
+
                     const deltaRight = newBounds.right - oldBounds.right
                     const deltaBottom = newBounds.bottom - oldBounds.bottom
                     const isShrinking = deltaRight < 0 || deltaBottom < 0
+
                     if (isShrinking) {
                         if (config.boundStatus.right) {
-                            newTranslateX = translateX + deltaRight
+                            newTranslateX = transforms.translate.x + deltaRight
                         }
                         if (config.boundStatus.bottom) {
-                            newTranslateY = translateY + deltaBottom
+                            newTranslateY = transforms.translate.y + deltaBottom
                         }
                     }
                     else {
@@ -690,9 +700,9 @@ export class WidgetManager {
                             config.boundStatus.bottom = false
                         }
                     }
-                    if (newTranslateX !== translateX || newTranslateY !== translateY) {
-                        config.transform = `translate(${newTranslateX}px, ${newTranslateY}px)`
-                        element.style.transform = config.transform
+
+                    if (newTranslateX !== transforms.translate.x || newTranslateY !== transforms.translate.y) {
+                        this.#transform.setTranslate(element, newTranslateX, newTranslateY)
                     }
                 }
             }
@@ -913,27 +923,33 @@ export class WidgetManager {
                 rotate:                 initialConfig.rotate ?? 0,
             }
             // Restore position from IndexedDB if available
+            config.fromDB = false
             if (config.persist) {
-                const savedPosition = await this.getWidgetPosition(elementId)
-                if (savedPosition) {
+                const savedWidget = await this.getWidgetPosition(elementId)
+                if (savedWidget) {
+                    config.fromDB = true
                     config.position = {
-                        left: savedPosition.left,
-                        top:  savedPosition.top,
+                        left: savedWidget.left,
+                        top:  savedWidget.top,
                     }
-                    config.cropDimensions = config.cropDimensions || {}
-                    config.cropDimensions.width = savedPosition.width
-                    config.cropDimensions.height = savedPosition.height
-                    config.dimensions = {
-                        width:  savedPosition.width,
-                        height: savedPosition.height,
-                    }
-                    config.group = savedPosition.group || config.group
-                    config.scale = savedPosition.scale || {x: 1, y: 1}
 
-                    // Restore scale transform if saved
-                    if (config.scale.x !== 1 || config.scale.y !== 1) {
-                        this.#transform.setScale(element, config.scale.x, config.scale.y)
+                    config.dimensions = {
+                        width:  savedWidget.width,
+                        height: savedWidget.height,
                     }
+
+                    config.cropDimensions = {
+                        top:    savedWidget.top,
+                        left:   savedWidget.left,
+                        width:  savedWidget.width,
+                        height: savedWidget.height,
+                    }
+
+                    config.group = savedWidget.group || config.group
+                    config.scale = savedWidget.scale || {x: 1, y: 1}
+
+                    config.ratio = savedWidget.ratio
+                    config.attachTo = savedWidget.attachTo
                 }
             }
             this.#widgets.set(elementId, config)

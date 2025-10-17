@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-16
- * Last modified: 2025-10-16
+ * Created on: 2025-10-17
+ * Last modified: 2025-10-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -43,31 +43,33 @@ export class WidgetTransform {
      * @returns {Object} Object containing translate, scale, rotate values
      */
     parseTransform = transformString => {
+        // Initialize default transformation values
         const result = {
             translate: {x: 0, y: 0},
             scale:     {x: 1, y: 1},
             rotate:    0,
         }
 
+        // Early return if transform string is empty or 'none'
         if (!transformString || transformString === 'none') {
             return result
         }
 
-        // Parse translate
+        // Parse translate values from the string
         const translateMatch = transformString.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
         if (translateMatch) {
             result.translate.x = parseFloat(translateMatch[1]) || 0
             result.translate.y = parseFloat(translateMatch[2]) || 0
         }
 
-        // Parse scale
+        // Parse scale values from the string, handling uniform or separate x/y scales
         const scaleMatch = transformString.match(/scale\(([-\d.]+)(?:,\s*([-\d.]+))?\)/)
         if (scaleMatch) {
             result.scale.x = parseFloat(scaleMatch[1]) || 1
             result.scale.y = scaleMatch[2] ? parseFloat(scaleMatch[2]) : result.scale.x
         }
 
-        // Parse rotate
+        // Parse rotate value from the string
         const rotateMatch = transformString.match(/rotate\(([-\d.]+)deg\)/)
         if (rotateMatch) {
             result.rotate = parseFloat(rotateMatch[1]) || 0
@@ -82,23 +84,25 @@ export class WidgetTransform {
      * @returns {string} CSS transform string
      */
     buildTransform = transforms => {
+        // Array to collect transform parts
         const parts = []
 
-        // Add translate if not at origin
+        // Add translate if values are not at origin
         if (transforms.translate && (transforms.translate.x !== 0 || transforms.translate.y !== 0)) {
             parts.push(`translate(${transforms.translate.x}px, ${transforms.translate.y}px)`)
         }
 
-        // Add scale if not at 1
+        // Add scale if values are not at 1
         if (transforms.scale && (transforms.scale.x !== 1 || transforms.scale.y !== 1)) {
             parts.push(`scale(${transforms.scale.x}, ${transforms.scale.y})`)
         }
 
-        // Add rotate if not at 0
+        // Add rotate if value is not at 0
         if (transforms.rotate && transforms.rotate !== 0) {
             parts.push(`rotate(${transforms.rotate}deg)`)
         }
 
+        // Join parts or return 'none' if no transforms
         return parts.length > 0 ? parts.join(' ') : 'none'
     }
 
@@ -109,9 +113,11 @@ export class WidgetTransform {
      * @param {number} y - Y translation value
      */
     setTranslate = (element, x, y) => {
+        // Retrieve widget ID and config
         const elementId = this.#widgetManager.retrieveElementId(element)
         const config = this.#widgetManager.getWidgetConfig(elementId)
 
+        // Early return if config not found
         if (!config) {
             return
         }
@@ -119,13 +125,13 @@ export class WidgetTransform {
         // Parse existing transform
         const currentTransform = this.parseTransform(element.style.transform)
 
-        // Update translate
+        // Update translate values
         currentTransform.translate = {x, y}
 
-        // Store in config
+        // Store updated translate in config
         config.translate = currentTransform.translate
 
-        // Build and apply new transform
+        // Build and apply new transform string
         const newTransform = this.buildTransform(currentTransform)
         element.style.transform = newTransform
         config.transform = newTransform
@@ -138,9 +144,11 @@ export class WidgetTransform {
      * @param {number} y - Y scale value
      */
     setScale = (element, x, y) => {
+        // Retrieve widget ID and config
         const elementId = this.#widgetManager.retrieveElementId(element)
         const config = this.#widgetManager.getWidgetConfig(elementId)
 
+        // Early return if config not found
         if (!config) {
             return
         }
@@ -148,18 +156,16 @@ export class WidgetTransform {
         // Parse existing transform
         const currentTransform = this.parseTransform(element.style.transform)
 
-        // Update scale
+        // Update scale values
         currentTransform.scale = {x, y}
 
-        // Store in config
+        // Store updated scale in config
         config.scale = currentTransform.scale
 
-        // Build and apply new transform
+        // Build and apply new transform string
         const newTransform = this.buildTransform(currentTransform)
         element.style.transform = newTransform
         config.transform = newTransform
-
-        console.log(newTransform)
     }
 
     /**
@@ -168,9 +174,11 @@ export class WidgetTransform {
      * @param {number} degrees - Rotation in degrees
      */
     setRotate = (element, degrees) => {
+        // Retrieve widget ID and config
         const elementId = this.#widgetManager.retrieveElementId(element)
         const config = this.#widgetManager.getWidgetConfig(elementId)
 
+        // Early return if config not found
         if (!config) {
             return
         }
@@ -178,13 +186,13 @@ export class WidgetTransform {
         // Parse existing transform
         const currentTransform = this.parseTransform(element.style.transform)
 
-        // Update rotate
+        // Update rotate value
         currentTransform.rotate = degrees
 
-        // Store in config
+        // Store updated rotate in config
         config.rotate = degrees
 
-        // Build and apply new transform
+        // Build and apply new transform string
         const newTransform = this.buildTransform(currentTransform)
         element.style.transform = newTransform
         config.transform = newTransform
@@ -196,14 +204,16 @@ export class WidgetTransform {
      * @returns {Object} Object containing translate, scale, rotate values
      */
     getTransform = element => {
+        // Retrieve widget ID and config
         const elementId = this.#widgetManager.retrieveElementId(element)
         const config = this.#widgetManager.getWidgetConfig(elementId)
 
+        // Return default transforms if config not found
         if (!config) {
             return {translate: {x: 0, y: 0}, scale: {x: 1, y: 1}, rotate: 0}
         }
 
-        // Parse from element if not in config
+        // Parse from config if available, otherwise from element style
         if (!config.transform) {
             return this.parseTransform(element.style.transform)
         }
@@ -216,13 +226,16 @@ export class WidgetTransform {
      * @param {HTMLElement} element - The DOM element
      */
     resetTransform = element => {
+        // Retrieve widget ID and config
         const elementId = this.#widgetManager.retrieveElementId(element)
         const config = this.#widgetManager.getWidgetConfig(elementId)
 
+        // Early return if config not found
         if (!config) {
             return
         }
 
+        // Reset transform style and config values
         element.style.transform = 'none'
         config.transform = undefined
         config.translate = {x: 0, y: 0}
@@ -235,35 +248,63 @@ export class WidgetTransform {
      * @param {HTMLElement} element - The DOM element
      */
     commitTranslateToPosition = element => {
+        // Retrieve widget ID and config
         const elementId = this.#widgetManager.retrieveElementId(element)
         const config = this.#widgetManager.getWidgetConfig(elementId)
 
+        // Early return if config not found
         if (!config) {
             return
         }
 
+        // Get current transforms
         const transforms = this.getTransform(element)
 
+        // Apply translate to position if not zero
         if (transforms.translate.x !== 0 || transforms.translate.y !== 0) {
-            // Apply translate to position
+            // Parse current position
             const currentLeft = parseInt(element.style.left || '0', 10)
             const currentTop = parseInt(element.style.top || '0', 10)
 
+            // Calculate new position
             const newLeft = Math.round(currentLeft + transforms.translate.x)
             const newTop = Math.round(currentTop + transforms.translate.y)
 
+            // Update element style and config position
             element.style.left = `${newLeft}px`
             element.style.top = `${newTop}px`
 
             config.position = {left: newLeft, top: newTop}
 
-            // Reset translate but keep other transforms
+            // Reset translate in transforms
             transforms.translate = {x: 0, y: 0}
             config.translate = {x: 0, y: 0}
 
+            // Build and apply updated transform
             const newTransform = this.buildTransform(transforms)
             element.style.transform = newTransform
             config.transform = newTransform === 'none' ? undefined : newTransform
         }
+    }
+
+    /**
+     * Parses position values (supports px, %, or numbers).
+     * @param {string|number} value - The position value to parse
+     * @param {number} maxDimension - The maximum dimension for percentage calculations
+     * @returns {number} Parsed position value in pixels
+     */
+    parsePosition = (value, maxDimension) => {
+        // Handle percentage values
+        if (typeof value === 'string' && value.endsWith('%')) {
+            const percent = parseFloat(value)
+            return isNaN(percent) ? 0 : (percent / 100) * maxDimension
+        }
+        // Handle px values
+        if (typeof value === 'string' && value.endsWith('px')) {
+            return parseFloat(value) || 0
+        }
+        // Handle numeric or string numeric values
+        const numValue = typeof value === 'number' ? value : parseFloat(value)
+        return isNaN(numValue) ? 0 : numValue
     }
 }
