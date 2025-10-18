@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-17
- * Last modified: 2025-10-17
+ * Created on: 2025-10-18
+ * Last modified: 2025-10-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -49,6 +49,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const [isMouseOver, setIsMouseOver] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
 
+
     /**
      * Get snap settings based on configuration
      * @returns {Object} Snap settings with threshold and gap
@@ -82,47 +83,56 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const handleDoubleClickOrTap = useSingleOrDoubleEvent({onDouble: handleDoubleClick})
 
     /**
-     * Get center guidelines for snapping
-     * @returns {{verticalGuidelines: [], horizontalGuidelines: []}} Vertical and horizontal guidelines
+     * Get center guidelines for snapping, adjusted for container offset
+     * @returns {{verticalGuidelines: number[], horizontalGuidelines: number[]}} Vertical and horizontal guidelines
      */
     const getCenterGuidelines = useCallback(() => {
-        const container = lgs.canvas
+        const container = config.container ?? lgs.canvas
         if (!container) {
             return {verticalGuidelines: [], horizontalGuidelines: []}
         }
-        const {width, height} = container.getBoundingClientRect()
-        return {verticalGuidelines: [width / 2], horizontalGuidelines: [height / 2]}
-    }, [])
+        const {width, height, left, top} = container.getBoundingClientRect()
+        // Adjust center guidelines by adding the container's left and top offsets
+        const centerX = left + width / 2
+        const centerY = top + height / 2
+        return {verticalGuidelines: [centerX], horizontalGuidelines: [centerY]}
+    }, [config?.container])
 
     /**
-     * Get custom grid guidelines for snapping
-     * @returns {Object} Vertical and horizontal guidelines
+     * Get custom grid guidelines for snapping, adjusted for container offset
+     * @returns {{verticalGuidelines: number[], horizontalGuidelines: number[]}} Vertical and horizontal guidelines
      */
     const getCustomGridGuidelines = useCallback(() => {
         if (!config?.snapGrid || !lgs.canvas) {
             return {verticalGuidelines: [], horizontalGuidelines: []}
         }
         const {x: gridX = 0, y: gridY = 0} = config.snapGrid
-        const {width, height} = lgs.canvas.getBoundingClientRect()
+        const {width, height, left, top} = lgs.canvas.getBoundingClientRect()
         const verticalGuidelines = []
         const horizontalGuidelines = []
-        const centerX = width / 2
-        const centerY = height / 2
+        // Adjust center by container's left and top offsets
+        const centerX = left + width / 2
+        const centerY = top + height / 2
+
         if (gridX > 0) {
             verticalGuidelines.push(centerX)
-            for (let x = centerX + gridX; x <= width; x += gridX) {
+            // Add guidelines to the right
+            for (let x = centerX + gridX; x <= left + width; x += gridX) {
                 verticalGuidelines.push(x)
             }
-            for (let x = centerX - gridX; x >= 0; x -= gridX) {
+            // Add guidelines to the left
+            for (let x = centerX - gridX; x >= left; x -= gridX) {
                 verticalGuidelines.push(x)
             }
         }
         if (gridY > 0) {
             horizontalGuidelines.push(centerY)
-            for (let y = centerY + gridY; y <= height; y += gridY) {
+            // Add guidelines below
+            for (let y = centerY + gridY; y <= top + height; y += gridY) {
                 horizontalGuidelines.push(y)
             }
-            for (let y = centerY - gridY; y >= 0; y -= gridY) {
+            // Add guidelines above
+            for (let y = centerY - gridY; y >= top; y -= gridY) {
                 horizontalGuidelines.push(y)
             }
         }
@@ -142,7 +152,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             _moveable.current?.updateRect()
         }
         updateGuidelines()
-        const container = lgs.canvas
+        const container = config.container ?? lgs.canvas
         if (container) {
             const resizeObserver = new ResizeObserver(updateGuidelines)
             resizeObserver.observe(container)
