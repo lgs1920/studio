@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-17
- * Last modified: 2025-10-17
+ * Created on: 2025-10-19
+ * Last modified: 2025-10-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -51,6 +51,9 @@ export class WidgetManager {
 
     /** @type {boolean} Indicates if a widget is being scaled */
     #isScaling = false
+
+    /** @type {boolean} Indicates if window resizing has an impact */
+    #windowResizing = true
 
     /** @type {Map<string, number>} Timers for hiding control boxes */
     #controlBoxTimers = new Map()
@@ -259,10 +262,18 @@ export class WidgetManager {
 
     /**
      * Getter for isScaling property
-     * @returns {boolean} Whether a widget is being scaled
+     * @returns {boolean} Whether a widget is being dragged
      */
     get isDragging() {
         return this.#isDragging
+    }
+
+    get windowResizing() {
+        return this.#windowResizing
+    }
+
+    set windowResizing(value) {
+        this.#windowResizing = value
     }
 
     /**
@@ -283,7 +294,7 @@ export class WidgetManager {
             element.style.transform = position
             config.transform = position
         }
-        // Then if it is an objet , it's coordinates
+        // Then if it is an object, it's coordinates
         else if (typeof position === 'object') {
             element.style.left = `${position.left}px`
             element.style.top = `${position.top}px`
@@ -352,7 +363,7 @@ export class WidgetManager {
     getRatio = ratio => lgs.configuration.videoFormats.find(p => p.value === ratio)
 
     /**
-     * Computes initial position for a widget based on configuration.
+     * Computes initial position for a widget based on configuration, respecting container margins.
      * @param {Object} config - Widget configuration
      * @param {HTMLElement} element - The DOM element
      * @param {boolean} isResize - Whether this is a resize operation
@@ -364,6 +375,7 @@ export class WidgetManager {
         }
         const container = config.container.getBoundingClientRect()
         const widget = element.getBoundingClientRect()
+        const margin = Number.isFinite(config.containerPadding) ? config.containerPadding : 0
 
         let defaultWidth = widget.width || 200
         let defaultHeight = widget.height || 200
@@ -378,7 +390,6 @@ export class WidgetManager {
         let {left, top} = config.position
         if (config.fromDB) {
             // Use saved position from DB, relative to the container
-            // We do not need to adjust position, it's always left,top
             left = config.position.left
             top = config.position.top
         }
@@ -392,24 +403,23 @@ export class WidgetManager {
                     left: left - defaultWidth / 2,
                     top:  top - defaultHeight / 2,
                 }),
-                top:            () => ({left: left - defaultWidth / 2, top: top}),
-                left:           () => ({left: left, top: top - defaultHeight / 2}),
-                right:          () => ({left: left - defaultWidth, top: top - defaultHeight / 2}),
-                bottom:         () => ({left: left - defaultWidth / 2, top: top - defaultHeight}),
-                'top-left':     () => ({left, top}),
-                'top-right':    () => ({left: left - defaultWidth, top}),
-                'bottom-left':  () => ({left, top: top - defaultHeight}),
-                'bottom-right': () => ({left: left - defaultWidth, top: top - defaultHeight}),
+                top:            () => ({left: left - defaultWidth / 2, top: top + margin}),
+                left:           () => ({left: left + margin, top: top - defaultHeight / 2}),
+                right:          () => ({left: left - defaultWidth - margin, top: top - defaultHeight / 2}),
+                bottom:         () => ({left: left - defaultWidth / 2, top: top - defaultHeight - margin}),
+                'top-left':     () => ({left: left + margin, top: top + margin}),
+                'top-right':    () => ({left: left - defaultWidth - margin, top: top + margin}),
+                'bottom-left':  () => ({left: left + margin, top: top - defaultHeight - margin}),
+                'bottom-right': () => ({left: left - defaultWidth - margin, top: top - defaultHeight - margin}),
             }
             if (adjustments[attachTo]) {
                 ({left, top} = adjustments[attachTo]())
             }
         }
 
-
-        // Constrain position within bounds
-        left = Math.min(Math.max(left, config.bounds.left), config.bounds.right - defaultWidth)
-        top = Math.min(Math.max(top, config.bounds.top), config.bounds.bottom - defaultHeight)
+        // Constrain position within bounds, respecting margins
+        left = Math.min(Math.max(left, config.bounds.left + margin), config.bounds.right - defaultWidth - margin)
+        top = Math.min(Math.max(top, config.bounds.top + margin), config.bounds.bottom - defaultHeight - margin)
         config.position = {left, top}
         config.dimensions = {width: defaultWidth, height: defaultHeight}
 
@@ -449,11 +459,12 @@ export class WidgetManager {
     setBoundStatus = (element, config = this.getWidgetConfig(this.#current)) => {
         const container = config.container.getBoundingClientRect()
         const target = element.getBoundingClientRect()
+        const margin = Number.isFinite(config.containerPadding) ? config.containerPadding : 0
         config.boundStatus = {
-            top: target.top <= container.top,
-            bottom: target.bottom >= container.bottom,
-            left: target.left <= container.left,
-            right: target.right >= container.right,
+            top:    target.top <= container.top + margin,
+            bottom: target.bottom >= container.bottom - margin,
+            left:   target.left <= container.left + margin,
+            right:  target.right >= container.right - margin,
         }
         return config.boundStatus
     }
@@ -603,7 +614,11 @@ export class WidgetManager {
      * Applies crop dimensions to the overlay element.
      * @param {Object} config - Widget configuration
      */
-    applyCropToOverlay = config => this.#cropper.applyCropToOverlay(config)
+    applyCropToOverlay = config => {
+        if (this.windowResizing) {
+            this.#cropper.applyCropToOverlay(config)
+        }
+    }
 
     /**
      * Creates a clip path for the overlay based on crop dimensions.
@@ -649,6 +664,8 @@ export class WidgetManager {
 
     /**
      * Monitors container resize events and updates widget bounds and position.
+     * Detects when widgets are out of bounds, repositions them considering container margins only for colliding sides,
+     * and dispatches an event. For croppers, maintains the relative center position before repositioning.
      * @param {Object} config - Widget configuration
      * @param {Function} setBounds - Function to update bounds
      * @param {Object} moveable - Moveable instance
@@ -672,18 +689,73 @@ export class WidgetManager {
             }
             setBounds(newBounds)
             this.setBoundStatus(element, config)
+
+            // Check if widget is out of bounds and reposition if necessary
+            const containerRect = config.container.getBoundingClientRect()
+            const widgetRect = element.getBoundingClientRect()
+            const margin = Number.isFinite(config.containerPadding) ? config.containerPadding : 5
+            let newLeft = config.position.left
+            let newTop = config.position.top
+            let isOutOfBounds = false
+            const outOfBoundsDetails = {
+                widgetId:         config.id,
+                top:              false,
+                bottom:           false,
+                left:             false,
+                right:            false,
+                margin:           margin,
+                originalPosition: {...config.position},
+                newPosition:      null,
+            }
+
+            // Detect out-of-bounds conditions and apply margin only to colliding sides
+            if (widgetRect.left < containerRect.left + margin) {
+                newLeft = containerRect.left + margin
+                outOfBoundsDetails.left = true
+                isOutOfBounds = true
+            }
+            else if (widgetRect.right > containerRect.right - margin) {
+                newLeft = containerRect.right - widgetRect.width - margin
+                outOfBoundsDetails.right = true
+                isOutOfBounds = true
+            }
+            if (widgetRect.top < containerRect.top + margin) {
+                newTop = containerRect.top + margin
+                outOfBoundsDetails.top = true
+                isOutOfBounds = true
+            }
+            else if (widgetRect.bottom > containerRect.bottom - margin) {
+                newTop = containerRect.bottom - widgetRect.height - margin
+                outOfBoundsDetails.bottom = true
+                isOutOfBounds = true
+            }
+
+            // Reposition widget if out of bounds
+            if (isOutOfBounds) {
+                config.position = {left: newLeft, top: newTop}
+                outOfBoundsDetails.newPosition = {left: newLeft, top: newTop}
+                element.style.left = `${newLeft}px`
+                element.style.top = `${newTop}px`
+                setPosition(config.position)
+
+                // Dispatch custom event for out-of-bounds
+                const outOfBoundsEvent = new CustomEvent('widgetOutOfBounds', {
+                    detail:     outOfBoundsDetails,
+                    bubbles:    true,
+                    cancelable: true,
+                })
+                element.dispatchEvent(outOfBoundsEvent)
+            }
+
             // Adjust transform for dragging elements
             if (config.transform) {
                 const transforms = this.#transform.parseTransform(config.transform)
-
                 if (transforms.translate.x !== 0 || transforms.translate.y !== 0) {
                     let newTranslateX = transforms.translate.x
                     let newTranslateY = transforms.translate.y
-
                     const deltaRight = newBounds.right - oldBounds.right
                     const deltaBottom = newBounds.bottom - oldBounds.bottom
                     const isShrinking = deltaRight < 0 || deltaBottom < 0
-
                     if (isShrinking) {
                         if (config.boundStatus.right) {
                             newTranslateX = transforms.translate.x + deltaRight
@@ -700,18 +772,18 @@ export class WidgetManager {
                             config.boundStatus.bottom = false
                         }
                     }
-
                     if (newTranslateX !== transforms.translate.x || newTranslateY !== transforms.translate.y) {
                         this.#transform.setTranslate(element, newTranslateX, newTranslateY)
                     }
                 }
             }
+
             // Update cropper position and dimensions
-            if (config.isCropper) {
+            if (config.isCropper && this.windowResizing) {
+                console.log('update cropper position and dimensions')
                 const containerRect = config.container.getBoundingClientRect()
                 const currentWidth = config.cropDimensions?.width || 200
                 const currentHeight = config.cropDimensions?.height || 200
-                const margin = Number.isFinite(config.margin) ? config.margin : 0
                 const maxWidth = containerRect.width - 2 * margin
                 const maxHeight = containerRect.height - 2 * margin
                 let newWidth = currentWidth
@@ -730,36 +802,59 @@ export class WidgetManager {
                     newWidth = Math.min(currentWidth, maxWidth)
                     newHeight = Math.min(currentHeight, maxHeight)
                 }
-                // Recalculate centered position for cropper
-                let newLeft, newTop
-                if (config.attachTo === 'center') {
-                    newLeft = (containerRect.width - newWidth) / 2
-                    newTop = (containerRect.height - newHeight) / 2
-                    // Constrain position within bounds
-                    newLeft = Math.min(Math.max(newLeft, newBounds.left + margin), newBounds.right - newWidth - margin)
-                    newTop = Math.min(Math.max(newTop, newBounds.top + margin), newBounds.bottom - newHeight - margin)
+                // Recalculate position for cropper, maintaining relative center
+                let newLeft = config.position.left
+                let newTop = config.position.top
+                // Use centerRatio if available, otherwise calculate from current position
+                const centerRatio = config.centerRatio || {
+                    x: (config.position.left + currentWidth / 2) / containerRect.width,
+                    y: (config.position.top + currentHeight / 2) / containerRect.height,
                 }
-                else {
-                    newLeft = config.position.left
-                    newTop = config.position.top
+                // Calculate new position based on centerRatio
+                newLeft = centerRatio.x * containerRect.width - newWidth / 2
+                newTop = centerRatio.y * containerRect.height - newHeight / 2
+                // Constrain position within bounds, applying margin only to colliding sides
+                if (newLeft < newBounds.left + margin) {
+                    newLeft = newBounds.left + margin
+                    outOfBoundsDetails.left = true
+                    isOutOfBounds = true
+                }
+                else if (newLeft + newWidth > newBounds.right - margin) {
+                    newLeft = newBounds.right - newWidth - margin
+                    outOfBoundsDetails.right = true
+                    isOutOfBounds = true
+                }
+                if (newTop < newBounds.top + margin) {
+                    newTop = newBounds.top + margin
+                    outOfBoundsDetails.top = true
+                    isOutOfBounds = true
+                }
+                else if (newTop + newHeight > newBounds.bottom - margin) {
+                    newTop = newBounds.bottom - newHeight - margin
+                    outOfBoundsDetails.bottom = true
+                    isOutOfBounds = true
+                }
+                // Update centerRatio after repositioning
+                config.centerRatio = {
+                    x: (newLeft + newWidth / 2) / containerRect.width,
+                    y: (newTop + newHeight / 2) / containerRect.height,
                 }
                 // Update crop dimensions and position
                 config.cropDimensions = {
-                    left:   newLeft,
-                    top:    newTop,
-                    width:  newWidth,
+                    left:  newLeft,
+                    top:   newTop,
+                    width: newWidth,
                     height: newHeight,
                 }
                 config.position = {
                     left: newLeft,
-                    top:  newTop,
+                    top: newTop,
                 }
                 // Apply dimensions and position synchronously
                 element.style.width = `${newWidth}px`
                 element.style.height = `${newHeight}px`
                 element.style.left = `${newLeft}px`
                 element.style.top = `${newTop}px`
-
                 // Apply clip-path immediately
                 this.#cropper.applyCropToOverlay(config)
                 // Update Moveable only if necessary
@@ -769,10 +864,20 @@ export class WidgetManager {
                 // Dispatch crop update
                 this.#cropper.dispatchCropUpdate(config, 'resize')
                 setPosition(config.position)
+                // Update out-of-bounds event for cropper if necessary
+                if (isOutOfBounds) {
+                    outOfBoundsDetails.newPosition = {left: newLeft, top: newTop}
+                    const outOfBoundsEvent = new CustomEvent('widgetOutOfBounds', {
+                        detail:     outOfBoundsDetails,
+                        bubbles:    true,
+                        cancelable: true,
+                    })
+                    element.dispatchEvent(outOfBoundsEvent)
+                }
             }
         }
         if (config.container) {
-            config.observer = new ResizeObserver(handleResize)
+            config.observer = new ResizeObserver(this.#throttle(handleResize, 100))
             config.observer.observe(config.container)
         }
     }
@@ -932,22 +1037,18 @@ export class WidgetManager {
                         left: savedWidget.left,
                         top:  savedWidget.top,
                     }
-
                     config.dimensions = {
                         width:  savedWidget.width,
                         height: savedWidget.height,
                     }
-
                     config.cropDimensions = {
                         top:    savedWidget.top,
                         left:   savedWidget.left,
                         width:  savedWidget.width,
                         height: savedWidget.height,
                     }
-
                     config.group = savedWidget.group || config.group
                     config.scale = savedWidget.scale || {x: 1, y: 1}
-
                     config.ratio = savedWidget.ratio
                     config.attachTo = savedWidget.attachTo
                 }

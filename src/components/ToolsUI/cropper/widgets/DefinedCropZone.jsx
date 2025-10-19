@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-12
- * Last modified: 2025-10-12
+ * Created on: 2025-10-19
+ * Last modified: 2025-10-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,6 +22,7 @@
  ******************************************************************************/
 
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { useSnapshot } from 'valtio'
 import { CropZoneInfo }                                          from './CropZoneInfo'
 
 export const DefinedCropZone = memo(function DefinedCropZone({
@@ -33,16 +34,19 @@ export const DefinedCropZone = memo(function DefinedCropZone({
                                                                  context,
                                                              }) {
     const _definedCropZone = useRef(null)
+    const $video = lgs.stores.ui.video
+    const video = useSnapshot($video)
 
     const [crop, setCrop] = useState(() => {
-        const cfg = __.ui.widgetManager.getWidgetConfig(context.id)
-        return cfg?.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0}
+        const config = __.ui.widgetManager.getWidgetConfig(context.id)
+        return config?.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0}
     })
 
     // Store the crop zone DOM element in Valtio store when mounted
     useEffect(() => {
         if (_definedCropZone.current) {
             context.cropZone = _definedCropZone.current.id
+            context.resizable = $video.resizable
             context.widgetEditor = true
         }
         return () => {
@@ -51,27 +55,7 @@ export const DefinedCropZone = memo(function DefinedCropZone({
                 // we need widgetEditor later...
             }
         }
-    }, [_definedCropZone.current])
-
-    useEffect(() => {
-        const sync = () => {
-            const cfg = __.ui.widgetManager.getWidgetConfig(context.id)
-            if (!cfg?.cropDimensions) {
-                return
-            }
-            setCrop({...cfg.cropDimensions})
-        }
-        // initial
-        sync()
-        // live updates
-        const onUpdate = (e) => {
-            if (!e?.detail || e.detail.id === context.context.id) {
-                sync()
-            }
-        }
-        document.addEventListener('onCropUpdate', onUpdate)
-        return () => document.removeEventListener('onCropUpdate', onUpdate)
-    }, [context.id])
+    }, [_definedCropZone.current, $video.resizable])
 
     // Apply DOM styles for the static crop box
     useEffect(() => {
@@ -93,15 +77,16 @@ export const DefinedCropZone = memo(function DefinedCropZone({
             return
         }
         try {
-            const cfg = __.ui.widgetManager.getWidgetConfig(context.id)
-            if (cfg) {
-                cfg.outsideOverlay = overlay
-                __.ui.widgetManager.applyCropToOverlay({...cfg, cropDimensions: crop})
+            const config = __.ui.widgetManager.getWidgetConfig(context.id)
+            console.log('ok')
+            if (config) {
+                config.outsideOverlay = overlay
+                __.ui.widgetManager.applyCropToOverlay({...config, cropDimensions: crop})
             }
         }
         catch (_) {
         }
-    }, [overlay, context.id, crop])
+    }, [])
 
     return (
         <div

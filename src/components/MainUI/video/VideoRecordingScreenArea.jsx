@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-13
- * Last modified: 2025-10-13
+ * Created on: 2025-10-19
+ * Last modified: 2025-10-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -29,10 +29,10 @@ export const VideoRecordingScreenArea = () => {
     const video = useSnapshot($video)
     const _cropZone = useRef(null)
     const [crop, setCrop] = useState({x: 0, y: 0, width: 0, height: 0})
-
+    const [widget, setWidget] = useState(null)
     useEffect(() => {
-        const widget = __.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE)
-        setCrop(widget.cropDimensions)
+        setWidget(__.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE))
+        setCrop(__.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE).cropDimensions)
         return () => {
             __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGET_GROUP, false)
             __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGET_GROUP, false)
@@ -72,7 +72,7 @@ export const VideoRecordingScreenArea = () => {
 
     return (
         <>
-            <CropOverlay style={overlayStyle}/>
+            <CropOverlay style={overlayStyle} className={'video-recording-in-progress'}/>
             <VideoRecorderWidget id="video-recorder-widget"/>
             <DefinedCropZone
                 context={$video.cropper}

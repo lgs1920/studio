@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-17
- * Last modified: 2025-10-17
+ * Created on: 2025-10-19
+ * Last modified: 2025-10-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -307,37 +307,37 @@ export class WidgetCropper {
         }
     }
 
-    /**
-     * Handles container resize for cropper elements.
-     * @param {Object} config - Widget configuration
-     * @param {HTMLElement} element - The DOM element
-     * @param {Object} moveable - Moveable instance
-     * @param {Function} setPosition - Function to set position
-     */
-    handleContainerResize = (config, element, moveable, setPosition) => {
-        const t = element.style.transform || ''
-        const m = t.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
-        const baseLeft = parseInt(element.style.left || '0', 10)
-        const baseTop = parseInt(element.style.top || '0', 10)
-        const dx = m ? parseFloat(m[1]) || 0 : 0
-        const dy = m ? parseFloat(m[2]) || 0 : 0
-        let left = Math.round(baseLeft + dx)
-        let top = Math.round(baseTop + dy)
-        let width = Number(config.cropDimensions?.width) || parseInt(element.style.width || '0', 10)
-        let height = Number(config.cropDimensions?.height) || parseInt(element.style.height || '0', 10)
-        width = Math.max(0, width)
-        height = Math.max(0, height)
-        const maxLeft = Math.max(config.bounds.left, config.bounds.right - width)
-        const maxTop = Math.max(config.bounds.top, config.bounds.bottom - height)
-        left = Math.min(Math.max(left, config.bounds.left), maxLeft)
-        top = Math.min(Math.max(top, config.bounds.top), maxTop)
-        element.style.left = `${left}px`
-        element.style.top = `${top}px`
-        element.style.transform = 'none'
-        config.transform = undefined
-        config.position = {left, top}
-        config.cropDimensions = {left, top, width, height}
-        this.applyCropToOverlay(config)
-        this.dispatchCropUpdate(config, 'container-resize')
-    }
+    // /**
+    //  * Handles container resize for cropper elements.
+    //  * @param {Object} config - Widget configuration
+    //  * @param {HTMLElement} element - The DOM element
+    //  * @param {Object} moveable - Moveable instance
+    //  * @param {Function} setPosition - Function to set position
+    //  */
+    // handleContainerResize = (config, element, moveable, setPosition) => {
+    //     const t = element.style.transform || ''
+    //     const m = t.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
+    //     const baseLeft = parseInt(element.style.left || '0', 10)
+    //     const baseTop = parseInt(element.style.top || '0', 10)
+    //     const dx = m ? parseFloat(m[1]) || 0 : 0
+    //     const dy = m ? parseFloat(m[2]) || 0 : 0
+    //     let left = Math.round(baseLeft + dx)
+    //     let top = Math.round(baseTop + dy)
+    //     let width = Number(config.cropDimensions?.width) || parseInt(element.style.width || '0', 10)
+    //     let height = Number(config.cropDimensions?.height) || parseInt(element.style.height || '0', 10)
+    //     width = Math.max(0, width)
+    //     height = Math.max(0, height)
+    //     const maxLeft = Math.max(config.bounds.left, config.bounds.right - width)
+    //     const maxTop = Math.max(config.bounds.top, config.bounds.bottom - height)
+    //     left = Math.min(Math.max(left, config.bounds.left), maxLeft)
+    //     top = Math.min(Math.max(top, config.bounds.top), maxTop)
+    //     element.style.left = `${left}px`
+    //     element.style.top = `${top}px`
+    //     element.style.transform = 'none'
+    //     config.transform = undefined
+    //     config.position = {left, top}
+    //     config.cropDimensions = {left, top, width, height}
+    //     this.applyCropToOverlay(config)
+    //     this.dispatchCropUpdate(config, 'container-resize')
+    // }
 }
