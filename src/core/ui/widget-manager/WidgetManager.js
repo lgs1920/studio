@@ -375,7 +375,7 @@ export class WidgetManager {
         }
         const container = config.container.getBoundingClientRect()
         const widget = element.getBoundingClientRect()
-        const margin = Number.isFinite(config.containerPadding) ? config.containerPadding : 0
+        const margin = Number.isFinite(config.margin) ? config.margin : 0
 
         let defaultWidth = widget.width || 200
         let defaultHeight = widget.height || 200
@@ -459,7 +459,7 @@ export class WidgetManager {
     setBoundStatus = (element, config = this.getWidgetConfig(this.#current)) => {
         const container = config.container.getBoundingClientRect()
         const target = element.getBoundingClientRect()
-        const margin = Number.isFinite(config.containerPadding) ? config.containerPadding : 0
+        const margin = Number.isFinite(config.margin) ? config.margin : 0
         config.boundStatus = {
             top:    target.top <= container.top + margin,
             bottom: target.bottom >= container.bottom - margin,
@@ -615,9 +615,7 @@ export class WidgetManager {
      * @param {Object} config - Widget configuration
      */
     applyCropToOverlay = config => {
-        if (this.windowResizing) {
             this.#cropper.applyCropToOverlay(config)
-        }
     }
 
     /**
@@ -693,7 +691,7 @@ export class WidgetManager {
             // Check if widget is out of bounds and reposition if necessary
             const containerRect = config.container.getBoundingClientRect()
             const widgetRect = element.getBoundingClientRect()
-            const margin = Number.isFinite(config.containerPadding) ? config.containerPadding : 5
+            const margin = Number.isFinite(config.margin) ? config.margin : 5
             let newLeft = config.position.left
             let newTop = config.position.top
             let isOutOfBounds = false
@@ -780,7 +778,6 @@ export class WidgetManager {
 
             // Update cropper position and dimensions
             if (config.isCropper && this.windowResizing) {
-                console.log('update cropper position and dimensions')
                 const containerRect = config.container.getBoundingClientRect()
                 const currentWidth = config.cropDimensions?.width || 200
                 const currentHeight = config.cropDimensions?.height || 200
@@ -1004,7 +1001,7 @@ export class WidgetManager {
                 dimensions:             {width: 0, height: 0},
                 observer:               null,
                 showControlBox:         initialConfig.showControlBox,
-                containerPadding:       initialConfig.containerPadding,
+                margin: initialConfig.margin,
                 animationWhenDragging:  initialConfig.animationWhenDragging ?? false,
                 animationWhenScaling:   initialConfig.animationWhenScaling ?? false,
                 ratio:                  this.getRatio(initialConfig.ratio ?? ratio),

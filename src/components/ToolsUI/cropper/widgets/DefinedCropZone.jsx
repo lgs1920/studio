@@ -78,7 +78,6 @@ export const DefinedCropZone = memo(function DefinedCropZone({
         }
         try {
             const config = __.ui.widgetManager.getWidgetConfig(context.id)
-            console.log('ok')
             if (config) {
                 config.outsideOverlay = overlay
                 __.ui.widgetManager.applyCropToOverlay({...config, cropDimensions: crop})
