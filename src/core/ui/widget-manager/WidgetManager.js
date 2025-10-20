@@ -70,7 +70,7 @@ export class WidgetManager {
         this.#resizable = new WidgetResizable(this, this.#cropper)
         this.#scalable = new WidgetScalable(this, this.#cropper, this.#transform)
         this.#position = new WidgetPosition(this)
-        this.#core = new WidgetCore(this)
+        this.#core = new WidgetCore(this, this.#transform)
         WidgetManager.#instance = this
     }
 
@@ -80,70 +80,6 @@ export class WidgetManager {
      */
     get transform() {
         return this.#transform
-    }
-
-    /**
-     * Getter for isResizing property
-     * @returns {boolean} Whether a widget is being resized
-     */
-    get isResizing() {
-        return this.#core.isResizing
-    }
-
-    /**
-     * Setter for isResizing property
-     * @param {boolean} value - New value for isResizing
-     */
-    set isResizing(value) {
-        this.#core.isResizing = value
-    }
-
-    /**
-     * Getter for isDragging property
-     * @returns {boolean} Whether a widget is being dragged
-     */
-    get isDragging() {
-        return this.#core.isDragging
-    }
-
-    /**
-     * Setter for isDragging property
-     * @param {boolean} value - New value for isDragging
-     */
-    set isDragging(value) {
-        this.#core.isDragging = value
-    }
-
-    /**
-     * Getter for windowResizing property
-     * @returns {boolean} Whether window resizing has an impact
-     */
-    get windowResizing() {
-        return this.#core.windowResizing
-    }
-
-    /**
-     * Setter for windowResizing property
-     * @param {boolean} value - New value for windowResizing
-     */
-    set windowResizing(value) {
-        this.#core.windowResizing = value
-    }
-
-    /**
-     * Getter for isScaling property
-     * @returns {boolean} Whether a widget is being scaled
-     */
-    get isScaling() {
-        return this.#core.isScaling
-    }
-
-    /**
-     * Setter for isScaling property
-     * @param {boolean} value - New value for isScaling
-     */
-    set isScaling(value) {
-        this.#core.isScaling = value
     }
 
     /**
@@ -228,38 +164,6 @@ export class WidgetManager {
     getWidgetConfig = elementId => this.#core.getWidgetConfig(elementId)
 
     /**
-     * Handles the start of a drag event.
-     * @param {Object} event - Drag event
-     */
-    onDragStart = event => this.#draggable.onDragStart(event)
-
-    /**
-     * Handles the end of a drag event.
-     * @param {Object} event - Drag event
-     */
-    onDragEnd = event => this.#draggable.onDragEnd(event)
-
-    /**
-     * Handles the start of a resize event.
-     * @param {Object} event - Resize event
-     */
-    onResizeStart = event => this.#resizable.onResizeStart(event)
-
-    /**
-     * Handles resize events, updating element dimensions and position.
-     * @param {Object} event - Resize event
-     * @param {Object} refs - References object
-     * @param {Function} setPosition - Function to set position
-     */
-    onResize = (event, refs, setPosition) => this.#resizable.onResize(event, refs, setPosition)
-
-    /**
-     * Handles the end of a resize event.
-     * @param {Object} event - Resize event
-     */
-    onResizeEnd = event => this.#resizable.onResizeEnd(event)
-
-    /**
      * Retrieves the widget element by ID.
      * @param {string} id - The widget ID
      * @returns {HTMLElement|null} The DOM element or null if not found
@@ -281,29 +185,6 @@ export class WidgetManager {
     getInnerOverlay = element => this.#core.getInnerOverlay(element)
 
     /**
-     * Handles double-click events, maximizing the crop zone.
-     * @param {Object} event - Click event
-     * @param {Function} setPosition - Function to set position
-     */
-    onDoubleClick = (event, setPosition) => this.#cropper.onDoubleClick(event, setPosition)
-
-    /**
-     * Updates the crop zone ratio and dimensions.
-     * @param {string} cropzoneId - The crop zone ID
-     * @param {number} aspectRatio - The new aspect ratio
-     * @param {boolean} lockRatio - Whether to lock the ratio
-     */
-    updateCropRatio = (cropzoneId, aspectRatio, lockRatio) => this.#cropper.updateCropRatio(cropzoneId, aspectRatio, lockRatio)
-
-    /**
-     * Computes crop dimensions.
-     * @param {Object} config - Widget configuration
-     * @param {boolean} maximize - Whether to maximize crop
-     * @returns {Object} Crop dimensions
-     */
-    cropDimensions = (config, maximize = false) => this.#cropper.cropDimensions(config, maximize)
-
-    /**
      * Sets widget configuration for an element ID.
      * @param {string} elementId - The element ID
      * @param {Object} config - Widget configuration
@@ -311,46 +192,11 @@ export class WidgetManager {
     setConfig = (elementId, config) => this.#core.setConfig(elementId, config)
 
     /**
-     * Creates a clip path for the overlay based on crop dimensions.
-     * @param {Object} crop - Crop dimensions object
-     * @returns {string} CSS clip-path string
-     */
-    openWindowInOverlay = crop => this.#cropper.openWindowInOverlay(crop)
-
-    /**
      * Retrieves widget configurations by group ID.
      * @param {string} groupId - The group identifier
      * @returns {Object[]} Array of widget configurations
      */
     getWidgetConfigByGroup = groupId => this.#core.getWidgetConfigByGroup(groupId)
-
-    /**
-     * Retrieves widget position from the widget DB if not expired.
-     * @param {string} widgetId - The widget ID
-     * @returns {Promise<Object|null>} Position data or null if not found/expired
-     */
-    getWidgetPosition = async widgetId => this.#widgetDB.getWidgetPosition(widgetId)
-
-    /**
-     * Retrieves all widget positions for a given group from IndexedDB if not expired.
-     * @param {string} groupId - The group ID
-     * @returns {Promise<Object[]>} Array of position data for the group
-     */
-    getWidgetsByGroup = async groupId => this.#widgetDB.getWidgetsByGroup(groupId)
-
-    /**
-     * Deletes all widget positions for a given group from IndexedDB.
-     * @param {string} groupId - The group ID
-     * @returns {Promise<void>}
-     */
-    deleteWidgetsByGroup = async groupId => this.#widgetDB.deleteWidgetsByGroup(groupId)
-
-    /**
-     * Deletes a single widget position from the widgets DB.
-     * @param {string} widgetId - The widget ID
-     * @returns {Promise<void>}
-     */
-    deleteWidgetPosition = async widgetId => this.#widgetDB.deleteWidgetPosition(widgetId)
 
     /**
      * Disposes a single widget element, cleaning up resources.
@@ -383,6 +229,46 @@ export class WidgetManager {
     onDrag = event => this.#draggable.onDrag(event)
 
     /**
+     * Getter for isResizing property
+     * @returns {boolean} Whether a widget is being resized
+     */
+    get isResizing() {
+        return this.#core.isResizing
+    }
+
+    /**
+     * Setter for isResizing property
+     * @param {boolean} value - New value for isResizing
+     */
+    set isResizing(value) {
+        this.#core.isResizing = value
+    }
+
+    /**
+     * Getter for isDragging property
+     * @returns {boolean} Whether a widget is being dragged
+     */
+    get isDragging() {
+        return this.#core.isDragging
+    }
+
+    /**
+     * Setter for isDragging property
+     * @param {boolean} value - New value for isDragging
+     */
+    set isDragging(value) {
+        this.#core.isDragging = value
+    }
+
+    /**
+     * Getter for windowResizing property
+     * @returns {boolean} Whether window resizing has an impact
+     */
+    get windowResizing() {
+        return this.#core.windowResizing
+    }
+
+    /**
      * Handles the start of a scale event.
      * @param {Object} event - Scale event
      */
@@ -403,10 +289,42 @@ export class WidgetManager {
     onScaleEnd = async event => this.#scalable.onScaleEnd(event)
 
     /**
+     * Setter for windowResizing property
+     * @param {boolean} value - New value for windowResizing
+     */
+    set windowResizing(value) {
+        this.#core.windowResizing = value
+    }
+
+    /**
+     * Getter for isScaling property
+     * @returns {boolean} Whether a widget is being scaled
+     */
+    get isScaling() {
+        return this.#core.isScaling
+    }
+
+    /**
+     * Setter for isScaling property
+     * @param {boolean} value - New value for isScaling
+     */
+    set isScaling(value) {
+        this.#core.isScaling = value
+    }
+
+    /**
      * Applies crop dimensions to the overlay element.
      * @param {Object} config - Widget configuration
      */
     applyCropToOverlay = config => this.#cropper.applyCropToOverlay(config)
+
+    /**
+     * Retrieves or creates widget configuration for an element, including saved positions from browser DB.
+     * @param {HTMLElement} element - The DOM element
+     * @param {Object} initialConfig - Initial configuration
+     * @returns {Promise<Object>} Widget configuration
+     */
+    retrieveConfig = async (element, initialConfig) => this.#core.retrieveConfig(element, initialConfig)
 
     /**
      * Saves widget position and dimensions to the widgets DB.
@@ -415,6 +333,32 @@ export class WidgetManager {
      * @returns {Promise<void>}
      */
     saveWidgetPosition = async (widgetId, config) => this.#widgetDB.saveWidgetPosition(widgetId, config)
+
+    /**
+     * Handles the start of a drag event.
+     * @param {Object} event - Drag event
+     */
+    onDragStart = event => this.#draggable.onDragStart(event)
+
+    /**
+     * Handles the end of a drag event.
+     * @param {Object} event - Drag event
+     */
+    onDragEnd = event => this.#draggable.onDragEnd(event)
+
+    /**
+     * Handles the start of a resize event.
+     * @param {Object} event - Resize event
+     */
+    onResizeStart = event => this.#resizable.onResizeStart(event)
+
+    /**
+     * Handles resize events, updating element dimensions and position.
+     * @param {Object} event - Resize event
+     * @param {Object} refs - References object
+     * @param {Function} setPosition - Function to set position
+     */
+    onResize = (event, refs, setPosition) => this.#resizable.onResize(event, refs, setPosition)
 
     /**
      * Positions the widget at the center of its container.
@@ -487,4 +431,68 @@ export class WidgetManager {
      * @returns {Object} New position object
      */
     toBottomRight = (element, margin = 0) => this.#position.toBottomRight(element, margin)
+
+    /**
+     * Handles the end of a resize event.
+     * @param {Object} event - Resize event
+     */
+    onResizeEnd = event => this.#resizable.onResizeEnd(event)
+
+    /**
+     * Handles double-click events, maximizing the crop zone.
+     * @param {Object} event - Click event
+     * @param {Function} setPosition - Function to set position
+     */
+    onDoubleClick = (event, setPosition) => this.#cropper.onDoubleClick(event, setPosition)
+
+    /**
+     * Updates the crop zone ratio and dimensions.
+     * @param {string} cropzoneId - The crop zone ID
+     * @param {number} aspectRatio - The new aspect ratio
+     * @param {boolean} lockRatio - Whether to lock the ratio
+     */
+    updateCropRatio = (cropzoneId, aspectRatio, lockRatio) => this.#cropper.updateCropRatio(cropzoneId, aspectRatio, lockRatio)
+
+    /**
+     * Computes crop dimensions.
+     * @param {Object} config - Widget configuration
+     * @param {boolean} maximize - Whether to maximize crop
+     * @returns {Object} Crop dimensions
+     */
+    cropDimensions = (config, maximize = false) => this.#cropper.cropDimensions(config, maximize)
+
+    /**
+     * Creates a clip path for the overlay based on crop dimensions.
+     * @param {Object} crop - Crop dimensions object
+     * @returns {string} CSS clip-path string
+     */
+    openWindowInOverlay = crop => this.#cropper.openWindowInOverlay(crop)
+
+    /**
+     * Retrieves widget position from the widget DB if not expired.
+     * @param {string} widgetId - The widget ID
+     * @returns {Promise<Object|null>} Position data or null if not found/expired
+     */
+    getWidgetPosition = async widgetId => this.#widgetDB.getWidgetPosition(widgetId)
+
+    /**
+     * Retrieves all widget positions for a given group from IndexedDB if not expired.
+     * @param {string} groupId - The group ID
+     * @returns {Promise<Object[]>} Array of position data for the group
+     */
+    getWidgetsByGroup = async groupId => this.#widgetDB.getWidgetsByGroup(groupId)
+
+    /**
+     * Deletes all widget positions for a given group from IndexedDB.
+     * @param {string} groupId - The group ID
+     * @returns {Promise<void>}
+     */
+    deleteWidgetsByGroup = async groupId => this.#widgetDB.deleteWidgetsByGroup(groupId)
+
+    /**
+     * Deletes a single widget position from the widgets DB.
+     * @param {string} widgetId - The widget ID
+     * @returns {Promise<void>}
+     */
+    deleteWidgetPosition = async widgetId => this.#widgetDB.deleteWidgetPosition(widgetId)
 }

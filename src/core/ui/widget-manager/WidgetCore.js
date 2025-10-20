@@ -25,6 +25,9 @@ export class WidgetCore {
     /** @type {WidgetManager} Reference to the WidgetManager instance */
     #widgetManager
 
+    /** @type {WidgetTransform} Reference to the WidgetManager instance */
+    #widgetTransform
+
     /** @type {number} Delay in milliseconds before hiding control box */
     HIDE_DELAY = 2 * SECOND
 
@@ -58,9 +61,11 @@ export class WidgetCore {
     /**
      * Constructor for WidgetCore.
      * @param {WidgetManager} widgetManager - The WidgetManager instance
+     * @param {WidgetTransform} widgetTransform - The #widgetTransform instance
      */
-    constructor(widgetManager) {
+    constructor(widgetManager, widgetTransform) {
         this.#widgetManager = widgetManager
+        this.#widgetTransform = widgetTransform
     }
 
     /**
@@ -355,7 +360,7 @@ export class WidgetCore {
     getRatio = ratio => lgs.configuration.videoFormats.find(p => p.value === ratio)
 
     /**
-     * Computes initial position for a widget based on configuration, using WidgetPosition.
+     * Computes initial position for a widget based on configuration, respecting container margins
      * @param {Object} config - Widget configuration
      * @param {HTMLElement} element - The DOM element
      * @param {boolean} isResize - Whether this is a resize operation
@@ -365,18 +370,65 @@ export class WidgetCore {
         if (!config.container || !element) {
             return {left: 0, top: 0}
         }
+        const container = config.container.getBoundingClientRect()
+        const widget = element.getBoundingClientRect()
+        const margin = Number.isFinite(config.margin) ? config.margin : 0
 
-        // Use saved position from DB if available
-        if (config.fromDB) {
-            return config.position
+        let defaultWidth = widget.width || 200
+        let defaultHeight = widget.height || 200
+        if (config.isCropper) {
+            defaultWidth = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : (widget.width || 200)
+            defaultHeight = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : (widget.height || 200)
         }
 
-        // Use WidgetPosition to compute initial position
-        const attachTo = config.attachTo || (config.isCropper ? 'center' : 'top-left')
-        const margin = Number.isFinite(config.margin) ? config.margin : 0
-        return this.#widgetManager[attachTo.replace('-', '')](element, margin)
-    }
+        // Set config.dimensions
+        config.dimensions = {width: defaultWidth, height: defaultHeight}
 
+        // Compute left/top
+        const attachTo = config.attachTo || (config.isCropper ? 'center' : 'top-left')
+
+        let left, top
+        if (config.fromDB) {
+            // Use saved position from DB, relative to the container
+            left = config.position?.left ?? 0
+            top = config.position?.top ?? 0
+        }
+        else {
+            // Use provided left/top or center for croppers, relative to the container
+            left = config.isCropper ? (container.width - defaultWidth) / 2 : container.left + this.#widgetTransform.parsePosition(config.left ?? '50%', container.width)
+            top = config.isCropper ? (container.height - defaultHeight) / 2 : container.top + this.#widgetTransform.parsePosition(config.top ?? '50%', container.height)
+            // Adjust position based on anchor point, skip center adjustment for croppers
+            const adjustments = {
+                center:         () => config.isCropper ? ({left, top}) : ({
+                    left: left - defaultWidth / 2,
+                    top:  top - defaultHeight / 2,
+                }),
+                top:            () => ({left: left - defaultWidth / 2, top: top + margin}),
+                left:           () => ({left: left + margin, top: top - defaultHeight / 2}),
+                right:          () => ({left: left - defaultWidth - margin, top: top - defaultHeight / 2}),
+                bottom:         () => ({left: left - defaultWidth / 2, top: top - defaultHeight - margin}),
+                'top-left':     () => ({left: left + margin, top: top + margin}),
+                'top-right':    () => ({left: left - defaultWidth - margin, top: top + margin}),
+                'bottom-left':  () => ({left: left + margin, top: top - defaultHeight - margin}),
+                'bottom-right': () => ({left: left - defaultWidth - margin, top: top - defaultHeight - margin}),
+            }
+            if (adjustments[attachTo]) {
+                ({left, top} = adjustments[attachTo]())
+            }
+        }
+
+        // Set config.position
+        config.position = {left, top}
+
+        // Ensure widget stays within container bounds
+        const boundedLeft = Math.max(0, Math.min(left, container.width - defaultWidth))
+        const boundedTop = Math.max(0, Math.min(top, container.height - defaultHeight))
+
+        // Update config.position with bounded values
+        config.position = {left: boundedLeft, top: boundedTop}
+
+        return {left: boundedLeft, top: boundedTop}
+    }
     /**
      * Refreshes container bounds based on current container size.
      * @param {Object} config - Widget configuration
@@ -791,42 +843,43 @@ export class WidgetCore {
                                 : 'top-left')
             const ratio = __.device.isPortrait ? '9x16' : '16x9'
             const config = {
-                id:                     elementId,
+                animationWhenDragging: initialConfig.animationWhenDragging ?? false,
+                animationWhenScaling:  initialConfig.animationWhenScaling ?? false,
+                attachTo:              anchor,
                 boundStatus:            {left: false, top: false, right: false, bottom: false},
+                bounds:                {left: 0, top: 0, right: 0, bottom: 0},
+                centerRatio:           {x: 0.5, y: 0.5},
                 container:              initialConfig.container,
+                cropDimensions:        initialConfig.cropDimensions,
+                dimensions:            {width: 0, height: 0},
+                dynamic:               initialConfig.dynamic ?? false,
+                element:               initialConfig.element,
+                group:                 initialConfig.group ?? null,
+                id:                    elementId,
                 isCropper:              initialConfig.isCropper,
                 isMobile:               initialConfig.isMobile,
-                bounds:                 {left: 0, top: 0, right: 0, bottom: 0},
-                position:               {left: 0, top: 0},
                 left:                   initialConfig.left,
-                top:                    initialConfig.top,
-                attachTo:               anchor,
-                snapPoints:             [],
-                dimensions:             {width: 0, height: 0},
-                observer:               null,
-                showControlBox:         initialConfig.showControlBox,
+                mandatory:             initialConfig.mandatory ?? false,
                 margin:                 initialConfig.margin,
-                animationWhenDragging:  initialConfig.animationWhenDragging ?? false,
-                animationWhenScaling:   initialConfig.animationWhenScaling ?? false,
-                ratio:                  this.getRatio(initialConfig.ratio ?? ratio),
-                useRatio:               initialConfig.useRatio ?? true,
                 minCropSize:            initialConfig.minCropSize ?? {width: 0, height: 0},
+                moveable:              initialConfig.moveable,
+                observer:              null,
                 outsideOverlay:         initialConfig.outsideOverlay,
-                resizeFromCenter:       initialConfig.resizeFromCenter ?? false,
-                centerRatio:            {x: 0.5, y: 0.5},
+                persist:               initialConfig.persist ?? null,
+                position:              {left: 0, top: 0},
                 previousCropDimensions: null,
-                moveable:               initialConfig.moveable,
+                ratio:                 this.getRatio(initialConfig.ratio ?? ratio),
+                resizeFromCenter:      initialConfig.resizeFromCenter ?? false,
+                rotate:                initialConfig.rotate ?? 0,
+                scale:                 initialConfig.scale ?? {x: 1, y: 1},
                 setPosition:            initialConfig.setPosition,
-                element:                initialConfig.element,
-                cropDimensions:         initialConfig.cropDimensions,
-                group:                  initialConfig.group ?? null,
-                persist:                initialConfig.persist ?? null,
+                showControlBox:        initialConfig.showControlBox,
+                snapPoints:            [],
+                top:                   initialConfig.top,
+                translate:             initialConfig.translate ?? {x: 0, y: 0},
                 transient:              initialConfig.transient ?? false,
-                dynamic:                initialConfig.dynamic ?? false,
                 ttl:                    initialConfig.ttl ?? this.TTL,
-                translate:              initialConfig.translate ?? {x: 0, y: 0},
-                scale:                  initialConfig.scale ?? {x: 1, y: 1},
-                rotate:                 initialConfig.rotate ?? 0,
+                useRatio:              initialConfig.useRatio ?? true,
             }
             // Restore position from IndexedDB if available
             config.fromDB = false
