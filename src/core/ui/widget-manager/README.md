@@ -2,57 +2,70 @@
 
 ## Overview
 
-`WidgetManager` is a singleton class in the `LGS1920/studio` project designed to manage draggable and resizable widgets
-within a container. It delegates drag functionality to `WidgetDraggable`, resize functionality to `WidgetResizable`, and
-cropping functionality to `WidgetCropper`. The class handles widget positioning, bounds enforcement, snapping, control
-box visibility, group-based widget management, and optional persistence of widget configurations in IndexedDB, ensuring
-a transparent interface for components that interact with it.
+`WidgetManager` is a singleton class in the `LGS1920/studio` project designed to manage draggable, resizable, scalable,
+and croppable widgets within a container. It serves as a transparent interface, delegating specific functionalities to
+specialized utility classes: `WidgetCore`, `WidgetDraggable`, `WidgetResizable`, `WidgetScalable`, `WidgetCropper`,
+`WidgetPosition`, `WidgetTransform`, and `WidgetDBManager`. This architecture ensures modularity and maintainability,
+allowing components to interact solely with `WidgetManager` without knowledge of the underlying implementations.
 
 ### Key Responsibilities
 
-- **Widget Initialization**: Sets up draggable and resizable elements with unique IDs, applies initial positions, and
-  ensures elements stay within container bounds.
-- **Drag and Resize Delegation**: Delegates drag and resize operations to `WidgetDraggable` and `WidgetResizable`,
-  maintaining state for dragging and resizing.
+- **Widget Initialization**: Configures DOM elements as widgets with unique IDs, applies initial positions, and ensures
+  they stay within container bounds.
+- **Drag, Resize, and Scale Delegation**: Delegates drag, resize, and scale operations to `WidgetDraggable`,
+  `WidgetResizable`, and `WidgetScalable`, respectively, while tracking states like `isDragging`, `isResizing`, and
+  `isScaling`.
 - **Crop Management**: Delegates cropping operations (e.g., crop dimensions, overlay synchronization, double-click
   toggling) to `WidgetCropper`.
-- **Container Resize Observation**: Monitors container size changes and adjusts widget positions and dimensions
-  accordingly.
-- **Group Management**: Supports grouping of widgets for collective retrieval and disposal.
-- **Persistence**: Manages widget configuration persistence in IndexedDB when enabled, allowing restoration across
-  sessions. The `persist` flag enables saving widget configurations to IndexedDB, while `transient` indicates that the
-  data is temporary with a lifespan defined by the `ttl` property (in seconds).
+- **Positioning**: Delegates positioning logic (e.g., centering, aligning to edges) to `WidgetPosition`.
+- **Transform Management**: Delegates transformation operations (e.g., scale, translate) to `WidgetTransform`.
+- **Container Resize Observation**: Monitors container size changes and adjusts widget positions and dimensions via
+  `WidgetCore`.
+- **Group Management**: Supports grouping widgets for collective retrieval and disposal.
+- **Persistence**: Manages widget configuration persistence in IndexedDB via `WidgetDBManager` when the `persist` flag
+  is enabled. The `transient` flag marks configurations as temporary with a lifespan defined by the `ttl` property (in
+  seconds).
 
 ### Classes Overview
 
-- **`WidgetManager`**: Central singleton that orchestrates widget management, delegating specific behaviors to
-  `WidgetDraggable`, `WidgetResizable`, `WidgetCropper`, and `WidgetDBManager`.
-- **`WidgetDraggable`**: Singleton responsible for handling drag start and end events, updating widget positions, and
-  coordinating with `WidgetCropper` for crop zones.
-- **`WidgetResizable`**: Singleton responsible for handling resize events, updating widget dimensions, and coordinating
-  with `WidgetCropper` for crop zones.
-- **`WidgetCropper`**: Singleton responsible for managing crop zone dimensions, overlay synchronization, aspect ratio
-  updates, and double-click toggling.
-- **`WidgetDBManager`**: Singleton responsible for managing persistence of widget configurations in IndexedDB.
+- **`WidgetManager`**: Singleton interface that orchestrates widget management, delegating tasks to utility classes.
+- **`WidgetCore`**: Handles core widget functionality, including configuration storage, bounds management, control box
+  visibility, and container resize observation.
+- **`WidgetDraggable`**: Manages drag start, drag, and drag end events, updating widget positions and coordinating with
+  `WidgetCropper` for crop zones.
+- **`WidgetResizable`**: Manages resize start, resize, and resize end events, updating widget dimensions and
+  synchronizing crop overlays.
+- **`WidgetScalable`**: Manages scale start, scale, and scale end events, updating widget transformations.
+- **`WidgetCropper`**: Manages crop zone dimensions, overlay synchronization, aspect ratio updates, and double-click
+  toggling.
+- **`WidgetPosition`**: Provides methods for positioning widgets at specific container locations (e.g., center,
+  top-left).
+- **`WidgetTransform`**: Manages CSS transformations (e.g., scale, translate) for widgets.
+- **`WidgetDBManager`**: Manages persistence of widget configurations in IndexedDB, including saving, retrieving, and
+  deleting data.
 
 ## Installation
 
 Ensure the following dependencies are included in your project:
 
 - `uuid` for generating unique widget IDs.
-- Constants from `@Core/constants` (e.g., `LGS_ANIMATION_DRAGGING`, `LGS_ANIMATION_RESIZING`, `SECOND`).
+- Constants from `@Core/constants` (e.g., `SECOND`).
 
 ```bash
-npm install uuid
+bun add uuid
 ```
 
 Include the necessary files in your project:
 
 ```javascript
 import { WidgetManager }   from './WidgetManager.js'
+import { WidgetCore }      from './WidgetCore.js'
 import { WidgetDraggable } from './WidgetDraggable.js'
 import { WidgetResizable } from './WidgetResizable.js'
+import { WidgetScalable }  from './WidgetScalable.js'
 import { WidgetCropper }   from './WidgetCropper.js'
+import { WidgetPosition }  from './WidgetPosition.js'
+import { WidgetTransform } from './WidgetTransform.js'
 import { WidgetDBManager } from '@Core/ui/widget-manager/WidgetDBManager'
 ```
 
@@ -60,8 +73,8 @@ import { WidgetDBManager } from '@Core/ui/widget-manager/WidgetDBManager'
 
 ### Creating the Singleton Instance
 
-`WidgetManager` is a singleton, so you only need to instantiate it once. You can optionally pass a shared store during
-initialization.
+`WidgetManager` is a singleton, ensuring a single instance manages all widgets. You can optionally pass a shared store
+during initialization (currently unused).
 
 ```javascript
 const widgetManager = new WidgetManager(store)
@@ -69,79 +82,72 @@ const widgetManager = new WidgetManager(store)
 
 ### Setting Up a Widget
 
-To initialize a draggable, resizable, or croppable widget, call the `setupElement` method with the required parameters.
+Use the `setupElement` method to initialize a draggable, resizable, scalable, or croppable widget.
 
 ```javascript
-/**
- * Initialize a draggable/resizable widget
- * @param {HTMLElement} element - The DOM element to manage
- * @param {Object} initialConfig - Configuration object
- * @param {Function} setBounds - Callback to update bounds state
- * @param {Function} setPosition - Callback to update position state
- * @param {Object} moveable - Reference to Moveable instance
- * @returns {boolean} - Success status
- */
-const success = widgetManager.setupElement(
-        element,
-        {
-            id:               'widget-1',
-            container:        document.querySelector('#container'),
-            isCropper:        true,
-            showControlBox:   true,
-            margin:    10,
-            ratio:            '16x9',
-            minCropSize:      {width: 100, height: 100},
-            outsideOverlay:   document.querySelector('#overlay'),
-            resizeFromCenter: true,
-            group:     'video-tools', // Group identifier
-            persist:   true,         // Enable persistence in IndexedDB
-            transient: true,         // Mark as temporary with TTL
-            ttl:       3600          // Time-to-live in seconds (1 hour)
-        },
-        setBounds,
-        setPosition,
-        moveableRef
-    )
+import Moveable from 'moveable'
+
+const element = document.querySelector('#widget-1')
+const container = document.querySelector('#container')
+const moveable = {current: new Moveable(container)}
+const setBounds = bounds => console.log('Bounds updated:', bounds)
+const setPosition = position => console.log('Position updated:', position)
+
+const success = await widgetManager.setupElement(
+    element,
+    {
+        id:               'widget-1',
+        container:        container,
+        isCropper:        true,
+        showControlBox:   true,
+        margin:           10,
+        ratio:            '16x9',
+        minCropSize:      {width: 100, height: 100},
+        outsideOverlay:   document.querySelector('#overlay'),
+        resizeFromCenter: true,
+        group:            'video-tools',
+        persist:          true,
+        transient:        true,
+        ttl:              3600 // 1 hour
+    },
+    setBounds,
+    setPosition,
+    moveable
+)
+
+console.log('Widget setup:', success)
 ```
 
 ### Updating Crop Aspect Ratio
 
-To update the aspect ratio of a crop zone, use the `updateCropRatio` method, which is delegated to `WidgetCropper`.
+Update the aspect ratio of a crop zone using `updateCropRatio`.
 
 ```javascript
-/**
- * Update the aspect ratio of a crop zone
- * @param {string} cropzoneId - ID of the crop zone
- * @param {number} aspectRatio - New aspect ratio (width/height)
- * @param {boolean} lockRatio - Whether to lock the aspect ratio
- */
 widgetManager.updateCropRatio('widget-1', 16 / 9, true)
+```
+
+### Positioning a Widget
+
+Position a widget at specific container locations using methods like `toCenter`, `toTopLeft`, etc.
+
+```javascript
+widgetManager.toCenter(element, 10) // Center with 10px margin
 ```
 
 ### Managing Widgets by Group
 
-To retrieve or dispose of widgets in a group:
+Retrieve or dispose of widgets in a group.
 
 ```javascript
-/**
- * Retrieve widget configurations by group ID
- * @param {string} groupId - The group identifier
- * @returns {Object[]} Array of widget configurations
- */
 const configs = widgetManager.getWidgetConfigByGroup('video-tools')
+console.log('Group configs:', configs)
 
-/**
- * Dispose widgets by group ID
- * @param {string} groupId - The group identifier
- * @param {boolean} usePersist - Whether to respect persist flag
- */
 widgetManager.disposeByGroup('video-tools', true)
 ```
 
 ### Handling Events
 
-`WidgetManager` emits custom events (`onCropUpdate`) via `WidgetCropper` during crop-related changes. Listen for these
-events to synchronize your application state.
+Listen for `onCropUpdate` events emitted by `WidgetCropper` to synchronize application state.
 
 ```javascript
 document.addEventListener('onCropUpdate', event => {
@@ -152,117 +158,273 @@ document.addEventListener('onCropUpdate', event => {
 
 ### Disposing a Widget
 
-To clean up a widget and stop observing its container, use the `disposeElement` method.
+Clean up a widget and its resources.
 
 ```javascript
-/**
- * Dispose a widget and clean up resources
- * @param {HTMLElement} element - The DOM element to dispose
- */
 widgetManager.disposeElement(element)
 ```
 
 ## Configuration Options
 
-The `initialConfig` object passed to `setupElement` supports the following properties:
+The `initialConfig` object for `setupElement` supports:
 
-| Property                | Type          | Description                                                                  |
-|-------------------------|---------------|------------------------------------------------------------------------------|
-| `id`                    | string        | Unique identifier for the widget (optional; auto-generated if not provided). |
-| `container`             | HTMLElement   | The container element for bounds and resize observation.                     |
-| `isCropper`             | boolean       | Whether the widget is a crop zone.                                           |
-| `showControlBox`        | boolean       | Whether to display a control box for resizing/dragging.                      |
-| `margin`                | number        | Margin around the widget (in pixels).                                        |
-| `ratio`                 | string        | Aspect ratio identifier (e.g., '16x9', '9x16', '1x1').                       |
-| `minCropSize`           | Object        | Minimum crop dimensions `{ width: number, height: number }`.                 |
-| `outsideOverlay`        | HTMLElement   | Overlay element for crop zone clipping.                                      |
-| `resizeFromCenter`      | boolean       | Whether resizing adjusts from the center or edge.                            |
-| `animationWhenDragging` | boolean       | Whether to apply drag animation (uses `LGS_ANIMATION_DRAGGING` class).       |
-| `left`                  | number/string | Initial left position (pixels or percentage).                                |
-| `top`                   | number/string | Initial top position (pixels or percentage).                                 |
-| `attachTo`              | string        | Anchor position (e.g., 'center', 'top-left', 'bottom-right').                |
-| `group`                 | string/null   | Group identifier for collective widget management.                           |
-| `persist`               | boolean       | Whether to save widget configuration in IndexedDB.                           |
-| `transient`             | boolean       | Whether the widget configuration is temporary, with lifespan set by `ttl`.   |
-| `dynamic`               | boolean       | Whether the widget is dynamically managed (specific usage TBD).              |
-| `ttl`                   | number        | Time-to-live for persisted data in IndexedDB (in seconds, defaults to 3600). |
+| Property                | Type          | Description                                                            |
+|-------------------------|---------------|------------------------------------------------------------------------|
+| `id`                    | string        | Unique widget ID (auto-generated if not provided).                     |
+| `container`             | HTMLElement   | Container for bounds and resize observation.                           |
+| `isCropper`             | boolean       | Whether the widget is a crop zone.                                     |
+| `showControlBox`        | boolean       | Whether to show a control box for dragging/resizing.                   |
+| `margin`                | number        | Margin around the widget (pixels).                                     |
+| `ratio`                 | string        | Aspect ratio (e.g., '16x9', '9x16', '1x1').                            |
+| `minCropSize`           | Object        | Minimum crop dimensions `{ width: number, height: number }`.           |
+| `outsideOverlay`        | HTMLElement   | Overlay element for crop zone clipping.                                |
+| `resizeFromCenter`      | boolean       | Whether resizing adjusts from the center or edge.                      |
+| `animationWhenDragging` | boolean       | Whether to apply drag animation (uses `LGS_ANIMATION_DRAGGING` class). |
+| `animationWhenScaling`  | boolean       | Whether to apply scale animation (uses `LGS_ANIMATION_SCALING` class). |
+| `left`                  | number/string | Initial left position (pixels or percentage).                          |
+| `top`                   | number/string | Initial top position (pixels or percentage).                           |
+| `attachTo`              | string        | Anchor position (e.g., 'center', 'top-left', 'bottom-right').          |
+| `group`                 | string/null   | Group identifier for collective management.                            |
+| `persist`               | boolean       | Whether to save configuration in IndexedDB.                            |
+| `transient`             | boolean       | Whether configuration is temporary (uses `ttl`).                       |
+| `dynamic`               | boolean       | Whether the widget is dynamically managed (specific usage TBD).        |
+| `ttl`                   | number        | Time-to-live for persisted data (seconds, defaults to 3600).           |
+| `translate`             | Object        | Initial translation `{ x: number, y: number }`.                        |
+| `scale`                 | Object        | Initial scale `{ x: number, y: number }`.                              |
+| `rotate`                | number        | Initial rotation (degrees).                                            |
 
-## Methods
+## Classes and Methods
 
 ### WidgetManager
 
-- **retrieveElementId(element)**: Retrieves the unique ID of an element.
-- **setupElement(element, initialConfig, setBounds, setPosition, moveable)**: Initializes a widget with drag, resize,
-  and optional crop functionality.
-- **updateCropRatio(cropzoneId, aspectRatio, lockRatio)**: Updates the crop zone's aspect ratio (delegates to
-  `WidgetCropper`).
-- **applyPosition(element, position, moveable, isDragging, setControlBoxProps)**: Applies position styles (transform or
-  left/top).
-- **manageControlBox(moveable, setControlBoxProps, _controlBoxTimer, show, isMouseOver)**: Manages control box
-  visibility.
-- **disposeElement(element)**: Cleans up a widget and its resources.
-- **getWidgetConfig(elementId)**: Retrieves the configuration for a widget.
-- **getElementById(id)**: Retrieves a widget element by ID.
-- **setConfig(elementId, config)**: Sets the configuration for a widget.
-- **getWidgetConfigByGroup(groupId)**: Retrieves all widget configurations in a group.
-- **disposeByGroup(groupId, usePersist)**: Disposes all widgets in a group, respecting `persist` flag.
-- **onDragStart(event)**: Handles drag start (delegates to `WidgetDraggable`).
-- **onDragEnd(event)**: Handles drag end (delegates to `WidgetDraggable`).
-- **onResizeStart(event)**: Handles resize start (delegates to `WidgetResizable`).
-- **onResize(event, refs, setPosition)**: Handles resize (delegates to `WidgetResizable`).
-- **onResizeEnd(event)**: Handles resize end (delegates to `WidgetResizable`).
-- **onDoubleClick(event, setPosition)**: Handles double-click for crop toggling (delegates to `WidgetCropper`).
-- **cropDimensions(config, maximize)**: Computes crop dimensions (delegates to `WidgetCropper`).
-- **applyCropToOverlay(config)**: Applies crop to overlay (delegates to `WidgetCropper`).
-- **openWindowInOverlay(crop)**: Creates clip-path for overlay (delegates to `WidgetCropper`).
-- **saveWidgetPosition(widgetId, config)**: Saves widget configuration to IndexedDB with a 1-hour TTL (delegates to
-  `WidgetDBManager`).
-- **getWidgetPosition(widgetId)**: Retrieves widget configuration from IndexedDB if not expired (delegates to
-  `WidgetDBManager`).
-- **getWidgetsByGroup(groupId)**: Retrieves all widget configurations for a group from IndexedDB (delegates to
-  `WidgetDBManager`).
-- **deleteWidgetsByGroup(groupId)**: Deletes all widget configurations for a group from IndexedDB (delegates to
-  `WidgetDBManager`).
+**Attributes**:
+
+- `#instance` (static, private): Singleton instance.
+- `#draggable` (private): `WidgetDraggable` instance.
+- `#resizable` (private): `WidgetResizable` instance.
+- `#scalable` (private): `WidgetScalable` instance.
+- `#cropper` (private): `WidgetCropper` instance.
+- `#widgetDB` (private): `WidgetDBManager` instance.
+- `#position` (private): `WidgetPosition` instance.
+- `#transform` (private): `WidgetTransform` instance.
+- `#core` (private): `WidgetCore` instance.
+- `transform` (getter): Returns `WidgetTransform` instance.
+- `isDragging` (getter/setter): Indicates if a widget is being dragged.
+- `isResizing` (getter/setter): Indicates if a widget is being resized.
+- `isScaling` (getter/setter): Indicates if a widget is being scaled.
+- `windowResizing` (getter/setter): Indicates if window resizing impacts widgets.
+
+**Methods**:
+
+- `constructor(store)`: Creates or returns the singleton instance.
+- `retrieveElementId(element)`: Retrieves the element's ID from its data attribute.
+- `setupElement(element, initialConfig, setBounds, setPosition, moveable)`: Initializes a widget.
+- `applyPosition(element, position, moveable, isDragging, setControlBoxProps)`: Applies position styles.
+- `manageControlBox(moveable, setControlBoxProps, _controlBoxTimer, show, isMouseOver)`: Manages control box visibility.
+- `getRatio(ratio)`: Retrieves video format ratio configuration.
+- `computeInitialPosition(config, element, isResize)`: Computes initial widget position.
+- `refreshBounds(config, moveable)`: Refreshes container bounds.
+- `setBoundStatus(element, config)`: Sets boundary status.
+- `getWidgetConfig(elementId)`: Retrieves widget configuration.
+- `getElementById(id)`: Retrieves widget element by ID.
+- `getIdFromElement(element)`: Retrieves widget ID from element.
+- `getInnerOverlay(element)`: Retrieves inner overlay element.
+- `setConfig(elementId, config)`: Sets widget configuration.
+- `getWidgetConfigByGroup(groupId)`: Retrieves widget configurations by group.
+- `disposeElement(element)`: Disposes a widget.
+- `disposeByGroup(groupId, usePersist)`: Disposes widgets in a group.
+- `monitorContainerResize(config, setBounds, moveable, element, setPosition)`: Monitors container resize.
+- `onDrag(event)`: Handles drag events (delegates to `WidgetDraggable`).
+- `onDragStart(event)`: Handles drag start (delegates to `WidgetDraggable`).
+- `onDragEnd(event)`: Handles drag end (delegates to `WidgetDraggable`).
+- `onResizeStart(event)`: Handles resize start (delegates to `WidgetResizable`).
+- `onResize(event, refs, setPosition)`: Handles resize (delegates to `WidgetResizable`).
+- `onResizeEnd(event)`: Handles resize end (delegates to `WidgetResizable`).
+- `onScaleStart(event)`: Handles scale start (delegates to `WidgetScalable`).
+- `onScale(event, refs, setPosition)`: Handles scale (delegates to `WidgetScalable`).
+- `onScaleEnd(event)`: Handles scale end (delegates to `WidgetScalable`).
+- `onDoubleClick(event, setPosition)`: Handles double-click (delegates to `WidgetCropper`).
+- `updateCropRatio(cropzoneId, aspectRatio, lockRatio)`: Updates crop ratio (delegates to `WidgetCropper`).
+- `cropDimensions(config, maximize)`: Computes crop dimensions (delegates to `WidgetCropper`).
+- `applyCropToOverlay(config)`: Applies crop to overlay (delegates to `WidgetCropper`).
+- `openWindowInOverlay(crop)`: Creates clip-path for overlay (delegates to `WidgetCropper`).
+- `saveWidgetPosition(widgetId, config)`: Saves widget position (delegates to `WidgetDBManager`).
+- `getWidgetPosition(widgetId)`: Retrieves widget position (delegates to `WidgetDBManager`).
+- `getWidgetsByGroup(groupId)`: Retrieves widgets by group (delegates to `WidgetDBManager`).
+- `deleteWidgetsByGroup(groupId)`: Deletes widgets by group (delegates to `WidgetDBManager`).
+- `deleteWidgetPosition(widgetId)`: Deletes widget position (delegates to `WidgetDBManager`).
+- `toCenter(element, margin)`: Positions widget at container center (delegates to `WidgetPosition`).
+- `toTopLeft(element, margin)`: Positions widget at top-left (delegates to `WidgetPosition`).
+- `toTop(element, margin)`: Positions widget at top (delegates to `WidgetPosition`).
+- `toLeft(element, margin)`: Positions widget at left (delegates to `WidgetPosition`).
+- `toRight(element, margin)`: Positions widget at right (delegates to `WidgetPosition`).
+- `toBottom(element, margin)`: Positions widget at bottom (delegates to `WidgetPosition`).
+- `toTopRight(element, margin)`: Positions widget at top-right (delegates to `WidgetPosition`).
+- `toBottomLeft(element, margin)`: Positions widget at bottom-left (delegates to `WidgetPosition`).
+- `toBottomRight(element, margin)`: Positions widget at bottom-right (delegates to `WidgetPosition`).
+
+### WidgetCore
+
+**Attributes**:
+
+- `#widgetManager` (private): Reference to `WidgetManager`.
+- `#ID_KEY` (private): Data attribute key for element IDs (`'data-LGS-ID'`).
+- `#widgets` (private): Map of widget configurations.
+- `#validPositions` (private): Array of valid position anchors.
+- `#isDragging` (private): Indicates if a widget is being dragged.
+- `#isResizing` (private): Indicates if a widget is being resized.
+- `#isScaling` (private): Indicates if a widget is being scaled.
+- `#windowResizing` (private): Indicates if window resizing impacts widgets.
+- `#controlBoxTimers` (private): Map of timers for hiding control boxes.
+- `#current` (private): ID of the currently active widget.
+- `HIDE_DELAY` (public): Delay for hiding control box (2 seconds).
+- `isDragging` (getter/setter): Accesses `#isDragging`.
+- `isResizing` (getter/setter): Accesses `#isResizing`.
+- `isScaling` (getter/setter): Accesses `#isScaling`.
+- `windowResizing` (getter/setter): Accesses `#windowResizing`.
+
+**Methods**:
+
+- `constructor(widgetManager)`: Initializes with `WidgetManager` reference.
+- `retrieveElementId(element)`: Retrieves element ID from data attribute.
+- `#throttle(func, limit)`: Throttles a function to limit execution rate.
+- `#hideControlBoxWithTimer(moveable, config, setControlBoxProps, isMouseOver)`: Hides control box with delay.
+- `setupElement(element, initialConfig, setBounds, setPosition, moveable)`: Initializes a widget.
+- `applyPosition(element, position, moveable, isDragging, setControlBoxProps)`: Applies position styles.
+- `manageControlBox(moveable, setControlBoxProps, _controlBoxTimer, show, isMouseOver)`: Manages control box visibility.
+- `getRatio(ratio)`: Retrieves video format ratio.
+- `computeInitialPosition(config, element, isResize)`: Computes initial position.
+- `refreshBounds(config, moveable)`: Refreshes container bounds.
+- `setBoundStatus(element, config)`: Sets boundary status.
+- `#createInnerOverlay(element)`: Creates inner overlay element.
+- `#computeElementBounds(element)`: Computes element bounds.
+- `disposeElement(element)`: Disposes a widget.
+- `getWidgetConfigByGroup(groupId)`: Retrieves widget configurations by group.
+- `disposeByGroup(groupId, usePersist)`: Disposes widgets in a group.
+- `getWidgetConfig(elementId)`: Retrieves widget configuration.
+- `getElementById(id)`: Retrieves widget element by ID.
+- `getIdFromElement(element)`: Retrieves widget ID from element.
+- `getInnerOverlay(element)`: Retrieves inner overlay element.
+- `setConfig(elementId, config)`: Sets widget configuration.
+- `monitorContainerResize(config, setBounds, moveable, element, setPosition)`: Monitors container resize.
+- `retrieveConfig(element, initialConfig)`: Retrieves or creates widget configuration.
 
 ### WidgetDraggable
 
-- **onDragStart(event)**: Applies drag styles and sets the dragging state.
-- **onDragEnd(event)**: Finalizes drag operation, updates widget position, and synchronizes crop overlay via
-  `WidgetCropper`.
+**Attributes**:
+
+- `#widgetManager` (private): Reference to `WidgetManager`.
+- `#cropper` (private): Reference to `WidgetCropper`.
+- `#transform` (private): Reference to `WidgetTransform`.
+
+**Methods**:
+
+- `constructor(widgetManager, cropper, transform)`: Initializes with references.
+- `onDragStart(event)`: Handles drag start, applying styles and setting state.
+- `onDrag(event)`: Updates widget position and crop overlay during drag.
+- `onDragEnd(event)`: Finalizes drag, updates position, and synchronizes crop.
 
 ### WidgetResizable
 
-- **onResizeStart(event)**: Applies resize styles and sets the resizing state.
-- **onResize(event, refs, setPosition)**: Updates element styles and overlay during resize.
-- **onResizeEnd(event)**: Finalizes resize operation, updates dimensions, and synchronizes crop overlay via
-  `WidgetCropper`.
+**Attributes**:
+
+- `#widgetManager` (private): Reference to `WidgetManager`.
+- `#cropper` (private): Reference to `WidgetCropper`.
+
+**Methods**:
+
+- `constructor(widgetManager, cropper)`: Initializes with references.
+- `onResizeStart(event)`: Handles resize start, applying styles and setting state.
+- `onResize(event, refs, setPosition)`: Updates dimensions and crop overlay during resize.
+- `onResizeEnd(event)`: Finalizes resize, updates dimensions, and synchronizes crop.
+
+### WidgetScalable
+
+**Attributes**:
+
+- `#widgetManager` (private): Reference to `WidgetManager`.
+- `#cropper` (private): Reference to `WidgetCropper`.
+- `#transform` (private): Reference to `WidgetTransform`.
+
+**Methods**:
+
+- `constructor(widgetManager, cropper, transform)`: Initializes with references.
+- `onScaleStart(event)`: Handles scale start, setting state.
+- `onScale(event, refs, setPosition)`: Updates scale and position during scaling.
+- `onScaleEnd(event)`: Finalizes scale, updates transformations.
 
 ### WidgetCropper
 
-- **setupCropper(element, config)**: Initializes crop-specific properties for an element.
-- **applyCropToOverlay(config)**: Updates an outside overlay's `clip-path` to align with crop dimensions.
-- **cropDimensions(config, maximize)**: Computes crop dimensions based on container and aspect ratio.
-- **openWindowInOverlay(crop)**: Creates a CSS clip-path for the crop overlay.
-- **onDoubleClick(event, setPosition)**: Toggles crop zone between maximized and previous dimensions.
-- **updateCropRatio(cropzoneId, aspectRatio, lockRatio)**: Updates crop zone dimensions and aspect ratio.
-- **dispatchCropUpdate(config, phase)**: Dispatches `onCropUpdate` events for crop changes.
+**Attributes**:
+
+- `#widgetManager` (private): Reference to `WidgetManager`.
+
+**Methods**:
+
+- `constructor(widgetManager)`: Initializes with `WidgetManager` reference.
+- `setupCropper(element, config)`: Initializes crop-specific properties.
+- `applyCropToOverlay(config)`: Updates overlay clip-path.
+- `cropDimensions(config, maximize)`: Computes crop dimensions.
+- `openWindowInOverlay(crop)`: Creates CSS clip-path for overlay.
+- `onDoubleClick(event, setPosition)`: Toggles crop between maximized and previous dimensions.
+- `updateCropRatio(cropzoneId, aspectRatio, lockRatio)`: Updates crop dimensions and ratio.
+- `dispatchCropUpdate(config, phase)`: Dispatches `onCropUpdate` events.
+
+### WidgetPosition
+
+**Attributes**:
+
+- `#widgetManager` (private): Reference to `WidgetManager`.
+
+**Methods**:
+
+- `constructor(widgetManager)`: Initializes with `WidgetManager` reference.
+- `toCenter(element, margin)`: Positions widget at container center.
+- `toTopLeft(element, margin)`: Positions widget at top-left.
+- `toTop(element, margin)`: Positions widget at top.
+- `toLeft(element, margin)`: Positions widget at left.
+- `toRight(element, margin)`: Positions widget at right.
+- `toBottom(element, margin)`: Positions widget at bottom.
+- `toTopRight(element, margin)`: Positions widget at top-right.
+- `toBottomLeft(element, margin)`: Positions widget at bottom-left.
+- `toBottomRight(element, margin)`: Positions widget at bottom-right.
+
+### WidgetTransform
+
+**Attributes**:
+
+- `#widgetManager` (private): Reference to `WidgetManager`.
+
+**Methods**:
+
+- `constructor(widgetManager)`: Initializes with `WidgetManager` reference.
+- `setScale(element, x, y)`: Applies scale transformation.
+- `setTranslate(element, x, y)`: Applies translate transformation.
+- `parseTransform(transform)`: Parses CSS transform string into components.
 
 ### WidgetDBManager
 
-- **saveWidgetPosition(widgetId, config)**: Saves widget configuration to IndexedDB.
-- **getWidgetPosition(widgetId)**: Retrieves widget configuration from IndexedDB if not expired.
-- **deleteWidgetPosition(widgetId)**: Deletes widget configuration from IndexedDB.
-- **getWidgetsByGroup(groupId)**: Retrieves all widget configurations for a group from IndexedDB.
-- **deleteWidgetsByGroup(groupId)**: Deletes all widget configurations for a group from IndexedDB.
+**Attributes**:
+
+- `#widgetManager` (private): Reference to `WidgetManager`.
+
+**Methods**:
+
+- `constructor(widgetManager)`: Initializes with `WidgetManager` reference.
+- `saveWidgetPosition(widgetId, config)`: Saves widget configuration to IndexedDB.
+- `getWidgetPosition(widgetId)`: Retrieves widget configuration from IndexedDB.
+- `deleteWidgetPosition(widgetId)`: Deletes widget configuration from IndexedDB.
+- `getWidgetsByGroup(groupId)`: Retrieves widget configurations by group.
+- `deleteWidgetsByGroup(groupId)`: Deletes widget configurations by group.
 
 ## Event Handling
 
-The `WidgetCropper` class emits `onCropUpdate` events during crop-related changes, with the following details:
+`WidgetCropper` emits `onCropUpdate` events with details:
 
-- `id`: The widget's unique ID.
-- `crop`: Object containing `{ left, top, width, height }` of the crop zone.
-- `ratio`: Object containing `{ aspectRatio, locked }` for the crop zone.
-- `phase`: String indicating the event phase (`init`, `resize`, `ratio`, `container-resize`, `end`, `toggle`).
+- `id`: Widget ID.
+- `crop`: `{ left, top, width, height }` of the crop zone.
+- `ratio`: `{ aspectRatio, locked }` for the crop zone.
+- `phase`: Event phase (`init`, `resize`, `ratio`, `container-resize`, `end`, `toggle`).
 
 Example:
 
@@ -275,15 +437,17 @@ document.addEventListener('onCropUpdate', event => {
 
 ## Notes
 
-- The `WidgetManager` assumes the presence of a `Moveable` library for drag and resize functionality.
-- The singleton pattern ensures only one instance of each class (`WidgetManager`, `WidgetDraggable`, `WidgetResizable`,
-  `WidgetCropper`, `WidgetDBManager`) manages all widgets, preventing conflicts.
-- The `margin` and `minCropSize` properties enforce constraints for crop zones, handled by `WidgetCropper`.
-- Aspect ratio handling respects the `useRatio` and `ratio` configuration to maintain consistent proportions.
-- Group management allows for efficient handling of related widgets (e.g., disposing all widgets in a group).
-- The `persist` flag enables saving widget configurations to IndexedDB, while `transient` marks configurations as
-  temporary with a lifespan defined by `ttl`.
-- The interface remains transparent, so components interact only with `WidgetManager`, unaware of the delegated classes.
+- Assumes `Moveable` library for drag, resize, and scale functionality.
+- Singleton pattern ensures one instance per class, preventing conflicts.
+- `margin` and `minCropSize` enforce crop constraints in `WidgetCropper`.
+- Aspect ratio handling respects `useRatio` and `ratio` configuration.
+- Group management enables efficient handling of related widgets.
+- `persist` and `transient` flags control IndexedDB storage with `ttl` for temporary data.
+- All interactions go through `WidgetManager`, maintaining a transparent interface.
+- No external CSS libraries are used; styles are applied programmatically.
+- Methods use arrow functions (`=>`) except for constructors, per style guidelines.
+- Private fields use `#` prefix, and DOM elements use `element` naming.
+- JSDocs are in English without semicolons.
 
 ## License
 
