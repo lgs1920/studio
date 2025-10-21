@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-12
- * Last modified: 2025-10-12
+ * Created on: 2025-10-21
+ * Last modified: 2025-10-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,6 +21,7 @@ import { VideoQualityWidget }           from '@Components/MainUI/video/toolbox/V
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
 import { VideoSettingsInfo }            from '@Components/MainUI/video/VideoSettingsInfo'
 import { CompassWidget } from '@Components/MainUI/video/widgets/CompassWidget'
+import { WidgetContextMenu } from '@Components/MainUI/WidgetContextMenu'
 import { Cropper }                  from '@Components/ToolsUI/cropper/Cropper'
 import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordingScreenArea'
 import { VIDEO_CROP_ZONE }          from '@Core/constants'
@@ -42,6 +43,7 @@ export const ToolsUI = () => {
                     <VideoFPSWidget id="video-fps-widget"/>
                     <VideoQualityWidget id="video-quality-widget"/>
                     <VideoRecordingSettingsWidget id="video-recording-settings-widget"/>
+                    <WidgetContextMenu/>
                 </>
             ) : (
 

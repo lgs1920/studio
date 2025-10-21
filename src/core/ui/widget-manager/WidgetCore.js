@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-20
- * Last modified: 2025-10-20
+ * Created on: 2025-10-21
+ * Last modified: 2025-10-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,8 +18,8 @@
  * Core class for managing widget configurations, bounds, and control box functionality.
  * Handles setup, positioning, and cleanup of widget elements.
  */
-import { SECOND }       from '@Core/constants'
-import { v4 as uuidv4 } from 'uuid'
+import { SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
+import { v4 as uuidv4 }                 from 'uuid'
 
 export class WidgetCore {
     /** @type {WidgetManager} Reference to the WidgetManager instance */
@@ -850,6 +850,7 @@ export class WidgetCore {
                 bounds:                {left: 0, top: 0, right: 0, bottom: 0},
                 centerRatio:           {x: 0.5, y: 0.5},
                 container:              initialConfig.container,
+                contextMenu: __.ui.widgetManager.cloneContext(initialConfig?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
                 cropDimensions:        initialConfig.cropDimensions,
                 dimensions:            {width: 0, height: 0},
                 dynamic:               initialConfig.dynamic ?? false,
@@ -923,4 +924,29 @@ export class WidgetCore {
         }
         return this.getWidgetConfig(elementId)
     }
+
+    /**
+     * Clones a context menu configuration object by ensuring all expected boolean attributes are defined.
+     * If an attribute is missing in the source object, it will be set to false in the clone.
+     *
+     * @param {Object} source - The object to clone.
+     * @param {string[]} attrs - List of expected boolean attribute names.
+     * @returns {Object} A new object with all attributes from `attrs`, defaulting to false if undefined in `source`.
+     */
+    cloneContext = (source, attrs) =>
+        Object.fromEntries(
+            attrs.map(attr => [attr, source.hasOwnProperty(attr) ? source[attr] : false]),
+        )
+
+    /**
+     * Checks whether at least one of the specified capability attributes is truthy in the source object.
+     *
+     * @param {Object} source - The object to inspect.
+     * @param {string[]} attrs - List of capability attribute names to check.
+     * @returns {boolean} True if at least one attribute is truthy in `source`, otherwise false.
+     */
+    hasCapabilities = (source, attrs) =>
+        attrs.some(attr => Boolean(source[attr]))
+
+
 }

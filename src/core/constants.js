@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-17
- * Last modified: 2025-10-17
+ * Created on: 2025-10-21
+ * Last modified: 2025-10-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -480,3 +480,5 @@ export const VIDEO_CROP_ZONE = 'video-crop-zone'
 export const VIDEO_TOOLS_WIDGET_GROUP = 'video-tools-widget-group'
 export const CROP_TOOLS_WIDGET_GROUP = 'crop-tools-widget-group'
 export const VIDEO_ELEMENTS_WIDGET_GROUP = 'video-element-widget-group'
+
+export const WIDGETS_CAPABILITIES = ['canRemove', 'canReset', 'canMaximize', 'canPosition']

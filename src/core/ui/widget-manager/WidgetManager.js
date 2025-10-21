@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-20
- * Last modified: 2025-10-20
+ * Created on: 2025-10-21
+ * Last modified: 2025-10-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -267,6 +267,25 @@ export class WidgetManager {
     get windowResizing() {
         return this.#core.windowResizing
     }
+
+    /**
+     * Clones a context menu configuration object by ensuring all expected boolean attributes are defined.
+     * If an attribute is missing in the source object, it will be set to false in the clone.
+     *
+     * @param {Object} source - The object to clone.
+     * @param {string[]} attrs - List of expected boolean attribute names.
+     * @returns {Object} A new object with all attributes from `attrs`, defaulting to false if undefined in `source`.
+     */
+    cloneContext = (source, attrs) => this.#core.cloneContext(source, attrs)
+
+    /**
+     * Checks whether at least one of the specified capability attributes is truthy in the source object.
+     *
+     * @param {Object} source - The object to inspect.
+     * @param {string[]} attrs - List of capability attribute names to check.
+     * @returns {boolean} True if at least one attribute is truthy in `source`, otherwise false.
+     */
+    hasCapabilities = (source, attrs) => this.#core.hasCapabilities(source, attrs)
 
     /**
      * Handles the start of a scale event.
