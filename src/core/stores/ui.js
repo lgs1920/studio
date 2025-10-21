@@ -109,7 +109,6 @@ export const ui = {
 
     widget: {
         canDisplayContextMenu: false,
-        timer:                 null,
         id:                    null,
         position:              {x: 0, y: 0},
     },
