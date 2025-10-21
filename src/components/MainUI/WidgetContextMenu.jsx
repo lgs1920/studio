@@ -14,25 +14,31 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { WIDGETS_CAPABILITIES }       from '@Core/constants'
+import { SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
 import { faArrowsRotate, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon }                     from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                      from '@Utils/FA2SL'
-import React, { useEffect, useRef }   from 'react'
-import Timeout                        from 'smart-timeout'
-import { useSnapshot }                from 'valtio'
+import { SlIcon }                       from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                        from '@Utils/FA2SL'
+import React, { useEffect, useRef }     from 'react'
+import { useSnapshot }                  from 'valtio'
+
+/**
+ * Offset value for menu positioning (in pixels).
+ */
+const MENU_OFFSET = 10
 
 /**
  * WidgetContextMenu component renders a context menu for a widget with configurable actions.
  * The menu is displayed based on the widget's capabilities and configuration.
  * If hasCapabilities is false, the context menu is disabled.
+ * The menu opens downward or upward and rightward or leftward based on available space in the window.
  *
  * @returns {JSX.Element | null} The context menu component or null if not displayed.
  */
 export const WidgetContextMenu = () => {
     const _anchor = useRef(null)
+    const _timer = useRef(null) // Local timer reference
     const $widget = lgs.stores.ui.widget
-    const {id, canDisplayContextMenu, timer, position} = useSnapshot($widget)
+    const {id, canDisplayContextMenu, position} = useSnapshot($widget)
     const element = __.ui.widgetManager.getElementById(id)
     const config = __.ui.widgetManager.getWidgetConfig(id)
 
@@ -44,25 +50,83 @@ export const WidgetContextMenu = () => {
 
         const handleClickOutside = (event) => {
             if (_anchor.current && !_anchor.current.contains(event.target)) {
-                $widget.canDisplayContextMenu = false
+                hideMenu()
             }
         }
 
         // Add listener on next tick to avoid immediate close
         setTimeout(() => {
-            document.addEventListener('mousedown', handleClickOutside)
+            document.addEventListener('pointerdown', handleClickOutside)
         }, 0)
 
         return () => {
-            document.removeEventListener('mousedown', handleClickOutside)
+            document.removeEventListener('pointerdown', handleClickOutside)
         }
     }, [canDisplayContextMenu])
+
+    // Clean up timer on unmount or when menu is hidden
+    useEffect(() => {
+        if (!canDisplayContextMenu) {
+            if (_timer.current) {
+                clearTimeout(_timer.current)
+                _timer.current = null
+            }
+        }
+
+        return () => {
+            if (_timer.current) {
+                clearTimeout(_timer.current)
+                _timer.current = null
+            }
+        }
+    }, [canDisplayContextMenu])
+
+    // Calculate menu position based on available space
+    useEffect(() => {
+        if (!canDisplayContextMenu || !_anchor.current) {
+            return
+        }
+
+        const menuHeight = _anchor.current.offsetHeight
+        const menuWidth = _anchor.current.offsetWidth
+        const windowHeight = window.innerHeight
+        const windowWidth = window.innerWidth
+        const cursorY = position.y
+        const cursorX = position.x
+
+        // Vertical positioning: open downward if enough space, otherwise upward
+        if (cursorY + menuHeight + MENU_OFFSET > windowHeight) {
+            _anchor.current.style.top = `${cursorY - menuHeight + MENU_OFFSET}px`
+        }
+        else {
+            _anchor.current.style.top = `${cursorY - MENU_OFFSET}px`
+        }
+
+        // Horizontal positioning: open rightward if enough space, otherwise leftward
+        if (cursorX + menuWidth + MENU_OFFSET > windowWidth) {
+            _anchor.current.style.left = `${cursorX - menuWidth + MENU_OFFSET}px`
+        }
+        else {
+            _anchor.current.style.left = `${cursorX - MENU_OFFSET}px`
+        }
+    }, [canDisplayContextMenu, position])
 
     /**
      * Handles the removal of the widget.
      */
     const handleRemove = () => {
         __.ui.widgetManager.disposeElement(element)
+        $widget.canDisplayContextMenu = false
+    }
+
+    /**
+     * Hides the menu in the application by clearing the timer and updating visibility settings.
+     */
+    const hideMenu = () => {
+        if (_timer.current) {
+            clearTimeout(_timer.current)
+            _timer.current = null
+        }
         $widget.canDisplayContextMenu = false
     }
 
@@ -89,15 +153,13 @@ export const WidgetContextMenu = () => {
         <div
             ref={_anchor}
             className="lgs-context-menu widget-context-menu lgs-card on-map"
-            style={{top: position.y - 10, left: position.x - 10}}
             onPointerLeave={() => {
-                if (timer) {
-                    Timeout.restart(timer)
-                }
+                _timer.current = setTimeout(() => hideMenu(), 2 * SECOND)
             }}
             onPointerEnter={() => {
-                if (timer) {
-                    Timeout.pause(timer)
+                if (_timer.current) {
+                    clearTimeout(_timer.current)
+                    _timer.current = null
                 }
             }}
         >
