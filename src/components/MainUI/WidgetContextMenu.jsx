@@ -15,11 +15,16 @@
  ******************************************************************************/
 
 import { SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
-import { faArrowsRotate, faTrashCan } from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon }                       from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                        from '@Utils/FA2SL'
-import React, { useEffect, useRef }     from 'react'
-import { useSnapshot }                  from 'valtio'
+import {
+    faArrowsRotate, faSquare, faTrashCan, faArrowUpLeft,
+    faArrowUp, faArrowUpRight, faArrowLeft, faPlus, faArrowRight,
+    faArrowDownLeft, faArrowDown, faArrowDownRight,
+}                                   from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon, SlTooltip }        from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                    from '@Utils/FA2SL'
+import classNames                   from 'classnames'
+import React, { useEffect, useRef } from 'react'
+import { useSnapshot }              from 'valtio'
 
 /**
  * Offset value for menu positioning (in pixels).
@@ -30,7 +35,10 @@ const MENU_OFFSET = 10
  * WidgetContextMenu component renders a context menu for a widget with configurable actions.
  * The menu is displayed based on the widget's capabilities and configuration.
  * If hasCapabilities is false, the context menu is disabled.
- * The menu opens downward or upward and rightward or leftward based on available space in the window.
+ * The menu opens downward or upward and rightward or leftward based on available space in the window,
+ * taking into account the menu's height and width, including the rendered <ul> and its grid content.
+ * When opening upward, the menu is aligned to the bottom of the window with MENU_OFFSET margin.
+ * When opening leftward, the menu is aligned to the right of the window with MENU_OFFSET margin.
  *
  * @returns {JSX.Element | null} The context menu component or null if not displayed.
  */
@@ -87,28 +95,33 @@ export const WidgetContextMenu = () => {
             return
         }
 
-        const menuHeight = _anchor.current.offsetHeight
-        const menuWidth = _anchor.current.offsetWidth
-        const windowHeight = window.innerHeight
-        const windowWidth = window.innerWidth
-        const cursorY = position.y
-        const cursorX = position.x
+        // Use setTimeout to ensure the menu is fully rendered
+        const timerId = setTimeout(() => {
+            const menuHeight = _anchor.current.offsetHeight
+            const menuWidth = _anchor.current.offsetWidth
+            const windowHeight = window.innerHeight
+            const windowWidth = window.innerWidth
+            const cursorY = position.y
+            const cursorX = position.x
 
-        // Vertical positioning: open downward if enough space, otherwise upward
-        if (cursorY + menuHeight + MENU_OFFSET > windowHeight) {
-            _anchor.current.style.top = `${cursorY - menuHeight + MENU_OFFSET}px`
-        }
-        else {
-            _anchor.current.style.top = `${cursorY - MENU_OFFSET}px`
-        }
+            // Vertical positioning: open downward if enough space, otherwise align to bottom
+            if (cursorY + menuHeight > windowHeight) {
+                _anchor.current.style.top = `${windowHeight - menuHeight - MENU_OFFSET}px`
+            }
+            else {
+                _anchor.current.style.top = `${cursorY + MENU_OFFSET}px`
+            }
 
-        // Horizontal positioning: open rightward if enough space, otherwise leftward
-        if (cursorX + menuWidth + MENU_OFFSET > windowWidth) {
-            _anchor.current.style.left = `${cursorX - menuWidth + MENU_OFFSET}px`
-        }
-        else {
-            _anchor.current.style.left = `${cursorX - MENU_OFFSET}px`
-        }
+            // Horizontal positioning: open rightward if enough space, otherwise align to right
+            if (cursorX + menuWidth > windowWidth) {
+                _anchor.current.style.left = `${windowWidth - menuWidth - MENU_OFFSET}px`
+            }
+            else {
+                _anchor.current.style.left = `${cursorX + MENU_OFFSET}px`
+            }
+        }, 0)
+
+        return () => clearTimeout(timerId)
     }, [canDisplayContextMenu, position])
 
     /**
@@ -183,9 +196,114 @@ export const WidgetContextMenu = () => {
                     </li>
                 )}
                 {config.contextMenu.canPosition && (
-                    <li key="reposition" onClick={handleResetSize}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsRotate)}/>
-                        <span>Reposition</span>
+                    <li
+                        key="reposition"
+                        className="widget-grid-position buttons-bar-on-map"
+                        style={{
+                            display:             'grid',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gridTemplateRows:    'repeat(3, 1fr)',
+                        }}
+                    >
+                        <SlTooltip key="top-left" content="Top left" placement="left">
+                            <SlIcon
+                                library="fa"
+                                className="lgs-one-line-card on-map"
+                                onPointerDown={() => {
+                                    __.ui.widgetManager.toTopLeft(element, lgs.gutter.xs)
+                                    hideMenu()
+                                }}
+                                name={FA2SL.set(faArrowUpLeft)}
+                            />
+                        </SlTooltip>
+                        <SlTooltip key="top" content="Top" placement="top">
+                            <SlIcon
+                                library="fa"
+                                className="lgs-one-line-card on-map"
+                                onPointerDown={() => {
+                                    __.ui.widgetManager.toTop(element, lgs.gutter.xs)
+                                    hideMenu()
+                                }}
+                                name={FA2SL.set(faArrowUp)}
+                            />
+                        </SlTooltip>
+                        <SlTooltip key="top-right" content="Top right" placement="right">
+                            <SlIcon
+                                library="fa"
+                                className="lgs-one-line-card on-map"
+                                onPointerDown={() => {
+                                    __.ui.widgetManager.toTopRight(element, lgs.gutter.xs)
+                                    hideMenu()
+                                }}
+                                name={FA2SL.set(faArrowUpRight)}
+                            />
+                        </SlTooltip>
+                        <SlTooltip key="left" content="Left" placement="left">
+                            <SlIcon
+                                library="fa"
+                                className="lgs-one-line-card on-map"
+                                onPointerDown={() => {
+                                    __.ui.widgetManager.toLeft(element, lgs.gutter.xs)
+                                    hideMenu()
+                                }}
+                                name={FA2SL.set(faArrowLeft)}
+                            />
+                        </SlTooltip>
+                        <SlTooltip key="center" content="Center" placement="top">
+                            <SlIcon
+                                library="fa"
+                                className="lgs-one-line-card on-map"
+                                onPointerDown={() => {
+                                    __.ui.widgetManager.toCenter(element, lgs.gutter.xs)
+                                    hideMenu()
+                                }}
+                                name={FA2SL.set(faPlus)}
+                            />
+                        </SlTooltip>
+                        <SlTooltip key="right" content="Right" placement="right">
+                            <SlIcon
+                                library="fa"
+                                className="lgs-one-line-card on-map"
+                                onPointerDown={() => {
+                                    __.ui.widgetManager.toRight(element, lgs.gutter.xs)
+                                    hideMenu()
+                                }}
+                                name={FA2SL.set(faArrowRight)}
+                            />
+                        </SlTooltip>
+                        <SlTooltip key="bottom-left" content="Bottom left" placement="left">
+                            <SlIcon
+                                library="fa"
+                                className="lgs-one-line-card on-map"
+                                onPointerDown={() => {
+                                    __.ui.widgetManager.toBottomLeft(element, lgs.gutter.xs)
+                                    hideMenu()
+                                }}
+                                name={FA2SL.set(faArrowDownLeft)}
+                            />
+                        </SlTooltip>
+                        <SlTooltip key="bottom" content="Bottom" placement="bottom">
+                            <SlIcon
+                                library="fa"
+                                className="lgs-one-line-card on-map"
+                                onPointerDown={() => {
+                                    __.ui.widgetManager.toBottom(element, lgs.gutter.xs)
+                                    hideMenu()
+                                }}
+                                name={FA2SL.set(faArrowDown)}
+                            />
+                        </SlTooltip>
+                        <SlTooltip key="bottom-right" content="Bottom right" placement="right">
+                            <SlIcon
+                                library="fa"
+                                className="lgs-one-line-card on-map"
+                                onPointerDown={() => {
+                                    __.ui.widgetManager.toBottomRight(element, lgs.gutter.xs)
+                                    hideMenu()
+                                }}
+                                name={FA2SL.set(faArrowDownRight)}
+                            />
+                        </SlTooltip>
                     </li>
                 )}
             </ul>
