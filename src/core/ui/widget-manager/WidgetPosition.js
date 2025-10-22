@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-20
- * Last modified: 2025-10-20
+ * Created on: 2025-10-22
+ * Last modified: 2025-10-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,7 +23,7 @@ export class WidgetPosition {
     #widgetManager
 
     /** @type {number} Default margin for positioning */
-    #defaultMargin = 0
+    #defaultMargin = lgs.gutter.xs ?? 5
 
     /** @type {string[]} Valid position anchors for widgets */
     #validPositions = ['center', 'top', 'left', 'right', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
