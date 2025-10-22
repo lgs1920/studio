@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-21
- * Last modified: 2025-10-21
+ * Created on: 2025-10-22
+ * Last modified: 2025-10-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,12 +19,11 @@ import {
     faArrowsRotate, faSquare, faTrashCan, faArrowUpLeft,
     faArrowUp, faArrowUpRight, faArrowLeft, faPlus, faArrowRight,
     faArrowDownLeft, faArrowDown, faArrowDownRight,
-}                                   from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon, SlTooltip }        from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                    from '@Utils/FA2SL'
-import classNames                   from 'classnames'
+}                            from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }             from '@Utils/FA2SL'
 import React, { useEffect, useRef } from 'react'
-import { useSnapshot }              from 'valtio'
+import { useSnapshot }       from 'valtio'
 
 /**
  * Offset value for menu positioning (in pixels).
@@ -34,17 +33,19 @@ const MENU_OFFSET = 10
 /**
  * WidgetContextMenu component renders a context menu for a widget with configurable actions.
  * The menu is displayed based on the widget's capabilities and configuration.
- * If hasCapabilities is false, the context menu is disabled.
+ * If hasCapabilities is false, a drag is in progress, or position is invalid (0,0), the context menu is disabled.
  * The menu opens downward or upward and rightward or leftward based on available space in the window,
  * taking into account the menu's height and width, including the rendered <ul> and its grid content.
  * When opening upward, the menu is aligned to the bottom of the window with MENU_OFFSET margin.
  * When opening leftward, the menu is aligned to the right of the window with MENU_OFFSET margin.
+ * On mobile, long tap is detected externally, and coordinates are validated with a fallback to widget element position.
  *
  * @returns {JSX.Element | null} The context menu component or null if not displayed.
  */
 export const WidgetContextMenu = () => {
     const _anchor = useRef(null)
     const _timer = useRef(null) // Local timer reference
+    const _isDragging = useRef(false) // Track if a drag is in progress
     const $widget = lgs.stores.ui.widget
     const {id, canDisplayContextMenu, position} = useSnapshot($widget)
     const element = __.ui.widgetManager.getElementById(id)
@@ -91,7 +92,7 @@ export const WidgetContextMenu = () => {
 
     // Calculate menu position based on available space
     useEffect(() => {
-        if (!canDisplayContextMenu || !_anchor.current) {
+        if (!canDisplayContextMenu || !_anchor.current || !element) {
             return
         }
 
@@ -101,8 +102,15 @@ export const WidgetContextMenu = () => {
             const menuWidth = _anchor.current.offsetWidth
             const windowHeight = window.innerHeight
             const windowWidth = window.innerWidth
-            const cursorY = position.y
-            const cursorX = position.x
+
+            // Use widget element position as fallback if coordinates are invalid
+            let cursorX = position.x
+            let cursorY = position.y
+            if (cursorX === 0 || cursorY === 0) {
+                const rect = element.getBoundingClientRect()
+                cursorX = rect.left
+                cursorY = rect.top
+            }
 
             // Vertical positioning: open downward if enough space, otherwise align to bottom
             if (cursorY + menuHeight > windowHeight) {
@@ -122,7 +130,7 @@ export const WidgetContextMenu = () => {
         }, 0)
 
         return () => clearTimeout(timerId)
-    }, [canDisplayContextMenu, position])
+    }, [canDisplayContextMenu, position.x, position.y, element])
 
     /**
      * Handles the removal of the widget.
@@ -157,8 +165,9 @@ export const WidgetContextMenu = () => {
         $widget.canDisplayContextMenu = false
     }
 
-    // If the menu cannot be displayed or capabilities are not met, return null
-    if (!canDisplayContextMenu || !__.ui.widgetManager.hasCapabilities(config?.contextMenu, WIDGETS_CAPABILITIES)) {
+    // If the menu cannot be displayed, capabilities are not met, dragging is in progress, or element is invalid,
+    // return null
+    if (!canDisplayContextMenu || _isDragging.current || !element || !__.ui.widgetManager.hasCapabilities(config?.contextMenu, WIDGETS_CAPABILITIES)) {
         return null
     }
 
@@ -200,7 +209,7 @@ export const WidgetContextMenu = () => {
                         key="reposition"
                         className="widget-grid-position buttons-bar-on-map"
                         style={{
-                            display:             'grid',
+                            display: 'grid',
                             gridTemplateColumns: 'repeat(3, 1fr)',
                             gridTemplateRows:    'repeat(3, 1fr)',
                         }}
