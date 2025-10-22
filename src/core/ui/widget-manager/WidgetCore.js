@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-21
- * Last modified: 2025-10-21
+ * Created on: 2025-10-22
+ * Last modified: 2025-10-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -946,7 +946,7 @@ export class WidgetCore {
      * @returns {boolean} True if at least one attribute is truthy in `source`, otherwise false.
      */
     hasCapabilities = (source, attrs) =>
-        attrs.some(attr => Boolean(source[attr]))
+        attrs.some(attr => Boolean(source?.[attr]));
 
 
 }
