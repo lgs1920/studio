@@ -661,7 +661,7 @@ export class WidgetCore {
                 return
             }
             const oldBounds = {...config.bounds}
-            const newBounds = this.refreshBounds(config, mv.current)
+            const newBounds = this.refreshBounds(config, mv?.current)
             if (newBounds.left === oldBounds.left && newBounds.top === oldBounds.top &&
                 newBounds.right === oldBounds.right && newBounds.bottom === oldBounds.bottom) {
                 return
