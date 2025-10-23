@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-22
- * Last modified: 2025-10-22
+ * Created on: 2025-10-23
+ * Last modified: 2025-10-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -326,12 +326,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [config])
 
     /**
-     * Handle double-tap event for touch devices to trigger context menu
+     * Handle double-tap event for touch devices to trigger context menu or cropper double-click
      */
     const handleDoubleTap = useDoubleTap({
                                              onDoubleTap: event => {
                                                  if (event.pointerType === 'touch') {
-                                                     handleContextMenu(event)
+                                                     if (!config.isCropper) {
+                                                         handleContextMenu(event)
+                                                     }
+                                                     else {
+                                                         handleDoubleClick(event)
+                                                     }
                                                  }
                                              },
                                          })
