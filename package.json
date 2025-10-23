@@ -58,7 +58,7 @@
     "easy-file-picker": "^1.2.0",
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.2",
-    "elysia": "^1.4.12",
+    "elysia": "^1.4.13",
     "eslint-import-resolver-alias": "^1.1.2",
     "eslint-plugin-import": "^2.32.0",
     "fs": "^0.0.1-security",
@@ -113,9 +113,9 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "jsdom": "^27.0.1",
     "typescript": "^5.9.3",
-    "vite": "7.1.11",
+    "vite": "7.1.12",
     "vite-plugin-markdown": "^2.2.0",
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.1"
   },
   "module": "index.ts",
   "trustedDependencies": [
