@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-22
- * Last modified: 2025-10-22
+ * Created on: 2025-10-23
+ * Last modified: 2025-10-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -121,9 +121,9 @@ export class WidgetPosition {
             config.setPosition(config.position)
         }
 
-        // Update moveable if present
-        if (config.moveable?.current) {
-            config.moveable.current.updateRect()
+        const moveable = this.#widgetManager.getMoveable(elementId)
+        if (moveable?.current) {
+            moveable.current.updateRect()
         }
 
         return config.position
@@ -200,4 +200,6 @@ export class WidgetPosition {
      * @returns {Object} New position object
      */
     toBottomRight = (element, margin = this.#defaultMargin) => this.#positionElement(element, 'bottom-right', margin)
+
+
 }
