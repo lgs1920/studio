@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-19
- * Last modified: 2025-10-19
+ * Created on: 2025-10-23
+ * Last modified: 2025-10-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -46,8 +46,9 @@ export class WidgetCropper {
      * Sets up cropper-specific properties for an element.
      * @param {HTMLElement} element - The DOM element
      * @param {Object} config - Widget configuration
+     * @param {Object} [moveable] - Moveable instance reference (optional)
      */
-    setupCropper = (element, config) => {
+    setupCropper = (element, config, moveable) => {
         // Initialize crop dimensions if not persisted
         const hasPersistedCrop =
                   config?.cropDimensions &&
@@ -69,6 +70,11 @@ export class WidgetCropper {
         element.style.transform = 'none'
         config.position = {left: config.cropDimensions.left, top: config.cropDimensions.top}
         this.applyCropToOverlay(config)
+
+        // Set moveable instance if provided
+        if (moveable?.current) {
+            this.#widgetManager.setMoveable(config.id, moveable)
+        }
     }
 
     /**
@@ -184,8 +190,9 @@ export class WidgetCropper {
         config.position = {left, top}
         this.applyCropToOverlay(config)
         setPosition({left, top})
-        if (config.moveable && config.moveable.current) {
-            config.moveable.current.updateRect()
+        const moveable = this.#widgetManager.getMoveable(config.id)
+        if (moveable?.current) {
+            moveable.current.updateRect()
         }
         this.dispatchCropUpdate(config, 'toggle')
     }
@@ -278,8 +285,9 @@ export class WidgetCropper {
         if (config.setPosition) {
             config.setPosition({left, top})
         }
-        if (config.moveable?.current) {
-            config.moveable.current.updateRect()
+        const moveable = this.#widgetManager.getMoveable(cropzoneId)
+        if (moveable?.current) {
+            moveable.current.updateRect()
         }
 
         // Dispatch crop update event

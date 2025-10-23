@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-21
- * Last modified: 2025-10-21
+ * Created on: 2025-10-23
+ * Last modified: 2025-10-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -99,7 +99,7 @@ export class WidgetManager {
      * @returns {Promise<boolean>} True if setup is successful, false otherwise
      */
     setupElement = async (element, initialConfig, setBounds, setPosition, moveable) =>
-        this.#core.setupElement(element, initialConfig, setBounds, setPosition, moveable)
+        await this.#core.setupElement(element, initialConfig, setBounds, setPosition, moveable)
 
     /**
      * Applies position to an element, updating its style and configuration.
@@ -514,4 +514,24 @@ export class WidgetManager {
      * @returns {Promise<void>}
      */
     deleteWidgetPosition = async widgetId => this.#widgetDB.deleteWidgetPosition(widgetId)
+
+    /**
+     * Retrieves the moveable reference for an element ID.
+     * @param {string} elementId - The element ID
+     * @returns {Object|undefined} Moveable reference or undefined if not found
+     */
+    getMoveable = elementId => this.#core.getMoveable(elementId)
+
+    /**
+     * Sets the moveable reference for an element ID.
+     * @param {string} elementId - The element ID
+     * @param {Object} moveable - Moveable instance reference
+     */
+    setMoveable = (elementId, moveable) => this.#core.setMoveable(elementId, moveable)
+
+    /**
+     * Removes the moveable instance for an element ID from the moveables Map.
+     * @param {string} elementId - The element ID
+     */
+    removeMoveable = elementId => this.#core.removeMoveable(elementId)
 }

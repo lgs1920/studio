@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-22
- * Last modified: 2025-10-22
+ * Created on: 2025-10-23
+ * Last modified: 2025-10-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,7 +25,7 @@ export class WidgetCore {
     /** @type {WidgetManager} Reference to the WidgetManager instance */
     #widgetManager
 
-    /** @type {WidgetTransform} Reference to the WidgetManager instance */
+    /** @type {WidgetTransform} Reference to the WidgetTransform instance */
     #widgetTransform
 
     /** @type {number} Delay in milliseconds before hiding control box */
@@ -36,6 +36,9 @@ export class WidgetCore {
 
     /** @type {Map<string, Object>} Map of widget configurations */
     #widgets = new Map()
+
+    /** @type {Map<string, Object>} Map of moveable instances by element ID */
+    #moveables = new Map()
 
     /** @type {string[]} Valid position anchors for widgets */
     #validPositions = ['center', 'top', 'left', 'right', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
@@ -61,7 +64,7 @@ export class WidgetCore {
     /**
      * Constructor for WidgetCore.
      * @param {WidgetManager} widgetManager - The WidgetManager instance
-     * @param {WidgetTransform} widgetTransform - The #widgetTransform instance
+     * @param {WidgetTransform} widgetTransform - The WidgetTransform instance
      */
     constructor(widgetManager, widgetTransform) {
         this.#widgetManager = widgetManager
@@ -176,7 +179,7 @@ export class WidgetCore {
         }
         return setTimeout(() => {
             setControlBoxProps({renderDirections: [], zoom: 0, opacity: 0})
-            const elementId = this.retrieveElementId(moveable.current.target)
+            const elementId = this.retrieveElementId(moveable.target)
             this.#controlBoxTimers.delete(elementId)
         }, this.HIDE_DELAY)
     }
@@ -198,7 +201,6 @@ export class WidgetCore {
 
         // Initialize configuration
         initialConfig.element = element
-        initialConfig.moveable = moveable
         initialConfig.setPosition = setPosition
         let elementId = initialConfig.id && typeof initialConfig.id === 'string' && initialConfig.id.trim()
                         ? initialConfig.id
@@ -226,7 +228,7 @@ export class WidgetCore {
         }
 
         // Set initial bounds and position
-        const newBounds = this.refreshBounds(config, moveable)
+        const newBounds = this.refreshBounds(config, moveable.current)
         setBounds(newBounds)
         // Initialize position for all elements
         const newPosition = this.computeInitialPosition(config, element, false)
@@ -275,6 +277,9 @@ export class WidgetCore {
         if (config.isCropper && config.cropDimensions) {
             this.#widgetManager.cropDimensions(config, false) // Trigger initial crop update
         }
+        console.log(this.getMoveable(elementId))
+        this.setConfig(elementId, config)
+        this.setMoveable(elementId, moveable)
 
         return true
     }
@@ -283,12 +288,14 @@ export class WidgetCore {
      * Applies position to an element, updating its style and configuration.
      * @param {HTMLElement} element - The DOM element
      * @param {Object|string} position - Position object or transform string
-     * @param {Object} moveable - Moveable instance
+     * @param {Object} moveable - Moveable instance reference
      * @param {boolean} isDragging - Whether element is being dragged
      * @param {Function} setControlBoxProps - Function to set control box properties
      */
     applyPosition = (element, position, moveable, isDragging, setControlBoxProps) => {
-        const config = this.getWidgetConfig(this.retrieveElementId(element))
+        const elementId = this.retrieveElementId(element)
+        const config = this.getWidgetConfig(elementId)
+        const mv = this.getMoveable(elementId)
         if (!config) {
             return
         }
@@ -305,8 +312,8 @@ export class WidgetCore {
         }
 
         // Update widget and control box position
-        if (moveable?.current) {
-            moveable.current.updateRect()
+        if (mv?.current) {
+            mv.current.updateRect()
         }
         if (config.showControlBox && isDragging) {
             setControlBoxProps({
@@ -319,7 +326,7 @@ export class WidgetCore {
 
     /**
      * Manages the visibility of the control box.
-     * @param {Object} moveable - Moveable instance
+     * @param {Object} moveable - Moveable instance reference
      * @param {Function} setControlBoxProps - Function to set control box properties
      * @param {Object} _controlBoxTimer - Timer reference
      * @param {boolean} show - Whether to show the control box
@@ -328,6 +335,7 @@ export class WidgetCore {
     manageControlBox = (moveable, setControlBoxProps, _controlBoxTimer, show, isMouseOver) => {
         const elementId = this.retrieveElementId(moveable.current.target)
         const config = this.getWidgetConfig(elementId)
+        const mv = this.getMoveable(elementId)
         if (!config || !config.showControlBox) {
             setControlBoxProps({renderDirections: [], zoom: 0, opacity: 0})
             clearTimeout(_controlBoxTimer.current)
@@ -345,7 +353,7 @@ export class WidgetCore {
                                })
         }
         else {
-            _controlBoxTimer.current = this.#hideControlBoxWithTimer(moveable, config, setControlBoxProps, isMouseOver)
+            _controlBoxTimer.current = this.#hideControlBoxWithTimer(mv.current, config, setControlBoxProps, isMouseOver)
             if (_controlBoxTimer.current) {
                 this.#controlBoxTimers.set(elementId, _controlBoxTimer.current)
             }
@@ -429,13 +437,14 @@ export class WidgetCore {
 
         return {left: boundedLeft, top: boundedTop}
     }
+
     /**
      * Refreshes container bounds based on current container size.
      * @param {Object} config - Widget configuration
-     * @param {Object} moveable - Moveable instance
+     * @param {Object} moveableInstance - Moveable instance
      * @returns {Object} Updated bounds object
      */
-    refreshBounds = (config, moveable) => {
+    refreshBounds = (config, moveableInstance) => {
         const container = config.container.getBoundingClientRect()
         config.bounds = {
             left:   container.left,
@@ -515,6 +524,7 @@ export class WidgetCore {
             config.observer = null
         }
         this.#widgets.delete(elementId)
+        this.#moveables.delete(elementId)
         const timer = this.#controlBoxTimers.get(elementId)
         if (timer) {
             clearTimeout(timer)
@@ -556,6 +566,7 @@ export class WidgetCore {
             }
             else {
                 this.#widgets.delete(elementId)
+                this.#moveables.delete(elementId)
                 const timer = this.#controlBoxTimers.get(elementId)
                 if (timer) {
                     clearTimeout(timer)
@@ -607,10 +618,34 @@ export class WidgetCore {
     }
 
     /**
+     * Retrieves the moveable reference for an element ID.
+     * @param {string} elementId - The element ID
+     * @returns {Object|undefined} Moveable reference or undefined if not found
+     */
+    getMoveable = elementId => this.#moveables.get(elementId)
+
+    /**
+     * Sets the moveable reference for an element ID.
+     * @param {string} elementId - The element ID
+     * @param {Object} moveable - Moveable instance reference
+     */
+    setMoveable = (elementId, moveable) => {
+        this.#moveables.set(elementId, moveable)
+    }
+
+    /**
+     * Removes the moveable instance for an element ID from the moveables Map.
+     * @param {string} elementId - The element ID
+     */
+    removeMoveable = elementId => {
+        this.#moveables.delete(elementId)
+    }
+
+    /**
      * Monitors container resize events and updates widget bounds and position.
      * @param {Object} config - Widget configuration
      * @param {Function} setBounds - Function to update bounds
-     * @param {Object} moveable - Moveable instance
+     * @param {Object} moveable - Moveable instance reference
      * @param {HTMLElement} element - The DOM element
      * @param {Function} setPosition - Function to set position
      */
@@ -618,13 +653,15 @@ export class WidgetCore {
         if (config.observer) {
             return
         }
+        const elementId = config.id
+        const mv = this.getMoveable(elementId)
         const handleResize = () => {
             // Skip if resizing to avoid interference
             if (this.#isResizing) {
                 return
             }
             const oldBounds = {...config.bounds}
-            const newBounds = this.refreshBounds(config, moveable)
+            const newBounds = this.refreshBounds(config, mv.current)
             if (newBounds.left === oldBounds.left && newBounds.top === oldBounds.top &&
                 newBounds.right === oldBounds.right && newBounds.bottom === oldBounds.bottom) {
                 return
@@ -799,8 +836,8 @@ export class WidgetCore {
                 // Apply clip-path immediately
                 this.#widgetManager.applyCropToOverlay(config)
                 // Update Moveable only if necessary
-                if (moveable && moveable.current && (config.transform || config.isCropper)) {
-                    moveable.current.updateRect()
+                if (mv && mv.current && (config.transform || config.isCropper)) {
+                    mv.current.updateRect()
                 }
                 // Dispatch crop update
                 this.#widgetManager.cropDimensions(config, false)
@@ -863,7 +900,6 @@ export class WidgetCore {
                 mandatory:             initialConfig.mandatory ?? false,
                 margin:                 initialConfig.margin,
                 minCropSize:            initialConfig.minCropSize ?? {width: 0, height: 0},
-                moveable:              initialConfig.moveable,
                 observer:              null,
                 outsideOverlay:         initialConfig.outsideOverlay,
                 persist:               initialConfig.persist ?? null,
@@ -946,7 +982,7 @@ export class WidgetCore {
      * @returns {boolean} True if at least one attribute is truthy in `source`, otherwise false.
      */
     hasCapabilities = (source, attrs) =>
-        attrs.some(attr => Boolean(source?.[attr]));
+        attrs.some(attr => Boolean(source?.[attr]))
 
 
 }
