@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-06
- * Last modified: 2025-10-06
+ * Created on: 2025-10-24
+ * Last modified: 2025-10-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -116,7 +116,7 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
     return (
         <>
             {cropper.ratioEditor && (
-                <div className="crop-ratio-widget lgs-toolbar lgs-card on-map">
+                <div className="crop-ratio-widget lgs-card on-map">
                     {/* Drag handle for moving the toolbar */}
                     <SlTooltip content="Drag me">
                         <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
