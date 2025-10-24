@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-23
- * Last modified: 2025-10-23
+ * Created on: 2025-10-24
+ * Last modified: 2025-10-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -104,22 +104,6 @@ export class WidgetCore {
     }
 
     /**
-     * Getter for windowResizing property
-     * @returns {boolean} Whether window resizing has an impact
-     */
-    get windowResizing() {
-        return this.#windowResizing
-    }
-
-    /**
-     * Setter for windowResizing property
-     * @param {boolean} value - New value for windowResizing
-     */
-    set windowResizing(value) {
-        this.#windowResizing = value
-    }
-
-    /**
      * Getter for isScaling property
      * @returns {boolean} Whether a widget is being scaled
      */
@@ -133,6 +117,22 @@ export class WidgetCore {
      */
     set isScaling(value) {
         this.#isScaling = value
+    }
+
+    /**
+     * Getter for windowResizing property
+     * @returns {boolean} Whether window resizing has an impact
+     */
+    get windowResizing() {
+        return this.#windowResizing
+    }
+
+    /**
+     * Setter for windowResizing property
+     * @param {boolean} value - New value for windowResizing
+     */
+    set windowResizing(value) {
+        this.#windowResizing = value
     }
 
     /**
@@ -182,6 +182,26 @@ export class WidgetCore {
             const elementId = this.retrieveElementId(moveable.target)
             this.#controlBoxTimers.delete(elementId)
         }, this.HIDE_DELAY)
+    }
+
+    /**
+     * Creates an inner overlay element for the widget.
+     * @private
+     * @param {HTMLElement} element - The DOM element
+     */
+    #createInnerOverlay = element => {
+        const overlay = document.createElement('div')
+        const elementId = this.retrieveElementId(element)
+        const config = this.getWidgetConfig(elementId)
+        config.overlay = overlay
+        const targetRect = this.#computeElementBounds(element)
+        Object.assign(overlay.style, {
+            display: 'block',
+            width:   `${targetRect.width || 200}px`,
+            height:  `${targetRect.height || 200}px`,
+        })
+        overlay.classList.add('lgs-widget-inner-overlay')
+        element.appendChild(overlay)
     }
 
     /**
@@ -269,15 +289,12 @@ export class WidgetCore {
 
         // Initialize resize observer and overlay
         this.monitorContainerResize(config, setBounds, moveable, element, setPosition)
-        if (!config.overlay) {
-            this.#createInnerOverlay(element)
-        }
+        this.#createInnerOverlay(element)
 
         // Dispatch initial crop event for croppers
         if (config.isCropper && config.cropDimensions) {
             this.#widgetManager.cropDimensions(config, false) // Trigger initial crop update
         }
-        console.log(this.getMoveable(elementId))
         this.setConfig(elementId, config)
         this.setMoveable(elementId, moveable)
 
@@ -472,22 +489,6 @@ export class WidgetCore {
             right:  target.right >= container.right - margin,
         }
         return config.boundStatus
-    }
-
-    /**
-     * Creates an inner overlay element for the widget.
-     * @private
-     * @param {HTMLElement} element - The DOM element
-     */
-    #createInnerOverlay = element => {
-        const overlay = document.createElement('div')
-        const elementId = this.retrieveElementId(element)
-        const config = this.getWidgetConfig(elementId)
-        config.overlay = overlay
-        const targetRect = this.#computeElementBounds(element)
-        Object.assign(overlay.style, {width: `${targetRect.width || 200}px`, height: `${targetRect.height || 200}px`})
-        overlay.classList.add('lgs-widget-inner-overlay')
-        element.appendChild(overlay)
     }
 
     /**
@@ -983,6 +984,4 @@ export class WidgetCore {
      */
     hasCapabilities = (source, attrs) =>
         attrs.some(attr => Boolean(source?.[attr]))
-
-
 }

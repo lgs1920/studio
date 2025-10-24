@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-10
- * Last modified: 2025-10-10
+ * Created on: 2025-10-24
+ * Last modified: 2025-10-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -48,7 +48,7 @@ export const JourneyToolbarWidget = ({id}) => {
 
     return (
         <Widget isVisible={journeyEditor.list.length > 0 && journeyToolbar.show}
-                config={config} className="">
+                config={config}>
             <JourneyToolbar/>
         </Widget>
     )

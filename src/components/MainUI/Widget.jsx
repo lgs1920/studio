@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-23
- * Last modified: 2025-10-23
+ * Created on: 2025-10-24
+ * Last modified: 2025-10-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -216,7 +216,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         // Set dragging state when threshold is met
         if (!_isDragConfirmed.current) {
             setIsDragging(true)
-            _widget.current?.classList.add('dragging')
         }
 
         _isDragConfirmed.current = true
@@ -246,7 +245,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const handleDragEnd = useCallback(event => {
         _isDragConfirmed.current = false
         setIsDragging(false)
-        _widget.current?.classList.remove('dragging')
         __.ui.widgetManager.onDragEnd(event)
         __.ui.widgetManager.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, isMouseOver)
     }, [isMouseOver])
