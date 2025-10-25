@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-23
- * Last modified: 2025-10-23
+ * Created on: 2025-10-25
+ * Last modified: 2025-10-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -534,4 +534,13 @@ export class WidgetManager {
      * @param {string} elementId - The element ID
      */
     removeMoveable = elementId => this.#core.removeMoveable(elementId)
+
+    /**
+     * Gets the current transform values for a widget.
+     * @param {HTMLElement} element - The DOM element
+     * @returns {Object} Object containing translate, scale, rotate values
+     */
+    getTransform = element => this.#transform.getTransform(element)
+
+
 }
