@@ -170,7 +170,6 @@ export class WidgetResizable {
     onResizeStart = async event => {
         this.#widgetManager.isResizing = true
         this.#resizeDirection = event.direction
-        console.log(event.target)
         event.target.classList.add('resizing', `direction-${this.#cardinalDirections[this.#resizeDirection]}`)
         const config = await this.#widgetManager.retrieveConfig(event.target)
 
