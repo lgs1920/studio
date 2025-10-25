@@ -15,41 +15,36 @@
  ******************************************************************************/
 
 /**
- * Widget.jsx
- *
- * Generic component for rendering a draggable element with snapping, rotating, resizing
- *
  * @module Widget
+ * @description A generic component for rendering a draggable, resizable, and scalable element with snapping.
  */
 import {
     LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_WIDGET, WIDGETS_CAPABILITIES,
 }                                                                        from '@Core/constants'
 import classNames                                                        from 'classnames'
-import React, { cloneElement, useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Moveable                                                          from 'react-moveable'
 import { useSnapshot }                                                   from 'valtio'
-import {
-    usePointerSingleOrDouble,
-}                                                                        from '@Components/hooks/usePointerSingleOrDouble'
+import { usePointerSingleOrDouble }                        from '@Components/hooks/usePointerSingleOrDouble'
 
 // Drag thresholds for touch and mouse devices (in pixels)
 const DRAG_THRESHOLD_TOUCH = 30
 const DRAG_THRESHOLD_MOUSE = 5
-const CLICK_WAIT_TIMEOUT = 500 // Wait time in milliseconds before confirming click
+const CLICK_DELAY = 100 // Delay in ms for mouse clicks to confirm drag status
 
 /**
- * Generic component for rendering a draggable element with snapping, rotating, resizing
+ * Renders a draggable UI widget with snapping, resizing, and scaling capabilities.
  * @component
- * @param {Object} props - Component props
- * @param {boolean} props.isVisible - Whether the widget is visible
+ * @param {Object} props
+ * @param {boolean} props.isVisible - Determines if the widget is visible
  * @param {string} [props.className=''] - Additional CSS class names
  * @param {React.ReactNode} props.children - Child elements to render inside the widget
- * @param {Object} props.config - Configuration object for draggable settings
+ * @param {Object} props.config - Configuration for draggable, resizable, and scalable settings
  * @param {React.RefObject} [props.childRef] - Optional ref for child component
- * @returns {JSX.Element} The rendered draggable UI widget
+ * @returns {JSX.Element} The rendered draggable widget
  */
 export const Widget = ({isVisible, className = '', children, config, childRef}) => {
-    // Ref for the draggable element
+    // Refs for widget, moveable, and interaction tracking
     const _widget = useRef(null)
     const _moveable = useRef(null)
     const _controlBoxTimer = useRef(null)
@@ -57,8 +52,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const _resizeRaf = useRef(0)
     const _children = childRef ?? useRef(null)
     const _touchCoords = useRef({x: 0, y: 0})
-    const _dragStartCoords = useRef({x: 0, y: 0}) // Store initial drag coordinates
-    const _dragConfirmed = useRef(false) // Track if drag is confirmed
+    const _dragStartCoords = useRef({x: 0, y: 0})
+    const _dragConfirmed = useRef(false)
     const [bounds, setBounds] = useState({left: 0, top: 0, right: 0, bottom: 0})
     const [, setPosition] = useState({left: 0, top: 0})
     const [controlBoxProps, setControlBoxProps] = useState({renderDirections: [], zoom: 0, opacity: 0})
@@ -69,8 +64,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const widget = useSnapshot($widget)
 
     /**
-     * Get snap settings based on configuration
-     * @returns {Object} Snap settings with threshold and gap
+     * Retrieves snap settings based on configuration.
+     * @returns {{snapThreshold: number, snapGap: boolean}} Snap threshold and gap settings
      */
     const getSnapSettings = useCallback(() => {
         const sensitivity = config?.snapSensitivity || 'medium'
@@ -88,16 +83,16 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const {snapThreshold, snapGap} = getSnapSettings()
 
     /**
-     * Handle double-click event (non-touch devices)
-     * @param {MouseEvent | PointerEvent} event - The double-click event
+     * Handles double-click events for non-touch devices.
+     * @param {MouseEvent | PointerEvent} event
      */
     const handleDoubleClick = useCallback(event => {
         __.ui.widgetManager.onDoubleClick(event, setPosition, _moveable)
     }, [])
 
     /**
-     * Get center guidelines for snapping, adjusted for container offset
-     * @returns {{verticalGuidelines: number[], horizontalGuidelines: number[]}} Vertical and horizontal guidelines
+     * Calculates center guidelines for snapping, adjusted for container offset.
+     * @returns {{verticalGuidelines: number[], horizontalGuidelines: number[]}}
      */
     const getCenterGuidelines = useCallback(() => {
         const container = config?.container ?? lgs.canvas
@@ -105,14 +100,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             return {verticalGuidelines: [], horizontalGuidelines: []}
         }
         const {width, height, left, top} = container.getBoundingClientRect()
-        const centerX = left + width / 2
-        const centerY = top + height / 2
-        return {verticalGuidelines: [centerX], horizontalGuidelines: [centerY]}
+        return {
+            verticalGuidelines:   [left + width / 2],
+            horizontalGuidelines: [top + height / 2],
+        }
     }, [config?.container])
 
     /**
-     * Get custom grid guidelines for snapping, adjusted for container offset
-     * @returns {{verticalGuidelines: number[], horizontalGuidelines: number[]}} Vertical and horizontal guidelines
+     * Generates custom grid guidelines for snapping.
+     * @returns {{verticalGuidelines: number[], horizontalGuidelines: number[]}}
      */
     const getCustomGridGuidelines = useCallback(() => {
         if (!config?.snapGrid || !lgs.canvas) {
@@ -146,7 +142,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [config?.snapGrid])
 
     /**
-     * Update guidelines when container or config changes
+     * Updates snapping guidelines when container or config changes.
      */
     useEffect(() => {
         const updateGuidelines = () => {
@@ -167,7 +163,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [getCenterGuidelines, getCustomGridGuidelines])
 
     /**
-     * Handle mouse enter event
+     * Shows control box on mouse enter.
      */
     const handleMouseEnter = useCallback(() => {
         setIsMouseOver(true)
@@ -175,7 +171,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
-     * Handle mouse out event
+     * Hides control box on mouse out unless dragging.
      */
     const handleMouseOut = useCallback(event => {
         if (_dragConfirmed.current) {
@@ -190,28 +186,29 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
-     * Handle drag event
-     * @param {Object} event - The drag event
+     * Handles drag movement, confirming drag if threshold is exceeded.
+     * @param {Object} event - Moveable drag event
      */
     const handleDrag = useCallback(event => {
-        // Get current coordinates from the event (supporting both PointerEvent and MouseEvent)
-        const currentX = event.inputEvent.clientX ?? event.inputEvent.x
-        const currentY = event.inputEvent.clientY ?? event.inputEvent.y
-
-        // Determine drag threshold based on input type
-        const dragThreshold = event.inputEvent.pointerType === 'touch' ? DRAG_THRESHOLD_TOUCH : DRAG_THRESHOLD_MOUSE
-
-        // Check if movement exceeds the threshold in x or y
+        const inputEvent = event.inputEvent
+        let currentX, currentY
+        if (inputEvent.touches && inputEvent.touches.length > 0) {
+            currentX = inputEvent.touches[0].clientX
+            currentY = inputEvent.touches[0].clientY
+        }
+        else {
+            currentX = inputEvent.clientX ?? inputEvent.x ?? 0
+            currentY = inputEvent.clientY ?? inputEvent.y ?? 0
+        }
+        const dragThreshold = inputEvent.pointerType === 'touch' ? DRAG_THRESHOLD_TOUCH : DRAG_THRESHOLD_MOUSE
         const deltaX = Math.abs(currentX - _dragStartCoords.current.x)
         const deltaY = Math.abs(currentY - _dragStartCoords.current.y)
 
-        // Confirm drag if threshold is met
         if (deltaX >= dragThreshold || deltaY >= dragThreshold) {
             _dragConfirmed.current = true
             setIsDragging(true)
         }
 
-        // Apply drag transformation to allow Moveable to function
         __.ui.widgetManager.applyPosition(_widget.current, event.transform, _moveable, true, setControlBoxProps)
         __.ui.widgetManager.onDrag(event)
         if (_children.current?.handleDrag) {
@@ -220,15 +217,23 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
-     * Handle drag start event
-     * @param {Object} event - The drag start event
+     * Initializes drag state and coordinates.
+     * @param {Object} event - Moveable drag start event
      */
     const handleDragStart = useCallback(event => {
-        setIsDragging(false) // Initialize to false
-        _dragConfirmed.current = false // Reset drag confirmation
-        _dragStartCoords.current = {
-            x: event.inputEvent.clientX ?? event.inputEvent.x,
-            y: event.inputEvent.clientY ?? event.inputEvent.y,
+        setIsDragging(false)
+        _dragConfirmed.current = false
+        if (event.inputEvent.touches && event.inputEvent.touches.length > 0) {
+            _dragStartCoords.current = {
+                x: event.inputEvent.touches[0].clientX,
+                y: event.inputEvent.touches[0].clientY,
+            }
+        }
+        else {
+            _dragStartCoords.current = {
+                x: event.inputEvent.clientX ?? event.inputEvent.x ?? 0,
+                y: event.inputEvent.clientY ?? event.inputEvent.y ?? 0,
+            }
         }
         if (_children.current?.onDragStart) {
             _children.current.onDragStart(event)
@@ -238,8 +243,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [isMouseOver])
 
     /**
-     * Handle drag end event
-     * @param {Object} event - The drag end event
+     * Resets drag state and updates control box.
+     * @param {Object} event - Moveable drag end event
      */
     const handleDragEnd = useCallback(event => {
         __.ui.widgetManager.onDragEnd(event)
@@ -249,46 +254,55 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [isMouseOver])
 
     /**
-     * Handle pointer down event to capture coordinates
-     * @param {PointerEvent | MouseEvent} event - The pointer down event
+     * Captures pointer down coordinates, prevents native click for mouse events only.
+     * @param {PointerEvent | MouseEvent | TouchEvent} event
      */
     const handlePointerDown = useCallback(event => {
-        // Prevent default to block native click event until we decide in pointerUp
-        // Only prevent click-related events, allow drag events for Moveable
         if (event.type === 'mousedown') {
             event.preventDefault()
         }
         setIsDragging(false)
         _dragConfirmed.current = false
-        _touchCoords.current = {x: event.clientX ?? event.x, y: event.clientY ?? event.y}
-        _dragStartCoords.current = {x: event.clientX ?? event.x, y: event.clientY ?? event.y}
-        handleUserEvent(event)
-    }, [])
-
-    /**
-     * Handle pointer move event to update coordinates
-     * @param {PointerEvent | MouseEvent} event - The pointer move event
-     */
-    const handlePointerMove = useCallback(event => {
-        _touchCoords.current = {x: event.clientX ?? event.x, y: event.clientY ?? event.y}
-    }, [])
-
-    /**
-     * Handle pointer up event
-     * @param {PointerEvent | MouseEvent} event - The pointer up event
-     */
-    const handlePointerUp = useCallback(event => {
-        // Block native click event if drag is confirmed
-        if (_dragConfirmed.current) {
-            event.preventDefault()
-            event.stopPropagation()
+        if (event.touches && event.touches.length > 0) {
+            _touchCoords.current = {x: event.touches[0].clientX, y: event.touches[0].clientY}
+            _dragStartCoords.current = {x: event.touches[0].clientX, y: event.touches[0].clientY}
+        }
+        else {
+            _touchCoords.current = {x: event.clientX ?? event.x ?? 0, y: event.clientY ?? event.y ?? 0}
+            _dragStartCoords.current = {x: event.clientX ?? event.x ?? 0, y: event.clientY ?? event.y ?? 0}
         }
         handleUserEvent(event)
     }, [])
 
     /**
-     * Handle pointer cancel event
-     * @param {PointerEvent | MouseEvent} event - The pointer cancel event
+     * Updates touch coordinates on pointer move.
+     * @param {PointerEvent | MouseEvent | TouchEvent} event
+     */
+    const handlePointerMove = useCallback(event => {
+        if (event.touches && event.touches.length > 0) {
+            _touchCoords.current = {x: event.touches[0].clientX, y: event.touches[0].clientY}
+        }
+        else {
+            _touchCoords.current = {x: event.clientX ?? event.x ?? 0, y: event.clientY ?? event.y ?? 0}
+        }
+    }, [])
+
+    /**
+     * Resets drag state and handles click propagation.
+     * @param {PointerEvent | MouseEvent | TouchEvent} event
+     */
+    const handlePointerUp = useCallback(event => {
+        if (_dragConfirmed.current) {
+            event.preventDefault()
+            event.stopPropagation()
+        }
+        _dragConfirmed.current = false
+        handleUserEvent(event)
+    }, [])
+
+    /**
+     * Resets interaction state on pointer cancel.
+     * @param {PointerEvent | MouseEvent | TouchEvent} event
      */
     const handlePointerCancel = useCallback(event => {
         setIsDragging(false)
@@ -299,16 +313,22 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
-     * Handle context menu event
-     * @param {MouseEvent | PointerEvent} event - The context menu event
+     * Displays context menu at the specified coordinates.
+     * @param {MouseEvent | PointerEvent | TouchEvent} event
      */
     const handleContextMenu = useCallback(event => {
         event.preventDefault()
         let x = event.clientX
         let y = event.clientY
         if (!x || !y || isNaN(x) || isNaN(y)) {
-            x = _touchCoords.current.x
-            y = _touchCoords.current.y
+            if (event.touches && event.touches.length > 0) {
+                x = event.touches[0].clientX
+                y = event.touches[0].clientY
+            }
+            else {
+                x = _touchCoords.current.x
+                y = _touchCoords.current.y
+            }
         }
         if (!x || !y || isNaN(x) || isNaN(y)) {
             const element = document.elementFromPoint(_touchCoords.current.x || event.clientX, _touchCoords.current.y || event.clientY)
@@ -325,28 +345,31 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (x > 0 && y > 0) {
             Object.assign($widget, {
                 canDisplayContextMenu: true,
-                id:                    config?.id,
-                timer:                 null,
-                position:              {x, y},
+                id:       config?.id,
+                timer:    null,
+                position: {x, y},
             })
         }
     }, [config])
 
     /**
-     * Handle double-tap event for touch devices to trigger context menu or cropper double-click
+     * Handles single clicks and double taps, with immediate click for touch events.
      */
     const handleUserEvent = usePointerSingleOrDouble({
                                                          onSingleClickOrTap: event => {
-                                                             // Wait for a short delay to confirm drag status
-                                                             setTimeout(() => {
-                                                                 // Trigger click only if drag is not confirmed
-                                                                 if (!_dragConfirmed.current) {
-                                                                     const element = event.currentTarget === null ? event.target : event.currentTarget
-                                                                     if (element) {
+                                                             if (!_dragConfirmed.current) {
+                                                                 const element = event.currentTarget === null ? event.target : event.currentTarget
+                                                                 if (element) {
+                                                                     if (event.pointerType === 'touch') {
                                                                          element.click()
                                                                      }
+                                                                     else {
+                                                                         setTimeout(() => {
+                                                                             element.click()
+                                                                         }, CLICK_DELAY)
+                                                                     }
                                                                  }
-                                                             }, CLICK_WAIT_TIMEOUT)
+                                                             }
                                                          },
                                                          onDoubleTap:        event => {
                                                              if (event.pointerType === 'touch') {
@@ -357,12 +380,12 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                                                                      handleDoubleClick(event)
                                                                  }
                                                              }
-                                                         },
+                                                         }
                                                      })
 
     /**
-     * Handle resize event
-     * @param {Object} event - The resize event
+     * Applies resize transformations to the widget.
+     * @param {Object} event - Moveable resize event
      */
     const handleResize = useCallback(event => {
         event.target.style.width = `${event.width}px`
@@ -371,8 +394,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
-     * Handle resize start event
-     * @param {Object} event - The resize start event
+     * Notifies resize start to child and widget manager.
+     * @param {Object} event - Moveable resize start event
      */
     const handleResizeStart = useCallback(event => {
         if (_children.current?.onResizeStart) {
@@ -382,8 +405,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
-     * Handle resize end event
-     * @param {Object} event - The resize end event
+     * Notifies resize end to child and widget manager.
+     * @param {Object} event - Moveable resize end event
      */
     const handleResizeEnd = useCallback(event => {
         if (_children.current?.onResizeEnd) {
@@ -393,8 +416,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
-     * Handle scale event
-     * @param {Object} event - The scale event
+     * Applies scale transformations to the widget.
+     * @param {Object} event - Moveable scale event
      */
     const handleScale = useCallback(event => {
         const scaleX = event.scale?.[0] ?? 1
@@ -406,8 +429,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
-     * Handle scale start event
-     * @param {Object} event - The scale start event
+     * Notifies scale start to child and widget manager.
+     * @param {Object} event - Moveable scale start event
      */
     const handleScaleStart = useCallback(event => {
         if (_children.current?.onScaleStart) {
@@ -417,8 +440,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
-     * Handle scale end event
-     * @param {Object} event - The scale end event
+     * Notifies scale end to child and widget manager.
+     * @param {Object} event - Moveable scale end event
      */
     const handleScaleEnd = useCallback(event => {
         if (_children.current?.onScaleEnd) {
@@ -428,14 +451,14 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
-     * Cleanup resize animation frame
+     * Cleans up animation frame and interaction state on unmount.
      */
     useEffect(() => {
         return () => {
             if (_resizeRaf.current) {
                 cancelAnimationFrame(_resizeRaf.current)
-                _resizeRaf.current = 0
             }
+            _resizeRaf.current = 0
             setIsDragging(false)
             _dragConfirmed.current = false
             _touchCoords.current = {x: 0, y: 0}
@@ -444,7 +467,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
-     * Initialize the widget and handle cleanup
+     * Initializes widget configuration and handles cleanup.
      */
     useEffect(() => {
         if (!config || !isVisible) {
@@ -462,30 +485,30 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 animationWhenDragging: (config.animationWhenDragging ?? null) !== null
                                        ? config.animationWhenDragging
                                        : config.type === LGS_TOOLBAR,
-                attachTo:         config.attachTo,
-                container:        config.container ?? lgs.canvas,
-                contextMenu:      __.ui.widgetManager.cloneContext(config?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
-                cropDimensions:   config.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0},
-                dynamic:          config.dynamic ?? false,
-                forceEven:        config.forceEven ?? false,
-                group:            config.group ?? null,
-                id:               config.id ?? null,
-                isCropper:        config.isCropper ?? false,
-                left:             config.left,
-                margin:           config.margin ?? 0,
-                mandatory:        config.mandatory ?? false,
-                opacity:          config.opacity ?? lgs.settings.ui.toolbars.opacity,
-                outsideOverlay:   config.outsideOverlay ?? false,
-                persist:          config.persist ?? false,
-                ratio:            config.ratio ?? null,
+                attachTo:       config.attachTo,
+                container:      config.container ?? lgs.canvas,
+                contextMenu:    __.ui.widgetManager.cloneContext(config?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
+                cropDimensions: config.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0},
+                dynamic:        config.dynamic ?? false,
+                forceEven:      config.forceEven ?? false,
+                group:          config.group ?? null,
+                id:             config.id ?? null,
+                isCropper:      config.isCropper ?? false,
+                left:           config.left,
+                margin:         config.margin ?? 0,
+                mandatory:      config.mandatory ?? false,
+                opacity:        config.opacity ?? lgs.settings.ui.toolbars.opacity,
+                outsideOverlay: config.outsideOverlay ?? false,
+                persist:        config.persist ?? false,
+                ratio:          config.ratio ?? null,
                 resizeFromCenter: config.resizeFromCenter ?? false,
-                resizable:        config.resizable ?? false,
-                scalable:         config.scalable ?? false,
-                showControlBox:   true,
-                top:              config.top,
-                transient:        config.transient ?? false,
-                ttl:              config.ttl ?? null,
-                type:             LGS_WIDGET,
+                resizable:      config.resizable ?? false,
+                scalable:       config.scalable ?? false,
+                showControlBox: true,
+                top:            config.top,
+                transient:      config.transient ?? false,
+                ttl:            config.ttl ?? null,
+                type:           LGS_WIDGET,
             }
             await __.ui.widgetManager.retrieveConfig(widgetElement, initialConfig)
             const ok = await __.ui.widgetManager.setupElement(
@@ -508,12 +531,12 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             cancelled = true
             if (_controlBoxTimer.current) {
                 clearTimeout(_controlBoxTimer.current)
-                _controlBoxTimer.current = null
             }
+            _controlBoxTimer.current = null
             if (_resizeRaf.current) {
                 cancelAnimationFrame(_resizeRaf.current)
-                _resizeRaf.current = 0
             }
+            _resizeRaf.current = 0
             setIsDragging(false)
             _dragConfirmed.current = false
             if (_initialized.current && widgetElement && __.ui.widgetManager && !config?.persist) {
@@ -529,7 +552,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             widgetElement = null
             if (resizeObserver && lgs.canvas) {
                 resizeObserver.unobserve(lgs.canvas)
-                resizeObserver = null
             }
         }
     }, [
@@ -551,7 +573,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
               ])
 
     /**
-     * Update Moveable rect when bounds change
+     * Updates Moveable rectangle when bounds change.
      */
     useEffect(() => {
         if (!lgs?.canvas) {
@@ -561,18 +583,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [bounds])
 
     /**
-     * Handle bound event
-     * @param {Object} event - The bound event
+     * Updates widget bounds status.
+     * @param {Object} event - Moveable bound event
      */
     const handleOnBound = useCallback(event => {
         __.ui.widgetManager.setBoundStatus(_widget.current)
-    }, [])
-
-    /**
-     * Handle Moveable render event for debugging
-     * @param {Object} event - The render event
-     */
-    const handleRender = useCallback(event => {
     }, [])
 
     return (
@@ -587,8 +602,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                                 [config?.type]: config?.type && config?.type !== LGS_WIDGET,
                                 [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
                                 [LGS_ANIMATION_RESIZING]: config.animationWhenResizing,
-                                dragging: _dragConfirmed.current, // Apply dragging class only if drag is confirmed
-                            },
+                                dragging: _dragConfirmed.current,
+                            }
                         )}
                         ref={_widget}
                         onMouseEnter={handleMouseEnter}
@@ -600,62 +615,76 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         onPointerCancel={handlePointerCancel}
                         onContextMenu={handleContextMenu}
                         style={{
-                            touchAction:   'manipulation',
+                            touchAction: 'pan-x pan-y',
                             pointerEvents: 'auto',
-                            zIndex:        1000,
-                            position:      'absolute',
+                            zIndex:      1000,
+                            position:    'absolute',
                         }}
                     >
                         {children}
                     </div>
                     <Moveable
+
+                        // General configuration
+                        className="lgs-widget-control-box"
+                        container={lgs.canvas}
+                        origin={false}
                         ref={_moveable}
                         target={_widget}
-                        container={lgs.canvas}
-                        className="lgs-widget-control-box"
-                        origin={false}
+
+                        // Drag events and settings
                         draggable={config?.draggable ?? true}
                         edgeDraggable={false}
-                        throttleDrag={0}
                         onDrag={handleDrag}
-                        onDragStart={handleDragStart}
                         onDragEnd={handleDragEnd}
-                        onRender={handleRender}
-                        resizable={config?.resizable || false}
-                        onResize={handleResize}
-                        onResizeStart={handleResizeStart}
-                        onResizeEnd={handleResizeEnd}
+                        onDragStart={handleDragStart}
+                        throttleDrag={2}
+
+                        // Event handling
+                        onBound={handleOnBound}
+                        preventDefault={false}
+
+                        // Resize events and settings
                         keepRatio={Boolean(
                             __.ui.widgetManager.getWidgetConfig(config?.id)?.ratio?.locked ??
                             config?.ratio?.locked,
                         )}
-                        throttleResize={1}
-                        scalable={config?.scalable || false}
+                        onResize={handleResize}
+                        onResizeEnd={handleResizeEnd}
+                        onResizeStart={handleResizeStart}
+                        resizable={config?.resizable || false}
+                        throttleResize={2}
+
+                        // Scale events and settings
                         onScale={handleScale}
-                        onScaleStart={handleScaleStart}
                         onScaleEnd={handleScaleEnd}
-                        snappable={config?.snappable ?? true}
-                        snapThreshold={snapThreshold}
-                        snapGap={snapGap}
+                        onScaleStart={handleScaleStart}
+                        scalable={config?.scalable || false}
+
+                        // Snapping settings
+                        bounds={bounds}
+                        elementGuidelines={[lgs.canvas]}
+                        horizontalGuidelines={guidelines.horizontalGuidelines}
                         snapCenter={true}
                         snapElement={true}
-                        verticalGuidelines={guidelines.verticalGuidelines}
-                        horizontalGuidelines={guidelines.horizontalGuidelines}
+                        snapGap={snapGap}
+                        snapThreshold={snapThreshold}
+                        snappable={config?.snappable ?? true}
                         snapDirections={{
-                            left: true,
-                            top: true,
-                            right: true,
                             bottom: true,
                             center: true,
+                            left:  true,
                             middle: true,
+                            right: true,
+                            top:   true,
                         }}
-                        elementGuidelines={[lgs.canvas]}
-                        bounds={bounds}
-                        onBound={handleOnBound}
+                        verticalGuidelines={guidelines.verticalGuidelines}
+
+                        // Observers and rendering
                         renderDirections={controlBoxProps.renderDirections}
-                        zoom={controlBoxProps.zoom}
-                        useResizeObserver={true}
                         useMutationObserver={true}
+                        useResizeObserver={true}
+                        zoom={controlBoxProps.zoom}
                     />
                 </div>
             )}
