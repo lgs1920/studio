@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-16
- * Last modified: 2025-10-16
+ * Created on: 2025-10-25
+ * Last modified: 2025-10-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -28,6 +28,19 @@ export class WidgetResizable {
 
     /** @type {WidgetCropper} Reference to WidgetCropper instance */
     #widgetCropper
+
+    #cardinalDirections = {
+        '0,-1':  'n',
+        '0,1':   's',
+        '1,0':   'e',
+        '-1,0':  'w',
+        '1,-1':  'ne',
+        '-1,-1': 'nw',
+        '1,1':   'se',
+        '-1,1':  'sw',
+    }
+
+    #resizeDirection = ''
 
     /**
      * Creates or returns the singleton instance of WidgetResizable.
@@ -156,7 +169,9 @@ export class WidgetResizable {
      */
     onResizeStart = async event => {
         this.#widgetManager.isResizing = true
-        event.target.classList.add('resizing')
+        this.#resizeDirection = event.direction
+        console.log(event.target)
+        event.target.classList.add('resizing', `direction-${this.#cardinalDirections[this.#resizeDirection]}`)
         const config = await this.#widgetManager.retrieveConfig(event.target)
 
         if (config.animationWhenResizing) {
@@ -180,7 +195,8 @@ export class WidgetResizable {
      */
     onResizeEnd = async event => {
         this.#widgetManager.isResizing = false
-        event.target.classList.remove('resizing', LGS_ANIMATION_RESIZING)
+
+        event.target.classList.remove('resizing', LGS_ANIMATION_RESIZING, `direction-${this.#cardinalDirections[this.#resizeDirection]}`)
         const config = await this.#widgetManager.retrieveConfig(event.target)
         if (config?.isCropper) {
             config.element = event.target
