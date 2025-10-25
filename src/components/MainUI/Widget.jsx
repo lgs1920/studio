@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-24
- * Last modified: 2025-10-24
+ * Created on: 2025-10-25
+ * Last modified: 2025-10-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,12 +23,14 @@
  */
 import {
     LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_WIDGET, WIDGETS_CAPABILITIES,
-}                       from '@Core/constants'
-import { useDoubleTap } from '@Core/events/useDoubleTap'
-import classNames       from 'classnames'
-import React, { Children, cloneElement, useCallback, useEffect, useRef, useState } from 'react'
-import Moveable         from 'react-moveable'
-import { useSnapshot }  from 'valtio'
+}                                                                        from '@Core/constants'
+import classNames                                                        from 'classnames'
+import React, { cloneElement, useCallback, useEffect, useRef, useState } from 'react'
+import Moveable                                                          from 'react-moveable'
+import { useSnapshot }                                                   from 'valtio'
+import {
+    usePointerSingleOrDouble,
+}                                                                        from '@Components/hooks/usePointerSingleOrDouble'
 
 // Drag thresholds for touch and mouse devices (in pixels)
 const DRAG_THRESHOLD_TOUCH = 30
@@ -214,7 +216,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
 
         // Set dragging state when threshold is met
-        if (!_isDragConfirmed.current) {
+        if (_isDragConfirmed.current) {
             setIsDragging(true)
         }
 
@@ -231,6 +233,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
      * @param {Object} event - The drag start event
      */
     const handleDragStart = useCallback(event => {
+        _isDragConfirmed.current
         if (_children.current?.onDragStart) {
             _children.current.onDragStart(event)
         }
@@ -255,11 +258,14 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
      */
     const handlePointerDown = useCallback(event => {
         event.stopPropagation()
+        if (_isDragConfirmed.current) {
+            event.preventDefault()
+        }
         _touchCoords.current = {x: event.clientX ?? event.x, y: event.clientY ?? event.y}
         _dragStartCoords.current = {x: event.clientX ?? event.x, y: event.clientY ?? event.y} // Store initial
                                                                                               // coordinates for drag
         _isDragConfirmed.current = false
-        handleDoubleTap(event)
+        // handleUserEvent(event)
     }, [])
 
     /**
@@ -275,7 +281,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
      * @param {PointerEvent | MouseEvent} event - The pointer up event
      */
     const handlePointerUp = useCallback(event => {
-        handleDoubleTap(event)
+        handleUserEvent(event)
     }, [])
 
     /**
@@ -286,7 +292,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         _isDragConfirmed.current = false
         _touchCoords.current = {x: 0, y: 0}
         _dragStartCoords.current = {x: 0, y: 0}
-        handleDoubleTap(event)
+        handleUserEvent(event)
     }, [])
 
     /**
@@ -326,18 +332,26 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     /**
      * Handle double-tap event for touch devices to trigger context menu or cropper double-click
      */
-    const handleDoubleTap = useDoubleTap({
-                                             onDoubleTap: event => {
-                                                 if (event.pointerType === 'touch') {
-                                                     if (!config.isCropper) {
-                                                         handleContextMenu(event)
-                                                     }
-                                                     else {
-                                                         handleDoubleClick(event)
-                                                     }
-                                                 }
-                                             },
-                                         })
+    const handleUserEvent = usePointerSingleOrDouble({
+                                                         onSingleClickOrTap: (event) => {
+                                                             // Handle single tap by triggering the native click event
+                                                             const element = event.currentTarget === null ? event.target : event.currentTarget
+                                                             console.log(element, !_isDragConfirmed.current)
+                                                             if (element) {
+                                                                 element.click() // Trigger native click event
+                                                             }
+                                                         },
+                                                         onDoubleTap:        event => {
+                                                             if (event.pointerType === 'touch') {
+                                                                 if (!config.isCropper) {
+                                                                     handleContextMenu(event)
+                                                                 }
+                                                                 else {
+                                                                     handleDoubleClick(event)
+                                                                 }
+                                                             }
+                                                         },
+                                                     })
 
     /**
      * Handle resize event
@@ -552,30 +566,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const handleRender = useCallback(event => {
     }, [])
 
-    /**
-     * Safely clone children to avoid passing key prop
-     * @param {React.ReactNode} child - The child element to clone
-     * @returns {React.ReactNode} Cloned child with ref or original child
-     */
-    const renderChild = useCallback(child => {
-        if (!React.isValidElement(child)) {
-            return child
-        }
-        const {key, ref: _childRef, ...childProps} = child.props
-        return cloneElement(child, {
-            ...childProps,
-            ref: node => {
-                _children.current = node
-                if (_childRef && typeof _childRef === 'function') {
-                    _childRef(node)
-                }
-                else if (_childRef && _childRef.current) {
-                    _childRef.current = node
-                }
-            },
-        })
-    }, [])
-
     return (
         <>
             {isVisible && (
@@ -588,7 +578,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                                 [config?.type]: config?.type && config?.type !== LGS_WIDGET,
                                 [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
                                 [LGS_ANIMATION_RESIZING]: config.animationWhenResizing,
-                            }
+                            },
                         )}
                         ref={_widget}
                         onMouseEnter={handleMouseEnter}
@@ -616,7 +606,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         origin={false}
                         draggable={config?.draggable ?? true}
                         edgeDraggable={false}
-                        throttleDrag={2}
+                        throttleDrag={1}
                         onDrag={handleDrag}
                         onDragStart={handleDragStart}
                         onDragEnd={handleDragEnd}
@@ -627,9 +617,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         onResizeEnd={handleResizeEnd}
                         keepRatio={Boolean(
                             __.ui.widgetManager.getWidgetConfig(config?.id)?.ratio?.locked ??
-                            config?.ratio?.locked
+                            config?.ratio?.locked,
                         )}
-                        throttleResize={2}
+                        throttleResize={1}
                         scalable={config?.scalable || false}
                         onScale={handleScale}
                         onScaleStart={handleScaleStart}
@@ -654,6 +644,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         onBound={handleOnBound}
                         renderDirections={controlBoxProps.renderDirections}
                         zoom={controlBoxProps.zoom}
+                        useResizeObserver={true}
+                        useMutationObserver={true}
                     />
                 </div>
             )}
