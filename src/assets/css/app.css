@@ -224,20 +224,24 @@ main-logo.xlarge {
 
 
 .lgs-widget-control-box .moveable-control {
-    width: var(--lgs-gutter) !important;
-    height: var(--lgs-gutter) !important;
+    width: var(--width) !important;
+    height: var(--height) !important;
+    margin-top: calc(var(--height) / -2) !important;
+    margin-left: calc(var(--width) / -2) !important;
     border: 1px solid var(--lgs-dark-color) !important;
     border-radius: var(--lgs-border-radius-s) !important;
     background: var(--moveable-color);
+    --width: var(--lgs-gutter);
+    --height: var(--lgs-gutter);
     --moveable-color: var(--lgs-light-color);
 }
 
 .lgs-widget-control-box .moveable-control.moveable-n, .lgs-widget-control-box .moveable-control.moveable-s {
-    width: calc(2 * var(--lgs-gutter)) !important;
+    --width: calc(2 * var(--lgs-gutter)) !important;
 }
 
 .lgs-widget-control-box .moveable-control.moveable-w, .lgs-widget-control-box .moveable-control.moveable-e {
-    height: calc(2 * var(--lgs-gutter)) !important;
+    --height: calc(2 * var(--lgs-gutter)) !important;
 }
 
 .lgs-widget-control-box .moveable-line {
