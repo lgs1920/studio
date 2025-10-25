@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-16
- * Last modified: 2025-10-16
+ * Created on: 2025-10-25
+ * Last modified: 2025-10-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -53,7 +53,6 @@ export class WidgetDraggable {
      * @param {Object} event - Drag event
      */
     onDragStart = async event => {
-        event.target.classList.add('dragging')
         const config = await this.#widgetManager.retrieveConfig(event.target)
         if (config.animationWhenDragging) {
             event.target.classList.add(LGS_ANIMATION_DRAGGING)
