@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-10
- * Last modified: 2025-10-10
+ * Created on: 2025-10-25
+ * Last modified: 2025-10-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -62,7 +62,7 @@ const RecorderControls = memo(({recording, paused, recorder, onFinalize}) => {
                 <SlIconButton
                     library="fa"
                     name={FA2SL.set(paused ? faPlay : faPause)}
-                    onPointerDown={handlePlayPause}
+                    onClick={handlePlayPause}
                     disabled={!recorder}
                 />
             </SlTooltip>
@@ -71,7 +71,7 @@ const RecorderControls = memo(({recording, paused, recorder, onFinalize}) => {
                     <SlIconButton
                         library="fa"
                         name={FA2SL.set(faStop)}
-                        onPointerDown={handleStop}
+                        onClick={handleStop}
                     />
                 </SlTooltip>
             )}

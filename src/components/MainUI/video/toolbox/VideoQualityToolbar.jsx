@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-09
- * Last modified: 2025-10-09
+ * Created on: 2025-10-25
+ * Last modified: 2025-10-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -63,7 +63,7 @@ export const VideoQualityToolbar = () => {
                     >
                         <div
                             className={classNames('lgs-one-line-card', 'on-map', {'selected': index === video.quality})}
-                            onPointerDown={(event) => handleChangeQuality(index, event)}>
+                            onClick={(event) => handleChangeQuality(index, event)}>
                             {short}
                         </div>
                     </SlTooltip>

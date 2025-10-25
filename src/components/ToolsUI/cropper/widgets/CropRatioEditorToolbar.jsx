@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-24
- * Last modified: 2025-10-24
+ * Created on: 2025-10-25
+ * Last modified: 2025-10-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -132,7 +132,7 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
                                     <SlIcon
                                         library="fa"
                                         className={classNames('lgs-one-line-card on-map', {'selected': preset.value === video.ratio})}
-                                        onPointerDown={event => handleChangeRatio(preset, event)}
+                                        onClick={event => handleChangeRatio(preset, event)}
                                         name={FA2SL.set(ICONS[preset.value] || faSquare)}
                                     />
                                 </SlTooltip>

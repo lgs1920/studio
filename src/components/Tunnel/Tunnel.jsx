@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-20
- * Last modified: 2025-10-20
+ * Created on: 2025-10-25
+ * Last modified: 2025-10-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -137,7 +137,7 @@ export const Tunnel = memo(({steps, onCancel, className = ''}) => {
                             'lgs-tunnel-element-active':  isCurrent,
                             'lgs-tunnel-element-blocked': isBlocked,
                         })}
-                        onPointerDown={event => handleStepClick(index, event)}
+                        onClick={event => handleStepClick(index, event)}
                         disabled={isBlocked}
                         library="fa"
                         name={FA2SL.set(step.icon)}
