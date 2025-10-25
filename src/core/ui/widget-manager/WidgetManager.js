@@ -542,5 +542,11 @@ export class WidgetManager {
      */
     getTransform = element => this.#transform.getTransform(element)
 
-
+    /**
+     * Updates the scale values in the widget's transform.
+     * @param {HTMLElement} element - The DOM element
+     * @param {number} x - X scale value
+     * @param {number} y - Y scale value
+     */
+    setScale = (element, x, y) => this.#transform.setScale(element, x, y)
 }
