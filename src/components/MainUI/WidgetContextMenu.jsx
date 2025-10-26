@@ -7,28 +7,30 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-22
- * Last modified: 2025-10-22
+ * Created on: 2025-10-26
+ * Last modified: 2025-10-26
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
+import { SECOND, WIDGETS_CAPABILITIES }                          from '@Core/constants'
+import { faRegularSquareCirclePlus, faRegularSquareCircleMinus } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+
 import {
-    faArrowsRotate, faSquare, faTrashCan, faArrowUpLeft,
-    faArrowUp, faArrowUpRight, faArrowLeft, faPlus, faArrowRight,
-    faArrowDownLeft, faArrowDown, faArrowDownRight,
+    faArrowDown, faArrowDownLeft, faArrowDownRight, faArrowLeft, faArrowRight,
+    faArrowUp, faArrowUpLeft, faArrowUpRight, faCompress, faPlus, faTrashCan,
 }                            from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }             from '@Utils/FA2SL'
-import React, { useEffect, useRef } from 'react'
-import { useSnapshot }       from 'valtio'
+import React, { useEffect, useMemo, useRef } from 'react'
+import { useSnapshot } from 'valtio'
 
 /**
  * Offset value for menu positioning (in pixels).
  */
 const MENU_OFFSET = 10
+const PERCENTAGE = 0.1
 
 /**
  * WidgetContextMenu component renders a context menu for a widget with configurable actions.
@@ -154,15 +156,15 @@ export const WidgetContextMenu = () => {
     /**
      * Resets the widget to its original size.
      */
-    const handleResetSize = () => {
-        if (config?.id) {
-            const originalConfig = __.ui.widgetManager.getWidgetConfig(id)
-            if (originalConfig) {
-                element.style.width = `${originalConfig.width}px`
-                element.style.height = `${originalConfig.height}px`
-            }
+    const handleResetSize = (scale) => {
+        const current = __.ui.widgetManager.getTransform(element)
+        const newScale = scale === 1
+                         ? {x: 1, y: 1}
+                         : {x: current.scale.x * (1 + scale), y: current.scale.y * (1 + scale)}
+        __.ui.widgetManager.setScale(element, newScale.x, newScale.y)
+        if (scale === 1) {
+            $widget.canDisplayContextMenu = false
         }
-        $widget.canDisplayContextMenu = false
     }
 
     // If the menu cannot be displayed, capabilities are not met, dragging is in progress, or element is invalid,
@@ -171,12 +173,13 @@ export const WidgetContextMenu = () => {
         return null
     }
 
+
     return (
         <div
             ref={_anchor}
             className="lgs-context-menu widget-context-menu lgs-card on-map"
             onPointerLeave={() => {
-                _timer.current = setTimeout(() => hideMenu(), 2 * SECOND)
+                _timer.current = setTimeout(() => hideMenu(), 200000 * SECOND)
             }}
             onPointerEnter={() => {
                 if (_timer.current) {
@@ -186,39 +189,55 @@ export const WidgetContextMenu = () => {
             }}
         >
             <ul>
+
+                {config.contextMenu.canReset && (
+                    <li key="reset-plus-minus" className="widget-grid-one-line widget-no-hover buttons-bar-on-map">
+                        <SlTooltip key="reset-size" content={'Reset size'} placement="top">
+                            <SlIcon library="fa" name={FA2SL.set(faCompress)}
+                                    className="lgs-one-line-card on-map"
+                                    onClick={() => handleResetSize(1)}/>
+                        </SlTooltip>
+
+                        <SlTooltip key="plus-ten" content={`Shrink ${PERCENTAGE * 100}%`} placement="top">
+                            <SlIcon library="fa" name={FA2SL.set(faRegularSquareCircleMinus)}
+                                    className="lgs-one-line-card on-map"
+                                    onClick={() => handleResetSize(-PERCENTAGE)}/>
+                        </SlTooltip>
+
+                        <SlTooltip key="minus-ten" content={`Expand ${PERCENTAGE * 100}%`} placement="top">
+                            <SlIcon library="fa" name={FA2SL.set(faRegularSquareCirclePlus)}
+                                    className="lgs-one-line-card on-map"
+                                    onClick={() => handleResetSize(PERCENTAGE)}/>
+                        </SlTooltip>
+                    </li>
+                )}
                 {config.contextMenu.canRemove && (
                     <li key="remove-from-video" onClick={handleRemove}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faTrashCan)}/>
-                        <span>Remove</span>
+                        <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
+                        <SlTooltip content="Remove Widget" placement="left">
+                            <span>{'Remove'}</span>
+                        </SlTooltip>
                     </li>
                 )}
-                {config.contextMenu.canReset && (
-                    <li key="reset-size" onClick={handleResetSize}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsRotate)}/>
-                        <span>Reset size</span>
-                    </li>
-                )}
-                {config.contextMenu.canMaximize && (
-                    <li key="maximize" onClick={handleResetSize}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsRotate)}/>
-                        <span>Maximize</span>
-                    </li>
-                )}
+
+                {/* {config.contextMenu.canMaximize && ( */}
+                {/*     <li key="maximize" onClick={handleResetSize}> */}
+                {/*         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faArrowsRotate)}/> */}
+                {/*         <span>{'Maximize'}</span> */}
+                {/*     </li> */}
+                {/* )} */}
+
+
                 {config.contextMenu.canPosition && (
                     <li
                         key="reposition"
-                        className="widget-grid-position buttons-bar-on-map"
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(3, 1fr)',
-                            gridTemplateRows:    'repeat(3, 1fr)',
-                        }}
+                        className="widget-grid-position widget-no-hover buttons-bar-on-map"
                     >
                         <SlTooltip key="top-left" content="Top left" placement="left">
                             <SlIcon
                                 library="fa"
                                 className="lgs-one-line-card on-map"
-                                onPointerDown={() => {
+                                onClick={() => {
                                     __.ui.widgetManager.toTopLeft(element, lgs.gutter.xs)
                                     hideMenu()
                                 }}
@@ -229,7 +248,7 @@ export const WidgetContextMenu = () => {
                             <SlIcon
                                 library="fa"
                                 className="lgs-one-line-card on-map"
-                                onPointerDown={() => {
+                                onClick={() => {
                                     __.ui.widgetManager.toTop(element, lgs.gutter.xs)
                                     hideMenu()
                                 }}
@@ -240,7 +259,7 @@ export const WidgetContextMenu = () => {
                             <SlIcon
                                 library="fa"
                                 className="lgs-one-line-card on-map"
-                                onPointerDown={() => {
+                                onClick={() => {
                                     __.ui.widgetManager.toTopRight(element, lgs.gutter.xs)
                                     hideMenu()
                                 }}
@@ -251,7 +270,7 @@ export const WidgetContextMenu = () => {
                             <SlIcon
                                 library="fa"
                                 className="lgs-one-line-card on-map"
-                                onPointerDown={() => {
+                                onClick={() => {
                                     __.ui.widgetManager.toLeft(element, lgs.gutter.xs)
                                     hideMenu()
                                 }}
@@ -262,7 +281,7 @@ export const WidgetContextMenu = () => {
                             <SlIcon
                                 library="fa"
                                 className="lgs-one-line-card on-map"
-                                onPointerDown={() => {
+                                onClick={() => {
                                     __.ui.widgetManager.toCenter(element, lgs.gutter.xs)
                                     hideMenu()
                                 }}
@@ -273,7 +292,7 @@ export const WidgetContextMenu = () => {
                             <SlIcon
                                 library="fa"
                                 className="lgs-one-line-card on-map"
-                                onPointerDown={() => {
+                                onClick={() => {
                                     __.ui.widgetManager.toRight(element, lgs.gutter.xs)
                                     hideMenu()
                                 }}
@@ -284,7 +303,7 @@ export const WidgetContextMenu = () => {
                             <SlIcon
                                 library="fa"
                                 className="lgs-one-line-card on-map"
-                                onPointerDown={() => {
+                                onClick={() => {
                                     __.ui.widgetManager.toBottomLeft(element, lgs.gutter.xs)
                                     hideMenu()
                                 }}
@@ -295,7 +314,7 @@ export const WidgetContextMenu = () => {
                             <SlIcon
                                 library="fa"
                                 className="lgs-one-line-card on-map"
-                                onPointerDown={() => {
+                                onClick={() => {
                                     __.ui.widgetManager.toBottom(element, lgs.gutter.xs)
                                     hideMenu()
                                 }}
@@ -306,7 +325,7 @@ export const WidgetContextMenu = () => {
                             <SlIcon
                                 library="fa"
                                 className="lgs-one-line-card on-map"
-                                onPointerDown={() => {
+                                onClick={() => {
                                     __.ui.widgetManager.toBottomRight(element, lgs.gutter.xs)
                                     hideMenu()
                                 }}
