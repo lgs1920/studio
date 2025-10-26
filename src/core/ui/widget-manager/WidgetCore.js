@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-24
- * Last modified: 2025-10-24
+ * Created on: 2025-10-26
+ * Last modified: 2025-10-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,8 +18,8 @@
  * Core class for managing widget configurations, bounds, and control box functionality.
  * Handles setup, positioning, and cleanup of widget elements.
  */
-import { SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
-import { v4 as uuidv4 }                 from 'uuid'
+import { LGS_WIDGET, SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
+import { v4 as uuidv4 }                             from 'uuid'
 
 export class WidgetCore {
     /** @type {WidgetManager} Reference to the WidgetManager instance */
@@ -200,7 +200,7 @@ export class WidgetCore {
             width:   `${targetRect.width || 200}px`,
             height:  `${targetRect.height || 200}px`,
         })
-        overlay.classList.add('lgs-widget-inner-overlay')
+        overlay.classList.add('lgs-widget-inner-overlay', config.type)
         element.appendChild(overlay)
     }
 
@@ -917,6 +917,7 @@ export class WidgetCore {
                 translate:             initialConfig.translate ?? {x: 0, y: 0},
                 transient:              initialConfig.transient ?? false,
                 ttl:                    initialConfig.ttl ?? this.TTL,
+                type: initialConfig.type ?? LGS_WIDGET,
                 useRatio:              initialConfig.useRatio ?? true,
             }
             // Restore position from IndexedDB if available

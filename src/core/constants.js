@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-21
- * Last modified: 2025-10-21
+ * Created on: 2025-10-26
+ * Last modified: 2025-10-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -471,7 +471,7 @@ export const BANNER_SHOW_DELAY = 5          // Seconds
  ******************************************************************************/
 export const LGS_TOOLBAR = 'lgs-toolbar'
 export const LGS_WIDGET = 'lgs-widget'
-export const LGS_SNAP = 'lgs-snap'
+export const LGS_VISUAL_WIDGET = 'lgs-visual-widget'
 export const LGS_ANIMATION_DRAGGING = 'lgs-animation-dragging'
 export const LGS_ANIMATION_RESIZING = 'lgs-animation-resizing'
 export const LGS_ANIMATION_SCALING = 'lgs-animation-scaling'

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-25
- * Last modified: 2025-10-25
+ * Created on: 2025-10-26
+ * Last modified: 2025-10-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -508,7 +508,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 top:            config.top,
                 transient:      config.transient ?? false,
                 ttl:            config.ttl ?? null,
-                type:           LGS_WIDGET,
+                type: config.type ?? LGS_WIDGET,
             }
             await __.ui.widgetManager.retrieveConfig(widgetElement, initialConfig)
             const ok = await __.ui.widgetManager.setupElement(
