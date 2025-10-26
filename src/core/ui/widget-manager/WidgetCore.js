@@ -31,6 +31,9 @@ export class WidgetCore {
     /** @type {number} Delay in milliseconds before hiding control box */
     HIDE_DELAY = 2 * SECOND
 
+    /** @type {number} Minimum dimension threshold for displaying cardinal handles */
+    MIN_DIMENSION_THRESHOLD = 50
+
     /** @type {string} Data attribute key for element IDs */
     #ID_KEY = 'data-LGS-ID'
 
@@ -205,6 +208,28 @@ export class WidgetCore {
     }
 
     /**
+     * Computes the render directions for control box handles based on effective dimensions.
+     * @private
+     * @param {DOMRect} rect - The element's bounding rectangle
+     * @returns {string[]} Array of render directions
+     */
+    #computeRenderDirections = (rect) => {
+        const widthOk = rect.width > this.MIN_DIMENSION_THRESHOLD
+        const heightOk = rect.height > this.MIN_DIMENSION_THRESHOLD
+        const directions = []
+
+        if (widthOk) {
+            directions.push('n', 's')
+        }
+        if (heightOk) {
+            directions.push('e', 'w')
+        }
+        directions.push('ne', 'nw', 'se', 'sw')
+
+        return directions
+    }
+
+    /**
      * Sets up a DOM element as a widget with moveable functionality.
      * @param {HTMLElement} element - The DOM element to set up
      * @param {Object} initialConfig - Initial widget configuration
@@ -334,7 +359,7 @@ export class WidgetCore {
         }
         if (config.showControlBox && isDragging) {
             setControlBoxProps({
-                                   renderDirections: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
+                                   renderDirections: this.#computeRenderDirections(element.getBoundingClientRect()),
                                    zoom:             1,
                                    opacity:          1,
                                })
@@ -364,7 +389,7 @@ export class WidgetCore {
         if (show) {
             this.#current = elementId
             setControlBoxProps({
-                                   renderDirections: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
+                                   renderDirections: this.#computeRenderDirections(moveable.current.target.getBoundingClientRect()),
                                    zoom:             1,
                                    opacity:          1,
                                })
@@ -900,6 +925,8 @@ export class WidgetCore {
                 left:                   initialConfig.left,
                 mandatory:             initialConfig.mandatory ?? false,
                 margin:                 initialConfig.margin,
+                max: initialConfig.max ?? {width: 500, height: 500},
+                min: initialConfig.min ?? {width: 10, height: 10},
                 minCropSize:            initialConfig.minCropSize ?? {width: 0, height: 0},
                 observer:              null,
                 outsideOverlay:         initialConfig.outsideOverlay,
