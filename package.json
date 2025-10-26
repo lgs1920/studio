@@ -13,7 +13,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@awesome.me/kit-eb5c406148": "^1.0.90",
+    "@awesome.me/kit-eb5c406148": "^1.0.93",
     "@eslint/migrate-config": "^1.6.0",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
