@@ -56,7 +56,7 @@ export const CreditsBar = () => {
     const Credit = memo(({type, provider}) => {
         const credits = () => {
             const layer = __.layersAndTerrainManager.getEntityProxy(lgs.settings.layers[type])
-            return `${type} : ${layer?.credits ?? provider.credits ?? `credits ${provider.name}`}`
+            return `${layer?.credits ?? provider.credits ?? `credits ${provider.name}`}`
         };
 
         return (
@@ -94,7 +94,8 @@ export const CreditsBar = () => {
         // Remove duplicate providers
         const used = new Set()
         Object.keys(tmp).forEach((key) => {
-            if (tmp[key] && !used.has(tmp[key].name)) {
+            if (tmp[key] && tmp[key].id !== 'cesium' && !used.has(tmp[key].name)) {
+                console.log(tmp[key])
                 used.add(tmp[key].name)
                 $providers[key] = tmp[key]
             }
