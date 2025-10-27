@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-16
- * Last modified: 2025-09-16
+ * Created on: 2025-10-27
+ * Last modified: 2025-10-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -632,6 +632,15 @@ export class AppUtils {
 
         return true
     }
+
+    /**
+     * Clamps a value between a min and max range.
+     * @param {number} value - The value to clamp.
+     * @param {number} min - Minimum allowed value.
+     * @param {number} max - Maximum allowed value.
+     * @returns {number} The clamped value.
+     */
+    static clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
 
 }

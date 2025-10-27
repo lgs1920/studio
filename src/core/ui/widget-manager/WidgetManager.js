@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-25
- * Last modified: 2025-10-25
+ * Created on: 2025-10-27
+ * Last modified: 2025-10-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -549,4 +549,12 @@ export class WidgetManager {
      * @param {number} y - Y scale value
      */
     setScale = (element, x, y) => this.#transform.setScale(element, x, y)
+
+    /**
+     * Updates the translate values in the widget's transform.
+     * @param {HTMLElement} element - The DOM element
+     * @param {number} x - X translation value
+     * @param {number} y - Y translation value
+     */
+    setTranslate = (element, x, y) => this.#transform.setTranslate(element, x, y)
 }
