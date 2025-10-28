@@ -47,7 +47,7 @@
     "@turf/transform-rotate": "^7.2.0",
     "@zumer/snapdom": "1.9.14",
     "argparse": "^2.0.1",
-    "axios": "^1.12.2",
+    "axios": "^1.13.0",
     "babel-plugin-module-resolver": "^5.0.2",
     "canvg": "^4.0.3",
     "cesium": "~1.134.1",
@@ -115,7 +115,7 @@
     "typescript": "^5.9.3",
     "vite": "7.1.12",
     "vite-plugin-markdown": "^2.2.0",
-    "vitest": "^4.0.3"
+    "vitest": "^4.0.4"
   },
   "module": "index.ts",
   "trustedDependencies": [
