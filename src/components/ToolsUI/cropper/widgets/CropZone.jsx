@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-12
- * Last modified: 2025-10-12
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,22 +17,6 @@
 import { VIDEO_CROP_ZONE } from '@Core/constants'
 import React, { useEffect, useRef, useCallback, useState } from 'react'
 import { CropZoneInfo }                                                from './CropZoneInfo'
-
-const toClipPath = ({left, top, width, height}) => {
-    const x1 = Math.floor(left)
-    const y1 = Math.floor(top)
-    const x2 = Math.floor(left + width)
-    const y2 = Math.floor(top + height)
-    return `polygon(
-    0% 0%, 100% 0%, 100% 100%, 0% 100%,
-    0% ${y1}px,
-    ${x1}px ${y1}px,
-    ${x1}px ${y2}px,
-    ${x2}px ${y2}px,
-    ${x2}px ${y1}px,
-    0% ${y1}px
-  )`
-}
 
 /**
  * CropZone component for rendering the crop zone content with imperative API.
