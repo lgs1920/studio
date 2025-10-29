@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-27
- * Last modified: 2025-10-27
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -54,8 +54,8 @@ export const CreditsWidget = ({id, context}) => {
                 type: LGS_VISUAL_WIDGET,
                 group:     VIDEO_ELEMENTS_WIDGET_GROUP,
                 margin:    5,
-                min: {height: 30}, max: {width: 350},
-                attachTo:  'bottom',
+                min:      {height: 20}, max: {width: 350},
+                attachTo: 'bottom',
                 scalable:  true,
                 id,
                 persist:   true,
