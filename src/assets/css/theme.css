@@ -1173,6 +1173,10 @@ h3 {
     /*background: var(--lgs-second-color-90)*/
 }
 
+.lgs-visual-widget {
+    margin: 0 !important
+}
+
 .lgs-visual-widget.lgs-widget-inner-overlay {
     pointer-events: auto !important;
     background-color: #dd0000aa;
