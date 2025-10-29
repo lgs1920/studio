@@ -439,8 +439,6 @@ export class WidgetCore {
             // Use saved position from DB, relative to the container
             left = config.position?.left ?? 0
             top = config.position?.top ?? 0
-            // Overload anchor to match the coordinates
-            config.anchor = 'top-left'
         }
         else {
             // Use provided left/top or center for croppers, relative to the container

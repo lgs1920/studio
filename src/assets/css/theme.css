@@ -1179,7 +1179,6 @@ h3 {
 
 .lgs-visual-widget.lgs-widget-inner-overlay {
     pointer-events: auto !important;
-    background-color: #dd0000aa;
 }
 
 .dragging .lgs-widget-inner-overlay {
