@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-27
- * Last modified: 2025-10-27
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -95,7 +95,6 @@ export const CreditsBar = () => {
         const used = new Set()
         Object.keys(tmp).forEach((key) => {
             if (tmp[key] && tmp[key].id !== 'cesium' && !used.has(tmp[key].name)) {
-                console.log(tmp[key])
                 used.add(tmp[key].name)
                 $providers[key] = tmp[key]
             }
