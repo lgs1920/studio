@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-27
- * Last modified: 2025-10-27
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -399,27 +399,24 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                                                          },
                                                      })
 
-    // /**
-    //  * Sets transform origin based on the handle clicked for scaling, including corner handles.
-    //  * @param {import('moveable').OnBeforeScale} event
-    //  */
-    // const handleBeforeScale = useCallback(event => {
-    //     const target = _widget.current
-    //     if (!target) {
-    //         return
-    //     }
-    //
-    //     // Get the direction of the handle clicked
-    //     const [x, y] = event.startFixedDirection
-    //
-    //     // Map direction to transform-origin for corners and edges
-    //     const originX = x === -1 ? 'right' : x === 1 ? 'left' : 'center'
-    //     const originY = y === -1 ? 'bottom' : y === 1 ? 'top' : 'center'
-    //     target.style.transformOrigin = `center center`
-    //
-    //     // Store the initial bounding rectangle for position compensation
-    //     target.__rectBefore = target.getBoundingClientRect()
-    // }, [])
+    /**
+     * Sets transform origin based on the handle clicked for scaling, including corner handles.
+     * @param {import('moveable').OnBeforeScale} event
+     */
+    const handleBeforeScale = useCallback(event => {
+        const target = _widget.current
+        if (!target) {
+            return
+        }
+
+        // Get the direction of the handle clicked
+        const [x, y] = event.startFixedDirection
+
+        // Map direction to transform-origin for corners and edges
+        const originX = x === 1 ? 'right' : x === -1 ? 'left' : 'center'
+        const originY = y === 1 ? 'bottom' : y === -1 ? 'top' : 'center'
+        target.style.transformOrigin = `${originX} ${originY}`
+    }, [])
 
     /**
      * Applies scale transformations to the widget, adjusting scale to stay within bounds.
@@ -449,10 +446,12 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 if (config.min?.height !== undefined && adjustedHeight < dimensionsConstraint.min.height) {
                     scaleY = dimensionsConstraint.min.height / target.offsetHeight
                     scaleX = scaleY
+                    // __.ui.widgetManager.setTranslate(target, 0, 0)
                 }
                 else if (config.max?.height !== undefined && adjustedHeight > dimensionsConstraint.max.height) {
                     scaleY = dimensionsConstraint.max.height / target.offsetHeight
                     scaleX = scaleY
+                    // __.ui.widgetManager.setTranslate(target, 0, 0)
                 }
             }
             else {
@@ -464,8 +463,16 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
 
         // Apply scale transformation
-        __.ui.widgetManager.setScale(target, scaleX, scaleY)
+
+        const eventTransform = __.ui.widgetManager.parseTransform(event.drag.transform)
+        console.log(eventTransform, config.transform)
+        // eventTransform.scale = {x: scaleX, y: scaleY}
+        //  eventTransform.translate = [0, 0]
+        //event.drag.transform = __.ui.widgetManager.buildTransform(eventTransform)
         target.style.transform = event.drag.transform
+
+        __.ui.widgetManager.setScale(target, eventTransform.scale.x, eventTransform.scale.y)
+        __.ui.widgetManager.setTranslate(target, eventTransform.translate.x, eventTransform.translate.y)
 
         __.ui.widgetManager.onScale(event, {widget: _widget, child: _children}, setPosition)
 
@@ -744,7 +751,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         resizable={config?.resizable || false}
                         throttleResize={2}
                         // Scale events and settings
-                        // onBeforeScale={handleBeforeScale}
+                        onBeforeScale={handleBeforeScale}
                         onScale={handleScale}
                         onScaleEnd={handleScaleEnd}
                         onScaleStart={handleScaleStart}

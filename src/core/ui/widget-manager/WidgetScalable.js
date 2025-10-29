@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-16
- * Last modified: 2025-10-16
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -68,6 +68,7 @@ export class WidgetScalable {
         const scaleX = Number(event.scale?.[0].toFixed(2)) ?? 1
         const scaleY = Number(event.scale?.[1].toFixed(2)) ?? 1
 
+
         // Store scale in config
         config.scale = {x: scaleX, y: scaleY}
 
@@ -121,11 +122,20 @@ export class WidgetScalable {
     onScaleEnd = async event => {
         this.#widgetManager.isScaling = false
         event.target.classList.remove('scaling', LGS_ANIMATION_SCALING)
+        event.target.style.transformOrigine = '0 0'
         const config = await this.#widgetManager.retrieveConfig(event.target)
 
         // Extract final scale values using transform helper
         const transforms = this.#widgetTransform.getTransform(event.target)
         config.scale = transforms.scale
+        const {x, y} = event.target.getBoundingClientRect()
+
+        const style = getComputedStyle(event.target)
+
+        config.position = {
+            left: parseFloat(x) - parseFloat(style.marginLeft),
+            top:  parseFloat(y) - parseFloat(style.marginTop),
+        }
 
         if (config.persist) {
             this.#widgetManager.saveWidgetPosition(config.id, config)

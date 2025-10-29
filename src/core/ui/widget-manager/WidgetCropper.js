@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-23
- * Last modified: 2025-10-23
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -325,14 +325,14 @@ export class WidgetCropper {
     // handleContainerResize = (config, element, moveable, setPosition) => {
     //     const t = element.style.transform || ''
     //     const m = t.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/)
-    //     const baseLeft = parseInt(element.style.left || '0', 10)
-    //     const baseTop = parseInt(element.style.top || '0', 10)
+    //     const baseLeft =  __.app.parsePx(element.style.left || '0')
+    //     const baseTop =  __.app.parsePx(element.style.top || '0')
     //     const dx = m ? parseFloat(m[1]) || 0 : 0
     //     const dy = m ? parseFloat(m[2]) || 0 : 0
     //     let left = Math.round(baseLeft + dx)
     //     let top = Math.round(baseTop + dy)
-    //     let width = Number(config.cropDimensions?.width) || parseInt(element.style.width || '0', 10)
-    //     let height = Number(config.cropDimensions?.height) || parseInt(element.style.height || '0', 10)
+    //     let width = Number(config.cropDimensions?.width) ||  __.app.parsePx(element.style.width || '0')
+    //     let height = Number(config.cropDimensions?.height) ||  __.app.parsePx(element.style.height || '0')
     //     width = Math.max(0, width)
     //     height = Math.max(0, height)
     //     const maxLeft = Math.max(config.bounds.left, config.bounds.right - width)

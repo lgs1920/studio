@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-17
- * Last modified: 2025-10-17
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,16 +38,18 @@ export class WidgetDBManager {
      * @returns {Promise<void>}
      */
     saveWidgetPosition = async (widgetId, config) => {
+
+        const scale = config.scale || {x: 1, y: 1}
         const record = {
             id:        widgetId,
             group:     config.group || null,
-            left:      config.position.left,
-            top:       config.position.top,
+            left:  config.position.left,
+            top:   config.position.top,
             width:     config.cropDimensions?.width || config.dimensions.width,
             height:    config.cropDimensions?.height || config.dimensions.height,
             transient: config.transient,
             ttl:       config.ttl || null,
-            scale:    config.scale || {x: 1, y: 1},
+            scale: scale,
             ratio:    config.ratio,
             attachTo: config.attachTo,
         }

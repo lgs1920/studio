@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-25
- * Last modified: 2025-10-25
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -69,12 +69,12 @@ export class WidgetDraggable {
         const config = await this.#widgetManager.retrieveConfig(event.target)
         if (config?.isCropper && config.outsideOverlay) {
             const [dx, dy] = event.translate || [0, 0]
-            const baseLeft = parseInt(event.target.style.left || '0', 10)
-            const baseTop = parseInt(event.target.style.top || '0', 10)
+            const baseLeft = __.app.parsePx(event.target.style.left || '0')
+            const baseTop = __.app.parsePx(event.target.style.top || '0')
             const left = baseLeft + dx
             const top = baseTop + dy
-            const width = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : parseInt(event.target.style.width || '0', 10) || event.target.getBoundingClientRect().width || 200
-            const height = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : parseInt(event.target.style.height || '0', 10) || event.target.getBoundingClientRect().height || 200
+            const width = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : __.app.parsePx(event.target.style.width || '0') || event.target.getBoundingClientRect().width || 200
+            const height = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : __.app.parsePx(event.target.style.height || '0') || event.target.getBoundingClientRect().height || 200
             if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
                 config.cropDimensions = {left, top, width, height}
                 this.#widgetCropper.applyCropToOverlay(config)
@@ -96,10 +96,10 @@ export class WidgetDraggable {
         this.#widgetTransform.commitTranslateToPosition(event.target)
 
         config.element = event.target
-        const left = parseInt(event.target.style.left || '0', 10)
-        const top = parseInt(event.target.style.top || '0', 10)
-        const width = parseInt(event.target.style.width || '0', 10) || event.target.getBoundingClientRect().width || 200
-        const height = parseInt(event.target.style.height || '0', 10) || event.target.getBoundingClientRect().height || 200
+        const left = __.app.parsePx(event.target.style.left || '0')
+        const top = __.app.parsePx(event.target.style.top || '0')
+        const width = __.app.parsePx(event.target.style.width || '0') || event.target.getBoundingClientRect().width || 200
+        const height = __.app.parsePx(event.target.style.height || '0') || event.target.getBoundingClientRect().height || 200
 
         if (config?.isCropper) {
             if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {

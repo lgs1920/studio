@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-27
- * Last modified: 2025-10-27
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -642,5 +642,21 @@ export class AppUtils {
      */
     static clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
-
+    /**
+     * Parses a string representing a pixel value and returns a rounded number.
+     * Cleans non-numeric characters (except dot and sign), handles errors,
+     * and applies precise rounding with floating-point error correction.
+     *
+     * @param {string|number} str - The input value (e.g., "12px", "-3.4rem", 15).
+     * @param {number} [decimals=3] - Number of decimals for rounding.
+     * @returns {number|null} The rounded number or null if invalid.
+     */
+    static parsePx = (str, decimals = 3) => {
+        const num = parseFloat(String(str).replace(/[^\d.-]/g, ''))
+        if (isNaN(num)) {
+            return null
+        }
+        // Round with floating-point error compensation (Number.EPSILON)
+        return Math.round((num + Number.EPSILON) * 10 ** decimals) / 10 ** decimals
+    }
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-25
- * Last modified: 2025-10-25
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -91,10 +91,10 @@ export class WidgetResizable {
         const height = Math.round(event.height)
         const config = this.#widgetManager.getWidgetConfig(this.#widgetManager.retrieveElementId(target))
         const prevCropDimensions = config.isCropper ? {...config.cropDimensions} : {}
-        const baseLeft = parseInt(target.style.left || '0', 10)
-        const baseTop = parseInt(target.style.top || '0', 10)
-        const currentWidth = config.isCropper ? prevCropDimensions?.width || width : parseInt(target.style.width || '0', 10) || width
-        const currentHeight = config.isCropper ? prevCropDimensions?.height || height : parseInt(target.style.height || '0', 10) || height
+        const baseLeft = __.app.parsePx(target.style.left || '0')
+        const baseTop = __.app.parsePx(target.style.top || '0')
+        const currentWidth = config.isCropper ? prevCropDimensions?.width || width : __.app.parsePx(target.style.width || '0') || width
+        const currentHeight = config.isCropper ? prevCropDimensions?.height || height : __.app.parsePx(target.style.height || '0') || height
         let finalLeft = baseLeft
         let finalTop = baseTop
 
@@ -199,10 +199,10 @@ export class WidgetResizable {
         const config = await this.#widgetManager.retrieveConfig(event.target)
         if (config?.isCropper) {
             config.element = event.target
-            const left = parseInt(event.target.style.left || '0', 10)
-            const top = parseInt(event.target.style.top || '0', 10)
-            const width = parseInt(event.target.style.width || '0', 10) || event.target.getBoundingClientRect().width || 200
-            const height = parseInt(event.target.style.height || '0', 10) || event.target.getBoundingClientRect().height || 200
+            const left = __.app.parsePx(event.target.style.left || '0')
+            const top = __.app.parsePx(event.target.style.top || '0')
+            const width = __.app.parsePx(event.target.style.width || '0') || event.target.getBoundingClientRect().width || 200
+            const height = __.app.parsePx(event.target.style.height || '0') || event.target.getBoundingClientRect().height || 200
             config.position = {left, top}
             config.cropDimensions = {left, top, width, height}
             this.#widgetCropper.applyCropToOverlay(config)

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-26
- * Last modified: 2025-10-26
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -197,11 +197,8 @@ export class WidgetCore {
         const elementId = this.retrieveElementId(element)
         const config = this.getWidgetConfig(elementId)
         config.overlay = overlay
-        const targetRect = this.#computeElementBounds(element)
         Object.assign(overlay.style, {
             display: 'block',
-            width:   `${targetRect.width || 200}px`,
-            height:  `${targetRect.height || 200}px`,
         })
         overlay.classList.add('lgs-widget-inner-overlay', config.type)
         element.appendChild(overlay)
@@ -442,6 +439,8 @@ export class WidgetCore {
             // Use saved position from DB, relative to the container
             left = config.position?.left ?? 0
             top = config.position?.top ?? 0
+            // Overload anchor to match the coordinates
+            config.anchor = 'top-left'
         }
         else {
             // Use provided left/top or center for croppers, relative to the container
@@ -462,6 +461,7 @@ export class WidgetCore {
                 'bottom-left':  () => ({left: left + margin, top: top - defaultHeight - margin}),
                 'bottom-right': () => ({left: left - defaultWidth - margin, top: top - defaultHeight - margin}),
             }
+
             if (adjustments[attachTo]) {
                 ({left, top} = adjustments[attachTo]())
             }
@@ -471,13 +471,20 @@ export class WidgetCore {
         config.position = {left, top}
 
         // Ensure widget stays within container bounds
-        const boundedLeft = Math.max(0, Math.min(left, container.width - defaultWidth))
-        const boundedTop = Math.max(0, Math.min(top, container.height - defaultHeight))
 
-        // Update config.position with bounded values
-        config.position = {left: boundedLeft, top: boundedTop}
+        // Update config.position but  force the widget to remain in the container
+        config.position = {
+            left: Math.max(
+                container.left,
+                Math.min(left, container.right - defaultWidth),
+            ),
+            top:  Math.max(
+                container.top,
+                Math.min(top, container.bottom - defaultHeight),
+            ),
+        }
 
-        return {left: boundedLeft, top: boundedTop}
+        return config.position
     }
 
     /**

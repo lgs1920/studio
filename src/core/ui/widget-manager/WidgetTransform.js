@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-17
- * Last modified: 2025-10-17
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -155,7 +155,6 @@ export class WidgetTransform {
 
         // Parse existing transform
         const currentTransform = this.parseTransform(element.style.transform)
-
         // Update scale values
         currentTransform.scale = {x, y}
 
@@ -263,14 +262,15 @@ export class WidgetTransform {
         // Apply translate to position if not zero
         if (transforms.translate.x !== 0 || transforms.translate.y !== 0) {
             // Parse current position
-            const currentLeft = parseInt(element.style.left || '0', 10)
-            const currentTop = parseInt(element.style.top || '0', 10)
+            const currentLeft = parseFloat(element.style.left || '0')
+            const currentTop = parseFloat(element.style.top || '0')
 
             // Calculate new position
-            const newLeft = Math.round(currentLeft + transforms.translate.x)
-            const newTop = Math.round(currentTop + transforms.translate.y)
+            const newLeft = currentLeft + transforms.translate.x
+            const newTop = currentTop + transforms.translate.y
 
             // Update element style and config position
+            element.style.transformOrigin = '0 0'
             element.style.left = `${newLeft}px`
             element.style.top = `${newTop}px`
 

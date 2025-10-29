@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-27
- * Last modified: 2025-10-27
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -536,11 +536,24 @@ export class WidgetManager {
     removeMoveable = elementId => this.#core.removeMoveable(elementId)
 
     /**
+     * Builds a transform string from individual transformation values.
+     * @param {Object} transforms - Object containing translate, scale, rotate values
+     * @returns {string} CSS transform string
+     */
+    buildTransform = transforms => this.#transform.buildTransform(transforms)
+    /**
      * Gets the current transform values for a widget.
      * @param {HTMLElement} element - The DOM element
      * @returns {Object} Object containing translate, scale, rotate values
      */
     getTransform = element => this.#transform.getTransform(element)
+
+    /**
+     * Parses a transform string and extracts individual transformations.
+     * @param {string} transformString - The CSS transform string
+     * @returns {Object} Object containing translate, scale, rotate values
+     */
+    parseTransform = transformString => this.#transform.parseTransform(transformString)
 
     /**
      * Updates the scale values in the widget's transform.
