@@ -932,7 +932,7 @@ export class WidgetCore {
                 margin:                 initialConfig.margin,
                 max: initialConfig.max ?? {width: 500, height: 500},
                 min: initialConfig.min ?? {width: 10, height: 10},
-                minCropSize:            initialConfig.minCropSize ?? {width: 0, height: 0},
+                minCropSize: initialConfig.minCropSize ?? {width: 100, height: 100},
                 observer:              null,
                 outsideOverlay:         initialConfig.outsideOverlay,
                 persist:               initialConfig.persist ?? null,

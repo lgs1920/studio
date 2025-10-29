@@ -93,58 +93,61 @@ export class WidgetCropper {
     }
 
     /**
-     * Computes crop dimensions.
+     * Computes crop dimensions when the data are not coming from a DB record
+     *
      * @param {Object} config - Widget configuration
      * @param {boolean} maximize - Whether to maximize crop
      * @returns {Object} Crop dimensions
      */
     cropDimensions = (config, maximize = false) => {
-        const container = this.#widgetManager.refreshBounds(config)
-        container.width = container.right - container.left
-        container.height = container.bottom - container.top
-        const padding = config.margin || 0
-        const paddedWidth = container.width - 2 * padding
-        const paddedHeight = container.height - 2 * padding
-        let width = 0
-        let height = 0
-        const maxWidth = Math.floor(paddedWidth * this.#CROP_SCALE_FACTOR)
-        const maxHeight = Math.floor(paddedHeight * this.#CROP_SCALE_FACTOR)
-        if (!config.useRatio || !config.ratio?.locked) {
-            // Free ratio: maximize to full container size
-            width = Math.max(config.minCropSize.width, maxWidth)
-            height = Math.max(config.minCropSize.height, maxHeight)
-        }
-        else {
-            // Locked ratio: respect aspect ratio
-            const ratio = config.ratio.aspectRatio
-            if (ratio === 1) {
-                width = height = Math.floor(Math.max(config.minCropSize.width, Math.min(maxWidth, maxHeight)))
-            }
-            else if (ratio < 1) {
-                height = Math.floor(Math.max(config.minCropSize.height, maxHeight))
-                width = Math.floor(Math.max(config.minCropSize.width, height * ratio))
-                if (width > maxWidth) {
-                    width = maxWidth
-                    height = Math.floor(width / ratio)
-                }
+        if (!config.fromDB) {
+            const container = this.#widgetManager.refreshBounds(config)
+            container.width = container.right - container.left
+            container.height = container.bottom - container.top
+            const padding = config.margin || 0
+            const paddedWidth = container.width - 2 * padding
+            const paddedHeight = container.height - 2 * padding
+            let width = 0
+            let height = 0
+            const maxWidth = Math.floor(paddedWidth * this.#CROP_SCALE_FACTOR)
+            const maxHeight = Math.floor(paddedHeight * this.#CROP_SCALE_FACTOR)
+            if (!config.useRatio || !config.ratio?.locked) {
+                // Free ratio: maximize to full container size
+                width = Math.max(config.minCropSize.width, maxWidth)
+                height = Math.max(config.minCropSize.height, maxHeight)
             }
             else {
-                width = Math.floor(Math.max(config.minCropSize.width, maxWidth))
-                height = Math.floor(Math.max(config.minCropSize.height, width / ratio))
-                if (height > maxHeight) {
-                    height = maxHeight
-                    width = Math.floor(height * ratio)
+                // Locked ratio: respect aspect ratio
+                const ratio = config.ratio.aspectRatio
+                if (ratio === 1) {
+                    width = height = Math.floor(Math.max(config.minCropSize.width, Math.min(maxWidth, maxHeight)))
+                }
+                else if (ratio < 1) {
+                    height = Math.floor(Math.max(config.minCropSize.height, maxHeight))
+                    width = Math.floor(Math.max(config.minCropSize.width, height * ratio))
+                    if (width > maxWidth) {
+                        width = maxWidth
+                        height = Math.floor(width / ratio)
+                    }
+                }
+                else {
+                    width = Math.floor(Math.max(config.minCropSize.width, maxWidth))
+                    height = Math.floor(Math.max(config.minCropSize.height, width / ratio))
+                    if (height > maxHeight) {
+                        height = maxHeight
+                        width = Math.floor(height * ratio)
+                    }
                 }
             }
+            const left = Math.floor((paddedWidth - width) / 2) + padding
+            const top = Math.floor((paddedHeight - height) / 2) + padding
+            config.cropDimensions = {left, top, width, height}
+            if (config.resizeFromCenter) {
+                config.centerRatio = {x: 0.5, y: 0.5}
+            }
+            // Update ratio to reflect new dimensions
+            config.ratio = {...config.ratio, aspectRatio: width / height, locked: config.ratio?.locked ?? true}
         }
-        const left = Math.floor((paddedWidth - width) / 2) + padding
-        const top = Math.floor((paddedHeight - height) / 2) + padding
-        config.cropDimensions = {left, top, width, height}
-        if (config.resizeFromCenter) {
-            config.centerRatio = {x: 0.5, y: 0.5}
-        }
-        // Update ratio to reflect new dimensions
-        config.ratio = {...config.ratio, aspectRatio: width / height, locked: config.ratio?.locked ?? true}
         return config.cropDimensions
     }
 
