@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-29
- * Last modified: 2025-10-29
+ * Created on: 2025-10-30
+ * Last modified: 2025-10-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -599,7 +599,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 type: config.type ?? LGS_WIDGET,
             }
 
-            await __.ui.widgetManager.retrieveConfig(widgetElement, initialConfig)
+            const newConfig = await __.ui.widgetManager.retrieveConfig(widgetElement, initialConfig)
+            console.log(newConfig)
 
             // Update constraints state with min and max from initialConfig
             setDimensionsConstraint({
@@ -609,7 +610,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
             const ok = await __.ui.widgetManager.setupElement(
                 _widget.current,
-                initialConfig,
+                newConfig,
                 setBounds,
                 setPosition,
                 _moveable,

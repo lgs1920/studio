@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-29
- * Last modified: 2025-10-29
+ * Created on: 2025-10-30
+ * Last modified: 2025-10-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -901,6 +901,7 @@ export class WidgetCore {
         const elementId = initialConfig.id && typeof initialConfig.id === 'string' && initialConfig.id.trim()
                           ? initialConfig.id
                           : this.retrieveElementId(element) || uuidv4()
+        let config
         if (!this.#widgets.has(elementId)) {
             const anchor = initialConfig.isCropper
                            ? (initialConfig.attachTo && this.#validPositions.includes(initialConfig.attachTo) ? initialConfig.attachTo : 'center')
@@ -910,7 +911,7 @@ export class WidgetCore {
                                 ? initialConfig.position
                                 : 'top-left')
             const ratio = __.device.isPortrait ? '9x16' : '16x9'
-            const config = {
+            config = {
                 animationWhenDragging: initialConfig.animationWhenDragging ?? false,
                 animationWhenScaling:  initialConfig.animationWhenScaling ?? false,
                 attachTo:              anchor,
@@ -952,6 +953,19 @@ export class WidgetCore {
                 type: initialConfig.type ?? LGS_WIDGET,
                 useRatio:              initialConfig.useRatio ?? true,
             }
+        }
+        else {
+            config = this.#widgets.get(elementId)
+            if (initialConfig.outsideOverlay) {
+                config.outsideOverlay = initialConfig.outsideOverlay
+            }
+            if (initialConfig.container) {
+                config.container = initialConfig.container
+            }
+            if (initialConfig.group !== undefined) {
+                config.group = initialConfig.group
+            }
+            }
             // Restore position from IndexedDB if available
             config.fromDB = false
             if (config.persist) {
@@ -979,20 +993,8 @@ export class WidgetCore {
                 }
             }
             this.#widgets.set(elementId, config)
-        }
-        else {
-            const widget = this.#widgets.get(elementId)
-            if (initialConfig.outsideOverlay) {
-                widget.outsideOverlay = initialConfig.outsideOverlay
-            }
-            if (initialConfig.container) {
-                widget.container = initialConfig.container
-            }
-            if (initialConfig.group !== undefined) {
-                widget.group = initialConfig.group
-            }
-        }
-        return this.getWidgetConfig(elementId)
+
+        return config
     }
 
     /**

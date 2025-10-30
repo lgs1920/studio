@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-17
- * Last modified: 2025-10-17
+ * Created on: 2025-10-30
+ * Last modified: 2025-10-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -80,7 +80,8 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 {overlay && <div className="crop-overlay" ref={_overlay}/>}
                 {children}
                 <CompassWidget id="video-compass-element" context={context}/>
-                <CreditsWidget id="video-credits-element" context={context}/>
+                <CreditsWidget id="video-credits" context={context}/>
+                <CompassWidget id="another-element" context={context}/>
 
             </div>
         </>
