@@ -18,8 +18,8 @@
  * Core class for managing widget configurations, bounds, and control box functionality.
  * Handles setup, positioning, and cleanup of widget elements.
  */
-import { LGS_WIDGET, SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
-import { v4 as uuidv4 }                             from 'uuid'
+import { LGS_VISUAL_WIDGET, LGS_WIDGET, SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
+import { v4 as uuidv4 }                                                from 'uuid'
 
 export class WidgetCore {
     /** @type {WidgetManager} Reference to the WidgetManager instance */
@@ -993,19 +993,47 @@ export class WidgetCore {
             }
         }
 
+        // Constrain and adapt widget size to its container
+        const container = config?.container.getBoundingClientRect()
+        if (container) {
+            if (config.type === LGS_VISUAL_WIDGET) {
+                const maxW = container.width - 2 * config.margin
+                const maxH = container.height - 2 * config.margin
 
-        // Constrain position within container bounds
-        const container = config.container.getBoundingClientRect()
-        config.position = {
-            left: Math.max(
-                container.left + config.margin,
-                Math.min(config.position.left, container.right - config.dimensions.width * config.scale.x - config.margin),
-            ),
-            top:  Math.max(
-                container.top + config.margin,
-                Math.min(config.position.top, container.bottom - config.dimensions.height * config.scale.y - config.margin),
-            ),
+                // Ensure widget fits inside container with config.margin, using uniform scale to preserve aspect ratio
+                if ((config.ratio?.locked || config.useRatio) && config.ratio?.aspectRatio) {
+                    // Ratio is enforced (locked or useRatio) → compute scaled height from width
+                    const sw = config.dimensions.width * config.scale.x
+                    const sh = config.dimensions.height * config.scale.y
+                    if (sw > maxW || sh > maxH) {
+                        const tmp = Math.min(maxW / config.dimensions.width, maxH / config.dimensions.height)
+                        config.scale = {x: tmp, y: tmp}
+                    }
+                }
+                else {
+                    // No ratio constraint → allow independent X/Y scaling, but still use uniform scale to avoid
+                    // distortion
+                    const tmp = Math.min(maxW / (config.dimensions.width * config.scale.x), maxH /
+                        (config.dimensions.height * config.scale.y))
+                    config.scale = {x: tmp, y: tmp}
+                }
+                console.log(config.scale)
+            }
+            // Constrain position within container bounds
+            config.position = {
+                left: Math.max(
+                    container.left + config.margin,
+                    Math.min(config.position.left, container.right - config.dimensions.width * config.scale.x - config.margin),
+                ),
+                top:  Math.max(
+                    container.top + config.margin,
+                    Math.min(config.position.top, container.bottom - config.dimensions.height * config.scale.y - config.margin),
+                ),
+            }
+
+
         }
+
 
         this.#widgets.set(elementId, config)
 
@@ -1018,7 +1046,8 @@ export class WidgetCore {
      *
      * @param {Object} source - The object to clone.
      * @param {string[]} attrs - List of expected boolean attribute names.
-     * @returns {Object} A new object with all attributes from `attrs`, defaulting to false if undefined in `source`.
+     * @returns {Object} A new object with all attributes from `attrs`, defaulting to false if undefined in
+     *     `source`.
      */
     cloneContext = (source, attrs) =>
         Object.fromEntries(
