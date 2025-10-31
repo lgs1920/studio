@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-30
- * Last modified: 2025-10-30
+ * Created on: 2025-10-31
+ * Last modified: 2025-10-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -600,7 +600,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             }
 
             const newConfig = await __.ui.widgetManager.retrieveConfig(widgetElement, initialConfig)
-            console.log(newConfig)
 
             // Update constraints state with min and max from initialConfig
             setDimensionsConstraint({
