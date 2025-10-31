@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-31
- * Last modified: 2025-10-31
+ * Created on: 2025-11-01
+ * Last modified: 2025-11-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -33,7 +33,6 @@ export const CropZone = ({onDoubleClick, infoComponent, infoPosition, overlay, c
         return async () => {
             const config = await __.ui.widgetManager.getWidgetConfig(context.id)
             await __.ui.widgetManager.saveWidgetPosition(context.id, config)
-            console.log('fin cropzone', context)
         }
     }, [])
 
