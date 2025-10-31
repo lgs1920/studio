@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-30
- * Last modified: 2025-10-30
+ * Created on: 2025-10-31
+ * Last modified: 2025-10-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -122,7 +122,7 @@ export class WidgetScalable {
     onScaleEnd = async event => {
         this.#widgetManager.isScaling = false
         event.target.classList.remove('scaling', LGS_ANIMATION_SCALING)
-        event.target.style.transformOrigine = '0 0'
+        //   event.target.style.transformOrigin = '0 0'
         const config = await this.#widgetManager.retrieveConfig(event.target)
 
         // Extract final scale values using transform helper

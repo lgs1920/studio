@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-29
- * Last modified: 2025-10-29
+ * Created on: 2025-10-31
+ * Last modified: 2025-10-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -117,8 +117,13 @@ export class WidgetPosition {
         // Apply position to element
         element.style.left = `${left}px`
         element.style.top = `${top}px`
+        element.style.transformOrigin = `0 0`
         if (config.setPosition) {
             config.setPosition(config.position)
+        }
+
+        if (config.persist) {
+            this.#widgetManager.saveWidgetPosition(elementId, config)
         }
 
         const moveable = this.#widgetManager.getMoveable(elementId)

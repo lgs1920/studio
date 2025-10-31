@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-30
- * Last modified: 2025-10-30
+ * Created on: 2025-10-31
+ * Last modified: 2025-10-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -931,8 +931,8 @@ export class WidgetCore {
                 left:                   initialConfig.left,
                 mandatory:             initialConfig.mandatory ?? false,
                 margin:                 initialConfig.margin,
-                max: initialConfig.max ?? {width: 500, height: 500},
-                min: initialConfig.min ?? {width: 10, height: 10},
+                max:  initialConfig.max ?? {width: 500, height: 500},
+                min:  initialConfig.min ?? {width: 10, height: 10},
                 minCropSize: initialConfig.minCropSize ?? {width: 100, height: 100},
                 observer:              null,
                 outsideOverlay:         initialConfig.outsideOverlay,
@@ -965,34 +965,49 @@ export class WidgetCore {
             if (initialConfig.group !== undefined) {
                 config.group = initialConfig.group
             }
-            }
-            // Restore position from IndexedDB if available
-            config.fromDB = false
-            if (config.persist) {
-                const savedWidget = await this.#widgetManager.getWidgetPosition(elementId)
-                if (savedWidget) {
-                    config.fromDB = true
-                    config.position = {
-                        left: savedWidget.left,
-                        top:  savedWidget.top,
-                    }
-                    config.dimensions = {
-                        width:  savedWidget.width,
-                        height: savedWidget.height,
-                    }
-                    config.cropDimensions = {
-                        top:    savedWidget.top,
-                        left:   savedWidget.left,
-                        width:  savedWidget.width,
-                        height: savedWidget.height,
-                    }
-                    config.group = savedWidget.group || config.group
-                    config.scale = savedWidget.scale || {x: 1, y: 1}
-                    config.ratio = savedWidget.ratio
-                    config.attachTo = savedWidget.attachTo
+        }
+        // Restore position from IndexedDB if available
+        config.fromDB = false
+        if (config.persist) {
+            const savedWidget = await this.#widgetManager.getWidgetPosition(elementId)
+            if (savedWidget) {
+                config.fromDB = true
+                config.position = {
+                    left: savedWidget.left,
+                    top:  savedWidget.top,
                 }
+                config.dimensions = {
+                    width:  savedWidget.width,
+                    height: savedWidget.height,
+                }
+                config.cropDimensions = {
+                    top:    savedWidget.top,
+                    left:   savedWidget.left,
+                    width:  savedWidget.width,
+                    height: savedWidget.height,
+                }
+                config.group = savedWidget.group || config.group
+                config.scale = savedWidget.scale || {x: 1, y: 1}
+                config.ratio = savedWidget.ratio
+                config.attachTo = 'top-left'
             }
-            this.#widgets.set(elementId, config)
+        }
+
+
+        // Constrain position within container bounds
+        const container = config.container.getBoundingClientRect()
+        config.position = {
+            left: Math.max(
+                container.left + config.margin,
+                Math.min(config.position.left, container.right - config.dimensions.width * config.scale.x - config.margin),
+            ),
+            top:  Math.max(
+                container.top + config.margin,
+                Math.min(config.position.top, container.bottom - config.dimensions.height * config.scale.y - config.margin),
+            ),
+        }
+
+        this.#widgets.set(elementId, config)
 
         return config
     }
