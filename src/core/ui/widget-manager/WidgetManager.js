@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-29
- * Last modified: 2025-10-29
+ * Created on: 2025-11-01
+ * Last modified: 2025-11-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -534,6 +534,25 @@ export class WidgetManager {
      * @param {string} elementId - The element ID
      */
     removeMoveable = elementId => this.#core.removeMoveable(elementId)
+
+    /**
+     * Constrains position within container bounds
+     *
+     * @param container {width,height} - Container dimensions
+     * @param config - Widget configuration
+     * @return {*|{x: *, y: *}|{x: *, y: *}} - scale
+     * @return {{left: *, top: *}}
+     */
+    adaptPositionToContainer = (config, container) => this.#core.adaptPositionToContainer(config, container)
+
+    /**
+     * Adapts widget size to container size. It provides a new scale value.
+     *
+     * @param container{width,height} - Container dimensions
+     * @param config - Widget configuration
+     * @return {*|{x: *, y: *}|{x: *, y: *}} - scale
+     */
+    adaptScaleToContainer = (container, config) => this.#core.adaptScaleToContainer(container, config)
 
     /**
      * Builds a transform string from individual transformation values.

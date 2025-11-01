@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-31
- * Last modified: 2025-10-31
+ * Created on: 2025-11-01
+ * Last modified: 2025-11-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -997,48 +997,68 @@ export class WidgetCore {
         const container = config?.container.getBoundingClientRect()
         if (container) {
             if (config.type === LGS_VISUAL_WIDGET) {
-                const maxW = container.width - 2 * config.margin
-                const maxH = container.height - 2 * config.margin
-
-                // Ensure widget fits inside container with config.margin, using uniform scale to preserve aspect ratio
-                if ((config.ratio?.locked || config.useRatio) && config.ratio?.aspectRatio) {
-                    // Ratio is enforced (locked or useRatio) → compute scaled height from width
-                    const sw = config.dimensions.width * config.scale.x
-                    const sh = config.dimensions.height * config.scale.y
-                    if (sw > maxW || sh > maxH) {
-                        const tmp = Math.min(maxW / config.dimensions.width, maxH / config.dimensions.height)
-                        config.scale = {x: tmp, y: tmp}
-                    }
-                }
-                else {
-                    // No ratio constraint → allow independent X/Y scaling, but still use uniform scale to avoid
-                    // distortion
-                    const tmp = Math.min(maxW / (config.dimensions.width * config.scale.x), maxH /
-                        (config.dimensions.height * config.scale.y))
-                    config.scale = {x: tmp, y: tmp}
-                }
-                console.log(config.scale)
+                config.scale = this.adaptScaleToContainer(config, container)
             }
-            // Constrain position within container bounds
-            config.position = {
-                left: Math.max(
-                    container.left + config.margin,
-                    Math.min(config.position.left, container.right - config.dimensions.width * config.scale.x - config.margin),
-                ),
-                top:  Math.max(
-                    container.top + config.margin,
-                    Math.min(config.position.top, container.bottom - config.dimensions.height * config.scale.y - config.margin),
-                ),
-            }
-
-
+            config.position = this.adaptPositionToContainer(config, container)
         }
-
-
         this.#widgets.set(elementId, config)
 
         return config
     }
+
+    /**
+     * Constrains position within container bounds
+     *
+     * @param container{width,height} - Container dimensions
+     * @param config - Widget configuration
+     * @return {*|{x: *, y: *}|{x: *, y: *}} - scale
+     * @return {{left: *, top: *}}
+     */
+    adaptPositionToContainer = (config, container) => {
+        //
+        return {
+            left: Math.max(
+                container.left + config.margin,
+                Math.min(config.position.left, container.right - config.dimensions.width * config.scale.x - config.margin),
+            ),
+            top:  Math.max(
+                container.top + config.margin,
+                Math.min(config.position.top, container.bottom - config.dimensions.height * config.scale.y - config.margin),
+            ),
+        }
+    }
+
+    /**
+     * Adapts widget size to container size. It provides a new scale value.
+     *
+     * @param config - Widget configuration
+     * @param container{width,height} - Container dimensions
+     * @return {*|{x: *, y: *}|{x: *, y: *}} - scale
+     */
+    adaptScaleToContainer = (config, container) => {
+        const maxW = container.width - 2 * config.margin
+        const maxH = container.height - 2 * config.margin
+
+        // Ensure widget fits inside container with config.margin, using uniform scale to preserve aspect ratio
+        if ((config.ratio?.locked || config.useRatio) && config.ratio?.aspectRatio) {
+            // Ratio is enforced (locked or useRatio) → compute scaled height from width
+            const sw = config.dimensions.width * config.scale.x
+            const sh = config.dimensions.height * config.scale.y
+            if (sw > maxW || sh > maxH) {
+                const tmp = Math.min(maxW / config.dimensions.width, maxH / config.dimensions.height)
+                config.scale = {x: tmp, y: tmp}
+            }
+        }
+        else {
+            // No ratio constraint → allow independent X/Y scaling, but still use uniform scale to avoid
+            // distortion
+            const tmp = Math.min(maxW / (config.dimensions.width * config.scale.x), maxH /
+                (config.dimensions.height * config.scale.y))
+            config.scale = {x: tmp, y: tmp}
+        }
+        return config.scale
+    }
+
 
     /**
      * Clones a context menu configuration object by ensuring all expected boolean attributes are defined.
