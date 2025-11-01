@@ -1056,7 +1056,9 @@ export class WidgetCore {
                 (config.dimensions.height * config.scale.y))
             config.scale = {x: tmp, y: tmp}
         }
-        return config.scale
+
+
+        return config.scale = __.ui.widgetManager.clampScale(config.scale, config)
     }
 
 

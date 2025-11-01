@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-31
- * Last modified: 2025-10-31
+ * Created on: 2025-11-01
+ * Last modified: 2025-11-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -49,6 +49,51 @@ export class WidgetScalable {
     }
 
     /**
+     * Clamps a scale {x, y} value according to config.min and config.max dimensions.
+     * If ratio is locked, clamps both axes to the same value (most restrictive).
+     * @public
+     * @param {Object} scale - The scale to clamp { x: number, y: number }
+     * @param {Object} config - Widget configuration
+     * @returns {{ x: number, y: number }} Clamped scale
+     */
+    clampScale = (scale, config) => {
+        // Guard clause
+        if (!scale || !config?.dimensions || !config.min || !config.max) {
+            return scale
+        }
+
+        const {width, height} = config.dimensions
+        const minWidth = config.min.width ?? 0
+        const minHeight = config.min.height ?? 0
+        const maxWidth = config.max.width ?? Infinity
+        const maxHeight = config.max.height ?? Infinity
+
+        const minScaleX = minWidth / width
+        const minScaleY = minHeight / height
+        const maxScaleX = maxWidth / width
+        const maxScaleY = maxHeight / height
+
+        // If ratio is locked, use the most restrictive scale factor
+        const isRatioLocked = config.ratio?.locked === true
+
+        if (isRatioLocked) {
+            // Compute allowed scale range for both axes
+            const minScale = Math.max(minScaleX, minScaleY)
+            const maxScale = Math.min(maxScaleX, maxScaleY)
+
+            // Clamp the input scale to the common allowed range
+            const clamped = Math.max(minScale, Math.min(maxScale, scale.x))
+            return {x: clamped, y: clamped}
+        }
+        else {
+            // Independent clamping per axis
+            const clampedX = Math.max(minScaleX, Math.min(maxScaleX, scale.x))
+            const clampedY = Math.max(minScaleY, Math.min(maxScaleY, scale.y))
+            return {x: clampedX, y: clampedY}
+        }
+    }
+
+    /**
      * Handles scale operations, throttled to prevent excessive updates.
      * @private
      * @param {Object} event - Scale event
@@ -64,21 +109,25 @@ export class WidgetScalable {
 
         const config = this.#widgetManager.getWidgetConfig(this.#widgetManager.retrieveElementId(target))
 
-        // Get scale values from the event (
-        const scaleX = Number(event.scale?.[0].toFixed(2)) ?? 1
-        const scaleY = Number(event.scale?.[1].toFixed(2)) ?? 1
+        // Get raw scale from event
+        const rawScale = {
+            x: Number(event.scale?.[0].toFixed(4)) ?? 1,
+            y: Number(event.scale?.[1].toFixed(4)) ?? 1,
+        }
 
+        // Apply clamping with ratio support
+        const clampedScale = this.clampScale(rawScale, config)
 
-        // Store scale in config
-        config.scale = {x: scaleX, y: scaleY}
+        // Update config
+        config.scale = clampedScale
 
-        // Use transform helper to set scale (preserves other transforms)
-        this.#widgetTransform.setScale(target, scaleX, scaleY)
+        // Apply via transform helper
+        this.#widgetTransform.setScale(target, clampedScale.x, clampedScale.y)
 
-        // Update child component if it has a handleScale method
+        // Notify child
         if (childRef?.current?.handleScale) {
             childRef.current.handleScale({
-                                             scale:     {x: scaleX, y: scaleY},
+                                             scale: clampedScale,
                                              transform: target.style.transform,
                                          })
         }
@@ -95,7 +144,6 @@ export class WidgetScalable {
         event.target.classList.add('scaling')
         const config = await this.#widgetManager.retrieveConfig(event.target)
 
-        // Initialize scale if not present
         if (!config.scale) {
             config.scale = {x: 1, y: 1}
         }
@@ -122,14 +170,16 @@ export class WidgetScalable {
     onScaleEnd = async event => {
         this.#widgetManager.isScaling = false
         event.target.classList.remove('scaling', LGS_ANIMATION_SCALING)
-        //   event.target.style.transformOrigin = '0 0'
+
         const config = await this.#widgetManager.retrieveConfig(event.target)
-
-        // Extract final scale values using transform helper
         const transforms = this.#widgetTransform.getTransform(event.target)
-        config.scale = transforms.scale
-        const {x, y} = event.target.getBoundingClientRect()
 
+        // Re-clamp final scale to ensure ratio & bounds
+        const finalScale = this.clampScale(transforms.scale, config)
+        config.scale = finalScale
+        this.#widgetTransform.setScale(event.target, finalScale.x, finalScale.y)
+
+        const {x, y} = event.target.getBoundingClientRect()
         const style = getComputedStyle(event.target)
 
         config.position = {
@@ -142,6 +192,5 @@ export class WidgetScalable {
         }
 
         __.ui.widgetManager.setConfig(config.id, config)
-
     }
 }

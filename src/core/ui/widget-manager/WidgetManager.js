@@ -307,6 +307,17 @@ export class WidgetManager {
      */
     onScaleEnd = async event => this.#scalable.onScaleEnd(event)
 
+
+    /**
+     * Clamps a scale {x, y} value according to config.min and config.max dimensions.
+     * If ratio is locked, clamps both axes to the same value (most restrictive).
+     * @public
+     * @param {Object} scale - The scale to clamp { x: number, y: number }
+     * @param {Object} config - Widget configuration
+     * @returns {{ x: number, y: number }} Clamped scale
+     */
+    clampScale = (scale, config) => this.#scalable.clampScale(scale, config)
+
     /**
      * Setter for windowResizing property
      * @param {boolean} value - New value for windowResizing

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-31
- * Last modified: 2025-10-31
+ * Created on: 2025-11-01
+ * Last modified: 2025-11-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -51,50 +51,50 @@ export class WidgetPosition {
             return config?.position || {left: 0, top: 0}
         }
 
-        const containerRect = config.container.getBoundingClientRect()
-        const widgetRect = element.getBoundingClientRect()
-        const defaultWidth = widgetRect.width || 200
-        const defaultHeight = widgetRect.height || 200
+        const container = config.container.getBoundingClientRect()
+        const widget = element.getBoundingClientRect()
+        const defaultWidth = widget.width || 200
+        const defaultHeight = widget.height || 200
 
         let left, top
 
         // Calculate position based on anchor point
         const positionMap = {
             'center':       () => ({
-                left: (containerRect.width - defaultWidth) / 2 + containerRect.left,
-                top:  (containerRect.height - defaultHeight) / 2 + containerRect.top,
+                left: (container.width - defaultWidth) / 2 + container.left,
+                top:  (container.height - defaultHeight) / 2 + container.top,
             }),
             'top':          () => ({
-                left: (containerRect.width - defaultWidth) / 2 + containerRect.left,
-                top:  containerRect.top + margin,
+                left: (container.width - defaultWidth) / 2 + container.left,
+                top:  container.top + margin,
             }),
             'left':         () => ({
-                left: containerRect.left + margin,
-                top:  (containerRect.height - defaultHeight) / 2 + containerRect.top,
+                left: container.left + margin,
+                top:  (container.height - defaultHeight) / 2 + container.top,
             }),
             'right':        () => ({
-                left: containerRect.right - defaultWidth - margin,
-                top:  (containerRect.height - defaultHeight) / 2 + containerRect.top,
+                left: container.right - defaultWidth - margin,
+                top:  (container.height - defaultHeight) / 2 + container.top,
             }),
             'bottom':       () => ({
-                left: (containerRect.width - defaultWidth) / 2 + containerRect.left,
-                top:  containerRect.bottom - defaultHeight - margin,
+                left: (container.width - defaultWidth) / 2 + container.left,
+                top:  container.bottom - defaultHeight - margin,
             }),
             'top-left':     () => ({
-                left: containerRect.left + margin,
-                top:  containerRect.top + margin,
+                left: container.left + margin,
+                top:  container.top + margin,
             }),
             'top-right':    () => ({
-                left: containerRect.right - defaultWidth - margin,
-                top:  containerRect.top + margin,
+                left: container.right - defaultWidth - margin,
+                top:  container.top + margin,
             }),
             'bottom-left':  () => ({
-                left: containerRect.left + margin,
-                top:  containerRect.bottom - defaultHeight - margin,
+                left: container.left + margin,
+                top:  container.bottom - defaultHeight - margin,
             }),
             'bottom-right': () => ({
-                left: containerRect.right - defaultWidth - margin,
-                top:  containerRect.bottom - defaultHeight - margin,
+                left: container.right - defaultWidth - margin,
+                top:  container.bottom - defaultHeight - margin,
             }),
         }
 
@@ -107,11 +107,11 @@ export class WidgetPosition {
         }
 
         // Constrain position within container bounds
-        left = Math.max(containerRect.left + margin, Math.min(left, containerRect.right - defaultWidth - margin))
-        top = Math.max(containerRect.top + margin, Math.min(top, containerRect.bottom - defaultHeight - margin))
+        config.postion = {
+            left: Math.max(container.left + margin, Math.min(config.position.left, container.right - defaultWidth - margin)),
+            top:  Math.max(container.top + margin, Math.min(config.position.top, container.bottom - defaultHeight - margin)),
+        }
 
-        // Update configuration
-        config.position = {left, top}
         config.attachTo = anchor
 
         // Apply position to element

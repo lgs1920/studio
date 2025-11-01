@@ -14,19 +14,23 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { usePointerSingleOrDouble } from '@Components/hooks/usePointerSingleOrDouble'
-
 /**
  * @module Widget
  * @description A generic component for rendering a draggable, resizable, and scalable element with snapping.
  */
 import {
-    LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET, WIDGETS_CAPABILITIES,
+    LGS_ANIMATION_DRAGGING,
+    LGS_ANIMATION_RESIZING,
+    LGS_TOOLBAR,
+    LGS_VISUAL_WIDGET,
+    LGS_WIDGET,
+    WIDGETS_CAPABILITIES,
 }                                   from '@Core/constants'
 import classNames                   from 'classnames'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Moveable                     from 'react-moveable'
 import { useSnapshot }              from 'valtio'
+import { usePointerSingleOrDouble } from '@Components/hooks/usePointerSingleOrDouble'
 
 // Drag thresholds for touch and mouse devices (in pixels)
 const DRAG_THRESHOLD_TOUCH = 30
@@ -62,10 +66,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const [guidelines, setGuidelines] = useState({verticalGuidelines: [], horizontalGuidelines: []})
     const [isMouseOver, setIsMouseOver] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
-    const [dimensionsConstraint, setDimensionsConstraint] = useState({
-                                                                         min: {width: 10, height: 10},
-                                                                         max: {width: 500, height: 500},
-                                                                     })
+
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
 
@@ -204,7 +205,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
         else {
             currentX = inputEvent.clientX ?? inputEvent.x ?? 0
-            currentY = inputEvent.clientY ?? inputEvent.y ?? 0
+            currentY = inputEvent.clientY ?? inputEvent.y ?? 0  // CORRIGÉ ICI
         }
         const dragThreshold = inputEvent.pointerType === 'touch' ? DRAG_THRESHOLD_TOUCH : DRAG_THRESHOLD_MOUSE
         const deltaX = Math.abs(currentX - _dragStartCoords.current.x)
@@ -265,7 +266,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         __.ui.widgetManager.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, isMouseOver)
         setIsDragging(false)
         _dragConfirmed.current = false
-        // Update Moveable rectangle to ensure handles are correctly positioned
         _moveable.current?.updateRect()
     }, [isMouseOver])
 
@@ -398,10 +398,12 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                                                              }
                                                          },
                                                      })
-
     /**
-     * Sets transform origin based on the handle clicked for scaling, including corner handles.
-     * @param {import('moveable').OnBeforeScale} event
+     * Sets the transform origin based on the scaling handle being used.
+     * Prevents visual "jumps" by compensating the translation when the origin changes.
+     * The widget's visual center stays in the same screen position.
+     *
+     * @param {import('moveable').OnBeforeScale} event - Moveable before-scale event
      */
     const handleBeforeScale = useCallback(event => {
         const target = _widget.current
@@ -409,74 +411,86 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             return
         }
 
-        // Get the direction of the handle clicked
-        const [x, y] = event.startFixedDirection
+        // Determine new origin from the handle direction
+        const [dirX, dirY] = event.startFixedDirection
+        const newOriginX = dirX === 1 ? 'right' : dirX === -1 ? 'left' : 'center'
+        const newOriginY = dirY === 1 ? 'bottom' : dirY === -1 ? 'top' : 'center'
 
-        // Map direction to transform-origin for corners and edges
-        const originX = x === 1 ? 'right' : x === -1 ? 'left' : 'center'
-        const originY = y === 1 ? 'bottom' : y === -1 ? 'top' : 'center'
-        target.style.transformOrigin = `${originX} ${originY}`
-    }, [])
-
-    /**
-     * Applies scale transformations to the widget, adjusting scale to stay within bounds.
-     * Compensates position based on transform origin and scale to maintain visual alignment for corner handles.
-     * @param {Object} event - Moveable scale event
-     */
-    const handleScale = useCallback(event => {
-        const target = _widget.current
-        if (!target) {
+        // Keep old origin for delta calculation
+        const oldOrigin = target.style.transformOrigin || 'center center'
+        const [oldX, oldY] = oldOrigin.split(' ')
+        if (oldX === newOriginX && oldY === newOriginY) {
             return
         }
 
-        let scaleX = event.scale[0]
-        let scaleY = event.scale[1]
+        // Current widget dimensions
+        const {width, height} = target.getBoundingClientRect()
 
-        if (config.type === LGS_VISUAL_WIDGET) {
-            const newWidth = target.offsetWidth * scaleX
-            const newHeight = target.offsetHeight * scaleY
+        // Calculate translation delta to keep visual center fixed
+        let deltaX = 0
+        let deltaY = 0
 
-            // Clamp scale to respect min/max constraints
-            scaleX = __.app.clamp(newWidth, dimensionsConstraint.min.width, dimensionsConstraint.max.width) / target.offsetWidth
-
-            const isRatioLocked = __.ui.widgetManager.getWidgetConfig(config?.id)?.ratio?.locked || config?.ratio?.locked
-            if (isRatioLocked) {
-                scaleY = scaleX
-                const adjustedHeight = target.offsetHeight * scaleY
-                if (config.min?.height !== undefined && adjustedHeight < dimensionsConstraint.min.height) {
-                    scaleY = dimensionsConstraint.min.height / target.offsetHeight
-                    scaleX = scaleY
-                    // __.ui.widgetManager.setTranslate(target, 0, 0)
-                }
-                else if (config.max?.height !== undefined && adjustedHeight > dimensionsConstraint.max.height) {
-                    scaleY = dimensionsConstraint.max.height / target.offsetHeight
-                    scaleX = scaleY
-                    // __.ui.widgetManager.setTranslate(target, 0, 0)
-                }
-            }
-            else {
-                scaleY = __.app.clamp(newHeight, dimensionsConstraint.min.height, dimensionsConstraint.max.height) / target.offsetHeight
-            }
-
-            event.scale[0] = scaleX
-            event.scale[1] = scaleY
+        // X-axis compensation
+        if (oldX === 'center' && newOriginX === 'left') {
+            deltaX += width / 2
+        }
+        if (oldX === 'center' && newOriginX === 'right') {
+            deltaX -= width / 2
+        }
+        if (oldX === 'left' && newOriginX === 'center') {
+            deltaX -= width / 2
+        }
+        if (oldX === 'right' && newOriginX === 'center') {
+            deltaX += width / 2
+        }
+        if (oldX === 'left' && newOriginX === 'right') {
+            deltaX -= width
+        }
+        if (oldX === 'right' && newOriginX === 'left') {
+            deltaX += width
         }
 
-        // Apply scale transformation
+        // Y-axis compensation
+        if (oldY === 'center' && newOriginY === 'top') {
+            deltaY += height / 2
+        }
+        if (oldY === 'center' && newOriginY === 'bottom') {
+            deltaY -= height / 2
+        }
+        if (oldY === 'top' && newOriginY === 'center') {
+            deltaY -= height / 2
+        }
+        if (oldY === 'bottom' && newOriginY === 'center') {
+            deltaY += height / 2
+        }
+        if (oldY === 'top' && newOriginY === 'bottom') {
+            deltaY -= height
+        }
+        if (oldY === 'bottom' && newOriginY === 'top') {
+            deltaY += height
+        }
 
-        const eventTransform = __.ui.widgetManager.parseTransform(event.drag.transform)
-        console.log(eventTransform, config.transform)
-        // eventTransform.scale = {x: scaleX, y: scaleY}
-        //  eventTransform.translate = [0, 0]
-        //event.drag.transform = __.ui.widgetManager.buildTransform(eventTransform)
-        target.style.transform = event.drag.transform
+        // Apply new origin and compensated translation
+        const current = __.ui.widgetManager.getTransform(target)
+        const newX = current.translate.x + deltaX
+        const newY = current.translate.y + deltaY
 
-        __.ui.widgetManager.setScale(target, eventTransform.scale.x, eventTransform.scale.y)
-        __.ui.widgetManager.setTranslate(target, eventTransform.translate.x, eventTransform.translate.y)
+        target.style.transformOrigin = `${newOriginX} ${newOriginY}`
+        const newTransform = `translate(${newX}px, ${newY}px) scale(${current.scale.x}, ${current.scale.y})`
+        target.style.transform = newTransform
 
+        // Sync Moveable with the corrected transform
+        __.ui.widgetManager.applyPosition(target, newTransform, _moveable, true, setControlBoxProps)
+    }, [])
+
+    /**
+     * Delegates scale handling entirely to WidgetScalable.
+     * No local clamping or ratio logic — all handled centrally.
+     * @param {Object} event - Moveable scale event
+     */
+    const handleScale = useCallback(event => {
         __.ui.widgetManager.onScale(event, {widget: _widget, child: _children}, setPosition)
-
-    }, [dimensionsConstraint, config.type, config?.id, config?.ratio?.locked])
+    }, [])
 
     /**
      * Notifies scale start to child and widget manager
@@ -490,7 +504,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
-     * Notifies scale end to child and widget manager, and updates Moveable rectangle.
+     * Notifies scale end to child and widget manager.
      * @param {Object} event - Moveable scale end event
      */
     const handleScaleEnd = useCallback(event => {
@@ -498,7 +512,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             _children.current.onScaleEnd(event)
         }
         __.ui.widgetManager.onScaleEnd(event)
-        // Update Moveable rectangle to ensure handles are correctly positioned
         _moveable.current?.updateRect()
     }, [])
 
@@ -529,10 +542,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
      */
     const handleResizeEnd = useCallback(event => {
         if (_children.current?.onResizeEnd) {
-            _children.current.onScaleEnd(event)
+            _children.current.onResizeEnd(event)
         }
         __.ui.widgetManager.onResizeEnd(event)
-        // Update Moveable rectangle to ensure handles are correctly positioned
         _moveable.current?.updateRect()
     }, [])
 
@@ -560,14 +572,13 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             return
         }
         let cancelled = false
-        let resizeObserver = null
         let widgetElement = null
         const tryInit = async () => {
             if (cancelled || !_widget.current) {
                 return
             }
             widgetElement = _widget.current
-            let initialConfig = {
+            const initialConfig = {
                 animationWhenDragging: (config.animationWhenDragging ?? null) !== null
                                        ? config.animationWhenDragging
                                        : config.type === LGS_TOOLBAR,
@@ -600,13 +611,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             }
 
             const newConfig = await __.ui.widgetManager.retrieveConfig(widgetElement, initialConfig)
-
-            // Update constraints state with min and max from initialConfig
-            setDimensionsConstraint({
-                                        min: initialConfig.min,
-                                        max: initialConfig.max,
-                                    })
-
             const ok = await __.ui.widgetManager.setupElement(
                 _widget.current,
                 newConfig,
@@ -647,9 +651,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             }
             _widget.current = null
             widgetElement = null
-            if (resizeObserver && lgs.canvas) {
-                resizeObserver.unobserve(lgs.canvas)
-            }
         }
     }, [
                   isVisible,
@@ -723,13 +724,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         {children}
                     </div>
                     <Moveable
-                        // General configuration
                         className="lgs-widget-control-box"
                         container={lgs.canvas}
                         origin={false}
                         ref={_moveable}
                         target={_widget}
-                        // Drag events and settings
                         draggable={config?.draggable ?? true}
                         edgeDraggable={true}
                         edge={['w', 'e', 's', 'n']}
@@ -737,10 +736,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         onDragEnd={handleDragEnd}
                         onDragStart={handleDragStart}
                         throttleDrag={2}
-                        // Event handling
                         onBound={handleOnBound}
                         preventDefault={false}
-                        // Resize events and settings
                         keepRatio={Boolean(
                             __.ui.widgetManager.getWidgetConfig(config?.id)?.ratio?.locked ??
                             config?.ratio?.locked,
@@ -750,13 +747,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         onResizeStart={handleResizeStart}
                         resizable={config?.resizable || false}
                         throttleResize={2}
-                        // Scale events and settings
                         onBeforeScale={handleBeforeScale}
                         onScale={handleScale}
                         onScaleEnd={handleScaleEnd}
                         onScaleStart={handleScaleStart}
                         scalable={config?.scalable || false}
-                        // Snapping settings
                         bounds={bounds}
                         elementGuidelines={[lgs.canvas]}
                         horizontalGuidelines={guidelines.horizontalGuidelines}
@@ -774,7 +769,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                             top:   true,
                         }}
                         verticalGuidelines={guidelines.verticalGuidelines}
-                        // Observers and rendering
                         renderDirections={controlBoxProps.renderDirections}
                         useMutationObserver={true}
                         useResizeObserver={true}

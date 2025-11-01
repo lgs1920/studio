@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-26
- * Last modified: 2025-10-26
+ * Created on: 2025-11-01
+ * Last modified: 2025-11-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -157,18 +157,28 @@ export const WidgetContextMenu = () => {
      * Resets the widget to its original size.
      */
     const handleResetSize = (scale) => {
-        const current = __.ui.widgetManager.getTransform(element)
-        const newScale = scale === 1
+        //const current = __.ui.widgetManager.getTransform(element)
+        const elementId = __.ui.widgetManager.retrieveElementId(element)
+        const container = config.container.getBoundingClientRect()
+
+        config.scale = scale === 1
                          ? {x: 1, y: 1}
-                         : {x: current.scale.x * (1 + scale), y: current.scale.y * (1 + scale)}
-        __.ui.widgetManager.setScale(element, newScale.x, newScale.y)
+                         : {x: config.scale.x * (1 + scale), y: config.scale.y * (1 + scale)}
+        config.scale = __.ui.widgetManager.adaptScaleToContainer(config, container)
+        config.position = __.ui.widgetManager.adaptPositionToContainer(config, container)
+        if (config.persist) {
+            __.ui.widgetManager.saveWidgetPosition(elementId, config)
+        }
         if (scale === 1) {
             $widget.canDisplayContextMenu = false
         }
+
+        __.ui.widgetManager.setScale(element, config.scale.x, config.scale.y)
+        __.ui.widgetManager.applyPosition(element, config.position)
+
+
     }
 
-    // If the menu cannot be displayed, capabilities are not met, dragging is in progress, or element is invalid,
-    // return null
     if (!canDisplayContextMenu || _isDragging.current || !element || !__.ui.widgetManager.hasCapabilities(config?.contextMenu, WIDGETS_CAPABILITIES)) {
         return null
     }
@@ -198,13 +208,13 @@ export const WidgetContextMenu = () => {
                                     onClick={() => handleResetSize(1)}/>
                         </SlTooltip>
 
-                        <SlTooltip key="plus-ten" content={`Shrink ${PERCENTAGE * 100}%`} placement="top">
+                        <SlTooltip key="plus-ten" content={`Shrink -${PERCENTAGE * 100}%`} placement="top">
                             <SlIcon library="fa" name={FA2SL.set(faRegularSquareCircleMinus)}
                                     className="lgs-one-line-card on-map"
                                     onClick={() => handleResetSize(-PERCENTAGE)}/>
                         </SlTooltip>
 
-                        <SlTooltip key="minus-ten" content={`Expand ${PERCENTAGE * 100}%`} placement="top">
+                        <SlTooltip key="minus-ten" content={`Expand +${PERCENTAGE * 100}%`} placement="top">
                             <SlIcon library="fa" name={FA2SL.set(faRegularSquareCirclePlus)}
                                     className="lgs-one-line-card on-map"
                                     onClick={() => handleResetSize(PERCENTAGE)}/>
