@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-01
- * Last modified: 2025-11-01
+ * Created on: 2025-11-02
+ * Last modified: 2025-11-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -600,4 +600,44 @@ export class WidgetManager {
      * @param {number} y - Y translation value
      */
     setTranslate = (element, x, y) => this.#transform.setTranslate(element, x, y)
+    /**
+     * Returns CSS-compatible transformOrigin numbers based on a Moveable direction vector.
+     *
+     * @param {number} dx - Horizontal direction (-1 = left, 0 = center, 1 = right)
+     * @param {number} dy - Vertical direction (-1 = top, 0 = center, 1 = bottom)
+     *
+     * @returns {x,y} - Numbers representing the transform origin in percentage format (e.g., '0%','100%').
+     */
+    getTransformOriginFromDirection = (dx, dy) => this.#transform.getTransformOriginFromDirection(dx, dy)
+
+    /**
+     * Returns the transform-origin of a DOM element as an object { x, y }.
+     * By default, values are returned as percentages relative to the element's size.
+     * If `inPixel` is true, values are returned in absolute pixels.
+     *
+     * @param {HTMLElement} element - The target DOM element.
+     * @param {boolean} [inPixel=false] - Whether to return values in pixels instead of percentages.
+     * @returns {{x: number, y: number}} An object representing the transform origin.
+     *   - If `inPixel` is false: x and y are percentages (0–100).
+     *   - If `inPixel` is true: x and y are pixel offsets from the top-left corner.
+     */
+    getTransformOrigin = (element, inPixel = false) => this.#transform.getTransformOrigin(element, inPixel)
+
+    /**
+     * Sets the transform-origin of a DOM element using string values like '50%' or '120px'.
+     *
+     * @param {HTMLElement} element - The target DOM element.
+     * @param {{x: string, y: string}} origin - The origin point to set.
+     *   - `x` and `y` must be valid CSS length strings (e.g., '50%', '120px').
+     */
+    setTransformOrigin = (element, origin) => this.#transform.setTransformOrigin(element, origin)
+
+    /**
+     * Converts a transform-origin string object into pixel coordinates based on an element's size.
+     *
+     * @param {{x: string, y: string}} origin - The transform origin as CSS strings (e.g. '50%', '120px').
+     * @param {DOMRect} rect - The bounding rectangle of the element (from getBoundingClientRect).
+     * @returns {{x: number, y: number}} The transform origin in pixels.
+     */
+    getTransformOriginFromString = (origin, rect) => this.#transform.getTransformOriginFromString(origin, rect)
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-29
- * Last modified: 2025-10-29
+ * Created on: 2025-11-02
+ * Last modified: 2025-11-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -206,18 +206,17 @@ export class WidgetTransform {
         // Retrieve widget ID and config
         const elementId = this.#widgetManager.retrieveElementId(element)
         const config = this.#widgetManager.getWidgetConfig(elementId)
-
         // Return default transforms if config not found
         if (!config) {
             return {translate: {x: 0, y: 0}, scale: {x: 1, y: 1}, rotate: 0}
         }
 
-        // Parse from config if available, otherwise from element style
-        if (!config.transform) {
-            return this.parseTransform(element.style.transform)
-        }
+        const transform = this.parseTransform(element.style.transform)
+        config.scale = transform.scale
+        config.translate = transform.translate
+        config.rotate = transform.rotate
 
-        return this.parseTransform(config.transform)
+        return transform
     }
 
     /**
@@ -307,4 +306,99 @@ export class WidgetTransform {
         const numValue = typeof value === 'number' ? value : parseFloat(value)
         return isNaN(numValue) ? 0 : numValue
     }
+
+    /**
+     * Returns CSS-compatible transformOrigin numbers based on a Moveable direction vector.
+     *
+     * @param {number} dx - Horizontal direction (-1 = left, 0 = center, 1 = right)
+     * @param {number} dy - Vertical direction (-1 = top, 0 = center, 1 = bottom)
+     *
+     * @returns {x,y} - Numbers representing the transform origin in percentage format (e.g., '0%','100%').
+     */
+    getTransformOriginFromDirection = (dx, dy) => {
+        return {
+            x: dx === -1 ? 0 : dx === 1 ? 100 : 50,
+            y: dy === -1 ? 0 : dy === 1 ? 100 : 50,
+        }
+    }
+
+    /**
+     * Returns the transform-origin of a DOM element as an object { x, y }.
+     * By default, values are returned as percentages relative to the element's size.
+     * If `inPixel` is true, values are returned in absolute pixels.
+     *
+     * @param {HTMLElement} element - The target DOM element.
+     * @param {boolean} [inPixel=false] - Whether to return values in pixels instead of percentages.
+     * @returns {{x: number, y: number}} An object representing the transform origin.
+     *   - If `inPixel` is false: x and y are percentages (0–100).
+     *   - If `inPixel` is true: x and y are pixel offsets from the top-left corner.
+     *
+     * @example
+     * getTransformOrigin(myElement); // { x: 50, y: 50 }
+     * getTransformOrigin(myElement, true); // { x: 120, y: 75 }
+     */
+    getTransformOrigin = (element, inPixel = false) => {
+        const style = getComputedStyle(element)
+        const origin = style.transformOrigin
+        const rect = element.getBoundingClientRect()
+        const [oxRaw, oyRaw] = origin.split(' ')
+
+        const parseValue = (value, size) => {
+            if (value.endsWith('%')) {
+                const percent = parseFloat(value)
+                return inPixel ? (percent / 100) * size : percent
+            }
+            const px = parseFloat(value)
+            return inPixel ? px : (px / size) * 100
+        }
+
+        const x = parseValue(oxRaw, rect.width)
+        const y = parseValue(oyRaw, rect.height)
+
+        return {x, y}
+    }
+
+    /**
+     * Sets the transform-origin of a DOM element using string values like '50%' or '120px'.
+     *
+     * @param {HTMLElement} element - The target DOM element.
+     * @param {{x: string, y: string}} origin - The origin point to set.
+     *   - `x` and `y` must be valid CSS length strings (e.g., '50%', '120px').
+     *
+     * @example
+     * setTransformOrigin(myElement, { x: '50%', y: '50%' }); // center
+     * setTransformOrigin(myElement, { x: '0%', y: '100%' }); // bottom-left
+     * setTransformOrigin(myElement, { x: '120px', y: '75px' }); // absolute pixel origin
+     */
+    setTransformOrigin = (element, origin) => {
+        element.style.transformOrigin = `${origin.x} ${origin.y}`
+    }
+
+    /**
+     * Converts a transform-origin string object into pixel coordinates based on an element's size.
+     *
+     * @param {{x: string, y: string}} origin - The transform origin as CSS strings (e.g. '50%', '120px').
+     * @param {DOMRect} rect - The bounding rectangle of the element (from getBoundingClientRect).
+     * @returns {{x: number, y: number}} The transform origin in pixels.
+     *
+     * @example
+     * const rect = element.getBoundingClientRect();
+     * const origin = getTransformOriginFromString({ x: '100%', y: '0%' }, rect);
+     * console.log(origin); // { x: rect.width, y: 0 }
+     */
+    getTransformOriginFromString = (origin, rect) => {
+        const parse = (value, size) => {
+            if (value.endsWith('%')) {
+                return (parseFloat(value) / 100) * size
+            }
+            return parseFloat(value) // assume px
+        }
+
+        return {
+            x: rect.left + parse(origin.x, rect.width),
+            y: rect.top + parse(origin.y, rect.height),
+        }
+    }
+
+
 }

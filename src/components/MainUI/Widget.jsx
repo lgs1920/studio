@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-01
- * Last modified: 2025-11-01
+ * Created on: 2025-11-02
+ * Last modified: 2025-11-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -398,90 +398,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                                                              }
                                                          },
                                                      })
-    /**
-     * Sets the transform origin based on the scaling handle being used.
-     * Prevents visual "jumps" by compensating the translation when the origin changes.
-     * The widget's visual center stays in the same screen position.
-     *
-     * @param {import('moveable').OnBeforeScale} event - Moveable before-scale event
-     */
-    const handleBeforeScale = useCallback(event => {
-        const target = _widget.current
-        if (!target) {
-            return
-        }
-
-        // Determine new origin from the handle direction
-        const [dirX, dirY] = event.startFixedDirection
-        const newOriginX = dirX === 1 ? 'right' : dirX === -1 ? 'left' : 'center'
-        const newOriginY = dirY === 1 ? 'bottom' : dirY === -1 ? 'top' : 'center'
-
-        // Keep old origin for delta calculation
-        const oldOrigin = target.style.transformOrigin || 'center center'
-        const [oldX, oldY] = oldOrigin.split(' ')
-        if (oldX === newOriginX && oldY === newOriginY) {
-            return
-        }
-
-        // Current widget dimensions
-        const {width, height} = target.getBoundingClientRect()
-
-        // Calculate translation delta to keep visual center fixed
-        let deltaX = 0
-        let deltaY = 0
-
-        // X-axis compensation
-        if (oldX === 'center' && newOriginX === 'left') {
-            deltaX += width / 2
-        }
-        if (oldX === 'center' && newOriginX === 'right') {
-            deltaX -= width / 2
-        }
-        if (oldX === 'left' && newOriginX === 'center') {
-            deltaX -= width / 2
-        }
-        if (oldX === 'right' && newOriginX === 'center') {
-            deltaX += width / 2
-        }
-        if (oldX === 'left' && newOriginX === 'right') {
-            deltaX -= width
-        }
-        if (oldX === 'right' && newOriginX === 'left') {
-            deltaX += width
-        }
-
-        // Y-axis compensation
-        if (oldY === 'center' && newOriginY === 'top') {
-            deltaY += height / 2
-        }
-        if (oldY === 'center' && newOriginY === 'bottom') {
-            deltaY -= height / 2
-        }
-        if (oldY === 'top' && newOriginY === 'center') {
-            deltaY -= height / 2
-        }
-        if (oldY === 'bottom' && newOriginY === 'center') {
-            deltaY += height / 2
-        }
-        if (oldY === 'top' && newOriginY === 'bottom') {
-            deltaY -= height
-        }
-        if (oldY === 'bottom' && newOriginY === 'top') {
-            deltaY += height
-        }
-
-        // Apply new origin and compensated translation
-        const current = __.ui.widgetManager.getTransform(target)
-        const newX = current.translate.x + deltaX
-        const newY = current.translate.y + deltaY
-
-        target.style.transformOrigin = `${newOriginX} ${newOriginY}`
-        const newTransform = `translate(${newX}px, ${newY}px) scale(${current.scale.x}, ${current.scale.y})`
-        target.style.transform = newTransform
-
-        // Sync Moveable with the corrected transform
-        __.ui.widgetManager.applyPosition(target, newTransform, _moveable, true, setControlBoxProps)
-    }, [])
 
     /**
      * Delegates scale handling entirely to WidgetScalable.
@@ -747,7 +663,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         onResizeStart={handleResizeStart}
                         resizable={config?.resizable || false}
                         throttleResize={2}
-                        onBeforeScale={handleBeforeScale}
                         onScale={handleScale}
                         onScaleEnd={handleScaleEnd}
                         onScaleStart={handleScaleStart}
@@ -773,6 +688,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         useMutationObserver={true}
                         useResizeObserver={true}
                         zoom={controlBoxProps.zoom}
+                        onRender={e => {
+                            // Apply CSS
+                            e.target.style.cssText += e.cssText
+                        }}
                     />
                 </div>
             )}
