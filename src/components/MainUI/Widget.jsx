@@ -689,8 +689,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         useResizeObserver={true}
                         zoom={controlBoxProps.zoom}
                         onRender={e => {
-                            // Apply CSS
-                            e.target.style.cssText += e.cssText
+                            if (!config.isCropper) {
+                                e.target.style.cssText += e.cssText
+                            }
                         }}
                     />
                 </div>
