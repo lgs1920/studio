@@ -156,14 +156,17 @@ export const WidgetContextMenu = () => {
     /**
      * Resets the widget to its original size.
      */
-    const handleResetSize = (scale) => {
+    const handleResetSize = (scale, config) => {
         //const current = __.ui.widgetManager.getTransform(element)
         const elementId = __.ui.widgetManager.retrieveElementId(element)
         const container = config.container.getBoundingClientRect()
 
-        config.scale = scale === 1
-                         ? {x: 1, y: 1}
-                         : {x: config.scale.x * (1 + scale), y: config.scale.y * (1 + scale)}
+        config.scale =
+            scale === 1 ? {x: 1, y: 1}
+                        : __.ui.widgetManager.clampScale({
+                                                             x: config.scale.x * (1 + scale),
+                                                             y: config.scale.y * (1 + scale),
+                                                         }, config)
         config.scale = __.ui.widgetManager.adaptScaleToContainer(config, container)
         config.position = __.ui.widgetManager.adaptPositionToContainer(config, container)
         if (config.persist) {
@@ -205,19 +208,19 @@ export const WidgetContextMenu = () => {
                         <SlTooltip key="reset-size" content={'Reset size'} placement="top">
                             <SlIcon library="fa" name={FA2SL.set(faCompress)}
                                     className="lgs-one-line-card on-map"
-                                    onClick={() => handleResetSize(1)}/>
+                                    onClick={() => handleResetSize(1, config)}/>
                         </SlTooltip>
 
                         <SlTooltip key="plus-ten" content={`Shrink -${PERCENTAGE * 100}%`} placement="top">
                             <SlIcon library="fa" name={FA2SL.set(faRegularSquareCircleMinus)}
                                     className="lgs-one-line-card on-map"
-                                    onClick={() => handleResetSize(-PERCENTAGE)}/>
+                                    onClick={() => handleResetSize(-PERCENTAGE, config)}/>
                         </SlTooltip>
 
                         <SlTooltip key="minus-ten" content={`Expand +${PERCENTAGE * 100}%`} placement="top">
                             <SlIcon library="fa" name={FA2SL.set(faRegularSquareCirclePlus)}
                                     className="lgs-one-line-card on-map"
-                                    onClick={() => handleResetSize(PERCENTAGE)}/>
+                                    onClick={() => handleResetSize(PERCENTAGE, config)}/>
                         </SlTooltip>
                     </li>
                 )}
