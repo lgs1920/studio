@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-01
- * Last modified: 2025-11-01
+ * Created on: 2025-11-02
+ * Last modified: 2025-11-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -107,9 +107,9 @@ export class WidgetPosition {
         }
 
         // Constrain position within container bounds
-        config.postion = {
-            left: Math.max(container.left + margin, Math.min(config.position.left, container.right - defaultWidth - margin)),
-            top:  Math.max(container.top + margin, Math.min(config.position.top, container.bottom - defaultHeight - margin)),
+        config.position = {
+            left: Math.max(container.left + margin, Math.min(left, container.right - defaultWidth - margin)),
+            top:  Math.max(container.top + margin, Math.min(top, container.bottom - defaultHeight - margin)),
         }
 
         config.attachTo = anchor

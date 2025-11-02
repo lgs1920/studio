@@ -49,6 +49,52 @@ export class WidgetScalable {
     }
 
     /**
+     * Clamps a scale {x, y} value according to config.min and config.max dimensions.
+     * If ratio is locked, clamps both axes to the same value (most restrictive).
+     * @public
+     * @param {Object} scale - The scale to clamp { x: number, y: number }
+     * @param {Object} config - Widget configuration
+     * @returns {{ x: number, y: number }} Clamped scale
+     */
+    clampScale = (scale, config) => {
+        // Guard clause
+        if (!scale || !config?.dimensions || !config.min || !config.max) {
+            return scale
+        }
+
+        const {width, height} = config.dimensions
+        const minWidth = config.min.width
+        const minHeight = config.min.height
+        const maxWidth = config.max.width
+        const maxHeight = config.max.height
+
+        const minScaleX = minWidth / width
+        const minScaleY = minHeight / height
+        const maxScaleX = maxWidth / width
+        const maxScaleY = maxHeight / height
+
+        // If ratio is locked, use the most restrictive scale factor
+        const isRatioLocked = config.ratio?.locked === true
+
+        if (isRatioLocked) {
+            // Compute allowed scale range for both axes
+            const minScale = Math.max(minScaleX, minScaleY)
+            const maxScale = Math.min(maxScaleX, maxScaleY)
+
+            // Clamp the input scale to the common allowed range
+            const clamped = Math.max(minScale, Math.min(maxScale, scale.x))
+            return {x: clamped, y: clamped}
+        }
+        else {
+            // Independent clamping per axis
+            return {
+                x: Math.max(minScaleX, Math.min(maxScaleX, scale.x)),
+                y: Math.max(minScaleY, Math.min(maxScaleY, scale.y)),
+            }
+        }
+    }
+
+    /**
      * Handles scale operations, throttled to prevent excessive updates.
      * @private
      * @param {Object} event - Scale event
