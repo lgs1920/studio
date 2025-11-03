@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-02
- * Last modified: 2025-11-02
+ * Created on: 2025-11-03
+ * Last modified: 2025-11-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -685,13 +685,14 @@ export class WidgetCore {
             return
         }
         const elementId = config.id
-        const mv = this.getMoveable(elementId)
+
         const handleResize = () => {
             // Skip if resizing to avoid interference
             if (this.#isResizing) {
                 return
             }
             const oldBounds = {...config.bounds}
+            const mv = this.getMoveable(elementId)
             const newBounds = this.refreshBounds(config, mv?.current)
             if (newBounds.left === oldBounds.left && newBounds.top === oldBounds.top &&
                 newBounds.right === oldBounds.right && newBounds.bottom === oldBounds.bottom) {
