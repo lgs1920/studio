@@ -7,16 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-25
- * Last modified: 2025-10-25
+ * Created on: 2025-11-03
+ * Last modified: 2025-11-03
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { faCropSimple, faRectangle, faRectangleVertical, faSquare } from '@fortawesome/pro-regular-svg-icons'
-import { faGripDots }                                               from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlTooltip }                                        from '@shoelace-style/shoelace/dist/react'
+import {
+    faCropSimple, faRectangleWide, faRectangle, faRectangleVertical, faSquare, faRectangleTall,
+}                                   from '@fortawesome/pro-regular-svg-icons'
+import { faExpandWide, faGripDots } from '@fortawesome/pro-solid-svg-icons'
+import { SlIcon, SlTooltip }        from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                    from '@Utils/FA2SL'
 import classNames from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState }           from 'react'
@@ -30,10 +32,12 @@ import '../style.css'
  */
 const ICONS = {
     'square': faSquare,
-    '9x16': faRectangleVertical,
-    '16x9': faRectangle,
+    '9x16': faRectangleWide,
+    '16x9': faRectangleWide,
     '1x1': faSquare,
-    '4x3': faCropSimple,
+    '4x5':  faRectangleVertical,
+    '4x3':  faRectangle,
+    '0x0':  faExpandWide,
 }
 
 /**
@@ -131,7 +135,11 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
                                 >
                                     <SlIcon
                                         library="fa"
-                                        className={classNames('lgs-one-line-card on-map', {'selected': preset.value === video.ratio})}
+                                        className={classNames(
+                                            'lgs-one-line-card on-map',
+                                            {'selected': preset.value === video.ratio},
+                                            `icon-${preset.value}`,
+                                        )}
                                         onClick={event => handleChangeRatio(preset, event)}
                                         name={FA2SL.set(ICONS[preset.value] || faSquare)}
                                     />

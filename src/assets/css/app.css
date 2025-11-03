@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-26
- * Last modified: 2025-10-26
+ * Created on: 2025-11-03
+ * Last modified: 2025-11-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -395,4 +395,9 @@ main-logo.xlarge {
 .buttons-bar-on-map sl-icon svg {
     width: unset;
     height: var(--lgs-font-size);
+}
+
+/** fix for 9x16, forcing same icon than 16x9 **/
+.buttons-bar-on-map sl-icon.icon-9x16::part(svg) {
+    transform: rotate(90deg);
 }
