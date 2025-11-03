@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-29
- * Last modified: 2025-10-29
+ * Created on: 2025-11-03
+ * Last modified: 2025-11-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -100,6 +100,7 @@ export class WidgetCropper {
      * @returns {Object} Crop dimensions
      */
     cropDimensions = (config, maximize = false) => {
+
         if (!config.fromDB) {
             const container = this.#widgetManager.refreshBounds(config)
             container.width = container.right - container.left
@@ -164,40 +165,6 @@ export class WidgetCropper {
       ${crop.left + crop.width}px ${crop.top + crop.height}px, 
       ${crop.left + crop.width}px ${crop.top}px, 
       0% ${crop.top}px)`
-    }
-
-    /**
-     * Handles double-click events, maximizing the crop zone.
-     * @param {Object} event - Click event
-     * @param {Function} setPosition - Function to set position
-     */
-    onDoubleClick = async (event, setPosition) => {
-        const config = await this.#widgetManager.retrieveConfig(event.target)
-        if (!config?.isCropper) {
-            return
-        }
-
-        // Maximize using cropDimensions
-        this.cropDimensions(config, true)
-
-        // Apply styles and update state
-        const {left, top, width, height} = config.cropDimensions
-        Object.assign(event.target.style, {
-            left:      `${left}px`,
-            top:       `${top}px`,
-            width:     `${width}px`,
-            height:    `${height}px`,
-            transform: 'none',
-        })
-        config.transform = undefined
-        config.position = {left, top}
-        this.applyCropToOverlay(config)
-        setPosition({left, top})
-        const moveable = this.#widgetManager.getMoveable(config.id)
-        if (moveable?.current) {
-            moveable.current.updateRect()
-        }
-        this.dispatchCropUpdate(config, 'toggle')
     }
 
     /**
@@ -291,6 +258,10 @@ export class WidgetCropper {
         const moveable = this.#widgetManager.getMoveable(cropzoneId)
         if (moveable?.current) {
             moveable.current.updateRect()
+        }
+
+        if (config.fromDB) {
+            this.#widgetManager.saveWidgetPosition(cropzoneId, config)
         }
 
         // Dispatch crop update event
