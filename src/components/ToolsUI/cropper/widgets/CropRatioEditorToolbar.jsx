@@ -19,10 +19,10 @@ import {
 }                                   from '@fortawesome/pro-regular-svg-icons'
 import { faExpandWide, faGripDots } from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlTooltip }        from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                    from '@Utils/FA2SL'
-import classNames from 'classnames'
-import { memo, useCallback, useEffect, useRef, useState }           from 'react'
-import { useSnapshot }                                              from 'valtio'
+import { FA2SL }                                          from '@Utils/FA2SL'
+import classNames                                         from 'classnames'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { useSnapshot }                                    from 'valtio'
 import '../style.css'
 
 /**
@@ -63,22 +63,26 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
     // Track selected ratio, defaulting to first video format
     const defaultRatio = __.device.isPortrait ? '9x16' : '16x9'
 
-    // Handle crop updates
+    // Ensure handleCropUpdate is executed only once (singleton listener)
     useEffect(() => {
+        let executed = false
+
+        /**
+         * Handles crop update event – runs only on first occurrence.
+         * Wus it t retrieve and display the right crop ratio.
+         * @param {CustomEvent} event - Custom event with detail.ratio.value
+         */
         const handleCropUpdate = (event) => {
-            // setForceRender((prev) => prev + 1) // Force local re-render
+            if (executed) {
+                return
+            }
+            executed = true
+            $video.ratio = event.detail.ratio.value
         }
+
         document.addEventListener('onCropUpdate', handleCropUpdate)
         return () => document.removeEventListener('onCropUpdate', handleCropUpdate)
-    }, [context])
-
-    useEffect(() => {
-        $video.ratio = cropper.ratioEditor
-                       ? lgs.configuration.videoFormats.find(p => p.value === cropper.aspectRatio?.toString().replace('/', 'x'))?.value ||
-                           lgs.configuration.videoFormats[0]?.value ||
-                           defaultRatio
-                       : defaultRatio
-    }, [])
+    }, [$video]) // $video is stable (Valtio proxy)
 
     /**
      * Handles selection of a crop ratio preset
@@ -92,13 +96,12 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
 
         // Parse ratio and update cropzone
         const [w, h] = preset.value.split('x').map(Number)
-        __.ui.widgetManager.updateCropRatio(cropzoneId, w / h, preset.locked)
+        __.ui.widgetManager.updateCropRatio(cropzoneId, preset.value, w / h, preset.locked)
 
         // Update store to keep ratioEditor active
         $cropper.ratioEditor = true
         $cropper.aspectRatio = w / h
-
-    }, [$cropper, cropzoneId])
+    }, [$cropper, $video, cropzoneId])
 
     /**
      * Determines if a given preset is visible on the current device and orientation

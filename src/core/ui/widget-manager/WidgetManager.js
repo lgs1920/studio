@@ -471,10 +471,11 @@ export class WidgetManager {
     /**
      * Updates the crop zone ratio and dimensions.
      * @param {string} cropzoneId - The crop zone ID
+     * @param {string} value - The crop zone value, widthxheight, ie 16x9
      * @param {number} aspectRatio - The new aspect ratio
      * @param {boolean} lockRatio - Whether to lock the ratio
      */
-    updateCropRatio = (cropzoneId, aspectRatio, lockRatio) => this.#cropper.updateCropRatio(cropzoneId, aspectRatio, lockRatio)
+    updateCropRatio = (cropzoneId, value, aspectRatio, lockRatio) => this.#cropper.updateCropRatio(cropzoneId, value, aspectRatio, lockRatio)
 
     /**
      * Computes crop dimensions.

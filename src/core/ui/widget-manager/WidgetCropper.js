@@ -170,10 +170,11 @@ export class WidgetCropper {
     /**
      * Updates the crop zone ratio and dimensions.
      * @param {string} cropzoneId - The crop zone ID
+     * @param {string} value - The crop zone value, widthxheight, i.e., 16x9
      * @param {number} aspectRatio - The new aspect ratio
      * @param {boolean} lockRatio - Whether to lock the ratio
      */
-    updateCropRatio = (cropzoneId, aspectRatio, lockRatio) => {
+    updateCropRatio = (cropzoneId, value, aspectRatio, lockRatio) => {
         const config = this.#widgetManager.getWidgetConfig(cropzoneId)
         if (!config || !config.isCropper) {
             console.warn('[WidgetCropper] No valid cropzone found for ID:', cropzoneId)
@@ -231,7 +232,7 @@ export class WidgetCropper {
                                          isNaN(aspectRatio) ? maxHeight : width / aspectRatio))
             if (height > maxHeight) {
                 height = maxHeight
-                width = Math.floor(height * aspectRatio)
+                width = Math.floor(isNaN(aspectRatio) ? height : height * aspectRatio)
             }
         }
 
@@ -242,7 +243,7 @@ export class WidgetCropper {
         config.position = {left, top}
         config.centerRatio = {x: (left + width / 2) / container.width, y: (top + height / 2) / container.height}
         // Update config.ratio to ensure synchronization
-        config.ratio = {aspectRatio, locked: lockRatio}
+        config.ratio = {value, aspectRatio, locked: lockRatio}
 
         // Apply styles to element
         const element = config.element
@@ -281,7 +282,11 @@ export class WidgetCropper {
                 detail: {
                     id:    config.id,
                     crop:  {...config.cropDimensions},
-                    ratio: {aspectRatio: config?.ratio?.aspectRatio, locked: config?.ratio?.locked},
+                    ratio: {
+                        value:       config?.ratio.value,
+                        aspectRatio: config?.ratio?.aspectRatio,
+                        locked:      config?.ratio?.locked,
+                    },
                     phase,
                 },
             }))

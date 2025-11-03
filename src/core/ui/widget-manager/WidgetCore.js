@@ -258,7 +258,7 @@ export class WidgetCore {
         const config = await this.retrieveConfig(element, initialConfig)
 
         // Set default ratio if none exists
-        if (!config?.ratio || !Number.isFinite(config.ratio?.aspectRatio)) {
+        if (!config?.ratio) {
             const fallback = __.device.isPortrait ? '9x16' : '16x9'
             config.ratio = this.getRatio(initialConfig.ratio ?? fallback)
         }
@@ -1001,6 +1001,7 @@ export class WidgetCore {
             }
             config.position = this.adaptPositionToContainer(config, container)
         }
+        // Save it locally
         this.#widgets.set(elementId, config)
 
         return config
