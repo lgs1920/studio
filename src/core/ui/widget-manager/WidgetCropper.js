@@ -226,7 +226,9 @@ export class WidgetCropper {
         }
         else {
             width = Math.floor(Math.max(config.minCropSize.width, maxWidth))
-            height = Math.floor(Math.max(config.minCropSize.height, width / aspectRatio))
+            // aspectRatio is Nan for when ratio is free
+            height = Math.floor(Math.max(config.minCropSize.height,
+                                         isNaN(aspectRatio) ? maxHeight : width / aspectRatio))
             if (height > maxHeight) {
                 height = maxHeight
                 width = Math.floor(height * aspectRatio)

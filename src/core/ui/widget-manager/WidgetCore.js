@@ -292,7 +292,7 @@ export class WidgetCore {
 
             // Configure moveable for resizing with ratio lock
             moveable.current.request('resizable', {
-                keepRatio:   !!config.ratio.locked,
+                keepRatio: !!config.ratio?.locked || false,    // undefined when free ratio
                 deltaWidth:  0,
                 deltaHeight: 0,
             }, true)
