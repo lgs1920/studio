@@ -40,7 +40,7 @@ videoFormats:
     locked: true
     orientation: "square"
     description: "Instagram square posts"
-  - label: "4X5"
+  - label: "4x5"
     value: "4x5"
     locked: true
     aspectRatio: 1.25
