@@ -266,7 +266,6 @@ export class WidgetCore {
         // Apply crop dimensions for cropper elements
         if (config.isCropper) {
             this.#widgetManager.cropDimensions(config, false) // Setup cropper dimensions
-            moveable.current.onDoubleClick = e => this.#widgetManager.onDoubleClick(e, setPosition)
         }
 
         // Set initial bounds and position

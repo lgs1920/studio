@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-02
- * Last modified: 2025-11-02
+ * Created on: 2025-11-03
+ * Last modified: 2025-11-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -467,13 +467,6 @@ export class WidgetManager {
      * @param {Object} event - Resize event
      */
     onResizeEnd = event => this.#resizable.onResizeEnd(event)
-
-    /**
-     * Handles double-click events, maximizing the crop zone.
-     * @param {Object} event - Click event
-     * @param {Function} setPosition - Function to set position
-     */
-    onDoubleClick = (event, setPosition) => this.#cropper.onDoubleClick(event, setPosition)
 
     /**
      * Updates the crop zone ratio and dimensions.
