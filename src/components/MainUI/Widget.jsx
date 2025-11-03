@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-02
- * Last modified: 2025-11-02
+ * Created on: 2025-11-03
+ * Last modified: 2025-11-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -432,6 +432,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     /**
+     * Forces  scaling direction from center when Shift Key is pressed
+     *
+     * @param {Object} event - The scaling event object.
+     */
+    const handleScaleDirection = useCallback(event => {
+        if (event.inputEvent.shiftKey) {
+            event.setFixedDirection([0, 0])
+        }
+    }, [])
+
+    /**
      * Applies resize transformations to the widget.
      * @param {Object} event - Moveable resize event
      */
@@ -663,6 +674,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         onResizeStart={handleResizeStart}
                         resizable={config?.resizable || false}
                         throttleResize={2}
+                        onBeforeScale={handleScaleDirection}
                         onScale={handleScale}
                         onScaleEnd={handleScaleEnd}
                         onScaleStart={handleScaleStart}
