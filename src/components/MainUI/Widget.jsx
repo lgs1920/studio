@@ -697,8 +697,12 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         }}
                         verticalGuidelines={guidelines.verticalGuidelines}
                         renderDirections={controlBoxProps.renderDirections}
-                        useMutationObserver={true}
-                        useResizeObserver={true}
+
+                        // Do not use, it causes issues with the widget manager
+                        // as it forces its own values for top/left
+                        useMutationObserver={false}
+                        useResizeObserver={false}
+
                         zoom={controlBoxProps.zoom}
                         onRender={e => {
                             if (!config.isCropper) {
