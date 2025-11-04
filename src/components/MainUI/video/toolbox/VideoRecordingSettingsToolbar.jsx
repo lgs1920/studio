@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-20
- * Last modified: 2025-10-20
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,16 +22,28 @@
  * @module VideoRecordingSettingsToolbar
  */
 
-import { Tunnel }                     from '@Components/Tunnel/Tunnel'
+import { Tunnel } from '@Components/Tunnel/Tunnel'
 import {
     APP_KEY, CROP_TOOLS_WIDGET_GROUP, LGS_PROJECT, MINUTE, VIDEO_CROP_ZONE, VIDEO_TOOLS_WIDGET_GROUP,
-}                                     from '@Core/constants'
-import { VideoRecorder } from '@Core/ui/video/recorder/VideoRecorder'
-import { faGear } from '@fortawesome/pro-regular-svg-icons'
-import { faPhotoFilm, faVideo } from '@fortawesome/pro-solid-svg-icons'
-import { UIToast }                    from '@Utils/UIToast'
-import { memo, useCallback, useMemo } from 'react'
-import { useSnapshot }                from 'valtio'
+}                 from '@Core/constants'
+import {
+    VideoRecorder,
+}                 from '@Core/ui/video/recorder/VideoRecorder'
+import {
+    faGear,
+}                 from '@fortawesome/pro-regular-svg-icons'
+import {
+    faPhotoFilm, faVideo,
+}                 from '@fortawesome/pro-solid-svg-icons'
+import {
+    UIToast,
+}                 from '@Utils/UIToast'
+import {
+    memo, useCallback, useMemo,
+}                 from 'react'
+import {
+    useSnapshot,
+}                 from 'valtio'
 
 /**
  * VideoRecordingSettingsToolbar renders a call-to-action bar for the video cropper interface
@@ -61,14 +73,26 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         // Save settings
         $video.settings = {quality: $video.quality, fps: $video.fps}
 
+        // Set canvas source
+        const configs = __.ui.widgetManager.getWidgetConfigByGroup(CROP_TOOLS_WIDGET_GROUP)
+        const widget = configs.find(config => config.id === VIDEO_CROP_ZONE)
+        if (!widget) {
+            console.warn('[VideoRecordingSettingsToolbar] No widget found for VIDEO_CROP_ZONE')
+            return
+        }
         // Configure recorder
         __.recorder.initialize({
                                    maxSize:     maxSize * 1048576, // MB to bytes
                                    maxDuration: maxDuration * MINUTE, // Minutes to milliseconds
                                    quality:     VideoRecorder.QUALITY[$video.quality].value,
-                                   filename: APP_KEY,
+                                   filename:   APP_KEY,
                                    fps:         VideoRecorder.FPS[$video.fps],
-                                   metadata: {
+                                   dimensions: {
+                                       width:  widget.cropDimensions.width * __.device.dpr,
+                                       height: widget.cropDimensions.height * __.device.dpr,
+                                   },
+                                   ratio:      widget.ratio.value,
+                                   metadata:   {
                                        artist: lgs.servers.studio.name,
                                        date:  new Date(),
                                        description: `Visit ${lgs.servers.site.protocol}://${lgs.servers.site.domain}`,
@@ -78,13 +102,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                                    useWebGL:    true,
                                })
 
-        // Set canvas source
-        const configs = __.ui.widgetManager.getWidgetConfigByGroup(CROP_TOOLS_WIDGET_GROUP)
-        const widget = configs.find(config => config.id === VIDEO_CROP_ZONE)
-        if (!widget) {
-            console.warn('[VideoRecordingSettingsToolbar] No widget found for VIDEO_CROP_ZONE')
-            return
-        }
+
         const {top, left, width, height} = widget.cropDimensions
         widget.noResize = true
 
@@ -140,7 +158,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             icon:       faGear,
             text:       'Video parameters',
             done:       false,
-            mandatory: false,
+            mandatory:  false,
             beforeStep: index => {
                 Object.assign($video.cropper, {
                     ratioEditor:   true,
@@ -158,19 +176,19 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                 })
                 steps[index].done = true
                 __.ui.widgetManager.windowResizing = false
-            }
+            },
         },
         {
-            icon: faPhotoFilm,
-            text: 'Add widgets',
-            done: false,
-            mandatory: true,
+            icon:       faPhotoFilm,
+            text:       'Add widgets',
+            done:       false,
+            mandatory:  true,
             beforeStep: index => {
                 steps[index].done = true
             },
             afterStep:  index => {
                 $video.cropper.widgetEditor = false
-            }
+            },
         },
         {
             icon:       faVideo,
@@ -188,8 +206,8 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                 })
                 steps[index].done = true
                 await handleVideoRecording(event)
-            }
-        }
+            },
+        },
     ], [handleVideoRecording])
 
     return (

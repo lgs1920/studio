@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-14
- * Last modified: 2025-10-14
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -273,6 +273,20 @@ export class VideoRecorder extends EventTarget {
     #video = null
 
     /**
+     * Video dimensions
+     * @private
+     * @type {width,height}
+     */
+    #dimensions
+
+    /**
+     * Video dimensions
+     * @private
+     * @type {width,height}
+     */
+    #ratio
+
+    /**
      * Initializes the singleton instance and sets default values.
      */
     constructor() {
@@ -287,20 +301,27 @@ export class VideoRecorder extends EventTarget {
     }
 
     /**
-     * Gets the recorded size in bytes.
-     * @returns {number} Total bytes recorded.
+     * Gets the recorded video information.
+     * @returns {Object} Recorded video stats
+     * @property {number} size Total bytes recorded
+     * @property {number} duration Duration in seconds
+     * @property {number} fps Frames per second
+     * @property {string} quality Encoding quality level
+     * @property {Object} metadata Additional metadata
      */
-    get size() {
-        return this.#size
+    get videoData() {
+        console.log(this.#ratio)
+        return {
+            size:       this.#size,
+            duration:   this.#duration,
+            fps:        this.#fps,
+            quality:    this.#quality,
+            metadata:   this.#metadata,
+            dimensions: this.#dimensions,
+            ratio:      this.#ratio,
+        }
     }
 
-    /**
-     * Gets the recording duration in milliseconds, excluding paused time.
-     * @returns {number} Duration in milliseconds.
-     */
-    get duration() {
-        return this.#duration
-    }
 
     /**
      * Initializes recording parameters and creates a default canvas if no stream is set.
@@ -320,6 +341,8 @@ export class VideoRecorder extends EventTarget {
                       quality = this.#quality,
                       maxSize = this.#maxSize,
                       metadata = {},
+                      ratio,
+                      dimensions,
                   } = {}) => {
         if (this.isRecording()) {
             throw this.#dispatchError('Cannot initialize while recording')
@@ -332,6 +355,11 @@ export class VideoRecorder extends EventTarget {
         this.#timeslice = timeslice
         this.#quality = VideoRecorder.QUALITY.find(q => q.value === quality) || this.#quality
         this.#metadata = metadata || {date: new Date()}
+        this.#dimensions = {
+            width:  Math.round(dimensions.width),
+            height: Math.round(dimensions.height),
+        }
+        this.#ratio = lgs.configuration.videoFormats.find(f => f.value === ratio)
 
         if (!this.#stream) {
             // Create default canvas if no stream is set

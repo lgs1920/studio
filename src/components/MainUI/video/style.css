@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-09
- * Last modified: 2025-10-09
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -192,31 +192,47 @@
  */
 
 .video-info {
+    position: absolute;
+    z-index: 2;
+    top: 0;left: 0;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    flex-direction: column;
     justify-content: space-between;
-    gap: var(--lgs-gutter);
+    margin: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
 }
 
-.video-info sl-icon {
-    font-size: var(--lgs-font-size-m) !important;
-    margin-right: var(--lgs-gutter-xs);
+.video-info div {
+    font-size: var(--lgs-font-size-s);
+    line-height: 1.3;
+    display: flex;
+    align-content: center;
+    align-items: center;
+}
+
+.video-info div sl-icon {
+    font-size: var(--lgs-font-size);
+}
+
+.video-info div :first-child {
+    margin-right: var(--lgs-gutter);
 }
 
 .video-info sl-input {
     max-width: 100px;
 }
 
-.video-info > div {
-    display: flex;
-    align-items: center;
-    gap: var(--lgs-gutter-s);
-}
+/*.video-info > div {*/
+/*    display: flex;*/
+/*    align-items: center;*/
+/*    gap: var(--lgs-gutter-s);*/
+/*}*/
 
-.video-info > div > span {
-    display: inline-flex;
-    align-items: center;
-}
+/*.video-info > div > span {*/
+/*    display: inline-flex;*/
+/*    align-items: center;*/
+/*}*/
 
 /***************************************
  * Video quality toolbar
