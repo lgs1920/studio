@@ -310,7 +310,6 @@ export class VideoRecorder extends EventTarget {
      * @property {Object} metadata Additional metadata
      */
     get videoData() {
-        console.log(this.#ratio)
         return {
             size:       this.#size,
             duration:   this.#duration,
