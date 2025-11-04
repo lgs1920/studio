@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-21
- * Last modified: 2025-10-21
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,11 +20,9 @@ import { VideoFPSWidget }               from '@Components/MainUI/video/toolbox/V
 import { VideoQualityWidget }           from '@Components/MainUI/video/toolbox/VideoQualityWidget'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
 import { VideoSettingsInfo }            from '@Components/MainUI/video/VideoSettingsInfo'
-import { CompassWidget } from '@Components/MainUI/video/widgets/CompassWidget'
 import { WidgetContextMenu } from '@Components/MainUI/WidgetContextMenu'
 import { Cropper }                  from '@Components/ToolsUI/cropper/Cropper'
 import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordingScreenArea'
-import { VIDEO_CROP_ZONE }          from '@Core/constants'
 import { JourneyToolbarWidget }     from '@Editor/JourneyToolbarWidget'
 import React                        from 'react'
 import { useSnapshot }              from 'valtio/index'
