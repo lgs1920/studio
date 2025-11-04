@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-29
- * Last modified: 2025-10-29
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,7 +27,7 @@ import { useSnapshot }                                 from 'valtio'
  * @param {Object} props - Component props
  * @param {string} props.id - Unique identifier for the widget
  * @param {Object} props.context - Valtio proxy context containing cropZone and widgetEditor
- * @returns {JSX.Element|null} The compass widget or null if not in editor mode or container is not ready
+ * @returns {JSX.Element|null} The credits widget or null if not in editor mode or container is not ready
  */
 export const CreditsWidget = ({id, context}) => {
     // Get snapshot of context
