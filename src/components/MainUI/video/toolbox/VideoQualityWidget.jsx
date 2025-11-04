@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-10
- * Last modified: 2025-10-10
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { LGS_TOOLBAR, VIDEO_TOOLS_WIDGET_GROUP } from '@Core/constants'
+import { LGS_TOOLBAR, VIDEO_TOOLS_WIDGETS } from '@Core/constants'
 import React, { useMemo }                        from 'react'
 import { Widget }         from '@Components/MainUI/Widget'
 import { useSnapshot }    from 'valtio'
@@ -38,7 +38,7 @@ export const VideoQualityWidget = ({id}) => {
             opacity:        lgs.settings.ui.toolbars.opacity,
             type: LGS_TOOLBAR,
             id: id,
-            group: VIDEO_TOOLS_WIDGET_GROUP,
+            group: VIDEO_TOOLS_WIDGETS,
         }
     }, [])
 

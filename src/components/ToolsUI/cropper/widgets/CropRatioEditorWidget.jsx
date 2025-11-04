@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-10
- * Last modified: 2025-10-10
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,7 @@
 
 import { Widget }         from '@Components/MainUI/Widget'
 import {
-    LGS_TOOLBAR, VIDEO_TOOLS_WIDGET_GROUP, VIDEO_ELEMENTS_WIDGET_GROUP, CROP_TOOLS_WIDGET_GROUP,
+    LGS_TOOLBAR, VIDEO_TOOLS_WIDGETS, MULTI_PURPOSE_WIDGETS, CROP_TOOLS_WIDGETS,
 } from '@Core/constants'
 import React, { useMemo } from 'react'
 import { useSnapshot }            from 'valtio'
@@ -38,7 +38,7 @@ export const CropRatioEditorWidget = ({context, id}) => {
             opacity:  lgs.settings.ui.toolbars.opacity,
             type: LGS_TOOLBAR,
             id: id,
-            group: CROP_TOOLS_WIDGET_GROUP,
+            group: CROP_TOOLS_WIDGETS,
         }
     }, [])
 

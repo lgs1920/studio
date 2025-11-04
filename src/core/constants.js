@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-26
- * Last modified: 2025-10-26
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -55,6 +55,7 @@ export const CONFIGURATION = 'config.yaml'
 export const SETTINGS = 'settings.yaml'
 export const LAYERS_TERRAINS_SETTINGS = 'layers-terrains.yaml'
 export const COUNTRIES = 'countries.yaml'
+export const WIDGETS = 'widgets.yaml'
 export const WORLD = 'WORLD'
 export const COUNTRY_FLAGS_DIR = '/assets/images/flags/'
 
@@ -477,8 +478,8 @@ export const LGS_ANIMATION_RESIZING = 'lgs-animation-resizing'
 export const LGS_ANIMATION_SCALING = 'lgs-animation-scaling'
 
 export const VIDEO_CROP_ZONE = 'video-crop-zone'
-export const VIDEO_TOOLS_WIDGET_GROUP = 'video-tools-widget-group'
-export const CROP_TOOLS_WIDGET_GROUP = 'crop-tools-widget-group'
-export const VIDEO_ELEMENTS_WIDGET_GROUP = 'video-element-widget-group'
+export const VIDEO_TOOLS_WIDGETS = 'video-tools-widgets'
+export const CROP_TOOLS_WIDGETS = 'crop-tools-widgets'
+export const MULTI_PURPOSE_WIDGETS = 'multi-purpose-widgets'
 
 export const WIDGETS_CAPABILITIES = ['canRemove', 'canReset', 'canMaximize', 'canPosition']

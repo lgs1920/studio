@@ -18,7 +18,7 @@ import { Compass }                                     from '@Components/cesium/
 import { CreditsPanel }                                from '@Components/InformationPanel/CreditsPanel'
 import { CreditsBar }                                  from '@Components/MainUI/credits/CreditsBar'
 import { Widget }                                      from '@Components/MainUI/Widget'
-import { HOUR, LGS_VISUAL_WIDGET, VIDEO_ELEMENTS_WIDGET_GROUP } from '@Core/constants'
+import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
 import React, { useEffect, useMemo, useState }         from 'react'
 import { useSnapshot }                                 from 'valtio'
 
@@ -52,7 +52,7 @@ export const CreditsWidget = ({id, context}) => {
                 top:       '100%',
                 left:      '0px',
                 type: LGS_VISUAL_WIDGET,
-                group:     VIDEO_ELEMENTS_WIDGET_GROUP,
+                group: MULTI_PURPOSE_WIDGETS,
                 margin:    5,
                 min:      {height: 20}, max: {width: 350},
                 attachTo: 'bottom',

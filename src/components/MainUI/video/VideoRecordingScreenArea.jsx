@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-19
- * Last modified: 2025-10-19
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,7 +19,7 @@ import { VideoRecorderWidget } from '@Components/MainUI/video/toolbox/VideoRecor
 import { VideoSettingsInfo }   from '@Components/MainUI/video/VideoSettingsInfo'
 import { CropOverlay }         from '@Components/ToolsUI/cropper/CropOverlay'
 import { DefinedCropZone }                                                    from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
-import { CROP_TOOLS_WIDGET_GROUP, VIDEO_CROP_ZONE, VIDEO_TOOLS_WIDGET_GROUP } from '@Core/constants'
+import { CROP_TOOLS_WIDGETS, VIDEO_CROP_ZONE, VIDEO_TOOLS_WIDGETS } from '@Core/constants'
 import classNames                                                             from 'classnames'
 import React, { forwardRef, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                             from 'valtio'
@@ -34,8 +34,8 @@ export const VideoRecordingScreenArea = () => {
         setWidget(__.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE))
         setCrop(__.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE).cropDimensions)
         return () => {
-            __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGET_GROUP, false)
-            __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGET_GROUP, false)
+            __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGETS, false)
+            __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, false)
         }
     }, [])
 

@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-14
- * Last modified: 2025-10-14
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { Widget }                        from '@Components/MainUI/Widget'
-import { CROP_TOOLS_WIDGET_GROUP, HOUR } from '@Core/constants'
+import { CROP_TOOLS_WIDGETS, HOUR } from '@Core/constants'
 import React, { memo, useMemo, useRef }  from 'react'
 import { useSnapshot }                  from 'valtio'
 import { CropZone }                     from './CropZone'
@@ -63,7 +63,7 @@ export const CropZoneWidget = memo(({
         persist:   true,
         transient: true,
         ttl:       HOUR,
-        group:            CROP_TOOLS_WIDGET_GROUP,
+        group: CROP_TOOLS_WIDGETS,
     }), [$context.id, $context.forceEven, overlay])
 
     // Render the widget with the CropZone component

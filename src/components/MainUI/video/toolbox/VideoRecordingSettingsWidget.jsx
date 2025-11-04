@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-14
- * Last modified: 2025-10-14
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { VideoRecordingSettingsToolbar }         from '@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar'
-import { LGS_TOOLBAR, VIDEO_TOOLS_WIDGET_GROUP } from '@Core/constants'
+import { LGS_TOOLBAR, VIDEO_TOOLS_WIDGETS } from '@Core/constants'
 import React, { useMemo }                        from 'react'
 import { Widget }                        from '@Components/MainUI/Widget'
 import { VideoQualityToolbar }           from './VideoQualityToolbar'
@@ -35,7 +35,7 @@ export const VideoRecordingSettingsWidget = ({id}) => {
             opacity:  lgs.settings.ui.toolbars.opacity,
             id:             id,
             persist: true,
-            group: VIDEO_TOOLS_WIDGET_GROUP,
+            group: VIDEO_TOOLS_WIDGETS,
         }
     }, [])
 

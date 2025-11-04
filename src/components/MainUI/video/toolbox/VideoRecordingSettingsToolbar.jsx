@@ -24,7 +24,7 @@
 
 import { Tunnel } from '@Components/Tunnel/Tunnel'
 import {
-    APP_KEY, CROP_TOOLS_WIDGET_GROUP, LGS_PROJECT, MINUTE, VIDEO_CROP_ZONE, VIDEO_TOOLS_WIDGET_GROUP,
+    APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, VIDEO_CROP_ZONE, VIDEO_TOOLS_WIDGETS,
 }                 from '@Core/constants'
 import {
     VideoRecorder,
@@ -61,8 +61,8 @@ export const VideoRecordingSettingsToolbar = memo(() => {
      */
     const handleCancel = useCallback(() => {
         $video.editing = false
-        __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGET_GROUP, false)
-        __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGET_GROUP, false)
+        __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGETS, false)
+        __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, false)
     }, [])
 
     /**
@@ -74,7 +74,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         $video.settings = {quality: $video.quality, fps: $video.fps}
 
         // Set canvas source
-        const configs = __.ui.widgetManager.getWidgetConfigByGroup(CROP_TOOLS_WIDGET_GROUP)
+        const configs = __.ui.widgetManager.getWidgetConfigByGroup(CROP_TOOLS_WIDGETS)
         const widget = configs.find(config => config.id === VIDEO_CROP_ZONE)
         if (!widget) {
             console.warn('[VideoRecordingSettingsToolbar] No widget found for VIDEO_CROP_ZONE')

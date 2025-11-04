@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-29
- * Last modified: 2025-10-29
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,7 @@
 
 import { Compass }                             from '@Components/cesium/CompassUI/Compass'
 import { Widget }                                      from '@Components/MainUI/Widget'
-import { HOUR, LGS_VISUAL_WIDGET, VIDEO_ELEMENTS_WIDGET_GROUP } from '@Core/constants'
+import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
 import React, { useEffect, useMemo, useState }         from 'react'
 import { useSnapshot }                         from 'valtio'
 
@@ -51,7 +51,7 @@ export const CompassWidget = ({id, context}) => {
                 top:       '0px',
                 left:      '100%',
                 type: LGS_VISUAL_WIDGET,
-                group:     VIDEO_ELEMENTS_WIDGET_GROUP,
+                group: MULTI_PURPOSE_WIDGETS,
                 attachTo:  'right',
                 scalable:  true,
                 id,
