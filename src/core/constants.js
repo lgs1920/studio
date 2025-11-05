@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-04
- * Last modified: 2025-11-04
+ * Created on: 2025-11-05
+ * Last modified: 2025-11-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,7 +21,8 @@ import {
     faTelescope, faUnlock, faUser,
 }                                                 from '@fortawesome/duotone-regular-svg-icons'
 import { faAndroid, faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
-import { faDesktop }                              from '@fortawesome/pro-solid-svg-icons'
+import { faCompass, faDesktop }                   from '@fortawesome/pro-regular-svg-icons'
+import { faGavel }                                from '@fortawesome/pro-solid-svg-icons'
 
 
 export const SLOGAN = 'Replay Your Adventures!'
@@ -483,3 +484,18 @@ export const CROP_TOOLS_WIDGETS = 'crop-tools-widgets'
 export const MULTI_PURPOSE_WIDGETS = 'multi-purpose-widgets'
 
 export const WIDGETS_CAPABILITIES = ['canRemove', 'canReset', 'canMaximize', 'canPosition']
+export const WIDGETS_CONFIGURATION = new Map([
+                                                 [
+                                                     'compass-widget', {
+                                                     icon:      faCompass,
+                                                     component: null,
+                                                 },
+                                                 ],
+                                                 [
+                                                     'credits-widget', {
+                                                     icon:      faGavel,
+                                                     component: null,
+                                                 },
+                                                 ],
+                                             ],
+)
