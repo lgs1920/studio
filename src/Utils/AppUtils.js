@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-05
- * Last modified: 2025-11-05
+ * Created on: 2025-11-06
+ * Last modified: 2025-11-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -170,7 +170,7 @@ export class AppUtils {
         for (const [groupKey, groupValue] of Object.entries(raw)) {
             const widgets = new Map()
             for (const [widgetKey, widgetValue] of Object.entries(groupValue.widgets)) {
-                widgets.set(widgetKey, new Map(Object.entries(widgetValue)))
+                widgets.set(widgetKey, widgetValue)
             }
             const groupCopy = {...groupValue, widgets: widgets}
             __.widgets.set(groupKey, groupCopy)
