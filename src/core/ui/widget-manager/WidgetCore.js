@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-04
- * Last modified: 2025-11-04
+ * Created on: 2025-11-06
+ * Last modified: 2025-11-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -201,6 +201,9 @@ export class WidgetCore {
             display: 'block',
         })
         overlay.classList.add('lgs-widget-inner-overlay', config.type)
+        if (config.stopPropagation) {
+            overlay.classList.add('no-propagation', config.type)
+        }
         element.appendChild(overlay)
     }
 
@@ -947,6 +950,7 @@ export class WidgetCore {
                 setPosition:            initialConfig.setPosition,
                 showControlBox:        initialConfig.showControlBox,
                 snapPoints:            [],
+                stopPropagation: initialConfig.stopPropagation ?? false,
                 top:                   initialConfig.top,
                 translate:             initialConfig.translate ?? {x: 0, y: 0},
                 transient:              initialConfig.transient ?? false,
