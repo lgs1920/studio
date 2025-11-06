@@ -516,3 +516,22 @@ providers:
         doc: 'https://www.thunderforest.com/'
         type: base
 
+  ## Consortium of Ancient World Mappers
+#  - id: cawm
+#    name: AWM
+#    credits: Credits UNiv. Iowa Lib
+#    logo: 'https://opentopomap.org/img/OpenTopoMap_rechts.png'
+#    url: 'https://opentopomap.org'
+#    layers:
+#      ## Open Topo Map standard
+#      - name: cawm
+#        id: cawm-map
+#        image: otm-map.png
+#        usage:
+#          type: free
+#          doc: ''
+#
+#        tile: slippy
+#        url: https://cawm.lib.uiowa.edu/tiles
+#        doc: ''
+#        type: overlay
