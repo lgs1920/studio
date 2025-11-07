@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-04
- * Last modified: 2025-11-04
+ * Created on: 2025-11-07
+ * Last modified: 2025-11-07
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { CompassWidget }                            from '@Components/MainUI/video/widgets/CompassWidget'
-import { CreditsWidget }         from '@Components/MainUI/video/widgets/CreditsWidget'
-import { WidgetsPanel }          from '@Components/MainUI/widgets/WidgetsPanel'
+import { CompassWidget }  from '@Components/MainUI/widgets/list/CompassWidget'
+import { CreditsWidget }  from '@Components/MainUI/widgets/list/CreditsWidget'
+import { WidgetRenderer } from '@Components/MainUI/widgets/WidgetRenderer'
+import { WidgetsPanel }   from '@Components/MainUI/widgets/WidgetsPanel'
 import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropRatioEditorWidget'
 /**
  * Cropper component for interactive crop region selection over canvas, video, or image elements.
@@ -43,7 +44,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
     const _cropperContainer = useRef(null)
     const _overlay = useRef(null)
     const cropper = useSnapshot(context)
-
+    const [displayedWidgets, setDisplayedWidgets] = useState([])
     const [overlayElement, setOverlayElement] = useState(null)
 
     useEffect(() => {
@@ -53,6 +54,14 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
     }, [overlay])
 
 
+    const handleWidgetSelect = (key, props) => {
+        setDisplayedWidgets((prev) => {
+            if (prev.some(w => w.key === key)) {
+                return prev
+            }
+            return [...prev, {key, props}]
+        })
+    }
     return (
         <>
             {overlayElement && cropper.ratioEditor &&
@@ -81,9 +90,14 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 ) : null}
                 {overlay && <div className="crop-overlay" ref={_overlay}/>}
                 {children}
-                <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS]}/>
-                <CompassWidget id="video-compass-element" context={context}/>
-                <CreditsWidget id="video-credits" context={context}/>
+                <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS]}
+                              onWidgetSelect={handleWidgetSelect}/>
+                {displayedWidgets.map(({key, props}) => (
+                    <WidgetRenderer key={key} id={key} props={props} context={context}/>
+                ))
+                }
+                {/* <CompassWidget id="video-compass-element" /> */}
+                {/* <CreditsWidget id="video-credits" context={context}/> */}
             </div>
         </>
     )

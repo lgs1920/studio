@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-04
- * Last modified: 2025-11-04
+ * Created on: 2025-11-07
+ * Last modified: 2025-11-07
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { Widget }                        from '@Components/MainUI/Widget'
+import { Widget } from '@Components/MainUI/widgets/Widget'
 import { CROP_TOOLS_WIDGETS, HOUR } from '@Core/constants'
 import React, { memo, useMemo, useRef }  from 'react'
 import { useSnapshot }                  from 'valtio'

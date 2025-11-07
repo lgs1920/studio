@@ -2,37 +2,37 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: CreditsWidget.jsx
+ * File: CompassWidget.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-04
- * Last modified: 2025-11-04
+ * Created on: 2025-11-07
+ * Last modified: 2025-11-07
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { Compass }                                     from '@Components/cesium/CompassUI/Compass'
-import { CreditsPanel }                                from '@Components/InformationPanel/CreditsPanel'
-import { CreditsBar }                                  from '@Components/MainUI/credits/CreditsBar'
-import { Widget }                                      from '@Components/MainUI/Widget'
+import { Compass }                             from '@Components/cesium/CompassUI/Compass'
+import { Widget }                              from '@Components/MainUI/widgets/Widget'
 import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
-import React, { useEffect, useMemo, useState }         from 'react'
-import { useSnapshot }                                 from 'valtio'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useSnapshot }                         from 'valtio'
 
 /**
- * CreditsWidget component to display a compass in the widget editor
+ * CompassWidget component to display a compass in the widget editor
  * @param {Object} props - Component props
  * @param {string} props.id - Unique identifier for the widget
  * @param {Object} props.context - Valtio proxy context containing cropZone and widgetEditor
- * @returns {JSX.Element|null} The credits widget or null if not in editor mode or container is not ready
+ * @returns {JSX.Element|null} The compass widget or null if not in editor mode or container is not ready
  */
-export const CreditsWidget = ({id, context}) => {
+export const CompassWidget = ({id, context}) => {
     // Get snapshot of context
     const {widgetEditor, cropZone} = useSnapshot(context)
     const [_container, setContainer] = useState(null)
+
+    console.log(id)
 
     // Set container when cropZone changes
     useEffect(() => {
@@ -48,21 +48,22 @@ export const CreditsWidget = ({id, context}) => {
                 contextMenu: {
                     canReset:    true,
                     canPosition: true,
+                    canRemove:   true,
                 },
-                top:       '100%',
-                left:      '0px',
+                top:       '0px',
+                left:      '100%',
                 type: LGS_VISUAL_WIDGET,
                 group: MULTI_PURPOSE_WIDGETS,
-                margin:    5,
-                min:      {height: 20}, max: {width: 350},
-                attachTo: 'bottom',
+                attachTo:  'right',
                 scalable:  true,
                 id,
                 persist:   true,
                 transient: true,
                 dynamic:   true,
                 ttl:       HOUR,
-                mandatory:   true,
+                min: {width: 50},
+                max: {width: 300},
+                margin: 0,
             }
         }
 
@@ -76,7 +77,7 @@ export const CreditsWidget = ({id, context}) => {
 
     return (
         <Widget isVisible={true} config={config}>
-            <CreditsBar/>
+            <Compass/>
         </Widget>
     )
 }

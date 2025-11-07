@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-24
- * Last modified: 2025-10-24
+ * Created on: 2025-11-07
+ * Last modified: 2025-11-07
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 
-import { Widget } from '@Components/MainUI/Widget'
+import { Widget } from '@Components/MainUI/widgets/Widget'
 import { LGS_TOOLBAR } from '@Core/constants'
 import { JourneyToolbar }    from '@Editor/JourneyToolbar'
 import React, { useMemo }    from 'react'

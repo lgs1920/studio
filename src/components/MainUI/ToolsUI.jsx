@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-04
- * Last modified: 2025-11-04
+ * Created on: 2025-11-07
+ * Last modified: 2025-11-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,9 +19,9 @@ import { MapPOIContextMenu }            from '@Components/MainUI/MapPOI/MapPOICo
 import { VideoFPSWidget }               from '@Components/MainUI/video/toolbox/VideoFPSWidget'
 import { VideoQualityWidget }           from '@Components/MainUI/video/toolbox/VideoQualityWidget'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
-import { VideoSettingsInfo }            from '@Components/MainUI/video/VideoSettingsInfo'
-import { WidgetContextMenu } from '@Components/MainUI/WidgetContextMenu'
-import { Cropper }                  from '@Components/ToolsUI/cropper/Cropper'
+import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
+import { WidgetContextMenu } from '@Components/MainUI/widgets/WidgetContextMenu'
+import { Cropper }           from '@Components/ToolsUI/cropper/Cropper'
 import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordingScreenArea'
 import { JourneyToolbarWidget }     from '@Editor/JourneyToolbarWidget'
 import React                        from 'react'

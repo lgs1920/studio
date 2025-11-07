@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-03
- * Last modified: 2025-11-03
+ * Created on: 2025-11-07
+ * Last modified: 2025-11-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -31,6 +31,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Moveable                     from 'react-moveable'
 import { useSnapshot }              from 'valtio'
 import { usePointerSingleOrDouble } from '@Components/hooks/usePointerSingleOrDouble'
+import { v4 as uuid } from 'uuid'
 
 // Drag thresholds for touch and mouse devices (in pixels)
 const DRAG_THRESHOLD_TOUCH = 30
@@ -516,7 +517,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 dynamic:        config.dynamic ?? false,
                 forceEven:      config.forceEven ?? false,
                 group:          config.group ?? null,
-                id:             config.id ?? null,
+                id:              config.id ?? uuid(),
                 isCropper:      config.isCropper ?? false,
                 left:           config.left,
                 margin:         config.margin ?? 0,
@@ -526,17 +527,18 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 opacity:        config.opacity ?? lgs.settings.ui.toolbars.opacity,
                 outsideOverlay: config.outsideOverlay ?? false,
                 persist:        config.persist ?? false,
-                ratio:          config.ratio ?? null,
+                ratio:           config.ratio ?? null,
                 resizeFromCenter: config.resizeFromCenter ?? false,
                 resizable:      config.resizable ?? false,
                 scalable:       config.scalable ?? false,
                 showControlBox: true,
+                stopPropagation: config.stopPropagation ?? false,
                 top:            config.top,
                 transient:      config.transient ?? false,
                 ttl:            config.ttl ?? null,
                 type: config.type ?? LGS_WIDGET,
             }
-
+            console.log(config)
             const newConfig = await __.ui.widgetManager.retrieveConfig(widgetElement, initialConfig)
             const ok = await __.ui.widgetManager.setupElement(
                 _widget.current,
@@ -580,23 +582,23 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             widgetElement = null
         }
     }, [
-                  isVisible,
-                  config?.id,
-                  config?.left,
-                  config?.top,
-                  config?.attachTo,
-                  config?.opacity,
-                  config?.animationWhenDragging,
-                  config?.resizable,
-                  config?.scalable,
-                  config?.resizeFromCenter,
-                  config?.margin,
-                  config?.outsideOverlay,
-                  config?.type,
-                  config?.transient,
-                  config?.isCropper,
-                  config?.min,
-                  config?.max,
+                  // isVisible,
+                  // config?.id,
+                  // config?.left,
+                  // config?.top,
+                  // config?.attachTo,
+                  // config?.opacity,
+                  // config?.animationWhenDragging,
+                  // config?.resizable,
+                  // config?.scalable,
+                  // config?.resizeFromCenter,
+                  // config?.margin,
+                  // config?.outsideOverlay,
+                  // config?.type,
+                  // config?.transient,
+                  // config?.isCropper,
+                  // config?.min,
+                  // config?.max,
               ])
 
     /**

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-03
- * Last modified: 2025-11-03
+ * Created on: 2025-11-07
+ * Last modified: 2025-11-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -400,4 +400,49 @@ main-logo.xlarge {
 /** fix for 9x16, forcing same icon than 16x9 **/
 .buttons-bar-on-map sl-icon.icon-9x16::part(svg) {
     transform: rotate(90deg);
+}
+
+.widget-deck-panel {
+    flex-direction: column;
+    width: auto;
+    padding: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-deck-panel, .widget-deck-panel * {
+    font-size: var(--lgs-font-size) !important;
+}
+
+.widget-deck-panel section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-deck-entry {
+    display: flex;
+    align-items: center;
+    /*border-bottom: 1 px solid var(--lgs-light-color-25);*/
+    background: transparent !important;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-deck-entry.small {
+    height: calc(2 * var(--lgs-font-size)) !important;
+}
+
+.widget-deck-entry:not(.widget-deck-title):hover {
+    cursor: pointer;
+    border-color: var(--lgs-card-on-map-hover-border-color);
+    background: var(--lgs-card-on-map-hover-bg-color);
+}
+
+.widget-deck-title {
+    width: 100%;
+    padding: 0 var(--lgs-gutter-xs);
+}
+
+.widget-deck-entry sl-icon {
+    width: calc(var(--lgs-font-size-s) + 6px);
+    height: calc(var(--lgs-font-size-s) + 6px);
 }

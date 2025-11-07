@@ -61,3 +61,12 @@ videoFormats:
     orientation: "paysage"
     visibility: [ "tablet","desktop","mobile" ]
     description: "Define your own"
+
+widgetRatio:
+  label: "Widget ratio"
+  value: "1x1"
+  locked: true
+  aspectRatio: 1.0
+  orientation: "paysage"
+  visibility: [ "tablet","desktop","mobile" ]
+  description: "Widget Internal ratio"

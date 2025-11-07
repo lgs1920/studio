@@ -7,17 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-04
- * Last modified: 2025-11-04
+ * Created on: 2025-11-07
+ * Last modified: 2025-11-07
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { Widget }         from '@Components/MainUI/Widget'
+import { Widget } from '@Components/MainUI/widgets/Widget'
 import {
     LGS_TOOLBAR, VIDEO_TOOLS_WIDGETS, MULTI_PURPOSE_WIDGETS, CROP_TOOLS_WIDGETS,
-} from '@Core/constants'
+}                 from '@Core/constants'
 import React, { useMemo } from 'react'
 import { useSnapshot }            from 'valtio'
 import { CropRatioEditorToolbar } from './CropRatioEditorToolbar'

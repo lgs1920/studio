@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-06
- * Last modified: 2025-11-06
+ * Created on: 2025-11-07
+ * Last modified: 2025-11-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -259,6 +259,7 @@ export class WidgetCore {
 
         // Get config for this element
         const config = await this.retrieveConfig(element, initialConfig)
+        console.log(config.id, config)
 
         // Set default ratio if none exists
         if (!config?.ratio) {
@@ -914,7 +915,11 @@ export class WidgetCore {
                               : (initialConfig.position && this.#validPositions.includes(initialConfig.position))
                                 ? initialConfig.position
                                 : 'top-left')
-            const ratio = __.device.isPortrait ? '9x16' : '16x9'
+            let ratio = this.getRatio(initialConfig.ratio ?? __.device.isPortrait ? '9x16' : '16x9')
+            if (initialConfig.type === LGS_VISUAL_WIDGET) {
+                ratio = lgs.configuration.widgetRatio
+            }
+
             config = {
                 animationWhenDragging: initialConfig.animationWhenDragging ?? false,
                 animationWhenScaling:  initialConfig.animationWhenScaling ?? false,
@@ -943,7 +948,7 @@ export class WidgetCore {
                 persist:               initialConfig.persist ?? null,
                 position:              {left: 0, top: 0},
                 previousCropDimensions: null,
-                ratio:                 this.getRatio(initialConfig.ratio ?? ratio),
+                ratio: ratio,
                 resizeFromCenter:      initialConfig.resizeFromCenter ?? false,
                 rotate:                initialConfig.rotate ?? 0,
                 scale:                 initialConfig.scale ?? {x: 1, y: 1},

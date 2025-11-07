@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-04
- * Last modified: 2025-11-04
+ * Created on: 2025-11-07
+ * Last modified: 2025-11-07
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { LGS_TOOLBAR, VIDEO_TOOLS_WIDGETS } from '@Core/constants'
-import React, { useMemo }                        from 'react'
-import { Widget }         from '@Components/MainUI/Widget'
+import React, { useMemo } from 'react'
+import { Widget }         from '@Components/MainUI/widgets/Widget'
 import { useSnapshot }    from 'valtio'
 import { VideoQualityToolbar } from './VideoQualityToolbar'
 

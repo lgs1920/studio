@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-14
- * Last modified: 2025-10-14
+ * Created on: 2025-11-07
+ * Last modified: 2025-11-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -26,6 +26,7 @@ import { Geocoder }          from '@Core/ui/Geocoder'
 import { MenuManager }       from '@Core/ui/MenuManager'
 import { POIManager }        from '@Core/ui/POIManager'
 import { VideoRecorder }     from '@Core/ui/video/recorder/VideoRecorder'
+import { WidgetCache }       from '@Core/ui/widget-manager/WidgetCache'
 import { WidgetManager }     from '@Core/ui/widget-manager/WidgetManager'
 import { AppUtils }          from '@Utils/AppUtils'
 import { MouseUtils }        from '@Utils/cesium/MouseUtils'
@@ -215,7 +216,7 @@ export class LGS1920Context {
                                           },
                                       ],
                                       manageTransients: false,
-                                      version: 6, // integer
+                                      version: 7, // integer
                                   }),
             settings: new LocalDB({
                                       name:    `settings-${APP_KEY}${dbPrefix}`,
@@ -381,6 +382,7 @@ export class LGS1920Context {
         __.ui.sceneManager = new SceneManager()
         __.ui.menuManager = new MenuManager()
         __.ui.widgetManager = new WidgetManager()
+        __.ui.widgetCache = new WidgetCache()
 
         __.ui.poiManager = new POIManager()
         __.ui.geocoder = new Geocoder()
