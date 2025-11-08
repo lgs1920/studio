@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-07
- * Last modified: 2025-11-07
+ * Created on: 2025-11-08
+ * Last modified: 2025-11-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,7 +21,7 @@ import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
 import React, { useEffect, useMemo, useState }            from 'react'
 import { useSnapshot }                                    from 'valtio'
 
-export const WidgetsPanel = ({id, context, groups, onWidgetSelect}) => {
+export const WidgetsPanel = ({id, context, groups}) => {
     // Get snapshot of context
     const {widgetEditor} = useSnapshot(context)
 
@@ -62,7 +62,7 @@ export const WidgetsPanel = ({id, context, groups, onWidgetSelect}) => {
 
     return (
         <Widget isVisible={true} config={config}>
-            <WidgetsPanelContent groups={groups} onWidgetSelect={onWidgetSelect}/>
+            <WidgetsPanelContent groups={groups}/>
         </Widget>
     )
 }

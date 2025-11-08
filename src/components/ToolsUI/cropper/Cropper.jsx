@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-07
- * Last modified: 2025-11-07
+ * Created on: 2025-11-08
+ * Last modified: 2025-11-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -44,7 +44,8 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
     const _cropperContainer = useRef(null)
     const _overlay = useRef(null)
     const cropper = useSnapshot(context)
-    const [displayedWidgets, setDisplayedWidgets] = useState([])
+    const $widget = lgs.stores.ui.widget
+    const {list} = useSnapshot($widget)
     const [overlayElement, setOverlayElement] = useState(null)
 
     useEffect(() => {
@@ -54,14 +55,6 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
     }, [overlay])
 
 
-    const handleWidgetSelect = (key, props) => {
-        setDisplayedWidgets((prev) => {
-            if (prev.some(w => w.key === key)) {
-                return prev
-            }
-            return [...prev, {key, props}]
-        })
-    }
     return (
         <>
             {overlayElement && cropper.ratioEditor &&
@@ -90,14 +83,10 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 ) : null}
                 {overlay && <div className="crop-overlay" ref={_overlay}/>}
                 {children}
-                <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS]}
-                              onWidgetSelect={handleWidgetSelect}/>
-                {displayedWidgets.map(({key, props}) => (
+                <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS]}/>
+                {Array.from(list.entries()).map(([key, props]) => (
                     <WidgetRenderer key={key} id={key} props={props} context={context}/>
-                ))
-                }
-                {/* <CompassWidget id="video-compass-element" /> */}
-                {/* <CreditsWidget id="video-credits" context={context}/> */}
+                ))}
             </div>
         </>
     )

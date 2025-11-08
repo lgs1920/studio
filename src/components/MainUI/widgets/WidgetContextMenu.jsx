@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-07
- * Last modified: 2025-11-07
+ * Created on: 2025-11-08
+ * Last modified: 2025-11-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -49,7 +49,7 @@ export const WidgetContextMenu = () => {
     const _timer = useRef(null) // Local timer reference
     const _isDragging = useRef(false) // Track if a drag is in progress
     const $widget = lgs.stores.ui.widget
-    const {id, canDisplayContextMenu, position} = useSnapshot($widget)
+    const {current: {id, position, canDisplayContextMenu}} = useSnapshot($widget)
     const element = __.ui.widgetManager.getElementById(id)
     const config = __.ui.widgetManager.getWidgetConfig(id)
 
@@ -138,8 +138,19 @@ export const WidgetContextMenu = () => {
      * Handles the removal of the widget.
      */
     const handleRemove = () => {
-        __.ui.widgetManager.disposeElement(element)
-        $widget.canDisplayContextMenu = false
+        // Use the actual widget ID instead of hardcoded value
+        if (id) {
+            __.ui.widgetCache.delete(id)
+            $widget.list.delete(id)
+        }
+
+        // Dispose the widget element and clean up resources
+        if (element) {
+            __.ui.widgetManager.disposeElement(element)
+        }
+
+        hideMenu()
+
     }
 
     /**
@@ -150,7 +161,7 @@ export const WidgetContextMenu = () => {
             clearTimeout(_timer.current)
             _timer.current = null
         }
-        $widget.canDisplayContextMenu = false
+        $widget.current.canDisplayContextMenu = false
     }
 
     /**
@@ -173,7 +184,7 @@ export const WidgetContextMenu = () => {
             __.ui.widgetManager.saveWidgetPosition(elementId, config)
         }
         if (scale === 1) {
-            $widget.canDisplayContextMenu = false
+            $widget.current.canDisplayContextMenu = false
         }
 
         __.ui.widgetManager.setScale(element, config.scale.x, config.scale.y)

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-07
- * Last modified: 2025-11-07
+ * Created on: 2025-11-08
+ * Last modified: 2025-11-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,6 +19,7 @@ import { faBox }                             from '@fortawesome/pro-regular-svg-
 import { SlIcon, SlTooltip }                 from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                             from '@Utils/FA2SL'
 import { useEffect, useRef, useState, lazy } from 'react'
+import { useSnapshot } from 'valtio'
 
 /**
  * Renders the widget selection panel.
@@ -28,10 +29,10 @@ import { useEffect, useRef, useState, lazy } from 'react'
  * @param {function(string, Object): void} [props.onWidgetSelect] - Callback when a widget is selected.
  * @returns {JSX.Element} The widget panel with grouped entries.
  */
-export const WidgetsPanelContent = ({groups, onWidgetSelect}) => {
+export const WidgetsPanelContent = ({groups, onWidgetSelect, onWidgetUnselect}) => {
     const _widgetDeckPanel = useRef(null)
     const [selectedKeys, setSelectedKeys] = useState([])
-    const _propsCache = useRef(new Map())
+    const $widget = lgs.stores.ui.widget
 
     /**
      * Filters and returns only the groups that exist in the global registry.
@@ -46,6 +47,23 @@ export const WidgetsPanelContent = ({groups, onWidgetSelect}) => {
         }
         return subGroups
     }
+
+    /**
+     * Dynamically unmounts a widget: removes from UI, cache and emits unselect.
+     *
+     * @param {string} key - Widget key to unmount
+     */
+    const unmountWidget = (key) => {
+        __.ui.widgetCache.delete(key)
+        $widget.list.delete(key)
+    }
+
+    // Global cleanup on panel unmount
+    useEffect(() => {
+        return () => {
+            selectedKeys.forEach(key => unmountWidget(key))
+        }
+    }, [])
 
     /**
      * Loads a widget component lazily and caches it.
@@ -87,32 +105,17 @@ export const WidgetsPanelContent = ({groups, onWidgetSelect}) => {
                                                 })),
                 )
                 __.ui.widgetCache.set(key, LazyWidget)
+                $widget.list.set(key, extraProps)
+
             }
         }
-
-        // Track selection and props
-        setSelectedKeys(prev => (prev.includes(key) ? prev : [...prev, key]))
-        _propsCache.current.set(key, extraProps)
-        onWidgetSelect?.(key, extraProps)
-    }
-
-    /**
-     * Removes a widget from selection and global cache.
-     *
-     * @param {string} key - Widget key to unload.
-     */
-    const unloadWidget = (key) => {
-        setSelectedKeys(prev => prev.filter(k => k !== key))
-        _propsCache.current.delete(key)
-        __.ui.widgetCache.delete(key)
     }
 
     // Clean up all widgets and cache on unmount
     useEffect(() => {
         return () => {
-            setSelectedKeys([])
-            _propsCache.current.clear()
             __.ui.widgetCache.clear()
+            $widget.list.clear()
         }
     }, [])
 

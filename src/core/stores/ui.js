@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-21
- * Last modified: 2025-10-21
+ * Created on: 2025-11-08
+ * Last modified: 2025-11-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -108,9 +108,12 @@ export const ui = {
     },
 
     widget: {
-        canDisplayContextMenu: false,
-        id:                    null,
-        position:              {x: 0, y: 0},
+        current: {
+            id:                    null,
+            canDisplayContextMenu: false,
+            position:              {x: 0, y: 0},
+        },
+        list:    new proxyMap(),
     },
 
     appUpdate: {

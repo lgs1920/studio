@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-07
- * Last modified: 2025-11-07
+ * Created on: 2025-11-08
+ * Last modified: 2025-11-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -31,8 +31,6 @@ export const CompassWidget = ({id, context}) => {
     // Get snapshot of context
     const {widgetEditor, cropZone} = useSnapshot(context)
     const [_container, setContainer] = useState(null)
-
-    console.log(id)
 
     // Set container when cropZone changes
     useEffect(() => {
