@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-05
- * Last modified: 2025-11-05
+ * Created on: 2025-11-08
+ * Last modified: 2025-11-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,7 +25,7 @@ import { faCompass, faDesktop }                   from '@fortawesome/pro-regular
 import { faGavel }                                from '@fortawesome/pro-solid-svg-icons'
 
 
-export const SLOGAN = 'Replay Your Adventures!'
+export const SLOGAN = 'Replay the World Outdoors!'
 /*******************************************************************************
  * Time and duration constants in seconds
  */
