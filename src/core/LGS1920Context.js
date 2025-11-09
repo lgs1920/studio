@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-07
- * Last modified: 2025-11-07
+ * Created on: 2025-11-09
+ * Last modified: 2025-11-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -212,11 +212,11 @@ export class LGS1920Context {
                                           JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE,
                                           {
                                               name:    WIDGETS_STORE,
-                                              indexes: [{name: 'group', keyPath: 'group'}],
+                                              indexes: [{name: 'group', keyPath: 'data.group'}],
                                           },
                                       ],
                                       manageTransients: false,
-                                      version: 7, // integer
+                                      version: 21, // integer
                                   }),
             settings: new LocalDB({
                                       name:    `settings-${APP_KEY}${dbPrefix}`,
@@ -231,6 +231,8 @@ export class LGS1920Context {
                                       version: 1, // integer
                                   }),
         }
+
+        //   this.db.lgs1920.forceRebuildStore(WIDGETS_STORE)
     }
 
     /**
