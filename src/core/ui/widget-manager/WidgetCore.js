@@ -551,7 +551,7 @@ export class WidgetCore {
      * Disposes a single widget element, cleaning up resources.
      * @param {HTMLElement} element - The DOM element
      */
-    disposeElement = element => {
+    disposeElement = async element => {
         const elementId = this.retrieveElementId(element)
         const config = this.getWidgetConfig(elementId)
         if (!config) {
@@ -572,6 +572,10 @@ export class WidgetCore {
         if (timer) {
             clearTimeout(timer)
             this.#controlBoxTimers.delete(elementId)
+        }
+
+        if (config.persist) {
+            await this.#widgetDB.deleteWidgetPosition(elementId)
         }
     }
 
