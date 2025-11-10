@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-08
- * Last modified: 2025-11-08
+ * Created on: 2025-11-10
+ * Last modified: 2025-11-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,7 +27,6 @@ import {
 import classNames                                                   from 'classnames'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Moveable                                                     from 'react-moveable'
-import { v4 as uuid }                                               from 'uuid'
 import { useSnapshot }                                              from 'valtio'
 
 const DRAG_THRESHOLD_TOUCH = 30
@@ -326,11 +325,14 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
 
         let cancelled = false
+        config.id = __.ui.widgetManager.defineElementId(config.group, config.id)
+
 
         const initWidget = async () => {
             if (cancelled || !_widget.current) {
                 return
             }
+
 
             const fullConfig = {
                 animationWhenDragging: config.animationWhenDragging ?? config.type === LGS_TOOLBAR,
@@ -341,7 +343,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 dynamic:               config.dynamic ?? false,
                 forceEven:             config.forceEven ?? false,
                 group:                 config.group ?? null,
-                id:                    config.id ?? uuid(),
+                id: config.id,
                 isCropper:             config.isCropper ?? false,
                 left:                  config.left,
                 margin:                config.margin ?? 0,

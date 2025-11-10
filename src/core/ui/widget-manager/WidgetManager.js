@@ -269,6 +269,23 @@ export class WidgetManager {
     }
 
     /**
+     * Getter for widgets list property
+     * @returns {[]} List of widget elements
+     */
+    get widgets() {
+        return this.#core.widgets
+    }
+
+    /**
+     * Generates a unique element ID based on a provided key and formatting option.
+     *
+     * @param {string|null} [key=null] - The base key to use for the ID. If null, a UUID is returned.
+     * @param {boolean} [simple=false] - If true, returns the key as-is without appending a UUID.
+     * @returns {string} A unique identifier string, either a UUID or a combination of the key and UUID.
+     */
+    defineElementId = (key = null, simple = false) => this.#core.defineElementId(key, simple)
+
+    /**
      * Clones a context menu configuration object by ensuring all expected boolean attributes are defined.
      * If an attribute is missing in the source object, it will be set to false in the clone.
      *

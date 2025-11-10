@@ -19,7 +19,7 @@
  * Handles setup, positioning, and cleanup of widget elements.
  */
 import { LGS_VISUAL_WIDGET, LGS_WIDGET, SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
-import { v4 as uuidv4 }                                                from 'uuid'
+import { v4 as uuid }                                                  from 'uuid'
 
 export class WidgetCore {
     /** @type {WidgetManager} Reference to the WidgetManager instance */
@@ -236,103 +236,11 @@ export class WidgetCore {
     }
 
     /**
-     * Sets up a DOM element as a widget with moveable functionality.
-     * @param {HTMLElement} element - The DOM element to set up
-     * @param {Object} initialConfig - Initial widget configuration
-     * @param {Function} setBounds - Function to update bounds
-     * @param {Function} setPosition - Function to update position
-     * @param {Object} moveable - Moveable instance reference
-     * @returns {Promise<boolean>} True if setup is successful, false otherwise
+     * Getter for widgets list property
+     * @returns {[]} List of widget elements
      */
-    setupElement = async (element, initialConfig, setBounds, setPosition, moveable) => {
-        // Validate inputs
-        if (!element || !initialConfig?.container || !moveable.current) {
-            return false
-        }
-
-        // Initialize configuration
-        initialConfig.element = element
-        initialConfig.setPosition = setPosition
-        let elementId = initialConfig.id && typeof initialConfig.id === 'string' && initialConfig.id.trim()
-                        ? initialConfig.id
-                        : this.retrieveElementId(element) || uuidv4()
-        element.setAttribute(this.#ID_KEY, elementId)
-        moveable.current.target = element
-        moveable.current.onRender = e => {
-            e.target.style.opacity = initialConfig.opacity
-        }
-        initialConfig.controlBoxVisibility = initialConfig.showControlBox || false
-
-        // Get config for this element
-        const config = await this.retrieveConfig(element, initialConfig)
-
-        // Set default ratio if none exists
-        if (!config?.ratio) {
-            const fallback = __.device.isPortrait ? '9x16' : '16x9'
-            config.ratio = this.getRatio(initialConfig.ratio ?? fallback)
-        }
-
-        // Apply crop dimensions for cropper elements
-        if (config.isCropper) {
-            this.#widgetManager.cropDimensions(config, false) // Setup cropper dimensions
-        }
-
-        // Set initial bounds and position
-        const newBounds = this.refreshBounds(config, moveable.current)
-        setBounds(newBounds)
-        // Initialize position for all elements
-        const newPosition = this.computeInitialPosition(config, element, false)
-        this.applyPosition(element, newPosition, moveable, false, setPosition)
-
-        // Initialize cropDimensions for croppers
-        if (config.isCropper) {
-            const rect = element.getBoundingClientRect()
-            const width = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : (rect.width || 200)
-            const height = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : (rect.height || 200)
-            config.cropDimensions = {
-                left: newPosition.left,
-                top:  newPosition.top,
-                width,
-                height,
-            }
-            element.style.width = `${width}px`
-            element.style.height = `${height}px`
-            this.#widgetManager.applyCropToOverlay(config)
-
-            // Configure moveable for resizing with ratio lock
-            moveable.current.request('resizable', {
-                keepRatio: !!config.ratio?.locked || false,    // undefined when free ratio
-                deltaWidth:  0,
-                deltaHeight: 0,
-            }, true)
-        }
-
-        // Set default styles BEFORE any transform operations
-        element.style.transform = 'none'
-        element.style.opacity = initialConfig.opacity || 1
-        element.style.transformOrigin = '0 0'
-
-        // Restore scale transform if saved (must be AFTER style initialization)
-        if (config.fromDB && config.scale && (config.scale.x !== 1 || config.scale.y !== 1)) {
-            this.#widgetManager.transform.setScale(element, config.scale.x, config.scale.y)
-        }
-
-        // Initialize resize observer and overlay
-        this.monitorContainerResize(config, setBounds, moveable, element, setPosition)
-        this.#createInnerOverlay(element)
-
-        // Dispatch initial crop event for croppers
-        if (config.isCropper && config.cropDimensions) {
-            this.#widgetManager.cropDimensions(config, false) // Trigger initial crop update
-        }
-        this.setConfig(elementId, config)
-        this.setMoveable(elementId, moveable)
-
-        if (config.persist) {
-            await this.#widgetDB.saveWidgetPosition(elementId, config)
-        }
-
-        return true
+    get widgets() {
+        return this.#widgets
     }
 
     /**
@@ -918,7 +826,7 @@ export class WidgetCore {
     retrieveConfig = async (element, initialConfig = {}) => {
         const elementId = initialConfig.id && typeof initialConfig.id === 'string' && initialConfig.id.trim()
                           ? initialConfig.id
-                          : this.retrieveElementId(element) || uuidv4()
+                          : this.retrieveElementId(element) || uuid()
         let config
         if (!this.#widgets.has(elementId)) {
             const anchor = initialConfig.isCropper
@@ -1109,4 +1017,135 @@ export class WidgetCore {
      */
     hasCapabilities = (source, attrs) =>
         attrs.some(attr => Boolean(source?.[attr]))
+
+    /**
+     * Sets up a DOM element as a widget with moveable functionality.
+     * @param {HTMLElement} element - The DOM element to set up
+     * @param {Object} initialConfig - Initial widget configuration
+     * @param {Function} setBounds - Function to update bounds
+     * @param {Function} setPosition - Function to update position
+     * @param {Object} moveable - Moveable instance reference
+     * @returns {Promise<boolean>} True if setup is successful, false otherwise
+     */
+    setupElement = async (element, initialConfig, setBounds, setPosition, moveable) => {
+        // Validate inputs
+        if (!element || !initialConfig?.container || !moveable.current) {
+            return false
+        }
+
+        // Initialize configuration
+        initialConfig.element = element
+        initialConfig.setPosition = setPosition
+        let elementId = initialConfig.id && typeof initialConfig.id === 'string' && initialConfig.id.trim()
+                        ? initialConfig.id
+                        : this.retrieveElementId(element) || uuid()
+        element.setAttribute(this.#ID_KEY, elementId)
+        moveable.current.target = element
+        moveable.current.onRender = e => {
+            e.target.style.opacity = initialConfig.opacity
+        }
+        initialConfig.controlBoxVisibility = initialConfig.showControlBox || false
+
+        // Get config for this element
+        const config = await this.retrieveConfig(element, initialConfig)
+
+        // Set default ratio if none exists
+        if (!config?.ratio) {
+            const fallback = __.device.isPortrait ? '9x16' : '16x9'
+            config.ratio = this.getRatio(initialConfig.ratio ?? fallback)
+        }
+
+        // Apply crop dimensions for cropper elements
+        if (config.isCropper) {
+            this.#widgetManager.cropDimensions(config, false) // Setup cropper dimensions
+        }
+
+        // Set initial bounds and position
+        const newBounds = this.refreshBounds(config, moveable.current)
+        setBounds(newBounds)
+        // Initialize position for all elements
+        const newPosition = this.computeInitialPosition(config, element, false)
+        this.applyPosition(element, newPosition, moveable, false, setPosition)
+
+        // Initialize cropDimensions for croppers
+        if (config.isCropper) {
+            const rect = element.getBoundingClientRect()
+            const width = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : (rect.width || 200)
+            const height = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : (rect.height || 200)
+            config.cropDimensions = {
+                left: newPosition.left,
+                top:  newPosition.top,
+                width,
+                height,
+            }
+            element.style.width = `${width}px`
+            element.style.height = `${height}px`
+            this.#widgetManager.applyCropToOverlay(config)
+
+            // Configure moveable for resizing with ratio lock
+            moveable.current.request('resizable', {
+                keepRatio:   !!config.ratio?.locked || false,    // undefined when free ratio
+                deltaWidth:  0,
+                deltaHeight: 0,
+            }, true)
+        }
+
+        // Set default styles BEFORE any transform operations
+        element.style.transform = 'none'
+        element.style.opacity = initialConfig.opacity || 1
+        element.style.transformOrigin = '0 0'
+
+        // Restore scale transform if saved (must be AFTER style initialization)
+        if (config.fromDB && config.scale && (config.scale.x !== 1 || config.scale.y !== 1)) {
+            this.#widgetManager.transform.setScale(element, config.scale.x, config.scale.y)
+        }
+
+        // Initialize resize observer and overlay
+        this.monitorContainerResize(config, setBounds, moveable, element, setPosition)
+        this.#createInnerOverlay(element)
+
+        // Dispatch initial crop event for croppers
+        if (config.isCropper && config.cropDimensions) {
+            this.#widgetManager.cropDimensions(config, false) // Trigger initial crop update
+        }
+        this.setConfig(elementId, config)
+        this.setMoveable(elementId, moveable)
+
+        if (config.persist) {
+            await this.#widgetDB.saveWidgetPosition(elementId, config)
+        }
+
+        console.log(this.#widgets)
+
+        return true
+    }
+    /**
+     * Generates a unique element ID based on a provided group and ID.
+     *
+     * @param {string} group - The widget group name used to locate configuration.
+     * @param {string|null} [id=null] - The base ID to use. If null, a UUID is generated.
+     * @returns {string} A unique identifier string, either a UUID or a combination of the ID and UUID.
+     *
+     * If the widget configuration indicates the element should not be unique (count > 1 or not mandatory,
+     * the function returns a composite ID in the format `<id>#<uuid>`. Otherwise, it returns the original ID.
+     * If no widget configuration is found, the original ID is returned.
+     */
+    defineElementId = (group, id = null) => {
+        // No group provided, se use ID
+        if (!group) {
+            return id
+        }
+        // No ID provided, we generate a new one
+        if (id === null) {
+            return uuid()
+        }
+        // We have group and ID
+        // let's search widgets type defines in app configuration and get some settings
+        const widget = __.widgets.get(group ?? null)?.widgets.get(id)
+        if (widget) {
+            return (!widget?.mandatory && widget?.use !== 1) ? `${id}#${uuid()}` : id
+        }
+        // No widget found, id is enough, let's use it
+        return id
+    }
 }
