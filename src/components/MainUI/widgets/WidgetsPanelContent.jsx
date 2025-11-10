@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-08
- * Last modified: 2025-11-08
+ * Created on: 2025-11-10
+ * Last modified: 2025-11-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,8 +18,7 @@ import { WIDGETS_CONFIGURATION }             from '@Core/constants'
 import { faBox }                             from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon, SlTooltip }                 from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                             from '@Utils/FA2SL'
-import { useEffect, useRef, useState, lazy } from 'react'
-import { useSnapshot } from 'valtio'
+import { lazy, useEffect, useRef, useState } from 'react'
 
 /**
  * Renders the widget selection panel.
@@ -48,22 +47,50 @@ export const WidgetsPanelContent = ({groups, onWidgetSelect, onWidgetUnselect}) 
         return subGroups
     }
 
-    /**
-     * Dynamically unmounts a widget: removes from UI, cache and emits unselect.
-     *
-     * @param {string} key - Widget key to unmount
-     */
-    const unmountWidget = (key) => {
-        __.ui.widgetCache.delete(key)
-        $widget.list.delete(key)
-    }
 
-    // Global cleanup on panel unmount
     useEffect(() => {
-        return () => {
-            selectedKeys.forEach(key => unmountWidget(key))
+        const targetedGroups = theGroups()
+        console.log(targetedGroups)
+
+        /**
+         * Reads and displays the widgets saved in the base.
+         * @return {Promise<void>}
+         */
+        const displayWidgetsInBase = async () => {
+            for (const [id, group] of targetedGroups.entries()) {
+                const widgets = await __.ui.widgetManager.getWidgetsByGroup(id)
+                for (const widget of widgets) {
+                    $widget.list.set(widget.id, widget)
+                    renderMyComponent(id, widget.id)
+                }
+            }
         }
+
+        /**
+         * Displays the mandatory widgets
+         */
+        const displayMandatoryWidgets = () => {
+            for (const [groupId, group] of targetedGroups.entries()) {
+                for (const [id, widget] of group.widgets) {
+                    if (!$widget.list.has(id) && widget.mandatory) {
+                        $widget.list.set(id, widget)
+                        renderMyComponent(groupId, id)
+                    }
+                }
+            }
+        }
+
+        // We first show the widgets saved in the base to have their last size and position
+        displayWidgetsInBase()
+        // Then we show the mandatory widgets not already shown
+        displayMandatoryWidgets()
+
+
+        // return () => {// Global cleanup on panel unmount
+        //     persisted.forEach(key => unmountWidget(key))
+        // }
     }, [])
+
 
     /**
      * Loads a widget component lazily and caches it.
