@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-08
- * Last modified: 2025-11-08
+ * Created on: 2025-11-10
+ * Last modified: 2025-11-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,6 +27,9 @@ export class WidgetCore {
 
     /** @type {WidgetTransform} Reference to the WidgetTransform instance */
     #widgetTransform
+
+    /** @type {WidgetDBManager} Reference to the WidgetDBManager instance */
+    #widgetDB
 
     /** @type {number} Delay in milliseconds before hiding control box */
     HIDE_DELAY = 2 * SECOND
@@ -64,14 +67,17 @@ export class WidgetCore {
     /** @type {string|null} ID of the currently active widget */
     #current = null
 
+
     /**
      * Constructor for WidgetCore.
      * @param {WidgetManager} widgetManager - The WidgetManager instance
      * @param {WidgetTransform} widgetTransform - The WidgetTransform instance
+     * @param {WidgetDBManager} widgetDB - The widgetDBManager instance
      */
-    constructor(widgetManager, widgetTransform) {
+    constructor(widgetManager, widgetTransform, widgetDB) {
         this.#widgetManager = widgetManager
         this.#widgetTransform = widgetTransform
+        this.#widgetDB = widgetDB
     }
 
     /**
@@ -321,6 +327,10 @@ export class WidgetCore {
         }
         this.setConfig(elementId, config)
         this.setMoveable(elementId, moveable)
+
+        if (config.persist) {
+            await this.#widgetDB.saveWidgetPosition(elementId, config)
+        }
 
         return true
     }

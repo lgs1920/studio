@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-03
- * Last modified: 2025-11-03
+ * Created on: 2025-11-10
+ * Last modified: 2025-11-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -70,7 +70,7 @@ export class WidgetManager {
         this.#resizable = new WidgetResizable(this, this.#cropper)
         this.#scalable = new WidgetScalable(this, this.#cropper, this.#transform)
         this.#position = new WidgetPosition(this)
-        this.#core = new WidgetCore(this, this.#transform)
+        this.#core = new WidgetCore(this, this.#transform, this.#widgetDB)
         WidgetManager.#instance = this
     }
 
