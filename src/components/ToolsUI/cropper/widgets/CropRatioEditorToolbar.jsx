@@ -7,20 +7,22 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-06
- * Last modified: 2025-10-06
+ * Created on: 2025-11-03
+ * Last modified: 2025-11-03
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { faCropSimple, faRectangle, faRectangleVertical, faSquare } from '@fortawesome/pro-regular-svg-icons'
-import { faGripDots }                                               from '@fortawesome/pro-solid-svg-icons'
-import { SlIcon, SlTooltip }                                        from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                    from '@Utils/FA2SL'
-import classNames from 'classnames'
-import { memo, useCallback, useEffect, useRef, useState }           from 'react'
-import { useSnapshot }                                              from 'valtio'
+import {
+    faCropSimple, faRectangleWide, faRectangle, faRectangleVertical, faSquare, faRectangleTall,
+}                                   from '@fortawesome/pro-regular-svg-icons'
+import { faExpandWide, faGripDots } from '@fortawesome/pro-solid-svg-icons'
+import { SlIcon, SlTooltip }        from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                          from '@Utils/FA2SL'
+import classNames                                         from 'classnames'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { useSnapshot }                                    from 'valtio'
 import '../style.css'
 
 /**
@@ -30,10 +32,12 @@ import '../style.css'
  */
 const ICONS = {
     'square': faSquare,
-    '9x16': faRectangleVertical,
-    '16x9': faRectangle,
+    '9x16': faRectangleWide,
+    '16x9': faRectangleWide,
     '1x1': faSquare,
-    '4x3': faCropSimple,
+    '4x5':  faRectangleVertical,
+    '4x3':  faRectangle,
+    '0x0':  faExpandWide,
 }
 
 /**
@@ -59,22 +63,26 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
     // Track selected ratio, defaulting to first video format
     const defaultRatio = __.device.isPortrait ? '9x16' : '16x9'
 
-    // Handle crop updates
+    // Ensure handleCropUpdate is executed only once (singleton listener)
     useEffect(() => {
+        let executed = false
+
+        /**
+         * Handles crop update event – runs only on first occurrence.
+         * Wus it t retrieve and display the right crop ratio.
+         * @param {CustomEvent} event - Custom event with detail.ratio.value
+         */
         const handleCropUpdate = (event) => {
-            // setForceRender((prev) => prev + 1) // Force local re-render
+            if (executed) {
+                return
+            }
+            executed = true
+            $video.ratio = event.detail.ratio.value
         }
+
         document.addEventListener('onCropUpdate', handleCropUpdate)
         return () => document.removeEventListener('onCropUpdate', handleCropUpdate)
-    }, [context])
-
-    useEffect(() => {
-        $video.ratio = cropper.ratioEditor
-                       ? lgs.configuration.videoFormats.find(p => p.value === cropper.aspectRatio?.toString().replace('/', 'x'))?.value ||
-                           lgs.configuration.videoFormats[0]?.value ||
-                           defaultRatio
-                       : defaultRatio
-    }, [])
+    }, [$video]) // $video is stable (Valtio proxy)
 
     /**
      * Handles selection of a crop ratio preset
@@ -88,13 +96,12 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
 
         // Parse ratio and update cropzone
         const [w, h] = preset.value.split('x').map(Number)
-        __.ui.widgetManager.updateCropRatio(cropzoneId, w / h, preset.locked)
+        __.ui.widgetManager.updateCropRatio(cropzoneId, preset.value, w / h, preset.locked)
 
         // Update store to keep ratioEditor active
         $cropper.ratioEditor = true
         $cropper.aspectRatio = w / h
-
-    }, [$cropper, cropzoneId])
+    }, [$cropper, $video, cropzoneId])
 
     /**
      * Determines if a given preset is visible on the current device and orientation
@@ -116,7 +123,7 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
     return (
         <>
             {cropper.ratioEditor && (
-                <div className="crop-ratio-widget lgs-toolbar lgs-card on-map">
+                <div className="crop-ratio-widget lgs-card on-map">
                     {/* Drag handle for moving the toolbar */}
                     <SlTooltip content="Drag me">
                         <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
@@ -131,8 +138,12 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
                                 >
                                     <SlIcon
                                         library="fa"
-                                        className={classNames('lgs-one-line-card on-map', {'selected': preset.value === video.ratio})}
-                                        onPointerDown={event => handleChangeRatio(preset, event)}
+                                        className={classNames(
+                                            'lgs-one-line-card on-map',
+                                            {'selected': preset.value === video.ratio},
+                                            `icon-${preset.value}`,
+                                        )}
+                                        onClick={event => handleChangeRatio(preset, event)}
                                         name={FA2SL.set(ICONS[preset.value] || faSquare)}
                                     />
                                 </SlTooltip>

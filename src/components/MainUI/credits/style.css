@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-19
- * Last modified: 2025-07-19
+ * Created on: 2025-10-27
+ * Last modified: 2025-10-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,15 +23,16 @@
 }
 
 .credits-bar {
-    height: var(--lgs-credits-bar-height);
+    font-size: var(--lgs-font-size-s);
     display: flex;
+    align-items: center;
     flex-direction: row-reverse;
     justify-content: right;
-    align-items: center;
+    height: var(--lgs-credits-bar-height);
+    padding: var(--lgs-gutter-xs);
+    pointer-events: auto;
     gap: var(--lgs-gutter-xs);
     --padding: var(--lgs-gutter-xs);
-    pointer-events: auto;
-    font-size: var(--lgs-font-size-s);
 }
 
 .credits-bar > div {
@@ -49,17 +50,17 @@
 }
 
 .credits-bar .main-logo {
-    --padding: var(--lgs-gutter-s);
+    --padding: var(--lgs-gutter-xs);
 }
 
 .credits-bar img {
     box-sizing: border-box;
-    height: calc(100% - 2 * var(--padding));
     width: auto;
+    height: calc(100% - var(--padding));
 }
 
 .credits-bar .cesium-credits img {
-    height: calc(100% - 2.5 * var(--padding));
+    height: calc(100% - 2 * var(--padding));
 }
 
 .credits-bar sl-divider {
@@ -67,20 +68,43 @@
 }
 
 .lgs-credits {
+    line-height: 1;
     display: flex;
     align-items: center;
-    line-height: 1;
+    flex-direction: row;
+    flex-wrap: nowrap;
+
 }
 
 .lgs-credits > a, .lgs-credits > a:link {
-    align-items: center;
     line-height: 1;
-    text-decoration: none;
-    color: var(--lgs-dark-ui-fg-color);
+    display: flex;
+    align-items: center;
+    flex: 0 1 auto;
     height: var(--lgs-credits-bar-height);
+    text-decoration: none;
+    color: var(--lgs-dark-color);
+}
+
+
+.lgs-credits {
+    overflow: hidden;
+
+    white-space: nowrap; /* prevents text wrapping */
+    text-overflow: ellipsis; /* adds "..." if text overflows */
+
+}
+
+.lgs-credits a:first-child .credits {
+    border-right: 1px solid var(--lgs-card-on-map-border-color);
+    padding-inline: var(--lgs-gutter-s)
 }
 
 .provider-credits {
-    color: var(--lgs-card-on-map-border-color) !important;
+    color: var(--lgs-dark-color);
+    background-color: var(--lgs-light-color-50);
+
 }
+
+
 

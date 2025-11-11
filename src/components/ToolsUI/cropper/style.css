@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-08
- * Last modified: 2025-10-08
+ * Created on: 2025-10-25
+ * Last modified: 2025-10-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -55,9 +55,9 @@
     box-sizing: border-box;
     user-select: none;
     pointer-events: none;
-    border: var(--border-width) dashed var(--crop-border-color);
+    border: var(--border-width) solid var(--crop-border-color);
     background-color: transparent;
-    --border-width: 2px;
+    --border-width: 1px;
     touch-action: none;
 }
 
@@ -74,11 +74,12 @@
     font-size: var(--lgs-font-size-s);
     position: absolute;
     z-index: calc(var(--crop-zindex) + 1);
-
     display: flex;
+
     align-items: center;
     width: max-content;
     pointer-events: none;
+    opacity: 0.7;
     gap: var(--lgs-gutter-xs);
 }
 
@@ -131,10 +132,6 @@
  * Cropper Editor
  ******************************************************************************/
 
-:root {
-    --buttons-bar-on-map-direction: column;
-}
-
 .crop-ratio-widget-container {
     position: absolute;
     z-index: calc(var(--crop-zindex) + 2);
@@ -153,44 +150,5 @@
 
 .crop-ratio-widget.lgs-toolbar {
     opacity: 1;
-}
-
-.buttons-bar-on-map {
-    display: flex;
-    align-items: center;
-    flex-direction: var(--buttons-bar-on-map-direction);
-    justify-content: space-between;
-    gap: var(--lgs-gutter-xs);
-}
-
-.buttons-bar-on-map sl-icon, .buttons-bar-on-map div {
-    font-size: var(--lgs-font-size);
-    line-height: 1;
-    width: calc(var(--lgs-font-size) + 4px);
-    height: calc(var(--lgs-font-size) + 2px);
-    padding: var(--lgs-gutter-s);
-    cursor: pointer;
-    text-align: center;
-}
-
-.buttons-bar-on-map div {
-    justify-content: center;
-    width: 100%;
-    height: auto;
-}
-
-.buttons-bar-on-map .selected {
-    border-color: var(--lgs-card-on-map-selected-border-color);
-    background: var(--lgs-card-on-map-selected-bg-color);
-}
-
-.buttons-bar-on-map sl-icon:hover, .buttons-bar-on-map div:hover {
-    border-color: var(--lgs-card-on-map-hover-border-color);
-    background: var(--lgs-card-on-map-hover-bg-color);
-}
-
-.buttons-bar-on-map sl-icon svg {
-    width: unset;
-    height: var(--lgs-font-size);
 }
 

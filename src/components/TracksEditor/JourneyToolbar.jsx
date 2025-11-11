@@ -7,29 +7,25 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-10-25
+ * Last modified: 2025-10-25
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { FAButton }                                                             from '@Components/FAButton'
-import { ToggleStateIcon }                                                      from '@Components/ToggleStateIcon'
-import { APP_EVENT, CURRENT_JOURNEY, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
-import { JourneySelector }                                                      from '@Editor/journey/JourneySelector'
-import { Utils }                                                                from '@Editor/Utils'
-import {
-    faCrosshairsSimple, faSquarePlus, faXmark,
-}                                                                               from '@fortawesome/pro-regular-svg-icons'
-import { faGripDotsVertical }                                                   from '@fortawesome/pro-solid-svg-icons'
-import {
-    SlButton, SlIcon, SlIconButton, SlTooltip,
-}                                                                               from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                                from '@Utils/FA2SL'
-import React, { useEffect, useRef, useState }                                   from 'react'
-import { sprintf }                                                              from 'sprintf-js'
-import { useSnapshot }                                                          from 'valtio'
+import { FAButton }                                                  from '@Components/FAButton'
+import { ToggleStateIcon }                                           from '@Components/ToggleStateIcon'
+import { CURRENT_JOURNEY, REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
+import { JourneySelector }                                           from '@Editor/journey/JourneySelector'
+import { Utils }                                                     from '@Editor/Utils'
+import { faCrosshairsSimple, faSquarePlus, faXmark }                 from '@fortawesome/pro-regular-svg-icons'
+import { faGripDotsVertical }                                        from '@fortawesome/pro-solid-svg-icons'
+import { SlButton, SlIcon, SlIconButton, SlTooltip }                 from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                     from '@Utils/FA2SL'
+import React, { useEffect, useRef, useState }                        from 'react'
+import { sprintf }                                                   from 'sprintf-js'
+import { useSnapshot }                                               from 'valtio'
 
 /**
  * A toolbar component for managing journey-related actions, such as selecting journeys, toggling visibility, focusing,
@@ -199,76 +195,77 @@ export const JourneyToolbar = (props) => {
             {journeyEditor.list.length > 0 && journeyToolbar.show &&
                 <div className="journey-toolbar lgs-card on-map"
                      ref={_journeyToolbar}>
-                        <SlTooltip hoist content={'Drag me'}>
-                            <SlIcon className="grabber" library="fa"
-                                    name={FA2SL.set(faGripDotsVertical)}/>
-                        </SlTooltip>
+                    <SlTooltip hoist content={'Drag me'}>
+                        <SlIcon className="grabber" library="fa"
+                                name={FA2SL.set(faGripDotsVertical)}/>
+                    </SlTooltip>
 
-                        <JourneySelector onChange={newJourneySelection}
-                                         single="true" size="small" style="card" ref={_journeySelector}/>
+                    <JourneySelector onChange={newJourneySelection}
+                                     single="true" size="small" style="card" ref={_journeySelector}/>
 
-                        <SlTooltip hoist content={'Add a journey'} placement="top">
-                            <SlIconButton library="fa" onClick={journeyLoader} name={FA2SL.set(faSquarePlus)}/>
-                        </SlTooltip>
-                        <>
-                            {editorStore.journey?.visible &&
-                                <>
-                                    {!autoRotate.journey &&
-                                        <SlTooltip
-                                            hoist
-                                            content={
-                                                rotate.running && rotate.target.instanceOf(CURRENT_JOURNEY)
-                                                ? 'Stop rotation'
-                                                : 'Start rotation'
-                                            }
-                                            placement="top"
-                                        >
-                                            <SlButton
-                                                size="small"
-                                                ref={manualRotate}
+                    <SlTooltip hoist content={'Add a journey'} placement="top">
+                        <SlIconButton library="fa" onClick={journeyLoader} name={FA2SL.set(faSquarePlus)}/>
+                    </SlTooltip>
 
-                                                onClick={forceRotate}
-                                                loading={rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)}
-                                            >
-                                                <SlIcon slot="prefix" library="fa"
-                                                        name={FA2SL.set(faCrosshairsSimple)}/>
-                                            </SlButton>
-
-                                        </SlTooltip>
-                                    }
-
+                    <SlTooltip hoist content={textVisibilityJourney} placement="top">
+                        <ToggleStateIcon
+                            onChange={setJourneyVisibility}
+                            initial={editorStore?.journey?.visible}
+                        />
+                    </SlTooltip>
+                    <>
+                        {editorStore.journey?.visible &&
+                            <>
+                                {!autoRotate.journey &&
                                     <SlTooltip
                                         hoist
                                         content={
-                                            rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)
+                                            rotate.running && rotate.target.instanceOf(CURRENT_JOURNEY)
                                             ? 'Stop rotation'
-                                            : 'Focus on journey'
+                                            : 'Start rotation'
                                         }
                                         placement="top"
                                     >
                                         <SlButton
                                             size="small"
-                                            onClick={maybeRotate}
+                                            ref={manualRotate}
+
+                                            onClick={forceRotate}
                                             loading={rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)}
                                         >
-                                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
+                                            <SlIcon slot="prefix" library="fa"
+                                                    name={FA2SL.set(faCrosshairsSimple)}/>
                                         </SlButton>
 
                                     </SlTooltip>
-                                </>
-                            }
-                            <SlTooltip hoist content={textVisibilityJourney} placement="top">
-                                <ToggleStateIcon
-                                    onChange={setJourneyVisibility}
-                                    initial={editorStore?.journey?.visible}
-                                />
-                            </SlTooltip>
+                                }
 
-                            <SlTooltip hoist content="Close" placement="top">
-                                <FAButton className="close-lgs-toolbar" onClick={closeToolbar} icon={faXmark}/>
-                            </SlTooltip>
-                        </>
-                    </div>
+                                <SlTooltip
+                                    hoist
+                                    content={
+                                        rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)
+                                        ? 'Stop rotation'
+                                        : 'Focus on journey'
+                                    }
+                                    placement="top"
+                                >
+                                    <SlButton
+                                        size="small"
+                                        onClick={maybeRotate}
+                                        loading={rotate.running && rotate.target?.instanceOf(CURRENT_JOURNEY)}
+                                    >
+                                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
+                                    </SlButton>
+
+                                </SlTooltip>
+                            </>
+                        }
+
+                        <SlTooltip hoist content="Close" placement="top">
+                            <FAButton className="close-lgs-toolbar" onClick={closeToolbar} icon={faXmark}/>
+                        </SlTooltip>
+                    </>
+                </div>
             }
         </>
     )

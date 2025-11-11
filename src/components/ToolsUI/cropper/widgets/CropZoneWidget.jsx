@@ -7,56 +7,76 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-07
- * Last modified: 2025-10-07
+ * Created on: 2025-11-07
+ * Last modified: 2025-11-07
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { Widget } from '@Components/MainUI/Widget'
-import React, { memo, useMemo } from 'react'
-import { CropZone }             from './CropZone'
+import { Widget } from '@Components/MainUI/widgets/Widget'
+import { CROP_TOOLS_WIDGETS, HOUR } from '@Core/constants'
+import React, { memo, useMemo, useRef }  from 'react'
+import { useSnapshot }                  from 'valtio'
+import { CropZone }                     from './CropZone'
 
 /**
- * CropZoneWidget component for rendering a draggable and resizable crop zone.
- * @param {Object} props - Component properties
- * @param {string} [props.className=''] - Additional CSS class names
- * @param {Function} [props.onDoubleClick] - Handler for double click events
- * @param {React.ReactNode} [props.infoComponent=null] - Custom info component
- * @param {boolean} [props.infoPosition=true] - Show default info position
- * @param {boolean} [props.overlay] - Enable/disable overlay
- * @returns {JSX.Element} The rendered crop zone widget
+ * CropZoneWidget component to display a crop zone in the widget editor
+ * @param {Object} props - Component props
+ * @param {string} [props.className=''] - Additional CSS class for the widget
+ * @param {Function} [props.onDoubleClick] - Handler for double-click events
+ * @param {React.ReactNode} [props.infoComponent=null] - Component to display additional information
+ * @param {boolean} [props.infoPosition=true] - Whether to show the info component at the default position
+ * @param {boolean} [props.overlay=false] - Whether to display an overlay outside the crop zone
+ * @param {Object} props.context - Valtio proxy context containing crop zone configuration
+ * @param {string} props.context.id - Unique identifier for the widget
+ * @param {boolean} [props.context.forceEven=false] - Whether to force even dimensions for the crop zone
+ * @returns {JSX.Element} The crop zone widget
  */
-export const CropZoneWidget = memo(function CropZoneWidget({
-                                                               className = '',
-                                                               onDoubleClick,
-                                                               infoComponent = null,
-                                                               infoPosition = true,
-                                                               overlay,
-                                                               id,
-                                                           }) {
-    // Memoized configuration for DraggableUIWidget
+export const CropZoneWidget = memo(({
+                                        className = '',
+                                        onDoubleClick,
+                                        infoComponent = null,
+                                        infoPosition = true,
+                                        overlay = false,
+                                        context,
+                                    }) => {
+    // Reference to the CropZone DOM element
+    const _cropZone = useRef(null)
+
+    // Snapshot of the Valtio context
+    const $context = useSnapshot(context)
+
+    // Memoized configuration for the Widget component
     const config = useMemo(() => ({
         left:             '20%',
         top:              '30%',
-        attachTo:         'top-left',
+        attachTo:         'center',
         isCropper:        true,
         resizable:        true,
         draggable:        true,
-        outsideOverlay:   overlay ?? false,
-        containerPadding: (lgs?.gutter?.xs ?? 8),
+        outsideOverlay:   overlay,
+        margin: lgs?.gutter?.xs ?? 8,
         resizeFromCenter: true,
-        id:        id,
-        forceEven: lgs?.stores?.ui?.video?.cropper?.forceEven ?? false,
-    }), [overlay, id])
+        id:               $context.id,
+        forceEven:        $context.forceEven ?? false,
+        persist:   true,
+        transient: true,
+        ttl:       HOUR,
+        group: CROP_TOOLS_WIDGETS,
+    }), [$context.id, $context.forceEven, overlay])
 
+    // Render the widget with the CropZone component
     return (
         <Widget isVisible={true} config={config} className={className}>
-            <CropZone onDoubleClick={onDoubleClick}
-                      infoComponent={infoComponent}
-                      infoPosition={infoPosition}
-                      overlay={overlay}/>
+            <CropZone
+                onDoubleClick={onDoubleClick}
+                infoComponent={infoComponent}
+                infoPosition={infoPosition}
+                overlay={overlay}
+                ref={_cropZone}
+                context={context}
+            />
         </Widget>
     )
 })

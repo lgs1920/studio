@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-07
- * Last modified: 2025-09-07
+ * Created on: 2025-11-08
+ * Last modified: 2025-11-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -74,7 +74,6 @@ export const ui = {
         paused:          false,
         finalizing: false,
         size:       0,
-        step:    0,
         toolbarPosition: {},
         cropper: {
             ratioEditor: true,
@@ -82,6 +81,10 @@ export const ui = {
             resizable:   true,
             qualityEditor: true,
             fpsEditor: true,
+            widgetEditor: false,
+            cropZone:  null,
+            forceEven: true,
+            id:        'video-crop-zone',
         },
         conversion: {
             videoUrl:          null,
@@ -98,9 +101,19 @@ export const ui = {
             progress:          {
                 percentage: 0,
                 time:       0,
+
             },
             errorMessage:      null,
         },
+    },
+
+    widget: {
+        current: {
+            id:                    null,
+            canDisplayContextMenu: false,
+            position:              {x: 0, y: 0},
+        },
+        list:    new proxyMap(),
     },
 
     appUpdate: {

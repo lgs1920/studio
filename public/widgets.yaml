@@ -1,0 +1,22 @@
+multi-purpose-widgets:
+  id: "multi-purpose-widgets"
+  name: "Multi-purpose Widgets"
+  description: "A collection of widgets"
+  icon: "puzzle-piece"
+  widgets:
+    compass-widget:
+      id: "compass-widget"
+      name: "Compass"
+      description: "A compass widget"
+      icon: "compass"
+      mandatory: false
+      max: 3
+      component: "CompassWidget"
+    credits-widget:
+      id: "credits-widget"
+      name: "Credits"
+      description: "A credits widget"
+      icon: "user"
+      mandatory: true
+      component: "CreditsWidget"
+

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-16
- * Last modified: 2025-09-16
+ * Created on: 2025-11-06
+ * Last modified: 2025-11-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,7 @@
 
 import {
     BUILD, CONFIGURATION, COUNTRIES, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, LGS_CONTEXT_MENU_HOOK, MILLIS,
-    platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE,
+    platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE, WIDGETS,
 }                           from '@Core/constants'
 import { ElevationServer }  from '@Core/Elevation/ElevationServer'
 import { Settings }         from '@Core/settings/Settings'
@@ -159,6 +159,23 @@ export class AppUtils {
             .then(res => res.text())
             .then(text => YAML.parse(text),
             )
+
+        // Read Widgets
+        const raw = await fetch(WIDGETS, {cache: 'no-store'})
+            .then(res => res.text())
+            .then(text => YAML.parse(text),
+            )
+        __.widgets = new Map()
+
+        for (const [groupKey, groupValue] of Object.entries(raw)) {
+            const widgets = new Map()
+            for (const [widgetKey, widgetValue] of Object.entries(groupValue.widgets)) {
+                widgets.set(widgetKey, widgetValue)
+            }
+            const groupCopy = {...groupValue, widgets: widgets}
+            __.widgets.set(groupKey, groupCopy)
+        }
+
 
         // Get the setting sections ID
         lgs.settingSections = Object.keys(settings)
@@ -633,5 +650,30 @@ export class AppUtils {
         return true
     }
 
+    /**
+     * Clamps a value between a min and max range.
+     * @param {number} value - The value to clamp.
+     * @param {number} min - Minimum allowed value.
+     * @param {number} max - Maximum allowed value.
+     * @returns {number} The clamped value.
+     */
+    static clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
+    /**
+     * Parses a string representing a pixel value and returns a rounded number.
+     * Cleans non-numeric characters (except dot and sign), handles errors,
+     * and applies precise rounding with floating-point error correction.
+     *
+     * @param {string|number} str - The input value (e.g., "12px", "-3.4rem", 15).
+     * @param {number} [decimals=3] - Number of decimals for rounding.
+     * @returns {number|null} The rounded number or null if invalid.
+     */
+    static parsePx = (str, decimals = 3) => {
+        const num = parseFloat(String(str).replace(/[^\d.-]/g, ''))
+        if (isNaN(num)) {
+            return null
+        }
+        // Round with floating-point error compensation (Number.EPSILON)
+        return Math.round((num + Number.EPSILON) * 10 ** decimals) / 10 ** decimals
+    }
 }

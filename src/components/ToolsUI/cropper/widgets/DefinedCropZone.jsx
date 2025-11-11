@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-06
- * Last modified: 2025-10-06
+ * Created on: 2025-10-19
+ * Last modified: 2025-10-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,48 +21,48 @@
  *
  ******************************************************************************/
 
-import React, { memo, useEffect, useRef, useState } from 'react'
-import { CropZoneInfo } from './CropZoneInfo'
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { useSnapshot } from 'valtio'
+import { CropZoneInfo }                                          from './CropZoneInfo'
 
 export const DefinedCropZone = memo(function DefinedCropZone({
                                                                  className = '',
                                                                  infoComponent = null,
                                                                  infoPosition = true,
                                                                  overlay,
-                                                                 id,
+                                                                 children,
+                                                                 context,
                                                              }) {
-    const _zoneRef = useRef(null)
+    const _definedCropZone = useRef(null)
+    const $video = lgs.stores.ui.video
+    const video = useSnapshot($video)
+
     const [crop, setCrop] = useState(() => {
-        const cfg = __.ui.widgetManager.getConfig(id)
-        return cfg?.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0}
+        const config = __.ui.widgetManager.getWidgetConfig(context.id)
+        return config?.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0}
     })
 
+    // Store the crop zone DOM element in Valtio store when mounted
     useEffect(() => {
-        const sync = () => {
-            const cfg = __.ui.widgetManager.getConfig(id)
-            if (!cfg?.cropDimensions) {
-                return
-            }
-            setCrop({...cfg.cropDimensions})
+        if (_definedCropZone.current) {
+            context.cropZone = _definedCropZone.current.id
+            context.resizable = $video.resizable
+            context.widgetEditor = true
         }
-        // initial
-        sync()
-        // live updates
-        const onUpdate = (e) => {
-            if (!e?.detail || e.detail.id === id) {
-                sync()
+        return () => {
+            if (context) {
+                context.cropZone = null
+                // we need widgetEditor later...
             }
         }
-        document.addEventListener('onCropUpdate', onUpdate)
-        return () => document.removeEventListener('onCropUpdate', onUpdate)
-    }, [id])
+    }, [_definedCropZone.current, $video.resizable])
 
     // Apply DOM styles for the static crop box
     useEffect(() => {
-        if (!_zoneRef.current) {
+        if (!_definedCropZone.current) {
             return
         }
-        const el = _zoneRef.current
+        const el = _definedCropZone.current
         el.style.left = `${crop.left}px`
         el.style.top = `${crop.top}px`
         el.style.width = `${crop.width}px`
@@ -77,25 +77,26 @@ export const DefinedCropZone = memo(function DefinedCropZone({
             return
         }
         try {
-            const cfg = __.ui.widgetManager.getConfig(id)
-            if (cfg) {
-                cfg.outsideOverlay = overlay
-                __.ui.widgetManager.applyCropToOverlay({...cfg, cropDimensions: crop})
+            const config = __.ui.widgetManager.getWidgetConfig(context.id)
+            if (config) {
+                config.outsideOverlay = overlay
+                __.ui.widgetManager.applyCropToOverlay({...config, cropDimensions: crop})
             }
         }
         catch (_) {
         }
-    }, [overlay, id, crop])
+    }, [])
 
     return (
         <div
-            ref={_zoneRef}
+            ref={_definedCropZone}
             className={`crop-zone defined ${className}`}
             aria-label="defined-crop-zone"
+            id={context.id}
         >
             {infoPosition && (
                 <div className="crop-info lgs-one-line-card on-map small">
-                    <CropZoneInfo id={id}/>
+                    <CropZoneInfo id={context.id}/>
                 </div>
             )}
 
@@ -104,6 +105,9 @@ export const DefinedCropZone = memo(function DefinedCropZone({
                     {infoComponent}
                 </div>
             )}
+
+            {children}
+
         </div>
     )
 })

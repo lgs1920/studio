@@ -7,30 +7,43 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-30
- * Last modified: 2025-09-30
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 /**
- * VideoDownloadAndShareDialog - Component for previewing and downloading recorded videos.
- * @returns {JSX.Element} Dialog with video preview and download/share options.
+ * @file VideoDownloadAndShareDialog.jsx
+ * @description Optimized component for previewing and downloading recorded videos.
+ * Prevents errors on videoData access by using Valtio snapshot safely.
+ * Uses Shoelace web components and FontAwesome icons.
+ * All refs prefixed with _, no default export, no semicolons.
  */
-import { LGSScrollbars }                            from '@Components/MainUI/LGSScrollbars'
+
+import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
+import { VideoRecorder } from '@Core/ui/video/recorder/VideoRecorder'
 import {
-    VideoRecorder,
-} from '@Core/ui/video/recorder/VideoRecorder'
-import {
-    faClock, faDownload, faFile, faFilm, faFloppyDisk, faShareAlt, faXmark,
+    faCropAlt,
+    faDownload,
+    faFile,
+    faFilm,
+    faFloppyDisk,
+    faHourglass,
+    faShareAlt,
+    faXmark,
 } from '@fortawesome/pro-regular-svg-icons'
 import {
-    SlButton, SlDialog, SlIcon, SlInput, SlTooltip,
+    SlButton,
+    SlDialog,
+    SlIcon,
+    SlInput,
+    SlTooltip,
 } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                    from '@Utils/FA2SL'
+import { FA2SL }         from '@Utils/FA2SL'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useSnapshot }                              from 'valtio'
+import { useSnapshot }   from 'valtio'
 import './style.css'
 
 export const VideoDownloadAndShareDialog = () => {
@@ -38,26 +51,67 @@ export const VideoDownloadAndShareDialog = () => {
     const video = useSnapshot($video)
     const [dialogOpen, setDialogOpen] = useState(false)
     const [filename, setFilename] = useState('')
-    const [canDownloadAndShare, setCanDownloadAndShare] = useState(true)
+    const [canDownloadAndShare, setCanDownloadAndShare] = useState(false)
     const [canShare] = useState(!!(navigator.canShare && navigator.canShare({files: []})))
     const _mainVideo = useRef(null)
     const _blurredVideo = useRef(null)
-    const _videoBlob = useRef({})
+    const _videoBlob = useRef({blob: null, url: null, filename: ''})
 
     /**
-     * Initialize and handle stop recording event.
+     * Safely accesses videoData from recorder with fallback.
+     * @returns {Object} Video stats with default values
+     */
+    const getVideoData = useCallback(() => {
+        const fallback = {
+            size:       0,
+            duration:   0,
+            fps:        0,
+            dimensions: {width: 0, height: 0},
+            quality:    {name: 'Unknown'},
+            ratio:      {label: 'Unknown'},
+        }
+
+        try {
+            const data = __.recorder?.videoData
+            if (!data || typeof data !== 'object') {
+                return fallback
+            }
+
+            return {
+                size:       Number(data.size) || 0,
+                duration:   Number(data.duration) || 0,
+                fps:        Number(data.fps) || 0,
+                dimensions: {
+                    width:  Number(data.dimensions?.width) || 0,
+                    height: Number(data.dimensions?.height) || 0,
+                },
+                quality:    data.quality || {name: 'Unknown'},
+                ratio:      data.ratio || {label: 'Unknown'},
+            }
+        }
+        catch {
+            return fallback
+        }
+    }, [])
+
+    /**
+     * Initialize stop recording handler with blob validation.
      */
     useEffect(() => {
-        const handleStopRecording = ({detail: {blob}}) => {
+        const handleStopRecording = (event) => {
+            const blob = event.detail?.blob
             if (!(blob instanceof Blob) || blob.size === 0) {
-                console.error(`Invalid video blob (type: ${blob?.type}, size: ${blob?.size})`)
+                console.error('Invalid video blob received')
                 return
             }
-            const url = URL.createObjectURL(blob)
-            const recorderFilename = __.recorder.filename({})
 
-            _videoBlob.current = {blob, filename: recorderFilename, url}
-            setFilename(_videoBlob.current.filename)
+            const url = URL.createObjectURL(blob)
+            const recorderFilename = __.recorder.filename({}) || 'video'
+            const safeFilename = recorderFilename.replace(/[^a-zA-Z0-9_-]/g, '_')
+
+            _videoBlob.current = {blob, url, filename: safeFilename}
+            setFilename(safeFilename)
+            setCanDownloadAndShare(true)
             setDialogOpen(true)
         }
 
@@ -72,9 +126,13 @@ export const VideoDownloadAndShareDialog = () => {
     }, [])
 
     /**
-     * Synchronize blurred video with main video and start playback.
+     * Sync blurred video with main video playback.
      */
     useEffect(() => {
+        if (!dialogOpen || !_mainVideo.current || !_blurredVideo.current) {
+            return
+        }
+
         const mainVideo = _mainVideo.current
         const blurredVideo = _blurredVideo.current
 
@@ -84,42 +142,29 @@ export const VideoDownloadAndShareDialog = () => {
                     blurredVideo.currentTime = mainVideo.currentTime
                 }
             }
-            catch (e) {
-                // no-op: Safari may throw during scrubbing
+            catch {
+                // Ignore sync errors during seek
             }
         }
 
-        const handlePlay = () => {
-            blurredVideo.play().catch(error => console.error(`Error playing blurred video: ${error.message}`))
-            syncTime()
-        }
-
-        const handlePause = () => {
-            blurredVideo.pause()
-        }
-
+        const handlePlay = () => blurredVideo.play().catch(() => {
+        })
+        const handlePause = () => blurredVideo.pause()
         const handleRateChange = () => {
             blurredVideo.playbackRate = mainVideo.playbackRate
         }
-
         const handleLoadedMeta = () => {
             blurredVideo.muted = true
             blurredVideo.playbackRate = mainVideo.playbackRate
             syncTime()
         }
 
-        const handleSeeking = () => {
-            syncTime()
-        }
-
-        mainVideo.play().catch(error => console.error(`Error playing main video: ${error.message}`))
-
         mainVideo.addEventListener('play', handlePlay)
         mainVideo.addEventListener('pause', handlePause)
         mainVideo.addEventListener('timeupdate', syncTime)
         mainVideo.addEventListener('ratechange', handleRateChange)
         mainVideo.addEventListener('loadedmetadata', handleLoadedMeta)
-        mainVideo.addEventListener('seeking', handleSeeking)
+        mainVideo.addEventListener('seeking', syncTime)
 
         return () => {
             mainVideo.removeEventListener('play', handlePlay)
@@ -127,29 +172,32 @@ export const VideoDownloadAndShareDialog = () => {
             mainVideo.removeEventListener('timeupdate', syncTime)
             mainVideo.removeEventListener('ratechange', handleRateChange)
             mainVideo.removeEventListener('loadedmetadata', handleLoadedMeta)
-            mainVideo.removeEventListener('seeking', handleSeeking)
+            mainVideo.removeEventListener('seeking', syncTime)
         }
+    }, [dialogOpen])
+
+    /**
+     * Handle filename input with sanitization.
+     */
+    const handleFilenameChange = useCallback((event) => {
+        const value = event.target?.value || ''
+        const sanitized = value.replace(/[^a-zA-Z0-9_\-\s]/g, '')
+        _videoBlob.current.filename = sanitized
+        const canProceed = sanitized.length > 0
+        setCanDownloadAndShare(canProceed)
+        setFilename(sanitized)
     }, [])
 
     /**
-     * Handle filename input changes.
-     */
-    const handleFilenameChange = (event) => {
-        _videoBlob.current.filename = event.target?.value
-        setCanDownloadAndShare(_videoBlob.current.filename.length > 0)
-        setFilename(_videoBlob.current.filename)
-    }
-
-    /**
-     * Handle share action.
+     * Handle share action with Web Share API fallback.
      */
     const handleShare = useCallback(async () => {
-        try {
-            const blob = _videoBlob.current?.blob
-            const filename = `${(_videoBlob.current?.filename).sanitize()}.${lgs.settings.ui.video.format}`
-            const file = new File([blob], filename, {type: blob.type || 'video/mp4'})
+        const blob = _videoBlob.current.blob
+        const filename = `${_videoBlob.current.filename}.${lgs.settings.ui.video.format}`
+        const file = new File([blob], filename, {type: blob.type || 'video/mp4'})
 
-            if (blob && navigator.canShare && navigator.canShare({files: [file]})) {
+        try {
+            if (navigator.canShare?.({files: [file]})) {
                 await navigator.share({
                                           title: 'LGS1920 Studio Video',
                                           text:  'Check out my video created with LGS1920 Studio!',
@@ -157,63 +205,55 @@ export const VideoDownloadAndShareDialog = () => {
                                       })
                 return
             }
-
             if (navigator.share) {
                 await navigator.share({
                                           title: 'LGS1920 Studio Video',
-                                          text:  'Check out my video created with LGS1920 Studio!',
-                                          url: _videoBlob.current.url || '',
+                                          text: 'Check out my video created with LGS1920 Studio!',
+                                          url:  _videoBlob.current.url,
                                       })
-            }
-            else {
-                console.error('Web Share API not supported')
             }
         }
         catch (error) {
-            console.error(`Error during share: ${error.message}`)
+            console.error('Share failed:', error.message)
         }
     }, [])
 
     /**
-     * Handle save action with download.
+     * Handle download via recorder API.
      */
-    const handleDownload = async () => {
-        const blob = _videoBlob.current?.blob
-        if (!(blob instanceof Blob) || blob.size === 0) {
-            console.error('Invalid video blob')
+    const handleDownload = useCallback(async () => {
+        const blob = _videoBlob.current.blob
+        if (!blob || blob.size === 0) {
             return
         }
 
         try {
             await __.recorder.download({
                                            filename: `${_videoBlob.current.filename}.${lgs.settings.ui.video.format}`,
-                                           type:     'local-filesystem',
+                                           type: 'local-filesystem',
                                        })
         }
         catch (error) {
-            console.error(`Error during download: ${error.message}`)
+            console.error('Download failed:', error.message)
         }
-    }
+    }, [])
 
     /**
-     * Handle cancel action.
+     * Handle cancel and cleanup.
      */
-    const handleCancel = () => {
+    const handleCancel = useCallback(() => {
         setDialogOpen(false)
         if (_videoBlob.current.url) {
-            try {
-                URL.revokeObjectURL(_videoBlob.current.url)
-            }
-            catch {
-            }
+            URL.revokeObjectURL(_videoBlob.current.url)
         }
-        _videoBlob.current = {}
+        _videoBlob.current = {blob: null, url: null, filename: ''}
         $video.editing = false
-    }
-
+        setCanDownloadAndShare(false)
+        setFilename('')
+    }, [$video])
 
     /**
-     * Handle dialog close event to prevent closing via ESC or overlay.
+     * Prevent dialog close except via close button.
      */
     const handleDialogClose = useCallback((event) => {
         if (event.detail?.source === 'close-button') {
@@ -224,6 +264,8 @@ export const VideoDownloadAndShareDialog = () => {
         }
     }, [handleCancel])
 
+    const videoData = getVideoData()
+
     return (
         <SlDialog
             id="video-preview-dialog"
@@ -233,9 +275,9 @@ export const VideoDownloadAndShareDialog = () => {
         >
             <div slot="label">
                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faFilm)}/>
-                {`Download ${__.app.canShare() ? 'and Share ' : ''}your video`}
+                Download {__.app.canShare() ? 'and Share ' : ''}your video
             </div>
-            <div></div>
+
             <div className="video-container">
                 <video
                     ref={_mainVideo}
@@ -244,6 +286,7 @@ export const VideoDownloadAndShareDialog = () => {
                     autoPlay
                     className="main-video"
                 />
+
                 <div className="blurred-video-wrapper">
                     <video
                         ref={_blurredVideo}
@@ -253,54 +296,65 @@ export const VideoDownloadAndShareDialog = () => {
                         autoPlay
                     />
                 </div>
-            </div>
-                <div className="video-info">
+
+                <div className="video-info lgs-card on-map">
                     <div>
-
-                        <SlInput
-                            size="small"
-                            name="video-file-name"
-                            onSlInput={handleFilenameChange}
-                            value={filename}
-                        >
-                            <SlIcon library="fa" slot="prefix" name={FA2SL.set(faFloppyDisk)}/>
-                            <span slot="suffix">{`.${lgs.settings.ui.video.format}`}</span></SlInput>
+                        <SlIcon library="fa" name={FA2SL.set(faCropAlt)}/>
+                        {videoData.ratio.label} - {videoData.dimensions.width}x{videoData.dimensions.height}
                     </div>
-
                     <div>
-
-                        <span><SlIcon library="fa"
-                                      name={FA2SL.set(faFile)}/>{__.convert(__.recorder.size).toBytesUnit()}</span>
-
-                        <span><SlIcon library="fa"
-                                      name={FA2SL.set(faClock)}/>{__.convert(__.recorder.duration).toTime()}</span>
+                        <SlIcon library="fa" name={FA2SL.set(faFile)}/>
+                        {__.convert(videoData.size).toBytesUnit()}
                     </div>
+                    <div>
+                        <SlIcon library="fa" name={FA2SL.set(faHourglass)}/>
+                        {__.convert(videoData.duration).toTime()}
+                    </div>
+                    <div>FPS: {videoData.fps}</div>
+                    <div>{videoData.quality.name}</div>
                 </div>
+            </div>
+
+            <div>
+                <SlInput
+                    size="small"
+                    name="video-file-name"
+                    onSlInput={handleFilenameChange}
+                    value={filename}
+                    label={'File name'}
+                >
+                    <span slot="suffix">.{lgs.settings.ui.video.format}</span>
+                </SlInput>
+            </div>
+
             <div slot="footer" id="video-preview-dialog-footer">
                 <SlTooltip content="Cancel">
                     <SlButton onClick={handleCancel}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}/>
-                        {'Close'}
+                        Close
                     </SlButton>
                 </SlTooltip>
+
                 <div>
-                {__.app.canShare() &&
-                    <SlTooltip content="Share your video">
-                        <SlButton disabled={!canDownloadAndShare} onClick={handleShare}>
-                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faShareAlt)}/>
-                            {`Share`}
-                            {canShare &&
+                    {__.app.canShare() && (
+                        <SlTooltip content="Share your video">
+                            <SlButton disabled={!canDownloadAndShare} onClick={handleShare}>
                                 <SlIcon slot="prefix" library="fa" name={FA2SL.set(faShareAlt)}/>
-                            }
+                                Share
+                            </SlButton>
+                        </SlTooltip>
+                    )}
+
+                    <SlTooltip content="Save your video">
+                        <SlButton
+                            variant="primary"
+                            onClick={handleDownload}
+                            disabled={!canDownloadAndShare}
+                        >
+                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDownload)}/>
+                            Download
                         </SlButton>
                     </SlTooltip>
-                }
-                <SlTooltip content="Save your video">
-                    <SlButton variant="primary" onClick={handleDownload} disabled={!canDownloadAndShare}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faDownload)}/>
-                        {'Download'}
-                    </SlButton>
-                </SlTooltip>
                 </div>
             </div>
         </SlDialog>

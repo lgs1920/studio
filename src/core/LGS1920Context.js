@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-05
- * Last modified: 2025-10-05
+ * Created on: 2025-11-09
+ * Last modified: 2025-11-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,7 @@
 
 import {
     APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEYS_STORE, ORIGIN_STORE,
-    platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE,
+    platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE, WIDGETS_STORE,
 }                            from '@Core/constants'
 import { StoresManager }     from '@Core/stores/StoresManager'
 import { AppToolsManager }   from '@Core/ui/AppToolsManager'
@@ -26,6 +26,7 @@ import { Geocoder }          from '@Core/ui/Geocoder'
 import { MenuManager }       from '@Core/ui/MenuManager'
 import { POIManager }        from '@Core/ui/POIManager'
 import { VideoRecorder }     from '@Core/ui/video/recorder/VideoRecorder'
+import { WidgetCache }       from '@Core/ui/widget-manager/WidgetCache'
 import { WidgetManager }     from '@Core/ui/widget-manager/WidgetManager'
 import { AppUtils }          from '@Utils/AppUtils'
 import { MouseUtils }        from '@Utils/cesium/MouseUtils'
@@ -207,9 +208,15 @@ export class LGS1920Context {
         this.db = {
             lgs1920:  new LocalDB({
                                       name:             `${APP_KEY}${dbPrefix}`,
-                                      stores:           [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE],
+                                      stores:  [
+                                          JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE,
+                                          {
+                                              name:    WIDGETS_STORE,
+                                              indexes: [{name: 'group', keyPath: 'data.group'}],
+                                          },
+                                      ],
                                       manageTransients: false,
-                                      version:          4, // integer
+                                      version: 21, // integer
                                   }),
             settings: new LocalDB({
                                       name:    `settings-${APP_KEY}${dbPrefix}`,
@@ -224,6 +231,8 @@ export class LGS1920Context {
                                       version: 1, // integer
                                   }),
         }
+
+        //   this.db.lgs1920.forceRebuildStore(WIDGETS_STORE)
     }
 
     /**
@@ -375,6 +384,7 @@ export class LGS1920Context {
         __.ui.sceneManager = new SceneManager()
         __.ui.menuManager = new MenuManager()
         __.ui.widgetManager = new WidgetManager()
+        __.ui.widgetCache = new WidgetCache()
 
         __.ui.poiManager = new POIManager()
         __.ui.geocoder = new Geocoder()

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-11-11
+ * Last modified: 2025-11-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -175,6 +175,9 @@
     --lgs-card-on-map-hover-border-color: var(--lgs-light-color-50);
     --lgs-card-on-map-selected-bg-color: var(--lgs-dark-color);
     --lgs-card-on-map-selected-border-color: var(--lgs-light-color-75);
+    --lgs-card-on-map-disabled-color: var(--lgs-light-color-25);
+    --lgs-card-on-map-disabled-bg-color: var(--lgs-dark-color-15);
+    --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-15);
 
     --lgs-track-color-active: var(--lgs-dark-ui-secondary-color);
     --lgs-track-color-inactive: var(--sl-color-gray-200);
@@ -821,6 +824,11 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
     pointer-events: auto;
 }
 
+.lgs-context-menu.widget-context-menu {
+    position: absolute;
+    z-index: calc(var(--lgs-tools-ui-zindex));
+}
+
 :root {
     --lgs-hover-context-menu-bg-color: var(--lgs-card-on-map-hover-bg-color)
 }
@@ -1163,15 +1171,23 @@ h3 {
     width: 100%;
     height: 100%;
     cursor: grabbing !important;
-    pointer-events: auto;
+    pointer-events: none;
     background: transparent;
+    /*background: var(--lgs-second-color-90)*/
 }
 
+.lgs-visual-widget {
+    margin: 0 !important
+}
+
+.lgs-visual-widget.lgs-widget-inner-overlay.no-propagation {
+    pointer-events: auto !important;
+}
 
 .dragging .lgs-widget-inner-overlay {
     display: block;
     cursor: grabbing !important;
-    pointer-events: none;
+    pointer-events: auto;
 }
 
 

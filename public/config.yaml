@@ -40,10 +40,33 @@ videoFormats:
     locked: true
     orientation: "square"
     description: "Instagram square posts"
-  - label: "Free"
+  - label: "4x5"
+    value: "4x5"
+    locked: true
+    aspectRatio: 1.25
+    visibility: [ "tablet","desktop","mobile-portrait" ]
+    orientation: "portrait"
+    description: "Instagram feed"
+  - label: "Standard Def."
     value: "4x3"
+    locked: true
     aspectRatio: 1.3333
-    locked: false
     orientation: "paysage"
+    visibility: [ "tablet","desktop","mobile-landscape" ]
+    description: "Old video"
+  - label: "Free"
+    value: "0x0"
+    locked: false
+    aspectRatio: 0
+    orientation: "paysage"
+    visibility: [ "tablet","desktop","mobile" ]
     description: "Define your own"
-    visibility: [ "tablet","desktop" ]
+
+widgetRatio:
+  label: "Widget ratio"
+  value: "1x1"
+  locked: true
+  aspectRatio: 1.0
+  orientation: "paysage"
+  visibility: [ "tablet","desktop","mobile" ]
+  description: "Widget Internal ratio"

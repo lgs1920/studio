@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-09
- * Last modified: 2025-10-09
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,9 +18,9 @@
 import { VideoRecorderWidget } from '@Components/MainUI/video/toolbox/VideoRecorderWidget'
 import { VideoSettingsInfo }   from '@Components/MainUI/video/VideoSettingsInfo'
 import { CropOverlay }         from '@Components/ToolsUI/cropper/CropOverlay'
-import { DefinedCropZone }     from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
-import { VIDEO_CROP_ZONE }                                         from '@Core/constants'
-import classNames                                                  from 'classnames'
+import { DefinedCropZone }                                                    from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
+import { CROP_TOOLS_WIDGETS, VIDEO_CROP_ZONE, VIDEO_TOOLS_WIDGETS } from '@Core/constants'
+import classNames                                                             from 'classnames'
 import React, { forwardRef, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                             from 'valtio'
 
@@ -29,10 +29,14 @@ export const VideoRecordingScreenArea = () => {
     const video = useSnapshot($video)
     const _cropZone = useRef(null)
     const [crop, setCrop] = useState({x: 0, y: 0, width: 0, height: 0})
-
+    const [widget, setWidget] = useState(null)
     useEffect(() => {
-        const widget = __.ui.widgetManager.getConfig(VIDEO_CROP_ZONE)
-        setCrop(widget.cropDimensions)
+        setWidget(__.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE))
+        setCrop(__.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE).cropDimensions)
+        return () => {
+            __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGETS, false)
+            __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, false)
+        }
     }, [])
 
     useEffect(() => {
@@ -68,10 +72,10 @@ export const VideoRecordingScreenArea = () => {
 
     return (
         <>
-            <CropOverlay style={overlayStyle}/>
-            <VideoRecorderWidget/>
+            <CropOverlay style={overlayStyle} className={'video-recording-in-progress'}/>
+            <VideoRecorderWidget id="video-recorder-widget"/>
             <DefinedCropZone
-                id={VIDEO_CROP_ZONE}
+                context={$video.cropper}
                 className={classNames('video-recording-in-progress', {finalizing: video.finalizing})}
                 infoComponent={<VideoSettingsInfo/>}
                 ref={_cropZone}

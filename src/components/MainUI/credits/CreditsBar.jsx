@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-19
- * Last modified: 2025-08-19
+ * Created on: 2025-10-29
+ * Last modified: 2025-10-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -56,7 +56,7 @@ export const CreditsBar = () => {
     const Credit = memo(({type, provider}) => {
         const credits = () => {
             const layer = __.layersAndTerrainManager.getEntityProxy(lgs.settings.layers[type])
-            return `${type} : ${layer?.credits ?? provider.credits ?? `credits ${provider.name}`}`
+            return `${layer?.credits ?? provider.credits ?? `credits ${provider.name}`}`
         };
 
         return (
@@ -94,7 +94,7 @@ export const CreditsBar = () => {
         // Remove duplicate providers
         const used = new Set()
         Object.keys(tmp).forEach((key) => {
-            if (tmp[key] && !used.has(tmp[key].name)) {
+            if (tmp[key] && tmp[key].id !== 'cesium' && !used.has(tmp[key].name)) {
                 used.add(tmp[key].name)
                 $providers[key] = tmp[key]
             }
@@ -124,11 +124,11 @@ export const CreditsBar = () => {
                 <img src="/assets/images/logo-lgs1920.png" alt="LGS1920 Logo"/>
             </div>
             <div className="provider-credits lgs-credits lgs-one-line-card on-map">
-                {providers.terrain && <><Credit id="terrain-credits" type={TERRAIN_ENTITY}
-                                                provider={providers.terrain}/>!</>}
-                {providers.overlay && <><Credit id="overlay-credits" type={OVERLAY_ENTITY}
-                                                provider={providers.overlay}/></>}
-                {providers.base && <><Credit id="layer-credits" type={BASE_ENTITY} provider={providers.base}/></>}
+                {providers.terrain && <Credit id="terrain-credits" type={TERRAIN_ENTITY}
+                                              provider={providers.terrain}/>}
+                {providers.overlay && <Credit id="overlay-credits" type={OVERLAY_ENTITY}
+                                              provider={providers.overlay}/>}
+                {providers.base && <Credit id="layer-credits" type={BASE_ENTITY} provider={providers.base}/>}
             </div>
             <div className="cesium-credits lgs-credits lgs-one-line-card on-map">
                 <a href="https://www.cesium.com/" target="_blank">

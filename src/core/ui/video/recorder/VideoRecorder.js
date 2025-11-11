@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-30
- * Last modified: 2025-09-30
+ * Created on: 2025-11-04
+ * Last modified: 2025-11-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -273,6 +273,20 @@ export class VideoRecorder extends EventTarget {
     #video = null
 
     /**
+     * Video dimensions
+     * @private
+     * @type {width,height}
+     */
+    #dimensions
+
+    /**
+     * Video dimensions
+     * @private
+     * @type {width,height}
+     */
+    #ratio
+
+    /**
      * Initializes the singleton instance and sets default values.
      */
     constructor() {
@@ -287,20 +301,26 @@ export class VideoRecorder extends EventTarget {
     }
 
     /**
-     * Gets the recorded size in bytes.
-     * @returns {number} Total bytes recorded.
+     * Gets the recorded video information.
+     * @returns {Object} Recorded video stats
+     * @property {number} size Total bytes recorded
+     * @property {number} duration Duration in seconds
+     * @property {number} fps Frames per second
+     * @property {string} quality Encoding quality level
+     * @property {Object} metadata Additional metadata
      */
-    get size() {
-        return this.#size
+    get videoData() {
+        return {
+            size:       this.#size,
+            duration:   this.#duration,
+            fps:        this.#fps,
+            quality:    this.#quality,
+            metadata:   this.#metadata,
+            dimensions: this.#dimensions,
+            ratio:      this.#ratio,
+        }
     }
 
-    /**
-     * Gets the recording duration in milliseconds, excluding paused time.
-     * @returns {number} Duration in milliseconds.
-     */
-    get duration() {
-        return this.#duration
-    }
 
     /**
      * Initializes recording parameters and creates a default canvas if no stream is set.
@@ -320,6 +340,8 @@ export class VideoRecorder extends EventTarget {
                       quality = this.#quality,
                       maxSize = this.#maxSize,
                       metadata = {},
+                      ratio,
+                      dimensions,
                   } = {}) => {
         if (this.isRecording()) {
             throw this.#dispatchError('Cannot initialize while recording')
@@ -332,6 +354,11 @@ export class VideoRecorder extends EventTarget {
         this.#timeslice = timeslice
         this.#quality = VideoRecorder.QUALITY.find(q => q.value === quality) || this.#quality
         this.#metadata = metadata || {date: new Date()}
+        this.#dimensions = {
+            width:  Math.round(dimensions.width),
+            height: Math.round(dimensions.height),
+        }
+        this.#ratio = lgs.configuration.videoFormats.find(f => f.value === ratio)
 
         if (!this.#stream) {
             // Create default canvas if no stream is set
@@ -372,16 +399,22 @@ export class VideoRecorder extends EventTarget {
             throw this.#dispatchError('Cannot change source while recording')
         }
 
-        // Validate canvas clipping parameters
+        // Validate canvas clipping parameters with on p of tolerance (due to some  rounding)
         const dpr = window.devicePixelRatio || 1
         canvases.forEach((canvas, i) => {
-            const canvasWidth = canvas.width * dpr
-            const canvasHeight = canvas.height * dpr
-            const validatedClipWidth = clipWidth ?? canvasWidth
-            const validatedClipHeight = clipHeight ?? canvasHeight
-            if (clipX < 0 || clipY < 0 || validatedClipWidth <= 0 || validatedClipHeight <= 0 ||
-                clipX + validatedClipWidth > canvasWidth || clipY + validatedClipHeight > canvasHeight) {
-                throw this.#dispatchError(`Invalid clipping parameters for canvas ${i}`)
+            const scaledWidth = canvas.width * dpr
+            const scaledHeight = canvas.height * dpr
+            const validWidth = clipWidth * dpr
+            const validHeight = clipHeight * dpr
+            if (
+                clipX < -1 ||
+                clipY < -1 ||
+                validWidth <= 0 ||
+                validHeight <= 0 ||
+                clipX + validWidth > scaledWidth + 1 ||
+                clipY + validHeight > scaledHeight + 1
+            ) {
+                throw new Error(`Invalid clipping parameters for canvas ${i}`)
             }
         })
 

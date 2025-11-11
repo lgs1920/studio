@@ -7,15 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-06
- * Last modified: 2025-10-06
+ * Created on: 2025-11-07
+ * Last modified: 2025-11-07
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { Widget }         from '@Components/MainUI/Widget'
-import { LGS_TOOLBAR } from '@Core/constants'
+import { Widget } from '@Components/MainUI/widgets/Widget'
+import {
+    LGS_TOOLBAR, VIDEO_TOOLS_WIDGETS, MULTI_PURPOSE_WIDGETS, CROP_TOOLS_WIDGETS,
+}                 from '@Core/constants'
 import React, { useMemo } from 'react'
 import { useSnapshot }            from 'valtio'
 import { CropRatioEditorToolbar } from './CropRatioEditorToolbar'
@@ -25,7 +27,7 @@ import { CropRatioEditorToolbar } from './CropRatioEditorToolbar'
  * @component
  * @returns {JSX.Element} Draggable video quality selector UI
  */
-export const CropRatioEditorWidget = ({context}) => {
+export const CropRatioEditorWidget = ({context, id}) => {
     const video = useSnapshot(context)
 
     const config = useMemo(() => {
@@ -35,6 +37,8 @@ export const CropRatioEditorWidget = ({context}) => {
             attachTo: 'right',
             opacity:  lgs.settings.ui.toolbars.opacity,
             type: LGS_TOOLBAR,
+            id: id,
+            group: CROP_TOOLS_WIDGETS,
         }
     }, [])
 
