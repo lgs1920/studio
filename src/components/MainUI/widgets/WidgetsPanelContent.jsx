@@ -14,31 +14,30 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { WIDGETS_CONFIGURATION }             from '@Core/constants'
-import { faBox }                             from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon, SlTooltip }                 from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                             from '@Utils/FA2SL'
-import classNames      from 'classnames'
-import { lazy, useEffect, useRef, useState } from 'react'
-import { useSnapshot } from 'valtio'
+import { WIDGETS_CONFIGURATION }   from '@Core/constants'
+import { faBox }                   from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon, SlTooltip }       from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                   from '@Utils/FA2SL'
+import classNames                  from 'classnames'
+import { lazy, useEffect, useRef } from 'react'
+import { useSnapshot }             from 'valtio'
 
 /**
- * Renders the widget selection panel.
+ * Widget panel that shows available widgets grouped by category.
+ * Lets users add widgets to the map if they haven't reached the limit.
  *
  * @param {Object} props
- * @param {Iterable<string>} props.groups - Group keys to filter from global widget registry.
- * @param {function(string, Object): void} [props.onWidgetSelect] - Callback when a widget is selected.
- * @returns {JSX.Element} The widget panel with grouped entries.
+ * @param {Iterable<string>} props.groups - Group IDs to show in the panel
+ * @returns {JSX.Element}
  */
 export const WidgetsPanelContent = ({groups}) => {
     const _widgetDeckPanel = useRef(null)
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
-    const [maxReached, setMaxReached] = useState(false)
 
     /**
-     * Filters and returns only the groups that exist in the global registry.
-     * @returns {Map<string, Object>} Map of valid group key → group data.
+     * Filters and returns only valid groups from the global registry
+     * @returns {Map<string, Object>}
      */
     const theGroups = () => {
         const subGroups = new Map()
@@ -50,14 +49,90 @@ export const WidgetsPanelContent = ({groups}) => {
         return subGroups
     }
 
+    /**
+     * Checks if a widget has reached its max allowed instances
+     *
+     * @param {string} groupKey - Group ID
+     * @param {string} widgetKey - Widget ID
+     * @returns {boolean}
+     */
+    const isMaxReached = (groupKey, widgetKey) => {
+        const group = __.widgets.get(groupKey)
+        const widgetDef = group?.widgets?.get(widgetKey)
+        const baseKey = widgetKey.split('#')[0]
+
+        const count = [...widget.list.keys()]
+            .map(k => k.split('#')[0])
+            .filter(k => k === baseKey).length
+
+        const max = widgetDef?.max ?? 1
+        return count >= max
+    }
+
+    /**
+     * Loads and renders a widget component if allowed
+     *
+     * @param {string} group - Group ID
+     * @param {string} id - Widget ID
+     * @param {Object} extraProps - Optional props to pass to the widget
+     */
+    const renderMyComponent = async (group, id, extraProps = {}) => {
+        const groupsMap = theGroups()
+        if (!groupsMap.has(group)) {
+            return
+        }
+
+        const key = id.split('#')[0]
+        const theId = (key === id) ? __.ui.widgetManager.defineElementId(group, key) : id
+        const theWidget = groupsMap.get(group).widgets.get(key)
+
+        const count = [...$widget.list.keys()]
+            .map(k => k.split('#')[0])
+            .filter(k => k === key).length
+
+        const max = theWidget?.max ?? 1
+        const canAddWidget = count < max
+
+        if (!__.ui.widgetCache.has(theId) && canAddWidget) {
+            if (theWidget?.component) {
+                const LazyWidget = lazy(() =>
+                                            import(`./list/${theWidget.component}.jsx`)
+                                                .then(module => {
+                                                    if (module.default) {
+                                                        return module
+                                                    }
+                                                    if (module[theWidget.component]) {
+                                                        return {default: module[theWidget.component]}
+                                                    }
+                                                    throw new Error(`Component ${theWidget.component} not found`)
+                                                })
+                                                .catch(() => ({
+                                                    default: () => (
+                                                        <div className="widget-load-error">
+                                                            Failed to load {theWidget.component}
+                                                        </div>
+                                                    )
+                                                }))
+                )
+                __.ui.widgetCache.set(theId, group, LazyWidget)
+                $widget.list.set(theId, extraProps)
+            }
+        }
+    }
+
+    /**
+     * Adds a widget to the map
+     *
+     * @param {string} group - Group ID
+     * @param {string} key - Widget ID
+     */
+    const addWidget = (group, key) => {
+        renderMyComponent(group, key, {})
+    }
 
     useEffect(() => {
         const targetedGroups = theGroups()
 
-        /**
-         * Reads and displays the widgets saved in the base.
-         * @return {Promise<void>}
-         */
         const displayWidgetsInBase = async () => {
             for (const [id, group] of targetedGroups.entries()) {
                 const widgets = await __.ui.widgetManager.getWidgetsByGroup(id)
@@ -68,9 +143,6 @@ export const WidgetsPanelContent = ({groups}) => {
             }
         }
 
-        /**
-         * Displays the mandatory widgets
-         */
         const displayMandatoryWidgets = () => {
             for (const [groupId, group] of targetedGroups.entries()) {
                 for (const [id, widget] of group.widgets) {
@@ -82,91 +154,33 @@ export const WidgetsPanelContent = ({groups}) => {
             }
         }
 
-        // We first show the widgets saved in the base to have their last size and position
         displayWidgetsInBase()
-        // Then we show the mandatory widgets not already shown
         displayMandatoryWidgets()
-
     }, [])
+    const getTooltipText = (groupKey, widgetKey, widgetDef) => {
+        const baseKey = widgetKey.split('#')[0]
 
+        const count = [...widget.list.keys()]
+            .map(k => k.split('#')[0])
+            .filter(k => k === baseKey).length
 
-    /**
-     * Loads a widget component lazily and caches it.
-     * Emits selection via onWidgetSelect.
-     *
-     * @param {string} group - Group key.
-     * @param {string} key - Widget key.
-     * @param {Record<string, any>} [extraProps] - Props to pass to the widget.
-     */
-    const renderMyComponent = async (group, id, extraProps = {}) => {
-        const groupsMap = theGroups()
-        if (!groupsMap.has(group)) {
-            return
+        const max = widgetDef?.max ?? 1
+        const remaining = max - count
+
+        let tooltipText = widgetDef.description || ''
+        if (max > 1 && remaining > 0) {
+            tooltipText += ` (${remaining} remaining)`
         }
-
-        // Load and cache the lazy component only once
-        const key = id.split('#')[0]
-        const theId = (key === id) ? __.ui.widgetManager.defineElementId(group, key) : id
-
-        const theWidget = groupsMap.get(group).widgets.get(key)
-        const count = [...$widget.list.keys()].filter(k => k.startsWith(key)).length
-        const canAddWidget = count < (theWidget?.max ?? 1)
-
-        if (!__.ui.widgetCache.has(theId) && canAddWidget) {
-            if (theWidget?.component) {
-                const LazyWidget = lazy(() =>
-                                            import(`./list/${theWidget.component}.jsx`)
-                                                .then(module => {
-                                                    // Support default export
-                                                    if (module.default) {
-                                                        return module
-                                                    }
-                                                    // Support named export matching component name
-                                                    if (module[theWidget.component]) {
-                                                        return {default: module[theWidget.component]}
-                                                    }
-                                                    throw new Error(`Component ${theWidget.component} not found`)
-                                                })
-                                                .catch(() => ({
-                                                    default: () => (
-                                                        <div className="widget-load-error">
-                                                            Failed to load {theWidget.component}
-                                                        </div>
-                                                    ),
-                                                })),
-                )
-                __.ui.widgetCache.set(theId, group, LazyWidget)
-                $widget.list.set(theId, extraProps)
-
-            }
-        }
-        setMaxReached(!canAddWidget)
+        return tooltipText
     }
 
-    useEffect(() => {
-        if (maxReached) {
-            setMaxReached(false)
-        }
 
-    }, [widget.list])
-
-    // Clean up all widgets and cache on unmount
     useEffect(() => {
         return () => {
             __.ui.widgetCache.clear()
             $widget.list.clear()
         }
     }, [])
-
-    /**
-     * Triggers widget selection with default props.
-     *
-     * @param {string} group - Group key.
-     * @param {string} key - Widget key.
-     */
-    const addWidget = (group, key) => {
-        renderMyComponent(group, key, {})
-    }
 
     return (
         <div className="widget-deck-panel lgs-card on-map" ref={_widgetDeckPanel}>
@@ -175,27 +189,32 @@ export const WidgetsPanelContent = ({groups}) => {
                 <span>Widgets</span>
             </div>
 
-            {/* Render grouped widget entries */}
             {[...theGroups().entries()].map(([groupKey, groupValue]) => (
                 <section key={groupKey} className="widget-group">
-                    {[...groupValue.widgets.entries()].map(([widgetKey, widget]) => (
-                        <SlTooltip key={widgetKey} hoist placement="right" content={widget.description || ''}>
-                            <div
-                                onClick={() => addWidget(groupKey, widgetKey)}
-                                className={classNames(
-                                    'widget-deck-entry', 'small',
-                                    'lgs-one-line-card on-map',
-                                    {'widget-menu-disabled': maxReached},
-                                )}
+                    {[...groupValue.widgets.entries()].map(([widgetKey, widget]) => {
+                        const reached = isMaxReached(groupKey, widgetKey)
+
+                        return (
+                            <SlTooltip key={widgetKey} hoist placement="right"
+                                       content={getTooltipText(groupKey, widgetKey, widget)}
                             >
-                                <SlIcon
-                                    library="fa"
-                                    name={FA2SL.set(WIDGETS_CONFIGURATION.get(widgetKey)?.icon || 'question-circle')}
-                                />
-                                <span className="widget-name">{widget.name}</span>
-                            </div>
-                        </SlTooltip>
-                    ))}
+                                <div
+                                    onClick={() => addWidget(groupKey, widgetKey)}
+                                    className={classNames(
+                                        'widget-deck-entry', 'small',
+                                        'lgs-one-line-card on-map',
+                                        {'widget-menu-disabled': reached},
+                                    )}
+                                >
+                                    <SlIcon
+                                        library="fa"
+                                        name={FA2SL.set(WIDGETS_CONFIGURATION.get(widgetKey)?.icon)}
+                                    />
+                                    <span className="widget-name">{widget.name}</span>
+                                </div>
+                            </SlTooltip>
+                        )
+                    })}
                 </section>
             ))}
         </div>

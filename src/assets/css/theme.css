@@ -175,8 +175,9 @@
     --lgs-card-on-map-hover-border-color: var(--lgs-light-color-50);
     --lgs-card-on-map-selected-bg-color: var(--lgs-dark-color);
     --lgs-card-on-map-selected-border-color: var(--lgs-light-color-75);
+    --lgs-card-on-map-disabled-color: var(--lgs-light-color-25);
     --lgs-card-on-map-disabled-bg-color: var(--lgs-dark-color-15);
-    --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-50);
+    --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-15);
 
     --lgs-track-color-active: var(--lgs-dark-ui-secondary-color);
     --lgs-track-color-inactive: var(--sl-color-gray-200);

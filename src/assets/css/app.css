@@ -449,7 +449,7 @@ main-logo.xlarge {
 
 .widget-menu-disabled {
     cursor: not-allowed !important;
-    color: var(--lgs-card-on-map-disabled-border-color) !important;
+    color: var(--lgs-card-on-map-disabled-color) !important;
     border-color: var(--lgs-card-on-map-disabled-border-color) !important;
     background: transparent !important;
 }
