@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-10
- * Last modified: 2025-11-10
+ * Created on: 2025-11-11
+ * Last modified: 2025-11-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -379,7 +379,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
         requestAnimationFrame(initWidget)
         if (config.type === LGS_VISUAL_WIDGET) {
-            $widget.list.set(config.id, {})
+            const id = __.ui.widgetManager.defineElementId(config.group, config.id)
+            $widget.list.set(id, {})
         }
 
         return () => {

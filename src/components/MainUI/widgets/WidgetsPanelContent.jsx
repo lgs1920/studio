@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-10
- * Last modified: 2025-11-10
+ * Created on: 2025-11-11
+ * Last modified: 2025-11-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,7 +18,9 @@ import { WIDGETS_CONFIGURATION }             from '@Core/constants'
 import { faBox }                             from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon, SlTooltip }                 from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                             from '@Utils/FA2SL'
+import classNames      from 'classnames'
 import { lazy, useEffect, useRef, useState } from 'react'
+import { useSnapshot } from 'valtio'
 
 /**
  * Renders the widget selection panel.
@@ -28,10 +30,11 @@ import { lazy, useEffect, useRef, useState } from 'react'
  * @param {function(string, Object): void} [props.onWidgetSelect] - Callback when a widget is selected.
  * @returns {JSX.Element} The widget panel with grouped entries.
  */
-export const WidgetsPanelContent = ({groups, onWidgetSelect, onWidgetUnselect}) => {
+export const WidgetsPanelContent = ({groups}) => {
     const _widgetDeckPanel = useRef(null)
-    const [selectedKeys, setSelectedKeys] = useState([])
     const $widget = lgs.stores.ui.widget
+    const widget = useSnapshot($widget)
+    const [maxReached, setMaxReached] = useState(false)
 
     /**
      * Filters and returns only the groups that exist in the global registry.
@@ -50,7 +53,6 @@ export const WidgetsPanelContent = ({groups, onWidgetSelect, onWidgetUnselect}) 
 
     useEffect(() => {
         const targetedGroups = theGroups()
-        console.log(targetedGroups)
 
         /**
          * Reads and displays the widgets saved in the base.
@@ -60,8 +62,8 @@ export const WidgetsPanelContent = ({groups, onWidgetSelect, onWidgetUnselect}) 
             for (const [id, group] of targetedGroups.entries()) {
                 const widgets = await __.ui.widgetManager.getWidgetsByGroup(id)
                 for (const widget of widgets) {
+                    renderMyComponent(id, widget.id, {})
                     $widget.list.set(widget.id, widget)
-                    renderMyComponent(id, widget.id)
                 }
             }
         }
@@ -73,8 +75,8 @@ export const WidgetsPanelContent = ({groups, onWidgetSelect, onWidgetUnselect}) 
             for (const [groupId, group] of targetedGroups.entries()) {
                 for (const [id, widget] of group.widgets) {
                     if (!$widget.list.has(id) && widget.mandatory) {
+                        renderMyComponent(groupId, id, {})
                         $widget.list.set(id, widget)
-                        renderMyComponent(groupId, id)
                     }
                 }
             }
@@ -85,10 +87,6 @@ export const WidgetsPanelContent = ({groups, onWidgetSelect, onWidgetUnselect}) 
         // Then we show the mandatory widgets not already shown
         displayMandatoryWidgets()
 
-
-        // return () => {// Global cleanup on panel unmount
-        //     persisted.forEach(key => unmountWidget(key))
-        // }
     }, [])
 
 
@@ -100,43 +98,57 @@ export const WidgetsPanelContent = ({groups, onWidgetSelect, onWidgetUnselect}) 
      * @param {string} key - Widget key.
      * @param {Record<string, any>} [extraProps] - Props to pass to the widget.
      */
-    const renderMyComponent = (group, key, extraProps = {}) => {
+    const renderMyComponent = async (group, id, extraProps = {}) => {
         const groupsMap = theGroups()
         if (!groupsMap.has(group)) {
             return
         }
 
         // Load and cache the lazy component only once
-        if (!__.ui.widgetCache.has(key)) {
-            const widget = groupsMap.get(group).widgets.get(key)
-            if (widget?.component) {
+        const key = id.split('#')[0]
+        const theId = (key === id) ? __.ui.widgetManager.defineElementId(group, key) : id
+
+        const theWidget = groupsMap.get(group).widgets.get(key)
+        const count = [...$widget.list.keys()].filter(k => k.startsWith(key)).length
+        const canAddWidget = count < (theWidget?.max ?? 1)
+
+        if (!__.ui.widgetCache.has(theId) && canAddWidget) {
+            if (theWidget?.component) {
                 const LazyWidget = lazy(() =>
-                                            import(`./list/${widget.component}.jsx`)
+                                            import(`./list/${theWidget.component}.jsx`)
                                                 .then(module => {
                                                     // Support default export
                                                     if (module.default) {
                                                         return module
                                                     }
                                                     // Support named export matching component name
-                                                    if (module[widget.component]) {
-                                                        return {default: module[widget.component]}
+                                                    if (module[theWidget.component]) {
+                                                        return {default: module[theWidget.component]}
                                                     }
-                                                    throw new Error(`Component ${widget.component} not found`)
+                                                    throw new Error(`Component ${theWidget.component} not found`)
                                                 })
                                                 .catch(() => ({
                                                     default: () => (
                                                         <div className="widget-load-error">
-                                                            Failed to load {widget.component}
+                                                            Failed to load {theWidget.component}
                                                         </div>
                                                     ),
                                                 })),
                 )
-                __.ui.widgetCache.set(key, LazyWidget)
-                $widget.list.set(key, extraProps)
+                __.ui.widgetCache.set(theId, group, LazyWidget)
+                $widget.list.set(theId, extraProps)
 
             }
         }
+        setMaxReached(!canAddWidget)
     }
+
+    useEffect(() => {
+        if (maxReached) {
+            setMaxReached(false)
+        }
+
+    }, [widget.list])
 
     // Clean up all widgets and cache on unmount
     useEffect(() => {
@@ -152,7 +164,7 @@ export const WidgetsPanelContent = ({groups, onWidgetSelect, onWidgetUnselect}) 
      * @param {string} group - Group key.
      * @param {string} key - Widget key.
      */
-    const showWidget = (group, key) => {
+    const addWidget = (group, key) => {
         renderMyComponent(group, key, {})
     }
 
@@ -169,8 +181,12 @@ export const WidgetsPanelContent = ({groups, onWidgetSelect, onWidgetUnselect}) 
                     {[...groupValue.widgets.entries()].map(([widgetKey, widget]) => (
                         <SlTooltip key={widgetKey} hoist placement="right" content={widget.description || ''}>
                             <div
-                                onClick={() => showWidget(groupKey, widgetKey)}
-                                className="widget-deck-entry small lgs-one-line-card on-map"
+                                onClick={() => addWidget(groupKey, widgetKey)}
+                                className={classNames(
+                                    'widget-deck-entry', 'small',
+                                    'lgs-one-line-card on-map',
+                                    {'widget-menu-disabled': maxReached},
+                                )}
                             >
                                 <SlIcon
                                     library="fa"

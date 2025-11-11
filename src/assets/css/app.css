@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-07
- * Last modified: 2025-11-07
+ * Created on: 2025-11-11
+ * Last modified: 2025-11-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -333,7 +333,7 @@ main-logo.xlarge {
 }
 
 /*******************************************************************************
- * Widgets
+ * Widgets and Cropper Menus
  ******************************************************************************/
 
 :root {
@@ -445,4 +445,11 @@ main-logo.xlarge {
 .widget-deck-entry sl-icon {
     width: calc(var(--lgs-font-size-s) + 6px);
     height: calc(var(--lgs-font-size-s) + 6px);
+}
+
+.widget-menu-disabled {
+    cursor: not-allowed !important;
+    color: var(--lgs-card-on-map-disabled-border-color) !important;
+    border-color: var(--lgs-card-on-map-disabled-border-color) !important;
+    background: transparent !important;
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-10
- * Last modified: 2025-11-10
+ * Created on: 2025-11-11
+ * Last modified: 2025-11-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -277,13 +277,21 @@ export class WidgetManager {
     }
 
     /**
-     * Generates a unique element ID based on a provided key and formatting option.
+     * Generates a unique element ID based on a widget group and identifier.
      *
-     * @param {string|null} [key=null] - The base key to use for the ID. If null, a UUID is returned.
-     * @param {boolean} [simple=false] - If true, returns the key as-is without appending a UUID.
-     * @returns {string} A unique identifier string, either a UUID or a combination of the key and UUID.
+     * @param {string|null} group - The widget group name used to locate configuration. If null or falsy, the ID is
+     *     returned as-is.
+     * @param {string|null} [id=null] - The base identifier. If null, a UUID is generated.
+     * @returns {string} A unique identifier string, either:
+     * - the original ID,
+     * - a generated UUID,
+     * - or a composite ID in the format `<id>#<uuid>` if the widget is not mandatory and its usage count is not 1.
+     *
+     * The function checks the app configuration for widget settings. If the widget exists and is not mandatory and not
+     *     single-use, it appends a UUID to the ID to ensure uniqueness. If no widget is found, or the conditions
+     *     aren't met, the original ID is used.
      */
-    defineElementId = (key = null, simple = false) => this.#core.defineElementId(key, simple)
+    defineElementId = (group, id = null) => this.#core.defineElementId(group, id)
 
     /**
      * Clones a context menu configuration object by ensuring all expected boolean attributes are defined.

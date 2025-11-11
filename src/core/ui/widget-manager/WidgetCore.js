@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-10
- * Last modified: 2025-11-10
+ * Created on: 2025-11-11
+ * Last modified: 2025-11-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -1114,21 +1114,22 @@ export class WidgetCore {
         if (config.persist) {
             await this.#widgetDB.saveWidgetPosition(elementId, config)
         }
-
-        console.log(this.#widgets)
-
         return true
     }
     /**
-     * Generates a unique element ID based on a provided group and ID.
+     * Generates a unique element ID based on a widget group and identifier.
      *
-     * @param {string} group - The widget group name used to locate configuration.
-     * @param {string|null} [id=null] - The base ID to use. If null, a UUID is generated.
-     * @returns {string} A unique identifier string, either a UUID or a combination of the ID and UUID.
+     * @param {string|null} group - The widget group name used to locate configuration. If null or falsy, the ID is
+     *     returned as-is.
+     * @param {string|null} [id=null] - The base identifier. If null, a UUID is generated.
+     * @returns {string} A unique identifier string, either:
+     * - the original ID,
+     * - a generated UUID,
+     * - or a composite ID in the format `<id>#<uuid>` if the widget is not mandatory and its usage count is not 1.
      *
-     * If the widget configuration indicates the element should not be unique (count > 1 or not mandatory,
-     * the function returns a composite ID in the format `<id>#<uuid>`. Otherwise, it returns the original ID.
-     * If no widget configuration is found, the original ID is returned.
+     * The function checks the app configuration for widget settings. If the widget exists and is not mandatory and not
+     *     single-use, it appends a UUID to the ID to ensure uniqueness. If no widget is found, or the conditions
+     *     aren't met, the original ID is used.
      */
     defineElementId = (group, id = null) => {
         // No group provided, se use ID
@@ -1147,5 +1148,16 @@ export class WidgetCore {
         }
         // No widget found, id is enough, let's use it
         return id
+    }
+
+    countWidgets = (group, key) => {
+        let count = 0
+        if (group) {
+            const widgets = __.widgets.get(group)?.widgets
+            if (widgets) {
+                count = widgets.size
+            }
+        }
+        return count
     }
 }

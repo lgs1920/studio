@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-07
- * Last modified: 2025-11-07
+ * Created on: 2025-11-11
+ * Last modified: 2025-11-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -175,6 +175,8 @@
     --lgs-card-on-map-hover-border-color: var(--lgs-light-color-50);
     --lgs-card-on-map-selected-bg-color: var(--lgs-dark-color);
     --lgs-card-on-map-selected-border-color: var(--lgs-light-color-75);
+    --lgs-card-on-map-disabled-bg-color: var(--lgs-dark-color-15);
+    --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-50);
 
     --lgs-track-color-active: var(--lgs-dark-ui-secondary-color);
     --lgs-track-color-inactive: var(--sl-color-gray-200);
