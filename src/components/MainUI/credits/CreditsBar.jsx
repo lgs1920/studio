@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-29
- * Last modified: 2025-10-29
+ * Created on: 2025-11-14
+ * Last modified: 2025-11-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -29,7 +29,7 @@ const $providers = proxy({
                              [BASE_ENTITY]:    null,
                              [OVERLAY_ENTITY]: null,
                              [TERRAIN_ENTITY]: null,
-                         });
+                         })
 
 /** List of available layer types */
 const LAYERS_TYPE = [BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY]
@@ -43,6 +43,7 @@ const LAYERS_TYPE = [BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY]
 export const CreditsBar = () => {
 
     const providers = useSnapshot($providers)
+    const video = useSnapshot(lgs.stores.ui.video)
 
     /**
      * Component displaying provider credits.
@@ -54,23 +55,32 @@ export const CreditsBar = () => {
      * @returns {JSX.Element} The Credit component.
      */
     const Credit = memo(({type, provider}) => {
+
         const credits = () => {
             const layer = __.layersAndTerrainManager.getEntityProxy(lgs.settings.layers[type])
             return `${layer?.credits ?? provider.credits ?? `credits ${provider.name}`}`
-        };
+        }
 
         return (
             <a href={provider.url} target="_blank">
-                <SlTooltip hoist placement="top" content={credits()}>
-                    {provider.logo ? (
-                        <img src={provider.logo} alt={provider.name}/>
+                {video.recording ? (
+                    provider.logo ? (
+                        <img src={provider.logo}/>
                     ) : (
-                         <span className={'credits'}>{provider.name}</span>
-                     )}
-                </SlTooltip>
+                        <span className={'credits'}>{provider.name}</span>
+                    )) : (
+                     <SlTooltip hoist placement="top" content={credits()}>
+                         {provider.logo ? (
+                             <img src={provider.logo} alt={provider.name}/>
+                         ) : (
+                              <span className={'credits'}>{provider.name}</span>
+                          )}
+                     </SlTooltip>
+                 )
+                }
             </a>
-        );
-    });
+        )
+    })
 
     /**
      * Retrieves and updates provider data dynamically.
@@ -85,7 +95,7 @@ export const CreditsBar = () => {
             [BASE_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.base),
             [OVERLAY_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.overlay),
             [TERRAIN_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.terrain),
-        };
+        }
 
         if (layer) {
             tmp[type] = manager.getProviderProxyByEntity(layer)
@@ -101,8 +111,8 @@ export const CreditsBar = () => {
             else {
                 $providers[key] = undefined
             }
-        });
-    };
+        })
+    }
 
     // Initialize providers and subscribe to changes at once
     useEffect(() => {
@@ -132,15 +142,20 @@ export const CreditsBar = () => {
             </div>
             <div className="cesium-credits lgs-credits lgs-one-line-card on-map">
                 <a href="https://www.cesium.com/" target="_blank">
-                    <SlTooltip
-                        hoist
-                        placement="top"
-                        content="Built with CesiumJS, an Open Source JavaScript library for creating 3D globes"
-                    >
-                        <img src="/assets/images/Cesium_light_color.svg" alt="Cesium"/>
-                    </SlTooltip>
+                    {video.recording ?
+                     (<img src="/assets/images/Cesium_light_color.svg"/>)
+                                     : (
+                         <SlTooltip
+                             hoist
+                             placement="top"
+                             content="Built with CesiumJS, an Open Source JavaScript library for creating 3D globes"
+                         >
+                             <img src="/assets/images/Cesium_light_color.svg" alt="Cesium"/>
+                         </SlTooltip>
+                     )
+                    }
                 </a>
             </div>
         </div>
-    );
-};
+    )
+}
