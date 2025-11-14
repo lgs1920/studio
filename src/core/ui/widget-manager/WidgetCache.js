@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-11
- * Last modified: 2025-11-11
+ * Created on: 2025-11-14
+ * Last modified: 2025-11-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,9 +21,14 @@
  * Stored entries: { group: string, component: Promise<React.Component> }
  */
 export class WidgetCache {
+    /** @type {WidgetCache|null} */
     static #instance = null
+    /** @type {Map<string, {group: string, component: Promise<React.Component>}>} */
     #cache = new Map()
 
+    /**
+     * Private constructor enforcing singleton pattern.
+     */
     constructor() {
         if (WidgetCache.#instance) {
             return WidgetCache.#instance
@@ -36,7 +41,7 @@ export class WidgetCache {
      * @param {string} key - The widget key (may include #uuid suffix)
      * @returns {Promise<React.Component>|null}
      */
-    get = (key) => this.#cache.get(key)?.component ?? null
+    get = key => this.#cache.get(key)?.component ?? null
 
     /**
      * Stores a lazy-loaded component under a key and associates it with a group.
@@ -50,7 +55,7 @@ export class WidgetCache {
      * Deletes an entry by its key.
      * @param {string} key - Full key to delete
      */
-    delete = (key) => this.#cache.delete(key)
+    delete = key => this.#cache.delete(key)
 
     /**
      * Checks if a key exists in the cache.
@@ -74,7 +79,7 @@ export class WidgetCache {
      * Clears all entries belonging to a specific group.
      * @param {string} group - Group identifier to clear
      */
-    clearByGroup = (group) => {
+    clearByGroup = group => {
         for (const [key, value] of this.#cache) {
             if (value.group === group) {
                 this.#cache.delete(key)
@@ -107,4 +112,10 @@ export class WidgetCache {
 
         return entries.length
     }
+
+    /**
+     * Returns the internal cache Map (read-only view).
+     * @returns {Map<string, {group: string, component: Promise<React.Component>}>}
+     */
+    getAll = () => this.#cache
 }
