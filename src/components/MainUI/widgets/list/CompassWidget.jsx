@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-08
- * Last modified: 2025-11-08
+ * Created on: 2025-11-14
+ * Last modified: 2025-11-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -29,7 +29,7 @@ import { useSnapshot }                         from 'valtio'
  */
 export const CompassWidget = ({id, context}) => {
     // Get snapshot of context
-    const {widgetEditor, cropZone} = useSnapshot(context)
+    const {widgetEditor, cropZone} = useSnapshot(context ?? {widgetEditor: false, cropZone: ''})
     const [_container, setContainer] = useState(null)
 
     // Set container when cropZone changes
