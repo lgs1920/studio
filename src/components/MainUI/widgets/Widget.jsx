@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-11
- * Last modified: 2025-11-11
+ * Created on: 2025-11-14
+ * Last modified: 2025-11-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,9 +22,11 @@
 
 import { usePointerSingleOrDouble }                                 from '@Components/hooks/usePointerSingleOrDouble'
 import {
-    LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET, WIDGETS_CAPABILITIES,
-}                                                                   from '@Core/constants'
-import classNames                                                   from 'classnames'
+    LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_VISUAL_WIDGET, LGS_TOOLBAR, LGS_WIDGET,
+    WIDGETS_CAPABILITIES,
+}                        from '@Core/constants'
+import { Widget2Canvas } from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
+import classNames        from 'classnames'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Moveable                                                     from 'react-moveable'
 import { useSnapshot }                                              from 'valtio'
@@ -64,6 +66,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
+    const video = useSnapshot(lgs.stores.ui.video)
+
+    const isInteractionLocked = video.recording && config?.type === LGS_VISUAL_WIDGET
 
     // Memoized snap settings
     const snapSettings = useMemo(() => {
@@ -81,8 +86,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     // Double click handler
     const handleDoubleClick = useCallback(event => {
+        if (isInteractionLocked) {
+            return
+        }
         __.ui.widgetManager.onDoubleClick(event, setPosition, _moveable)
-    }, [])
+    }, [isInteractionLocked])
 
     // Center guidelines (canvas center)
     const centerGuidelines = useMemo(() => {
@@ -149,11 +157,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     // Control box on hover
     const handleMouseEnter = useCallback(() => {
+        if (isInteractionLocked) {
+            return
+        }
         setIsMouseOver(true)
         __.ui.widgetManager.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, true)
-    }, [])
+    }, [isInteractionLocked])
 
     const handleMouseOut = useCallback(event => {
+        if (isInteractionLocked) {
+            return
+        }
         if (_dragConfirmed.current) {
             return
         }
@@ -163,7 +177,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
         setIsMouseOver(false)
         __.ui.widgetManager.manageControlBox(_moveable, setControlBoxProps, _controlBoxTimer, false, false)
-    }, [])
+    }, [isInteractionLocked])
 
     // Drag handlers
     const handleDrag = useCallback(event => {
@@ -213,6 +227,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     // Context menu
     const handleContextMenu = useCallback(event => {
+        if (isInteractionLocked) {
+            return
+        }
         event.preventDefault()
         let x = event.clientX ?? event.touches?.[0]?.clientX ?? _dragStartCoords.current.x
         let y = event.clientY ?? event.touches?.[0]?.clientY ?? _dragStartCoords.current.y
@@ -224,9 +241,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 position: {x, y},
             })
         }
-    }, [config?.id])
+    }, [isInteractionLocked, config?.id])
 
-    // Single/double tap/click handler (defined BEFORE pointer handlers)
+    // Single/double tap/click handler
     const handleUserEvent = usePointerSingleOrDouble({
                                                          onSingleClickOrTap: event => {
                                                              if (!_dragConfirmed.current) {
@@ -246,8 +263,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                                                          },
                                                      })
 
-    // Unified pointer handlers (now use handleUserEvent defined above)
+    // Unified pointer handlers
     const handlePointerDown = useCallback(event => {
+        if (isInteractionLocked) {
+            return
+        }
         if (event.type === 'mousedown') {
             event.preventDefault()
         }
@@ -257,23 +277,29 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         const clientY = event.touches?.[0]?.clientY ?? event.clientY ?? 0
         _dragStartCoords.current = {x: clientX, y: clientY}
         handleUserEvent(event)
-    }, [handleUserEvent])
+    }, [isInteractionLocked, handleUserEvent])
 
     const handlePointerUp = useCallback(event => {
+        if (isInteractionLocked) {
+            return
+        }
         if (_dragConfirmed.current) {
             event.preventDefault()
             event.stopPropagation()
         }
         _dragConfirmed.current = false
         handleUserEvent(event)
-    }, [handleUserEvent])
+    }, [isInteractionLocked, handleUserEvent])
 
     const handlePointerCancel = useCallback(() => {
+        if (isInteractionLocked) {
+            return
+        }
         setIsDragging(false)
         _dragConfirmed.current = false
-    }, [])
+    }, [isInteractionLocked])
 
-    // Scale handlers (delegated)
+    // Scale & Resize handlers (inchangés, utilisent déjà la config)
     const handleScale = useCallback(event => __.ui.widgetManager.onScale(event, {
         widget: _widget,
         child:  _children,
@@ -289,7 +315,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
     const handleScaleDirection = useCallback(event => event.inputEvent.shiftKey && event.setFixedDirection([0, 0]), [])
 
-    // Resize handlers
     const handleResize = useCallback(event => {
         event.target.style.width = `${event.width}px`
         event.target.style.height = `${event.height}px`
@@ -306,9 +331,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
     const handleOnBound = useCallback(() => __.ui.widgetManager.setBoundStatus(_widget.current), [])
 
-    // General cleanup
+    // Cleanup
     useEffect(() => {
-
         return () => {
             if (_resizeRaf.current) {
                 cancelAnimationFrame(_resizeRaf.current)
@@ -327,12 +351,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         let cancelled = false
         config.id = __.ui.widgetManager.defineElementId(config.group, config.id)
 
-
         const initWidget = async () => {
             if (cancelled || !_widget.current) {
                 return
             }
-
 
             const fullConfig = {
                 animationWhenDragging: config.animationWhenDragging ?? config.type === LGS_TOOLBAR,
@@ -370,7 +392,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
             if (success) {
                 _initialized.current = true
-                _moveable.current?.updateRect()
+                if (isInteractionLocked) {
+                    new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
+                        embedFonts:      true,
+                        outerTRansforms: true,
+                    })
+                }
+                else {
+                    _moveable.current?.updateRect()
+                }
             }
             else if (!cancelled) {
                 requestAnimationFrame(initWidget)
@@ -397,7 +427,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 _initialized.current = false
             }
         }
-    }, [isVisible, config])
+    }, [isVisible, config, video.recording])
 
     // Update Moveable rect on bounds change
     useEffect(() => _moveable.current?.updateRect(), [bounds])
@@ -438,7 +468,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 origin={false}
                 ref={_moveable}
                 target={_widget}
-                draggable={config?.draggable ?? true}
+                draggable={isInteractionLocked ? false : (config?.draggable ?? true)}
                 edgeDraggable={true}
                 edge={['w', 'e', 's', 'n']}
                 onDrag={handleDrag}
@@ -451,13 +481,13 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 onResize={handleResize}
                 onResizeStart={handleResizeStart}
                 onResizeEnd={handleResizeEnd}
-                resizable={config?.resizable ?? false}
+                resizable={isInteractionLocked ? false : (config?.resizable ?? false)}
                 throttleResize={2}
                 onBeforeScale={handleScaleDirection}
                 onScale={handleScale}
                 onScaleStart={handleScaleStart}
                 onScaleEnd={handleScaleEnd}
-                scalable={config?.scalable ?? false}
+                scalable={isInteractionLocked ? false : (config?.scalable ?? false)}
                 bounds={bounds}
                 elementGuidelines={[lgs.canvas]}
                 horizontalGuidelines={guidelines.horizontalGuidelines}
