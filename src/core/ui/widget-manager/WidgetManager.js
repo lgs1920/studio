@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-11
- * Last modified: 2025-11-11
+ * Created on: 2025-11-15
+ * Last modified: 2025-11-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -54,6 +54,9 @@ export class WidgetManager {
 
     /** @type {WidgetCore} Instance of WidgetCore */
     #core
+
+    WIDGET_RENDERED_EVENT = 'widget-rendered'
+    ALL_WIDGETS_RENDERED_EVENT = 'all-widgets-rendered'
 
     /**
      * Creates or returns the singleton instance of WidgetManager.
@@ -365,6 +368,14 @@ export class WidgetManager {
      */
     set isScaling(value) {
         this.#core.isScaling = value
+    }
+
+    /**
+     * Getter used to retrieves the widget ID key.
+     * @returns {string} The widget ID key
+     */
+    get widgetIDKey() {
+        return this.#core.getWidgetIDKey()
     }
 
     /**

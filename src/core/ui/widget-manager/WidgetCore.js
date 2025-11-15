@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-11
- * Last modified: 2025-11-11
+ * Created on: 2025-11-15
+ * Last modified: 2025-11-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -37,8 +37,8 @@ export class WidgetCore {
     /** @type {number} Minimum dimension threshold for displaying cardinal handles */
     MIN_DIMENSION_THRESHOLD = 50
 
-    /** @type {string} Data attribute key for element IDs */
-    #ID_KEY = 'data-LGS-ID'
+    /** @type {string} Data attribute key for widget specific IDs */
+    #ID_KEY = 'data-widget-id'
 
     /** @type {Map<string, Object>} Map of widget configurations */
     #widgets = new Map()
@@ -562,6 +562,12 @@ export class WidgetCore {
         const config = this.getWidgetConfig(elementId)
         return config.overlay
     }
+
+    /**
+     * Retrieves the widget ID key.
+     * @returns {string} The widget ID key
+     */
+    getWidgetIDKey = () => this.#ID_KEY
 
     /**
      * Sets widget configuration for an element ID.
