@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-07
- * Last modified: 2025-11-07
+ * Created on: 2025-11-15
+ * Last modified: 2025-11-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -46,7 +46,7 @@ export const ToolsUI = () => {
             ) : (
 
                 <>
-                    {video.recording && <VideoRecordingScreenArea/>}
+                    <VideoRecordingScreenArea/>
                     <CameraAndTargetPanel/>
                      <MapPOIContextMenu/>
                      <ContextMenuHook/>
