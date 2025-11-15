@@ -46,7 +46,7 @@ export const ToolsUI = () => {
             ) : (
 
                 <>
-                    <VideoRecordingScreenArea/>
+                    {(video.preRecording || video.recording) && <VideoRecordingScreenArea/>}
                     <CameraAndTargetPanel/>
                      <MapPOIContextMenu/>
                      <ContextMenuHook/>
