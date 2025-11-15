@@ -7,61 +7,78 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-14
- * Last modified: 2025-11-14
+ * Created on: 2025-11-15
+ * Last modified: 2025-11-15
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 /**
- * Singleton cache for widget components.
- * Keys can be `<key>` or `<key>#<uuid>`.
- * A single key can belong to multiple groups.
- * Stored entries: { group: string, component: Promise<React.Component> }
+ * @typedef {Object} CacheEntry
+ * @property {string} group - Group identifier
+ * @property {Promise<React.Component>} component - Lazy-loaded component
+ * @property {HTMLElement} [element] - Associated DOM element (optional)
+ * @property {boolean} mountedForVideo - Indicates whether the widget is mounted for the current video
+ */
+
+/**
+ * Utility class providing a clean, reactive API over the global Valtio proxy cache.
+ * The proxy is stored in a private class field `#cache` for internal use.
+ * All methods are arrow functions.
  */
 export class WidgetCache {
     /** @type {WidgetCache|null} */
     static #instance = null
-    /** @type {Map<string, {group: string, component: Promise<React.Component>}>} */
-    #cache = new Map()
 
-    /**
-     * Private constructor enforcing singleton pattern.
-     */
+    /** @type {import('valtio').Proxy<Map<string, CacheEntry>>} */
+    #cache
+
     constructor() {
         if (WidgetCache.#instance) {
             return WidgetCache.#instance
         }
+        // Valtio proxy is a plain object with Map-like methods (get, set, has, delete, clear, entries, keys)
+        this.#cache = lgs.stores.ui.widget.cache
         WidgetCache.#instance = this
     }
 
     /**
-     * Retrieves the component for a given key.
-     * @param {string} key - The widget key (may include #uuid suffix)
+     * Retrieves the lazy-loaded component for a given key.
+     * @param {string} key - Full widget key
      * @returns {Promise<React.Component>|null}
      */
-    get = key => this.#cache.get(key)?.component ?? null
+    get = key => {
+        const entry = this.#cache.get(key)
+        return entry ? entry.component : null
+    }
 
     /**
-     * Stores a lazy-loaded component under a key and associates it with a group.
+     * Stores or updates a cache entry.
      * @param {string} key - Key (`<key>` or `<key>#<uuid>`)
      * @param {string} group - Group identifier
-     * @param {Promise<React.Component>} lazyComponent - Lazy-loaded component
+     * @param {Promise<React.Component>} lazyComponent - Lazy component
+     * @param {boolean} [mountedForVideo=false] - Initial mounted state for video
      */
-    set = (key, group, lazyComponent) => this.#cache.set(key, {group, component: lazyComponent})
+    set = (key, group, lazyComponent, mountedForVideo = false) => {
+        this.#cache.set(key, {
+            group,
+            component: lazyComponent,
+            mountedForVideo,
+        })
+    }
 
     /**
      * Deletes an entry by its key.
-     * @param {string} key - Full key to delete
+     * @param {string} key - Full key
      */
     delete = key => this.#cache.delete(key)
 
     /**
      * Checks if a key exists in the cache.
-     * @param {string} key - Full key or base key
-     * @param {boolean} [full=false] - If true, checks exact full key match
-     * @returns {boolean} True if key exists
+     * @param {string} key - Full or base key
+     * @param {boolean} [full=false] - If true, exact key match only
+     * @returns {boolean}
      */
     has = (key, full = false) => {
         if (full) {
@@ -71,13 +88,13 @@ export class WidgetCache {
     }
 
     /**
-     * Clears all entries from the cache.
+     * Clears the entire cache.
      */
     clear = () => this.#cache.clear()
 
     /**
      * Clears all entries belonging to a specific group.
-     * @param {string} group - Group identifier to clear
+     * @param {string} group - Group identifier
      */
     clearByGroup = group => {
         for (const [key, value] of this.#cache) {
@@ -89,10 +106,10 @@ export class WidgetCache {
 
     /**
      * Counts entries matching the specified criteria.
-     * @param {string} [key] - Base key to filter (optional)
-     * @param {string|string[]} [groups] - Group(s) to filter (optional)
-     * @param {boolean} [full=false] - If true, counts only exact key match
-     * @returns {number} Number of matching entries
+     * @param {string} [key] - Base key filter
+     * @param {string|string[]} [groups] - Group(s) filter
+     * @param {boolean} [full=false] - Exact key count
+     * @returns {number}
      */
     count = (key, groups, full = false) => {
         let entries = Array.from(this.#cache.entries())
@@ -100,22 +117,50 @@ export class WidgetCache {
         if (full && key) {
             return this.#cache.has(key) ? 1 : 0
         }
-
         if (key) {
             entries = entries.filter(([k]) => k === key || k.startsWith(`${key}#`))
         }
-
         if (groups) {
             const groupArray = Array.isArray(groups) ? groups : [groups]
             entries = entries.filter(([, v]) => groupArray.includes(v.group))
         }
-
         return entries.length
     }
 
     /**
-     * Returns the internal cache Map (read-only view).
-     * @returns {Map<string, {group: string, component: Promise<React.Component>}>}
+     * Returns a read-only snapshot of the cache.
+     * @returns {Map<string, CacheEntry>}
      */
-    getAll = () => this.#cache
+    getAll = () => new Map(this.#cache)
+
+    /**
+     * Associates an HTMLElement with an existing entry.
+     * @param {string} key - Widget key
+     * @param {HTMLElement} element - DOM element
+     */
+    setElement = (key, element) => {
+        const entry = this.#cache.get(key)
+        if (entry) {
+            entry.element = element
+        }
+    }
+
+    /**
+     * Updates the video-mounted state of an entry.
+     * @param {string} key - Widget key
+     * @param {boolean} mounted - New mounted state
+     */
+    setMountedForVideo = (key, mounted) => {
+        const entry = this.#cache.get(key)
+        if (entry) {
+            entry.mountedForVideo = mounted
+        }
+    }
+
+    /**
+     * Gets the video-mounted state of an entry.
+     * @param {string} key - Widget key
+     * @returns {boolean|undefined}
+     */
+    isMountedForVideo = key => this.#cache.get(key)?.mountedForVideo
 }

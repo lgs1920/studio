@@ -115,6 +115,7 @@ export const ui = {
             position:              {x: 0, y: 0},
         },
         list:    new proxyMap(),
+        cache: new proxyMap(),
     },
 
     appUpdate: {
