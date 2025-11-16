@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-15
- * Last modified: 2025-11-15
+ * Created on: 2025-11-16
+ * Last modified: 2025-11-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,7 +19,7 @@ import { Suspense }  from 'react'
 
 export const DynamicWidget = ({id, context, props = {}}) => {
 
-    const LazyWidget = __.ui.widgetCache.get(id)
+    const LazyWidget = __.ui.widgetCache.get(id)?.component
 
     if (!LazyWidget) {
         return false

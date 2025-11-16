@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-15
- * Last modified: 2025-11-15
+ * Created on: 2025-11-16
+ * Last modified: 2025-11-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,7 +22,6 @@ import {
     Widget2Canvas,
 }                 from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import classNames from 'classnames'
-import { derive } from 'derive-valtio'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Moveable                                                     from 'react-moveable'
 import { useSnapshot }                                              from 'valtio'
@@ -433,6 +432,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     if (!isVisible || (config.type === LGS_VISUAL_WIDGET && !$widget.list.has(config?.id))) {
         return null
     }
+
+    __.ui.widgetCache.mount(config.id)
 
     return (
         <div className="lgs-widget-container">
