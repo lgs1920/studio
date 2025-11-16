@@ -68,7 +68,7 @@
     "geo-coordinates-parser": "^1.7.4",
     "geojson-extent": "^0.3.2",
     "geojson-minimum-bounding-rectangle": "^2.0.3",
-    "html-react-parser": "^5.2.8",
+    "html-react-parser": "^5.2.10",
     "html2canvas": "^1.4.1",
     "idb": "^8.0.3",
     "import": "^0.0.6",
