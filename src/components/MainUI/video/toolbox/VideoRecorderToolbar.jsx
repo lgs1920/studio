@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-15
- * Last modified: 2025-11-15
+ * Created on: 2025-11-17
+ * Last modified: 2025-11-17
  *
  *
  * Copyright © 2025 LGS1920
@@ -146,7 +146,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             }
             updateState({
                             preRecording: false,
-                            recording:        true,
+                            recording: true,
                             finalizing:       false,
                             paused:           false,
                             size:             0,
@@ -192,6 +192,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 __.recorder.stop()
             }
             updateState({
+                            preRecording: false,
                             recording:        false,
                             paused:           false,
                             size:             0,
