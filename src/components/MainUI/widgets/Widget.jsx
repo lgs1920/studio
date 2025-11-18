@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-16
- * Last modified: 2025-11-16
+ * Created on: 2025-11-18
+ * Last modified: 2025-11-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,8 +16,9 @@
 
 import { usePointerSingleOrDouble }                                 from '@Components/hooks/usePointerSingleOrDouble'
 import {
-    LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET, WIDGETS_CAPABILITIES,
-}                 from '@Core/constants'
+    LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET, LGS_WIDGET_SCALE_FACTOR,
+    WIDGETS_CAPABILITIES,
+} from '@Core/constants'
 import {
     Widget2Canvas,
 }                 from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
@@ -393,6 +394,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 if (interactionLocked) {
                     new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
                         embedFonts: true,
+                        scale: LGS_WIDGET_SCALE_FACTOR,
                     })
                 }
                 else {
