@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-08
- * Last modified: 2025-11-08
+ * Created on: 2025-11-19
+ * Last modified: 2025-11-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -477,13 +477,14 @@ export const LGS_VISUAL_WIDGET = 'lgs-visual-widget'
 export const LGS_ANIMATION_DRAGGING = 'lgs-animation-dragging'
 export const LGS_ANIMATION_RESIZING = 'lgs-animation-resizing'
 export const LGS_ANIMATION_SCALING = 'lgs-animation-scaling'
+export const LGS_WIDGET_SCALE_FACTOR = 2
 
 export const VIDEO_CROP_ZONE = 'video-crop-zone'
 export const VIDEO_TOOLS_WIDGETS = 'video-tools-widgets'
 export const CROP_TOOLS_WIDGETS = 'crop-tools-widgets'
 export const MULTI_PURPOSE_WIDGETS = 'multi-purpose-widgets'
 
-export const WIDGETS_CAPABILITIES = ['canRemove', 'canReset', 'canMaximize', 'canPosition']
+export const WIDGETS_CAPABILITIES = ['canRemove', 'canReset', 'canMaximize', 'canPosition', 'canEdit']
 export const WIDGETS_CONFIGURATION = new Map([
                                                  [
                                                      'compass-widget', {

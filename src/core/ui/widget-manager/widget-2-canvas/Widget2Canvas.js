@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-14
- * Last modified: 2025-11-14
+ * Created on: 2025-11-19
+ * Last modified: 2025-11-19
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { snapdom } from '@zumer/snapdom'
+import { LGS_WIDGET_SCALE_FACTOR } from '@Core/constants'
+import { snapdom }                 from '@zumer/snapdom'
 
 /**
  * Widget2Canvas — High-performance version
@@ -117,20 +118,33 @@ export class Widget2Canvas {
 
         // Direct canvas capture – fastest path
         snapdom.toCanvas(clone, this.#options)
-            .then(newCanvas => {
-                newCanvas.classList.add('lgs-widget-canvas')
+            .then(snap => {
+                // Scale the canvas
+                const scaledCanvas = document.createElement('canvas')
+                const scaledWidth = Math.round(snap.width / LGS_WIDGET_SCALE_FACTOR)
+                const scaledHeight = Math.round(snap.height / LGS_WIDGET_SCALE_FACTOR)
 
+                scaledCanvas.width = scaledWidth
+                scaledCanvas.height = scaledHeight
+
+                const ctx = scaledCanvas.getContext('2d')
+                ctx.drawImage(snap, 0, 0, scaledWidth, scaledHeight)
+
+                // Apply the same class as before
+                scaledCanvas.classList.add('lgs-widget-canvas')
+
+                // Replace the old canvas (or insert the first one)
                 if (this.#canvas) {
-                    this.#canvas.replaceWith(newCanvas)
+                    this.#canvas.replaceWith(scaledCanvas)
                 }
                 else {
-                    this.#original.parentNode.insertBefore(newCanvas, this.#original)
+                    this.#original.parentNode.insertBefore(scaledCanvas, this.#original)
                 }
 
-                this.#canvas = newCanvas
+                this.#canvas = scaledCanvas
             })
             .catch(() => {
-                // Silent fail – UI remains stable
+                // Silent fallback – UI stays stable
             })
             .finally(() => {
                 clone.remove()
