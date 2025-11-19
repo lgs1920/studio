@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-15
- * Last modified: 2025-11-15
+ * Created on: 2025-11-19
+ * Last modified: 2025-11-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -1165,5 +1165,30 @@ export class WidgetCore {
             }
         }
         return count
+    }
+
+    /**
+     * Creates a perfect 1:1 clone of an element
+     * - Identical DOM structure
+     * - Identical class list
+     * - Identical inline styles
+     * - Identical computed styles
+     *
+     * The clone has the additional class lgs-widget-clone
+     *
+     * @param {HTMLElement} element Source element
+     * @returns {HTMLElement} Perfect clone
+     */
+    clone = (element) => {
+        const clone = element.cloneNode(true)
+
+        clone.className = element.className
+        const computed = window.getComputedStyle(element)
+        for (const prop of computed) {
+            clone.style[prop] = computed[prop]
+        }
+        clone.classList.add('lgs-widget-clone')
+
+        return clone
     }
 }

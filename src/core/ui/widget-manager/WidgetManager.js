@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-15
- * Last modified: 2025-11-15
+ * Created on: 2025-11-19
+ * Last modified: 2025-11-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -278,6 +278,20 @@ export class WidgetManager {
     get widgets() {
         return this.#core.widgets
     }
+
+    /**
+     * Creates a perfect 1:1 clone of an element
+     * - Identical DOM structure
+     * - Identical class list
+     * - Identical inline styles
+     * - Identical computed styles
+     *
+     * The clone has the additional class lgs-widget-clone
+     *
+     * @param {HTMLElement} element Source element
+     * @returns {HTMLElement} Perfect clone
+     */
+    clone = (element) => this.#core.clone(element)
 
     /**
      * Generates a unique element ID based on a widget group and identifier.
