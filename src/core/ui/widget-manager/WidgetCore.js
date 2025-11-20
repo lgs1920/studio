@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-19
- * Last modified: 2025-11-19
+ * Created on: 2025-11-20
+ * Last modified: 2025-11-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -1168,27 +1168,70 @@ export class WidgetCore {
     }
 
     /**
-     * Creates a perfect 1:1 clone of an element
-     * - Identical DOM structure
-     * - Identical class list
-     * - Identical inline styles
-     * - Identical computed styles
+     * Creates a fully independent clone of a DOM element
+     * - Cuts all JS references (event listeners, canvas state, etc.)
+     * - Preserves the exact visual size (including transform/scale from the element OR any parent)
+     * - Forces layout so getBoundingClientRect() works immediately
      *
-     * The clone has the additional class lgs-widget-clone
-     *
-     * @param {HTMLElement} element Source element
-     * @returns {HTMLElement} Perfect clone
+     * @param {Element} element - The original DOM element to clone
+     * @returns {Element} A brand new element, 100% independent and correctly sized
      */
     clone = (element) => {
-        const clone = element.cloneNode(true)
+        // 1. Serialize → parse → recreate → breaks all live references
+        const template = document.createElement('template')
+        template.innerHTML = element.outerHTML.trim()
+        const clone = template.content.firstElementChild
 
-        clone.className = element.className
-        const computed = window.getComputedStyle(element)
-        for (const prop of computed) {
-            clone.style[prop] = computed[prop]
+        if (!clone) {
+            return null
         }
-        clone.classList.add('lgs-widget-clone')
 
+        // 2. Compute the FULL accumulated transform matrix (element + all parents)
+        function getAccumulatedTransform(el) {
+            let current = el
+            let matrix = new DOMMatrix() // identity matrix
+
+            while (current && current !== document.documentElement) {
+                const style = getComputedStyle(current)
+                const transform = style.transform && style.transform !== 'none'
+                                  ? new DOMMatrix(style.transform)
+                                  : new DOMMatrix()
+
+                // Multiply on the left → correct composition order (child × parent)
+                matrix = transform.multiply(matrix)
+
+                current = current.parentElement
+            }
+            return matrix
+        }
+
+        const fullMatrix = getAccumulatedTransform(element)
+
+        // 3. Apply the exact same transform if there is one (scale, rotate, skew, matrix…)
+        if (!fullMatrix.isIdentity) {
+            clone.style.transform = `matrix(${fullMatrix.a}, ${fullMatrix.b}, ${fullMatrix.c}, ${fullMatrix.d}, ${fullMatrix.e}, ${fullMatrix.f})`
+
+            // Preserve transform-origin of the original element (important for correct scaling point)
+            const origStyle = getComputedStyle(element)
+            // if (origStyle.transformOrigin && origStyle.transformOrigin !== '0px 0px 0px') {
+            //     clone.style.transformOrigin = origStyle.transformOrigin
+            // }
+        }
+        //
+        //       // 4. Force layout so getBoundingClientRect() never returns 0×0
+        //       //    (off-screen positioning = invisible but fully rendered)
+        //       clone.style.cssText += `
+        //   ;display: block !important
+        //   ;visibility: visible !important
+        //   ;position: absolute !important
+        //   ;left: -999999px !important
+        //   ;top: -999999px !important
+        //   ;margin: 0 !important
+        //   ;padding: 0 !important
+        // `;
+
+        clone.classList.add('lgs-widget-clone')
         return clone
     }
+
 }

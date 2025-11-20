@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-19
- * Last modified: 2025-11-19
+ * Created on: 2025-11-20
+ * Last modified: 2025-11-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -126,7 +126,7 @@ export const VideoRecordingScreenArea = memo(() => {
         const {top: y, left: x, width, height} = widget.cropDimensions
         widget.noResize = true
 
-        const composer = new CesiumCanvasOverlayComposer(lgs.canvas, {
+        const composer = new CanvasOverlayComposer(lgs.canvas, {
                   viewer:           lgs.viewer,
                   clip:             {x, y, width, height}
                   , width, height,
@@ -134,9 +134,9 @@ export const VideoRecordingScreenArea = memo(() => {
               })
 
         ;[...__.ui.widgetCache.getAll().keys()].map(key => {
-            const canvas = __.ui.widgetManager.getElementById(key).querySelector('.lgs-widget-canvas')
-            if (canvas instanceof HTMLCanvasElement) {
-                composer.addOverlay(canvas)
+            const getCanvas = () => __.ui.widgetManager.getElementById(key)?.querySelector('.lgs-widget-canvas')
+            if (getCanvas() instanceof HTMLCanvasElement) {
+                composer.addOverlay(getCanvas)
             }
         })
         __.recorder.setCanvas(composer.getCanvas())

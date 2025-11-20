@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-18
- * Last modified: 2025-11-18
+ * Created on: 2025-11-20
+ * Last modified: 2025-11-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -392,6 +392,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 _initialized.current = true
                 $widget.list.set(config.id, {mounted: true})
                 if (interactionLocked) {
+                    // TODO fix the fact that ':scope > .lgs-widget-canvas' locks the loop
                     new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
                         embedFonts: true,
                         scale: LGS_WIDGET_SCALE_FACTOR,
