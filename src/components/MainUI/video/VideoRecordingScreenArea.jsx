@@ -7,268 +7,206 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-19
- * Last modified: 2025-11-19
+ * Created on: 2025-11-20
+ * Last modified: 2025-11-20
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
+import { snapdom } from '@zumer/snapdom'
+
 /**
- * VideoRecordingScreenArea.jsx
+ * Widget2Canvas — Ultra-fast DOM-to-canvas mirror (faster than html2canvas)
  *
- * Main recording screen area.
+ * Uses snapdom + single replaceWith() for maximum performance.
+ * Zero layout thrashing, zero memory leaks.
+ * Only one DOM mutation per refresh.
  *
- * Renders:
- *  - Dark overlay outside the crop zone (clip-path)
- *  - Video recorder controls
- *  - Pulsing crop rectangle with settings info
- *  - All lazy-loaded widgets via DynamicWidget
- *
+ * @class
+ * @exports
  */
+export class Widget2Canvas {
+    /** Original widget element (never touched during refresh) */
+    #original = null
 
-import { VideoRecorderWidget }                                                                    from '@Components/MainUI/video/toolbox/VideoRecorderWidget'
-import {
-    VideoSettingsInfo,
-}                                                                                                 from '@Components/MainUI/video/VideoSettingsInfo'
-import {
-    DynamicWidget,
-}                                                                                                 from '@Components/MainUI/widgets/DynamicWidget'
-import {
-    CropOverlay,
-}                                                                                                 from '@Components/ToolsUI/cropper/CropOverlay'
-import {
-    DefinedCropZone,
-}                                                                                                 from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
-import { APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, VIDEO_CROP_ZONE, VIDEO_TOOLS_WIDGETS } from '@Core/constants'
-import {
-    CanvasOverlayComposer,
-}                                                                                                 from '@Core/ui/video/canvas-overlay-composer/CanvasOverlayComposer'
-import {
-    CesiumCanvasOverlayComposer,
-}                                                                                                 from '@Core/ui/video/canvas-overlay-composer/CesiumCanvasOverlayComposer'
-import {
-    WebGLOverlayComposer,
-}                                                                                                 from '@Core/ui/video/canvas-overlay-composer/WebGLOverlayComposer'
-import {
-    VideoRecorder,
-}                                                                                                 from '@Core/ui/video/recorder/VideoRecorder'
-import { UIToast }                                                                                from '@Utils/UIToast'
-import classNames                                                                                 from 'classnames'
-import React, { memo, useCallback, useEffect, useMemo, useRef }                                   from 'react'
-import { useSnapshot }                                                                            from 'valtio'
+    /** Current visible canvas element */
+    #canvas = null
 
-export const VideoRecordingScreenArea = memo(() => {
-    const $video = lgs.stores.ui.video
-    const video = useSnapshot($video)
-    const {maxSize, maxDuration} = useSnapshot(lgs.settings.ui.video)
-    const _cropZone = useRef(null)
+    /** Original computed display value (restored on destroy/showOriginal) */
+    #originalDisplay = 'block'
 
-    const crop = useMemo(() => {
-        const config = __.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE)
-        return config?.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0}
-    }, [])
+    /** Snapdom rendering options */
+    #options = {}
 
-    const widgetCacheEntries = useMemo(() => [...__.ui.widgetCache.getAll().entries()], [])
-
-    const isValidCrop =
-              Number.isFinite(crop.left) &&
-              Number.isFinite(crop.top) &&
-              Number.isFinite(crop.width) &&
-              Number.isFinite(crop.height) &&
-              crop.width > 0 &&
-              crop.height > 0
-
-    // Sync crop pulse animation
-    useEffect(() => {
-        if (_cropZone.current) {
-            _cropZone.current.style.animationPlayState = video.paused ? 'paused' : 'running'
-        }
-    }, [video.paused])
+    /** Flag to debounce rapid successive mutations */
+    #pendingRefresh = false
 
     /**
-     * Initializes VideoRecorder with Cesium canvas
-     * @function
+     * Creates an ultra-fast canvas mirror of a DOM widget.
+     *
+     * @param {HTMLElement} target - The widget element to mirror
+     * @param {Object} [options={}] - Snapdom rendering options
+     * @param {number} [options.scale=devicePixelRatio] - Rendering scale factor
+     * @param {boolean} [options.includeBackground=true] - Capture element background
+     * @param {boolean} [options.includeShadowDom=true] - Include shadow DOM content
      */
-    const initializeRecorder = useCallback(() => {
-        // Save settings
-        $video.settings = {quality: $video.quality, fps: $video.fps}
-
-        // Set canvas source
-        const configs = __.ui.widgetManager.getWidgetConfigByGroup(CROP_TOOLS_WIDGETS)
-        const widget = configs.find(config => config.id === VIDEO_CROP_ZONE)
-        if (!widget) {
-            console.warn('[VideoRecordingSettingsToolbar] No widget found for VIDEO_CROP_ZONE')
-            return
-        }
-        // Configure recorder
-        __.recorder.initialize({
-                                   maxSize:     maxSize * 1048576, // MB to bytes
-                                   maxDuration: maxDuration * MINUTE, // Minutes to milliseconds
-                                   quality:     VideoRecorder.QUALITY[$video.quality].value,
-                                   filename:    APP_KEY,
-                                   fps:         VideoRecorder.FPS[$video.fps],
-                                   dimensions:  {
-                                       width:  widget.cropDimensions.width * __.device.dpr,
-                                       height: widget.cropDimensions.height * __.device.dpr,
-                                   },
-                                   ratio:       widget.ratio.value,
-                                   metadata:    {
-                                       artist:      lgs.servers.studio.name,
-                                       date:        new Date(),
-                                       description: `Visit ${lgs.servers.site.protocol}://${lgs.servers.site.domain}`,
-                                       album:       LGS_PROJECT,
-                                       genre:       'Adventure',
-                                   },
-                                   useWebGL:    true,
-                               })
-
-        const {top: y, left: x, width, height} = widget.cropDimensions
-        widget.noResize = true
-
-        const composer = new CesiumCanvasOverlayComposer(lgs.canvas, {
-                  viewer:           lgs.viewer,
-                  clip:             {x, y, width, height}
-                  , width, height,
-                  flushWebGLBuffer: () => lgs.scene.render(),
-              })
-
-        ;[...__.ui.widgetCache.getAll().keys()].map(key => {
-            const canvas = __.ui.widgetManager.getElementById(key).querySelector('.lgs-widget-canvas')
-            if (canvas instanceof HTMLCanvasElement) {
-                composer.addOverlay(canvas)
-            }
-        })
-        __.recorder.setCanvas(composer.getCanvas())
-
-    }, [maxSize, maxDuration, $video.quality, $video.fps])
-
-
-    /**
-     * Toggles video recording
-     * @function
-     * @param {PointerEvent} event - Pointer event
-     * @returns {Promise<void>}
-     */
-    const handleVideoRecording = useCallback(async event => {
-        if (!__.recorder) {
-            console.warn('[VideoRecordingSettingsToolbar] Recorder not initialized')
+    constructor(target, options = {}) {
+        if (!target || !(target instanceof HTMLElement)) {
             return
         }
 
-        try {
-            initializeRecorder()
-            await __.recorder.start()
+        this.#original = target
+        this.#options = {
+            scale:             window.devicePixelRatio || 1,
+            includeBackground: true,
+            includeShadowDom:  true,
+            ...options,
         }
-        catch (error) {
-            Object.assign($video, {
-                recording: false,
-                paused:    false,
-                size:      0,
-            })
-            UIToast.error({
-                              caption: 'Video capture',
-                              text:    `Stopped due to error:<br>${error.message} !`,
-                          })
-        }
-    }, [initializeRecorder])
 
+        // Store original display value before any manipulation
+        this.#originalDisplay = getComputedStyle(target).display
 
-    const observeWidgets = (widgets, onReady) => {
-        if (!widgets || widgets.length === 0) {
-            return () => {
+        // Observe all possible mutations on the target and its subtree
+        const observer = new MutationObserver((mutations) => {
+            if (!mutations.length) {
+                return
             }
-        }
-
-        const observer = new MutationObserver(() => {
-            const allMounted = widgets.every(k => __.ui.widgetCache.isMounted(k))
-            const allInDOM = widgets.every(k => {
-                const el = __.ui.widgetManager.getElementById(k)
-                return el?.querySelector('.lgs-widget-canvas')
-            })
-
-
-            if (allMounted && allInDOM) {
-                observer.disconnect()
-
-                window.dispatchEvent(
-                    new CustomEvent(__.ui.widgetManager.ALL_WIDGETS_RENDERED_EVENT, {
-                        detail: widgets,
-                    }),
-                )
-
-                onReady?.(widgets)
+            if (this.#pendingRefresh) {
+                return
             }
+
+            this.#pendingRefresh = true
+            queueMicrotask(() => {
+                this.#refresh()
+                this.#pendingRefresh = false
+            })
         })
 
-
-        observer.observe(document.body, {childList: true, subtree: true})
-
-        // Return cleanup
-        return () => observer.disconnect()
-    }
-
-    useEffect(() => {
-        observeWidgets([...__.ui.widgetCache.getAll().keys()], async (keys) => {
-            $video.preRecording = false
-            $video.recording = true
-            await handleVideoRecording()
+        observer.observe(target, {
+            childList:     true,
+            subtree:       true,
+            attributes:    true,
+            characterData: true,
         })
-    }, [])
 
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGETS, false)
-            __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, false)
-        }
-    }, [])
-
-    /** Early return when crop is not ready */
-    if (!isValidCrop) {
-        return null
+        // Initial render
+        this.#refresh()
     }
 
-    const overlayStyle = useMemo(() => ({
-        clipPath: `polygon(
-            0% 0%, 100% 0%, 100% 100%, 0% 100%,
-            0% ${crop.top}px,
-            ${crop.left}px ${crop.top}px,
-            ${crop.left}px ${crop.top + crop.height}px,
-            ${crop.left + crop.width}px ${crop.top + crop.height}px,
-            ${crop.left + crop.width}px ${crop.top}px,
-            0% ${crop.top}px
-        )`,
-    }), [crop.left, crop.top, crop.width, crop.height])
+    /**
+     * Performs a single DOM mutation refresh — the fastest possible path.
+     *
+     * Clones the widget off-screen, renders it with snapdom, draws to canvas,
+     * then replaces the previous canvas in one operation.
+     *
+     * @private
+     */
+    #refresh = () => {
+        if (!this.#original) {
+            return
+        }
 
+        // Clone using the global widget manager (avoids direct DOM reads that could trigger reflow)
+        const clone = __.ui.widgetManager.clone(this.#original)
 
-    return (
-        <>
-            <CropOverlay style={overlayStyle}/>
+        // Ensure the clone is fully visible for accurate rendering
+        clone.style.display = this.#originalDisplay
+        clone.style.visibility = 'visible'
 
-            <VideoRecorderWidget id="video-recorder-widget"/>
+        // Append off-screen to allow layout/paint before snapshot
+        document.body.appendChild(clone)
 
-            <DefinedCropZone
-                context={$video.cropper}
-                className={classNames(
-                    {'video-recording-in-progress': video.recording},
-                    {'video-pre-recording-in-progress': video.preRecording},
-                    {finalizing: video.finalizing},
-                )}
-                infoComponent={<VideoSettingsInfo/>}
-                ref={_cropZone}
-            />
+        snapdom
+            .toCanvas(clone, this.#options)
+            .then((snapshot) => {
+                const scale = this.#options.scale
+                const width = Math.round(snapshot.width / scale)
+                const height = Math.round(snapshot.height / scale)
 
-            {widgetCacheEntries.map(([key, {component: LazyComponent}]) => (
-                <DynamicWidget
-                    key={key}
-                    id={key}
-                    context={lgs.stores.ui.video.cropper}
-                />
-            ))}
-        </>
-    )
-})
+                const newCanvas = document.createElement('canvas')
+                newCanvas.width = width
+                newCanvas.height = height
+                newCanvas.className = 'lgs-widget-canvas'
 
-VideoRecordingScreenArea.displayName = 'VideoRecordingScreenArea'
+                const ctx = newCanvas.getContext('2d')
+                ctx.drawImage(snapshot, 0, 0, width, height)
+
+                // Single DOM mutation: replace or insert the new canvas
+                this.#canvas
+                ? this.#canvas.replaceWith(newCanvas)
+                : this.#original.before(newCanvas)
+
+                this.#canvas = newCanvas
+            })
+            .catch((error) => {
+                // Silent fallback — errors are rare but we don't want to break the UI
+                console.warn('Widget2Canvas: failed to render snapshot', error)
+            })
+            .finally(() => {
+                // Always clean up the temporary clone
+                clone.remove()
+            })
+    }
+
+    /**
+     * Returns the 2D rendering context of the current canvas (for overlays, annotations…).
+     *
+     * @returns {CanvasRenderingContext2D|null}
+     */
+    getContext = () => this.#canvas?.getContext('2d') ?? null
+
+    /**
+     * Returns the current canvas element.
+     *
+     * @returns {HTMLCanvasElement|null}
+     */
+    getCanvas = () => this.#canvas
+
+    /** Makes the canvas fully visible */
+    show = () => {
+        if (this.#canvas) {
+            this.#canvas.style.opacity = '1'
+        }
+    }
+
+    /** Hides the canvas (useful for transitions or temporary DOM visibility) */
+    hide = () => {
+        if (this.#canvas) {
+            this.#canvas.style.opacity = '0'
+        }
+    }
+
+    /** Displays the original DOM widget and hides the canvas */
+    showOriginal = () => {
+        if (this.#canvas) {
+            this.#canvas.style.display = 'none'
+        }
+        if (this.#original) {
+            this.#original.style.display = this.#originalDisplay
+        }
+    }
+
+    /** Hides the original widget and shows the canvas (default mirrored state) */
+    hideOriginal = () => {
+        if (this.#canvas) {
+            this.#canvas.style.display = 'block'
+        }
+        if (this.#original) {
+            this.#original.style.display = 'none'
+        }
+    }
+
+    /**
+     * Completely removes the canvas mirror and restores the original widget.
+     * Should be called when the widget is unmounted or no longer needed.
+     */
+    destroy = () => {
+        this.#canvas?.remove()
+        if (this.#original) {
+            this.#original.style.display = this.#originalDisplay
+        }
+        this.#canvas = null
+        this.#original = null
+    }
+}

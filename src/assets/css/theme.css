@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-15
- * Last modified: 2025-11-15
+ * Created on: 2025-11-20
+ * Last modified: 2025-11-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -590,7 +590,7 @@ sl-card[variant="primary"]::part(base) {
     display: block;
     width: var(--lgs-compass-size);
     height: var(--lgs-compass-size);
-    margin: var(--lgs-gutter-s);
+    /*margin: var(--lgs-gutter-s);*/
 }
 
 .lgs-compass.mode-light {
@@ -1242,11 +1242,11 @@ h3 {
 .lgs-widget-clone {
     position: absolute !important;
     z-index: 10000;
-    top: 0 !important;
-    left: 0 !important;
+    top: 200px; /*-9999px !important;*/
+    left: 200px; /*-9999px !important;*/
     visibility: visible !important;
     pointer-events: none !important;
-    contain: layout style paint; /* Optimisation perf */
+    contain: layout style paint;
 }
 
 .lgs-widget-canvas {
@@ -1258,6 +1258,7 @@ h3 {
     height: 100%;
     pointer-events: none;
     opacity: 1;
+    contain: layout style paint;
 }
 /*******************************************************************************
  * Cesium Selection indicator
