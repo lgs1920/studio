@@ -47,7 +47,7 @@
     "@turf/nearest-point-on-line": "^7.3.0",
     "@turf/point-to-line-distance": "^7.3.0",
     "@turf/transform-rotate": "^7.3.0",
-    "@zumer/snapdom": "1.9.14",
+    "@zumer/snapdom": "2.0.0",
     "argparse": "^2.0.1",
     "axios": "^1.13.2",
     "babel-plugin-module-resolver": "^5.0.2",
@@ -72,9 +72,9 @@
     "html2canvas": "^1.4.1",
     "idb": "^8.0.3",
     "import": "^0.0.6",
-    "jspdf": "^3.0.3",
+    "jspdf": "^3.0.4",
     "luxon": "^3.7.2",
-    "mediabunny": "^1.25.0",
+    "mediabunny": "^1.25.1",
     "path": "^0.12.7",
     "pm2": "^6.0.13",
     "react": "^19.2.0",
@@ -100,7 +100,7 @@
     "vite-plugin-cesium": "^1.2.23",
     "vite-plugin-pwa": "^1.1.0",
     "yaml": "^2.8.1",
-    "zip-a-folder": "^3.1.9"
+    "zip-a-folder": "^4.0.4"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.0",
@@ -115,7 +115,7 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "jsdom": "^27.2.0",
     "typescript": "^5.9.3",
-    "vite": "^7.2.2",
+    "vite": "^7.2.4",
     "vite-plugin-markdown": "^2.2.0",
     "vitest": "^4.0.10"
   },
