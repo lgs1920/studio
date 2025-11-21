@@ -17,51 +17,26 @@
 import { LGS_WIDGET_SCALE_FACTOR } from '@Core/constants'
 
 /**
- * CanvasOverlayComposer – 2D compositor ultra-léger (Cesium / Three.js / video)
- * Garantit une image complète même quand le canvas source est affiché en 1/4
+ * CanvasOverlayComposer – Compositeur 2D ultra-léger
+ * Fonctionne parfaitement avec Cesium/Three.js/video en HiDPI
  */
 export class CanvasOverlayComposer {
-    /** Canvas source principal (Cesium, Three.js, <video>, …) */
     #sourceCanvas
-
-    /** Canvas de sortie composite */
     #outputCanvas
-
-    /** Contexte 2D du canvas de sortie */
     #ctx
 
-    /** Largeur logique souhaitée de sortie (ex: 1920) */
     #outW = 1920
-
-    /** Hauteur logique souhaitée de sortie (ex: 1080) */
     #outH = 1080
 
-    /** Clip éventuel exprimé en pixels logiques du canvas source */
     #clip = null
-
-    /** Overlays à dessiner par-dessus */
     #overlays = []
-
-    /** Handle requestAnimationFrame */
     #raf = null
 
-    /** DPR de la page */
     #dpr = window.devicePixelRatio || 1
-
-    /** DPR réel du canvas source – recalculé chaque frame (critique) */
     #sourceDpr = 1
 
-    /** Callback pour forcer le flush WebGL (Cesium) */
     #flushWebGLBuffer = null
 
-    /**
-     * @param {HTMLCanvasElement} sourceCanvas                    Canvas source
-     * @param {Object} [options={}]
-     * @param {{x?:number,y?:number,width?:number,height?:number}|null} [options.clip=null]
-     * @param {number} [options.width=1920]                       Largeur logique de sortie
-     * @param {number} [options.height=1080]                      Hauteur logique de sortie
-     * @param {(() => void)|null} [options.flushWebGLBuffer=null]
-     */
     constructor(sourceCanvas, options = {}) {
         if (!(sourceCanvas instanceof HTMLCanvasElement)) {
             throw new Error('CanvasOverlayComposer: sourceCanvas must be an HTMLCanvasElement')
@@ -70,8 +45,8 @@ export class CanvasOverlayComposer {
         this.#sourceCanvas = sourceCanvas
 
         const {
-                  clip   = null,
-                  width  = 1920,
+                  clip  = null,
+                  width = 1920,
                   height = 1080,
                   flushWebGLBuffer = null,
               } = options
@@ -90,13 +65,11 @@ export class CanvasOverlayComposer {
         this.#loop()
     }
 
-    /** Recalcule le DPR réel du canvas source (peut changer à chaque frame avec Cesium) */
     #updateSourceDpr = () => {
         const rect = this.#sourceCanvas.getBoundingClientRect()
         this.#sourceDpr = rect.width > 0 ? this.#sourceCanvas.width / rect.width : 1
     }
 
-    /** Redimensionne le canvas de sortie selon le DPR de la page */
     #resizeOutputCanvas = () => {
         const physicalW = Math.round(this.#outW * this.#dpr)
         const physicalH = Math.round(this.#outH * this.#dpr)
@@ -109,39 +82,58 @@ export class CanvasOverlayComposer {
         this.#ctx.setTransform(this.#dpr, 0, 0, this.#dpr, 0, 0)
     }
 
-    /** @returns {HTMLCanvasElement} Canvas final prêt pour MediaRecorder / WebRTC */
     getCanvas = () => this.#outputCanvas
 
     /**
-     * Ajoute un overlay
+     * Ajoute un overlay – position et taille corrigées automatiquement en HiDPI
      */
     addOverlay = (element, x, y, w, h) => {
         const el = typeof element === 'function' ? element() : element
+        if (!el) {
+            return
+        }
 
-        let lx = x
-        let ly = y
+        let posX, posY, width, height
 
-        if (lx === undefined || ly === undefined) {
+        // Si position manuelle fournie → on l'utilise directement (déjà en pixels logiques)
+        if (typeof x === 'number' && typeof y === 'number') {
+            posX = x
+            posY = y
+            width = w ?? el.width ?? el.videoWidth ?? el.clientWidth ?? 0
+            height = h ?? el.height ?? el.videoHeight ?? el.clientHeight ?? 0
+        }
+        else {
+            // Auto-détection via getBoundingClientRect → on est en CSS pixels
             const rect = el.getBoundingClientRect()
             const sourceRect = this.#sourceCanvas.getBoundingClientRect()
-            lx = rect.left - sourceRect.left
-            ly = rect.top - sourceRect.top
+
+            // Conversion CSS pixels → logical pixels (en tenant compte du DPR du canvas source)
+            const cssX = rect.left - sourceRect.left
+            const cssY = rect.top - sourceRect.top
+
+            posX = cssX * this.#sourceDpr
+            posY = cssY * this.#sourceDpr
+
+            // Taille physique de l'élément
+            width = rect.width * this.#sourceDpr
+            height = rect.height * this.#sourceDpr
+
+            // Ajustement clip
             if (this.#clip) {
-                lx -= this.#clip.x
-                ly -= this.#clip.y
+                posX -= this.#clip.x
+                posY -= this.#clip.y
             }
         }
 
-        const lw = w ?? el.width ?? el.videoWidth ?? el.clientWidth ?? 0
-        const lh = h ?? el.height ?? el.videoHeight ?? el.clientHeight ?? 0
+        // Facteur d'échelle pour les widgets LGS rendus en haute résolution
         const scaleFactor = el.classList?.contains('lgs-widget-canvas') ? LGS_WIDGET_SCALE_FACTOR : 1
 
         this.#overlays.push({
                                 element,
-                                x: Number(lx),
-                                y: Number(ly),
-                                w: lw / scaleFactor,
-                                h: lh / scaleFactor,
+                                x: posX,
+                                y: posY,
+                                w: width / scaleFactor,
+                                h: height / scaleFactor,
                             })
 
         this.#draw()
@@ -152,23 +144,18 @@ export class CanvasOverlayComposer {
         this.#draw()
     }
 
-    /** Dessine une frame complète */
     #draw = () => {
         this.#flushWebGLBuffer?.()
-        this.#updateSourceDpr() // Indispensable à chaque frame
+        this.#updateSourceDpr()
 
         const ctx = this.#ctx
 
-        // Fond noir propre
         ctx.clearRect(0, 0, this.#outW, this.#outH)
         ctx.fillStyle = '#000000'
         ctx.fillRect(0, 0, this.#outW, this.#outH)
 
-        // --- Source principale (calcul 100 % en pixels physiques) ---
-        let srcX = 0
-        let srcY = 0
-        let srcW = this.#sourceCanvas.width
-        let srcH = this.#sourceCanvas.height
+        // --- Source principale ---
+        let srcX = 0, srcY = 0, srcW = this.#sourceCanvas.width, srcH = this.#sourceCanvas.height
 
         if (this.#clip) {
             srcX = this.#clip.x * this.#sourceDpr
@@ -179,8 +166,8 @@ export class CanvasOverlayComposer {
 
         ctx.drawImage(
             this.#sourceCanvas,
-            srcX, srcY, srcW, srcH,     // rectangle source en pixels physiques
-            0, 0, this.#outW, this.#outH, // destination logique
+            srcX, srcY, srcW, srcH,
+            0, 0, this.#outW, this.#outH,
         )
 
         // --- Overlays ---
@@ -197,7 +184,6 @@ export class CanvasOverlayComposer {
         this.#raf = requestAnimationFrame(this.#loop)
     }
 
-    /** Change la résolution de sortie à la volée */
     setSize = (width, height) => {
         this.#outW = width
         this.#outH = height
@@ -205,7 +191,6 @@ export class CanvasOverlayComposer {
         this.#draw()
     }
 
-    /** À appeler impérativement au resize de la fenêtre */
     handleResize = () => {
         this.#resizeOutputCanvas()
         this.#draw()
