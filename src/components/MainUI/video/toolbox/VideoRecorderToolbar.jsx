@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-25
- * Last modified: 2025-10-25
+ * Created on: 2025-11-21
+ * Last modified: 2025-11-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,17 +21,17 @@
  * @param {Object} props.toolbar - Toolbar element reference
  * @returns {JSX.Element} Video recorder toolbar UI
  */
-import { FontAwesomeIcon }         from '@Components/FontAwesomeIcon'
-import { SlIconButton, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FontAwesomeIcon }                                from '@Components/FontAwesomeIcon'
+import { VideoRecorder }                                  from '@Core/ui/video/recorder/VideoRecorder'
 import { faCircle }                                       from '@fortawesome/duotone-regular-svg-icons'
-import { faPause, faPlay, faStop, faXmark } from '@fortawesome/pro-regular-svg-icons'
+import { faPause, faPlay, faStop, faXmark }               from '@fortawesome/pro-regular-svg-icons'
+import { SlIconButton, SlTooltip }                        from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                          from '@Utils/FA2SL'
+import { UIToast }                                        from '@Utils/UIToast'
+import { UnitUtils }                                      from '@Utils/UnitUtils'
+import classNames                                         from 'classnames'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                    from 'valtio'
-import classNames                  from 'classnames'
-import { FA2SL }                   from '@Utils/FA2SL'
-import { UIToast }                 from '@Utils/UIToast'
-import { UnitUtils }               from '@Utils/UnitUtils'
-import { VideoRecorder }           from '@Core/ui/video/recorder/VideoRecorder'
 import '../style.css'
 
 /**
@@ -145,7 +145,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 return
             }
             updateState({
-                            recording:        true,
+                            preRecording: false,
+                            recording: true,
                             finalizing:       false,
                             paused:           false,
                             size:             0,
@@ -191,6 +192,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 __.recorder.stop()
             }
             updateState({
+                            preRecording: false,
                             recording:        false,
                             paused:           false,
                             size:             0,
@@ -245,6 +247,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             await __.recorder.cancel()
         }
         updateState({
+                        preRecording: false,
                         recording:        false,
                         paused:           false,
                         size:             0,
@@ -256,8 +259,12 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         showToast('warning', 'Recording has been canceled!')
     }, [__.recorder, updateState, showToast])
 
+
     return (
-        <div
+        <>
+            {video.preRecording ? (
+                <span className="video-pre-recording-message">{'Video Setup in progress ...'}</span>
+            ) : (<div
             ref={_toolbar}
             className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map"
         >
@@ -292,6 +299,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                     name={FA2SL.set(faXmark)}
                 />
             </SlTooltip>
-        </div>
+            </div>)
+            }
+        </>
     )
 }

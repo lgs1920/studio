@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-11
- * Last modified: 2025-11-11
+ * Created on: 2025-11-14
+ * Last modified: 2025-11-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -174,13 +174,15 @@ export const WidgetsPanelContent = ({groups}) => {
         return tooltipText
     }
 
+    // TODO mandatory for widget mirroring but may be
+    // TODO it will be usefully in some cases
 
-    useEffect(() => {
-        return () => {
-            __.ui.widgetCache.clear()
-            $widget.list.clear()
-        }
-    }, [])
+    // useEffect(() => {
+    //     return () => {
+    //         __.ui.widgetCache.clear()
+    //         $widget.list.clear()
+    //     }
+    // }, [])
 
     return (
         <div className="widget-deck-panel lgs-card on-map" ref={_widgetDeckPanel}>

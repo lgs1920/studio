@@ -2,27 +2,24 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: WidgetRenderer.jsx
+ * File: DynamicWidget.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-08
- * Last modified: 2025-11-08
+ * Created on: 2025-11-16
+ * Last modified: 2025-11-16
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-/**
- * @file WidgetRenderer – rendu simple et fiable.
- */
 import { SlSpinner } from '@shoelace-style/shoelace/dist/react'
 import { Suspense }  from 'react'
 
-export const WidgetRenderer = ({id, context, props = {}}) => {
+export const DynamicWidget = ({id, context, props = {}}) => {
 
-    const LazyWidget = __.ui.widgetCache.get(id)
+    const LazyWidget = __.ui.widgetCache.get(id)?.component
 
     if (!LazyWidget) {
         return false

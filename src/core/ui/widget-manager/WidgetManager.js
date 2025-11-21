@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-11
- * Last modified: 2025-11-11
+ * Created on: 2025-11-19
+ * Last modified: 2025-11-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -54,6 +54,9 @@ export class WidgetManager {
 
     /** @type {WidgetCore} Instance of WidgetCore */
     #core
+
+    WIDGET_RENDERED_EVENT = 'widget-rendered'
+    ALL_WIDGETS_RENDERED_EVENT = 'all-widgets-rendered'
 
     /**
      * Creates or returns the singleton instance of WidgetManager.
@@ -277,6 +280,20 @@ export class WidgetManager {
     }
 
     /**
+     * Creates a perfect 1:1 clone of an element
+     * - Identical DOM structure
+     * - Identical class list
+     * - Identical inline styles
+     * - Identical computed styles
+     *
+     * The clone has the additional class lgs-widget-clone
+     *
+     * @param {HTMLElement} element Source element
+     * @returns {HTMLElement} Perfect clone
+     */
+    clone = (element) => this.#core.clone(element)
+
+    /**
      * Generates a unique element ID based on a widget group and identifier.
      *
      * @param {string|null} group - The widget group name used to locate configuration. If null or falsy, the ID is
@@ -365,6 +382,14 @@ export class WidgetManager {
      */
     set isScaling(value) {
         this.#core.isScaling = value
+    }
+
+    /**
+     * Getter used to retrieves the widget ID key.
+     * @returns {string} The widget ID key
+     */
+    get widgetIDKey() {
+        return this.#core.getWidgetIDKey()
     }
 
     /**

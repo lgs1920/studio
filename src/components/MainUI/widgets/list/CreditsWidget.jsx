@@ -7,15 +7,13 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-07
- * Last modified: 2025-11-07
+ * Created on: 2025-11-16
+ * Last modified: 2025-11-16
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { Compass }                             from '@Components/cesium/CompassUI/Compass'
-import { CreditsPanel }                        from '@Components/InformationPanel/CreditsPanel'
 import { CreditsBar }                          from '@Components/MainUI/credits/CreditsBar'
 import { Widget }                              from '@Components/MainUI/widgets/Widget'
 import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
@@ -31,7 +29,7 @@ import { useSnapshot }                                 from 'valtio'
  */
 export const CreditsWidget = ({id, context}) => {
     // Get snapshot of context
-    const {widgetEditor, cropZone} = useSnapshot(context)
+    const {widgetEditor, cropZone} = useSnapshot(context ?? {widgetEditor: false, cropZone: ''})
     const [_container, setContainer] = useState(null)
 
     // Set container when cropZone changes

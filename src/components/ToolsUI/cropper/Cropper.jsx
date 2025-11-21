@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-08
- * Last modified: 2025-11-08
+ * Created on: 2025-11-15
+ * Last modified: 2025-11-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,7 @@
 
 import { CompassWidget }  from '@Components/MainUI/widgets/list/CompassWidget'
 import { CreditsWidget }  from '@Components/MainUI/widgets/list/CreditsWidget'
-import { WidgetRenderer } from '@Components/MainUI/widgets/WidgetRenderer'
+import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
 import { WidgetsPanel }   from '@Components/MainUI/widgets/WidgetsPanel'
 import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropRatioEditorWidget'
 /**
@@ -85,7 +85,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 {children}
                 <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS]}/>
                 {Array.from(list.entries()).map(([key, props]) => (
-                    <WidgetRenderer key={key} id={key} props={props} context={context}/>
+                    <DynamicWidget key={key} id={key} props={props} context={context}/>
                 ))}
             </div>
         </>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-19
- * Last modified: 2025-08-19
+ * Created on: 2025-11-19
+ * Last modified: 2025-11-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -255,7 +255,7 @@ export const LGS1920 = () => {
             catch (error) {
                 UIToast.error({
                                   caption: 'LGS1920 was stopped due to errors!',
-                                  text:    'We\'re sorry',
+                                  text: 'We\'re sorry' + '\n' + error.message + '\n' + error.stack,
                               })
                 setInitStatus(false)
                 setInitError(error)
