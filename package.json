@@ -117,7 +117,7 @@
     "typescript": "^5.9.3",
     "vite": "^7.2.4",
     "vite-plugin-markdown": "^2.2.0",
-    "vitest": "^4.0.10"
+    "vitest": "^4.0.12"
   },
   "module": "index.ts",
   "trustedDependencies": [
