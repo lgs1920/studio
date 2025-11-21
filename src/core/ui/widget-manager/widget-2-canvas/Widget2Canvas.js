@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-20
- * Last modified: 2025-11-20
+ * Created on: 2025-11-21
+ * Last modified: 2025-11-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -113,6 +113,8 @@ export class Widget2Canvas {
         // Ensure the clone is fully visible for accurate rendering
         clone.style.display = this.#originalDisplay
         clone.style.visibility = 'visible'
+        // Hide the original in place
+        this.#original.style.visibility = 'hidden'
 
         // Append off-screen to allow layout/paint before snapshot
         document.body.appendChild(clone)
