@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-17
- * Last modified: 2025-11-17
+ * Created on: 2025-11-21
+ * Last modified: 2025-11-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -259,8 +259,12 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         showToast('warning', 'Recording has been canceled!')
     }, [__.recorder, updateState, showToast])
 
+
     return (
-        <div
+        <>
+            {video.preRecording ? (
+                <span className="video-pre-recording-message">{'Video Setup in progress ...'}</span>
+            ) : (<div
             ref={_toolbar}
             className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map"
         >
@@ -295,6 +299,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                     name={FA2SL.set(faXmark)}
                 />
             </SlTooltip>
-        </div>
+            </div>)
+            }
+        </>
     )
 }
