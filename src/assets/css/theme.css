@@ -1177,7 +1177,6 @@ h3 {
     cursor: grabbing !important;
     pointer-events: none;
     background: transparent;
-    /*background: var(--lgs-second-color-90)*/
 }
 
 .lgs-visual-widget {
