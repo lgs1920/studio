@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-20
- * Last modified: 2025-11-20
+ * Created on: 2025-11-21
+ * Last modified: 2025-11-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -194,23 +194,26 @@ export class WidgetCore {
     }
 
     /**
-     * Creates an inner overlay element for the widget.
+     * If none already exists, creates an inner overlay element for the widget.
      * @private
      * @param {HTMLElement} element - The DOM element
      */
     #createInnerOverlay = element => {
-        const overlay = document.createElement('div')
-        const elementId = this.retrieveElementId(element)
-        const config = this.getWidgetConfig(elementId)
-        config.overlay = overlay
-        Object.assign(overlay.style, {
-            display: 'block',
-        })
-        overlay.classList.add('lgs-widget-inner-overlay', config.type)
-        if (config.stopPropagation) {
-            overlay.classList.add('no-propagation', config.type)
+
+        if (!element.querySelector('.lgs-widget-inner-overlay')) {
+            const overlay = document.createElement('div')
+            const elementId = this.retrieveElementId(element)
+            const config = this.getWidgetConfig(elementId)
+            config.overlay = overlay
+            Object.assign(overlay.style, {
+                display: 'block',
+            })
+            overlay.classList.add('lgs-widget-inner-overlay', config.type)
+            if (config.stopPropagation) {
+                overlay.classList.add('no-propagation', config.type)
+            }
+            element.appendChild(overlay)
         }
-        element.appendChild(overlay)
     }
 
     /**
