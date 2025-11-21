@@ -92,6 +92,10 @@
     --border-dance-duration: 40s;
 }
 
+.recording-in-progress .lgs-widget-inner-overlay {
+    cursor: auto !important;
+}
+
 .video-pre-recording-message {
     font-size: var(--lgs-font-size-xl);
     overflow: visible;

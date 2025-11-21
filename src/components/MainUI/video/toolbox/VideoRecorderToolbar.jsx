@@ -263,7 +263,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     return (
         <>
             {video.preRecording ? (
-                <span className="video-pre-recording-message">{'Video Setup in progress ...'}</span>
+                <span className="video-pre-recording-message flashing">{'Video Setup in progress ...'}</span>
             ) : (<div
             ref={_toolbar}
             className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal lgs-one-line-card on-map"
