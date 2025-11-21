@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-15
- * Last modified: 2025-11-15
+ * Created on: 2025-11-21
+ * Last modified: 2025-11-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,6 @@
 
 import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
 import { LayersAndTerrainManager }                     from '@Core/ui/LayerAndTerrainManager'
-import { SlTooltip }                                   from '@shoelace-style/shoelace/dist/react'
 import { memo, useEffect }                             from 'react'
 import { proxy, useSnapshot }                          from 'valtio'
 import { subscribeKey }                                from 'valtio/utils'
@@ -63,20 +62,9 @@ export const CreditsBar = () => {
 
         return (
             <a href={provider.url} target="_blank">
-                {video.preRecording || video.recording ? (
-                    provider.logo ? (
-                        <img src={provider.logo}/>
-                    ) : (
-                        <span className={'credits'}>{provider.name}</span>
-                    )) : (
-                     <SlTooltip hoist placement="top" content={credits()}>
-                         {provider.logo ? (
-                             <img src={provider.logo} alt={provider.name}/>
-                         ) : (
-                              <span className={'credits'}>{provider.name}</span>
-                          )}
-                     </SlTooltip>
-                 )
+                {provider.logo
+                 ? <img src={provider.logo} alt={provider.name}/>
+                 : <span className={'credits'}>{provider.name}</span>
                 }
             </a>
         )
@@ -142,18 +130,7 @@ export const CreditsBar = () => {
             </div>
             <div className="cesium-credits lgs-credits lgs-one-line-card on-map">
                 <a href="https://www.cesium.com/" target="_blank">
-                    {video.preRecording || video.recording ?
-                     (<img src="/assets/images/Cesium_light_color.svg"/>)
-                                     : (
-                         <SlTooltip
-                             hoist
-                             placement="top"
-                             content="Built with CesiumJS, an Open Source JavaScript library for creating 3D globes"
-                         >
-                             <img src="/assets/images/Cesium_light_color.svg" alt="Cesium"/>
-                         </SlTooltip>
-                     )
-                    }
+                    <img src="/assets/images/Cesium_light_color.svg" alt="Cesium"/>
                 </a>
             </div>
         </div>
