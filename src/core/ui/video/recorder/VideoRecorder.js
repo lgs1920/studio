@@ -265,7 +265,7 @@ export class VideoRecorder extends EventTarget {
             this.#checkLimits()
             this.dispatchEvent(new CustomEvent(VideoRecorder.events.INFO, {
                 detail: {
-                    duration: this.#recordedDuration,
+                    duration: this.#recordedDuration * SECOND,
                     size:     this.#sizeBytes,
                     fps:      this.#fps,
                     isPaused: this.#isPaused,
@@ -282,7 +282,7 @@ export class VideoRecorder extends EventTarget {
             return
         }
         const now = performance.now()
-        const elapsed = (now - this.#startTime - this.#pausedTime) / 1000
+        const elapsed = (now - this.#startTime - this.#pausedTime) / SECOND
         this.#videoSource.add(elapsed, 1 / this.#fps)
         this.#recordedDuration = elapsed
         this.#rafId = requestAnimationFrame(this.#recordFrame)
