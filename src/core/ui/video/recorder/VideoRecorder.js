@@ -86,6 +86,7 @@ export class VideoRecorder extends EventTarget {
     #timeslice = SECOND
     #dimensions = {width: 1920, height: 1080}
     #sourceType = 'unknown'
+    #metadata = null
 
     constructor() {
         super()
@@ -124,6 +125,7 @@ export class VideoRecorder extends EventTarget {
                       maxDuration = Infinity,
                       maxSize = Infinity,
                       timeslice = SECOND,
+                      metadata = null,
                   } = {}) => {
         if (this.#isRecording) {
             throw this.#error('Cannot initialize while recording')
@@ -138,6 +140,7 @@ export class VideoRecorder extends EventTarget {
         this.#maxDuration = maxDuration
         this.#maxSize = maxSize
         this.#timeslice = timeslice
+        this.#metadata = metadata || {date: new Date()}
     }
 
     /**
@@ -211,7 +214,7 @@ export class VideoRecorder extends EventTarget {
                                       format: new Mp4OutputFormat({fastStart: false}),
                                       target: new BufferTarget(),
                                   })
-        await this.#output.setMetadataTags({})
+        await this.#output.setMetadataTags(this.#metadata)
 
         const safe = this.#dimensions
         this.#videoSource = new CanvasSource(this.#canvas, {
@@ -396,7 +399,7 @@ export class VideoRecorder extends EventTarget {
         const url = URL.createObjectURL(this.#blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `${filename}.mp4`
+        a.download = filename
         a.click()
         setTimeout(() => URL.revokeObjectURL(url), 100)
     }
