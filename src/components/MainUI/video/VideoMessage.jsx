@@ -24,10 +24,10 @@ import React, { useState, useEffect, useRef } from 'react'
  * @param {Object} props - Component props
  * @param {string|React.ReactNode} props.children - Content to display inside the message
  * @param {number} [props.duration=3600] - Total lifetime of the message in seconds (default: 1 hour)
- * @param {number} [props.blinkRate=1] - Blink frequency in Hz (used for CSS variable)
+ * @param {number} [props.blinkRate=0] - Blink rate in second (default: 0, no blinking)
  * @returns {React.ReactElement|null} The message element or null when fully hidden
  */
-export const VideoMessage = ({children, duration = 3600, blinkRate = 1}) => {
+export const VideoMessage = ({children, duration = 3600, blinkRate = 0}) => {
     /** @type {React.MutableRefObject<NodeJS.Timeout|null>} */
     const timerRef = useRef(null)
     /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} */

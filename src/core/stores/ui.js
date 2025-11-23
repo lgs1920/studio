@@ -76,7 +76,7 @@ export const ui = {
         finalizing: false,
         size:       0,
         toolbarPosition: {},
-        step: 0,
+        step: null,
         cropper: {
             ratioEditor: true,
             draggable:   true,

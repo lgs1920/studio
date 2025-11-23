@@ -263,10 +263,10 @@ export const VideoRecordingScreenArea = memo(() => {
                 ref={_cropZone}
             />
 
-            {video.recording && <VideoMessage>{'Recording...'}</VideoMessage>}
-            {video.paused && <VideoMessage>{'Recording paused...'}</VideoMessage>}
-            {video.preRecording && <VideoMessage duration={5}>{'Video setup in progress...'}</VideoMessage>}
-            {video.finalizing && <VideoMessage>{'Video finalization...'}</VideoMessage>}
+            {video.recording && <VideoMessage>{'Recording'}</VideoMessage>}
+            {video.paused && <VideoMessage>{'Recording paused'}</VideoMessage>}
+            {video.preRecording && <VideoMessage>{'Video setup in progress'}</VideoMessage>}
+            {video.finalizing && <VideoMessage>{'Video finalization'}</VideoMessage>}
 
 
             {widgetCacheEntries.map(([key, {component: LazyComponent}]) => (

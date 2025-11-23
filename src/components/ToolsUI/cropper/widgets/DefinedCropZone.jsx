@@ -111,7 +111,6 @@ export const DefinedCropZone = memo(function DefinedCropZone({
                 {children}
 
             </div>
-            {video.step === 0 && <VideoMessage>{'Video settings'}</VideoMessage>}
             {video.step === 1 && <VideoMessage>{'Add some widgets'}</VideoMessage>}
         </>
     )

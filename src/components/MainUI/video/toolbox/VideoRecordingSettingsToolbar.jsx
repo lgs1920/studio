@@ -79,6 +79,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                         widgetEditor:  false,
                     })
                     __.ui.widgetManager.windowResizing = true
+                    return true
                 },
                 afterStep:  () => {
                     Object.assign($video.cropper, {
@@ -88,6 +89,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     })
                     _steps.current[0].done = true
                     __.ui.widgetManager.windowResizing = false
+                    return true
                 },
             },
             {
@@ -98,9 +100,11 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                 beforeStep: () => {
                     $video.step = 1
                     _steps.current[1].done = true
+                    return true
                 },
                 afterStep:  () => {
                     $video.cropper.widgetEditor = false
+                    return true
                 },
             },
             {
@@ -112,6 +116,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                 beforeStep: () => {
                     $video.step = 2
                     __.ui.widgetManager.windowResizing = false
+                    return true
                 },
                 onClick:    async (index, event) => {
                     Object.assign($video, {
@@ -119,7 +124,8 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                         finalizing: false,
                     })
                     _steps.current[2].done = true
-                    await handleVideoRecording(event)  // Appel explicite à handleVideoRecording
+                    await handleVideoRecording(event)
+                    return true
                 },
             },
         ]

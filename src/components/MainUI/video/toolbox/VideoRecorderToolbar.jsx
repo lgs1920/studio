@@ -181,6 +181,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             if ($video.finalizing) {
                 return
             }
+            $video.finalizing = true
             updateState({finalizing: true})
         }
 
