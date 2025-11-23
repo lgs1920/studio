@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-19
- * Last modified: 2025-10-19
+ * Created on: 2025-11-23
+ * Last modified: 2025-11-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,9 +21,10 @@
  *
  ******************************************************************************/
 
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { useSnapshot } from 'valtio'
-import { CropZoneInfo }                                          from './CropZoneInfo'
+import { VideoMessage }                             from '@Components/MainUI/video/VideoMessage'
+import React, { memo, useEffect, useRef, useState } from 'react'
+import { useSnapshot }                              from 'valtio'
+import { CropZoneInfo }                             from './CropZoneInfo'
 
 export const DefinedCropZone = memo(function DefinedCropZone({
                                                                  className = '',
@@ -88,26 +89,30 @@ export const DefinedCropZone = memo(function DefinedCropZone({
     }, [])
 
     return (
-        <div
-            ref={_definedCropZone}
-            className={`crop-zone defined ${className}`}
-            aria-label="defined-crop-zone"
-            id={context.id}
-        >
-            {infoPosition && (
-                <div className="crop-info lgs-one-line-card on-map small">
-                    <CropZoneInfo id={context.id}/>
-                </div>
-            )}
+        <>
+            <div
+                ref={_definedCropZone}
+                className={`crop-zone defined ${className}`}
+                aria-label="defined-crop-zone"
+                id={context.id}
+            >
+                {infoPosition && (
+                    <div className="crop-info lgs-one-line-card on-map small">
+                        <CropZoneInfo id={context.id}/>
+                    </div>
+                )}
 
-            {infoComponent && (
-                <div className="crop-info-custom lgs-one-line-card on-map small">
-                    {infoComponent}
-                </div>
-            )}
+                {infoComponent && (
+                    <div className="crop-info-custom lgs-one-line-card on-map small">
+                        {infoComponent}
+                    </div>
+                )}
 
-            {children}
+                {children}
 
-        </div>
+            </div>
+            {video.step === 0 && <VideoMessage>{'Video settings'}</VideoMessage>}
+            {video.step === 1 && <VideoMessage>{'Add some widgets'}</VideoMessage>}
+        </>
     )
 })

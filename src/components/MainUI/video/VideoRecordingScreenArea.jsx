@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-20
- * Last modified: 2025-11-20
+ * Created on: 2025-11-23
+ * Last modified: 2025-11-23
  *
  *
  * Copyright © 2025 LGS1920
@@ -28,6 +28,9 @@
  */
 
 import { VideoRecorderWidget }                                                                    from '@Components/MainUI/video/toolbox/VideoRecorderWidget'
+import {
+    VideoMessage,
+}                                                                                                 from '@Components/MainUI/video/VideoMessage'
 import {
     VideoSettingsInfo,
 }                                                                                                 from '@Components/MainUI/video/VideoSettingsInfo'
@@ -259,6 +262,12 @@ export const VideoRecordingScreenArea = memo(() => {
                 infoComponent={<VideoSettingsInfo/>}
                 ref={_cropZone}
             />
+
+            {video.recording && <VideoMessage>{'Recording...'}</VideoMessage>}
+            {video.paused && <VideoMessage>{'Recording paused...'}</VideoMessage>}
+            {video.preRecording && <VideoMessage duration={5}>{'Video setup in progress...'}</VideoMessage>}
+            {video.finalizing && <VideoMessage>{'Video finalization...'}</VideoMessage>}
+
 
             {widgetCacheEntries.map(([key, {component: LazyComponent}]) => (
                 <DynamicWidget
