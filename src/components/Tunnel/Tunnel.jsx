@@ -7,13 +7,12 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-25
- * Last modified: 2025-10-25
+ * Created on: 2025-11-23
+ * Last modified: 2025-11-23
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
-
 /**
  * Tunnel.jsx
  *
@@ -22,7 +21,6 @@
  *
  * @module Tunnel
  */
-
 import { faXmark }                                                 from '@fortawesome/pro-regular-svg-icons'
 import { SlIconButton, SlTooltip }                                 from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                   from '@Utils/FA2SL'
@@ -52,15 +50,30 @@ import './style.css'
  * @component
  * @param {Object} props - Component props
  * @param {TunnelStep[]} props.steps - Array of steps
+ * @param {number} [props.defaultStepIndex=0] - Index of the step to display by default
  * @param {() => void} props.onCancel - Callback for exit button
  * @param {string} [props.className] - Additional CSS class names
  * @returns {JSX.Element} The rendered tunnel component
  */
-export const Tunnel = memo(({steps, onCancel, className = ''}) => {
+export const Tunnel = memo(({steps, defaultStepIndex = 0, onCancel, className = ''}) => {
     // State for the current step index
-    const [currentContainer, setCurrentStepIndex] = useState(0)
+    const [currentContainer, setCurrentStepIndex] = useState(defaultStepIndex)
     // Ref for the tunnel container
     const _tunnelContainer = useRef(null)
+
+    /**
+     * Validates if the default step is not blocked by mandatory steps
+     */
+    const validateDefaultStep = useCallback(() => {
+        const isBlocked = steps
+            .slice(0, defaultStepIndex)
+            .some(step => step.mandatory && !step.done)
+        if (isBlocked) {
+            console.warn(`The default step ${defaultStepIndex} is blocked by mandatory steps.`)
+            return false
+        }
+        return true
+    }, [steps, defaultStepIndex])
 
     /**
      * Handles step navigation with optional per-step before/after events
@@ -75,78 +88,78 @@ export const Tunnel = memo(({steps, onCancel, className = ''}) => {
         if (index === currentContainer) {
             return
         }
-
         // Check if navigation is blocked by mandatory steps
         const isBlocked = steps
             .slice(0, index)
-            .some(step => step.mandatory && !step.done)
-
+            .some(step => step.mandatory && !step.done);
         if (isBlocked) {
             return
         }
-
         // Trigger afterStep for the current step if it exists
         if (steps[currentContainer]?.afterStep) {
             steps[currentContainer].afterStep(currentContainer)
         }
-
         // Trigger onClick for the target step if defined
         const targetStep = steps[index]
         if (targetStep.onClick?.(index, event) === false) {
             return
         }
-
         // Trigger beforeStep for the target step if defined
         if (targetStep.beforeStep?.(index, event) === false) {
             return
         }
-
         // Update the current step index
         setCurrentStepIndex(index)
-    }, [steps, currentContainer])
+    }, [steps, currentContainer]);
 
-    // Execute beforeStep for the first step on initial render
+    // Execute beforeStep for the default step on initial render
     useEffect(() => {
-        // Set initial opacity to ensure visibility
         if (_tunnelContainer.current) {
             _tunnelContainer.current.style.opacity = '1'
         }
-        // Trigger beforeStep for the first step if defined
-        if (steps[0]?.beforeStep) {
-            steps[0].beforeStep(0)
+        if (validateDefaultStep()) {
+            const defaultStep = steps[defaultStepIndex]
+            if (defaultStep?.beforeStep) {
+                defaultStep.beforeStep(defaultStepIndex)
+            }
         }
-    }, [steps])
+    }, [steps, defaultStepIndex, validateDefaultStep]);
 
     // Memoize step items to prevent unnecessary re-renders
-    const stepItems = useMemo(() => steps.map((step, index) => {
-        const isDone = step.done || false
-        const isCurrent = index === currentContainer
-        const isBlocked = steps
-            .slice(0, index)
-            .some(s => s.mandatory && !s.done)
-
-        return (
-            <div key={index} className="lgs-tunnel-bar-item" style={{
-                opacity:       isCurrent || step.className ? 1 : 0.7,
-                pointerEvents: isBlocked ? 'none' : 'auto',
-            }}>
-                <SlTooltip content={step.text} placement="top">
-                    <SlIconButton
-                        className={classNames('lgs-tunnel-element', step.className, {
-                            'lgs-tunnel-element-done':    isDone,
-                            'lgs-tunnel-element-active':  isCurrent,
-                            'lgs-tunnel-element-blocked': isBlocked,
-                        })}
-                        onClick={event => handleStepClick(index, event)}
-                        disabled={isBlocked}
-                        library="fa"
-                        name={FA2SL.set(step.icon)}
-                    />
-                </SlTooltip>
-                <div className="lgs-tunnel-bar-spacer"/>
-            </div>
-        )
-    }), [steps, currentContainer, handleStepClick])
+    const stepItems = useMemo(() =>
+                                  steps.map((step, index) => {
+                                      const isDone = step.done || false
+                                      const isCurrent = index === currentContainer
+                                      const isBlocked = steps
+                                          .slice(0, index)
+                                          .some(s => s.mandatory && !s.done)
+                                      return (
+                                          <div
+                                              key={index}
+                                              className="lgs-tunnel-bar-item"
+                                              style={{
+                                                  opacity:       isCurrent || step.className ? 1 : 0.7,
+                                                  pointerEvents: isBlocked ? 'none' : 'auto',
+                                              }}
+                                          >
+                                              <SlTooltip content={step.text} placement="top">
+                                                  <SlIconButton
+                                                      className={classNames('lgs-tunnel-element', step.className, {
+                                                          'lgs-tunnel-element-done':    isDone,
+                                                          'lgs-tunnel-element-active':  isCurrent,
+                                                          'lgs-tunnel-element-blocked': isBlocked,
+                                                      })}
+                                                      onClick={event => handleStepClick(index, event)}
+                                                      disabled={isBlocked}
+                                                      library="fa"
+                                                      name={FA2SL.set(step.icon)}
+                                                  />
+                                              </SlTooltip>
+                                              <div className="lgs-tunnel-bar-spacer"/>
+                                          </div>
+                                      )
+                                  }),
+                              [steps, currentContainer, handleStepClick])
 
     return (
         <div className={classNames('lgs-tunnel-container', className)} ref={_tunnelContainer}>
@@ -165,7 +178,6 @@ export const Tunnel = memo(({steps, onCancel, className = ''}) => {
                 </SlTooltip>
                 <div className="lgs-tunnel-bar-spacer"/>
             </div>
-
             {/* Current step content */}
             {steps[currentContainer]?.component && (
                 <div className="lgs-tunnel-content">
@@ -173,5 +185,5 @@ export const Tunnel = memo(({steps, onCancel, className = ''}) => {
                 </div>
             )}
         </div>
-    )
-})
+    );
+});
