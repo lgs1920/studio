@@ -87,6 +87,7 @@ export class VideoRecorder extends EventTarget {
     #dimensions = {width: 1920, height: 1080}
     #sourceType = 'unknown'
     #metadata = null
+    #ratio = null
 
     constructor() {
         super()
@@ -106,6 +107,7 @@ export class VideoRecorder extends EventTarget {
             fps:      this.#fps,
             quality: this.#quality,
             dimensions: this.#dimensions,
+            ratio: this.#ratio,
             sourceType: this.#sourceType,
         }
     }
@@ -126,6 +128,7 @@ export class VideoRecorder extends EventTarget {
                       maxSize = Infinity,
                       timeslice = SECOND,
                       metadata = null,
+                      ratio,
                   } = {}) => {
         if (this.#isRecording) {
             throw this.#error('Cannot initialize while recording')
@@ -141,6 +144,8 @@ export class VideoRecorder extends EventTarget {
         this.#maxSize = maxSize
         this.#timeslice = timeslice
         this.#metadata = metadata || {date: new Date()}
+        this.#ratio = lgs.configuration.videoFormats.find(f => f.value === ratio)
+
     }
 
     /**
