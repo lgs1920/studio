@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-23
- * Last modified: 2025-11-23
+ * Created on: 2025-11-24
+ * Last modified: 2025-11-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -34,6 +34,9 @@ import '../style.css'
  * RecorderControls - Renders play/pause and stop buttons for the recorder
  */
 const RecorderControls = memo(({recording, paused, recorder, onFinalize}) => {
+
+    const $video = lgs.stores.ui.video
+
     const handlePlayPause = useCallback(() => {
         if (recorder) {
             paused ? recorder.resume() : recorder.pause()
@@ -42,6 +45,7 @@ const RecorderControls = memo(({recording, paused, recorder, onFinalize}) => {
 
     const handleStop = useCallback(() => {
         onFinalize(true)
+        $video.finalizing = true
         recorder?.stop()
     }, [recorder, onFinalize])
 
