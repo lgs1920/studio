@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-21
- * Last modified: 2025-11-21
+ * Created on: 2025-11-25
+ * Last modified: 2025-11-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -884,6 +884,7 @@ export class WidgetCore {
                 scale:                 initialConfig.scale ?? {x: 1, y: 1},
                 setPosition:            initialConfig.setPosition,
                 showControlBox:        initialConfig.showControlBox,
+                snap: initialConfig.snap ?? false,
                 snapPoints:            [],
                 stopPropagation: initialConfig.stopPropagation ?? false,
                 top:                   initialConfig.top,

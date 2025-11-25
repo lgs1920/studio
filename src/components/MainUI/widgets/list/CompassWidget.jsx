@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-14
- * Last modified: 2025-11-14
+ * Created on: 2025-11-25
+ * Last modified: 2025-11-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -61,6 +61,7 @@ export const CompassWidget = ({id, context}) => {
                 ttl:       HOUR,
                 min: {width: 50},
                 max: {width: 300},
+                snap: 'svg',
                 margin: 0,
             }
         }
