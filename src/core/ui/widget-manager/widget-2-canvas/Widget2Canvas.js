@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-21
- * Last modified: 2025-11-21
+ * Created on: 2025-11-25
+ * Last modified: 2025-11-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -77,7 +77,7 @@ export class Widget2Canvas {
             }
 
             this.#pendingRefresh = true
-            queueMicrotask(() => {
+            requestAnimationFrame(() => {
                 this.#refresh()
                 this.#pendingRefresh = false
             })
@@ -95,62 +95,136 @@ export class Widget2Canvas {
     }
 
     /**
-     * Performs a single DOM mutation refresh — the fastest possible path.
-     *
-     * Clones the widget off-screen, renders it with snapdom, draws to canvas,
-     * then replaces the previous canvas in one operation.
-     *
-     * @private
+     * Refreshes the widget snapshot into a canvas
+     * - If type is 'svg', uses native Image + drawImage for speed
+     * - Otherwise falls back to snapdom.toCanvas
+     * - Ensures static vs dynamic rendering pipelines remain consistent
      */
-    #refresh = () => {
+    #refresh = async () => {
         if (!this.#original) {
             return
         }
 
-        // Clone using the global widget manager (avoids direct DOM reads that could trigger reflow)
+        // Clone via widget manager to avoid direct DOM reads
         const clone = __.ui.widgetManager.clone(this.#original)
-
-        // Ensure the clone is fully visible for accurate rendering
         clone.style.display = this.#originalDisplay
         clone.style.visibility = 'visible'
-        // Hide the original in place
         this.#original.style.visibility = 'hidden'
-
-        // Append off-screen to allow layout/paint before snapshot
         document.body.appendChild(clone)
 
-        snapdom
-            .toCanvas(clone, this.#options)
-            .then((snapshot) => {
-                const scale = this.#options.scale
-                const width = Math.round(snapshot.width / scale)
-                const height = Math.round(snapshot.height / scale)
+        const cleanup = () => clone.remove()
 
-                const newCanvas = document.createElement('canvas')
-                newCanvas.width = width
-                newCanvas.height = height
-                newCanvas.className = 'lgs-widget-canvas'
+        /**
+         * Replace or insert a new canvas with given source
+         * @param {CanvasImageSource} source - Image or canvas to draw
+         * @param {number} width - Target width
+         * @param {number} height - Target height
+         * @param {number} scale - Scale factor
+         */
+        const replaceCanvas = (source, width, height, scale = 1) => {
+            const newCanvas = document.createElement('canvas')
+            newCanvas.width = Math.round(width / scale)
+            newCanvas.height = Math.round(height / scale)
+            newCanvas.className = 'lgs-widget-canvas'
 
-                const ctx = newCanvas.getContext('2d')
-                ctx.drawImage(snapshot, 0, 0, width, height)
+            const ctx = newCanvas.getContext('2d')
+            ctx.drawImage(source, 0, 0, newCanvas.width, newCanvas.height)
 
-                // Single DOM mutation: replace or insert the new canvas
-                this.#canvas
-                ? this.#canvas.replaceWith(newCanvas)
-                : this.#original.before(newCanvas)
+            this.#canvas
+            ? this.#canvas.replaceWith(newCanvas)
+            : this.#original.before(newCanvas)
 
-                this.#canvas = newCanvas
-            })
-            .catch((error) => {
-                // Silent fallback — errors are rare but we don't want to break the UI
-                console.warn('Widget2Canvas: failed to render snapshot', error)
-            })
-            .finally(() => {
-                // Always clean up the temporary clone
-                clone.remove()
-            })
+            this.#canvas = newCanvas
+        }
+
+        try {
+            if (this.#options.type === 'svg') {
+                // Direct SVG pipeline: faster and resolves CSS variables/classes natively
+                const svg = clone.querySelector('svg')
+
+                /**
+                 * Convert an SVG element into a self-contained XML string
+                 * - Resolves classes and CSS variables via computed styles
+                 * - Applies paint/text/transform properties as inline attributes
+                 * - Removes class attributes
+                 * - Returns serialized XML string
+                 *
+                 * @param {SVGElement} svgEl - The SVG element to process
+                 * @returns {string} - Serialized XML string with inline styles
+                 */
+                function svgToXml(svgEl) {
+                    svgEl.querySelectorAll('*').forEach(el => {
+                        const style = getComputedStyle(el)
+
+                        // Paint properties
+                        const fill = style.getPropertyValue('fill')
+                        if (fill && fill !== 'none') {
+                            el.setAttribute('fill', fill)
+                        }
+
+                        const stroke = style.getPropertyValue('stroke')
+                        if (stroke && stroke !== 'none') {
+                            el.setAttribute('stroke', stroke)
+                        }
+
+                        const strokeWidth = style.getPropertyValue('stroke-width')
+                        if (strokeWidth && strokeWidth !== '0px') {
+                            el.setAttribute('stroke-width', strokeWidth)
+                        }
+
+                        // Text properties
+                        const fontFamily = style.getPropertyValue('font-family')
+                        if (fontFamily) {
+                            el.setAttribute('font-family', fontFamily)
+                        }
+
+                        const fontSize = style.getPropertyValue('font-size')
+                        if (fontSize) {
+                            el.setAttribute('font-size', fontSize)
+                        }
+
+                        // Opacity
+                        const opacity = style.getPropertyValue('opacity')
+                        if (opacity) {
+                            el.setAttribute('opacity', opacity)
+                        }
+
+                        // Transform
+                        const transform = style.getPropertyValue('transform')
+                        if (transform && transform !== 'none') {
+                            el.setAttribute('transform', transform)
+                        }
+
+                        // Remove class to make SVG self-contained
+                        el.removeAttribute('class')
+                    })
+
+                    // Serialize to XML string
+                    return new XMLSerializer().serializeToString(svgEl)
+                }
+
+                const xml = svgToXml(svg)
+                const img = new Image()
+                img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml)
+
+                // Wait until image is decoded before drawing
+                await img.decode()
+
+                replaceCanvas(img, img.width, img.height, this.#options.scale)
+            }
+            else {
+                // Fallback pipeline: rasterize via snapdom
+                const snapshot = await snapdom.toCanvas(clone, this.#options)
+                replaceCanvas(snapshot, snapshot.width, snapshot.height, this.#options.scale)
+            }
+        }
+        catch (err) {
+            console.warn('Widget2Canvas: failed to render snapshot', err)
+        }
+        finally {
+            cleanup()
+        }
     }
-
     /**
      * Returns the 2D rendering context of the current canvas (for overlays, annotations…).
      *
