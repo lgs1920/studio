@@ -375,11 +375,12 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 _initialized.current = true
                 $widget.list.set(config.id, {mounted: true})
                 if (interactionLocked) {
-                    new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
+                    const w2c = new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
                         embedFonts: true,
                         scale: LGS_WIDGET_SCALE_FACTOR,
                         type: fullConfig.snap,
                     })
+                    await w2c.init()
                 }
                 else {
                     _moveable.current?.updateRect()

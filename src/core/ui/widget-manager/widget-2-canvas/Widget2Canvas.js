@@ -58,173 +58,180 @@ export class Widget2Canvas {
 
         this.#original = target
         this.#options = {
-            scale:            window.devicePixelRatio || 1,
-            includeBackground: true,
-            includeShadowDom: true,
+            scale: window.devicePixelRatio || 1,
             ...options,
         }
 
-        // Store original display value before any manipulation
         this.#originalDisplay = getComputedStyle(target).display
 
-        // Observe all possible mutations on the target and its subtree
         const observer = new MutationObserver((mutations) => {
-            if (!mutations.length) {
-                return
-            }
-            if (this.#pendingRefresh) {
+            if (!mutations.length || this.#pendingRefresh) {
                 return
             }
 
             this.#pendingRefresh = true
-            requestAnimationFrame(() => {
-                this.#refresh()
+            requestAnimationFrame(async () => {
+                const relevant = mutations.some(m => m.target.classList?.contains('dynamic-widget-part'))
+
+                if (relevant) {
+                    // Mutation sur une partie dynamique
+                    await this.#refreshDynamic()
+                }
+                else {
+                    // Mutation ailleurs → uniquement le statique
+                    await this.#refreshStatic()
+                }
+
                 this.#pendingRefresh = false
             })
         })
 
+
         observer.observe(target, {
-            childList:     true,
-            subtree:       true,
-            attributes:    true,
+            childList:  true,
+            subtree:    true,
+            attributes: true,
             characterData: true,
         })
+    }
 
-        // Initial render
-        this.#refresh()
+    init = async () => {
+        await this.#refreshStatic()
+        await this.#refreshDynamic()
     }
 
     /**
-     * Refreshes the widget snapshot into a canvas
-     * - If type is 'svg', uses native Image + drawImage for speed
-     * - Otherwise falls back to snapdom.toCanvas
-     * - Ensures static vs dynamic rendering pipelines remain consistent
+     * Normalize a DOM element into a CanvasImageSource
+     * - If it's an SVG, inline styles and serialize to XML
+     * - Otherwise, return the element itself (or rasterized snapshot)
+     *
+     * @param {Element} el - DOM element (SVG or other)
+     * @param {Object} options - rendering options
+     * @returns {Promise<CanvasImageSource>} - Image or Canvas ready to draw
      */
-    #refresh = async () => {
-        if (!this.#original) {
-            return
-        }
+    #elementToCanvasSource = async (el, options = {}) => {
+        if (el instanceof SVGElement) {
+            // Inline styles
+            el.querySelectorAll('*').forEach(node => {
+                const style = getComputedStyle(node)
 
-        // Clone via widget manager to avoid direct DOM reads
-        const clone = __.ui.widgetManager.clone(this.#original)
-        clone.style.display = this.#originalDisplay
-        clone.style.visibility = 'visible'
-        this.#original.style.visibility = 'hidden'
-        document.body.appendChild(clone)
-
-        const cleanup = () => clone.remove()
-
-        /**
-         * Replace or insert a new canvas with given source
-         * @param {CanvasImageSource} source - Image or canvas to draw
-         * @param {number} width - Target width
-         * @param {number} height - Target height
-         * @param {number} scale - Scale factor
-         */
-        const replaceCanvas = (source, width, height, scale = 1) => {
-            const newCanvas = document.createElement('canvas')
-            newCanvas.width = Math.round(width / scale)
-            newCanvas.height = Math.round(height / scale)
-            newCanvas.className = 'lgs-widget-canvas'
-
-            const ctx = newCanvas.getContext('2d')
-            ctx.drawImage(source, 0, 0, newCanvas.width, newCanvas.height)
-
-            this.#canvas
-            ? this.#canvas.replaceWith(newCanvas)
-            : this.#original.before(newCanvas)
-
-            this.#canvas = newCanvas
-        }
-
-        try {
-            if (this.#options.type === 'svg') {
-                // Direct SVG pipeline: faster and resolves CSS variables/classes natively
-                const svg = clone.querySelector('svg')
-
-                /**
-                 * Convert an SVG element into a self-contained XML string
-                 * - Resolves classes and CSS variables via computed styles
-                 * - Applies paint/text/transform properties as inline attributes
-                 * - Removes class attributes
-                 * - Returns serialized XML string
-                 *
-                 * @param {SVGElement} svgEl - The SVG element to process
-                 * @returns {string} - Serialized XML string with inline styles
-                 */
-                function svgToXml(svgEl) {
-                    svgEl.querySelectorAll('*').forEach(el => {
-                        const style = getComputedStyle(el)
-
-                        // Paint properties
-                        const fill = style.getPropertyValue('fill')
-                        if (fill && fill !== 'none') {
-                            el.setAttribute('fill', fill)
-                        }
-
-                        const stroke = style.getPropertyValue('stroke')
-                        if (stroke && stroke !== 'none') {
-                            el.setAttribute('stroke', stroke)
-                        }
-
-                        const strokeWidth = style.getPropertyValue('stroke-width')
-                        if (strokeWidth && strokeWidth !== '0px') {
-                            el.setAttribute('stroke-width', strokeWidth)
-                        }
-
-                        // Text properties
-                        const fontFamily = style.getPropertyValue('font-family')
-                        if (fontFamily) {
-                            el.setAttribute('font-family', fontFamily)
-                        }
-
-                        const fontSize = style.getPropertyValue('font-size')
-                        if (fontSize) {
-                            el.setAttribute('font-size', fontSize)
-                        }
-
-                        // Opacity
-                        const opacity = style.getPropertyValue('opacity')
-                        if (opacity) {
-                            el.setAttribute('opacity', opacity)
-                        }
-
-                        // Transform
-                        const transform = style.getPropertyValue('transform')
-                        if (transform && transform !== 'none') {
-                            el.setAttribute('transform', transform)
-                        }
-
-                        // Remove class to make SVG self-contained
-                        el.removeAttribute('class')
-                    })
-
-                    // Serialize to XML string
-                    return new XMLSerializer().serializeToString(svgEl)
+                const fill = style.getPropertyValue('fill')
+                if (fill && fill !== 'none') {
+                    node.setAttribute('fill', fill)
                 }
 
-                const xml = svgToXml(svg)
-                const img = new Image()
-                img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml)
+                const stroke = style.getPropertyValue('stroke')
+                if (stroke && stroke !== 'none') {
+                    node.setAttribute('stroke', stroke)
+                }
 
-                // Wait until image is decoded before drawing
-                await img.decode()
+                const strokeWidth = style.getPropertyValue('stroke-width')
+                if (strokeWidth && strokeWidth !== '0px') {
+                    node.setAttribute('stroke-width', strokeWidth)
+                }
 
-                replaceCanvas(img, img.width, img.height, this.#options.scale)
-            }
-            else {
-                // Fallback pipeline: rasterize via snapdom
-                const snapshot = await snapdom.toCanvas(clone, this.#options)
-                replaceCanvas(snapshot, snapshot.width, snapshot.height, this.#options.scale)
+                const fontFamily = style.getPropertyValue('font-family')
+                if (fontFamily) {
+                    node.setAttribute('font-family', fontFamily)
+                }
+
+                const fontSize = style.getPropertyValue('font-size')
+                if (fontSize) {
+                    node.setAttribute('font-size', fontSize)
+                }
+
+                const opacity = style.getPropertyValue('opacity')
+                if (opacity) {
+                    node.setAttribute('opacity', opacity)
+                }
+
+                const transform = style.getPropertyValue('transform')
+                if (transform && transform !== 'none') {
+                    node.setAttribute('transform', transform)
+                }
+
+                node.removeAttribute('class')
+                node.removeAttribute('id')
+            })
+
+            // Serialize to XML string
+            const xml = new XMLSerializer().serializeToString(el)
+            const img = new Image()
+            img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml)
+            await img.decode()
+            return img
+        }
+
+        // Non-SVG fallback: rasterize via snapdom
+        const snapshot = await snapdom.toCanvas(el, options)
+        return snapshot
+    }
+
+    /**
+     * Render a DOM element (static or dynamic) into the widget canvas
+     * - Handles SVG vs non-SVG
+     * - Inlines styles if needed
+     * - Draws directly into the canvas
+     */
+    #renderPart = async (el) => {
+        let target = el
+
+        if (!(el instanceof SVGElement)) {
+            const childSvg = el.querySelector('svg')
+            if (childSvg) {
+                target = childSvg
             }
         }
-        catch (err) {
-            console.warn('Widget2Canvas: failed to render snapshot', err)
+
+        return await this.#elementToCanvasSource(target, this.#options)
+    }
+
+    #refreshStatic = async () => {
+        const staticParts = this.#original.querySelectorAll('.static-widget-part')
+
+        if (staticParts.length > 0) {
+            for (const el of staticParts) {
+                const partCanvas = await this.#renderPart(el)
+                this.#replaceCanvas(partCanvas, partCanvas.width, partCanvas.height, this.#options.scale)
+            }
         }
-        finally {
-            cleanup()
+        else {
+            const partCanvas = await this.#renderPart(this.#original)
+            this.#replaceCanvas(partCanvas, partCanvas.width, partCanvas.height, this.#options.scale)
         }
     }
+
+    #refreshDynamic = async () => {
+        const dynamicParts = this.#original.querySelectorAll('.dynamic-widget-part')
+        for (const el of dynamicParts) {
+            const partCanvas = await this.#renderPart(el)
+            this.#replaceCanvas(partCanvas, partCanvas.width, partCanvas.height, this.#options.scale)
+        }
+    }
+    /**
+     * Replace or insert a new canvas with given source
+     * @param {CanvasImageSource} source - Image or canvas to draw
+     * @param {number} width - Target width
+     * @param {number} height - Target height
+     * @param {number} scale - Scale factor
+     */
+    #replaceCanvas = (source, width, height, scale = 1) => {
+        const newCanvas = document.createElement('canvas')
+        newCanvas.width = Math.round(width / scale)
+        newCanvas.height = Math.round(height / scale)
+        newCanvas.className = 'lgs-widget-canvas'
+
+        const ctx = newCanvas.getContext('2d')
+        ctx.drawImage(source, 0, 0, newCanvas.width, newCanvas.height)
+
+        this.#canvas
+        ? this.#canvas.replaceWith(newCanvas)
+        : this.#original.before(newCanvas)
+
+        this.#canvas = newCanvas
+    }
+
+
     /**
      * Returns the 2D rendering context of the current canvas (for overlays, annotations…).
      *
