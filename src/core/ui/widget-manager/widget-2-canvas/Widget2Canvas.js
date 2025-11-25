@@ -34,9 +34,6 @@ export class Widget2Canvas {
     /** Current visible canvas element */
     #canvas = null
 
-    /** Original computed display value (restored on destroy/showOriginal) */
-    #originalDisplay = 'block'
-
     /** Snapdom rendering options */
     #options = {}
 
@@ -63,8 +60,6 @@ export class Widget2Canvas {
             ...options,
         }
 
-        this.#originalDisplay = getComputedStyle(target).display
-
         const observer = new MutationObserver((mutations) => {
             if (!mutations.length || this.#pendingRefresh) {
                 return
@@ -75,11 +70,9 @@ export class Widget2Canvas {
                 const relevant = mutations.some(m => m.target.classList?.contains('dynamic-widget-part'))
 
                 if (relevant) {
-                    // Mutation sur une partie dynamique
                     await this.#refreshDynamic()
                 }
                 else {
-                    // Mutation ailleurs → uniquement le statique
                     await this.#refreshStatic()
                 }
 
@@ -164,8 +157,7 @@ export class Widget2Canvas {
         }
 
         // Non-SVG fallback: rasterize via snapdom
-        const snapshot = await snapdom.toCanvas(el, options)
-        return snapshot
+        return await snapdom.toCanvas(el, options)
     }
 
     /**
@@ -210,6 +202,7 @@ export class Widget2Canvas {
             this.#replaceCanvas(partCanvas, partCanvas.width, partCanvas.height, this.#options.scale)
         }
     }
+
     /**
      * Replace or insert a new canvas with given source
      * @param {CanvasImageSource} source - Image or canvas to draw
@@ -262,35 +255,12 @@ export class Widget2Canvas {
         }
     }
 
-    /** Displays the original DOM widget and hides the canvas */
-    showOriginal = () => {
-        if (this.#canvas) {
-            this.#canvas.style.display = 'none'
-        }
-        if (this.#original) {
-            this.#original.style.display = this.#originalDisplay
-        }
-    }
-
-    /** Hides the original widget and shows the canvas (default mirrored state) */
-    hideOriginal = () => {
-        if (this.#canvas) {
-            this.#canvas.style.display = 'block'
-        }
-        if (this.#original) {
-            this.#original.style.display = 'none'
-        }
-    }
-
     /**
      * Completely removes the canvas mirror and restores the original widget.
      * Should be called when the widget is unmounted or no longer needed.
      */
     destroy = () => {
         this.#canvas?.remove()
-        if (this.#original) {
-            this.#original.style.display = this.#originalDisplay
-        }
         this.#canvas = null
         this.#original = null
     }
