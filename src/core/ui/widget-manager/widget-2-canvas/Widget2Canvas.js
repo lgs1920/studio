@@ -205,7 +205,6 @@ export class Widget2Canvas {
 
     #refreshDynamic = async () => {
         const dynamicParts = this.#original.querySelectorAll(`.${DYNAMIC_WIDGET_PART}`)
-        console.log(dynamicParts)
         for (const el of dynamicParts) {
             const partCanvas = await this.#renderPart(el)
             this.#replaceCanvas(partCanvas, partCanvas.width, partCanvas.height, this.#options.scale)
