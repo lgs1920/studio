@@ -14,7 +14,8 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { snapdom } from '@zumer/snapdom'
+import { DYNAMIC_WIDGET_PART, STATIC_WIDGET_PART } from '@Core/constants'
+import { snapdom }                                 from '@zumer/snapdom'
 
 /**
  * Widget2Canvas — Ultra-fast DOM-to-canvas mirror (faster than html2canvas)
@@ -187,7 +188,8 @@ export class Widget2Canvas {
     }
 
     #refreshStatic = async () => {
-        const staticParts = this.#original.querySelectorAll('.static-widget-part')
+        //TODO Fix Static and dynamic Refresh  Github #301
+        const staticParts = this.#original.querySelectorAll(`.${STATIC_WIDGET_PART}`)
 
         if (staticParts.length > 0) {
             for (const el of staticParts) {
@@ -202,7 +204,8 @@ export class Widget2Canvas {
     }
 
     #refreshDynamic = async () => {
-        const dynamicParts = this.#original.querySelectorAll('.dynamic-widget-part')
+        const dynamicParts = this.#original.querySelectorAll(`.${DYNAMIC_WIDGET_PART}`)
+        console.log(dynamicParts)
         for (const el of dynamicParts) {
             const partCanvas = await this.#renderPart(el)
             this.#replaceCanvas(partCanvas, partCanvas.width, partCanvas.height, this.#options.scale)

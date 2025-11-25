@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-20
- * Last modified: 2025-11-20
+ * Created on: 2025-11-25
+ * Last modified: 2025-11-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -484,8 +484,8 @@ export const VIDEO_TOOLS_WIDGETS = 'video-tools-widgets'
 export const CROP_TOOLS_WIDGETS = 'crop-tools-widgets'
 export const MULTI_PURPOSE_WIDGETS = 'multi-purpose-widgets'
 
-export const WIDGETS_CAPABILITIES = ['canRemove', 'canReset', 'canMaximize', 'canPosition', 'canEdit']
-export const WIDGETS_CONFIGURATION = new Map([
+export const WIDGETS_CAPABILITIES  = ['canRemove', 'canReset', 'canMaximize', 'canPosition', 'canEdit'],
+             WIDGETS_CONFIGURATION = new Map([
                                                  [
                                                      'compass-widget', {
                                                      icon:      faCompass,
@@ -499,4 +499,6 @@ export const WIDGETS_CONFIGURATION = new Map([
                                                  },
                                                  ],
                                              ],
-)
+             )
+export const DYNAMIC_WIDGET_PART = 'dynamic-widget-part',
+             STATIC_WIDGET_PART  = 'static-widget-part'
