@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-23
- * Last modified: 2025-11-23
+ * Created on: 2025-11-25
+ * Last modified: 2025-11-25
  *
  *
  * Copyright © 2025 LGS1920
@@ -248,7 +248,7 @@ export const VideoRecordingScreenArea = memo(() => {
 
     return (
         <>
-            <CropOverlay style={overlayStyle}/>
+            {!video.recording && <CropOverlay style={overlayStyle}/>}
 
             <VideoRecorderWidget id="video-recorder-widget"/>
 
