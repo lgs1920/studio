@@ -1,3 +1,5 @@
+Here is the complete Markdown code for the `src/core/ui/widget-manager/widget-2-canvas/README.md` file.
+
 # Widget2Canvas — High-Performance DOM-to-Canvas Mirroring
 
 A lightweight, production-ready class that replaces a DOM widget with a perfectly synced canvas
@@ -27,34 +29,34 @@ Ideal for:
 
 ## Installation
 
-```bash
+```
+bash
 npm install @zumer/snapdom
 ```
-
 ---
 
 ## Usage
 
 ### 1. Import the class
 
-```js
+```
+js
 import { Widget2Canvas } from './path/to/Widget2Canvas.js'
 ```
-
 ### 2. Initialize on a DOM element
 
-```js
+```
+js
 // Select your widget (excluding overlays, tooltips, etc.)
 const target = document.querySelector('.my-widget')
 
 // Create the canvas mirror
 const mirror = new Widget2Canvas(target, {
-    scale:             2,                    // Optional: 2x resolution
-    includeBackground: true,     // Default: true
-    includeShadowDom:  true       // Default: true
+scale:             2,                    // Optional: 2x resolution
+includeBackground: true,     // Default: true
+includeShadowDom:  true       // Default: true
 })
 ```
-
 > The original element is automatically hidden and replaced by a canvas.
 
 ---
@@ -73,54 +75,55 @@ const mirror = new Widget2Canvas(target, {
 
 ### Example: Draw on top of the mirrored canvas
 
-```js
+```
+js
 const ctx = mirror.getContext()
 ctx.fillStyle = 'red'
 ctx.fillRect(10, 10, 50, 50)
 ```
-
 ---
 
 ## CSS (Required)
 
 Add this to your global stylesheet:
 
-```css
+```
+css
 /* Off-screen clone — must be visible to snapdom */
 .lgs-widget-clone {
-    position: absolute !important;
-    top: -99999px !important;
-    left: -99999px !important;
-    visibility: visible !important;
-    pointer-events: none !important;
-    contain: layout style paint;
+position: absolute !important;
+top: -99999px !important;
+left: -99999px !important;
+visibility: visible !important;
+pointer-events: none !important;
+contain: layout style paint;
 }
 
 /* Visible canvas — inherits layout from original */
 .lgs-widget-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    opacity: 1;
-    display: block;
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+pointer-events: none;
+opacity: 1;
+display: block;
 }
 ```
-
 > The canvas automatically inherits `position`, `top`, `left`, `transform`, etc. from the parent.
 
 ---
 
 ## Advanced: React Integration (Hook)
 
-```tsx
+```
+tsx
 import {useRef, useEffect} from 'react'
 import {Widget2Canvas} from './Widget2Canvas'
 
 export function useWidget2Canvas(ref, options = {}) {
-    const mirrorRef = useRef(null)
+const mirrorRef = useRef(null)
 
     useEffect(() => {
         if (!ref.current) return
@@ -139,18 +142,17 @@ export function useWidget2Canvas(ref, options = {}) {
     return mirrorRef.current
 }
 ```
-
 Usage in component:
 
-```tsx
+```
+tsx
 function MyWidget() {
-    const widgetRef = useRef(null)
-    const mirror = useWidget2Canvas(widgetRef)
+const widgetRef = useRef(null)
+const mirror = useWidget2Canvas(widgetRef)
 
     return <div ref={widgetRef} className="lgs-widget">…</div>
 }
 ```
-
 ---
 
 ## Performance Tips
@@ -174,7 +176,3 @@ function MyWidget() {
 ## License
 
 © 2025 LGS1920 — All rights reserved.
-
----
-
-**Built for speed. Made for perfection.**
