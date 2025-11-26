@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-25
- * Last modified: 2025-11-25
+ * Created on: 2025-11-26
+ * Last modified: 2025-11-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,6 +24,7 @@ import {
     LGS_WIDGET_SCALE_FACTOR,
     WIDGETS_CAPABILITIES,
 } from '@Core/constants'
+import { VideoRecorder } from '@Core/ui/video/recorder/VideoRecorder'
 import { Widget2Canvas }            from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import classNames from 'classnames'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -64,6 +65,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const widget = useSnapshot($widget)
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
+    const _w2c = useRef(null)
 
     const interactionLocked = (video.preRecording || video.recording) && config.type === LGS_VISUAL_WIDGET
 
@@ -332,6 +334,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         let cancelled = false
         config.id = __.ui.widgetManager.defineElementId(config.group, config.id)
 
+        const clean = () => _w2c.current?.destroy()
+
         const init = async () => {
             if (cancelled || !_widget.current) {
                 return
@@ -375,12 +379,16 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 _initialized.current = true
                 $widget.list.set(config.id, {mounted: true})
                 if (interactionLocked) {
-                    const w2c = new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
+                    _w2c.current = new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
                         embedFonts: true,
                         scale: LGS_WIDGET_SCALE_FACTOR,
                         type: fullConfig.snap,
                     })
-                    await w2c.init()
+                    await _w2c.current.init()
+                    // Force cleanup on stop/cancel
+                    __.recorder.addEventListener(VideoRecorder.events.STOP, clean)
+                    __.recorder.addEventListener(VideoRecorder.events.STOP, clean)
+
                 }
                 else {
                     _moveable.current?.updateRect()
@@ -410,6 +418,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 }
                 _initialized.current = false
             }
+
+            __.recorder.removeEventListener(VideoRecorder.events.STOP, clean)
+            __.recorder.removeEventListener(VideoRecorder.events.STOP, clean)
         }
     }, [isVisible, config, video.recording])
 
