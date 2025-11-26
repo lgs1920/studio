@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-23
- * Last modified: 2025-11-23
+ * Created on: 2025-11-26
+ * Last modified: 2025-11-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,11 +20,11 @@
  * Forces even dimensions, 'avc' codec, no hardware acceleration
  * Real-time duration and size reporting via INFO event
  ******************************************************************************/
-import { APP_KEY, SECOND } from '@Core/constants'
-import { DateTime }        from 'luxon'
+import { APP_KEY, NAVIGATOR, SECOND } from '@Core/constants'
+import { DateTime }                   from 'luxon'
 import {
     BufferTarget, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH, QUALITY_LOW, QUALITY_MEDIUM, QUALITY_VERY_HIGH,
-}                          from 'mediabunny'
+}                                     from 'mediabunny'
 
 /**
  * Singleton class responsible for screen/canvas/stream recording using mediabunny
@@ -218,12 +218,15 @@ export class VideoRecorder extends EventTarget {
         this.#output = new Output({
                                       format: new Mp4OutputFormat({fastStart: false}),
                                       target: new BufferTarget(),
+                                      process: (a, b, c) => {
+                                          console.log(a, b, c)
+                                      },
                                   })
         await this.#output.setMetadataTags(this.#metadata)
 
         const safe = this.#dimensions
         this.#videoSource = new CanvasSource(this.#canvas, {
-            codec:                'avc',
+            codec: (__.device.browser === NAVIGATOR.firefox && __.device.isMobile) ? 'vp9' : 'avc',
             bitrate:              this.#quality.value,
             alpha:                'discard',
             latencyMode:          'realtime',
