@@ -74,9 +74,9 @@
     "import": "^0.0.6",
     "jspdf": "^3.0.4",
     "luxon": "^3.7.2",
-    "mediabunny": "^1.25.1",
+    "mediabunny": "^1.25.2",
     "path": "^0.12.7",
-    "pm2": "^6.0.13",
+    "pm2": "^6.0.14",
     "react": "^19.2.0",
     "react-custom-scrollbars": "^4.2.1",
     "react-custom-scrollbars-2": "^4.5.0",
@@ -117,7 +117,7 @@
     "typescript": "^5.9.3",
     "vite": "^7.2.4",
     "vite-plugin-markdown": "^2.2.0",
-    "vitest": "^4.0.13"
+    "vitest": "^4.0.14"
   },
   "module": "index.ts",
   "trustedDependencies": [
