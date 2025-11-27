@@ -343,6 +343,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
             const fullConfig = {
                 animationWhenDragging: config.animationWhenDragging ?? config.type === LGS_TOOLBAR,
+                attachTo: config.attachTo ?? 'top-left',
                 container:        config.container ?? lgs.canvas,
                 contextMenu:      __.ui.widgetManager.cloneContext(config?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
                 cropDimensions:   config.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0},
