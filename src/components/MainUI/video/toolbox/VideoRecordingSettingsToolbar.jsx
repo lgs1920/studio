@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-23
- * Last modified: 2025-11-23
+ * Created on: 2025-11-27
+ * Last modified: 2025-11-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,8 +21,8 @@
  ******************************************************************************/
 import { Tunnel }                                  from '@Components/Tunnel/Tunnel'
 import { CROP_TOOLS_WIDGETS, VIDEO_TOOLS_WIDGETS } from '@Core/constants'
-import { faGear }                                  from '@fortawesome/pro-regular-svg-icons'
-import { faPhotoFilm, faVideo }                    from '@fortawesome/pro-solid-svg-icons'
+import { faGear }                         from '@fortawesome/pro-regular-svg-icons'
+import { faCamera, faPhotoFilm, faVideo } from '@fortawesome/pro-solid-svg-icons'
 import { memo, useCallback, useMemo, useRef } from 'react'
 import { useSnapshot }                             from 'valtio'
 
@@ -47,12 +47,21 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, false)
     }, [])
 
+    const handleSnapShot = useCallback(async (event) => {
+        Object.assign($video, {
+            snapshot:     true,
+            preRecording: false,
+            recording:    false,
+        })
+    }, [])
+
     /** Starts pre-recording phase (countdown + preview). */
     const handleVideoRecording = useCallback(async (event) => {
         if (!__.recorder) {
             console.warn('[VideoRecordingSettingsToolbar] Recorder not initialized')
             return
         }
+
         Object.assign($video, {
             preRecording: true,
             recording:    false,
@@ -100,6 +109,9 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                 beforeStep: () => {
                     $video.step = 1
                     _steps.current[1].done = true
+                    _steps.current[2].done = true
+                    _steps.current[3].done = true
+
                     return true
                 },
                 afterStep:  () => {
@@ -123,14 +135,35 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                         editing:    false,
                         finalizing: false,
                     })
-                    _steps.current[2].done = true
                     await handleVideoRecording(event)
+                    return true
+                },
+            },
+
+            {
+                icon:       faCamera,
+                text:       'Snapshot',
+                done:       true,
+                mandatory:  false,
+                beforeStep: () => {
+                    $video.step = 3
+                    __.ui.widgetManager.windowResizing = false
+                    return true
+                },
+                onClick:    async (index, event) => {
+                    Object.assign($video, {
+                        recording:  false,
+                        editing:    false,
+                        finalizing: false,
+                    })
+                    _steps.current[3].done = true
+                    await handleSnapShot(event)
                     return true
                 },
             },
         ]
         return _steps.current
-    }, [handleVideoRecording])
+    }, [handleVideoRecording, handleSnapShot])
 
     // --- Render ---
     if (!video.editing) {

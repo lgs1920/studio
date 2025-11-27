@@ -326,10 +326,12 @@ ui:
 
   ## Video
   video:
-    format: mp4        #
+    format: mp4        # for Video
+    image: png         # for Image
     maxDuration: 5     # minutes
     maxSize: 200       # MB
     fps: 1             # 0:15, 1:30, 3:45, 4:60 => VideoRecorder.FPS
     quality: 1         # 0: low, 1: medium, 2: high, 3: very high => VideoRecorder.QUALITY
     ratio: null        # 16x9,9x16 ...
+
 

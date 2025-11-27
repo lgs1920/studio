@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-22
- * Last modified: 2025-11-22
+ * Created on: 2025-11-27
+ * Last modified: 2025-11-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -29,7 +29,7 @@ export const VideoButton = (props) => {
     }
     return (
         <>
-            {!video.recording && !video.preRecording &&
+            {!video.recording && !video.preRecording && !video.snapshot &&
                 <SlTooltip hoist placement={props.tooltip} content="Make a new video">
                     <SlButton size={'small'} className={'square-button'} id={'launch-the-video-editor'}
                               onClick={handleClick}>

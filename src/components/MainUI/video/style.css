@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-24
- * Last modified: 2025-11-24
+ * Created on: 2025-11-27
+ * Last modified: 2025-11-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -79,7 +79,7 @@
     --fa-secondary-color: var(--lgs-video-warning-bg-color);
 }
 
-.video-pre-recording-in-progress, .video-recording-in-progress {
+.video-pre-recording-in-progress, .video-recording-in-progress, .photo-snapshot-in-progress {
     padding: 20px;
     animation: border-dance var(--border-dance-duration) infinite linear;
     animation-play-state: running;
@@ -97,7 +97,7 @@
 }
 
 
-.video-recording-in-progress {
+.video-recording-in-progress, .photo-snapshot-in-progress {
     background-image: linear-gradient(90deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(90deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(0deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(0deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%);
 }
 
@@ -188,12 +188,6 @@
 
 }
 
-#video-preview-dialog-footer {
-    display: flex;
-    justify-content: space-between;
-    text-align: unset;
-}
-
 /***************************************
  * Video info
  */
@@ -230,17 +224,18 @@
     max-width: 100px;
 }
 
-/*.video-info > div {*/
-/*    display: flex;*/
-/*    align-items: center;*/
-/*    gap: var(--lgs-gutter-s);*/
-/*}*/
+/***************************************
+ * Video actions
+ */
+.video-file-actions, .video-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
 
-/*.video-info > div > span {*/
-/*    display: inline-flex;*/
-/*    align-items: center;*/
-/*}*/
-
+.video-file-actions {
+    justify-content: space-between;
+}
 /***************************************
  * Video quality toolbar
  */

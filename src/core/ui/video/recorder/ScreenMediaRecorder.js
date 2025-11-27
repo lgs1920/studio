@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: VideoRecorder.js
+ * File: ScreenMediaRecorder.js
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-26
- * Last modified: 2025-11-26
+ * Created on: 2025-11-27
+ * Last modified: 2025-11-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -30,7 +30,7 @@ import {
  * Singleton class responsible for screen/canvas/stream recording using mediabunny
  * @extends EventTarget
  */
-export class VideoRecorder extends EventTarget {
+export class ScreenMediaRecorder extends EventTarget {
     /** Event names dispatched by the recorder */
     static events = {
         START:    'video/start',
@@ -42,6 +42,8 @@ export class VideoRecorder extends EventTarget {
         ERROR:    'video/error',
         DOWNLOAD: 'video/download',
         CANCEL:   'video/cancel',
+        FINALIZE: 'video/finalize',
+        CAPTURED: 'video/captured',
         MAX_DURATION: 'video/max-duration',
         MAX_SIZE: 'video/max-size',
     }
@@ -62,6 +64,8 @@ export class VideoRecorder extends EventTarget {
     static DEFAULT_FPS_INDEX = 1
     static DEFAULT_QUALITY_INDEX = 2
     static instance
+    static VIDEO = 'video'
+    static IMAGE = 'image'
 
     // Private instance fields
     #blob = null
@@ -79,8 +83,8 @@ export class VideoRecorder extends EventTarget {
     #pausedTime = 0
     #recordedDuration = 0
     #sizeBytes = 0
-    #fps = VideoRecorder.FPS[VideoRecorder.DEFAULT_FPS_INDEX]
-    #quality = VideoRecorder.QUALITY[VideoRecorder.DEFAULT_QUALITY_INDEX]
+    #fps = ScreenMediaRecorder.FPS[ScreenMediaRecorder.DEFAULT_FPS_INDEX]
+    #quality = ScreenMediaRecorder.QUALITY[ScreenMediaRecorder.DEFAULT_QUALITY_INDEX]
     #maxDuration = Infinity
     #maxSize = Infinity
     #timeslice = SECOND
@@ -88,13 +92,15 @@ export class VideoRecorder extends EventTarget {
     #sourceType = 'unknown'
     #metadata = null
     #ratio = null
+    #type = null
+    #snapshot
 
     constructor() {
         super()
-        if (VideoRecorder.instance) {
-            return VideoRecorder.instance
+        if (ScreenMediaRecorder.instance) {
+            return ScreenMediaRecorder.instance
         }
-        VideoRecorder.instance = this
+        ScreenMediaRecorder.instance = this
         __.recorder = this
     }
 
@@ -118,6 +124,14 @@ export class VideoRecorder extends EventTarget {
     /** @returns {boolean} true if recording is currently paused */
     isPaused = () => this.#isPaused
 
+    get type() {
+        return this.#type
+    }
+
+    set type(type) {
+        this.#type = type
+    }
+
     /**
      * Configure recording parameters
      */
@@ -133,10 +147,10 @@ export class VideoRecorder extends EventTarget {
         if (this.#isRecording) {
             throw this.#error('Cannot initialize while recording')
         }
-        if (fps && VideoRecorder.FPS.includes(fps)) {
+        if (fps && ScreenMediaRecorder.FPS.includes(fps)) {
             this.#fps = fps
         }
-        const q = VideoRecorder.QUALITY.find(i => i.value === quality)
+        const q = ScreenMediaRecorder.QUALITY.find(i => i.value === quality)
         if (q) {
             this.#quality = q
         }
@@ -162,7 +176,7 @@ export class VideoRecorder extends EventTarget {
         this.#ctx = canvas.getContext('2d', {alpha: false})
         this.#dimensions = this.#getEncoderSafeSize(canvas.width, canvas.height)
         this.#sourceType = 'canvas'
-        this.dispatchEvent(new CustomEvent(VideoRecorder.events.SOURCE, {
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.SOURCE, {
             detail: {type: 'canvas', canvas, ...this.#dimensions},
         }))
     }
@@ -200,7 +214,7 @@ export class VideoRecorder extends EventTarget {
 
         this.#stream = stream
         this.#sourceType = 'stream'
-        this.dispatchEvent(new CustomEvent(VideoRecorder.events.SOURCE, {
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.SOURCE, {
             detail: {type: 'stream', stream, ...this.#dimensions},
         }))
     }
@@ -244,10 +258,10 @@ export class VideoRecorder extends EventTarget {
         this.#isRecording = true
         this.#startTime = performance.now()
         this.#pausedTime = 0
-        document.body.classList.add(VideoRecorder.CLASSES.RECORDING)
+        document.body.classList.add(ScreenMediaRecorder.CLASSES.RECORDING)
 
         // Send initial INFO event with duration 0
-        this.dispatchEvent(new CustomEvent(VideoRecorder.events.INFO, {
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
             detail: {
                 duration: 0,
                 size:     this.#sizeBytes,
@@ -261,7 +275,7 @@ export class VideoRecorder extends EventTarget {
             this.#checkLimits()
         }, this.#timeslice)
 
-        this.dispatchEvent(new CustomEvent(VideoRecorder.events.START))
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
     }
 
     /** Encode next frame using precise timestamp */
@@ -278,7 +292,7 @@ export class VideoRecorder extends EventTarget {
         this.#recordedDuration = elapsedSec
 
         // Send INFO event with current duration
-        this.dispatchEvent(new CustomEvent(VideoRecorder.events.INFO, {
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
             detail: {
                 duration: elapsedMs,
                 size:     this.#sizeBytes,
@@ -303,7 +317,7 @@ export class VideoRecorder extends EventTarget {
         this.#pausedTime += now - this.#startTime
 
         // Send INFO event with current duration before pausing
-        this.dispatchEvent(new CustomEvent(VideoRecorder.events.INFO, {
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
             detail: {
                 duration: currentDuration,
                 size:     this.#sizeBytes,
@@ -312,8 +326,8 @@ export class VideoRecorder extends EventTarget {
             },
         }))
 
-        document.body.classList.add(VideoRecorder.CLASSES.PAUSED)
-        this.dispatchEvent(new CustomEvent(VideoRecorder.events.PAUSE))
+        document.body.classList.add(ScreenMediaRecorder.CLASSES.PAUSED)
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.PAUSE))
     }
 
     /** Resume encoding after pause */
@@ -326,7 +340,7 @@ export class VideoRecorder extends EventTarget {
         this.#startTime = performance.now()
 
         // Send INFO event with current duration before resuming
-        this.dispatchEvent(new CustomEvent(VideoRecorder.events.INFO, {
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
             detail: {
                 duration: this.#recordedDuration * 1000,
                 size:     this.#sizeBytes,
@@ -335,39 +349,13 @@ export class VideoRecorder extends EventTarget {
             },
         }))
 
-        document.body.classList.remove(VideoRecorder.CLASSES.PAUSED)
+        document.body.classList.remove(ScreenMediaRecorder.CLASSES.PAUSED)
         this.#recordFrame()
-        this.dispatchEvent(new CustomEvent(VideoRecorder.events.RESUME))
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.RESUME))
     }
 
-    /** Finalize MP4 and emit STOP */
-    stop = async () => {
-        if (!this.#isRecording) {
-            return
-        }
-
-        this.#isRecording = false
-        cancelAnimationFrame(this.#rafId)
-        clearInterval(this.#infoInterval)
-
-        if (this.#videoSource) {
-            await this.#videoSource.close()
-        }
-
-        if (this.#output) {
-            await this.#output.finalize()
-            this.#blob = new Blob([this.#output.target.buffer], {type: 'video/mp4'})
-            this.#sizeBytes = this.#blob.size
-        }
-
-        document.body.classList.remove(VideoRecorder.CLASSES.RECORDING, VideoRecorder.CLASSES.PAUSED)
-        this.dispatchEvent(new CustomEvent(VideoRecorder.events.STOP, {
-            detail: {
-                ...this.videoData,
-                duration: this.#recordedDuration * 1000,
-            },
-        }))
-    }
+    isImage = () => this.#type === ScreenMediaRecorder.IMAGE
+    isVideo = () => this.#type === ScreenMediaRecorder.VIDEO
 
     /** Abort recording and discard data */
     cancel = async () => {
@@ -392,19 +380,24 @@ export class VideoRecorder extends EventTarget {
         }
 
         this.#reset()
-        document.body.classList.remove(VideoRecorder.CLASSES.RECORDING, VideoRecorder.CLASSES.PAUSED)
-        this.dispatchEvent(new CustomEvent(VideoRecorder.events.CANCEL))
+        document.body.classList.remove(ScreenMediaRecorder.CLASSES.RECORDING, ScreenMediaRecorder.CLASSES.PAUSED)
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.CANCEL))
     }
 
     /**
      * Trigger browser download of recorded file
      */
     download = ({filename = this.filename()} = {}) => {
-        if (!this.#blob) {
-            throw this.#error('No video')
+        let url
+        if (this.isVideo()) {
+            if (!this.#blob) {
+                throw this.#error('No video')
+            }
+            url = URL.createObjectURL(this.#blob)
         }
-
-        const url = URL.createObjectURL(this.#blob)
+        else {
+            url = this.#snapshot.toDataURL('image/png')
+        }
         const a = document.createElement('a')
         a.href = url
         a.download = filename
@@ -413,11 +406,12 @@ export class VideoRecorder extends EventTarget {
     }
 
     /** Generate timestamped filename */
-    filename = () => `${DateTime.now().toFormat('yyyyLLdd-HHmmss')}-${APP_KEY}`
+    filename = () => `${DateTime.now().toFormat('yyyyLLdHHmm')}-${APP_KEY}`
 
     /** Reset all internal counters and references */
     #reset = () => {
         this.#blob = null
+        this.#snapshot = null
         this.#recordedDuration = 0
         this.#startTime = 0
         this.#pausedTime = 0
@@ -427,11 +421,11 @@ export class VideoRecorder extends EventTarget {
     /** Enforce max duration and max size limits */
     #checkLimits = () => {
         if (this.#recordedDuration >= this.#maxDuration) {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_DURATION))
+            this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.MAX_DURATION))
             this.stop()
         }
         else if (this.#sizeBytes >= this.#maxSize) {
-            this.dispatchEvent(new CustomEvent(VideoRecorder.events.MAX_SIZE))
+            this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.MAX_SIZE))
             this.stop()
         }
     }
@@ -448,7 +442,45 @@ export class VideoRecorder extends EventTarget {
      */
     #error = (msg) => {
         const err = new Error(msg)
-        this.dispatchEvent(new CustomEvent(VideoRecorder.events.ERROR, {detail: {error: err}}))
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.ERROR, {detail: {error: err}}))
         return err
+    }
+
+    /** Finalize MP4 and emit STOP */
+    stop = async () => {
+        if (!this.#isRecording) {
+            return
+        }
+        this.type = ScreenMediaRecorder.VIDEO
+        this.#isRecording = false
+        cancelAnimationFrame(this.#rafId)
+        clearInterval(this.#infoInterval)
+
+        if (this.#videoSource) {
+            await this.#videoSource.close()
+        }
+
+        if (this.#output) {
+            await this.#output.finalize()
+            this.#blob = new Blob([this.#output.target.buffer], {type: 'video/mp4'})
+            this.#sizeBytes = this.#blob.size
+        }
+
+        document.body.classList.remove(ScreenMediaRecorder.CLASSES.RECORDING, ScreenMediaRecorder.CLASSES.PAUSED)
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP, {
+            detail: {
+                ...this.videoData,
+                duration: this.#recordedDuration * 1000,
+            },
+        }))
+    }
+
+    /** Finalize snapshot and emit CAPTURED event*/
+    capture = async (canvas) => {
+        this.type = ScreenMediaRecorder.IMAGE
+        this.#snapshot = canvas
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.CAPTURED, {
+            detail: {canvas},
+        }))
     }
 }
