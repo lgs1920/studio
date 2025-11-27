@@ -1,9 +1,21 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Export.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-11-27
+ * Last modified: 2025-11-27
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { default as html2canvas } from 'html2canvas'
-import { jsPDF }                  from 'jspdf'
 import { DateTime }               from 'luxon'
-// dummy...
-let dummy = jsPDF
-dummy = html2canvas
 
 export class Export {
 

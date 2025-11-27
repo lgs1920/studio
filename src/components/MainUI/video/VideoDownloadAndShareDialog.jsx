@@ -22,7 +22,7 @@
  * All refs prefixed with _, no default export, no semicolons.
  */
 
-import { ScreenMediaRecorder } from '@Core/ui/video/recorder/ScreenMediaRecorder'
+import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import {
     faCameraPolaroid, faCropAlt, faDownload, faFile, faFilm, faHourglass, faShareAlt, faXmark,
 }                              from '@fortawesome/pro-regular-svg-icons'

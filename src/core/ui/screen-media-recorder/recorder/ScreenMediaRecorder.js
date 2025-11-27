@@ -220,7 +220,7 @@ export class ScreenMediaRecorder extends EventTarget {
     }
 
     /** Begin encoding */
-    start = async () => {
+    startVideo = async () => {
         if (this.#isRecording) {
             throw this.#error('Already recording')
         }
@@ -305,7 +305,7 @@ export class ScreenMediaRecorder extends EventTarget {
     }
 
     /** Pause encoding */
-    pause = () => {
+    pauseVideo = () => {
         if (!this.#isRecording || this.#isPaused) {
             return
         }
@@ -331,7 +331,7 @@ export class ScreenMediaRecorder extends EventTarget {
     }
 
     /** Resume encoding after pause */
-    resume = () => {
+    resumeVideo = () => {
         if (!this.#isPaused) {
             return
         }
@@ -358,7 +358,7 @@ export class ScreenMediaRecorder extends EventTarget {
     isVideo = () => this.#type === ScreenMediaRecorder.VIDEO
 
     /** Abort recording and discard data */
-    cancel = async () => {
+    cancelVideo = async () => {
         this.#isRecording = this.#isPaused = false
         cancelAnimationFrame(this.#rafId)
         clearInterval(this.#infoInterval)
@@ -372,7 +372,7 @@ export class ScreenMediaRecorder extends EventTarget {
         }
 
         if (this.#stream) {
-            this.#stream.getTracks().forEach(track => track.stop())
+            this.#stream.getTracks().forEach(track => track.stopVideo())
         }
 
         if (this.#videoElement) {
@@ -422,11 +422,11 @@ export class ScreenMediaRecorder extends EventTarget {
     #checkLimits = () => {
         if (this.#recordedDuration >= this.#maxDuration) {
             this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.MAX_DURATION))
-            this.stop()
+            this.stopVideo()
         }
         else if (this.#sizeBytes >= this.#maxSize) {
             this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.MAX_SIZE))
-            this.stop()
+            this.stopVideo()
         }
     }
 
@@ -447,7 +447,7 @@ export class ScreenMediaRecorder extends EventTarget {
     }
 
     /** Finalize MP4 and emit STOP */
-    stop = async () => {
+    stopVideo = async () => {
         if (!this.#isRecording) {
             return
         }
@@ -476,7 +476,7 @@ export class ScreenMediaRecorder extends EventTarget {
     }
 
     /** Finalize snapshot and emit CAPTURED event*/
-    capture = async (canvas) => {
+    captureScreenshot = async (canvas) => {
         this.type = ScreenMediaRecorder.IMAGE
         this.#snapshot = canvas
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.CAPTURED, {

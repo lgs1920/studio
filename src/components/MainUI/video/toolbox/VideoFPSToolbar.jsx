@@ -21,7 +21,7 @@
  * @param {Object} props.store - Valtio store with crop state (fpsEditor, etc.)
  * @returns {JSX.Element} Draggable video FPS selector UI
  */
-import { ScreenMediaRecorder } from '@Core/ui/video/recorder/ScreenMediaRecorder'
+import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { faGripDots }          from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }             from '@Utils/FA2SL'

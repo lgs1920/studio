@@ -18,7 +18,7 @@
  * VideoRecorderToolbar.jsx - Displays video recording controls and stats
  ******************************************************************************/
 import { FontAwesomeIcon }     from '@Components/FontAwesomeIcon'
-import { ScreenMediaRecorder } from '@Core/ui/video/recorder/ScreenMediaRecorder'
+import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { faCircle }            from '@fortawesome/duotone-regular-svg-icons'
 import { faPause, faPlay, faStop, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import { SlIconButton, SlTooltip }          from '@shoelace-style/shoelace/dist/react'
@@ -39,14 +39,14 @@ const RecorderControls = memo(({recording, paused, recorder, onFinalize}) => {
 
     const handlePlayPause = useCallback(() => {
         if (recorder) {
-            paused ? recorder.resume() : recorder.pause()
+            paused ? recorder.resumeVideo() : recorder.pauseVideo()
         }
     }, [recorder, paused])
 
     const handleStop = useCallback(() => {
         onFinalize(true)
         $video.finalizing = true
-        recorder?.stop()
+        recorder?.stopVideo()
     }, [recorder, onFinalize])
 
     return (
@@ -191,7 +191,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
 
         const handleStop = (event) => {
             if (__.recorder?.isRecording() || $video.paused) {
-                __.recorder.stop()
+                __.recorder.stopVideo()
             }
 
             updateState({
@@ -244,7 +244,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
 
     const handleCancel = useCallback(async () => {
         if (__.recorder) {
-            await __.recorder.cancel()
+            await __.recorder.cancelVideo()
         }
         updateState({
                         preRecording: false,

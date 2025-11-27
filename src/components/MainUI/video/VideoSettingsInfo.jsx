@@ -14,7 +14,7 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { ScreenMediaRecorder } from '@Core/ui/video/recorder/ScreenMediaRecorder'
+import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { useEffect, useState } from 'react'
 import { useSnapshot }         from 'valtio'
 

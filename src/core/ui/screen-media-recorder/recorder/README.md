@@ -103,11 +103,11 @@ recorder.initialize({
                     })
 
 // Start recording
-recorder.start()
+recorder.startVideo()
 
 // Stop recording after 5 seconds and download
 setTimeout(() => {
-    recorder.stop().then(() => {
+    recorder.stopVideo().then(() => {
         recorder.download({type: 'local', filename: 'my-video.mp4'})
     })
 }, 5000)
@@ -148,10 +148,10 @@ recorder.setSource([canvas], {
 })
 
 // Start recording
-recorder.start()
+recorder.startVideo()
 
 // Stop after 5 seconds
-setTimeout(() => recorder.stop(), 5000)
+setTimeout(() => recorder.stopVideo(), 5000)
 ```
 
 ### Recording a MediaStream
@@ -175,11 +175,11 @@ const startWebcamRecording = async () => {
     await recorder.setStream(stream)
 
     // Start recording
-    recorder.start()
+    recorder.startVideo()
 
     // Stop after 5 seconds and clean up
     setTimeout(() => {
-        recorder.stop()
+        recorder.stopVideo()
         recorder.dispose()
     }, 5000)
 }
@@ -211,9 +211,9 @@ recorder.addEventListener(ScreenMediaRecorder.events.DOWNLOAD, ({detail}) => {
 })
 
 // Start and stop recording
-recorder.start()
+recorder.startVideo()
 setTimeout(() => {
-    recorder.stop().then(() => {
+    recorder.stopVideo().then(() => {
         // Download to local filesystem
         recorder.download({type: 'circular-filesystem', filename: 'my-video.mp4'})
     })

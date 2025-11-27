@@ -24,7 +24,7 @@ import {
     LGS_WIDGET_SCALE_FACTOR,
     WIDGETS_CAPABILITIES,
 }                              from '@Core/constants'
-import { ScreenMediaRecorder } from '@Core/ui/video/recorder/ScreenMediaRecorder'
+import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { Widget2Canvas }       from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import classNames from 'classnames'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'

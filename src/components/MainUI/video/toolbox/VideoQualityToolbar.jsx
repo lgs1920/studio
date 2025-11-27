@@ -24,7 +24,7 @@ import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }             from '@Utils/FA2SL'
 import { faGripDots }        from '@fortawesome/pro-solid-svg-icons'
 import classNames              from 'classnames'
-import { ScreenMediaRecorder } from '@Core/ui/video/recorder/ScreenMediaRecorder'
+import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { useSnapshot }         from 'valtio'
 
 export const VideoQualityToolbar = () => {

@@ -46,10 +46,10 @@ import {
 import { APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, VIDEO_CROP_ZONE, VIDEO_TOOLS_WIDGETS } from '@Core/constants'
 import {
     CanvasOverlayComposer,
-}                  from '@Core/ui/video/canvas-overlay-composer/CanvasOverlayComposer'
+} from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import {
     ScreenMediaRecorder,
-}                  from '@Core/ui/video/recorder/ScreenMediaRecorder'
+} from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { UIToast } from '@Utils/UIToast'
 import classNames                                                                                 from 'classnames'
 import React, { memo, useCallback, useEffect, useMemo, useRef }                                   from 'react'
@@ -153,7 +153,7 @@ export const VideoRecordingScreenArea = memo(() => {
 
         try {
             initializeRecorder()
-            await __.recorder.start()
+            await __.recorder.startVideo()
         }
         catch (error) {
             Object.assign($video, {
@@ -201,7 +201,7 @@ export const VideoRecordingScreenArea = memo(() => {
         })
 
         // We capture the snapshot
-        await __.recorder.capture(composer.getCanvas())
+        await __.recorder.captureScreenshot(composer.getCanvas())
 
     }, [])
 
