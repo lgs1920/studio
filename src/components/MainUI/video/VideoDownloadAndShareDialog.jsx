@@ -91,7 +91,6 @@ export const VideoDownloadAndShareDialog = () => {
     useEffect(() => {
 
         const handleStopRecording = (event) => {
-            console.log('Recording stopped', __.recorder.type)
             const blob = event.detail?.blob
             if (!(blob instanceof Blob) || blob.size === 0) {
                 console.error('Invalid video blob received')
