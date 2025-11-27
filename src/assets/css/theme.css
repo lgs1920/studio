@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-25
- * Last modified: 2025-11-25
+ * Created on: 2025-11-27
+ * Last modified: 2025-11-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -1325,6 +1325,34 @@ h3 {
     }
 }
 
+
+/*******************************************************************************
+ * Cameraaaaaflsh
+ ******************************************************************************/
+.lgs-flash-effect::after {
+    position: absolute;
+    top: 0;
+    right: 0; bottom: 0; left: 0; content: "";
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(
+            circle at 50% 50%, /* lumière décalée */ rgba(255, 255, 150, 0.8),
+            transparent 40%
+    );
+}
+
+.lgs-flash-effect.flash-on::after {
+    animation: lgs-flash-light 1.2s ease-out forwards;
+}
+
+@keyframes lgs-flash-light {
+    0% { opacity: 0; }
+    10% { opacity: 1; }
+    /* pic lumineux */
+    40% { opacity: 0.4; }
+    /* décroissance */
+    100% { opacity: 0; }
+}
 /*******************************************************************************
  * Console
  ******************************************************************************/
