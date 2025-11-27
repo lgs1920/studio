@@ -90,9 +90,9 @@ Initialize and start recording a default canvas stream:
 /**
  * Basic example of recording a default canvas and downloading the result
  */
-import { VideoRecorder, QUALITY_HIGH } from './VideoRecorder.js'
+import { ScreenMediaRecorder, QUALITY_HIGH } from './ScreenMediaRecorder.js'
 
-const recorder = new VideoRecorder()
+const recorder = new ScreenMediaRecorder()
 
 // Initialize with custom settings
 recorder.initialize({
@@ -121,7 +121,7 @@ Record from a specific canvas with clipping:
 /**
  * Example of recording from a canvas with clipping
  */
-import { VideoRecorder, QUALITY_MEDIUM } from './VideoRecorder.js'
+import { ScreenMediaRecorder, QUALITY_MEDIUM } from './ScreenMediaRecorder.js'
 
 const canvas = document.createElement('canvas')
 canvas.width = 1920
@@ -131,7 +131,7 @@ const ctx = canvas.getContext('2d')
 ctx.fillStyle = 'blue'
 ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-const recorder = new VideoRecorder()
+const recorder = new ScreenMediaRecorder()
 recorder.initialize({
                         quality:  QUALITY_MEDIUM,
                         metadata: {description: 'Canvas recording example'}
@@ -162,11 +162,11 @@ Record from a webcam stream:
 /**
  * Example of recording from a webcam stream
  */
-import { VideoRecorder } from './VideoRecorder.js'
+import { ScreenMediaRecorder } from './ScreenMediaRecorder.js'
 
 const startWebcamRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({video: true})
-    const recorder = new VideoRecorder()
+    const recorder = new ScreenMediaRecorder()
     recycler.initialize({
                             metadata: {genre: 'Webcam', date: new Date().toISOString()}
                         })
@@ -195,15 +195,15 @@ Handle different download types (`local`, `local-filesystem`):
 /**
  * Example of handling downloads with File System Access API
  */
-import { VideoRecorder } from './VideoRecorder.js'
+import { ScreenMediaRecorder } from './ScreenMediaRecorder.js'
 
-const recorder = new VideoRecorder()
+const recorder = new ScreenMediaRecorder()
 recorder.initialize({
                         maxDuration: 5 * 60 * 1000 // 5 minutes
-})
+                    })
 
 // Listen for download events
-recorder.addEventListener(VideoRecorder.events.DOWNLOAD, ({detail}) => {
+recorder.addEventListener(ScreenMediaRecorder.events.DOWNLOAD, ({detail}) => {
     console.log('Download started:', detail.filename, detail.type)
     if (detail.type === 'local-filesystem') {
         console.log('Progress:', detail.progress * 100, '%')
@@ -349,10 +349,10 @@ The `VideoRecorder` class extends `EventTarget` and emits the following custom D
 Example of listening to events:
 
 ```javascript
-recorder.addEventListener(VideoRecorder.events.START, () => {
+recorder.addEventListener(ScreenMediaRecorder.events.START, () => {
     console.log('Recording started')
 })
-recorder.addEventListener(VideoRecorder.events.STOP, ({detail}) => {
+recorder.addEventListener(ScreenMediaRecorder.events.STOP, ({detail}) => {
     console.log('Recording stopped:', detail.size, 'bytes,', detail.duration, 'ms')
 })
 ```
@@ -385,7 +385,7 @@ recorder.addEventListener(VideoRecorder.events.STOP, ({detail}) => {
 The class throws errors for invalid operations and emits `video/error` events with details:
 
 ```javascript
-recorder.addEventListener(VideoRecorder.events.ERROR, ({detail}) => {
+recorder.addEventListener(ScreenMediaRecorder.events.ERROR, ({detail}) => {
     console.error('Recorder error:', detail.error.message)
 })
 ```

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-09
- * Last modified: 2025-11-09
+ * Created on: 2025-11-27
+ * Last modified: 2025-11-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,34 +17,34 @@
 import {
     APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEYS_STORE, ORIGIN_STORE,
     platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE, WIDGETS_STORE,
-}                            from '@Core/constants'
-import { StoresManager }     from '@Core/stores/StoresManager'
-import { AppToolsManager }   from '@Core/ui/AppToolsManager'
-import { AppUpdateManager }  from '@Core/ui/AppUpdateManager'
-import { DeviceManager }     from '@Core/ui/DeviceManager'
-import { Geocoder }          from '@Core/ui/Geocoder'
-import { MenuManager }       from '@Core/ui/MenuManager'
-import { POIManager }        from '@Core/ui/POIManager'
-import { VideoRecorder }     from '@Core/ui/video/recorder/VideoRecorder'
-import { WidgetCache }       from '@Core/ui/widget-manager/WidgetCache'
-import { WidgetManager }     from '@Core/ui/widget-manager/WidgetManager'
-import { AppUtils }          from '@Utils/AppUtils'
-import { MouseUtils }        from '@Utils/cesium/MouseUtils'
-import { CSSUtils }          from '@Utils/CSSUtils'
-import { UIUtils }           from '@Utils/UIUtils'
-import { UnitUtils }         from '@Utils/UnitUtils'
-import { proxy }             from 'valtio'
-import { LocalDB }           from './db/LocalDB'
-import { MouseEventHandler } from './MouseEventHandler'
-import { editorSettings }    from './stores/editorSettings'
-import { main }              from './stores/main'
-import { theJourneyEditor }  from './stores/theJourneyEditor'
-import { CameraManager }     from './ui/CameraManager'
-import { JourneyEditor }     from './ui/JourneyEditor'
-import { PanelManager }      from './ui/panels/PanelManager'
-import { Profiler }          from './ui/Profiler'
-import { SceneManager }      from './ui/SceneManager'
-import { Wanderer }          from './ui/Wanderer'
+}                              from '@Core/constants'
+import { StoresManager }       from '@Core/stores/StoresManager'
+import { AppToolsManager }     from '@Core/ui/AppToolsManager'
+import { AppUpdateManager }    from '@Core/ui/AppUpdateManager'
+import { DeviceManager }       from '@Core/ui/DeviceManager'
+import { Geocoder }            from '@Core/ui/Geocoder'
+import { MenuManager }         from '@Core/ui/MenuManager'
+import { POIManager }          from '@Core/ui/POIManager'
+import { ScreenMediaRecorder } from '@Core/ui/video/recorder/ScreenMediaRecorder'
+import { WidgetCache }         from '@Core/ui/widget-manager/WidgetCache'
+import { WidgetManager }       from '@Core/ui/widget-manager/WidgetManager'
+import { AppUtils }            from '@Utils/AppUtils'
+import { MouseUtils }          from '@Utils/cesium/MouseUtils'
+import { CSSUtils }            from '@Utils/CSSUtils'
+import { UIUtils }             from '@Utils/UIUtils'
+import { UnitUtils }           from '@Utils/UnitUtils'
+import { proxy }               from 'valtio'
+import { LocalDB }             from './db/LocalDB'
+import { MouseEventHandler }   from './MouseEventHandler'
+import { editorSettings }      from './stores/editorSettings'
+import { main }                from './stores/main'
+import { theJourneyEditor }    from './stores/theJourneyEditor'
+import { CameraManager }       from './ui/CameraManager'
+import { JourneyEditor }       from './ui/JourneyEditor'
+import { PanelManager }        from './ui/panels/PanelManager'
+import { Profiler }            from './ui/Profiler'
+import { SceneManager }        from './ui/SceneManager'
+import { Wanderer }            from './ui/Wanderer'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -391,7 +391,7 @@ export class LGS1920Context {
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()
-        __.recorder = new VideoRecorder()
+        __.recorder = new ScreenMediaRecorder()
         __.updater = new AppUpdateManager()
 
 

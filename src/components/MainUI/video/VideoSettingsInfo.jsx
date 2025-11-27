@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-03
- * Last modified: 2025-10-03
+ * Created on: 2025-11-27
+ * Last modified: 2025-11-27
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { VideoRecorder }       from '@Core/ui/video/recorder/VideoRecorder'
+import { ScreenMediaRecorder } from '@Core/ui/video/recorder/ScreenMediaRecorder'
 import { useEffect, useState } from 'react'
 import { useSnapshot }         from 'valtio'
 
@@ -26,11 +26,11 @@ export const VideoSettingsInfo = () => {
     const [ratio, setRatio] = useState($video.ratio)
 
     useEffect(() => {
-        setFps(VideoRecorder.FPS[$video.fps])
+        setFps(ScreenMediaRecorder.FPS[$video.fps])
     }, [video.fps])
 
     useEffect(() => {
-        setQuality(VideoRecorder.QUALITY[video.quality])
+        setQuality(ScreenMediaRecorder.QUALITY[video.quality])
     }, [video.quality])
 
     // Recompute current format when ratio changes and guard when not found

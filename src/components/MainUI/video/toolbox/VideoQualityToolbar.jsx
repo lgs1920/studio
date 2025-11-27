@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-25
- * Last modified: 2025-10-25
+ * Created on: 2025-11-27
+ * Last modified: 2025-11-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,9 +23,9 @@ import { useCallback, useEffect } from 'react'
 import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }             from '@Utils/FA2SL'
 import { faGripDots }        from '@fortawesome/pro-solid-svg-icons'
-import classNames            from 'classnames'
-import { VideoRecorder }     from '@Core/ui/video/recorder/VideoRecorder'
-import { useSnapshot }       from 'valtio'
+import classNames              from 'classnames'
+import { ScreenMediaRecorder } from '@Core/ui/video/recorder/ScreenMediaRecorder'
+import { useSnapshot }         from 'valtio'
 
 export const VideoQualityToolbar = () => {
     // Access reactive video state
@@ -45,7 +45,7 @@ export const VideoQualityToolbar = () => {
      * Initialize default Quality from settings
      */
     useEffect(() => {
-        $video.quality = lgs.settings.ui.video.quality ?? VideoRecorder.QUALITY[0].value
+        $video.quality = lgs.settings.ui.video.quality ?? ScreenMediaRecorder.QUALITY[0].value
     }, [])
 
 
@@ -55,7 +55,7 @@ export const VideoQualityToolbar = () => {
                 <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
             </SlTooltip>
             <div className="buttons-bar-on-map">
-                {VideoRecorder.QUALITY.map(({value, name, short}, index) => (
+                {ScreenMediaRecorder.QUALITY.map(({value, name, short}, index) => (
                     <SlTooltip
                         key={index}
                         content={name}

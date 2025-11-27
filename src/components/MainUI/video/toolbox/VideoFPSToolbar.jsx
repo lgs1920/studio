@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-25
- * Last modified: 2025-10-25
+ * Created on: 2025-11-27
+ * Last modified: 2025-11-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,8 +21,8 @@
  * @param {Object} props.store - Valtio store with crop state (fpsEditor, etc.)
  * @returns {JSX.Element} Draggable video FPS selector UI
  */
-import { VideoRecorder }     from '@Core/ui/video/recorder/VideoRecorder'
-import { faGripDots }        from '@fortawesome/pro-solid-svg-icons'
+import { ScreenMediaRecorder } from '@Core/ui/video/recorder/ScreenMediaRecorder'
+import { faGripDots }          from '@fortawesome/pro-solid-svg-icons'
 import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }             from '@Utils/FA2SL'
 import classNames            from 'classnames'
@@ -39,7 +39,7 @@ export const VideoFPSToolbar = memo(() => {
      * Initialize default FPS from settings
      */
     useEffect(() => {
-        $video.fps = lgs.settings.ui.video.fps ?? VideoRecorder.FPS[0]
+        $video.fps = lgs.settings.ui.video.fps ?? ScreenMediaRecorder.FPS[0]
     }, [])
 
 
@@ -60,7 +60,7 @@ export const VideoFPSToolbar = memo(() => {
                 <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
             </SlTooltip>
             <div className="buttons-bar-on-map">
-                {VideoRecorder.FPS.map((fps, index) => (
+                {ScreenMediaRecorder.FPS.map((fps, index) => (
                     <SlTooltip
                         key={index}
                         content={`FPS: ${fps}`}

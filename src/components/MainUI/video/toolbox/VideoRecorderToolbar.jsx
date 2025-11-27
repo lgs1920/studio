@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-24
- * Last modified: 2025-11-24
+ * Created on: 2025-11-27
+ * Last modified: 2025-11-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,9 +17,9 @@
 /*******************************************************************************
  * VideoRecorderToolbar.jsx - Displays video recording controls and stats
  ******************************************************************************/
-import { FontAwesomeIcon }                  from '@Components/FontAwesomeIcon'
-import { VideoRecorder }                    from '@Core/ui/video/recorder/VideoRecorder'
-import { faCircle }                         from '@fortawesome/duotone-regular-svg-icons'
+import { FontAwesomeIcon }     from '@Components/FontAwesomeIcon'
+import { ScreenMediaRecorder } from '@Core/ui/video/recorder/ScreenMediaRecorder'
+import { faCircle }            from '@fortawesome/duotone-regular-svg-icons'
 import { faPause, faPlay, faStop, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import { SlIconButton, SlTooltip }          from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                            from '@Utils/FA2SL'
@@ -205,13 +205,13 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                         })
 
             switch (event.type) {
-                case VideoRecorder.events.STOP:
+                case ScreenMediaRecorder.events.STOP:
                     showToast('success', 'Done. Waiting...')
                     break
-                case VideoRecorder.events.MAX_SIZE:
+                case ScreenMediaRecorder.events.MAX_SIZE:
                     showToast('warning', `Stopped due to max size limit (${video.maxSize}MB). Waiting...`)
                     break
-                case VideoRecorder.events.MAX_DURATION:
+                case ScreenMediaRecorder.events.MAX_DURATION:
                     showToast('warning', `Stopped due to max duration limit (${video.maxDuration}m). Waiting...`)
                     break
             }
@@ -222,15 +222,15 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         }
 
         const events = [
-            [VideoRecorder.events.START, handleStart],
-            [VideoRecorder.events.INFO, handleInfo],
-            [VideoRecorder.events.PAUSE, handlePause],
-            [VideoRecorder.events.RESUME, handleResume],
-            [VideoRecorder.events.MAX_SIZE, handleStop],
-            [VideoRecorder.events.MAX_DURATION, handleStop],
-            [VideoRecorder.events.STOP, handleStop],
-            [VideoRecorder.events.DOWNLOAD, handleDownload],
-            [VideoRecorder.events.FINALIZE, handleFinalize],
+            [ScreenMediaRecorder.events.START, handleStart],
+            [ScreenMediaRecorder.events.INFO, handleInfo],
+            [ScreenMediaRecorder.events.PAUSE, handlePause],
+            [ScreenMediaRecorder.events.RESUME, handleResume],
+            [ScreenMediaRecorder.events.MAX_SIZE, handleStop],
+            [ScreenMediaRecorder.events.MAX_DURATION, handleStop],
+            [ScreenMediaRecorder.events.STOP, handleStop],
+            [ScreenMediaRecorder.events.DOWNLOAD, handleDownload],
+            [ScreenMediaRecorder.events.FINALIZE, handleFinalize],
         ]
 
         events.forEach(([event, handler]) => __.recorder.addEventListener(event, handler))
