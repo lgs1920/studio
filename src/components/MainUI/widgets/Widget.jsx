@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-27
- * Last modified: 2025-11-27
+ * Created on: 2025-11-28
+ * Last modified: 2025-11-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,16 +16,15 @@
 
 import { usePointerSingleOrDouble } from '@Components/hooks/usePointerSingleOrDouble'
 import {
-    LGS_ANIMATION_DRAGGING,
-    LGS_ANIMATION_RESIZING,
-    LGS_TOOLBAR,
-    LGS_VISUAL_WIDGET,
-    LGS_WIDGET,
-    LGS_WIDGET_SCALE_FACTOR,
+    LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET, LGS_WIDGET_SCALE_FACTOR,
     WIDGETS_CAPABILITIES,
-}                              from '@Core/constants'
-import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { Widget2Canvas }       from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
+} from '@Core/constants'
+import {
+    ScreenMediaRecorder,
+} from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {
+    Widget2Canvas,
+} from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import classNames from 'classnames'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Moveable                     from 'react-moveable'
@@ -378,7 +377,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
             if (success) {
                 _initialized.current = true
+                __.ui.widgetCache.mount(config.id)
                 $widget.list.set(config.id, {mounted: true})
+                _widget.current.style.opacity = 1
+
                 if (interactionLocked) {
                     _w2c.current = new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
                         embedFonts: true,
@@ -432,8 +434,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         return null
     }
 
-    __.ui.widgetCache.mount(config.id)
-
     return (
         <div className="lgs-widget-container">
             <div
@@ -445,7 +445,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
                         [LGS_ANIMATION_RESIZING]: config.animationWhenResizing,
                         dragging:       _dragConfirmed.current,
-                    }
+                    },
                 )}
                 ref={_widget}
                 onMouseEnter={handleMouseEnter}
@@ -455,7 +455,13 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerCancel}
                 onContextMenu={handleContextMenu}
-                style={{touchAction: 'pan-x pan-y', pointerEvents: 'auto', zIndex: 1000, position: 'absolute'}}
+                style={{
+                    touchAction:   'pan-x pan-y',
+                    pointerEvents: 'auto',
+                    zIndex:        1000,
+                    position:      'absolute',
+                    opacity:       0,
+                }}
             >
                 {children}
             </div>

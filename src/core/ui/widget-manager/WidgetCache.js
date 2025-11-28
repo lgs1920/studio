@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-16
- * Last modified: 2025-11-16
+ * Created on: 2025-11-28
+ * Last modified: 2025-11-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -165,9 +165,11 @@ export class WidgetCache {
     /**
      * Marks the widget as mounted
      * @param {string} key - Widget key
+     * @param {function} callback - Called once the widget has veen mounted
      */
-    mount = key => {
+    mount = (key, callback) => {
         this.#setMounted(key, true)
+        callback(key)
     }
 
     /**
