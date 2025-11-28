@@ -167,9 +167,9 @@ export class WidgetCache {
      * @param {string} key - Widget key
      * @param {function} callback - Called once the widget has veen mounted
      */
-    mount = (key, callback) => {
+    mount = (key, callback = null) => {
         this.#setMounted(key, true)
-        callback(key)
+        callback?.(key)
     }
 
     /**
