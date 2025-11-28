@@ -111,10 +111,11 @@ export class ScreenMediaRecorder extends EventTarget {
             size:     this.#sizeBytes,
             duration: this.#recordedDuration * 1000, // Convert to milliseconds
             fps:      this.#fps,
-            quality: this.#quality,
+            quality:  this.#quality,
             dimensions: this.#dimensions,
-            ratio: this.#ratio,
+            ratio:    this.#ratio,
             sourceType: this.#sourceType,
+            metadata: this.#metadata,
         }
     }
 
@@ -132,6 +133,26 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#type = type
     }
 
+    async url() {
+        if (this.isVideo()) {
+            if (!this.#blob) {
+                throw this.error('No video')
+            }
+        }
+        else {
+
+            // const base64 = this.#snapshot.toDataURL('image/png')
+            // this.#blob = await (await fetch(base64)).blob()
+            this.#snapshot.toBlob(blob => {
+                this.#blob = blob
+            }, 'image/png')
+
+            // TODO: add chunking to png
+            //this.#blob = await __.tools.addChunksToPng(this.#blob , this.#metadata)
+        }
+        return {url: URL.createObjectURL(this.#blob), blob: this.#blob}
+    }
+
     /**
      * Configure recording parameters
      */
@@ -145,7 +166,7 @@ export class ScreenMediaRecorder extends EventTarget {
                       ratio,
                   } = {}) => {
         if (this.#isRecording) {
-            throw this.#error('Cannot initialize while recording')
+            throw this.error('Cannot initialize while recording')
         }
         if (fps && ScreenMediaRecorder.FPS.includes(fps)) {
             this.#fps = fps
@@ -167,10 +188,10 @@ export class ScreenMediaRecorder extends EventTarget {
      */
     setCanvas = (canvas) => {
         if (!(canvas instanceof HTMLCanvasElement)) {
-            throw this.#error('Invalid canvas')
+            throw this.error('Invalid canvas')
         }
         if (this.#isRecording) {
-            throw this.#error('Cannot change source while recording')
+            throw this.error('Cannot change source while recording')
         }
         this.#canvas = canvas
         this.#ctx = canvas.getContext('2d', {alpha: false})
@@ -186,10 +207,10 @@ export class ScreenMediaRecorder extends EventTarget {
      */
     setStream = async (stream) => {
         if (!(stream instanceof MediaStream)) {
-            throw this.#error('Invalid stream')
+            throw this.error('Invalid stream')
         }
         if (this.#isRecording) {
-            throw this.#error('Cannot change source while recording')
+            throw this.error('Cannot change source while recording')
         }
         this.#videoElement = document.createElement('video')
         this.#videoElement.srcObject = stream
@@ -217,65 +238,6 @@ export class ScreenMediaRecorder extends EventTarget {
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.SOURCE, {
             detail: {type: 'stream', stream, ...this.#dimensions},
         }))
-    }
-
-    /** Begin encoding */
-    startVideo = async () => {
-        if (this.#isRecording) {
-            throw this.#error('Already recording')
-        }
-        if (!this.#canvas) {
-            throw this.#error('No source set')
-        }
-
-        this.#reset()
-        this.#output = new Output({
-                                      format: new Mp4OutputFormat({fastStart: false}),
-                                      target: new BufferTarget(),
-                                      process: (a, b, c) => {
-                                          console.log(a, b, c)
-                                      },
-                                  })
-        await this.#output.setMetadataTags(this.#metadata)
-
-        const safe = this.#dimensions
-        this.#videoSource = new CanvasSource(this.#canvas, {
-            codec: (__.device.browser === NAVIGATOR.firefox && __.device.isMobile) ? 'vp9' : 'avc',
-            bitrate:              this.#quality.value,
-            alpha:                'discard',
-            latencyMode:          'realtime',
-            hardwareAcceleration: 'no-preference',
-            width:                safe.width,
-            height:               safe.height,
-        })
-
-        this.#output.addVideoTrack(this.#videoSource, {framerate: this.#fps})
-        this.#output.target.onwrite = (_, end) => {
-            this.#sizeBytes = end
-        }
-
-        await this.#output.start()
-        this.#isRecording = true
-        this.#startTime = performance.now()
-        this.#pausedTime = 0
-        document.body.classList.add(ScreenMediaRecorder.CLASSES.RECORDING)
-
-        // Send initial INFO event with duration 0
-        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
-            detail: {
-                duration: 0,
-                size:     this.#sizeBytes,
-                fps:      this.#fps,
-                isPaused: this.#isPaused,
-            },
-        }))
-
-        this.#recordFrame()
-        this.#infoInterval = setInterval(() => {
-            this.#checkLimits()
-        }, this.#timeslice)
-
-        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
     }
 
     /** Encode next frame using precise timestamp */
@@ -384,20 +346,71 @@ export class ScreenMediaRecorder extends EventTarget {
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.CANCEL))
     }
 
+    /** Begin encoding */
+    startVideo = async () => {
+        if (this.#isRecording) {
+            throw this.error('Already recording')
+        }
+        if (!this.#canvas) {
+            throw this.error('No source set')
+        }
+
+        this.#reset()
+        this.#output = new Output({
+                                      format:  new Mp4OutputFormat({fastStart: false}),
+                                      target:  new BufferTarget(),
+                                      process: (a, b, c) => {
+                                          console.log(a, b, c)
+                                      },
+                                  })
+        await this.#output.setMetadataTags(this.#metadata)
+
+        const safe = this.#dimensions
+        this.#videoSource = new CanvasSource(this.#canvas, {
+            codec:                (__.device.browser === NAVIGATOR.firefox && __.device.isMobile) ? 'vp9' : 'avc',
+            bitrate:              this.#quality.value,
+            alpha:                'discard',
+            latencyMode:          'realtime',
+            hardwareAcceleration: 'no-preference',
+            width:                safe.width,
+            height:               safe.height,
+        })
+
+        this.#output.addVideoTrack(this.#videoSource, {framerate: this.#fps})
+        this.#output.target.onwrite = (_, end) => {
+            this.#sizeBytes = end
+        }
+
+        await this.#output.start()
+        this.#isRecording = true
+        this.#startTime = performance.now()
+        this.#pausedTime = 0
+        document.body.classList.add(ScreenMediaRecorder.CLASSES.RECORDING)
+
+        // Send initial INFO event with duration 0
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
+            detail: {
+                duration: 0,
+                size:     this.#sizeBytes,
+                fps:      this.#fps,
+                isPaused: this.#isPaused,
+            },
+        }))
+
+        this.#recordFrame()
+        this.#infoInterval = setInterval(() => {
+            this.#checkLimits()
+        }, this.#timeslice)
+
+        this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+    }
+
     /**
      * Trigger browser download of recorded file
      */
-    download = ({filename = this.filename()} = {}) => {
-        let url
-        if (this.isVideo()) {
-            if (!this.#blob) {
-                throw this.#error('No video')
-            }
-            url = URL.createObjectURL(this.#blob)
-        }
-        else {
-            url = this.#snapshot.toDataURL('image/png')
-        }
+    download = async ({filename = this.filename()} = {}) => {
+        const url = (await this.url()).url
+
         const a = document.createElement('a')
         a.href = url
         a.download = filename
@@ -440,7 +453,7 @@ export class ScreenMediaRecorder extends EventTarget {
     /**
      * Internal error handler
      */
-    #error = (msg) => {
+    error = (msg) => {
         const err = new Error(msg)
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.ERROR, {detail: {error: err}}))
         return err
@@ -479,8 +492,12 @@ export class ScreenMediaRecorder extends EventTarget {
     captureScreenshot = async (canvas) => {
         this.type = ScreenMediaRecorder.IMAGE
         this.#snapshot = canvas
+        this.#blob = await new Promise(resolve => canvas.toBlob(resolve))
+        this.#sizeBytes = this.#blob.size
+        this.dimensions = {width: canvas.width, height: canvas.height}
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.CAPTURED, {
             detail: {canvas},
         }))
+
     }
 }

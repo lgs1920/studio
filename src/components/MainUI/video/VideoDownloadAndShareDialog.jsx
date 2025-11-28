@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-27
- * Last modified: 2025-11-27
+ * Created on: 2025-11-28
+ * Last modified: 2025-11-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,10 +17,11 @@
 /**
  * @file VideoDownloadAndShareDialog.jsx
  * @description Optimized component for previewing and downloading recorded videos.
- * Prevents errors on videoData access by using Valtio snapshot safely.
+ * Prevents errors on _mediaData access by using Valtio snapshot safely.
  * Uses Shoelace web components and FontAwesome icons.
  * All refs prefixed with _, no default export, no semicolons.
  */
+
 
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import {
@@ -28,13 +29,15 @@ import {
 }                              from '@fortawesome/pro-regular-svg-icons'
 import {
     SlButton, SlDialog, SlIcon, SlInput, SlTooltip,
-} from '@shoelace-style/shoelace/dist/react'
+}                      from '@shoelace-style/shoelace/dist/react'
 import {
     FA2SL,
 }                              from '@Utils/FA2SL'
-import { UIToast }             from '@Utils/UIToast'
+import {
+    UIToast,
+}                      from '@Utils/UIToast'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useSnapshot }   from 'valtio'
+import { useSnapshot } from 'valtio'
 import './style.css'
 
 export const VideoDownloadAndShareDialog = () => {
@@ -46,13 +49,14 @@ export const VideoDownloadAndShareDialog = () => {
     const [canShare] = useState(!!(navigator.canShare && navigator.canShare({files: []})))
     const _mainVideo = useRef(null)
     const _blurredVideo = useRef(null)
-    const _videoBlob = useRef({blob: null, url: null, filename: ''})
+    const _mediaBlob = useRef({blob: null, url: null, filename: ''})
+    const _mediaData = useRef(null)
 
     /**
-     * Safely accesses videoData from recorder with fallback.
-     * @returns {Object} Video stats with default values
+     * Safely accesses media data from recorder with fallback.
+     * @returns {Object} Media stats with default values
      */
-    const getVideoData = useCallback(() => {
+    const getMediaData = useCallback(() => {
         const fallback = {
             size:       0,
             duration:   0,
@@ -63,22 +67,35 @@ export const VideoDownloadAndShareDialog = () => {
         }
 
         try {
-            const data = __.recorder?.videoData
+            const data = __.recorder?.mediaData
             if (!data || typeof data !== 'object') {
                 return fallback
             }
-
-            return {
-                size:       Number(data.size) || 0,
-                duration:   Number(data.duration) || 0,
-                fps:        Number(data.fps) || 0,
-                dimensions: {
-                    width:  Number(data.dimensions?.width) || 0,
-                    height: Number(data.dimensions?.height) || 0,
-                },
-                quality:    data.quality || {name: 'Unknown'},
-                ratio:      data.ratio || {label: 'Unknown'},
+            if (__.recorder.isVideo()) {
+                return {
+                    size:       Number(data.size) || 0,
+                    duration:   Number(data.duration) || 0,
+                    fps:        Number(data.fps) || 0,
+                    dimensions: {
+                        width:  Number(data.dimensions?.width) || 0,
+                        height: Number(data.dimensions?.height) || 0,
+                    },
+                    quality:    data.quality || {name: 'Unknown'},
+                    ratio:      data.ratio || {label: 'Unknown'},
+                }
             }
+            else {
+                return {
+                    ratio:      data.ratio || {label: 'Unknown'},
+                    size:       Number(data.size) || 0,
+                    dimensions: {
+                        width:  Number(data.dimensions?.width) || 0,
+                        height: Number(data.dimensions?.height) || 0,
+                    },
+                    metadata:   data.metadata || {},
+                }
+            }
+
         }
         catch {
             return fallback
@@ -101,7 +118,7 @@ export const VideoDownloadAndShareDialog = () => {
             const recorderFilename = __.recorder.filename({}) || 'video'
             const safeFilename = recorderFilename.replace(/[^a-zA-Z0-9_-]/g, '_')
 
-            _videoBlob.current = {
+            _mediaBlob.current = {
                 blob,
                 url,
                 filename: safeFilename,
@@ -116,8 +133,8 @@ export const VideoDownloadAndShareDialog = () => {
             const {canvas} = event.detail
             const recorderFilename = __.recorder.filename({}) || 'record'
             const safeFilename = recorderFilename.replace(/[^a-zA-Z0-9_-]/g, '_')
-            _videoBlob.current = {
-                content:  canvas.toDataURL('image/png'),
+            _mediaBlob.current = {
+                content: canvas.toDataURL(`image/${lgs.settings.ui.video.image}`, 1.0),
                 filename: safeFilename,
                 type:     ScreenMediaRecorder.IMAGE,
             }
@@ -135,8 +152,8 @@ export const VideoDownloadAndShareDialog = () => {
             __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, handleStopRecording)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CAPTURED, handleCapture)
 
-            if (_videoBlob.current.url) {
-                URL.revokeObjectURL(_videoBlob.current.url)
+            if (_mediaBlob.current.url) {
+                URL.revokeObjectURL(_mediaBlob.current.url)
             }
         }
     }, [])
@@ -198,7 +215,7 @@ export const VideoDownloadAndShareDialog = () => {
     const handleFilenameChange = useCallback((event) => {
         const value = event.target?.value || ''
         const sanitized = value.replace(/[^a-zA-Z0-9_\-\s]/g, '')
-        _videoBlob.current.filename = sanitized
+        _mediaBlob.current.filename = sanitized
         const canProceed = sanitized.length > 0
         setCanDownloadAndShare(canProceed)
         setFilename(sanitized)
@@ -210,30 +227,21 @@ export const VideoDownloadAndShareDialog = () => {
     const handleShare = useCallback(async () => {
 
         const getVideoFile = async () => {
-            const blob = _videoBlob.current.blob
-            const filename = `${_videoBlob.current.filename}.${lgs.settings.ui.video.format}`
+            const blob = _mediaBlob.current.blob
+            const filename = `${_mediaBlob.current.filename}.${lgs.settings.ui.video.format}`
             return new File([blob], filename, {type: blob.type || 'video/mp4'})
         }
 
-        const base64ToBlob = (base64) => {
-            const parts = base64.split(',')
-            const mime = parts[0].match(/:(.*?);/)[1]
-            const bstr = atob(parts[1])
-            let n = bstr.length
-            const u8arr = new Uint8Array(n)
-            while (n--) {
-                u8arr[n] = bstr.charCodeAt(n)
-            }
-            return new Blob([u8arr], {type: mime})
-        }
 
         const getImageFile = async () => {
-            const base64 = _videoBlob.current.content
-            const blob = base64ToBlob(base64)
-            const filename = `${_videoBlob.current.filename}.png`
+            const base64 = _mediaBlob.current.content
+            const blob = __.tools.base64ToBlob(base64)
+            _mediaBlob.current.blob = blob
+
+            const filename = `${_mediaBlob.current.filename}.${lgs.settings.ui.video.image}`
             return new File([blob], filename, {type: blob.type})
         }
-
+        _mediaData.current = getMediaData()
 
         const file = __.recorder.isVideo() ? await getVideoFile() : await getImageFile()
         const media = __.recorder.isVideo() ? 'video' : 'shot'
@@ -249,8 +257,8 @@ export const VideoDownloadAndShareDialog = () => {
             if (navigator.share && __.recorder.isVideo()) {
                 await navigator.share({
                                           title: 'LGS1920 Studio Video',
-                                          text: 'Check out my last video created with LGS1920 Studio!',
-                                          url:  _videoBlob.current.url,
+                                          text: `Check out my last ${media}  created with LGS1920 Studio!`,
+                                          url:  _mediaBlob.current.url,
                                       })
                 return
             }
@@ -265,24 +273,27 @@ export const VideoDownloadAndShareDialog = () => {
         }
     }, [])
 
+    _mediaData.current = getMediaData()
+
+
     /**
      * Handle download via recorder API.
      */
     const handleDownload = useCallback(async () => {
         try {
             if (__.recorder.isVideo()) {
-                const blob = _videoBlob.current.blob
+                const blob = _mediaBlob.current.blob
                 if (!blob || blob.size === 0) {
                     return
                 }
                 await __.recorder.download({
-                                               filename: `${_videoBlob.current.filename}.${lgs.settings.ui.video.format}`,
+                                               filename: `${_mediaBlob.current.filename}.${lgs.settings.ui.video.format}`,
                                                type:     'local-filesystem',
                                            })
             }
             else {
                 await __.recorder.download({
-                                               filename: `${_videoBlob.current.filename}.${lgs.settings.ui.video.image}`,
+                                               filename: `${_mediaBlob.current.filename}.${lgs.settings.ui.video.image}`,
                                                type:     'local-filesystem',
                                            })
             }
@@ -297,10 +308,10 @@ export const VideoDownloadAndShareDialog = () => {
      */
     const handleCancel = useCallback(() => {
         setDialogOpen(false)
-        if (_videoBlob.current.url) {
-            URL.revokeObjectURL(_videoBlob.current.url)
+        if (_mediaBlob.current.url) {
+            URL.revokeObjectURL(_mediaBlob.current.url)
         }
-        _videoBlob.current = {blob: null, url: null, filename: ''}
+        _mediaBlob.current = {blob: null, url: null, filename: ''}
         $video.editing = false
         setCanDownloadAndShare(false)
         setFilename('')
@@ -318,7 +329,6 @@ export const VideoDownloadAndShareDialog = () => {
         }
     }, [handleCancel])
 
-    const videoData = getVideoData()
 
     return (
         <SlDialog
@@ -337,7 +347,7 @@ export const VideoDownloadAndShareDialog = () => {
                     <>
                         <video
                             ref={_mainVideo}
-                            src={_videoBlob.current.url}
+                            src={_mediaBlob.current.url}
                             controls
                             autoPlay
                             className="main-video"
@@ -346,7 +356,7 @@ export const VideoDownloadAndShareDialog = () => {
                         <div className="blurred-video-wrapper">
                             <video
                                 ref={_blurredVideo}
-                                src={_videoBlob.current.url}
+                                src={_mediaBlob.current.url}
                                 className="blurred-video"
                                 muted
                                 autoPlay
@@ -355,28 +365,31 @@ export const VideoDownloadAndShareDialog = () => {
                     </>
                 ) : (
                      <>
-                         <img src={_videoBlob.current.content} alt="Screenshot" className="main-video"/>
+                         <img src={_mediaBlob.current.content} alt="Screenshot" className="main-video"/>
                          <div className="blurred-video-wrapper">
-                             <img src={_videoBlob.current.content} className="blurred-video"/>
+                             <img src={_mediaBlob.current.content} className="blurred-video"/>
                          </div>
                      </>
                  )}
-
                 <div className="video-info lgs-card on-map">
                     <div>
                         <SlIcon library="fa" name={FA2SL.set(faCropAlt)}/>
-                        {videoData.ratio.label} - {videoData.dimensions.width}x{videoData.dimensions.height}
+                        {_mediaData.current.ratio.label} - {_mediaData.current.dimensions.width}x{_mediaData.current.dimensions.height}
                     </div>
                     <div>
                         <SlIcon library="fa" name={FA2SL.set(faFile)}/>
-                        {__.convert(videoData.size).toBytesUnit()}
+                        {__.convert(_mediaData.current.size).toBytesUnit()}
                     </div>
-                    <div>
-                        <SlIcon library="fa" name={FA2SL.set(faHourglass)}/>
-                        {__.convert(videoData.duration).toTime()}
-                    </div>
-                    <div>FPS: {videoData.fps}</div>
-                    <div>{videoData.quality.name}</div>
+                    {__.recorder.isVideo() &&
+                        <>
+                            <div>
+                                <SlIcon library="fa" name={FA2SL.set(faHourglass)}/>
+                                {__.convert(_mediaData.current.duration).toTime()}
+                            </div>
+                            <div>FPS: {_mediaData.current.fps}</div>
+                            <div>{_mediaData.current.quality.name}</div>
+                        </>
+                    }
                 </div>
             </div>
 
@@ -420,8 +433,8 @@ export const VideoDownloadAndShareDialog = () => {
                     <SlButton onClick={handleCancel}>
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}/>
                         {'Close'}
-                        </SlButton>
-                    </SlTooltip>
+                    </SlButton>
+                </SlTooltip>
             </div>
         </SlDialog>
     )
