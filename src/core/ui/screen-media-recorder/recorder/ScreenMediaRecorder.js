@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-27
- * Last modified: 2025-11-27
+ * Created on: 2025-11-28
+ * Last modified: 2025-11-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -105,7 +105,7 @@ export class ScreenMediaRecorder extends EventTarget {
     }
 
     /** Current recorded video metadata */
-    get videoData() {
+    get mediaData() {
         return {
             blob:     this.#blob,
             size:     this.#sizeBytes,
@@ -469,7 +469,7 @@ export class ScreenMediaRecorder extends EventTarget {
         document.body.classList.remove(ScreenMediaRecorder.CLASSES.RECORDING, ScreenMediaRecorder.CLASSES.PAUSED)
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP, {
             detail: {
-                ...this.videoData,
+                ...this.mediaData,
                 duration: this.#recordedDuration * 1000,
             },
         }))

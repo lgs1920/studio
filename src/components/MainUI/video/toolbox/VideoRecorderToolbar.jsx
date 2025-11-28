@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-27
- * Last modified: 2025-11-27
+ * Created on: 2025-11-28
+ * Last modified: 2025-11-28
  *
  *
  * Copyright © 2025 LGS1920
@@ -159,7 +159,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             }
 
             // Use the duration from the recorder
-            const duration = __.recorder ? __.recorder.videoData.duration : 0
+            const duration = __.recorder ? __.recorder.mediaData.duration : 0
             updateState({
                             paused:           true,
                             recordedDuration: duration,
@@ -173,7 +173,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             }
 
             // Use the duration from the recorder
-            const duration = __.recorder ? __.recorder.videoData.duration : 0
+            const duration = __.recorder ? __.recorder.mediaData.duration : 0
             updateState({
                             paused:           false,
                             recordedDuration: duration,
