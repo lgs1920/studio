@@ -723,7 +723,7 @@ export class WidgetCore {
             }
 
             // Update cropper position and dimensions
-            if (config.isCropper && this.windowResizing) {
+            if (config.isCropper && this.windowResizing && !config.persist) {
                 const containerRect = config.container.getBoundingClientRect()
                 const currentWidth = config.cropDimensions?.width || 200
                 const currentHeight = config.cropDimensions?.height || 200
