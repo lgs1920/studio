@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-27
- * Last modified: 2025-11-27
+ * Created on: 2025-11-29
+ * Last modified: 2025-11-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -137,7 +137,7 @@ export const VideoRecordingScreenArea = memo(() => {
         })
         __.recorder.setCanvas(composer.getCanvas())
 
-    }, [maxSize, maxDuration, $video.quality, $video.fps])
+    }, [$video.ratio, maxSize, maxDuration, $video.quality, $video.fps])
 
 
     /**
@@ -201,6 +201,7 @@ export const VideoRecordingScreenArea = memo(() => {
         })
 
         // We capture the snapshot
+        initializeRecorder()
         await __.recorder.captureScreenshot(composer.getCanvas())
 
     }, [])
@@ -264,7 +265,7 @@ export const VideoRecordingScreenArea = memo(() => {
     useEffect(() => {
         return () => {
             __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGETS, false)
-            __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, false)
+            __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
         }
     }, [])
 
