@@ -913,7 +913,6 @@ export class WidgetCore {
         config.fromDB = false
         if (config.persist) {
             const savedWidget = await this.#widgetManager.getWidgetPosition(elementId)
-            console.log(elementId, savedWidget)
             if (savedWidget) {
                 config.fromDB = true
                 config.position = {
