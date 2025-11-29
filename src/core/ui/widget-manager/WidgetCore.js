@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-25
- * Last modified: 2025-11-25
+ * Created on: 2025-11-29
+ * Last modified: 2025-11-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -845,7 +845,9 @@ export class WidgetCore {
                               : (initialConfig.position && this.#validPositions.includes(initialConfig.position))
                                 ? initialConfig.position
                                 : 'top-left')
-            let ratio = this.getRatio(initialConfig.ratio ?? __.device.isPortrait ? '9x16' : '16x9')
+
+            // set ratio key
+            let ratio = initialConfig.ratio ?? __.device.isPortrait ? '9x16' : '16x9'
             if (initialConfig.type === LGS_VISUAL_WIDGET) {
                 ratio = lgs.configuration.widgetRatio
             }
@@ -878,7 +880,7 @@ export class WidgetCore {
                 persist:               initialConfig.persist ?? null,
                 position:              {left: 0, top: 0},
                 previousCropDimensions: null,
-                ratio: ratio,
+                ratio: this.getRatio(ratio),
                 resizeFromCenter:      initialConfig.resizeFromCenter ?? false,
                 rotate:                initialConfig.rotate ?? 0,
                 scale:                 initialConfig.scale ?? {x: 1, y: 1},
@@ -911,6 +913,7 @@ export class WidgetCore {
         config.fromDB = false
         if (config.persist) {
             const savedWidget = await this.#widgetManager.getWidgetPosition(elementId)
+            console.log(elementId, savedWidget)
             if (savedWidget) {
                 config.fromDB = true
                 config.position = {

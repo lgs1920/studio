@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-03
- * Last modified: 2025-11-03
+ * Created on: 2025-11-29
+ * Last modified: 2025-11-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -279,11 +279,12 @@ export class WidgetCropper {
     dispatchCropUpdate = (config, phase) => {
         try {
             document.dispatchEvent(new CustomEvent('onCropUpdate', {
+
                 detail: {
                     id:    config.id,
                     crop:  {...config.cropDimensions},
                     ratio: {
-                        value:       config?.ratio.value,
+                        value: config?.ratio?.value,
                         aspectRatio: config?.ratio?.aspectRatio,
                         locked:      config?.ratio?.locked,
                     },
