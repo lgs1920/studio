@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-28
- * Last modified: 2025-11-28
+ * Created on: 2025-11-30
+ * Last modified: 2025-11-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -58,11 +58,49 @@ export class ScreenMediaRecorder extends EventTarget {
         {value: QUALITY_HIGH, name: 'High Quality', short: 'H'},
         {value: QUALITY_VERY_HIGH, name: 'Very High Quality', short: 'V'},
     ]
-
     /** Supported output frame rates */
     static FPS = [15, 30, 45, 60]
+
+    /** Presets for video recording */
+    static VIDEO_PRESETS = new Map([
+                                       [
+                                           'low', {
+                                           quality:     0,  // index of QUALITY array
+                                           fps:         0,  // Index of FPS array
+                                           name:        'Low',
+                                           description: 'Low quality',
+                                       },
+                                       ],
+                                       [
+                                           'medium', {
+                                           quality:     1,
+                                           fps:         1,
+                                           name:        'Med',
+                                           description: 'Medium quality',
+                                       },
+                                       ],
+                                       [
+                                           'high', {
+                                           quality:     2,
+                                           fps:         2,
+                                           name:        'High',
+                                           description: 'Very High quality',
+                                       },
+                                       ],
+                                       [
+                                           'custom', {
+                                           quality:     10,
+                                           fps:         10,
+                                           name:        'Flex',
+                                           description: 'Define yours',
+                                       },
+                                       ],
+                                   ])
+
+
     static DEFAULT_FPS_INDEX = 1
     static DEFAULT_QUALITY_INDEX = 2
+
     static instance
     static VIDEO = 'video'
     static IMAGE = 'image'

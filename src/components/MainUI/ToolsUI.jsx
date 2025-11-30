@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-27
- * Last modified: 2025-11-27
+ * Created on: 2025-11-30
+ * Last modified: 2025-11-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,8 +16,7 @@
 import { CameraAndTargetPanel }     from '@Components/cesium/CameraAndTargetPanel/CameraAndTargetPanel'
 import { ContextMenuHook }          from '@Components/MainUI/ContextMenuHook'
 import { MapPOIContextMenu }            from '@Components/MainUI/MapPOI/MapPOIContextMenu'
-import { VideoFPSWidget }               from '@Components/MainUI/video/toolbox/VideoFPSWidget'
-import { VideoQualityWidget }           from '@Components/MainUI/video/toolbox/VideoQualityWidget'
+import { VideoPresetWidget } from '@Components/MainUI/video/toolbox/VideoPresetWidget'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
 import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
 import { WidgetContextMenu } from '@Components/MainUI/widgets/WidgetContextMenu'
@@ -38,8 +37,7 @@ export const ToolsUI = () => {
                     <Cropper overlay source={lgs.canvas}
                              context={$cropper} className="video-cropper"
                              options={{infoComponent: <VideoSettingsInfo/>}}/>
-                    <VideoFPSWidget id="video-fps-widget"/>
-                    <VideoQualityWidget id="video-quality-widget"/>
+                    <VideoPresetWidget id="video-preset-widget"/>
                     <VideoRecordingSettingsWidget id="video-recording-settings-widget"/>
                     <WidgetContextMenu/>
                 </>

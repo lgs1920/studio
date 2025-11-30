@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-29
- * Last modified: 2025-11-29
+ * Created on: 2025-11-30
+ * Last modified: 2025-11-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -51,16 +51,14 @@ export const VideoQualityToolbar = () => {
 
 
     return (
-        <div className="video-quality-widget lgs-card on-map">
-            <SlTooltip content="Drag me">
-                <SlIcon library="fa" className="grabber" name={FA2SL.set(faGripDots)}/>
-            </SlTooltip>
+        <div className="video-quality-widget">
+            <span>{'Quality'}</span>
             <div className="buttons-bar-on-map">
                 {ScreenMediaRecorder.QUALITY.map(({value, name, short}, index) => (
                     <SlTooltip
                         key={index}
                         content={name}
-                        placement="left"
+                        placement="bottom"
                     >
                         <div
                             className={classNames('lgs-one-line-card', 'on-map', {'selected': index === video.quality})}

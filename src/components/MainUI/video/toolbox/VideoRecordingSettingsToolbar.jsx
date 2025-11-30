@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-29
- * Last modified: 2025-11-29
+ * Created on: 2025-11-30
+ * Last modified: 2025-11-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -32,11 +32,9 @@ import { useSnapshot }                             from 'valtio'
  * @returns {JSX.Element|null} The rendered toolbar component or null if not in editing mode.
  */
 export const VideoRecordingSettingsToolbar = memo(() => {
-    // --- State & Stores ---
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
-    // --- Refs ---
     const _steps = useRef([])
 
     // --- Handlers ---
@@ -83,8 +81,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     $video.step = 0
                     Object.assign($video.cropper, {
                         ratioEditor:   true,
-                        qualityEditor: true,
-                        fpsEditor:     true,
+                        presetEditor: true,
                         widgetEditor:  false,
                     })
                     __.ui.widgetManager.windowResizing = true
@@ -93,8 +90,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                 afterStep:  () => {
                     Object.assign($video.cropper, {
                         ratioEditor:   false,
-                        qualityEditor: false,
-                        fpsEditor:     false,
+                        presetEditor: false,
                     })
                     _steps.current[0].done = true
                     __.ui.widgetManager.windowResizing = false

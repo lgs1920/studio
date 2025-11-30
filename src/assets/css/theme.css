@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: theme.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-27
- * Last modified: 2025-11-27
+ * Created on: 2025-11-30
+ * Last modified: 2025-11-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -563,9 +563,10 @@ sl-card[variant="primary"]::part(base) {
     backdrop-filter: blur(var(--lgs-blur));
 }
 
-.on-map .lgs-card {
+
+.on-map.lgs-card, .on-map .lgs-card {
+    padding: var(--lgs-gutter-xs);
     border-color: var(--lgs-card-on-map-border-color);
-    background: var(--lgs-card-on-map-bg-color);
 }
 
 .lgs-card-wrapper {
@@ -1133,6 +1134,14 @@ ul {
 h3 {
     font-size: var(--lgs-font-size);
     font-weight: bold;
+}
+
+hr {
+    width: calc(100% - 2 * var(--lgs-gutter-xs));
+    height: 1px;
+    margin: var(--lgs-gutter-xs);
+    border: none;
+    background: var(--lgs-card-on-map-border-color)
 }
 
 [readonly] {

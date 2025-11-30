@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-27
- * Last modified: 2025-11-27
+ * Created on: 2025-11-30
+ * Last modified: 2025-11-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -237,7 +237,7 @@
     justify-content: space-between;
 }
 /***************************************
- * Video quality toolbar
+ * Video Quality toolbar
  */
 
 .video-quality-widget-container {
@@ -246,12 +246,13 @@
 
 .video-quality-widget {
     position: relative;
-    display: flex;
+    display: grid;
     align-items: center;
-    flex-direction: var(--buttons-bar-on-map-direction);
+    flex-direction: row;
     width: auto;
-    padding: var(--lgs-gutter-xs);
+    grid-template-columns: 3rem 1fr;
     gap: var(--lgs-gutter-xs);
+    --buttons-bar-on-map-direction: row
 }
 
 .video-quality-widget.lgs-toolbar {
@@ -264,11 +265,10 @@
 
 .video-fps-widget {
     position: relative;
-    display: flex;
+    display: grid;
     align-items: center;
-    flex-direction: var(--buttons-bar-on-map-direction);
     width: auto;
-    padding: var(--lgs-gutter-xs);
+    grid-template-columns: 3rem 1fr;
     gap: var(--lgs-gutter-xs);
     --buttons-bar-on-map-direction: row;
 }
@@ -279,6 +279,54 @@
 
 .video-fps-widget .grabber {
     rotate: 90deg;
+}
+
+/***************************************
+ * Video Preset selector
+ */
+
+.video-preset-widget {
+    position: relative;
+    align-items: center;
+    flex-direction: var(--buttons-bar-on-map-direction);
+    width: auto;
+    padding: var(--lgs-gutter-xs);
+    --buttons-bar-on-map-direction: row;
+    gap: var(--lgs-gutter-xs);
+}
+
+.video-preset-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+}
+
+.video-preset-widget.lgs-toolbar {
+    opacity: 1;
+}
+
+.video-preset-widget .grabber {
+    rotate: 90deg;
+}
+
+.video-preset-custom {
+    display: flex;
+    flex-basis: 100%;
+    flex-direction: column;
+    margin-bottom: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}
+
+.video-preset-widget-wrapper {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    gap: 0;
+
+}
+
+.video-fps-widget .buttons-bar-on-map, .video-quality-widget .buttons-bar-on-map {
+    display: grid;
+    grid-template-columns: repeat(4, 2rem) !important;
 }
 
 /***************************************
