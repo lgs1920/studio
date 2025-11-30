@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-09
- * Last modified: 2025-10-09
+ * Created on: 2025-11-30
+ * Last modified: 2025-11-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -212,7 +212,7 @@ export const MainUI = memo(() => {
                             <SupportUIButton tooltip={tooltipDir}/>
                         </div>
                         <div id="secondary-buttons-bar" className={secondaryEntrance}>
-                            <Compass sensitivity={100}/>
+                            {!video.recording && <Compass sensitivity={100}/>}
                             <div id="secondary-buttons-bar-content">
                                 <SceneModeSelector tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
@@ -237,7 +237,7 @@ export const MainUI = memo(() => {
                     )}
                 </div>
                 <div id="bottom-right-ui">
-                    <CreditsBar/>
+                    {!video.recording && <CreditsBar/>}
                 </div>
                     </>
                 )}
