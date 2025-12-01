@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-30
- * Last modified: 2025-11-30
+ * Created on: 2025-12-01
+ * Last modified: 2025-12-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,16 +16,15 @@
 
 import { Compass }                      from '@Components/cesium/CompassUI/Compass'
 import { FullScreenButton }                     from '@Components/FullScreenButton/FullScreenButton'
+import { ContextMenuRenderer } from '@Components/MainUI/ContextMenuRenderer'
 
 import { GeocodingButton }     from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'
-import { MapPOIContextMenu }            from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { MapPOIMonitor }                from '@Components/MainUI/MapPOI/MapPOIMonitor'
 import { RotateButton }                 from '@Components/MainUI/RotateButton'
 import { TrackEditorButton }            from '@Components/MainUI/TrackEditorButton'
 import { VideoButton }                 from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
-import { VideoRecorderToolbar } from '@Components/MainUI/video/toolbox/VideoRecorderToolbar'
 import { Profile }              from '@Components/Profile/Profile'
 import { ProfileButton }                        from '@Components/Profile/ProfileButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
@@ -247,6 +246,7 @@ export const MainUI = memo(() => {
                 <LayersPanel/>
                 <TracksEditor/>
                 <MapPOIEditPanel/>
+                <ContextMenuRenderer/>
             </div>
             <SupportUI/>
             <JourneyLoaderUI multiple/>

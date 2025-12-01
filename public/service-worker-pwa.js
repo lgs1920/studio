@@ -7,38 +7,33 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-17
- * Last modified: 2025-08-17
+ * Created on: 2025-12-01
+ * Last modified: 2025-12-01
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 /**
- * Service Worker for LGS1920 Studio PWA
- * Handles installation, activation, fetch events, and client messaging
- * Manages versioning by fetching build.json, version.json, and branch.json
- * Notifies clients of new versions when build time, version, or branch changes
- * Controlled by AppUpdateManager for updates via SKIP_WAITING
- * Uses Cache Storage with environment-specific cache name based on lgs.platform
+ * Service Worker for LGS1920 Studio PWA - Auto-update mode
+ * Automatically updates the app as soon as a new version is available
+ * No user action required - skipWaiting() is called immediately on new version
+ * Uses build.json, version.json, branch.json to detect changes
+ * Cache name based on platform from servers.json
  */
 
 /**
- * Generates a cache name based on the lgs.platform global variable
- * @returns {string} Cache name specific to the environment
+ * Generates a cache name based on the current platform (from servers.json)
+ * @returns {Promise<string>} The cache name for the current environment
  */
 const getCacheName = async () => {
-    // Read servers
-    const servers = await fetch('servers.json').then(
-        res => res.json(),
-    )
+    const servers = await fetch('servers.json').then(res => res.json())
     return servers.platform
 }
 
 /**
- * Fetches build metadata from JSON files
- * @async
- * @returns {Promise<{buildTime: string, version: string, branch: string}>} Metadata object
+ * Fetches build metadata from JSON manifest files
+ * @returns {Promise<{buildTime: string, version: string, branch: string}>}
  */
 const getBuildMetadata = async () => {
     let buildTime = `${Date.now()}`
@@ -46,157 +41,152 @@ const getBuildMetadata = async () => {
     let branch = 'main'
 
     try {
-        const buildResponse = await fetch('./build.json')
-        if (buildResponse.ok) {
-            const buildData = await buildResponse.json()
-            buildTime = buildData.date ? `${buildData.date}` : buildTime
+        const buildRes = await fetch('./build.json')
+        if (buildRes.ok) {
+            const data = await buildRes.json()
+            buildTime = data.date ? `${data.date}` : buildTime
         }
     }
-    catch (error) {
-        console.error('[Service Worker] Failed to fetch build.json:', error)
+    catch (err) {
+        console.error('[Service Worker] Failed to fetch build.json:', err)
     }
 
     try {
-        const versionResponse = await fetch('./version.json')
-        if (versionResponse.ok) {
-            const versionData = await versionResponse.json()
-            version = versionData.studio || versionData.backend || version
+        const verRes = await fetch('./version.json')
+        if (verRes.ok) {
+            const data = await verRes.json()
+            version = data.studio || data.backend || version
         }
     }
-    catch (error) {
-        console.error('[Service Worker] Failed to fetch version.json:', error)
+    catch (err) {
+        console.error('[Service Worker] Failed to fetch version.json:', err)
     }
 
     try {
-        const branchResponse = await fetch('./branch.json')
-        if (branchResponse.ok) {
-            const branchData = await branchResponse.json()
-            branch = branchData.branch || branch
+        const branchRes = await fetch('./branch.json')
+        if (branchRes.ok) {
+            const data = await branchRes.json()
+            branch = data.branch || branch
         }
     }
-    catch (error) {
-        console.error('[Service Worker] Failed to fetch branch.json:', error)
+    catch (err) {
+        console.error('[Service Worker] Failed to fetch branch.json:', err)
     }
 
     return {buildTime, version, branch}
 }
 
 /**
- * Logs build metadata for debugging
- * @async
+ * Logs current build information in console (debug)
  */
 const logBuildInfo = async () => {
     const {buildTime, version, branch} = await getBuildMetadata()
-    console.info(`[Service Worker] LGS1920 Studio - Build Time: ${buildTime}, Version: ${version}, Branch: ${branch}`)
+    console.info(`[Service Worker] LGS1920 Studio - Build: ${buildTime} | Version: ${version} | Branch: ${branch}`)
 }
 
 /**
- * Notifies clients of a new version with build metadata
- * @async
+ * Notifies all clients that a new version has been installed and activated
  */
 const notifyNewVersion = async () => {
     try {
         const {buildTime, version, branch} = await getBuildMetadata()
         const clients = await self.clients.matchAll({includeUncontrolled: true})
         const message = {
-            type: 'NEW_VERSION',
+            type: 'NEW_VERSION_AUTO_APPLIED',
             buildTime,
             version,
             branch,
         }
         clients.forEach(client => client.postMessage(message))
-        console.info('[Service Worker] New version notification sent:', message)
+        console.info('[Service Worker] New version auto-applied and clients notified:', message)
     }
-    catch (error) {
-        console.error('[Service Worker] Failed to notify clients:', error)
+    catch (err) {
+        console.error('[Service Worker] Failed to notify clients of auto-update:', err)
     }
 }
 
 /**
- * Checks if a new version is available by comparing build metadata with stored values in Cache Storage
- * Stores current metadata in Cache Storage for future comparisons
- * @async
- * @returns {Promise<boolean>} True if a new version is detected
+ * Checks if current build differs from the one stored in cache
+ * Updates the stored metadata and returns true if a new version is present
+ * @returns {Promise<boolean>}
  */
 const isNewVersionAvailable = async () => {
     try {
-        const currentMetadata = await getBuildMetadata()
-        // Open environment-specific cache
-        const cache = await caches.open(getCacheName())
-        // Retrieve previous metadata from cache
-        const cachedResponse = await cache.match('build_metadata')
-        const previousMetadata = cachedResponse ? await cachedResponse.json() : {}
+        const current = await getBuildMetadata()
+        const cache = await caches.open(await getCacheName())
+        const cachedResp = await cache.match('build_metadata')
+        const previous = cachedResp ? await cachedResp.json() : {}
 
-        // Compare current and previous metadata
         const isNew =
-                  previousMetadata.buildTime !== currentMetadata.buildTime ||
-                  previousMetadata.version !== currentMetadata.version ||
-                  previousMetadata.branch !== currentMetadata.branch
+                  previous.buildTime !== current.buildTime ||
+                  previous.version !== current.version ||
+                  previous.branch !== current.branch
 
-        // Store current metadata in cache
+        // Always update stored metadata
         await cache.put(
             'build_metadata',
-            new Response(JSON.stringify(currentMetadata), {
+            new Response(JSON.stringify(current), {
                 headers: {'Content-Type': 'application/json'},
             }),
         )
 
         return isNew
     }
-    catch (error) {
-        console.error('[Service Worker] Failed to check version in Cache Storage:', error)
+    catch (err) {
+        console.error('[Service Worker] Error checking version:', err)
         return false
     }
 }
 
-// Install event
+// ====================================
+// Install
+// ====================================
 self.addEventListener('install', event => {
-    console.info('[Service Worker] Installing...')
+    console.info('[Service Worker] Installing new version...')
     event.waitUntil(
         (async () => {
-            try {
-                await logBuildInfo()
-                // Do not call skipWaiting automatically - controlled by AppUpdateManager
-                console.info('[Service Worker] Installation complete - awaiting activation')
-            }
-            catch (error) {
-                console.error('[Service Worker] Installation failed:', error)
-            }
+            await logBuildInfo()
+            // Force immediate activation of the new worker
+            self.skipWaiting()
+            console.info('[Service Worker] Installation complete - skipWaiting() called')
         })()
     )
 })
 
-// Activate event
+// ====================================
+// Activate
+// ====================================
 self.addEventListener('activate', event => {
-    console.info('[Service Worker] Activating...')
+    console.info('[Service Worker] Activating new version...')
     event.waitUntil(
         (async () => {
-            try {
-                await self.clients.claim()
-                // Notify clients if a new version is detected
-                if (await isNewVersionAvailable()) {
-                    await notifyNewVersion()
-                }
-                console.info('[Service Worker] Activation complete')
+            // Take control of all clients immediately
+            await self.clients.claim()
+
+            const hasNewVersion = await isNewVersionAvailable()
+            if (hasNewVersion) {
+                await notifyNewVersion()
+                console.info('[Service Worker] New version automatically applied')
             }
-            catch (error) {
-                console.error('[Service Worker] Activation failed:', error)
+            else {
+                console.info('[Service Worker] Same version - no update needed')
             }
         })()
     )
 })
 
-// Fetch event
+// ====================================
+// Fetch
+// ====================================
 self.addEventListener('fetch', event => {
+    // Simple network-first strategy (you can customize later)
     event.respondWith(fetch(event.request))
 })
 
-// Message event
+// ====================================
+// Message (optional - kept for debug or future use)
+// ====================================
 self.addEventListener('message', event => {
-    if (event.data?.type === 'SKIP_WAITING') {
-        console.info('[Service Worker] Skip waiting requested')
-        self.skipWaiting()
-    }
     if (event.data?.type === 'GET_BUILD_INFO') {
         (async () => {
             const {buildTime, version, branch} = await getBuildMetadata()

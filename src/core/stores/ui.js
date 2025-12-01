@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-30
- * Last modified: 2025-11-30
+ * Created on: 2025-12-01
+ * Last modified: 2025-12-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -68,7 +68,7 @@ export const ui = {
         quality: null,
         ratio:   null,
         fps:     null,
-        url: null,
+        url:     null,
         editing:         false,
         recording:       false,
         preRecording: false,
@@ -77,7 +77,7 @@ export const ui = {
         finalizing: false,
         size:       0,
         toolbarPosition: {},
-        step: null,
+        step:    null,
         cropper: {
             ratioEditor: true,
             presetEditor: true,
@@ -129,5 +129,12 @@ export const ui = {
         installOutcome:           null,
         promptInstall:            null,
         applyUpdate:              null,
+    },
+
+    contextMenu: {
+        visible:  false,
+        type:     null,        // 'widget' | 'poi' | ...
+        targetId: null,
+        position: null,
     },
 }

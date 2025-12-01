@@ -7,33 +7,32 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-10-25
- * Last modified: 2025-10-25
+ * Created on: 2025-12-01
+ * Last modified: 2025-12-01
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-/**
- * Hook to detect right-click or long-tap interactions with a single event handler.
- * Handles right-click via contextmenu (MouseEvent) and long-tap via touchstart (TouchEvent).
- * Cleans up timeouts on component unmount.
- *
- * @param {{
- *   onAction?: (e: MouseEvent | TouchEvent) => void,
- *   longTapDelay?: number
- * }} options - Interaction handler and config.
- * @returns {(e: MouseEvent | TouchEvent) => void} - Unified event handler for JSX.
- */
 import { useEffect, useRef } from 'react'
 
-export const useRightClickOrLongTap = ({onAction, longTapDelay = 500}) => {
-    // Store touch start time
-    const _touchStart = useRef(0)
-    // Store timeout reference for long tap
+/**
+ * Unified hook for right-click (desktop) and long-tap (mobile) detection.
+ * Prevents default browser context menu on right-click.
+ * Cancels long-tap on movement or multi-touch.
+ * Fully cleaned up on unmount.
+ *
+ * @param {Object} options
+ * @param {(event: MouseEvent | TouchEvent) => void} options.onTrigger - Called on valid right-click or long-tap
+ * @param {number} [options.longTapDelay=600] - Delay in ms before long-tap triggers (600ms is more natural than 500)
+ * @returns {(node: HTMLElement | null) => void} - Ref callback to attach to target element
+ */
+export const useRightClickOrLongTap = ({onTrigger, longTapDelay = 600}) => {
     const _timeout = useRef(null)
+    const _touchMoved = useRef(false)
+    const _startPos = useRef({x: 0, y: 0})
 
-    // Cleanup timeout on unmount
+    // Cleanup on unmount
     useEffect(() => {
         return () => {
             if (_timeout.current) {
@@ -43,35 +42,86 @@ export const useRightClickOrLongTap = ({onAction, longTapDelay = 500}) => {
         }
     }, [])
 
-    // Unified event handler
-    const handleEvent = (event) => {
-        // Handle right-click (MouseEvent from contextmenu)
-        if (event.type === 'contextmenu' && typeof onAction === 'function') {
-            event.preventDefault() // Prevent default context menu
-            onAction(event)
+    return (element) => {
+        if (!element) {
+            // Cleanup if element is removed
+            if (_timeout.current) {
+                clearTimeout(_timeout.current)
+            }
             return
         }
 
-        // Handle touch events (long-tap via touchstart)
-        if (event.type === 'touchstart') {
-            if (event.touches?.length !== 1) {
+        // Cleanup previous listeners
+        element.removeEventListener('contextmenu', handleContextMenu)
+        element.removeEventListener('touchstart', handleTouchStart)
+        element.removeEventListener('touchmove', handleTouchMove)
+        element.removeEventListener('touchend', handleTouchEnd)
+        element.removeEventListener('touchcancel', handleTouchCancel)
+
+        // Add fresh listeners
+        element.addEventListener('contextmenu', handleContextMenu)
+        element.addEventListener('touchstart', handleTouchStart, {passive: true})
+        element.addEventListener('touchmove', handleTouchMove, {passive: true})
+        element.addEventListener('touchend', handleTouchEnd)
+        element.addEventListener('touchcancel', handleTouchCancel)
+
+        // Handlers
+        function handleContextMenu(event) {
+            event.preventDefault()
+            event.stopPropagation()
+            if (typeof onTrigger === 'function') {
+                onTrigger(event)
+            }
+        }
+
+        function handleTouchStart(event) {
+            if (event.touches.length !== 1) {
                 return
             }
-            _touchStart.current = Date.now()
+
+            const touch = event.touches[0]
+            _startPos.current = {x: touch.clientX, y: touch.clientY}
+            _touchMoved.current = false
+
             _timeout.current = setTimeout(() => {
-                if (typeof onAction === 'function') {
-                    onAction(event)
+                if (!_touchMoved.current && typeof onTrigger === 'function') {
+                    event.preventDefault() // Prevent context menu on iOS
+                    onTrigger(event)
                 }
                 _timeout.current = null
             }, longTapDelay)
         }
-        else if (event.type === 'touchend' || event.type === 'touchcancel') {
+
+        function handleTouchMove(event) {
+            if (!_timeout.current) {
+                return
+            }
+
+            const touch = event.touches[0]
+            const dx = touch.clientX - _startPos.current.x
+            const dy = touch.clientY - _startPos.current.y
+            const distance = Math.hypot(dx, dy)
+
+            // Cancel if finger moved more than 10px
+            if (distance > 10) {
+                _touchMoved.current = true
+                clearTimeout(_timeout.current)
+                _timeout.current = null
+            }
+        }
+
+        function handleTouchEnd() {
+            if (_timeout.current) {
+                clearTimeout(_timeout.current)
+                _timeout.current = null
+            }
+        }
+
+        function handleTouchCancel() {
             if (_timeout.current) {
                 clearTimeout(_timeout.current)
                 _timeout.current = null
             }
         }
     }
-
-    return handleEvent
 }

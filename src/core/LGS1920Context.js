@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-27
- * Last modified: 2025-11-27
+ * Created on: 2025-12-01
+ * Last modified: 2025-12-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,6 +21,7 @@ import {
 import { StoresManager }       from '@Core/stores/StoresManager'
 import { AppToolsManager }     from '@Core/ui/AppToolsManager'
 import { AppUpdateManager }    from '@Core/ui/AppUpdateManager'
+import { ContextMenu }         from '@Core/ui/ContextMenu'
 import { DeviceManager }       from '@Core/ui/DeviceManager'
 import { Geocoder }            from '@Core/ui/Geocoder'
 import { MenuManager }         from '@Core/ui/MenuManager'
@@ -388,6 +389,7 @@ export class LGS1920Context {
 
         __.ui.poiManager = new POIManager()
         __.ui.geocoder = new Geocoder()
+        __.ui.contextMenu = new ContextMenu()
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()
