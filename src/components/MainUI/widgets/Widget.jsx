@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-01
- * Last modified: 2025-12-01
+ * Created on: 2025-12-02
+ * Last modified: 2025-12-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -490,13 +490,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerCancel}
                 onContextMenu={handleContextMenu}
-                style={{
-                    touchAction: 'pan-x pan-y',
-                    pointerEvents: 'auto',
-                    zIndex:      1000,
-                    position:    'absolute',
-                    opacity:     0,
-                }}
             >
                 {children}
             </div>

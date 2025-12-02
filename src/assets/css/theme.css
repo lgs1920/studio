@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-01
- * Last modified: 2025-12-01
+ * Created on: 2025-12-02
+ * Last modified: 2025-12-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -58,6 +58,7 @@
     --lgs-ui-layer-zindex: 2000;
     --lgs-tools-ui-zindex: 2500;
     --lgs-drop-zone-zindex: 10;
+    --lgs-context-menu-zindex: calc(var(--lgs-tools-ui-zindex) + 100);
 
     --lgs-button-border-color: var(--lgs-dark-ui-secondary-color);
     --lgs-button-color: var(--lgs-dark-ui-primary-color);
@@ -820,7 +821,6 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
 
 .lgs-context-menu {
     position: fixed !important;
-    z-index: calc(var(--lgs-tools-ui-zindex) + 2);
     top: 0;
     left: 0;
     display: flex;
@@ -832,22 +832,17 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
 
     transition: opacity 120ms ease, transform 120ms ease, visibility 0s 120ms;
     transform: translateY(-8px);
-    pointer-events: none;
     opacity: 0;
 }
 
 .lgs-context-menu.visible {
+    z-index: var(--lgs-context-menu-zindex);
     visibility: visible;
     transition: opacity 120ms ease, transform 120ms ease, visibility 0s 0s;
     transform: translateY(0);
     pointer-events: all;
     opacity: 1;
-}
 
-
-.lgs-context-menu.widget-context-menu {
-    position: absolute;
-    z-index: calc(var(--lgs-tools-ui-zindex));
 }
 
 :root {
@@ -883,7 +878,6 @@ sl-details [slot="prefix"], sl-details [slot="suffix"] {
 .lgs-context-menu sl-icon, .lgs-context-menu svg, .lgs-context-menu sl-spinner {
     margin-right: var(--lgs-gutter-s);
 }
-
 
 /*******************************************************************************
  * Form elements
@@ -1181,6 +1175,7 @@ hr {
 
 .lgs-widget {
     position: absolute;
+    z-index: calc(var(--lgs-tools-ui-zindex) - 1);
     display: flex;
     align-items: center;
     flex-direction: row;
@@ -1188,7 +1183,9 @@ hr {
     width: auto;
     margin: var(--lgs-gutter-xs);
     pointer-events: auto;
+    opacity: 0;
     gap: var(--lgs-gutter-xs);
+    touchAction: 'pan-x pan-y';
 }
 
 .lgs-widget * {
