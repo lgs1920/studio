@@ -15,8 +15,8 @@
  ******************************************************************************/
 
 import { Compass }                      from '@Components/cesium/CompassUI/Compass'
-import { FullScreenButton }                     from '@Components/FullScreenButton/FullScreenButton'
-import { ContextMenuRenderer } from '@Components/MainUI/ContextMenuRenderer'
+import { FullScreenButton }    from '@Components/FullScreenButton/FullScreenButton'
+import { ContextMenuRenderer } from '@Components/MainUI/context-menu/ContextMenuRenderer'
 
 import { GeocodingButton }     from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-01
- * Last modified: 2025-12-01
+ * Created on: 2025-12-02
+ * Last modified: 2025-12-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,7 +21,7 @@ import {
 import { StoresManager }       from '@Core/stores/StoresManager'
 import { AppToolsManager }     from '@Core/ui/AppToolsManager'
 import { AppUpdateManager }    from '@Core/ui/AppUpdateManager'
-import { ContextMenu }         from '@Core/ui/ContextMenu'
+import { ContextMenu }         from '@Core/ui/context-menu/ContextMenu'
 import { DeviceManager }       from '@Core/ui/DeviceManager'
 import { Geocoder }            from '@Core/ui/Geocoder'
 import { MenuManager }         from '@Core/ui/MenuManager'
