@@ -16,17 +16,16 @@
 
 import { usePointerInteractions } from '@Components/MainUI/context-menu/usePointerInteractions'
 import {
-    LGS_ANIMATION_DRAGGING,
-    LGS_ANIMATION_RESIZING,
-    LGS_TOOLBAR,
-    LGS_VISUAL_WIDGET,
-    LGS_WIDGET,
-    LGS_WIDGET_SCALE_FACTOR,
+    LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET, LGS_WIDGET_SCALE_FACTOR,
     WIDGETS_CAPABILITIES,
 }                                 from '@Core/constants'
-import { ScreenMediaRecorder }    from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { Widget2Canvas }          from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
-import classNames from 'classnames'
+import {
+    ScreenMediaRecorder,
+}                                 from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {
+    Widget2Canvas,
+}                                 from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
+import classNames                 from 'classnames'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Moveable                   from 'react-moveable'
 import { useSnapshot }            from 'valtio'
@@ -231,19 +230,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (interactionLocked) {
             return
         }
-        if (lgs.stores.ui.contextMenu.visible) {
-            lgs.stores.ui.contextMenu.visible = false
 
-        }
-        else {
-            const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? 0
-            const clientY = event.clientY ?? event.touches?.[0]?.clientY ?? 0
+        const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? 0
+        const clientY = event.clientY ?? event.touches?.[0]?.clientY ?? 0
 
-            lgs.stores.ui.contextMenu.visible = true
-            lgs.stores.ui.contextMenu.type = 'widget'
-            lgs.stores.ui.contextMenu.targetId = config.id
-            lgs.stores.ui.contextMenu.position = {x: clientX, y: clientY}
-        }
+        lgs.stores.ui.contextMenu.visible = true
+        lgs.stores.ui.contextMenu.type = 'widget'
+        lgs.stores.ui.contextMenu.targetId = config.id
+        lgs.stores.ui.contextMenu.position = {x: clientX, y: clientY}
+
     }, [interactionLocked, config?.id])
 
     // Unified pointer interaction hook (tap / double-tap / long-tap / right-click)

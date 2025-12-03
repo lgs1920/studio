@@ -43,18 +43,18 @@ export const ContextMenuRenderer = () => {
                 __.ui.contextMenu.showAt(contextMenu.position)
             }
         }
-    }, [contextMenu.visible, contextMenu.type])
+    }, [contextMenu.visible, contextMenu.position?.x, contextMenu.position?.y])
 
-    // Update position while visible
-    useEffect(() => {
-        if (_menu.current && contextMenu.visible && contextMenu.position) {
-            __.ui.contextMenu.showAt(contextMenu.position)
-        }
-    }, [contextMenu.position?.x, contextMenu.position?.y])
+    // // Update position while visible
+    // useEffect(() => {
+    //     if (_menu.current && contextMenu.visible && contextMenu.position) {
+    //         __.ui.contextMenu.showAt(contextMenu.position)
+    //     }
+    // }, [contextMenu.position?.x, contextMenu.position?.y])
 
     // Do not render anything when the menu is hidden
     if (!contextMenu.visible || !contextMenu.type) {
-        return null
+        //  return null
     }
 
     // Delegate to the correct menu component

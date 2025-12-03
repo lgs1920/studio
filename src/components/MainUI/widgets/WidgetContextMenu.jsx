@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-01
- * Last modified: 2025-12-01
+ * Created on: 2025-12-03
+ * Last modified: 2025-12-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -63,7 +63,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
 
     // Helper to close the global context menu (shared store)
     const closeMenu = () => {
-        lgs.stores.ui.contextMenu.visible = false
+        __.ui.contextMenu.hide()
     }
 
     /** Completely removes the widget from cache, store and DOM */

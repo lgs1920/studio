@@ -28,6 +28,9 @@ export class ContextMenu {
     /** Root element of the context menu */
     #menuElement = null
 
+    /** Event current target */
+    #target = null
+
     /** Current visibility state */
     #isVisible = false
 
@@ -92,8 +95,7 @@ export class ContextMenu {
         if (!element.classList.contains('lgs-context-menu')) {
             element.classList.add('lgs-context-menu')
         }
-        //  this.hide()
-        console.log('init')
+        this.hide()
     }
 
     /**
@@ -107,21 +109,19 @@ export class ContextMenu {
         }
 
         this.#updatePosition(x, y)
-        this.#menuElement.classList.toggle('visible', true)
+        this.#menuElement.classList.add('visible', true)
         this.#menuElement.style.pointerEvents = 'all'
         this.#isVisible = true
-        console.log('show')
-
     }
 
     /** Hide the menu */
     hide = () => {
         if (this.#menuElement) {
-            this.#menuElement.classList.toggle('visible', false)
+            this.#menuElement.classList.remove('visible', false)
             this.#menuElement.style.pointerEvents = 'none'
             this.#isVisible = false
-            console.log('hide')
         }
+        this.#target = null
     }
 
     /** Cleanup listeners and reset internal state */
