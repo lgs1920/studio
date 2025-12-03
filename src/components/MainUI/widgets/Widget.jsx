@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-02
- * Last modified: 2025-12-02
+ * Created on: 2025-12-03
+ * Last modified: 2025-12-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -228,8 +228,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     // Context menu – long-tap (mobile) or right-click (desktop)
     const openContextMenu = useCallback((event) => {
-        console.log(interactionLocked)
-
         if (interactionLocked) {
             return
         }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-02
- * Last modified: 2025-12-02
+ * Created on: 2025-12-03
+ * Last modified: 2025-12-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -126,7 +126,6 @@ export const usePointerInteractions = ({
             if (preventContextMenu) {
                 e.preventDefault()
             }
-            console.log('Context Menu Fired')
             onLongTapOrRightClick?.(e)
         }
 
