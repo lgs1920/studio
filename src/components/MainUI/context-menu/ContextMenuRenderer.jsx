@@ -43,10 +43,6 @@ export const ContextMenuRenderer = () => {
                 __.ui.contextMenu.showAt(contextMenu.position)
             }
         }
-        // else {
-        //     // If hidden or no element, ensure singleton is hidden
-        //     __.ui.contextMenu.hide()
-        // }
     }, [contextMenu.visible, contextMenu.type])
 
     // Update position while visible
