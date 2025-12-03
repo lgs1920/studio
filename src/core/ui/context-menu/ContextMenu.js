@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-02
- * Last modified: 2025-12-02
+ * Created on: 2025-12-03
+ * Last modified: 2025-12-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -83,16 +83,17 @@ export class ContextMenu {
      *
      * @param {HTMLElement} element - Root element of the context menu
      */
-    initialize = (element) => {
+    initialize = (element = null) => {
+
         if (!(element instanceof HTMLElement)) {
             throw new Error('ContextMenu.initialize() expects a valid HTMLElement')
         }
-
         this.#menuElement = element
         if (!element.classList.contains('lgs-context-menu')) {
             element.classList.add('lgs-context-menu')
         }
-        this.hide()
+        //  this.hide()
+        console.log('init')
     }
 
     /**
@@ -109,14 +110,17 @@ export class ContextMenu {
         this.#menuElement.classList.toggle('visible', true)
         this.#menuElement.style.pointerEvents = 'all'
         this.#isVisible = true
+        console.log('show')
+
     }
 
     /** Hide the menu */
     hide = () => {
-        if (this.#menuElement && this.#isVisible) {
+        if (this.#menuElement) {
             this.#menuElement.classList.toggle('visible', false)
             this.#menuElement.style.pointerEvents = 'none'
             this.#isVisible = false
+            console.log('hide')
         }
     }
 

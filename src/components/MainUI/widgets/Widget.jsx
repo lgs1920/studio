@@ -233,6 +233,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
         if (lgs.stores.ui.contextMenu.visible) {
             lgs.stores.ui.contextMenu.visible = false
+
         }
         else {
             const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? 0

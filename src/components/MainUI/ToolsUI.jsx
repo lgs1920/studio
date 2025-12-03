@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-30
- * Last modified: 2025-11-30
+ * Created on: 2025-12-03
+ * Last modified: 2025-12-03
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 import { CameraAndTargetPanel }     from '@Components/cesium/CameraAndTargetPanel/CameraAndTargetPanel'
-import { ContextMenuHook }          from '@Components/MainUI/ContextMenuHook'
+import { ContextMenuHook } from '@Components/MainUI/context-menu/ContextMenuHook'
 import { MapPOIContextMenu }            from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { VideoPresetWidget } from '@Components/MainUI/video/toolbox/VideoPresetWidget'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
@@ -47,7 +47,6 @@ export const ToolsUI = () => {
                     {(video.preRecording || video.recording || video.snapshot) && <VideoRecordingScreenArea/>}
                     <CameraAndTargetPanel/>
                      <MapPOIContextMenu/>
-                     <ContextMenuHook/>
                     {usage && <JourneyToolbarWidget id="journey-toolbar-widget"/>}
                  </>
              )}
