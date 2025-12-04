@@ -17,7 +17,7 @@
 import React, { useEffect, useRef } from 'react'
 import { useSnapshot }              from 'valtio'
 
-import MapPOIContextMenu from '@Components/MainUI/MapPOI/MapPOIContextMenu'
+import { MapPOIContextMenu } from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { WidgetContextMenu } from '@Components/MainUI/widgets/WidgetContextMenu'
 
 /**

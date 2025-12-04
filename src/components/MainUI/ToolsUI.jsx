@@ -14,8 +14,7 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 import { CameraAndTargetPanel }     from '@Components/cesium/CameraAndTargetPanel/CameraAndTargetPanel'
-import { ContextMenuHook } from '@Components/MainUI/context-menu/ContextMenuHook'
-import MapPOIContextMenu from '@Components/MainUI/MapPOI/MapPOIContextMenu'
+import { MapPOIContextMenu } from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { VideoPresetWidget } from '@Components/MainUI/video/toolbox/VideoPresetWidget'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
 import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'

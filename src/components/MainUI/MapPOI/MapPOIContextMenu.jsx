@@ -47,29 +47,21 @@ export const MapPOIContextMenu = (props) => {
 
     const _menuRef = props.menuRef
     const thePOI = props.targetId?.id
+    const $pois = lgs.stores.main.components.pois
+    const pois = useSnapshot($pois)
 
     // If no target ID is provided, do not render the menu component.
     if (!thePOI) {
         return null
     }
 
-    const $pois = lgs.stores.main.components.pois
-
     // Set the global POI current ID based on the target prop.
     $pois.current = thePOI
 
     // POI Data Access
-    const $targetPoi = useMemo(() => {
-        // We ensure to retrieve the latest proxy object when the targetPoiId changes.
-        return $pois.list.get(thePOI) || null
-    }, [thePOI, $pois.list])
-
+    const $targetPoi = $pois.list.get(thePOI)
     const currentPoi = useSnapshot($targetPoi || {})
 
-    // Global State Access
-    const pois = useSnapshot($pois)
-
-    // Get context menu state
     const $contextMenu = lgs.stores.ui.contextMenu
     const contextMenu = useSnapshot($contextMenu)
 
