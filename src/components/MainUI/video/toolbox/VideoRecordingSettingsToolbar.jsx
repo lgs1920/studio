@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-30
- * Last modified: 2025-11-30
+ * Created on: 2025-12-04
+ * Last modified: 2025-12-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -43,6 +43,8 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         $video.editing = false
         __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGETS, false)
         __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
+
+        __.ui.contextMenu.hide()
     }, [])
 
     const handleSnapShot = useCallback(async (event) => {
