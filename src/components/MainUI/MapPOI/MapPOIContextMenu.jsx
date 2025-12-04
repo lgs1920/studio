@@ -110,7 +110,7 @@ export const MapPOIContextMenu = (props) => {
         __.ui.drawerManager.open(POIS_EDITOR_DRAWER, {
             action: 'edit-current',
             entity: thePOI,
-            tab: 'pois',
+            tab: currentPoi?.parent ? 'pois' : null,
         })
         hideMenu()
     }, [thePOI, hideMenu])
@@ -124,7 +124,7 @@ export const MapPOIContextMenu = (props) => {
 
     /** Hides the current POI from the map. */
     const hidePOI = useCallback(() => {
-        currentPoi.hide() // Assumes 'hide' is a method on the POI object itself
+        currentPoi.hide()
         hideMenu()
     }, [currentPoi, hideMenu])
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-12-04
+ * Last modified: 2025-12-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -56,10 +56,16 @@ const filterAndSortPois = (onlyJourney = false, settings) => {
     // Build the initial list of POI IDs based on filter toggles
     const ids = []
     if (global && !onlyJourney) {
-        ids.push(...manager.index(GLOBAL_PARENT))
+        const index = manager.index(GLOBAL_PARENT)
+        if (index) {
+            ids.push(...manager.index(GLOBAL_PARENT))
+        }
     }
     if (onlyJourney || journey) {
-        ids.push(...manager.index(theJourney.slug))
+        const index = manager.index(theJourney?.slug)
+        if (index) {
+            ids.push(...manager.index(theJourney.slug))
+        }
     }
 
     // Normalize search string for case-insensitive comparisons
