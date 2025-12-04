@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-03
- * Last modified: 2025-12-03
+ * Created on: 2025-12-04
+ * Last modified: 2025-12-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,7 +17,7 @@
 import React, { useEffect, useRef } from 'react'
 import { useSnapshot }              from 'valtio'
 
-import { MapPOIContextMenu } from '@Components/MainUI/MapPOI/MapPOIContextMenu'
+import MapPOIContextMenu from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { WidgetContextMenu } from '@Components/MainUI/widgets/WidgetContextMenu'
 
 /**
@@ -45,16 +45,9 @@ export const ContextMenuRenderer = () => {
         }
     }, [contextMenu.visible, contextMenu.position?.x, contextMenu.position?.y])
 
-    // // Update position while visible
-    // useEffect(() => {
-    //     if (_menu.current && contextMenu.visible && contextMenu.position) {
-    //         __.ui.contextMenu.showAt(contextMenu.position)
-    //     }
-    // }, [contextMenu.position?.x, contextMenu.position?.y])
-
     // Do not render anything when the menu is hidden
     if (!contextMenu.visible || !contextMenu.type) {
-        //  return null
+        return null
     }
 
     // Delegate to the correct menu component

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-03
- * Last modified: 2025-12-03
+ * Created on: 2025-12-04
+ * Last modified: 2025-12-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -60,25 +60,31 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
     const $point = isMenuMode ? null : $pois?.list?.get(poi)
     const point = isMenuMode || !$point ? null : useSnapshot($point)
 
+    const $contextMenu = lgs.stores.ui.contextMenu
+    $contextMenu.type = 'poi'
+
     /** retrieve current POI snapshot */
     const currentPOI = useMemo(() => {
         if (isMenuMode || !pois?.list) {
             return null
         }
         const data = pois.list.get(poi)
-        if (data) {
-            $pois.current = poi
-        }
+        // if (data) {
+        //     $pois.current = poi
+        // }
         return data
     }, [isMenuMode, pois?.list, poi, $pois])
 
     /** open/close POI editor drawer with journey/track context handling */
     const handleEditor = useCallback(async (event, entity) => {
+
         if (isMenuMode) {
             return
         }
 
         const thePOI = currentPOI
+
+        console.log(currentPOI)
         if (!thePOI?.type) {
             UIToast.warning({
                                 caption: `You can not edit this POI.`,
@@ -124,25 +130,24 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
 
     /** show POI context menu on right-click/long-tap */
     const handleContextMenu = useCallback((event, entity) => {
+
         if (isMenuMode) {
             return
         }
-
-        const poiData = currentPOI
-        const rotating = __.ui.cameraManager.isRotating()
-        const canShow = !rotating || pois.current === false || pois.current?.id === poiData?.id
-
-        if (poiData && canShow) {
-            const $contextMenu = lgs.stores.ui.contextMenu
-            const menuElement = document.querySelector('#poi-context-menu')
-
-            //  __.ui.contextMenu.hide()
-            __.ui.contextMenu.initialize(menuElement)
-            $contextMenu.visible = true
-            $contextMenu.position = {x: event.position.x, y: event.position.y}
-            __.ui.contextMenu.showAt($contextMenu.position)
-        }
-    }, [isMenuMode, currentPOI, pois?.current])
+        $contextMenu.visible = true
+        $contextMenu.position = {x: event.position.x, y: event.position.y}
+        $contextMenu.targetId = currentPOI
+        //__.ui.contextMenu.showAt($contextMenu.position)
+        // $pois.current = entity
+        // console.log(entity, currentPOI)
+        // //   if (!__.ui.cameraManager.isRotating()) {
+        // const contextMenuElement = document.querySelector('#poi-context-menu')
+        // __.ui.contextMenu.initialize(contextMenuElement)
+        //     $contextMenu.visible = true
+        //     $contextMenu.position = {x: event.position.x, y: event.position.y}
+        //
+        //  }
+    }, [isMenuMode, currentPOI])
 
     /** toggle expanded/collapsed state on click/tap */
     const handleClick = useCallback((event, entity) => {

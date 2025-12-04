@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-03
- * Last modified: 2025-12-03
+ * Created on: 2025-12-04
+ * Last modified: 2025-12-04
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 import { CameraAndTargetPanel }     from '@Components/cesium/CameraAndTargetPanel/CameraAndTargetPanel'
 import { ContextMenuHook } from '@Components/MainUI/context-menu/ContextMenuHook'
-import { MapPOIContextMenu }            from '@Components/MainUI/MapPOI/MapPOIContextMenu'
+import MapPOIContextMenu from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { VideoPresetWidget } from '@Components/MainUI/video/toolbox/VideoPresetWidget'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
 import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
