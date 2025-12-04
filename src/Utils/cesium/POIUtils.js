@@ -238,7 +238,7 @@ export class POIUtils {
             container.add({...options, billboard: new BillboardGraphics(billboard)})
         }
 
-        lgs.viewer.scene.requestRender()
+        lgs.viewer.scene.render()
         return entity || container.getById(poi.id)
     }
 
