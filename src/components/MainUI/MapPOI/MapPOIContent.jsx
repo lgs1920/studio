@@ -18,14 +18,14 @@ import { NameValueUnit }                             from '@Components/DataDispl
 import { FontAwesomeIcon }                           from '@Components/FontAwesomeIcon'
 import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
 import { MapPOI }                                    from '@Core/MapPOI'
-import { Utils }                                         from '@Editor/Utils'
-import { faMask }                                        from '@fortawesome/pro-solid-svg-icons'
+import { Utils }                                   from '@Editor/Utils'
+import { faMask }                                  from '@fortawesome/pro-solid-svg-icons'
 import { UIToast }                                   from '@Utils/UIToast'
 import { ELEVATION_UNITS }                           from '@Utils/UnitUtils'
 import { snapdom }                                   from '@zumer/snapdom'
 import classNames                                    from 'classnames'
 import { DateTime }                                  from 'luxon'
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }                               from 'valtio'
 import './style.css'
 
@@ -55,10 +55,10 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
     const isMenuMode = useInMenu || !!category
 
     // POI data access - only when not in menu/category mode
-    const $pois = isMenuMode ? null : lgs.stores.main.components.pois
-    const pois = isMenuMode ? null : useSnapshot($pois)
-    const $point = isMenuMode ? null : $pois?.list?.get(poi)
-    const point = isMenuMode || !$point ? null : useSnapshot($point)
+    const $pois = lgs.stores.main.components.pois
+    const pois = useSnapshot($pois)
+    const $point = $pois.list.get(poi)
+    const point = pois.list.get(poi)
 
     const $contextMenu = lgs.stores.ui.contextMenu
     $contextMenu.type = 'poi'
@@ -68,11 +68,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
         if (isMenuMode || !pois?.list) {
             return null
         }
-        const data = pois.list.get(poi)
-        // if (data) {
-        //     $pois.current = poi
-        // }
-        return data
+        return pois.list.get(poi)
     }, [isMenuMode, pois?.list, poi, $pois])
 
     /** open/close POI editor drawer with journey/track context handling */
@@ -130,23 +126,12 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
 
     /** show POI context menu on right-click/long-tap */
     const handleContextMenu = useCallback((event, entity) => {
-
         if (isMenuMode) {
             return
         }
         $contextMenu.visible = true
         $contextMenu.position = {x: event.position.x, y: event.position.y}
         $contextMenu.targetId = currentPOI
-        //__.ui.contextMenu.showAt($contextMenu.position)
-        // $pois.current = entity
-        // console.log(entity, currentPOI)
-        // //   if (!__.ui.cameraManager.isRotating()) {
-        // const contextMenuElement = document.querySelector('#poi-context-menu')
-        // __.ui.contextMenu.initialize(contextMenuElement)
-        //     $contextMenu.visible = true
-        //     $contextMenu.position = {x: event.position.x, y: event.position.y}
-        //
-        //  }
     }, [isMenuMode, currentPOI])
 
     /** toggle expanded/collapsed state on click/tap */
@@ -267,25 +252,6 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                   poi,
               ])
 
-    // menu/category only icon rendering
-    if (category) {
-        return (
-            <div className="poi-icon-wrapper poi-shrinked used-in-menu" {...(slot && {slot})}>
-                <div className="poi-card" ref={_poiContent}>
-                    <div className="poi-card-inner" ref={useRef(null)} style={style}>
-                        <div className="poi-card-inner-background"/>
-                        <FontAwesomeIcon
-                            ref={_icon}
-                            key={category}
-                            icon={MapPOI.categoryIcon(category)}
-                            className="poi-as-flag"
-                            style={style}
-                        />
-                    </div>
-                </div>
-            </div>
-        )
-    }
 
     // full map POI rendering
     return (
