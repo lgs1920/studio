@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-04
- * Last modified: 2025-12-04
+ * Created on: 2025-12-05
+ * Last modified: 2025-12-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -51,13 +51,9 @@ export const MapPOIListItem = memo(({id}) => {
                                        const globalPoisState = useSnapshot($pois, {sync: true})
                                        const drawerState = useSnapshot(lgs.stores.ui.drawers, {sync: true})
 
-                                       // --- STATE AND REFS ---
-
-                                       // Ref for the top-level wrapper element, prefixed with '_'
                                        /** @type {React.MutableRefObject<HTMLDivElement | null>} */
                                        const _wrapperElement = useRef(null)
 
-                                       // Ref for bulk state, prefixed with '_'
                                        /** @type {React.MutableRefObject<boolean>} */
                                        const _bulkState = useRef(globalPoisState.bulkList.get(id) ?? false)
 
@@ -65,7 +61,6 @@ export const MapPOIListItem = memo(({id}) => {
                                        const bulkList = globalPoisState.bulkList
                                        const drawerOpen = drawerState.open
 
-                                       // --- HANDLERS AND CALLBACKS ---
 
                                        /**
                                         * Updates the Valtio bulk list and the local ref state.
@@ -161,18 +156,15 @@ export const MapPOIListItem = memo(({id}) => {
                                         * Handles the SlDetails *after* closing event.
                                         * Uses preventDefault and stopPropagation to prevent the parent SlDrawer from
                                         * closing.
-                                        * @param {Event} event - The Shoelace 'sl-after-hide' event
+                                        * @param {Event} event - The Shoelace event
                                         * @returns {void}
                                         */
                                        const handleSlAfterHide = useCallback((event) => {
-                                                                                 // This is a targeted fix for the
-                                                                                 // SlDrawer closing issue
                                                                                  event.stopPropagation()
                                                                                  event.preventDefault()
                                                                              }
                                            , [])
 
-                                       // --- MEMOIZED VALUES ---
 
                                        /**
                                         * Calculates the inline styles for the POI item based on its colors
