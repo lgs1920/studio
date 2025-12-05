@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-01
- * Last modified: 2025-07-01
+ * Created on: 2025-12-05
+ * Last modified: 2025-12-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -32,12 +32,10 @@ export const Panel = () => {
     const openInfoModal = () => lgs.editorSettingsProxy.layer.infoDialog = true
 
     const closePanel = (event) => {
-        if (window.isOK(event)) {
             window.dispatchEvent(new Event('resize'))
             if (__.ui.drawerManager.isCurrent(SETTINGS_EDITOR_DRAWER)) {
                 __.ui.drawerManager.close()
             }
-        }
     }
 
     return (<div className={'drawer-wrapper'}>

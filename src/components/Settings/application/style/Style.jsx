@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-12-05
+ * Last modified: 2025-12-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,14 +25,6 @@ import { WelcomeModal }      from './WelcomeModal'
 export const Style = () => {
     const styleSettings = useRef(null)
 
-    const checkClose = (event) => {
-        // If we're over the drawer, ok else, stop event
-        if (window.isOK(event) && __.ui.drawerManager.over) {
-            return
-        }
-        event.preventDefault()
-    }
-
     useEffect(() => {
         __.ui.ui.initDetailsGroup(styleSettings.current)
     }, [])
@@ -43,7 +35,6 @@ export const Style = () => {
             <SlDetails id="ui-welcome-modal-settings"
                        small open={false}
                        className="lgs-theme"
-                       onSlHide={checkClose}
             >
                 <WelcomeModal/>
             </SlDetails>
@@ -51,7 +42,6 @@ export const Style = () => {
             <SlDetails id="ui-menu-settings"
                        small open={false}
                        className="lgs-theme"
-                       onSlHide={checkClose}
             >
                 <MenuSettings/>
             </SlDetails>
@@ -59,7 +49,6 @@ export const Style = () => {
             <SlDetails id="ui-compass-settings"
                        small open={false}
                        className="lgs-theme"
-                       onSlHide={checkClose}
             >
                 <CompassSettings/>
             </SlDetails>
@@ -67,7 +56,6 @@ export const Style = () => {
             <SlDetails id="ui-editor-settings"
                        small open={false}
                        className="lgs-theme"
-                       onSlHide={checkClose}
             >
                 <EditorSettings/>
             </SlDetails>
