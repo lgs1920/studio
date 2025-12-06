@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-04
- * Last modified: 2025-12-04
+ * Created on: 2025-12-06
+ * Last modified: 2025-12-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -131,25 +131,29 @@ export const Panel = memo(() => {
 
 
     return (
-        <div className="drawer-wrapper">
-            <SlDrawer
-                id={POIS_EDITOR_DRAWER}
-                open={drawerOpen}
-                onSlRequestClose={handleRequestClose}
-                onSlAfterHide={closePOIsEditor}
-                contained
-                className="lgs-theme"
-                placement={drawerPlacement}
-            >
-                <>
-                    <span slot="label">{'Points Of Interest'}</span>
-                    <MapPOIEditToggleFilter/>
-                    <MapPOIEditFilter/>
-                    <MapPOIEditSettings/>
-                    <MapPOIList/>
-                    <DrawerFooter/>
-                </>
-            </SlDrawer>
-        </div>
+        <>
+            {drawerOpen &&
+                <div className="drawer-wrapper">
+                    <SlDrawer
+                        id={POIS_EDITOR_DRAWER}
+                        open={true}
+                        onSlRequestClose={handleRequestClose}
+                        onSlAfterHide={closePOIsEditor}
+                        contained
+                        className="lgs-theme"
+                        placement={drawerPlacement}
+                    >
+                        <>
+                            <span slot="label">{'Points Of Interest'}</span>
+                            <MapPOIEditToggleFilter/>
+                            <MapPOIEditFilter/>
+                            <MapPOIEditSettings/>
+                            <MapPOIList/>
+                            <DrawerFooter/>
+                        </>
+                    </SlDrawer>
+                </div>
+            }
+        </>
     )
 })
