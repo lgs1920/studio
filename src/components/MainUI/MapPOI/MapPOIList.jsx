@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-04
- * Last modified: 2025-12-04
+ * Created on: 2025-12-06
+ * Last modified: 2025-12-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,175 +22,159 @@ import { FA2SL }                            from '@Utils/FA2SL'
 import { memo, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot } from 'valtio'
 
-// Pre-calculated warning icon for alert messages
 const ICON_WARNING = FA2SL.set(faTriangleExclamation)
 
 /**
- * Filters and sorts a list of Points of Interest (POIs) based on provided settings and journey context.
+ * Filters and sorts POIs according to current UI settings and journey context.
  *
- * @param {boolean} [onlyJourney=false] - If true, only includes POIs associated with the current journey.
- * @param {Object} [settings={ filter: { journey: true, global: true, byName: '', byCategories: [], exclude: false,
- *     alphabetic: true } }] - Configuration object for filtering and sorting POIs.
- * @returns {Array<[string, Object]>} Filtered and sorted array of [id, poi] entries.
+ * @param {boolean} onlyJourney           true when only journey-related POIs must be shown
+ * @param {Object}  filterSettings        Current POI filter configuration from settings store
+ * @returns {Array<[string, Object]>}     Array of [poiId, poiObject] tuples, filtered and sorted
  */
-const filterAndSortPois = (onlyJourney = false, settings) => {
-    // Destructure filtering parameters from the settings object
+const filterAndSortPois = (onlyJourney, filterSettings = {}) => {
     const {
               journey    = false,
               global     = false,
-              byName,
-              byCategories,
+              byName       = '',
+              byCategories = [],
               exclude    = false,
-              alphabetic = true,
-          } = settings?.filter ?? {}
+              alphabetic   = true,
+          } = filterSettings
 
     const {theJourney} = lgs
     const manager = __.ui.poiManager
 
-    // If 'onlyJourney' is true but journey POIs haven't been loaded yet,
-    // return early to avoid processing with incomplete data.
-    if (onlyJourney && !(theJourney?.poisLoaded === true)) {
+    // early exit if journey POIs are required but not yet loaded
+    if (onlyJourney && theJourney?.poisLoaded !== true) {
         return []
     }
 
-    // Build the initial list of POI IDs based on filter toggles
-    const ids = []
+    const ids = new Set()
+
+    // add global POIs when allowed and not in journey-only mode
     if (global && !onlyJourney) {
-        const index = manager.index(GLOBAL_PARENT)
-        if (index) {
-            ids.push(...manager.index(GLOBAL_PARENT))
-        }
+        const globalIndex = manager.index(GLOBAL_PARENT)
+        globalIndex?.forEach(id => ids.add(id))
     }
+
+    // add journey POIs when requested or in journey-only mode
     if (onlyJourney || journey) {
-        const index = manager.index(theJourney?.slug)
-        if (index) {
-            ids.push(...manager.index(theJourney.slug))
-        }
+        const journeyIndex = manager.index(theJourney?.slug)
+        journeyIndex?.forEach(id => ids.add(id))
     }
 
-    // Normalize search string for case-insensitive comparisons
-    const lowerName = byName?.toLowerCase()
-
-    const result = []
+    const lowerName = byName.toLowerCase()
+    const sorted = []
 
     for (const id of ids) {
         const poi = manager.list.get(id)
-        if (!poi || typeof poi.title !== 'string') {
+        if (!poi?.title) {
             continue
         }
 
-        // Filter by POI title if a search term is provided
+        // name filter
         if (lowerName && !poi.title.toLowerCase().includes(lowerName)) {
             continue
         }
 
-        // Category filter block
-        if (byCategories?.length) {
+        // category filter (include/exclude logic)
+        if (byCategories.length) {
             const inCategory = poi.category && byCategories.includes(poi.category)
-
             if (exclude ? inCategory : !inCategory) {
                 continue
             }
-
-            // Include or exclude uncategorized POIs depending on exclusion logic
             if (!poi.category && !exclude) {
                 continue
             }
         }
 
-        result.push([id, poi])
+        sorted.push([id, poi])
     }
 
-    // Sort alphabetically or in reverse order by title
-    if (result.length > 1 && alphabetic !== undefined) {
-        result.sort(([, a], [, b]) =>
+    // alphabetic sort (ascending or descending)
+    if (sorted.length > 1 && alphabetic !== undefined) {
+        sorted.sort(([, a], [, b]) =>
                         alphabetic
                         ? a.title.localeCompare(b.title)
-                        : b.title.localeCompare(a.title),
+                        : b.title.localeCompare(a.title)
         )
     }
 
-    return result
+
+    return sorted.map(([id]) => id)
+
 }
+
 /**
- * A memoized React component for displaying a filterable and sortable list of Points of Interest (POIs).
+ * Renders a performant, filter-aware list of POI items.
+ * Handles journey-only mode, bulk selection reset and filtered collections updates.
  *
  * @component
- * @param {Object} props - Component properties
- * @param {string} props.context - The rendering context identifier used by child components
- * @returns {JSX.Element} The rendered POI list component with filtering and sorting
+ * @param {Object} props
+ * @returns {JSX.Element}
  */
 export const MapPOIList = memo(() => {
-
-    // Ref for DOM manipulation
-    const poiList = useRef(null)
-
-    // Reactive store subscriptions
+    /** Reference to the root container – used for Shoelace details-group initialisation */
+    const _poiList = useRef(null)
+    // reactive snapshots
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
     const settings = useSnapshot(lgs.settings.poi)
     const drawers = useSnapshot(lgs.stores.ui.drawers)
 
-    // Memoized computation: determine if we're in journey-only mode
+    // true when the journey editor drawer is open → display only journey POIs
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
 
-    const filter = useMemo(() => settings.filter, [
-        settings.filter.byName,
-        settings.filter.byCategories,
-        settings.filter.alphabetic,
-        settings.filter.journey,
-        settings.filter.global,
-        settings.filter.exclude,
-    ])
+    const {filter: poiFilter} = settings
 
-    // Memoized computation: filter and sort POIs
-    const filteredPois = useMemo(() => {
-        return filterAndSortPois(onlyJourney, settings)
-    }, [onlyJourney, lgs.theJourney?.poisLoaded, filter])
+    /** Filtered & sorted POI entries – recomputed only when truly needed */
+    const filteredPois = useMemo(
+        () => filterAndSortPois(onlyJourney, poiFilter),
+        [
+            onlyJourney,
+            lgs.theJourney?.poisLoaded,
+            poiFilter.byName,
+            poiFilter.journey,
+            poiFilter.global,
+            poiFilter.alphabetic,
+            poiFilter.exclude,
+            JSON.stringify(poiFilter.byCategories),   // arrays are not comparable natively
+        ],
+    )
+    console.log(filteredPois)
 
+    /** Initialise Shoelace details-group and clear any pending drawer action */
     useEffect(() => {
-        // Initialize Shoelace details group
-        if (poiList.current) {
-            __.ui.ui.initDetailsGroup(poiList.current)
+        if (_poiList.current) {
+            __.ui.ui.initDetailsGroup(_poiList.current)
         }
-
-        // Clear drawer action
         if (drawers.action) {
             lgs.stores.ui.drawers.action = null
         }
+
     }, [])
 
-    // Effect: Initialize UI and update store state
+    /** Keep Valtio filtered collections & bulk selection in sync with current list */
     useEffect(() => {
-        // Reset bulk selection
         $pois.bulkList.clear()
         const bulkUpdates = new Map()
-        if (onlyJourney) {
-            //   $pois.filtered.journey.clear()
-            filteredPois.forEach(([id, poi]) => {
-                $pois.filtered.journey.set(id, poi)
-                bulkUpdates.set(id, false)
-            })
-        }
-        else {
-            //  $pois.filtered.global.clear()
-            filteredPois.forEach(([id, poi]) => {
-                $pois.filtered.global.set(id, poi)
-                bulkUpdates.set(id, false)
-            })
-        }
+
+        const target = onlyJourney ? $pois.filtered.journey : $pois.filtered.global
+        target.clear()
+
+        filteredPois.forEach(([id, poi]) => {
+            target.set(id, poi)
+            bulkUpdates.set(id, false)
+        })
 
         Object.assign($pois.bulkList, bulkUpdates)
-    }, [filteredPois, $pois.bulkList, $pois.filtered.journey, $pois.filtered.global])
+    }, [filteredPois, onlyJourney, $pois.filtered.journey, $pois.filtered.global, $pois.bulkList])
 
-    // Memoized content: render POI items or empty state
+    /** Render POI items or empty-state warning */
     const content = useMemo(() => {
-        if (filteredPois.length > 0) {
-            return filteredPois.map(([id, poiData]) => (
-                <MapPOIListItem
-                    key={id}
-                    id={id}
-                />
+        if (filteredPois.length) {
+            return filteredPois.map((id) => (
+                <MapPOIListItem key={id} id={id}/>
             ))
         }
 
@@ -203,8 +187,10 @@ export const MapPOIList = memo(() => {
     }, [filteredPois])
 
     return (
-        <div id="edit-map-poi-list" ref={poiList}>
+        <div id="edit-map-poi-list" ref={_poiList}>
             {content}
         </div>
     )
 })
+
+MapPOIList.displayName = 'MapPOIList'

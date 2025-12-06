@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-04
- * Last modified: 2025-12-04
+ * Created on: 2025-12-06
+ * Last modified: 2025-12-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -135,27 +135,27 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
     }, [isMenuMode, currentPOI])
 
     /** toggle expanded/collapsed state on click/tap */
-    const handleClick = useCallback((event, entity) => {
+    const handleClick = useCallback(async (event, entity) => {
         if (isMenuMode || !currentPOI) {
             return
         }
-        __.ui.poiManager.updatePOI(entity, {expanded: !currentPOI.expanded})
+        await __.ui.poiManager.updatePOI(entity, {expanded: !currentPOI.expanded})
     }, [isMenuMode, currentPOI?.expanded])
 
     /** expand on mouse over */
-    const handleMouseOver = useCallback((event, entity) => {
+    const handleMouseOver = useCallback(async (event, entity) => {
         if (isMenuMode || !currentPOI || currentPOI.expanded) {
             return
         }
-        __.ui.poiManager.updatePOI(entity, {expanded: true, isMouseOverExpanded: true})
+        await __.ui.poiManager.updatePOI(entity, {expanded: true, isMouseOverExpanded: true})
     }, [isMenuMode, currentPOI?.expanded])
 
     /** collapse on mouse out only if expanded by mouse over */
-    const handleMouseOut = useCallback((event, entity) => {
+    const handleMouseOut = useCallback(async (event, entity) => {
         if (isMenuMode || !currentPOI?.expanded || !currentPOI.isMouseOverExpanded) {
             return
         }
-        __.ui.poiManager.updatePOI(entity, {expanded: false, isMouseOverExpanded: false})
+        await __.ui.poiManager.updatePOI(entity, {expanded: false, isMouseOverExpanded: false})
     }, [isMenuMode, currentPOI?.expanded, currentPOI?.isMouseOverExpanded])
 
     /** register all canvas event listeners for the POI */
