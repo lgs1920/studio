@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-05
- * Last modified: 2025-12-05
+ * Created on: 2025-12-07
+ * Last modified: 2025-12-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,6 +18,7 @@ import { CameraSettings } from '@Components/Settings/application/general/CameraS
 import { CompassSettings } from '@Components/Settings/application/style/CompassSettings'
 import { EditorSettings } from '@Components/Settings/application/style/EditorSettings'
 import { MenuSettings }      from '@Components/Settings/application/style/MenuSettings'
+import { PWASettings } from '@Components/Settings/application/style/PWASettings'
 import { SlDetails }         from '@shoelace-style/shoelace/dist/react'
 import { useEffect, useRef } from 'react'
 import { WelcomeModal }      from './WelcomeModal'
@@ -58,6 +59,13 @@ export const Style = () => {
                        className="lgs-theme"
             >
                 <EditorSettings/>
+            </SlDetails>
+
+            <SlDetails id="ui-pwa-settings"
+                       small open={false}
+                       className="lgs-theme"
+            >
+                <PWASettings/>
             </SlDetails>
 
         </div>
