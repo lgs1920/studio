@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-06
- * Last modified: 2025-12-06
+ * Created on: 2025-12-07
+ * Last modified: 2025-12-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -57,7 +57,7 @@ export const MapPOIEditContent = memo(({poi}) => {
 
     // Always fresh data from Valtio snapshot — no ref, no stale, no flicker
     const $poi = lgs.stores.main.components.pois.list.get(poi)
-    console.log($poi)
+
     const point = useSnapshot($poi)
     if (!point) {
         return null
@@ -83,6 +83,7 @@ export const MapPOIEditContent = memo(({poi}) => {
     const _poiBgColor = useRef(null)
     const _copyCoordinates = useRef(null)
     const [copied, setCopied] = useState(false)
+
 
     // Dependencies are stable: poi never changes, unitSystem is proxied
     const handleChangeAltitude = useCallback(async (event) => {

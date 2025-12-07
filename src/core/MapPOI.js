@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-22
- * Last modified: 2025-06-22
+ * Created on: 2025-12-07
+ * Last modified: 2025-12-07
  *
  *
  * Copyright © 2025 LGS1920
@@ -273,11 +273,7 @@ export class MapPOI extends MapElement {
     update = async (updates, persistToDatabase = false) => {
         
         // Merge current ProxyMap data and updates into `this`
-        const current = lgs.stores.main.components.pois.list.get(this.id)
-        Object.assign(this, current, updates)
-
-        // Sync the ProxyMap with the updated `this`
-        lgs.stores.main.components.pois.list.set(this.id, {...this})
+        Object.assign(this, updates)
 
         // Persist to database if required
         if (persistToDatabase) {
