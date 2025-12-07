@@ -7,41 +7,29 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-08-18
- * Last modified: 2025-08-18
+ * Created on: 2025-12-07
+ * Last modified: 2025-12-07
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import {
-    APP_STUDIO,
-    BANNER_SHOW_DELAY,
-    BANNER_HIDE_DELAY,
-    BANNER_HIDE_DELAY_INSTALL,
-    NAVIGATOR,
-    SECOND,
-    OS_ICONS,
-}                                     from '@Core/constants'
-import { faMobileArrowDown, faXmark } from '@fortawesome/pro-regular-svg-icons'
-import {
-    SlButton,
-    SlDialog,
-    SlIcon,
-    SlSpinner,
-}                                     from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                      from '@Utils/FA2SL'
-import ReactMarkdown                  from 'react-markdown'
-import { useEffect, useState }        from 'react'
-import { useSnapshot }                from 'valtio'
+    APP_STUDIO, BANNER_HIDE_DELAY, BANNER_HIDE_DELAY_INSTALL, BANNER_SHOW_DELAY, NAVIGATOR, OS_ICONS, SECOND,
+}                                            from '@Core/constants'
+import { faBan, faMobileArrowDown, faXmark } from '@fortawesome/pro-regular-svg-icons'
+import androidInstructions                   from '@Locales/en/pwa-instructions/android.md?raw'
+import chromeEdgeInstructions                from '@Locales/en/pwa-instructions/chrome-edge.md?raw'
+import firefoxInstructions                   from '@Locales/en/pwa-instructions/firefox.md?raw'
 
-// Import Markdown instruction files
-import iosInstructions         from '@Locales/en/pwa-instructions/ios.md?raw'
-import androidInstructions     from '@Locales/en/pwa-instructions/android.md?raw'
-import chromeEdgeInstructions  from '@Locales/en/pwa-instructions/chrome-edge.md?raw'
-import firefoxInstructions     from '@Locales/en/pwa-instructions/firefox.md?raw'
-import safariMacOSInstructions from '@Locales/en/pwa-instructions/safari-macos.md?raw'
-import otherInstructions       from '@Locales/en/pwa-instructions/other.md?raw'
+import iosInstructions                           from '@Locales/en/pwa-instructions/ios.md?raw'
+import otherInstructions                         from '@Locales/en/pwa-instructions/other.md?raw'
+import safariMacOSInstructions                   from '@Locales/en/pwa-instructions/safari-macos.md?raw'
+import { SlButton, SlDialog, SlIcon, SlSpinner } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                 from '@Utils/FA2SL'
+import { useEffect, useState }                   from 'react'
+import ReactMarkdown                             from 'react-markdown'
+import { useSnapshot }                           from 'valtio'
 
 /**
  * Component to manage PWA installation and update banners using Shoelace components.
@@ -54,7 +42,7 @@ import otherInstructions       from '@Locales/en/pwa-instructions/other.md?raw'
  * Displays current version in both install and update banners, with specific update message format in English.
  * @returns {JSX.Element} The AppUpdate component
  */
-export const AppUpdate = () => {
+export const AppUpdate = ({mode = 'banner'}) => {
     // Snapshot of the updater store
     const _updaterStore = useSnapshot(__.updater.store)
 
@@ -194,26 +182,45 @@ export const AppUpdate = () => {
         }
     }
 
+    if (!lgs.settings.ui.pwa.canInstall) {
+        return null
+    }
+
     return (
         <>
             {/* Install banner (not shown on Firefox desktop) */}
-            {showInstallBanner && (
-                <div className="lgs-install-banner lgs-card on-map lgs-slide-in-from-top">
+            {showInstallBanner &&
+                <div className={classNames('lgs-install-banner',
+                                           {'lgs-card on-map lgs-slide-in-from-top': mode === 'banner'},
+                )}>
                     <div className="lgs-install-banner-content">
                         <div>
                             <SlIcon library="fa" name={FA2SL.set(faMobileArrowDown)}/>
                             <span>Install {APP_STUDIO} version {lgs?.versions?.studio} as an application for a better experience</span>
                         </div>
                         <div className="buttons-bar">
-                            <SlButton
-                                size="small"
-                                variant="default"
-                                outline
-                                onClick={() => setShowInstallBanner(false)}
-                            >
-                                <SlIcon slot="prefix" size="small" library="fa" name={FA2SL.set(faXmark)}/>
-                                Later
-                            </SlButton>
+                            {mode === 'banner' &
+                                <>
+                                    <SlButton
+                                        size="small"
+                                        variant="default"
+                                        outline
+                                        onClick={() => lgs.settings.ui.pwa.canInstall = false}
+                                    >
+                                        <SlIcon slot="prefix" size="small" library="fa" name={FA2SL.set(faBan)}/>
+                                        {'never'}
+                                    </SlButton>
+                                    <SlButton
+                                        size="small"
+                                        variant="default"
+                                        outline
+                                        onClick={() => setShowInstallBanner(false)}
+                                    >
+                                        <SlIcon slot="prefix" size="small" library="fa" name={FA2SL.set(faXmark)}/>
+                                        {'Later'}
+                                    </SlButton>
+                                </>
+                            }
                             <SlButton
                                 size="small"
                                 onClick={handleInstall}
@@ -225,7 +232,7 @@ export const AppUpdate = () => {
                         </div>
                     </div>
                 </div>
-            )}
+            }
 
             {/* Instructions dialog with ReactMarkdown */}
             <SlDialog

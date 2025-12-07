@@ -334,4 +334,8 @@ ui:
     quality: 1         # 0: low, 1: medium, 2: high, 3: very high => VideoRecorder.QUALITY
     ratio: null        # 16x9,9x16 ...
 
+    ## PWA
+  pwa:
+    canInstall: true
+
 
