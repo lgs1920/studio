@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-04
- * Last modified: 2025-12-04
+ * Created on: 2025-12-08
+ * Last modified: 2025-12-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -198,7 +198,7 @@ export const MapPOIContextMenu = (props) => {
     // Pre-computed flags (using currentPoi snapshot data) to avoid inline logic in JSX
     const isRotating = __.ui.cameraManager.isRotating()
     const canSaveAsStandard = currentPoi?.type === undefined
-    const canSetAsStarter = currentPoi?.type !== POI_STARTER_TYPE
+    const canSetAsStarter = currentPoi?.type !== POI_STARTER_TYPE && !canSaveAsStandard
     const canRemove = currentPoi?.type !== POI_STARTER_TYPE &&
         currentPoi?.type !== POI_FLAG_START &&
         currentPoi?.type !== POI_FLAG_STOP
