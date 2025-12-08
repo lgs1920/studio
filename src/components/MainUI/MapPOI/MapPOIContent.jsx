@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-06
- * Last modified: 2025-12-06
+ * Created on: 2025-12-08
+ * Last modified: 2025-12-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -77,10 +77,7 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
         if (isMenuMode) {
             return
         }
-
         const thePOI = currentPOI
-
-        console.log(currentPOI)
         if (!thePOI?.type) {
             UIToast.warning({
                                 caption: `You can not edit this POI.`,
@@ -252,6 +249,25 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
                   poi,
               ])
 
+    // menu/category only icon rendering
+    if (category) {
+        return (
+            <div className="poi-icon-wrapper poi-shrinked used-in-menu" {...(slot && {slot})}>
+                <div className="poi-card" ref={_poiContent}>
+                    <div className="poi-card-inner" ref={useRef(null)} style={style}>
+                        <div className="poi-card-inner-background"/>
+                        <FontAwesomeIcon
+                            ref={_icon}
+                            key={category}
+                            icon={MapPOI.categoryIcon(category)}
+                            className="poi-as-flag"
+                            style={style}
+                        />
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
     // full map POI rendering
     return (
