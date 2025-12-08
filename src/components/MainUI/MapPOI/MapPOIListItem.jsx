@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-07
- * Last modified: 2025-12-07
+ * Created on: 2025-12-08
+ * Last modified: 2025-12-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,7 +38,6 @@ const ICONS = {true: faSquareCheck, false: faSquare}
  * @param {Function} props.toggleBulk - Callback to toggle bulk selection
  */
 const POIBulkToggle = ({id, toggleBulk}) => {
-    // Lecture isolée de la liste de sélection en vrac
     const {bulkList} = useSnapshot(lgs.stores.main.components.pois, {sync: true})
     const isBulkSelected = bulkList.get(id) ?? false
 
@@ -85,10 +84,10 @@ const POIDetailsWrapper = ({id, $poiProxy, classes, styles, preventDrawerClose, 
             return
         }
 
-        $pois.current = id
+        Object.assign($pois, {current: id})
 
         if ($poiProxy) {
-            $poiProxy.animated = false
+            Object.assign($poiProxy, {animated: false})
         }
 
 
@@ -131,7 +130,6 @@ const POIDetailsWrapper = ({id, $poiProxy, classes, styles, preventDrawerClose, 
 
     /** Conditional rendering of the edit form (only when current) */
     const editContent = useMemo(() => {
-        // Conditionnel car MapPOIEditContent lit l'état du POI et doit être monté uniquement si nécessaire
         if (isCurrent) {
             return <MapPOIEditContent poi={id}/>
         }
@@ -146,7 +144,7 @@ const POIDetailsWrapper = ({id, $poiProxy, classes, styles, preventDrawerClose, 
             style={styles}
             open={isCurrent}
             small
-            onSlAfterShow={selectPOI}
+            onSlShow={selectPOI}
             onSlAfterHide={preventDrawerClose}
         >
             <div slot="summary" onClick={selectPOI}>
@@ -234,13 +232,11 @@ export const MapPOIListItem = memo(({id, context}) => {
 
                                        return (
                                            <div className="edit-map-poi-item-wrapper">
-                                               {/* Composant isolant la réactivité de la sélection en vrac */}
                                                <POIBulkToggle
                                                    id={id}
                                                    toggleBulk={toggleBulk}
                                                />
 
-                                               {/* Composant isolant la réactivité de la sélection (current) */}
                                                <POIDetailsWrapper
                                                    id={id}
                                                    $poiProxy={$poiProxy}

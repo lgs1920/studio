@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-07
- * Last modified: 2025-12-07
+ * Created on: 2025-12-08
+ * Last modified: 2025-12-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -114,8 +114,6 @@ export const MapPOIFilteredList = () => {
     const drawers = useSnapshot(lgs.stores.ui.drawers)
 
     const {filter: poiFilter} = settings
-    console.log('render MapPOIFilteredList')
-
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
 
     const poiKeysHash = useMemo(() => {
@@ -145,13 +143,11 @@ export const MapPOIFilteredList = () => {
 
         $bulkList.clear()
         target.clear()
-
         filteredPois.forEach((id) => {
             const poi = list.get(id)
             target.set(id, poi)
             $bulkList.set(id, false)
         })
-
     }, [
                   filteredPois,
                   onlyJourney,
@@ -160,7 +156,6 @@ export const MapPOIFilteredList = () => {
                   $pois.bulkList,
                   list,
               ])
-
     if (filteredPois.length) {
         return filteredPois.map((id) => (
             <MapPOIListItem key={id} id={id}/>

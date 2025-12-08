@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-07
- * Last modified: 2025-12-07
+ * Created on: 2025-12-08
+ * Last modified: 2025-12-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -296,16 +296,18 @@ export class MapPOI extends MapElement {
      * Collapses this POI to show minimal information
      * @returns {Promise<MapPOI>} Updated POI
      */
-    shrink = () => {
-        return this.update({expanded: false}, true)
+    shrink = async () => {
+        await this.update({expanded: false}, true)
+        return this
     }
 
     /**
      * Expands this POI to show full information
      * @returns {Promise<MapPOI>} Updated POI
      */
-    expand = () => {
-        return this.update({expanded: true}, true)
+    expand = async () => {
+        await this.update({expanded: true}, true)
+        return this
     }
 
     /**
@@ -316,7 +318,6 @@ export class MapPOI extends MapElement {
         this.update({visible: false}, true)
         this.toggleVisibility()
         return this
-
     }
 
     /**
