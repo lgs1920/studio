@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-06
- * Last modified: 2025-12-06
+ * Created on: 2025-12-08
+ * Last modified: 2025-12-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -144,8 +144,6 @@ export class POIManager {
      * @returns {Promise<MapPOI|null>} Updated POI or null if not found
      */
     async updatePOI(id, updates, options = {}) {
-        console.log('[updatePOI]', id, updates, new Error().stack)
-
         const {skipPersist = false, immediate = false} = options
 
         const poi = this.list.get(id)
@@ -156,7 +154,6 @@ export class POIManager {
 
         // Updated POI
         Object.assign(poi, updates)
-        console.log(`Updating POI ${id}:`, poi.bgColor)
 
         // Auto-sync filtered collections
         this.#syncFilteredCollections(id, poi)
@@ -430,7 +427,7 @@ export class POIManager {
                                                                         })
             }
             catch (error) {
-                console.log(error)
+                console.error(error)
                 point.simulatedHeight = 0
             }
         }
