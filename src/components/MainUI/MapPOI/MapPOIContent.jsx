@@ -7,17 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-08
- * Last modified: 2025-12-08
+ * Created on: 2025-12-09
+ * Last modified: 2025-12-09
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { NameValueUnit }                             from '@Components/DataDisplay/NameValueUnit'
-import { FontAwesomeIcon }                           from '@Components/FontAwesomeIcon'
-import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
-import { MapPOI }                                    from '@Core/MapPOI'
+import { FontAwesomeIcon }                                                 from '@Components/FontAwesomeIcon'
+import { JOURNEY_EDITOR_DRAWER, POI_TMP_TYPE, POIS_EDITOR_DRAWER, SECOND } from '@Core/constants'
+import { MapPOI }                                                          from '@Core/MapPOI'
 import { Utils }                                   from '@Editor/Utils'
 import { faMask }                                  from '@fortawesome/pro-solid-svg-icons'
 import { UIToast }                                   from '@Utils/UIToast'
@@ -78,13 +78,6 @@ export const MapPOIContent = ({poi, useInMenu = false, category = null, style, s
             return
         }
         const thePOI = currentPOI
-        if (!thePOI?.type) {
-            UIToast.warning({
-                                caption: `You can not edit this POI.`,
-                                text:    `It is a temporary POI. Use ${'Save As POI'} in the context menu then you will be able to.`,
-                            })
-            return
-        }
 
         const alreadyOpen = __.ui.drawerManager.drawers.open
         const samePOI = entity === pois.current

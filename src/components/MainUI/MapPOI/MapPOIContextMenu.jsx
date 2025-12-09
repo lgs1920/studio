@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-08
- * Last modified: 2025-12-08
+ * Created on: 2025-12-09
+ * Last modified: 2025-12-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -229,7 +229,7 @@ export const MapPOIContextMenu = (props) => {
                 {canSaveAsStandard && (
                     <li onClick={saveAsStandardPOI}>
                         <SlIcon library="fa" name={FA2SL.set(faLocationDot)}/>
-                        <span>Save as POI</span>
+                        <span>{'Add to library'}</span>
                     </li>
                 )}
 

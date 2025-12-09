@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-07
- * Last modified: 2025-12-07
+ * Created on: 2025-12-09
+ * Last modified: 2025-12-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -152,7 +152,7 @@ export const MapPOIEditContent = memo(({poi}) => {
         })
     }, [poi, $poi.title, $poi.latitude, $poi.longitude])
 
-    const swatches = useMemo(() => swatchesList.join(';'), [swatchesList])
+    const swatches = useMemo(() => swatchesList.join(';'), [swatchesList, poi.id])
 
     useEffect(() => {
         setSimulated(!height || height === simulatedHeight)
@@ -198,6 +198,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                     disabled={!visible}
                                     noFormatToggle
                                     ref={_poiBgColor}
+                                    hoist
                                 />
                             </SlTooltip>
                             <SlTooltip content="Foreground Color">
@@ -209,6 +210,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                     disabled={!visible}
                                     noFormatToggle
                                     ref={_poiColor}
+                                    hoist
                                 />
                             </SlTooltip>
                         </>

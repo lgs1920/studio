@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-09-16
- * Last modified: 2025-09-16
+ * Created on: 2025-12-09
+ * Last modified: 2025-12-09
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { SelectLocation }              from '@Components/MainUI/geocoding/SelectLocation'
+import { SECOND } from '@Core/constants'
 import { faBullseyePointer, faSearch } from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlInput, SlPopup, SlSwitch, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import * as turf                                                   from '@turf/helpers'
@@ -106,7 +107,6 @@ export const GeocodingUI = () => {
                 flyingTime: 2,
                 callback: async (poi) => {
                     const newPoi = await __.ui.poiManager.add(poi)
-
                     if (newPoi) {
                         setPoi(newPoi)
                         return true
@@ -137,6 +137,10 @@ export const GeocodingUI = () => {
     const handleSelect = async (event) => {
         lgs.stores.main.components.pois.current = false
         await showPOI($geocoder.list.get(event.target.parentElement.id * 1))
+        UIToast.warning({
+                            caption: `Temporary POI created.`,
+                            text:    `It won't be saved permanently until you edit it and add it to POIs library.`,
+                        }, 8 * SECOND)
     }
 
     const handleChange = () => {

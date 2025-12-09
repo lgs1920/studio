@@ -199,7 +199,7 @@ export const MapPOIEditMenu = memo(({point}) => {
                 items.push(
                     <SlMenuItem key="setAsStarter" onClick={saveAsStandardPOI} small>
                         <SlIcon slot="prefix" library="fa" name={ICON_FLAG}/>
-                        <span>Set as POI</span>
+                        <span>{'Add to library'}</span>
                     </SlMenuItem>,
                 )
             }
