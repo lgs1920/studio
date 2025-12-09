@@ -391,8 +391,21 @@
     width: 100%;
 }
 
-.altitude-copied {
-    color: var(--lgs-success-color);
+.edit-map-poi-warning {
+    display: block;
+    margin: 0;
+    padding: 0;
+    color: var(--lgs-warning-color);
+}
+
+.edit-map-poi-warning > div {
+    font-size: var(--lgs-font-size);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0;
+    padding: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
 }
 
 .edit-poi-copy-coordinates {
@@ -515,3 +528,5 @@
     -webkit-mask-size: 100% 34px;
 
 }
+
+.map-

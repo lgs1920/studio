@@ -21,10 +21,12 @@ import {
 import {
     MapPOIEditMenu,
 }                                                                  from '@Components/MainUI/MapPOI/MapPOIEditMenu'
+import { POI_STANDARD_TYPE, POI_TMP_TYPE }                         from '@Core/constants'
 import {
-    faClock, faCircleCheck, faCopy, faSquareQuestion,
+    faClock, faCircleCheck, faCopy, faSquareQuestion, faLocationExclamation, faLocationDot,
 }                                                                  from '@fortawesome/pro-regular-svg-icons'
 import {
+    SlAlert, SlButton,
     SlColorPicker, SlDivider, SlIcon, SlIconButton, SlInput, SlTextarea, SlTooltip,
 }                                                                  from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                   from '@Utils/FA2SL'
@@ -152,6 +154,10 @@ export const MapPOIEditContent = memo(({poi}) => {
         })
     }, [poi, $poi.title, $poi.latitude, $poi.longitude])
 
+    const handleAddToLibrary = useCallback(async () => {
+        await __.ui.poiManager.updatePOI(poi, {type: POI_STANDARD_TYPE})
+    })
+
     const swatches = useMemo(() => swatchesList.join(';'), [swatchesList, poi.id])
 
     useEffect(() => {
@@ -181,10 +187,23 @@ export const MapPOIEditContent = memo(({poi}) => {
             )}
         </div>
     ), [simulated, height, point.visible, simulatedHeight, unitSystem, handleChangeAltitude])
-
     return (
         <>
             <SlDivider/>
+
+            {point.type === POI_TMP_TYPE &&
+                <SlAlert variant="warning" className="edit-map-poi-warning" open>
+                    <SlIcon library="fa" slot="icon"
+                            name={FA2SL.set(faLocationExclamation)}/>
+                    <div>
+                        {'This POI is temporary and won\'t be saved. Add it to the library to save it.'}
+                        <SlButton size="small" variant="warning" onClick={handleAddToLibrary}>
+                            <SlIcon size="small" library="fa" slot="prefix"
+                                    name={FA2SL.set(faLocationDot)}/>{'Add it'}</SlButton>
+                    </div>
+                </SlAlert>
+            }
+
             <div className="edit-map-poi-wrapper" id={`edit-map-poi-content-${id}`}>
                 <div className="map-poi-color-actions">
                     {point.visible &&
