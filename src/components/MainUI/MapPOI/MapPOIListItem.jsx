@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-08
- * Last modified: 2025-12-08
+ * Created on: 2025-12-09
+ * Last modified: 2025-12-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,9 +16,9 @@
 
 import { MapPOIContent }              from '@Components/MainUI/MapPOI/MapPOIContent'
 import { MapPOIEditContent }          from '@Components/MainUI/MapPOI/MapPOIEditContent'
-import { ToggleStateIcon }            from '@Components/ToggleStateIcon'
-import { POI_STARTER_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
-import { faSquare, faSquareCheck }    from '@fortawesome/pro-regular-svg-icons'
+import { ToggleStateIcon }                                    from '@Components/ToggleStateIcon'
+import { POI_STARTER_TYPE, POI_TMP_TYPE, POIS_EDITOR_DRAWER } from '@Core/constants'
+import { faSquare, faSquareCheck }                            from '@fortawesome/pro-regular-svg-icons'
 import { SlDetails }                  from '@shoelace-style/shoelace/dist/react'
 import { UIToast }                    from '@Utils/UIToast'
 import classNames                     from 'classnames'
@@ -61,14 +61,14 @@ const POIBulkToggle = ({id, toggleBulk}) => {
  * @component
  * @param {Object} props
  * @param {string} props.id - POI unique identifier
- * @param {Object} props.$poiProxy - Direct Valtio proxy of the POI (for mutations)
+ * @param {Object} props.poi - Direct Valtio proxy of the POI (for mutations)
  * @param {string} props.classes - Dynamic classes
  * @param {Object} props.styles - Dynamic styles
  * @param {Function} props.preventDrawerClose - Callback to prevent drawer closure
  * @param {Object} props.poi - Snapshot of the POI object (for title/type/content)
  * @returns {JSX.Element}
  */
-const POIDetailsWrapper = ({id, $poiProxy, classes, styles, preventDrawerClose, poi}) => {
+const POIDetailsWrapper = ({id, poi, classes, styles, preventDrawerClose}) => {
     const $pois = lgs.stores.main.components.pois
 
     // Minimal reactive snapshots for selection and context
@@ -78,6 +78,7 @@ const POIDetailsWrapper = ({id, $poiProxy, classes, styles, preventDrawerClose, 
     const isCurrent = current === id
     const isGlobalDrawer = drawerOpen === POIS_EDITOR_DRAWER
 
+
     /** Select this POI – focus camera, scroll into view, update global current */
     const selectPOI = useCallback(async () => {
         if (current === id) {
@@ -86,8 +87,8 @@ const POIDetailsWrapper = ({id, $poiProxy, classes, styles, preventDrawerClose, 
 
         Object.assign($pois, {current: id})
 
-        if ($poiProxy) {
-            Object.assign($poiProxy, {animated: false})
+        if (poi) {
+            Object.assign(poi, {animated: false})
         }
 
 
@@ -126,7 +127,7 @@ const POIDetailsWrapper = ({id, $poiProxy, classes, styles, preventDrawerClose, 
         const element = document.getElementById(`edit-map-poi-${id}`)
         element?.scrollIntoView({behavior: 'smooth', block: 'start'})
         element?.focus()
-    }, [id, current, isGlobalDrawer, $pois, $poiProxy])
+    }, [id, current, isGlobalDrawer, $pois, poi])
 
     /** Conditional rendering of the edit form (only when current) */
     const editContent = useMemo(() => {
@@ -168,17 +169,14 @@ const POIDetailsWrapper = ({id, $poiProxy, classes, styles, preventDrawerClose, 
  * @param {string} props.id      POI unique identifier
  * @param {string} [props.context] Optional context passed from parent (kept for future use)
  */
-export const MapPOIListItem = memo(({id, context}) => {
+export const MapPOIListItem = memo(({id}) => {
                                        const $pois = lgs.stores.main.components.pois
                                        const DEFAULT_POI_BG = lgs.colors.poiDefaultBackground
 
                                        // Direct proxy to the POI object (reactive mutations)
-                                       const $poiProxy = $pois.list.get(id)
+                                       const $poi = $pois.list.get(id)
                                        // Snapshot of the POI for rendering (immutable)
-                                       const poi = useSnapshot($poiProxy || {})
-
-                                       // REMOVED: useSnapshot($pois, {sync: true}) is no longer needed here,
-                                       // because bulkList and current are now read in child components.
+                                       const poi = useSnapshot($poi || {})
 
                                        /** Toggle bulk selection for this POI */
                                        const toggleBulk = useCallback(
@@ -221,6 +219,7 @@ export const MapPOIListItem = memo(({id, context}) => {
                                        const classes = useMemo(
                                            () => classNames('edit-map-poi-item', {
                                                'map-poi-starter': poi.type === POI_STARTER_TYPE,
+                                               'map-poi-temp': poi.type === POI_TMP_TYPE,
                                            }),
                                            [poi.type],
                                        )
@@ -239,11 +238,10 @@ export const MapPOIListItem = memo(({id, context}) => {
 
                                                <POIDetailsWrapper
                                                    id={id}
-                                                   $poiProxy={$poiProxy}
+                                                   poi={$poi}
                                                    classes={classes}
                                                    styles={styles}
                                                    preventDrawerClose={preventDrawerClose}
-                                                   poi={poi}
                                                />
                                            </div>
                                        )

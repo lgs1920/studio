@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-08
- * Last modified: 2025-12-08
+ * Created on: 2025-12-09
+ * Last modified: 2025-12-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -157,9 +157,7 @@ export const MapPOIFilteredList = () => {
                   list,
               ])
     if (filteredPois.length) {
-        return filteredPois.map((id) => (
-            <MapPOIListItem key={id} id={id}/>
-        ))
+        return filteredPois.map((id) => <MapPOIListItem key={id} id={id}/>)
     }
 
     return (

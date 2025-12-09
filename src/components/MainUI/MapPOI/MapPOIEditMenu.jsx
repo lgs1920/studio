@@ -7,24 +7,24 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-02
- * Last modified: 2025-07-02
+ * Created on: 2025-12-09
+ * Last modified: 2025-12-09
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants'
+import { POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE } from '@Core/constants'
 import {
     faArrowRotateRight, faArrowsFromLine, faArrowsToLine, faCrosshairsSimple, faFlag, faLocationDot, faPanorama,
     faTrashCan, faXmark,
-}                                                          from '@fortawesome/pro-regular-svg-icons'
+}                                                                                           from '@fortawesome/pro-regular-svg-icons'
 import { faMask }                                                         from '@fortawesome/pro-solid-svg-icons'
 import { SlButton, SlDropdown, SlIcon, SlIconButton, SlMenu, SlMenuItem } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                                          from '@Utils/FA2SL'
-import { UIToast }                                         from '@Utils/UIToast'
-import React, { memo, useMemo }                            from 'react'
-import { useSnapshot }                                     from 'valtio'
+import { UIToast }                                                                          from '@Utils/UIToast'
+import React, { memo, useCallback, useMemo }                                                from 'react'
+import { useSnapshot }                                                                      from 'valtio'
 import './style.css'
 
 // Pre-calculated icon names to avoid recalculation
@@ -95,7 +95,7 @@ export const MapPOIEditMenu = memo(({point}) => {
             infinite:   true,
             rotate:     false,
             panoramic:  false,
-            flyingTime: 0,
+            flyingTime: 2,
         })
     }
 
@@ -140,6 +140,13 @@ export const MapPOIEditMenu = memo(({point}) => {
         }
     }
 
+    const saveAsStandardPOI = () => {
+        __.ui.poiManager.updatePOI(point.id, {
+            type:     POI_STANDARD_TYPE,
+            category: POI_STANDARD_TYPE,
+        })
+    }
+
     const panoramic = async () => {
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
@@ -150,9 +157,7 @@ export const MapPOIEditMenu = memo(({point}) => {
     const stopRotation = async () => {
         await __.ui.cameraManager.stopRotate()
         const poi = $pois.list.get(point.id)
-        await __.ui.poiManager.updatePOI(point.id, {
-            ...poi, animated: false,
-        })
+        await __.ui.poiManager.updatePOI(point.id, {animated: false})
     }
 
     const remove = async () => {
@@ -180,14 +185,25 @@ export const MapPOIEditMenu = memo(({point}) => {
                 </SlMenuItem>,
             )
 
-            if (point.type !== POI_STARTER_TYPE) {
+            if (point.type !== POI_TMP_TYPE) {
+                if (point.type !== POI_STARTER_TYPE) {
+                    items.push(
+                        <SlMenuItem key="setAsStarter" onClick={setAsStarter} small>
+                            <SlIcon slot="prefix" library="fa" name={ICON_FLAG}/>
+                            <span>Set as Starter</span>
+                        </SlMenuItem>,
+                    )
+                }
+            }
+            else {
                 items.push(
-                    <SlMenuItem key="setAsStarter" onClick={setAsStarter} small>
+                    <SlMenuItem key="setAsStarter" onClick={saveAsStandardPOI} small>
                         <SlIcon slot="prefix" library="fa" name={ICON_FLAG}/>
-                        <span>{'Set as Starter'}</span>
+                        <span>Set as POI</span>
                     </SlMenuItem>,
                 )
             }
+
             if (point.type !== POI_STARTER_TYPE && point.type !== POI_FLAG_START && point.type !== POI_FLAG_STOP) {
                 items.push(
                     <SlMenuItem key="remove" onClick={remove} small>
