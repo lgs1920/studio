@@ -1,0 +1,354 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *  
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-12-01
+ * Last modified: 2025-12-01
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
+.lgs-video-recording-trigger-actions {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-around;
+    gap: var(--lgs-gutter);
+}
+
+.lgs-video-recording-trigger:not(.lgs-tunnel-element-blocked) {
+    color: var(--lgs-video-recorder-color);
+    border-color: var(--lgs-video-recorder-border-color);
+    background: var(--lgs-video-recorder-bg-color);
+}
+
+.lgs-video-recording-trigger:not(.lgs-tunnel-element-blocked):hover {
+    color: var(--lgs-video-recorder-hover-color);
+    border-color: var(--lgs-video-recorder-hover-border-color);
+    background: var(--lgs-video-recorder-hover-bg-color);
+
+}
+
+.lgs-video-recording-trigger::part(base):hover {
+    color: var(--lgs-video-recorder-hover-color);
+    border-color: var(--lgs-video-recorder-hover-border-color)
+}
+
+.video-recorder-widget {
+    font-size: var(--lgs-font-size-s);
+    position: relative;
+    z-index: calc(var(--crop-zindex) + 2);
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    gap: 0;
+}
+
+.video-recorder-widget span {
+    width: max-content;
+    margin-right: var(--lgs-gutter-s);
+    border-right: 1px solid var(--lgs-card-on-map-border-color);
+    padding-inline-end: var(--lgs-gutter-s);
+}
+
+.video-recorder-widget button {margin: 0;}
+
+.video-recorder-widget .lgs-cancel-recording {
+    font-size: var(--lgs-font-size-s);
+    border-right: none;
+    border-left: 1px solid var(--lgs-card-on-map-border-color);
+}
+
+.video-recorder-indicator {
+    font-size: var(--lgs-font-size);
+    margin: 0 var(--lgs-gutter) 0 var(--lgs-gutter-s);
+    --fa-primary-color: var(--lgs-video-recorder-color);
+    --fa-primary-opacity: 1;
+    --fa-secondary-color: var(--lgs-video-recorder-bg-color);
+    --fa-secondary-opacity: 1;
+}
+
+.video-recorder-indicator.finalizing {
+    --fa-primary-color: var(--lgs-video-warning-color);
+    --fa-secondary-color: var(--lgs-video-warning-bg-color);
+}
+
+.video-pre-recording-in-progress, .video-recording-in-progress, .photo-snapshot-in-progress {
+    padding: 20px;
+    animation: border-dance var(--border-dance-duration) infinite linear;
+    animation-play-state: running;
+    border: none !important;
+    border-width: var(--border-width);
+    background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+    background-size: var(--dashing-width) var(--border-width), var(--dashing-width) var(--border-width), var(--border-width) var(--dashing-width), var(--border-width) var(--dashing-width);
+    --border-width: 4px !important;
+    --dashing-width: 25px;
+    --border-dance-duration: 40s;
+}
+
+.recording-in-progress .lgs-widget-inner-overlay {
+    cursor: auto !important;
+}
+
+
+.video-recording-in-progress, .photo-snapshot-in-progress {
+    background-image: linear-gradient(90deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(90deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(0deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%), linear-gradient(0deg, var(--lgs-video-recorder-bg-color) 50%, var(--lgs-video-recorder-color) 50%);
+}
+
+.video-pre-recording-in-progress, .video-recording-in-progress.finalizing {
+    background-image: linear-gradient(90deg, var(--lgs-video-warning-bg-color) 50%, var(--lgs-video-warning-color) 50%), linear-gradient(90deg, var(--lgs-video-warning-bg-color) 50%, var(--lgs-video-warning-color) 50%), linear-gradient(0deg, var(--lgs-video-warning-bg-color) 50%, var(--lgs-video-warning-color) 50%), linear-gradient(0deg, var(--lgs-video-warning-bg-color) 50%, var(--lgs-video-warning-color) 50%);
+}
+
+@keyframes border-dance {
+    0% {
+        background-position: 0 0, 100% 100%, 0 100%, 100% 0;
+    }
+    100% {
+        background-position: 100% 0, 0 100%, 0 0, 100% 100%;
+    }
+}
+
+/***************************************
+ * Video preview
+ */
+
+#video-preview-dialog::part(panel) {
+    width: min(100%, 600px);
+    max-height: 90%;
+}
+
+#video-preview-dialog sl-input::part(form-control) {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+
+/* Container for both videos, ensuring it takes full available space with max height */
+.video-container {
+    position: relative;
+    display: flex;
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: auto;
+    max-height: var(--max-video-height);
+    margin-bottom: var(--lgs-gutter);
+    --max-video-height: 50vh;
+}
+
+/* Main video, fits inside container without cropping.
+   - landscape: grows to width; if height would exceed max, it scales down
+   - portrait/square: limited by max height, uses as much width as possible */
+.main-video {
+    z-index: 1;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: var(--max-video-height);
+    object-fit: contain;
+}
+
+/* Wrapper for blurred video, filling the entire container */
+.blurred-video-wrapper {
+    position: absolute;
+    z-index: 0;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* Blurred video, scaled to cover container with blur effect */
+.blurred-video {
+    width: 100%;
+    height: 100%;
+    opacity: 0.5;
+    object-fit: cover;
+    filter: blur(3px);
+}
+
+.blurred-video-wrapper::before {
+    position: absolute; /* Ensure overlay is above the video but below other elements */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    content: '';
+    background-color: var(--lgs-dark-color-75);
+
+}
+
+/***************************************
+ * Video info
+ */
+
+.video-info {
+    position: absolute;
+    z-index: 2;
+    top: 0;left: 0;
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: space-between;
+    margin: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}
+
+.video-info div {
+    font-size: var(--lgs-font-size-s);
+    line-height: 1.3;
+    display: flex;
+    align-content: center;
+    align-items: center;
+}
+
+.video-info div sl-icon {
+    font-size: var(--lgs-font-size);
+}
+
+.video-info div :first-child {
+    margin-right: var(--lgs-gutter);
+}
+
+.video-info sl-input {
+    max-width: 100px;
+}
+
+/***************************************
+ * Video actions
+ */
+.video-file-actions, .video-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+
+.video-file-actions {
+    justify-content: space-between;
+}
+/***************************************
+ * Video Quality toolbar
+ */
+
+.video-quality-widget-container {
+    z-index: calc(var(--crop-zindex) + 2);
+}
+
+.video-quality-widget {
+    position: relative;
+    display: grid;
+    align-items: center;
+    flex-direction: row;
+    width: auto;
+    grid-template-columns: 3rem 1fr;
+    gap: var(--lgs-gutter-xs);
+    --buttons-bar-on-map-direction: row
+}
+
+.video-quality-widget.lgs-toolbar {
+    opacity: 1;
+}
+
+/***************************************
+ * Video fps selector
+ */
+
+.video-fps-widget {
+    position: relative;
+    display: grid;
+    align-items: center;
+    width: auto;
+    grid-template-columns: 3rem 1fr;
+    gap: var(--lgs-gutter-xs);
+    --buttons-bar-on-map-direction: row;
+}
+
+.video-fps-widget.lgs-toolbar {
+    opacity: 1;
+}
+
+.video-fps-widget .grabber {
+    rotate: 90deg;
+}
+
+/***************************************
+ * Video Preset selector
+ */
+
+.video-preset-widget {
+    position: relative;
+    align-items: center;
+    flex-direction: var(--buttons-bar-on-map-direction);
+    width: auto;
+    --buttons-bar-on-map-direction: row;
+    gap: var(--lgs-gutter-xs);
+}
+
+.video-preset-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+}
+
+.video-preset-widget.lgs-toolbar {
+    opacity: 1;
+}
+
+.video-preset-widget .grabber {
+    rotate: 90deg;
+}
+
+.video-preset-custom {
+    display: flex;
+    flex-basis: 100%;
+    flex-direction: column;
+    margin-bottom: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}
+
+.video-preset-widget-wrapper {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    gap: 0;
+
+}
+
+.video-fps-widget .buttons-bar-on-map, .video-quality-widget .buttons-bar-on-map {
+    display: grid;
+    grid-template-columns: repeat(4, 2rem) !important;
+}
+
+/***************************************
+ * Message
+ */
+
+.lgs-video-message {
+    font-size: var(--lgs-font-size-m);
+    font-weight: lighter;
+    position: fixed;
+    z-index: var(--lgs-tools-ui-zindex);
+    top: 95%;
+    left: 50%;
+    overflow: visible;
+
+    align-items: center;
+    align-self: center;
+    justify-content: center;
+    min-width: 200px;
+    padding: var(--lgs-gutter-s);
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+    gap: var(--lgs-gutter-s);
+}
+
+

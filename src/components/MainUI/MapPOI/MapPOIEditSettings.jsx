@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-12-09
+ * Last modified: 2025-12-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -62,7 +62,6 @@ export const MapPOIEditSettings = memo(({globals = true}) => {
             targetList.forEach(poi => {
                 $pois.bulkList.set(poi.id, state)
             })
-            console.log(targetList)
         },
         [onlyJourney, $pois.bulkList, $pois.filtered.journey, $pois.filtered.global]
     );
@@ -109,7 +108,7 @@ export const MapPOIEditSettings = memo(({globals = true}) => {
                     {'Focus on POI'}
                 </SlSwitch>
             </div>
-            {/*     <MapPOIEditSettings/> */}
+            {/* <MapPOIEditSettings/> */}
 
             <SlDivider/>
         </div>

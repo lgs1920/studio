@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-07
- * Last modified: 2025-07-07
+ * Created on: 2025-12-03
+ * Last modified: 2025-12-03
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,7 @@
 
 import {
     BUILD, CONFIGURATION, COUNTRIES, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS, LGS_CONTEXT_MENU_HOOK, MILLIS,
-    platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE,
+    platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE, WIDGETS,
 }                           from '@Core/constants'
 import { ElevationServer }  from '@Core/Elevation/ElevationServer'
 import { Settings }         from '@Core/settings/Settings'
@@ -153,12 +153,29 @@ export class AppUtils {
             .then(res => res.text())
             .then(text => YAML.parse(text),
             )
-        // Read Layers
 
+        // Read Layers
         settings.layers = await fetch(LAYERS_TERRAINS_SETTINGS, {cache: 'no-store'})
             .then(res => res.text())
             .then(text => YAML.parse(text),
             )
+
+        // Read Widgets
+        const raw = await fetch(WIDGETS, {cache: 'no-store'})
+            .then(res => res.text())
+            .then(text => YAML.parse(text),
+            )
+        __.widgets = new Map()
+
+        for (const [groupKey, groupValue] of Object.entries(raw)) {
+            const widgets = new Map()
+            for (const [widgetKey, widgetValue] of Object.entries(groupValue.widgets)) {
+                widgets.set(widgetKey, widgetValue)
+            }
+            const groupCopy = {...groupValue, widgets: widgets}
+            __.widgets.set(groupKey, groupCopy)
+        }
+
 
         // Get the setting sections ID
         lgs.settingSections = Object.keys(settings)
@@ -218,6 +235,18 @@ export class AppUtils {
         lgs.colors.poiDefaultBackground = lgs.colors.light
         lgs.colors.poiDefault = lgs.colors.dark
 
+
+        /**************************************
+         * Some dimension
+         */
+        lgs.gutter = {
+            s:  __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter-s')),
+            xs: __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter-xs')),
+            l:  __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter-l')),
+            m:  __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter-m')),
+            n:  __.ui.css.rem2px(__.ui.css.getCSSVariable('--lgs-gutter')),
+        }
+
         /***************************************
          * Application settings
          */
@@ -255,6 +284,22 @@ export class AppUtils {
                 index++
             }
         }
+
+        //sanitize strings
+        Object.defineProperty(String.prototype, 'sanitize', {
+            value:        function () {
+                return this
+                    .normalize('NFKD')                  // Removes accents and special Unicode characters
+                    .replace(/[\u0300-\u036f]/g, '')    // Strips diacritics (accent marks)
+                    .trim()                             // Removes leading and trailing spaces
+                    .replace(/[\/\\:*?"<>|]/g, '_')     // Replaces forbidden filename characters
+                    .replace(/[\s]+/g, '_')             // Converts multiple spaces to a single underscore
+                    .replace(/_+/g, '_')                // Collapses consecutive underscores
+                    .replace(/^_+|_+$/g, '')           // Removes leading and trailing underscores
+            },
+            writable:     false,
+            configurable: false,
+        })
 
 
         // Ping server
@@ -310,6 +355,7 @@ export class AppUtils {
                 error: new Error(`${lgs.settings.applicationName} Backend server seems to be unreachable!${info}`),
             }
         }
+
 
     }
 
@@ -582,5 +628,52 @@ export class AppUtils {
         contextMenuHook.style.left = `${event.position.x}px`
     }
 
+    /**
+     * Checks whether the Web Share API is available and can share files if requested
+     * @returns {boolean} True if sharing is supported (with or without files)
+     */
+    static canShare() {
+        if (!navigator.share) {
+            return false
+        }
 
+        if (navigator.canShare) {
+            try {
+                const testFile = new File(['test'], 'test.mp4', {type: 'video/mp4'})
+                return navigator.canShare({files: [testFile]})
+            }
+            catch (e) {
+                return false
+            }
+        }
+
+        return true
+    }
+
+    /**
+     * Clamps a value between a min and max range.
+     * @param {number} value - The value to clamp.
+     * @param {number} min - Minimum allowed value.
+     * @param {number} max - Maximum allowed value.
+     * @returns {number} The clamped value.
+     */
+    static clamp = (value, min, max) => Math.max(min, Math.min(max, value))
+
+    /**
+     * Parses a string representing a pixel value and returns a rounded number.
+     * Cleans non-numeric characters (except dot and sign), handles errors,
+     * and applies precise rounding with floating-point error correction.
+     *
+     * @param {string|number} str - The input value (e.g., "12px", "-3.4rem", 15).
+     * @param {number} [decimals=3] - Number of decimals for rounding.
+     * @returns {number|null} The rounded number or null if invalid.
+     */
+    static parsePx = (str, decimals = 3) => {
+        const num = parseFloat(String(str).replace(/[^\d.-]/g, ''))
+        if (isNaN(num)) {
+            return null
+        }
+        // Round with floating-point error compensation (Number.EPSILON)
+        return Math.round((num + Number.EPSILON) * 10 ** decimals) / 10 ** decimals
+    }
 }

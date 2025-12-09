@@ -3,19 +3,20 @@
   "backend": {
     "name": "LGS1920 Development Backend server",
     "shortname": "Backend",
-    "domain": "localhost",
+    "domain": "dev.lgs1920.fr",
     "protocol": "http",
-    "port": 3333
+    "port": 3333,
+    "ffmpeg": "/home/christian/bin/ffmpeg"
   },
   "studio": {
     "name": "LGS1920 Development Studio",
     "shortname": "Studio",
-    "domain": "localhost",
+    "domain": "dev.lgs1920.fr",
     "protocol": "http",
     "proxy": ""
   },
   "site": {
-    "domain": "dev.lgs1920.fr",
-    "protocol": "http"
+    "domain": "lgs1920.fr",
+    "protocol": "https"
   }
 }

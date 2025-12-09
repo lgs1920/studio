@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-02
- * Last modified: 2025-07-02
+ * Created on: 2025-12-09
+ * Last modified: 2025-12-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -317,7 +317,7 @@
 
 .map-poi-edit-row-coordinates {
     display: grid;
-    align-items: center;
+    align-items: flex-end;
     justify-content: start;
     gap: var(--lgs-gutter-xs);
     grid-template-columns: 9rem 9rem  32px;
@@ -333,6 +333,14 @@
     margin-bottom: -2rem; /** TODO Found where this has been set */
     margin-left: auto;
     gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-color-actions .label-on-left {
+    align-self: center;
+}
+
+.map-poi-color-actions sl-button {
+    margin-bottom: var(--lgs-gutter-xs);
 }
 
 .map-poi-edit-item.in-dms {
@@ -381,6 +389,23 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
+}
+
+.edit-map-poi-warning {
+    display: block;
+    margin: 0;
+    padding: 0;
+    color: var(--lgs-warning-color);
+}
+
+.edit-map-poi-warning > div {
+    font-size: var(--lgs-font-size);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0;
+    padding: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
 }
 
 .edit-poi-copy-coordinates {
@@ -468,7 +493,7 @@
 }
 
 .map-poi-category-selector-filter + sl-divider {
-/ / margin-top: var(--lgs-gutter-s);
+    /* margin-top: var(--lgs-gutter-s);*/
 }
 
 .map-poi-category-selector-filter::part(form-control-label) {
@@ -485,3 +510,23 @@
     width: 0.8rem;
     height: 0.8rem;
 }
+
+.map-poi-temp {
+    position: relative;
+    overflow: hidden;
+}
+
+.map-poi-temp::after {
+    position: absolute;
+    width: 100%;
+    content: "";
+    pointer-events: none; /* pour ne pas bloquer les interactions */
+    background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--fa-primary-color) 15%, transparent) 0 3px, transparent 3px 10px);
+    inset: 0;
+    -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 1) 30%, rgba(0, 0, 0, 0) 90%);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 34px;
+
+}
+
+.map-

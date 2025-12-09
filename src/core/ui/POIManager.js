@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-27
- * Last modified: 2025-06-27
+ * Created on: 2025-12-08
+ * Last modified: 2025-12-08
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,7 +25,6 @@ import { TrackUtils } from '@Utils/cesium/TrackUtils'
 import { UIToast }    from '@Utils/UIToast'
 import { KM }         from '@Utils/UnitUtils'
 import { v4 as uuid } from 'uuid'
-import { snapshot }   from 'valtio/index'
 import { proxyMap }   from 'valtio/utils'
 import { subscribe }  from 'valtio/vanilla'
 
@@ -147,35 +146,29 @@ export class POIManager {
     async updatePOI(id, updates, options = {}) {
         const {skipPersist = false, immediate = false} = options
 
-        const currentPOI = this.list.get(id)
-        if (!currentPOI) {
+        const poi = this.list.get(id)
+        if (!poi) {
             console.warn(`POI with id ${id} not found`)
             return null
         }
 
-        // Create updated POI with modification timestamp
-        const updatedPOI = {
-            ...currentPOI,
-            ...updates,
-        }
-
-        // Update main list
-        this.list.set(id, updatedPOI)
+        // Updated POI
+        Object.assign(poi, updates)
 
         // Auto-sync filtered collections
-        this.#syncFilteredCollections(id, updatedPOI)
+        this.#syncFilteredCollections(id, poi)
 
         // Handle database persistence
         if (!skipPersist) {
             if (immediate) {
-                await this.persistToDatabase(updatedPOI)
+                await this.persistToDatabase(poi)
             }
             else {
-                this.#debouncedPersist(updatedPOI)
+                this.#debouncedPersist(poi)
             }
         }
 
-        return updatedPOI
+        return poi
     }
 
     /**
@@ -218,12 +211,12 @@ export class POIManager {
 
         // Sync global filtered collection
         if ($pois.filtered.global.has(id)) {
-            $pois.filtered.global.set(id, poi)
+            Object.assign($pois.filtered.global.get(id), poi)
         }
 
         // Sync journey filtered collection
         if ($pois.filtered.journey.has(id)) {
-            $pois.filtered.journey.set(id, poi)
+            Object.assign($pois.filtered.journey.get(id), poi)
         }
     }
 
@@ -434,7 +427,7 @@ export class POIManager {
                                                                         })
             }
             catch (error) {
-                console.log(error)
+                console.error(error)
                 point.simulatedHeight = 0
             }
         }
@@ -655,7 +648,12 @@ export class POIManager {
             poi = lgs.stores.main.components.pois.list.get(poi)
         }
         if (poi.type && poi.type !== POI_TMP_TYPE) {
-            await lgs.db.lgs1920.put(poi.id, MapPOI.serialize({...poi, ...{__class: MapPOI}}), POIS_STORE)
+            const serialized = MapPOI.serialize({
+                                                    ...poi,
+                                                    __class: MapPOI,
+                                                })
+
+            await lgs.db.lgs1920.put(poi.id, serialized, POIS_STORE)
         }
     }
 

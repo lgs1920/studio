@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Profile.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-12-06
+ * Last modified: 2025-12-06
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { faRegularArrowsRotateReverseMagnifyingGlass }             from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { SlButton, SlDrawer, SlIcon, SlResizeObserver, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
@@ -16,8 +32,8 @@ import { ProfileChart }                                            from './Profi
 
 export const Profile = function Profile() {
 
-    const mainStore = lgs.mainProxy
-    const mainSnap = useSnapshot(mainStore)
+    const $main = lgs.mainProxy
+    const main = useSnapshot($main)
 
     /**
      * Avoid click outside drawer
@@ -34,7 +50,7 @@ export const Profile = function Profile() {
      */
     const closeProfile = (event) => {
         if (window.isOK(event)) {
-            mainStore.components.profile.show = false
+            $main.components.profile.show = false
             //TODO manage 'profile/close' event and externalise
             toggleMarker()
         }
@@ -71,7 +87,7 @@ export const Profile = function Profile() {
     const ProfileToolbar = (props) => {
         return (
             <>
-            {        mainSnap.components.profile.zoom &&
+                {main.components.profile.zoom &&
             <div className={'profile-additional'}>
             {/* <SlTooltip hoist placement={props.placement} content="Hide Marker"> */}
                 {/*     <SlButton id={'toggle-marker-visibility'} className={'square-button'} onClick={toggleMarker}> */}
@@ -99,15 +115,16 @@ export const Profile = function Profile() {
         if (container) {
             const dimensions = container.getBoundingClientRect()
             if (dimensions.width > 0) {
-                mainStore.components.profile.width = dimensions.width
-                mainStore.components.profile.height = dimensions.height
+                $main.components.profile.width = dimensions.width
+                $main.components.profile.height = dimensions.height
             }
         }
     }
 
     return (<>
-        {mainSnap.canViewProfile && <div key={mainSnap.components.profile.key} className={'drawer-wrapper horizontal'}>
-            <SlDrawer id="profile-pane" open={mainSnap.components.profile.show}
+        {main.canViewProfile && main.components.profile.show &&
+            <div key={main.components.profile.key} className={'drawer-wrapper horizontal'}>
+                <SlDrawer id="profile-pane" open={true}
                       onSlRequestClose={handleRequestClose}
                       onSlAfterShow={()=> {
                           window.dispatchEvent(new Event('resize'))

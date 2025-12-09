@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-07
- * Last modified: 2025-07-07
+ * Created on: 2025-12-04
+ * Last modified: 2025-12-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -39,19 +39,31 @@ body {
 }
 
 #lgs1920-container {
-    /*position: absolute;*/
-    width: 100vw;
-    height: 100dvh;
+    position: absolute;
+    top: var(--top);
+    right: var(--right);
+    bottom: var(--bottom);
+    left: var(--left);
+}
+
+#lgs-tools-ui {
+    position: absolute;
+    top: calc(-1 * var(--top));
+    right: calc(-1 * var(--right));
+    bottom: calc(-1 * var(--bottom));
+    left: calc(-1 * var(--left));
+    pointer-events: auto;
 }
 
 #cesium-viewer {
-    width: 100vw;
-    min-height: 100dvh;
-    max-height: 100dvh;
-    height: 100dvh;
     position: absolute;
+    z-index: 1;
     top: 0;
     left: 0;
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    max-height: 100dvh;
 }
 
 /** Hide the main toolbar */
@@ -67,15 +79,39 @@ body {
     display: none !important;
 }
 
+.signage-style {
+    color: var(--lgs-signage-color);
+    border-color: var(--lgs-signage-border-color);
+    border-radius: var(--lgs-border-radius-s);
+    background: var(--lgs-signage-bg-color);
+    box-shadow: var(--sl-shadow-medium);
+}
+
+.app-installing-dialog::part(body) {
+    padding: 0;
+}
+
+.installing-dialog {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: center;
+    padding: 2rem var(--lgs-gutter-s);
+
+    gap: var(--lgs-gutter);
+}
+
+.installing-dialog > sl-spinner {
+    font-size: var(--lgs-font-size-xl);
+    --track-width: var(--lgs-gutter-xs);
+    --indicator-color: black;
+    --track-color: var(--lgs-signage-disabled-color);
+}
 
 .main-logo {
     position: relative;
     --padding: calc(6 * var(--lgs-gutter));
     padding: var(--padding);
-    background: var(--lgs-direction-panel-bg-color);
-    border-color: var(--lgs-direction-panel-border-color);
-    border-radius: var(--lgs-border-radius-s);
-    box-shadow: var(--sl-shadow-medium);
     aspect-ratio: 2.813;
     display: flex;
     justify-content: center;
@@ -164,7 +200,57 @@ main-logo.xlarge {
     max-width: var(--lgs-horizontal-panel-width);
 }
 
+/*******************************************************************************
+ * Drag, Resize Rotate
+ ******************************************************************************/
+.lgs-widget-control-box * {
+    transition: opacity 0.2s ease-in-out;
+}
 
+.dragging .lgs-draggable-widget .moveable-control-box {
+    opacity: 0;
+}
+
+
+.lgs-widget-control-box .moveable-control {
+    width: var(--width) !important;
+    height: var(--height) !important;
+    margin-top: calc(var(--height) / -2) !important;
+    margin-left: calc(var(--width) / -2) !important;
+    border: 1px solid var(--lgs-dark-color) !important;
+    border-radius: var(--lgs-border-radius-s) !important;
+    background: var(--moveable-color);
+    --width: var(--lgs-gutter);
+    --height: var(--lgs-gutter);
+    --moveable-color: var(--lgs-light-color);
+}
+
+.lgs-widget-control-box .moveable-control.moveable-n, .lgs-widget-control-box .moveable-control.moveable-s {
+    --width: calc(2 * var(--lgs-gutter)) !important;
+}
+
+.lgs-widget-control-box .moveable-control.moveable-w, .lgs-widget-control-box .moveable-control.moveable-e {
+    --height: calc(2 * var(--lgs-gutter)) !important;
+}
+
+.lgs-widget-control-box .moveable-line {
+    /* Always transparent whatever show control box parameter */
+    background: transparent !important /*var(--lgs-light-color-75) !important;*/
+}
+
+.lgs-widget-control-box .moveable-guideline {
+    background: var(--lgs-third-color-75) !important;
+}
+
+/* snap inside a target */
+.lgs-widget-control-box .moveable-bold:not(.moveable-bounds) {
+    display: none;
+}
+
+/* snap target on bounds. */
+.lgs-widget-control-box .moveable-bold.moveable-bounds {
+    background-color: var(--lgs-first-color-90) !important;
+}
 /*******************************************************************************
  * VideoLayer component
  ******************************************************************************/
@@ -194,4 +280,165 @@ main-logo.xlarge {
     height: var(--lgs-font-size);
     border-radius: var(--lgs-border-radius-xs);
     object-fit: contain;
+}
+
+
+/*******************************************************************************
+ * PWA
+ ******************************************************************************/
+
+.lgs-install-banner {
+    line-height: 1;
+    position: relative;
+    z-index: calc(var(--lgs-ui-layer-zindex) + 10);
+    top: 0;
+    right: calc(2 * var(--lgs-gutter-s));
+    left: 0;
+    align-items: center;
+    flex-direction: row;
+    margin: 0;
+    pointer-events: auto;
+    border-radius: var(--lgs-border-radius-s);
+    gap: var(--lgs-gutter);
+}
+
+.lgs-install-banner-content {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    justify-content: space-between;
+    padding: var(--lgs-gutter);
+
+}
+
+.lgs-install-banner-content > div > sl-icon {
+    font-size: var(--lgs-font-size-l);
+    margin-right: var(--lgs-gutter);
+}
+
+.lgs-install-banner-content, .lgs-install-banner-content > * {
+    display: flex;
+    align-items: center;
+}
+
+/*******************************************************************************
+ * Widgets and Cropper Menus
+ ******************************************************************************/
+
+:root {
+    --buttons-bar-on-map-direction: column;
+}
+
+.widget-grid-position, .widget-grid-one-line {
+    display: grid !important;
+    margin-top: var(--lgs-gutter-xs) !important;
+    padding: 0 !important;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: var(--lgs-gutter-s);
+}
+
+.widget-grid-one-line {
+    grid-template-rows: none
+}
+
+.widget-no-hover:hover {
+    background: transparent !important
+}
+
+.buttons-bar-on-map {
+    display: flex;
+    align-items: center;
+    flex-direction: var(--buttons-bar-on-map-direction);
+    justify-content: space-between;
+    gap: var(--lgs-gutter-xs);
+}
+
+.buttons-bar-on-map sl-icon, .buttons-bar-on-map div {
+    font-size: var(--lgs-font-size);
+    line-height: 1;
+    width: calc(var(--lgs-font-size) + 4px);
+    height: calc(var(--lgs-font-size) + 2px);
+    margin: 0;
+    padding: var(--lgs-gutter-s);
+    cursor: pointer;
+    text-align: center;
+}
+
+.buttons-bar-on-map div {
+    justify-content: center;
+    width: 100%;
+    height: auto;
+}
+
+.buttons-bar-on-map .selected {
+    border-color: var(--lgs-card-on-map-selected-border-color);
+    background: var(--lgs-card-on-map-selected-bg-color);
+}
+
+.buttons-bar-on-map sl-icon:hover, .buttons-bar-on-map div:hover {
+    border-color: var(--lgs-card-on-map-hover-border-color);
+    background: var(--lgs-card-on-map-hover-bg-color);
+}
+
+.buttons-bar-on-map sl-icon svg {
+    width: unset;
+    height: var(--lgs-font-size);
+}
+
+/** fix for 9x16, forcing same icon than 16x9 **/
+.buttons-bar-on-map sl-icon.icon-9x16::part(svg) {
+    transform: rotate(90deg);
+}
+
+.widget-deck-panel {
+    flex-direction: column;
+    width: auto;
+    padding: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-deck-panel, .widget-deck-panel * {
+    font-size: var(--lgs-font-size) !important;
+}
+
+.widget-deck-panel section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-deck-entry {
+    display: flex;
+    align-items: center;
+    /*border-bottom: 1 px solid var(--lgs-light-color-25);*/
+    background: transparent !important;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-deck-entry.small {
+    height: calc(2 * var(--lgs-font-size)) !important;
+}
+
+.widget-deck-entry:not(.widget-deck-title):hover {
+    cursor: pointer;
+    border-color: var(--lgs-card-on-map-hover-border-color);
+    background: var(--lgs-card-on-map-hover-bg-color);
+}
+
+.widget-deck-title {
+    width: 100%;
+    padding: 0 var(--lgs-gutter-xs);
+}
+
+.widget-deck-entry sl-icon {
+    width: calc(var(--lgs-font-size-s) + 6px);
+    height: calc(var(--lgs-font-size-s) + 6px);
+}
+
+.widget-menu-disabled {
+    cursor: not-allowed !important;
+    color: var(--lgs-card-on-map-disabled-color) !important;
+    border-color: var(--lgs-card-on-map-disabled-border-color) !important;
+    background: transparent !important;
 }

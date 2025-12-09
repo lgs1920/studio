@@ -7,249 +7,280 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-28
- * Last modified: 2025-06-28
+ * Created on: 2025-11-19
+ * Last modified: 2025-11-19
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { MapLayer } from '@Components/cesium/MapLayer'
-import { Viewer }   from '@Components/cesium/Viewer'
-
+/**
+ * Main application component for LGS1920 Studio
+ * Initializes the application context, managers, layers, and camera settings
+ * Renders the map, UI components, and PWA installation button
+ * @returns {JSX.Element} The LGS1920 component
+ */
+import { MapLayer }            from '@Components/cesium/MapLayer'
+import { Viewer }              from '@Components/cesium/Viewer'
 import { InitErrorMessage }        from '@Components/InitErrorMessage'
 import { MainUI }                  from '@Components/MainUI/MainUI.jsx'
 import '@shoelace-style/shoelace/dist/themes/light.css'
+import ResponsiveDevice        from '@Components/MainUI/ResponsiveDevice'
 import { SelectionIndicator }      from '@Components/MainUI/SelectionIndicator'
+import { ToolsUI } from '@Components/MainUI/ToolsUI'
 import { WelcomeModal }            from '@Components/MainUI/WelcomeModal'
+import { AppUpdate }           from '@Components/AppUpdate'
 import {
-    APP_EVENT, BASE_ENTITY, BOTTOM, CURRENT_JOURNEY, FOCUS_LAST, FOCUS_STARTER, MOBILE_MAX, OVERLAY_ENTITY,
-    POI_STARTER_TYPE,
-}                                  from '@Core/constants'
-import { LGS1920Context }          from '@Core/LGS1920Context'
-import { MapTarget }               from '@Core/MapTarget'
+    APP_EVENT, BASE_ENTITY, BOTTOM, CURRENT_JOURNEY, FOCUS_LAST, FOCUS_STARTER,
+    MOBILE_MAX, OVERLAY_ENTITY, POI_STARTER_TYPE,
+}                              from '@Core/constants'
+import { LGS1920Context }      from '@Core/LGS1920Context'
+import { MapTarget }           from '@Core/MapTarget'
 import { LayersAndTerrainManager } from '@Core/ui/LayerAndTerrainManager'
-import { TerrainUtils }            from '@Utils/cesium/TerrainUtils'
-import { TrackUtils }              from '@Utils/cesium/TrackUtils'
-import { UIToast }                 from '@Utils/UIToast'
-import { useEffect }               from 'react'
-import { useMediaQuery }           from 'react-responsive'
+import { TerrainUtils }        from '@Utils/cesium/TerrainUtils'
+import { TrackUtils }          from '@Utils/cesium/TrackUtils'
+import { UIToast }             from '@Utils/UIToast'
+import { useEffect, useState } from 'react'
 
-/***************************************
- * Init Application context
- */
-window.lgs = new LGS1920Context()
+export const LGS1920 = () => {
+    // State to track initialization status and errors
+    const [initStatus, setInitStatus] = useState(null)
+    const [initError, setInitError] = useState(null)
 
-// Application initialisation
-const initApp = await __.app.init()
-
-// If Init is OK, we have some additional tasks to do.
-
-if (initApp.status) {
-    // Set DefaultTheme
-    __.app.setTheme()
-
-    // Init UI managers
-    await lgs.initManagers()
-
-    // Init Layer
-    __.layersAndTerrainManager = new LayersAndTerrainManager()
-
-    // Read last camera position
-    //  lgs.cameraStore = await __.ui.cameraManager.readCameraInformation()
-}
-
-
-export function LGS1920() {
-    const $pois = lgs.stores.main.components.pois
-    const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
-
-    if (isMobile) {
-        document.body.classList.add('mobile')
-        //  lgs.editorSettingsProxy.menu.drawer = BOTTOM
-    }
-    else {
-        document.body.classList.remove('mobile')
+    /**
+     * Initializes the global LGS1920 context
+     * @returns {LGS1920Context} The initialized context
+     */
+    const initializeContext = () => {
+        window.lgs = new LGS1920Context()
+        return window.lgs
     }
 
-    const isPortrait = useMediaQuery({orientation: 'portrait'})
-    if (isPortrait) {
-        document.body.classList.add('portrait')
+    /**
+     * Initializes the application and sets the theme
+     * @returns {Promise<{status: boolean, error?: Error}>} The initialization result
+     */
+    const initializeApp = async () => {
+        try {
+            const initResult = await __.app.init()
+            if (initResult.status) {
+                __.app.setTheme()
+            }
+            return initResult
+        }
+        catch (error) {
+            return {status: false, error}
+        }
     }
-    else {
-        document.body.classList.remove('portrait')
+
+    /**
+     * Initializes UI managers and layers
+     * @param {LGS1920Context} lgs - The application context
+     * @returns {Promise<void>}
+     */
+    const initializeManagersAndLayers = async lgs => {
+        await lgs.initManagers()
+        __.layersAndTerrainManager = new LayersAndTerrainManager()
     }
+
+    /**
+     * Initializes terrain, journeys, and POIs
+     * @param {LGS1920Context} lgs - The application context
+     * @returns {Promise<void>}
+     */
+    const initializeData = async lgs => {
+        await TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
+        await TrackUtils.readAllFromDB()
+        await __.ui.poiManager.initialize()
+        await __.ui.poiManager.readAllFromDB()
+    }
+
+    /**
+     * Sets up the starter POI if not present
+     * @param {LGS1920Context} lgs - The application context
+     * @returns {Promise<Object>} The starter POI
+     */
+    const setupStarterPOI = async lgs => {
+        let starter = __.ui.poiManager.starter
+        if (!starter) {
+            starter = await __.ui.poiManager.add({
+                                                     longitude:   lgs.settings.starter.longitude,
+                                                     latitude:    lgs.settings.starter.latitude,
+                                                     height:      lgs.settings.starter.height,
+                                                     title:       lgs.settings.starter.title,
+                                                     description: lgs.settings.starter.description,
+                                                     color:       lgs.settings.starter.color,
+                                                     bgColor:     lgs.settings.starter.bgColor,
+                                                     type:        POI_STARTER_TYPE,
+                                                 }, false, true)
+        }
+        lgs.stores.main.components.pois.current = starter.id
+        return starter
+    }
+
+    /**
+     * Configures the camera based on settings and focus mode
+     * @param {LGS1920Context} lgs - The application context
+     * @param {Object} starter - The starter POI
+     * @returns {Promise<{focusTarget: Object, cameraStore: Object}>} The focus target and camera settings
+     */
+    const configureCamera = async (lgs, starter) => {
+        let focusTarget = null
+        let cameraStore = null
+
+        if (!lgs.theJourney) {
+            __.ui.cameraManager.reset()
+        }
+
+        if (__.ui.cameraManager.isAppFocusOn(FOCUS_STARTER)) {
+            focusTarget = starter
+            cameraStore = {
+                target:   {
+                    longitude: starter.longitude,
+                    latitude:  starter.latitude,
+                    height:    starter.height,
+                },
+                position: {
+                    longitude: undefined,
+                    latitude:  undefined,
+                    height:    undefined,
+                    heading:   lgs.settings.camera.heading,
+                    pitch:     lgs.settings.camera.pitch,
+                    roll:      lgs.settings.camera.roll,
+                    range:     lgs.settings.camera.range,
+                },
+            }
+        }
+        else if (__.ui.cameraManager.isAppFocusOn(FOCUS_LAST)) {
+            cameraStore = await __.ui.cameraManager.readCameraInformation()
+        }
+        else {
+            if (__.ui.cameraManager.isJourneyFocusOn(FOCUS_LAST)) {
+                cameraStore = await __.ui.cameraManager.readCameraInformation()
+            }
+            else {
+                focusTarget = lgs.theJourney
+                cameraStore = lgs.theJourney.camera
+                cameraStore.target = new MapTarget(CURRENT_JOURNEY, await __.ui.sceneManager.getJourneyCentroid(lgs.theJourney))
+            }
+        }
+
+        return {focusTarget, cameraStore}
+    }
+
+    /**
+     * Sets the camera focus and dispatches initialization event
+     * @param {LGS1920Context} lgs - The application context
+     * @param {Object} starter - The starter POI
+     * @param {Object} focusTarget - The focus target
+     * @param {Object} cameraStore - The camera settings
+     */
+    const setCameraFocus = (lgs, starter, focusTarget, cameraStore) => {
+        __.ui.sceneManager.focus(cameraStore.target, {
+            target:   focusTarget,
+            heading:  cameraStore.position.heading,
+            pitch:    __.ui.sceneManager.noRelief() ? -90 : cameraStore.position.pitch,
+            roll:     cameraStore.position.roll,
+            range:    cameraStore.position.range,
+            infinite: true,
+            rotate:   lgs.settings.ui.camera.start.rotate.app,
+            lookAt:   true,
+            rpm:      lgs.settings.starter.camera.rpm,
+            callback: point => {
+                const initEvent = new CustomEvent(APP_EVENT.INITIAL_FOCUS, {
+                    detail: {
+                        point,
+                        timestamp: Date.now(),
+                    },
+                })
+                window.dispatchEvent(initEvent)
+            },
+        })
+        starter.animated = lgs.settings.ui.camera.start.rotate.app
+    }
+
+    /**
+     * Initializes the application on component mount
+     */
     useEffect(() => {
-                  try {
-                      // If initialisation phase was OK, we have somme additional tasks to do.
-                      if (initApp.status) {
+        /**
+         * Main initialization function
+         */
+        const initialize = async () => {
+            try {
+                // Initialize context
+                const lgs = initializeContext()
 
-                          // Detect drawer over
-                          __.ui.drawerManager.attachEvents()
+                // Initialize app
+                const initResult = await initializeApp()
+                setInitStatus(initResult.status)
+                setInitError(initResult.error)
 
-                          // Set body class to manage css versus platform
-                          document.body.classList.add(lgs.platform);
+                if (!initResult.status) {
+                    UIToast.error({
+                                      caption: 'LGS1920 was stopped due to initialization errors!',
+                                      text:    'We\'re sorry',
+                                  })
+                    return
+                }
 
-                          (async () => {
+                // Initialize managers and layers
+                await initializeManagersAndLayers(lgs)
 
-                              // Set the right terrain
-                              await TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
+                // Attach drawer events
+                __.ui.drawerManager.attachEvents()
 
-                              // Read DB for journeys
-                              await TrackUtils.readAllFromDB()
+                // Set body class for platform-specific CSS
+                document.body.classList.add(lgs.platform)
 
-                              // Read DB for POIs
-                              const initPOIManager = async () => {
-                                  await __.ui.poiManager.initialize()
-                              }
-                              initPOIManager()
-                              await __.ui.poiManager.readAllFromDB()
+                // Initialize data (terrain, journeys, POIs)
+                await initializeData(lgs)
 
-                              let starter = __.ui.poiManager.starter
+                // Set up starter POI
+                const starter = await setupStarterPOI(lgs)
 
-                              let focusTarget = null
+                // Configure camera
+                const {focusTarget, cameraStore} = await configureCamera(lgs, starter)
 
-                              if (!starter) {
-                                  starter = await __.ui.poiManager.add({
-                                                                           longitude:   lgs.settings.starter.longitude,
-                                                                           latitude:    lgs.settings.starter.latitude,
-                                                                           height:      lgs.settings.starter.height,
-                                                                           title:       lgs.settings.starter.title,
-                                                                           description: lgs.settings.starter.description,
-                                                                           color:       lgs.settings.starter.color,
-                                                                           bgColor:     lgs.settings.starter.bgColor,
-                                                                           type:        POI_STARTER_TYPE,
-                                                                       }, false, true)
+                // Set camera focus
+                setCameraFocus(lgs, starter, focusTarget, cameraStore)
 
-                              }
+                // Mark UI as initialized
+                __.app.uiInit = true
 
-                              $pois.current = starter.id
-
-                              // According to the settings and saved information, we set the camera data
-
-                              // Use app settings
-                              if (!lgs.theJourney) {
-                                  __.ui.cameraManager.reset()
-                              }
-
-                              if (__.ui.cameraManager.isAppFocusOn(FOCUS_STARTER)) {
-                                  focusTarget = starter
-                                  lgs.cameraStore = {
-                                      target: {
-                                          longitude: starter.longitude,
-                                          latitude:  starter.latitude,
-                                          height:    starter.height,
-                                      },
-
-                                      position: {
-                                          longitude: undefined,
-                                          latitude:  undefined,
-                                          height:    undefined,
-                                          heading:   lgs.settings.camera.heading,
-                                          pitch:     lgs.settings.camera.pitch,
-                                          roll:      lgs.settings.camera.roll,
-                                          range:     lgs.settings.camera.range,
-                                      },
-                                  }
-                              }
-                              else if (__.ui.cameraManager.isAppFocusOn(FOCUS_LAST)) {
-                                  // Last Camera Position
-                                  lgs.cameraStore = await __.ui.cameraManager.readCameraInformation()
-                              }
-                              else {
-                                  // App settings is last journey so what kind of focus ?
-                                  if (__.ui.cameraManager.isJourneyFocusOn(FOCUS_LAST)) {
-                                      //  Last Camera Position. On start, it is the same, whatever the journey
-                                      lgs.cameraStore = await __.ui.cameraManager.readCameraInformation()
-                                  }
-                                  else {
-                                      // Centroid
-                                      focusTarget = lgs.theJourney
-                                      lgs.cameraStore = lgs.theJourney.camera
-                                      lgs.cameraStore.target = new MapTarget(CURRENT_JOURNEY, await __.ui.sceneManager.getJourneyCentroid(lgs.theJourney))
-                                  }
-                              }
-
-                              // Do Focus
-                              __.ui.sceneManager.focus(lgs.cameraStore.target, {
-                                  target: focusTarget,
-                                  heading:  lgs.cameraStore.position.heading,
-                                  pitch:    __.ui.sceneManager.noRelief() ? -90 : lgs.cameraStore.position.pitch,
-                                  roll:     lgs.cameraStore.position.roll,
-                                  range:    lgs.cameraStore.position.range,
-                                  infinite: true,
-                                  rotate:   lgs.settings.ui.camera.start.rotate.app,
-                                  lookAt:   true,
-                                  rpm:      lgs.settings.starter.camera.rpm,
-                                  callback: (point) => {
-                                      const initEvent = new CustomEvent(APP_EVENT.INITIAL_FOCUS, {
-                                          detail: {
-                                              point:     point,
-                                              timestamp: Date.now(),
-                                          },
-                                      })
-                                      window.dispatchEvent(initEvent)
-                                  },
+                // log starting information
+                console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
+                console.log(`Connected to backend ${lgs.versions.backend}.`)
+            }
+            catch (error) {
+                UIToast.error({
+                                  caption: 'LGS1920 was stopped due to errors!',
+                                  text: 'We\'re sorry' + '\n' + error.message + '\n' + error.stack,
                               })
+                setInitStatus(false)
+                setInitError(error)
+            }
+        }
 
-                              // set animated state
-                              starter.animated = lgs.settings.ui.camera.start.rotate.app
+        initialize()
+    }, [])
 
-                              // log starting information
-                              console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
-                              console.log(`Connected to backend ${lgs.versions.backend}.`)
-
-                              // UI init
-                              __.app.uiInit = true
-                          })()
-
-
-                      }
-                      else {
-                          // Init was wrong, let'stop here
-                          UIToast.error({
-                                            caption: `LGS1920 was stopped due to init errors!`,
-                                            text:    `We're sorry`,
-                                        })
-                          console.log('LGS1920 was stopped due to init errors!')
-                          console.error(initApp)
-                      }
-                  }
-                  catch
-                      (error) {
-                      UIToast.error({
-                                        caption: `LGS1920 was stopped due to errors!`,
-                                        text:    `We're sorry`,
-                                    })
-                      console.log('LGS1920 was stopped due to errors!')
-                      console.error(error)
-                  }
-              }
-
-        ,
-              [],
-    )
     return (
         <>
-
-
-            {
-                !initApp.status && <InitErrorMessage message={initApp.error.message}/>
-            }
-            {
-                initApp.status &&
+            {!initStatus && initError && <InitErrorMessage message={initError.message}/>}
+            {initStatus && (
                 <>
+                    <ResponsiveDevice/>
+                    <AppUpdate/>
                     <WelcomeModal/>
                     <MapLayer type={BASE_ENTITY}/>
                     <MapLayer type={OVERLAY_ENTITY}/>
-
                     <Viewer/>
-
                     <MainUI/>
                     <SelectionIndicator/>
+                    <ToolsUI/>
                 </>
-
-            }
+            )}
         </>
     )
 }

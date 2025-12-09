@@ -7,29 +7,28 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-04
- * Last modified: 2025-07-04
+ * Created on: 2025-12-06
+ * Last modified: 2025-12-06
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { JourneyLoaderButton }           from '@Components/FileLoader/JourneyLoaderButton'
-import { JOURNEY_EDITOR_DRAWER }         from '@Core/constants'
-import { SlDivider, SlDrawer, SlSwitch } from '@shoelace-style/shoelace/dist/react'
+import { JourneyLoaderButton }   from '@Components/FileLoader/JourneyLoaderButton'
+import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
+import { SlDrawer, SlSwitch }    from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { useSnapshot }                   from 'valtio'
-import { JourneySelector }               from './journey/JourneySelector'
-import { JourneySettings }               from './journey/JourneySettings'
-import { TrackSelector }                 from './track/TrackSelector'
-import { TrackSettings }                 from './track/TrackSettings'
-import { Utils }                         from './Utils'
-import { memo, useCallback, useMemo }    from 'react'
+import { memo, useCallback }     from 'react'
+import { useSnapshot }           from 'valtio'
+import { JourneySelector }       from './journey/JourneySelector'
+import { JourneySettings }       from './journey/JourneySettings'
+import { TrackSettings }         from './track/TrackSettings'
+import { Utils }                 from './Utils'
 
 // Memoized sub-component for the toolbar header
 const ToolbarHeader = memo(({show, usage, onToggle}) => {
     if (!usage) {
-        return null;
+        return null
     }
     return (
         <div slot="header-actions">
@@ -42,8 +41,8 @@ const ToolbarHeader = memo(({show, usage, onToggle}) => {
                 Toolbar
             </SlSwitch>
         </div>
-    );
-});
+    )
+})
 
 // Memoized sub-component for journey content
 const JourneyContent = memo(({journeyVisible}) => (
@@ -100,29 +99,33 @@ export const TracksEditor = memo(() => {
 
     // Early return for no journey data
     if (!canViewJourneyData) {
-        return <div className="drawer-wrapper"/>
+        return null
     }
 
     return (
-        <div className="drawer-wrapper">
-            <SlDrawer
-                id={JOURNEY_EDITOR_DRAWER}
-                open={drawerOpen === JOURNEY_EDITOR_DRAWER}
-                onSlRequestClose={handleRequestClose}
-                onSlAfterHide={closeTracksEditor}
-                contained
-                className="lgs-theme"
-                placement={drawerPlacement}
-            >
-                <span slot="label">{'Edit the Journey'}</span>
-                <ToolbarHeader
-                    show={toolbarShow}
-                    usage={toolbarUsage}
-                    onToggle={toggleToolbar}
-                />
-                {hasJourneys && <JourneyContent journeyVisible={journeyVisible}/>}
-                <div id="journey-editor-footer" slot="footer"/>
-            </SlDrawer>
-        </div>
-    );
-});
+        <>
+            {drawerOpen === JOURNEY_EDITOR_DRAWER &&
+                <div className="drawer-wrapper">
+                    <SlDrawer
+                        id={JOURNEY_EDITOR_DRAWER}
+                        open={true}
+                        onSlRequestClose={handleRequestClose}
+                        onSlAfterHide={closeTracksEditor}
+                        contained
+                        className="lgs-theme"
+                        placement={drawerPlacement}
+                    >
+                        <span slot="label">{'Edit the Journey'}</span>
+                        <ToolbarHeader
+                            show={toolbarShow}
+                            usage={toolbarUsage}
+                            onToggle={toggleToolbar}
+                        />
+                        {hasJourneys && <JourneyContent journeyVisible={journeyVisible}/>}
+                        <div id="journey-editor-footer" slot="footer"/>
+                    </SlDrawer>
+                </div>
+            }
+        </>
+    )
+})

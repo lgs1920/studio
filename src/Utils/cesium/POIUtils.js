@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-20
- * Last modified: 2025-06-20
+ * Created on: 2025-12-04
+ * Last modified: 2025-12-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -132,7 +132,7 @@ export class POIUtils {
 
         // Update visibility state
         entity.show = poi.visible
-        lgs.viewer.scene.requestRender()
+        lgs.viewer.scene.render()
         return true
     }
 
@@ -238,7 +238,7 @@ export class POIUtils {
             container.add({...options, billboard: new BillboardGraphics(billboard)})
         }
 
-        lgs.viewer.scene.requestRender()
+        lgs.viewer.scene.render()
         return entity || container.getById(poi.id)
     }
 

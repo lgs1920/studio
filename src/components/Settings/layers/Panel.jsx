@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-01
- * Last modified: 2025-07-01
+ * Created on: 2025-12-06
+ * Last modified: 2025-12-06
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,7 +27,8 @@ import { LayersAndTerrains }      from './LayersAndTerrains'
 
 export const Panel = () => {
     const drawers = useSnapshot(lgs.stores.ui.drawers)
-    const openInfoModal = () => lgs.editorSettingsProxy.layer.infoDialog = true
+    const placement = useSnapshot(lgs.stores.editorSettings.menu).drawer
+    const openInfoModal = () => lgs.stores.editor.layer.infoDialog = true
 
     const closePanel = (event) => {
         if (window.isOK(event)) {
@@ -40,11 +41,12 @@ export const Panel = () => {
 
     return (
         <>
+            {drawers.open === LAYERS_DRAWER &&
             <div className={'drawer-wrapper'}>
                 <SlDrawer id={LAYERS_DRAWER}
-                          open={drawers.open === LAYERS_DRAWER}
+                          open={true}
                           onSlRequestClose={closePanel}
-                          placement={useSnapshot(lgs.editorSettingsProxy.menu).drawer}
+                          placement={placement}
                           contained
                           className={'lgs-theme'}>
                     <div slot={'label'}>{'Layers and Terrains'}</div>
@@ -53,10 +55,9 @@ export const Panel = () => {
                     <LayersAndTerrains/>
                     <DrawerFooter/>
                     <InfoLayerModal/>
-
                 </SlDrawer>
-
             </div>
+            }
         </>
 
     )

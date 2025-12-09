@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: CompassFull.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-11-25
+ * Last modified: 2025-11-25
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 export const CompassFull = ({width = '100%', height = '100%', ref}) => {
 
     return (
@@ -38,11 +54,14 @@ export const CompassFull = ({width = '100%', height = '100%', ref}) => {
 					c25.401,7.938,45.564,28.101,53.581,53.581v0.079c2.461,7.7,3.731,15.876,3.731,24.37
 					C337.682,301.087,301.008,337.762,256,337.762z"/>
                     </g>
-                    <g className="lgs-compass-needle" ref={ref} style={{rotate: '-45deg', scale: 0.8}}>
-                        <path id="north" d="M296.327,296.354l-80.703-80.703l174.962-101.759c9.854-5.731,13.225-2.36,7.494,7.494
+                    <g style={{transform: 'rotate(-45deg)', transformOrigin: 'center'}}>
+                        <g className="lgs-compass-needle" ref={ref}
+                           style={{transform: 'scale(1.2)', transformOrigin: 'center'}}>
+                            <path className="lgs-compass-needle-north" d="M296.327,296.354l-80.703-80.703l174.962-101.759c9.854-5.731,13.225-2.36,7.494,7.494
 					L296.327,296.354z"/>
-                        <path id="south" d="M296.327,296.354L121.36,398.108c-9.854,5.731-13.225,2.36-7.494-7.494l101.759-174.962
+                            <path className="lgs-compass-needle-south" d="M296.327,296.354L121.36,398.108c-9.854,5.731-13.225,2.36-7.494-7.494l101.759-174.962
 					L296.327,296.354z"/>
+                        </g>
                     </g>
                     <circle className="lgs-compass-center" cx="255.973" cy="256" r="22.8"/>
                 </g>

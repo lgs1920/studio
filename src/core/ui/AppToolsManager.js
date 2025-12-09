@@ -7,12 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-27
- * Last modified: 2025-06-27
+ * Created on: 2025-11-28
+ * Last modified: 2025-11-28
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
+import { encodeSync } from 'png-chunk-itxt'
+import encode         from 'png-chunks-encode'
+import extract        from 'png-chunks-extract'
 
 export class AppToolsManager {
 
@@ -99,13 +102,6 @@ export class AppToolsManager {
         })
     }
 
-    rem2px = (remString, stringify = false) => {
-        const root = document.documentElement
-        const baseFontSize = parseFloat(getComputedStyle(root).fontSize)
-        const remValue = parseFloat(remString)
-        const pixelValue = remValue * baseFontSize
-        return stringify ? `${pixelValue}px` : pixelValue
-    }
 
     toDMS(coordinate) {
         const degrees = Math.floor(coordinate)
@@ -134,6 +130,62 @@ export class AppToolsManager {
                 func.apply(this, args)
             }, wait)
         }
+    }
+
+    base64ToBlob = (base64) => {
+        const parts = base64.split(',')
+        const mime = parts[0].match(/:(.*?);/)[1]
+        const bstr = atob(parts[1])
+        let n = bstr.length
+        const u8arr = new Uint8Array(n)
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n)
+        }
+        return new Blob([u8arr], {type: mime})
+    }
+
+
+    /**
+     * Inject UTF-8 metadata into a PNG blob using iTXt chunks
+     * @param {Blob} blob - original PNG blob
+     * @param {Object} data - key/value metadata
+     * @param {string} type - MIME type
+     * @returns {Promise<Blob>} - new PNG blob with UTF-8 metadata
+     */
+    addChunksToPng = async (blob, data, type = 'image/png') => {
+        const addChunksToPng = async (blob, data, type = 'image/png') => {
+            const buffer = await blob.arrayBuffer()
+            const uint8 = new Uint8Array(buffer)
+
+            // Decode existing PNG chunks
+            const chunks = extract(uint8)
+
+            // Insert iTXt chunks before IEND
+            Object.entries(data).forEach(([key, value]) => {
+                chunks.splice(-1, 0, encodeSync(key, value, 'utf-8', false, ''))
+            })
+
+            // Re-encode PNG → Uint8Array
+            const newPng = encode(chunks)
+
+            // Return as a Blob
+            return new Blob([newPng], {type})
+        }
+    }
+
+    /**
+     * Read and list all chunks from a PNG Blob
+     * @param {Blob} blob - PNG blob
+     * @returns {Promise<Array>} - array of chunks { name, data }
+     */
+
+    readPngChunks = async (blob) => {
+        // Convert Blob → ArrayBuffer → Uint8Array
+        const buffer = await blob.arrayBuffer()
+        const uint8 = new Uint8Array(buffer)
+
+        // Decode PNG chunks
+        return extract(uint8)
     }
 
 }

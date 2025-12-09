@@ -7,8 +7,8 @@
   ~ Author : LGS1920 Team
   ~ email: contact@lgs1920.fr
   ~
-  ~ Created on: 2025-05-22
-  ~ Last modified: 2025-05-21
+  ~ Created on: 2025-11-09
+  ~ Last modified: 2025-11-09
   ~
   ~
   ~ Copyright © 2025 LGS1920
@@ -18,13 +18,41 @@
 <html class="sl-theme-light" lang="en">
 <head>
     <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
-    <title>Studio LGS1920 : Replay Your Adventures</title>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+          name="viewport">
+
+    <!-- Theme color for Android and browsers -->
+    <meta content="#000000" name="theme-color"/>
+
+    <!-- PWA Manifest -->
+    <link href="/manifest.webmanifest" rel="manifest" type="application/manifest+json">
+
+    <!-- iOS PWA -->
+
+    <meta content="yes" name="mobile-web-app-capable">
+    <meta content="black" name="apple-mobile-web-app-status-bar-style">
+    <meta content="LGS Studio" name="apple-mobile-web-app-title">
+    <link href="/assets/icons/app-icons/ios/180.png" rel="apple-touch-icon" sizes="180x180">
+    <link href="/assets/icons/app-icons/ios/167.png" rel="apple-touch-icon" sizes="167x167">
+    <link href="/assets/icons/app-icons/ios/152.png" rel="apple-touch-icon" sizes="152x152">
+    <link href="/assets/icons/app-icons/ios/120.png" rel="apple-touch-icon" sizes="120x120">
+
+
+    <!-- Android and browser icons -->
+    <link href="/assets/images/app-icons/android/android-launchericon-192-192.png" rel="icon" sizes="192x192">
+    <link href="/assets/images/app-icons/android/android-launchericon-512-512.png" rel="icon" sizes="512x512">
+
+    <!-- Windows PWA -->
+    <meta content="/assets/images/app-icons/windows/144.png" name="msapplication-TileImage">
+    <meta content="#000000" name="msapplication-TileColor">
+
+    <!-- Favicon for browsers -->
     <link href="/assets/images/favicon.png" rel="icon"/>
 
+    <!-- Page title -->
+    <title>Studio LGS1920: Replay The World Outdoors !</title>
 </head>
 <body>
-
 <div id="cesium-viewer"></div>
 <div id="lgs1920-container"></div>
 

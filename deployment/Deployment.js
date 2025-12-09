@@ -7,34 +7,50 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-07
- * Last modified: 2025-07-07
+ * Created on: 2025-10-11
+ * Last modified: 2025-10-11
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-// Import required Node.js modules for process execution, file system operations, and Git interactions
-import { exec, execSync } from 'child_process'
-import path               from 'path'
-import { Client as SCP }  from 'scp2'
-import { simpleGit }      from 'simple-git'
-import { Client as SSH2 } from 'ssh2'
-import { zip }            from 'zip-a-folder'
+// Import required Node.js modules for process execution, file system operations, and Git/SSH interactions
+import { exec, execSync, spawn } from 'child_process'
+import path                      from 'path'
+import { simpleGit }             from 'simple-git'
+import { Client as SSH2 }        from 'ssh2'
+import { zip }                   from 'zip-a-folder'
 
 const fs = require('fs')
 const yaml = require('yaml')
 
+const STUDIO_APP_NAME = 'LGS1920 Studio Development'
+
 /**
- * Class to manage the deployment of applications to different platforms such as production, staging, and test.
- * Handles building, zipping, copying, and deploying the application, along with Git tag management.
+ * Manages the deployment of applications to various platforms (production, staging, test).
+ * Handles building, zipping, copying, deploying, and Git tag management.
+ *
+ * @class
  */
 export class Deployment {
     // Define supported platforms and products
+    /**
+     * Supported platforms for deployment.
+     * @type {Object<string, string>}
+     */
     platforms = {production: 'production', staging: 'staging', test: 'test'}
+
+    /**
+     * Supported products for deployment.
+     * @type {Object<string, string>}
+     */
     products = {studio: 'studio', backend: 'backend'}
 
     // ANSI color codes for console output formatting
+    /**
+     * ANSI color codes for console output formatting.
+     * @type {string}
+     */
     red = '\x1b[31m'
     green = '\x1b[32m'
     yellow = '\x1b[33m'
@@ -42,10 +58,11 @@ export class Deployment {
 
     /**
      * Creates a new Deployment instance and initiates the configuration process.
+     *
      * @param {Object} params - Deployment parameters.
      * @param {string} params.product - The product to deploy ('studio' or 'backend').
      * @param {string} params.platform - The target platform ('production', 'staging', or 'test').
-     * @param {string} params.local - The local base path for the deployment files.
+     * @param {string} params.local - The local base path for deployment files.
      */
     constructor(params) {
         this.product = params.product
@@ -55,8 +72,10 @@ export class Deployment {
     }
 
     /**
-     * Configures the deployment by loading settings from a YAML file and initializing Git and SSH configurations.
+     * Loads deployment settings from a YAML file and initializes Git and SSH configurations.
+     *
      * @returns {Promise<void>} Resolves when configuration is complete.
+     * @private
      */
     configure = async () => {
         // Parse deployment configuration from YAML file
@@ -68,7 +87,7 @@ export class Deployment {
         this.remoteReleasePath = `${this.remotePath}/${this.configuration.remote.releases}`
         this.deploymentDir = 'deployment'
 
-        // Set local and remote paths
+        // Set local and remote paths for the build
         this.dist = this.configuration.local.dist
         this.current = this.configuration.remote.current
         this.localDistPath = path.join(`${this.local}/${this.product}`, `./${this.dist}/${this.version}`)
@@ -78,7 +97,7 @@ export class Deployment {
         this.github_token = process.env[`LGS1920_GITHUB_TOKEN`]
         this.github_user = process.env[`LGS1920_GITHUB_USER`]
 
-        // Initialize Git with authentication
+        // Initialize Git with GitHub token authentication
         this.git = simpleGit({
                                  config: [
                                      `http.extraHeader=Authorization: ${this.github_token}`,
@@ -93,31 +112,32 @@ export class Deployment {
             password: this.password,
         }
 
-        // Load PM2 configuration for backend
+        // Load PM2 configuration for backend deployments
         this.pm2 = this.configuration.backend[this.platform].pm2
 
-        // Generate timestamp for tag naming
+        // Generate timestamp for tag naming (format: YYYYMMDDHHMMSS)
         this.date = new Date().toISOString()
             .replace(/[-:.]/g, '')
             .slice(0, 15)
 
-        // Get current Git branch
+        // Retrieve current Git branch
         this.branch = (await this.git.status()).current
     }
 
     /**
      * Retrieves the version of the product from a JSON file.
+     *
      * @returns {Promise<string>} The version string for the specified product.
+     * @throws {Error} If the version file is not found or invalid.
+     * @private
      */
     getVersion = async () => {
         switch (this.product) {
             case 'studio': {
-                // eslint-disable-next-line no-undef
                 const file = Bun.file('./public/version.json')
                 return (await file.json()).studio
             }
             case 'backend': {
-                // eslint-disable-next-line no-undef
                 const file = Bun.file('./version.json')
                 return (await file.json()).backend
             }
@@ -125,24 +145,46 @@ export class Deployment {
     }
 
     /**
-     * Creates a symbolic link on the remote server to maintain consistent app access across releases.
-     * @param {Object} connection - The SSH2 connection object.
+     * Saves the current branch information to a JSON file.
+     *
+     * @returns {Promise<void>} Resolves when the branch.json file is written.
+     * @private
+     */
+    saveBranchInfo = async () => {
+        const data = {
+            branch: this.branch,
+        }
+
+        // Write branch data to branch.json
+        await Bun.write(`${this.localDistPath}/branch.json`, JSON.stringify(data, null, 2))
+        console.log(`    > ${this.yellow}Branch info saved to branch.json${this.reset}`)
+    }
+
+    /**
+     * Creates a symbolic link on the remote server to point to the latest release.
+     *
+     * @param {SSH2} connection - The SSH2 connection object.
      * @returns {Promise<void>} Resolves when the symbolic link is created and the zip file is removed.
+     * @throws {Error} If the link creation or zip removal fails.
+     * @private
      */
     link = async (connection) => {
         return new Promise((resolve, reject) => {
-            console.log('--- Create Link...')
+            console.log('    > Creating symbolic link...')
             connection.exec(`ln -sfn ${this.remoteReleasePath}/${this.version} ${this.remotePath}/${this.current} && rm ${this.remoteReleasePath}/${this.version}.zip`, (err, stream) => {
                 if (err) {
-                    console.error(err)
+                    console.error(`${this.red}Link creation failed: ${err}${this.reset}`)
                     reject(err)
                     return
                 }
                 stream.on('close', () => {
-                    console.log(`\n    ${this.green}Deployment done.${this.reset}\n`)
+                    console.log('\n---')
+                    console.log(`    ${this.yellow}👍 ${this.green}Deployment completed successfully${this.reset}`)
+                    console.log('---')
+
                     resolve()
                 }).on('data', (data) => {
-                    // Handle stdout data (if needed)
+                    // Log stdout data if needed
                 }).stderr.on('data', (data) => {
                     console.error(`STDERR: ${data}`)
                 })
@@ -151,24 +193,29 @@ export class Deployment {
     }
 
     /**
-     * Unzips the release package on the remote server.
-     * @param {Object} connection - The SSH2 connection object.
+     * Unzips the release package on the remote server after removing the destination directory if it exists.
+     *
+     * @param {SSH2} connection - The SSH2 connection object.
      * @returns {Promise<void>} Resolves when the unzip operation is complete.
+     * @throws {Error} If the unzip operation or directory removal fails.
+     * @private
      */
     unzip = async (connection) => {
         console.log(`    > Unzipping release on ${this.platform}`)
         return new Promise((resolve, reject) => {
-            connection.exec(`unzip -o ${this.remoteReleasePath}/${this.version}.zip -d ${this.remoteReleasePath}/${this.version}`, (err, stream) => {
+            // Command to remove the destination directory if it exists and then unzip
+            const command = `rm -rf ${this.remoteReleasePath}/${this.version} && unzip -o ${this.remoteReleasePath}/${this.version}.zip -d ${this.remoteReleasePath}/${this.version}`
+            connection.exec(command, (err, stream) => {
                 if (err) {
-                    console.error(err)
+                    console.error(`${this.red}Unzip or directory removal failed: ${err}${this.reset}`)
                     reject(err)
                     return
                 }
                 stream.on('close', () => {
-                    console.log(`    > ${this.green}Unzip done.${this.reset}`)
+                    console.log(`    > ${this.green}Unzip completed successfully${this.reset}`)
                     resolve()
                 }).on('data', (data) => {
-                    // Handle stdout data (if needed)
+                    // Log stdout data if needed
                 }).stderr.on('data', (data) => {
                     console.error(`STDERR: ${data}`)
                 })
@@ -177,27 +224,31 @@ export class Deployment {
     }
 
     /**
-     * Handles post-deployment tasks, such as restarting the backend using PM2.
-     * @param {Object} connection - The SSH2 connection object.
+     * Performs post-deployment tasks, such as restarting the backend using PM2.
+     *
+     * @param {SSH2} connection - The SSH2 connection object.
      * @returns {Promise<void>} Resolves when post-deployment tasks are complete.
+     * @throws {Error} If the PM2 restart fails.
+     * @private
      */
     postDeployment = async (connection) => {
-        console.log('--- Post deployment')
+        console.log('\n--- Post deployment tasks')
         if (this.product !== this.products.backend) {
             return
         }
         return new Promise((resolve, reject) => {
+            // Restart backend using PM2 with platform-specific command
             connection.exec(this.configuration.backend[this.platform].pm2.command, (err, stream) => {
                 if (err) {
-                    console.error(err)
+                    console.error(`${this.red}PM2 restart failed: ${err}${this.reset}`)
                     reject(err)
                     return
                 }
                 stream.on('close', () => {
-                    console.log(`    > ${this.green}backend restarted.${this.reset}`)
+                    console.log(`    > ${this.green}Backend restarted successfully${this.reset}`)
                     resolve()
                 }).on('data', (data) => {
-                    // Handle stdout data (if needed)
+                    // Log stdout data if needed
                 }).stderr.on('data', (data) => {
                     console.error(`STDERR: ${data}`)
                 })
@@ -207,11 +258,15 @@ export class Deployment {
 
     /**
      * Builds the application based on the product type.
-     * @returns {Promise<void>} Resolves when the build is complete, rejects on build errors.
+     *
+     * @returns {Promise<void>} Resolves when the build is complete.
+     * @throws {Error} If the build process fails.
+     * @private
      */
     build = async () => {
-        // Remove existing version directory if it exists
-        execSync(`rm -rf ${this.localDistPath}`)
+        // Remove existing version directory and create a new one
+        execSync(`rm -rf ${this.localDistPath} && mkdir -p ${this.localDistPath}`)
+
         return new Promise((resolve, reject) => {
             console.log(`--- Building ${this.yellow}${this.product} (version: ${this.version} - branch ${this.branch}) ${this.reset} for ${this.platform} ...`)
             let buildCommand
@@ -228,11 +283,11 @@ export class Deployment {
             }
             exec(buildCommand, (error) => {
                 if (error) {
-                    console.error(error)
+                    console.error(`${this.red}Build error: ${error.message}${this.reset}`)
                     reject(`${this.red}Build error: ${error.message}${this.reset}`)
                     return
                 }
-                console.log(`    > ${this.green}Build completed on ${this.localDistPath}.${this.reset}`)
+                console.log(`    > ${this.green}Build completed on ${this.localDistPath}${this.reset}`)
                 console.log('')
                 resolve()
             })
@@ -241,18 +296,21 @@ export class Deployment {
 
     /**
      * Compresses the built application into a zip file.
-     * @returns {Promise<void>} Resolves when the zip operation is complete, rejects on zip errors.
+     *
+     * @returns {Promise<void>} Resolves when the zip operation is complete.
+     * @throws {Error} If the zip operation fails.
+     * @private
      */
     zip = async () => {
         return new Promise(async (resolve, reject) => {
             console.log(`    > Zipping version`)
             try {
                 await zip(this.localDistPath, `${this.localDistPath}.zip`)
-                console.log(`    > ${this.green}Version zipped${this.reset}`)
+                console.log(`    > ${this.green}Version zipped successfully${this.reset}`)
                 resolve()
             }
             catch (error) {
-                console.error(error)
+                console.error(`${this.red}Zip failed: ${error.message}${this.reset}`)
                 reject(`Zip failed: ${error.message}`)
             }
         })
@@ -260,29 +318,52 @@ export class Deployment {
 
     /**
      * Copies the zipped application to the remote server using SCP.
-     * @returns {Promise<void>} Resolves when the file is copied, rejects on copy errors.
+     *
+     * @returns {Promise<void>} Resolves when the file is copied.
+     * @throws {Error} If the copy operation fails.
+     * @private
      */
     copy = async () => {
         return new Promise((resolve, reject) => {
-            const scp = new SCP(this.sshConfig)
-            scp.upload(`${this.localDistPath}.zip`, this.remoteReleasePath, (err) => {
-                if (err) {
-                    console.error(err)
-                    reject(`Error during file copy: ${err}`)
-                    return
+            const localFile = `${this.localDistPath}.zip`
+            const remoteTarget = `${this.sshConfig.username}@${this.sshConfig.host}:${this.remoteReleasePath}`
+            const password = this.sshConfig.password
+
+            console.log('    > Copying file...')
+
+            const args = [
+                '-p', password,
+                'scp',
+                '-o', 'StrictHostKeyChecking=no',
+                localFile,
+                remoteTarget,
+            ]
+
+            const scp = spawn('sshpass', args)
+
+            scp.stdout.on('data', data => process.stdout.write(data))
+            scp.stderr.on('data', data => process.stderr.write(data))
+
+            scp.on('close', code => {
+                if (code === 0) {
+                    console.log(`    > ${this.green}File copied successfully${this.reset}`)
+                    resolve()
                 }
-                console.log(`    > File copied ${this.green}successfully${this.reset}`)
-                scp.close()
-                resolve()
+                else {
+                    console.error(`${this.red}SCP failed with code ${code}${this.reset}`)
+                    reject(`Error during file copy: scp exited with code ${code}`)
+                }
             })
         })
     }
 
     /**
      * Retrieves the specified Git remote.
+     *
      * @param {string} [target='origin'] - The name of the remote to retrieve.
      * @returns {Promise<Object>} The remote object if found.
      * @throws {Error} If the remote cannot be retrieved.
+     * @private
      */
     remote = async (target = 'origin') => {
         try {
@@ -290,42 +371,47 @@ export class Deployment {
             return remotes.find(remote => remote.name === target)
         }
         catch (error) {
-            console.error('Error, cannot find remotes:', error)
+            console.error(`${this.red}Error retrieving remotes: ${error}${this.reset}`)
             process.exit(1)
         }
     }
 
     /**
-     * Creates a Git tag locally for the deployment.
-     * Tag format: <platform>-<version>-<branch>-<date>
-     * Commit message: 'Branch <branch> deployed on <tagName>!'
+     * Creates a Git tag for the deployment in the format: <platform>-<version>-<branch>-<date>.
+     *
      * @returns {Promise<void>} Resolves when the tag is created.
+     * @private
      */
     gitTag = async () => {
         this.tagName = `${this.platform}-${this.version}-${this.branch}-${this.date}`
         const message = `Branch ${this.branch} deployed on ${this.tagName}!`
-        console.log(`    > git commit tag : ${this.tagName}`)
+        console.log(`    > Creating Git tag: ${this.tagName}`)
         await this.git.commit(message)
         await this.git.addTag(this.tagName)
+        console.log(`    > ${this.green}Git tag created successfully${this.reset}`)
     }
 
     /**
      * Pushes the Git tag and branch to the remote repository.
+     *
      * @returns {Promise<void>} Resolves when the tag and branch are pushed.
+     * @private
      */
     pushTag = async () => {
-        console.log(`    > Git push tag on branch ${this.branch}`)
+        console.log(`    > Pushing Git tag on branch ${this.branch}`)
         await this.git.push('origin', this.branch)
         await this.git.pushTags('origin')
-        console.log(`    > ${this.green}Tag ${this.tagName} pushed to remote repository${this.reset}`)
+        console.log(`    > ${this.green}Tag ${this.yellow}${this.tagName}${this.green} pushed to remote repository${this.reset}`)
     }
 
     /**
      * Deletes the Git tag locally and remotely.
-     * @returns {Promise<void>} Resolves when the tag is deleted, logs errors if deletion fails.
+     *
+     * @returns {Promise<void>} Resolves when the tag is deleted.
+     * @private
      */
     deleteTag = async () => {
-        console.log(`    > Deleting git tag : ${this.tagName}`)
+        console.log(`    > Deleting Git tag: ${this.tagName}`)
         try {
             await this.git.removeTag(this.tagName)
             await this.git.push('origin', `:${this.tagName}`)
@@ -337,26 +423,57 @@ export class Deployment {
     }
 
     /**
-     * Handles pre-deployment tasks, such as creating a Git tag and preparing files for deployment.
+     * Prepares files and creates a Git tag before deployment.
+     * For 'studio', updates service-worker-pwa.js and manifest.webmanifest.
+     * For 'backend', copies PM2 configuration and renames files.
+     *
      * @returns {Promise<void>} Resolves when pre-deployment tasks are complete.
+     * @private
      */
     preDeployment = async () => {
-        console.log('--- Pre deployment')
+        console.log('--- Pre-deployment tasks')
         // Create Git tag locally
         await this.gitTag()
         console.log('    > Preparing files')
         switch (this.product) {
             case 'studio': {
+                const serviceWorkerPath = path.join(this.localDistPath, 'service-worker-pwa.js')
+                if (fs.existsSync(serviceWorkerPath)) {
+                    let serviceWorkerContent = fs.readFileSync(serviceWorkerPath, 'utf8')
+                    serviceWorkerContent = serviceWorkerContent.replace(/__BUILD_TIME__/g, `"${this.date}"`)
+                    serviceWorkerContent = serviceWorkerContent.replace(/__VERSION__/g, `"${this.version}"`)
+                    serviceWorkerContent = serviceWorkerContent.replace(/__BRANCH__/g, `"${this.branch}"`)
+
+                    fs.writeFileSync(serviceWorkerPath, serviceWorkerContent, 'utf8')
+                    console.log(`    > Service Worker configured`)
+                }
+
+                // Update manifest.webmanifest for studio
+                const manifestPath = path.join(this.localDistPath, 'manifest.webmanifest')
+                if (fs.existsSync(manifestPath)) {
+                    const manifestContent = await Bun.file(manifestPath).json()
+                    const replacement = this.platform === 'production'
+                                        ? ''
+                                        : this.platform.charAt(0).toUpperCase() + this.platform.slice(1)
+                    manifestContent.name = STUDIO_APP_NAME.replace('Development', replacement)
+                    await Bun.write(manifestPath, JSON.stringify(manifestContent, null, 2))
+                    console.log(`    > Manifest configured for ${manifestContent.name}`)
+                }
+                else {
+                    console.warn(`    > ${this.yellow}manifest.webmanifest not found in ${this.localDistPath}${this.reset}`)
+                }
+
                 break
             }
             case 'backend': {
-                // Copy PM2 configuration
+                // Copy PM2 configuration and rename files for backend
                 execSync(`cp -f ${this.deploymentDir}/pm2-config/${this.pm2.config} ${this.localDistPath}/ecosystem.config.js`)
                 // Copy version.json and rename index.js to backend.js
                 execSync(`cp -f version.json ${this.localDistPath} && mv ${this.localDistPath}/index.js ${this.localDistPath}/backend.js`)
+                console.log(`    > ${this.green}Backend files prepared${this.reset}`)
             }
         }
-        // Build the post-deployment launch command for PM2
+        // Build PM2 command for backend
         const where = path.join(this.configuration.remote[this.platform].path, this.platform, 'backend', this.current)
         this.configuration.backend[this.platform].pm2.command = `cd ${where} && ${this.pm2.bin} start --cwd ${where} ecosystem.config.js && ${this.pm2.bin} save`
         // Configure server home paths
@@ -377,29 +494,36 @@ export class Deployment {
                                                                                   platform: this.platform,
                                                                                   backend:  this.configuration.backend[this.platform],
                                                                                   studio:   this.configuration.studio[this.platform],
-                                                                                  site: this.configuration.site[this.platform],
+                                                                                  site:     this.configuration.site[this.platform],
+                                                                                  ffmpeg:   this.configuration.backend[this.platform].ffmpeg,
                                                                               }), 'utf8')
+        console.log(`    > ${this.yellow}Server configuration saved to servers.json${this.reset}`)
         // Save build date to build.json
         fs.writeFileSync(`${this.localDistPath}/build.json`, JSON.stringify({date: Date.now()}))
+        console.log(`    > ${this.yellow}Build date saved to build.json${this.reset}`)
+        // Save branch information
+        await this.saveBranchInfo()
         // Zip the distribution
         await this.zip()
     }
 
     /**
-     * Asynchronously initiates the deployment process.
-     * Steps include building, pre-deployment, copying, unzipping, linking, and post-deployment.
-     * The Git tag is pushed only if all steps succeed; otherwise, it is deleted.
-     * @returns {Promise<void>} Resolves when the deployment is complete, handles errors by deleting the tag.
+     * Initiates the deployment process: build, pre-deployment, copy, unzip, link, and post-deployment.
+     * Pushes Git tag on success, deletes it on failure.
+     *
+     * @returns {Promise<void>} Resolves when deployment is complete.
+     * @throws {Error} If any deployment step fails.
      */
     launch = async () => {
         try {
             await this.build()
             await this.preDeployment()
-            console.log(`--- Starting deployment of ${this.yellow}${this.localDistPath}.zip${this.reset} to ${this.yellow}${this.remoteReleasePath}${this.reset}`)
+            console.log(`\n--- Starting deployment of ${this.yellow}${this.localDistPath}.zip${this.reset} to ${this.yellow}${this.remoteReleasePath}${this.reset}`)
             await this.copy()
+            console.log('    > Connecting to SSH...')
             const connection = new SSH2()
             connection.on('ready', async () => {
-                console.log('    > SSH connection established.')
+                console.log(`    > ${this.green}SSH connection established${this.reset}`)
                 try {
                     await this.unzip(connection)
                     console.log('    > Deploying release...')
@@ -407,11 +531,11 @@ export class Deployment {
                     await this.postDeployment(connection)
                     await this.pushTag()
                     console.log('\n---')
-                    console.log(`${this.yellow}Application ${this.green}${this.product} (version: ${this.version} - branch ${this.branch}) ${this.yellow} deployed to ${this.platform} ${this.reset}`)
+                    console.log(`     Application ${this.yellow}${this.product} (version: ${this.version} - branch ${this.branch}) ${this.reset} deployed to ${this.platform}${this.reset}`)
                     console.log('---\n')
                 }
                 catch (error) {
-                    console.error(`Error during deployment: ${error}`)
+                    console.error(`${this.red}Deployment error: ${error}${this.reset}`)
                     await this.deleteTag()
                 }
                 finally {
@@ -420,7 +544,7 @@ export class Deployment {
             }).connect(this.sshConfig)
         }
         catch (error) {
-            console.error(`Error: ${error}`)
+            console.error(`${this.red}Error: ${error}${this.reset}`)
             await this.deleteTag()
         }
     }

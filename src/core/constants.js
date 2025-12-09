@@ -7,21 +7,25 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-07
- * Last modified: 2025-07-07
+ * Created on: 2025-12-07
+ * Last modified: 2025-12-07
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { CESIUM_EVENTS as $CESIUM_EVENTS } from '@Core/events/cesiumEvents'
+import { CESIUM_EVENTS as $CESIUM_EVENTS }        from '@Core/events/cesiumEvents'
 import {
     faBuildingColumns, faBuildings, faCampground, faCross, faCrown, faEarthEurope, faFlagPennant, faFlagSwallowtail,
     faFort, faHouseBlank, faLock, faMap, faMountains, faPlaceOfWorship, faRoad, faSquareParking, faTablePicnic,
     faTelescope, faUnlock, faUser,
-}                                          from '@fortawesome/duotone-regular-svg-icons'
+}                                                 from '@fortawesome/duotone-regular-svg-icons'
+import { faAndroid, faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
+import { faCompass, faDesktop }                   from '@fortawesome/pro-regular-svg-icons'
+import { faGavel }                                from '@fortawesome/pro-solid-svg-icons'
 
-export const SLOGAN = 'Replay Your Adventures!'
+
+export const SLOGAN = 'Replay the World Outdoors!'
 /*******************************************************************************
  * Time and duration constants in seconds
  */
@@ -41,7 +45,7 @@ export const WRONG = -99999999999
  * Responsivity
  ******************************************************************************/
 export const MOBILE_MAX = 767
-export const DESKTOP_MIN = 768
+export const DESKTOP_MIN = 992
 
 /**
  * Main Configuration file
@@ -52,6 +56,7 @@ export const CONFIGURATION = 'config.yaml'
 export const SETTINGS = 'settings.yaml'
 export const LAYERS_TERRAINS_SETTINGS = 'layers-terrains.yaml'
 export const COUNTRIES = 'countries.yaml'
+export const WIDGETS = 'widgets.yaml'
 export const WORLD = 'WORLD'
 export const COUNTRY_FLAGS_DIR = '/assets/images/flags/'
 
@@ -81,10 +86,13 @@ export const platforms = {
 
 
 export const APP_KEY = 'LGS1920'
+export const APP_STUDIO = `${APP_KEY} Studio`
+export const LGS_PROJECT = 'LGS1920 Project'
 export const SETTINGS_STORE = 'settings'
 export const VAULT_STORE = 'vault'
 export const CURRENT_STORE = 'current'
 export const JOURNEYS_STORE = 'journeys'
+export const WIDGETS_STORE = 'widgets'
 export const ORIGIN_STORE = 'origin'
 export const POIS_STORE = 'pois'
 export const CURRENT_JOURNEY = 'journey'
@@ -124,7 +132,7 @@ export const SETTING_EXCLUSIONS = [
     'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
     'ui.camera', 'ui.welcome', 'swatches.current',
     'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
-    'ui.compass.mode',
+    'ui.compass.mode', 'ui.video.fps', 'ui.video.quality', 'ui.video.ratio', 'ui.pwa',
 ].sort((a, b) => {
     const segmentsA = a.split('.')
     const segmentsB = b.split('.')
@@ -218,8 +226,6 @@ export const UNLOCKED = 'unlocked'
 /*******************************************************************************
  * UI Click/Touch events
  ******************************************************************************/
-
-
 export const DOUBLE_CLICK_TIMEOUT = 300     // milliseconds
 export const DOUBLE_TAP_TIMEOUT = 300       // milliseconds
 export const LONG_TAP_TIMEOUT = 700         // milliseconds
@@ -408,3 +414,91 @@ COMPASS_LIGHT           = 2
  ******************************************************************************/
 
 export const LGS_CONTEXT_MENU_HOOK = 'lgs-context-menu-hook'
+
+/*******************************************************************************
+ * Device type, Navigator, Os, ...
+ ******************************************************************************/
+
+export const OS = {
+    windows: 'windows',
+    linux:   'linux',
+    macOS: 'macos',
+    macos: 'macos',
+    android: 'android',
+    iOS:     'ios',
+    ios:   'ios',
+    unknown: 'unknown',
+}
+
+export const OS_ICONS = {
+    windows: faWindows,
+    linux:   faLinux,
+    macos: faApple,
+    android: faAndroid,
+    ios:   faApple,
+    unknown: faDesktop,
+}
+
+export const ORIENTATION = {
+    portrait:  'portrait',
+    landscape: 'landscape',
+}
+
+export const DEVICE_TYPE = {
+    mobile:  'mobile',
+    tablet:  'tablet',
+    desktop: 'desktop',
+    unknown: 'unknown',
+}
+
+export const NAVIGATOR = {
+    chrome:  'Chrome',
+    firefox: 'Firefox',
+    safari:  'Safari',
+    edge:    'Edge',
+    opera:   'Opera',
+    unknown: 'unknown',
+}
+
+/*******************************************************************************
+ * Banners
+ ******************************************************************************/
+export const BANNER_HIDE_DELAY_INSTALL = 3  // Seconds
+export const BANNER_HIDE_DELAY = 7          // Seconds
+export const BANNER_SHOW_DELAY = 5          // Seconds
+
+
+/*******************************************************************************
+ * Widgets and Toolbars
+ ******************************************************************************/
+export const LGS_TOOLBAR = 'lgs-toolbar'
+export const LGS_WIDGET = 'lgs-widget'
+export const LGS_VISUAL_WIDGET = 'lgs-visual-widget'
+export const LGS_ANIMATION_DRAGGING = 'lgs-animation-dragging'
+export const LGS_ANIMATION_RESIZING = 'lgs-animation-resizing'
+export const LGS_ANIMATION_SCALING = 'lgs-animation-scaling'
+export const LGS_WIDGET_SCALE_FACTOR = 1
+
+export const VIDEO_CROP_ZONE = 'video-crop-zone'
+export const VIDEO_TOOLS_WIDGETS = 'video-tools-widgets'
+export const CROP_TOOLS_WIDGETS = 'crop-tools-widgets'
+export const MULTI_PURPOSE_WIDGETS = 'multi-purpose-widgets'
+
+export const WIDGETS_CAPABILITIES  = ['canRemove', 'canReset', 'canMaximize', 'canPosition', 'canEdit'],
+             WIDGETS_CONFIGURATION = new Map([
+                                                 [
+                                                     'compass-widget', {
+                                                     icon:      faCompass,
+                                                     component: null,
+                                                 },
+                                                 ],
+                                                 [
+                                                     'credits-widget', {
+                                                     icon:      faGavel,
+                                                     component: null,
+                                                 },
+                                                 ],
+                                             ],
+             )
+export const DYNAMIC_WIDGET_PART = 'dynamic-widget-part',
+             STATIC_WIDGET_PART  = 'static-widget-part'

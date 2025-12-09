@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: CSSUtils.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-09-19
+ * Last modified: 2025-09-19
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 export class CSSUtils {
 
 
@@ -24,5 +40,13 @@ export class CSSUtils {
     static setCSSVariable = (variable, value) => {
         variable = (variable.startsWith('--') ? variable : '--' + variable)
         document.documentElement.style.setProperty(variable, value)
+    }
+
+    static rem2px = (remString, stringify = false) => {
+        const root = document.documentElement
+        const baseFontSize = parseFloat(getComputedStyle(root).fontSize)
+        const remValue = parseFloat(remString)
+        const pixelValue = remValue * baseFontSize
+        return stringify ? `${pixelValue}px` : pixelValue
     }
 }

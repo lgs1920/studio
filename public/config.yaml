@@ -19,3 +19,54 @@ db:
   IDBDelay: 5    # Seconds
   extDelay: 30   # Seconds
 
+videoFormats:
+  - label: "16x9"
+    value: "16x9"
+    aspectRatio: 1.7778
+    locked: true
+    orientation: "landscape"
+    visibility: [ "tablet","desktop","mobile-landscape" ]
+    description: "YouTube, film"
+  - label: "9x16"
+    value: "9x16"
+    aspectRatio: 0.5625
+    locked: true
+    orientation: "portrait"
+    visibility: [ "tablet","desktop","mobile-portrait" ]
+    description: "TikTok, Shorts, Stories, Reels"
+  - label: "Square"
+    value: "1x1"
+    aspectRatio: 1.0
+    locked: true
+    orientation: "square"
+    description: "Instagram square posts"
+  - label: "4x5"
+    value: "4x5"
+    locked: true
+    aspectRatio: 1.25
+    visibility: [ "tablet","desktop","mobile-portrait" ]
+    orientation: "portrait"
+    description: "Instagram feed"
+  - label: "Standard Def."
+    value: "4x3"
+    locked: true
+    aspectRatio: 1.3333
+    orientation: "paysage"
+    visibility: [ "tablet","desktop","mobile-landscape" ]
+    description: "Old video"
+  - label: "Free"
+    value: "0x0"
+    locked: false
+    aspectRatio: 0
+    orientation: "paysage"
+    visibility: [ "tablet","desktop","mobile" ]
+    description: "Define your own"
+
+widgetRatio:
+  label: "Widget ratio"
+  value: "1x1"
+  locked: true
+  aspectRatio: 1.0
+  orientation: "paysage"
+  visibility: [ "tablet","desktop","mobile" ]
+  description: "Widget Internal ratio"

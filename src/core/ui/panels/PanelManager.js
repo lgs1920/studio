@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-12-04
+ * Last modified: 2025-12-04
  *
  *
  * Copyright © 2025 LGS1920
@@ -136,28 +136,40 @@ export class PanelManager {
         }
     }
 
-    /**
-     * Opens a specified drawer and configures it with provided options.
+
+    /* Opens a specified drawer and configures it with provided options.
      *
      * @param {string} id - The ID of the drawer to open
      * @param {Object} [options] - Additional options for opening the drawer
      * @param {string} [options.action] - The action to perform when opening the drawer
      * @param {string} [options.entity] - The entity ID associated with the drawer content
-     * @param {string} [options.tab] - The tab to activate when opening the drawer
+     * @param {string|'current'|'default'} [options.tab] - The tab to activate when opening the drawer.
+     * Use the tab name for explicit activation, 'current' to use the last saved tab,
+     * or omit/use null for the drawer's default tab (usually the first).
      */
-    open = (id, options) => {
-        // Use the UI store instead of main proxy
+    open = (id, options = {}) => {
         ui.drawers.open = id
-        ui.drawers.action = options?.action ?? ''
-        
-        // Handle tab activation if specified or previously set
-        if (options?.tab) {
-            this.openTab(options.tab)
-            this.tab = options.tab
+        ui.drawers.action = options.action ?? ''
+
+        let tabToActivate = null
+
+        if (options.tab && options.tab !== 'current' && options.tab !== 'default') {
+            // Priority 1: Explicit tab name provided (e.g., options.tab = 'tab-pois')
+            tabToActivate = options.tab
+            // Also store this new explicit tab as the current active tab for this drawer
+            this.tab = tabToActivate
         }
-        else if (this.tab) {
-            this.openTab(this.tab)
+        else if (options.tab === 'current' || (!options.tab && this.#tabs.has(id))) {
+            // Priority 2: Use the last saved tab for this drawer (explicitly 'current' or implicitly when options.tab
+            // is null/undefined)
+            tabToActivate = this.#tabs.get(id)
         }
+
+        if (tabToActivate) {
+            // Activate the determined tab
+            this.openTab(tabToActivate)
+        }
+
     }
 
     /**

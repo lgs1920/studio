@@ -13,14 +13,15 @@ management to track deployments. The scripts are part of the `LGS1920/backend` p
 
 - **Build Automation**: Builds the application using Bun (`bun run build` for `studio`, `bun build.js` for `backend`
   with optional minification for `production`).
-- **File Preparation**: Copies configuration files (e.g., PM2 config for `backend`) and creates a zip archive of the
-  build.
+- **File Preparation**: Copies configuration files (e.g., PM2 config for `backend`), updates service worker and manifest
+  for `studio`, and creates a zip archive of the build.
 - **Remote Deployment**: Transfers the zip file to a remote server using SCP, unzips it, and creates a symbolic link for
   consistent access.
 - **Git Tag Management**: Creates a Git tag locally (format: `<platform>-<version>-<branch>-<date>`), pushes it to the
-  remote repository only on successful deployment, and deletes it if the deployment fails.
+  remote repository on successful deployment, and deletes it if the deployment fails.
 - **PM2 Integration**: Restarts the `backend` application using PM2 with platform-specific configurations.
-- **Error Handling**: Logs errors with color-coded console output and ensures cleanup of Git tags on failure.
+- **Error Handling**: Logs errors with color-coded console output (red for errors, green for success, yellow for
+  emphasis) and ensures cleanup of Git tags on failure.
 
 ## Prerequisites
 
@@ -29,17 +30,16 @@ Before running the script, ensure the following are installed and configured:
 - **Node.js**: Required for running the script.
 - **Bun**: Used for building and running the application (e.g., `bun run build`, `bun build.js`).
 - **Git**: Required for version control and tag management.
-- **SSH and SCP**: Required for remote server access and file transfer.
+- **SSH and SCP**: Required for remote server access and file transfer (via `sshpass` for SCP).
 - **Node Modules**:
-    - `argparse` (for command-line argument parsing in `deploy.js`)
-    - `child_process` (built-in)
-    - `path` (built-in)
-    - `scp2` (for SCP file transfers)
-    - `simple-git` (for Git operations)
-    - `ssh2` (for SSH connections)
-    - `zip-a-folder` (for zipping the build)
-    - `fs` (built-in, via `require`)
-    - `yaml` (for parsing the `deploy.yml` configuration file)
+    - `argparse`: For command-line argument parsing in `deploy.js`.
+    - `child_process`: Built-in module for process execution.
+    - `path`: Built-in module for path manipulation.
+    - `simple-git`: For Git operations.
+    - `ssh2`: For SSH connections.
+    - `zip-a-folder`: For zipping the build.
+    - `fs`: Built-in module (via `require`) for file system operations.
+    - `yaml`: For parsing the `deploy.yml` configuration file.
 - **Environment Variables**:
     - `LGS1920_PASSWORD_PRODUCTION`, `LGS1920_PASSWORD_STAGING`, or `LGS1920_PASSWORD_TEST`: Password for SSH
       authentication to the respective platform (user: `p5077` on `p5077.webmo.fr`).
@@ -52,27 +52,27 @@ Before running the script, ensure the following are installed and configured:
 Install dependencies using:
 
 ```bash
-npm install argparse scp2 simple-git ssh2 zip-a-folder yaml
+npm install argparse simple-git ssh2 zip-a-folder yaml
 ```
 
 ## Configuration
 
 The script relies on a `deploy.yml` file located in the `deployment/` directory. This file defines configurations for:
 
-- **Backend**: Settings for each platform (`production`, `staging`, `test`), including:
+- **Backend**: Settings for each platform (`production`, `staging`, `test`):
     - Server name (e.g., `LGS1920 Backend server`).
     - Domain (e.g., `api.lgs1920.fr`).
     - Port (e.g., 3333 for `production`, 3334 for `staging`, 3335 for `test`).
     - PM2 configuration (e.g., `backend-production.config.js`).
-- **Studio**: Settings for each platform, including:
+- **Studio**: Settings for each platform:
     - Domain (e.g., `studio.lgs1920.fr` for `production`, `staging.lgs1920.fr` for `staging`).
     - Proxy settings (e.g., `/proxy.php?csurl=`).
 - **Site**: Domain and protocol settings (e.g., `lgs1920.fr`, `https`).
 - **Local**: The local distribution directory (`dist`) where builds are stored.
 - **Remote**: Server details:
-    - User: `p5077`
-    - Host: `p5077.webmo.fr`
-    - Path: `/home/www/lgs1920`
+    - User: `p5077`.
+    - Host: `p5077.webmo.fr`.
+    - Path: `/home/www/lgs1920`.
     - Release directories: `releases` for builds, `current` for the active symbolic link.
 
 Ensure the `deploy.yml` file is present and correctly formatted before running the script.
@@ -80,8 +80,8 @@ Ensure the `deploy.yml` file is present and correctly formatted before running t
 ## Usage
 
 The `deploy.js` script is executed using Bun’s `run` command and requires a single platform flag to specify the target
-platform (`production`, `staging`, or `test`). The product (`studio` or `backend`) is automatically determined from the
-current working directory’s name, and the local path is set to the parent directory of the current working directory.
+platform (`production`, `staging`, or `test`). The product (`studio` or `backend`) is inferred from the current working
+directory’s name, and the local path is set to the parent directory of the current working directory.
 
 ### Command-Line Flags
 
@@ -90,7 +90,6 @@ current working directory’s name, and the local path is set to the parent dire
 - `-t, --test`: Deploy to the `test` platform.
 
 **Note**: Exactly one platform flag must be provided. The script infers:
-
 - `product`: From the current directory name (e.g., `studio` if run from `/home/christian/devs/assets/lgs1920/studio`).
 - `local`: From the parent directory of the current working directory (e.g., `/home/christian/devs/assets/lgs1920`).
 
@@ -111,7 +110,7 @@ determines the `product`.
    bun run deploy -s
    ```
    Builds the `studio` application, zips it, transfers it to `p5077.webmo.fr:/home/www/lgs1920/staging/studio/releases`,
-   deploys it, and pushes a Git tag (e.g., `staging-1.0.0-main-20250707180615`) on success.
+   deploys it, and pushes a Git tag (e.g., `staging-1.0.0-main-20251009185822`) on success.
 
 2. **Deploy the `backend` product to the `production` platform**:
    ```bash
@@ -155,9 +154,14 @@ The script follows these steps:
    host: `p5077.webmo.fr`), and retrieves the current branch and version from `version.json` (for `backend`) or
    `public/version.json` (for `studio`).
 2. **Build**: Builds the application using Bun (`bun run build` for `studio`, `bun build.js` with optional `-m` for
-   `backend` in `production`).
-3. **Pre-Deployment**: Creates a local Git tag (e.g., `staging-1.0.0-main-20250707180615`), copies configuration files (
-   e.g., PM2 config for `backend`), and zips the build to `dist/<version>.zip`.
+   `backend` in `production`). Stores the build in `dist/<version>`.
+3. **Pre-Deployment**:
+    - Creates a local Git tag (e.g., `staging-1.0.0-main-20251009185822`).
+    - For `studio`: Updates `service-worker-pwa.js` (replaces `__BUILD_TIME__`, `__VERSION__`, `__BRANCH__`) and
+      `manifest.webmanifest` (adjusts app name based on platform).
+    - For `backend`: Copies PM2 configuration and renames `index.js` to `backend.js`.
+    - Saves branch info (`branch.json`), server config (`servers.json`), and build date (`build.json`).
+    - Zips the build to `dist/<version>.zip`.
 4. **Copy**: Transfers the zip file to the remote server’s `releases` directory (e.g.,
    `/home/www/lgs1920/<platform>/<product>/releases`) using SCP.
 5. **Unzip**: Unzips the file on the remote server via SSH to `<platform>/<product>/releases/<version>`.
@@ -166,7 +170,7 @@ The script follows these steps:
    `backend-production.config.js`).
 8. **Tag Push**: Pushes the Git tag and branch to the remote repository (`origin`) if all steps succeed.
 9. **Error Handling**: Deletes the Git tag locally and remotely if any step fails, logging errors with color-coded
-   output.
+   output (red for errors, green for success, yellow for emphasis).
 
 ## Troubleshooting
 
@@ -198,6 +202,9 @@ The script follows these steps:
   Ensure PM2 is installed on the remote server at `/home/.bun/bin/pm2` and the config file (e.g.,
   `backend-staging.config.js`) exists in `deployment/pm2-config/`.
 
+- **Error: manifest.webmanifest not found**:
+  For `studio` deployments, ensure `manifest.webmanifest` exists in the build output (`dist/<version>`).
+
 ## License
 
-Copyright © 2024 LGS1920. All rights reserved.
+Copyright © 2025 LGS1920. All rights reserved.

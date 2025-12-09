@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-29
- * Last modified: 2025-06-29
+ * Created on: 2025-12-05
+ * Last modified: 2025-12-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -26,14 +26,6 @@ export const GlobalSettings = () => {
         __.ui.ui.initDetailsGroup(generalTools.current)
     }, [])
 
-    const checkClose = (event) => {
-        // If we're over the drawer, ok else, stop event
-        if (window.isOK(event) && __.ui.drawerManager.over) {
-            return
-        }
-        event.preventDefault()
-    }
-
 
     return (
 
@@ -41,7 +33,6 @@ export const GlobalSettings = () => {
             <SlDetails id={'tools-unit-system'}
                        small open={false}
                        className={'lgs-theme'}
-                       onSlHide={checkClose}
             >
                 <UnitsSystemSettings/>
             </SlDetails>
@@ -49,7 +40,6 @@ export const GlobalSettings = () => {
             <SlDetails id={'ui-camera-settings'}
                        small open={false}
                        className={'lgs-theme'}
-                       onSlHide={checkClose}
             >
                 <CameraSettings/>
             </SlDetails>

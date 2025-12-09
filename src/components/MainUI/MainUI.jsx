@@ -7,33 +7,33 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-12-02
+ * Last modified: 2025-12-02
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { Compass } from '@Components/cesium/CompassUI/Compass'
-import { FullScreenButton }                     from '@Components/FullScreenButton/FullScreenButton'
-import { ContextMenuHook } from '@Components/MainUI/ContextMenuHook'
-import { GeocodingButton }                      from '@Components/MainUI/geocoding/GeocodingButton'
+import { Compass }                      from '@Components/cesium/CompassUI/Compass'
+import { FullScreenButton }    from '@Components/FullScreenButton/FullScreenButton'
+import { ContextMenuRenderer } from '@Components/MainUI/context-menu/ContextMenuRenderer'
+
+import { GeocodingButton }     from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingUI }                          from '@Components/MainUI/geocoding/GeocodingUI'
-import { MapPOIMonitor } from '@Components/MainUI/MapPOI/MapPOIMonitor'
-import { TrackEditorButton } from '@Components/MainUI/TrackEditorButton'
-import { MapPOIContextMenu }                    from '@Components/MainUI/MapPOI/MapPOIContextMenu'
-import { RotateButton }                         from '@Components/MainUI/RotateButton'
-import { Profile }                              from '@Components/Profile/Profile'
+import { MapPOIMonitor }                from '@Components/MainUI/MapPOI/MapPOIMonitor'
+import { RotateButton }                 from '@Components/MainUI/RotateButton'
+import { TrackEditorButton }            from '@Components/MainUI/TrackEditorButton'
+import { VideoButton }                 from '@Components/MainUI/video/VideoButton'
+import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
+import { Profile }              from '@Components/Profile/Profile'
 import { ProfileButton }                        from '@Components/Profile/ProfileButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import {
-    BOTTOM, DESKTOP_MIN, END, EVENTS, MENU_BOTTOM_END,
-    MENU_BOTTOM_START, MENU_END_END, MENU_END_START,
-    MENU_START_END, MENU_START_START, MOBILE_MAX, SCENE_MODE_2D, SECOND, START, TOP,
-} from '@Core/constants'
+    BOTTOM, END, EVENTS, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
+    MENU_START_START, SCENE_MODE_2D, SECOND, START, TOP,
+}                                       from '@Core/constants'
 import { JourneyToolbar }                       from '@Editor/JourneyToolbar'
 import { memo, useCallback, useEffect, useRef } from 'react'
-import { useMediaQuery }                        from 'react-responsive'
 import { subscribe, useSnapshot }               from 'valtio'
 import { CameraAndTargetPanel }                 from '../cesium/CameraAndTargetPanel/CameraAndTargetPanel'
 import { JourneyLoaderUI }                      from '../FileLoader/JourneyLoaderUI'
@@ -51,6 +51,7 @@ import { PanelButton as POIEditButton }         from './MapPOI/PanelButton'
 import { SceneModeSelector }                    from './SceneModeSelector'
 import { SupportUI }                            from './SupportUI'
 import { SupportUIButton }                      from './SupportUIButton'
+
 import './style.css'
 
 const PRIMARY_ENTRANCE = 'lgs-slide-in-from-left'
@@ -58,19 +59,18 @@ const SECONDARY_ENTRANCE = 'lgs-slide-in-from-right'
 
 export const MainUI = memo(() => {
     const {hidden} = useSnapshot(lgs.stores.ui.welcome)
-    const isMobile = useMediaQuery({maxWidth: MOBILE_MAX})
-    const formerDevice = useRef(isMobile)
+    const formerDevice = useRef(__.device.isMobile)
     const {drawers, toolBar} = useSnapshot(lgs.settings.ui.menu)
-    const {show, usage} = useSnapshot(lgs.settings.ui.journeyToolbar)
-    const resizeTimer = useRef(null)
+    const {device, video} = useSnapshot(lgs.stores.ui)
+
 
     const windowResized = useCallback(__.tools.debounce(() => {
-        if (formerDevice.current !== isMobile) {
+        if (formerDevice.current !== __.device.isMobile) {
             __.ui.menuManager.reset()
             arrangeDrawers()
-            formerDevice.current = isMobile
+            formerDevice.current = __.device.isMobile
         }
-    }, 0.3 * SECOND), [isMobile])
+    }, 0.3 * SECOND), [])
 
     const closeDrawer = useCallback(() => {
         __.ui.drawerManager.close()
@@ -84,7 +84,7 @@ export const MainUI = memo(() => {
 
     const arrangeDrawers = useCallback(() => {
         const placement = sprintf('%s-%s',
-                                  isMobile ? (drawers.fromBottom ? BOTTOM : TOP) : (drawers.fromStart ? START : END),
+                                  __.device.isMobile ? (drawers.fromBottom ? BOTTOM : TOP) : (drawers.fromStart ? START : END),
                                   toolBar.fromStart ? START : END,
         )
 
@@ -98,7 +98,7 @@ export const MainUI = memo(() => {
 
         const cssConfig = {
             [MENU_START_START]:  {
-                '--primary-buttons-bar-left':          width,
+                '--primary-buttons-bar-left': width,
                 '--primary-buttons-bar-right':         'auto',
                 '--secondary-buttons-bar-left':        'auto',
                 '--secondary-buttons-bar-margin-left': 'auto',
@@ -108,7 +108,7 @@ export const MainUI = memo(() => {
             },
             [MENU_START_END]:    {
                 '--primary-buttons-bar-left':          'auto',
-                '--primary-buttons-bar-right':         0,
+                '--primary-buttons-bar-right': 'var(--right)',
                 '--secondary-buttons-bar-left':        width,
                 '--secondary-buttons-bar-margin-left': 0,
                 '--secondary-buttons-bar-right':       'auto',
@@ -128,12 +128,12 @@ export const MainUI = memo(() => {
             },
             [MENU_END_END]:      {
                 '--primary-buttons-bar-left':          'auto',
-                '--primary-buttons-bar-right':         width,
+                '--primary-buttons-bar-right':  `calc(${width} + var(--right))`,
                 '--secondary-buttons-bar-left':        0,
                 '--secondary-buttons-bar-margin-left': 0,
                 '--secondary-buttons-bar-right':       'auto',
                 '--lgs-horizontal-panel-left':         0,
-                '--lgs-horizontal-panel-width':        `calc(var(--lgs-inner-width) - calc(var(--left) + ${width}))`,
+                '--lgs-horizontal-panel-width': `calc(var(--lgs-inner-width) - calc(var(--left) - var(--right) + ${width}))`,
                 primaryEntrance:                       SECONDARY_ENTRANCE,
                 secondaryEntrance:                     PRIMARY_ENTRANCE,
             },
@@ -170,7 +170,7 @@ export const MainUI = memo(() => {
             primaryEntrance:   config.primaryEntrance || PRIMARY_ENTRANCE,
             secondaryEntrance: config.secondaryEntrance || SECONDARY_ENTRANCE,
         }
-    }, [isMobile, drawers.fromBottom, drawers.fromStart, toolBar.fromStart])
+    }, [drawers.fromBottom, drawers.fromStart, toolBar.fromStart])
 
     useEffect(() => {
         if (lgs.settings.scene.mode.value === SCENE_MODE_2D.value) {
@@ -199,7 +199,7 @@ export const MainUI = memo(() => {
     return (
         <>
             <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
-                {hidden && (
+                {!video.editing && (
                     <>
                         <div id="primary-buttons-bar" className={primaryEntrance}>
                             <SettingsButton tooltip={tooltipDir}/>
@@ -211,18 +211,22 @@ export const MainUI = memo(() => {
                             <SupportUIButton tooltip={tooltipDir}/>
                         </div>
                         <div id="secondary-buttons-bar" className={secondaryEntrance}>
-                            <Compass sensitivity={100}/>
+                            {!video.recording && <Compass sensitivity={100}/>}
                             <div id="secondary-buttons-bar-content">
                                 <SceneModeSelector tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <RotateButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <FullScreenButton/>
+                                <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                 <GeocodingUI/>
                             </div>
                         </div>
                         <CallForActions/>
                     </>
                 )}
+
+                {!video.editing && (
+                    <>
                 <CameraTarget/>
                 <div id="bottom-left-ui">
                     {lgs.platform !== 'production' && (
@@ -232,9 +236,10 @@ export const MainUI = memo(() => {
                     )}
                 </div>
                 <div id="bottom-right-ui">
-                    <CreditsBar/>
+                    {!video.recording && <CreditsBar/>}
                 </div>
-                <CameraAndTargetPanel/>
+                    </>
+                )}
                 <Profile/>
                 <InformationPanel/>
                 <SettingsPanel/>
@@ -244,10 +249,12 @@ export const MainUI = memo(() => {
             </div>
             <SupportUI/>
             <JourneyLoaderUI multiple/>
-            <MapPOIContextMenu/>
+            <ContextMenuRenderer/>
+
             <MapPOIMonitor/>
-            <ContextMenuHook/>
-            {show && usage && <JourneyToolbar/>}
+            <VideoDownloadAndShareDialog/>
+
+
         </>
     )
 })

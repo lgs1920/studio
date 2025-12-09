@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-12-01
+ * Last modified: 2025-12-01
  *
  *
  * Copyright © 2025 LGS1920
@@ -21,6 +21,13 @@ import { proxyMap } from 'valtio/utils'
  * Separated from main store to avoid conflicts and improve performance
  */
 export const ui = {
+    device: {
+        portrait:  false,
+        landscape: false,
+        tablet:    false,
+        mobile:    false,
+        desktop:   false,
+    },
     drawers: {
         open:   null,
         over:   false,
@@ -55,5 +62,79 @@ export const ui = {
 
     informationPanel: {
         tab: null,
+    },
+
+    video: {
+        quality: null,
+        ratio:   null,
+        fps:     null,
+        url:     null,
+        editing:         false,
+        recording:       false,
+        preRecording: false,
+        snapshot: false,
+        paused:          false,
+        finalizing: false,
+        size:       0,
+        toolbarPosition: {},
+        step:    null,
+        cropper: {
+            ratioEditor: true,
+            presetEditor: true,
+            draggable:   true,
+            resizable:   true,
+            qualityEditor: true,
+            fpsEditor: true,
+            widgetEditor: false,
+            cropZone:  null,
+            forceEven: true,
+            id:        'video-crop-zone',
+        },
+        conversion: {
+            videoUrl:          null,
+            convertedVideoUrl: null,
+            isDialogOpen:      false,
+            metadata:          null,
+            finalFilename:     '',
+            duration:          0,
+            convertedTime:     0,
+            doConversion:      false,
+            isConverting:      false,
+            isConverted:       false,
+            inputFormat:       null,
+            progress:          {
+                percentage: 0,
+                time:       0,
+
+            },
+            errorMessage:      null,
+        },
+    },
+
+    widget: {
+        current: {
+            id:                    null,
+            canDisplayContextMenu: false,
+            position:              {x: 0, y: 0},
+        },
+        list:    new proxyMap(),
+        cache: new proxyMap(),
+    },
+
+    appUpdate: {
+        isInstallPromptAvailable: false,
+        isUpdateAvailable:        false,
+        version:                  null,
+        build:                    null,
+        installOutcome:           null,
+        promptInstall:            null,
+        applyUpdate:              null,
+    },
+
+    contextMenu: {
+        visible:  false,
+        type:     null,        // 'widget' | 'poi' | ...
+        targetId: null,
+        position: null,
     },
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-30
+ * Created on: 2025-12-02
+ * Last modified: 2025-12-02
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,31 +16,36 @@
 
 import {
     APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEYS_STORE, ORIGIN_STORE,
-    platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE,
-}                            from '@Core/constants'
-import { StoresManager }     from '@Core/stores/StoresManager'
-import { AppToolsManager }   from '@Core/ui/AppToolsManager'
-import { DeviceManager }     from '@Core/ui/DeviceManager'
-import { Geocoder }          from '@Core/ui/Geocoder'
-import { MenuManager }       from '@Core/ui/MenuManager'
-import { POIManager }        from '@Core/ui/POIManager'
-import { AppUtils }          from '@Utils/AppUtils'
-import { MouseUtils }        from '@Utils/cesium/MouseUtils'
-import { CSSUtils }          from '@Utils/CSSUtils'
-import { UIUtils }           from '@Utils/UIUtils'
-import { UnitUtils }         from '@Utils/UnitUtils'
-import { proxy }             from 'valtio'
-import { LocalDB }           from './db/LocalDB'
-import { MouseEventHandler } from './MouseEventHandler'
-import { editorSettings }    from './stores/editorSettings'
-import { main }              from './stores/main'
-import { theJourneyEditor }  from './stores/theJourneyEditor'
-import { CameraManager }     from './ui/CameraManager'
-import { JourneyEditor }     from './ui/JourneyEditor'
-import { PanelManager }      from './ui/panels/PanelManager'
-import { Profiler }          from './ui/Profiler'
-import { SceneManager }      from './ui/SceneManager'
-import { Wanderer }          from './ui/Wanderer'
+    platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE, WIDGETS_STORE,
+}                              from '@Core/constants'
+import { StoresManager }       from '@Core/stores/StoresManager'
+import { AppToolsManager }     from '@Core/ui/AppToolsManager'
+import { AppUpdateManager }    from '@Core/ui/AppUpdateManager'
+import { ContextMenu }         from '@Core/ui/context-menu/ContextMenu'
+import { DeviceManager }       from '@Core/ui/DeviceManager'
+import { Geocoder }            from '@Core/ui/Geocoder'
+import { MenuManager }         from '@Core/ui/MenuManager'
+import { POIManager }          from '@Core/ui/POIManager'
+import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import { WidgetCache }         from '@Core/ui/widget-manager/WidgetCache'
+import { WidgetManager }       from '@Core/ui/widget-manager/WidgetManager'
+import { AppUtils }            from '@Utils/AppUtils'
+import { MouseUtils }          from '@Utils/cesium/MouseUtils'
+import { CSSUtils }            from '@Utils/CSSUtils'
+import { UIUtils }             from '@Utils/UIUtils'
+import { UnitUtils }           from '@Utils/UnitUtils'
+import { proxy }               from 'valtio'
+import { LocalDB }             from './db/LocalDB'
+import { MouseEventHandler }   from './MouseEventHandler'
+import { editorSettings }      from './stores/editorSettings'
+import { main }                from './stores/main'
+import { theJourneyEditor }    from './stores/theJourneyEditor'
+import { CameraManager }       from './ui/CameraManager'
+import { JourneyEditor }       from './ui/JourneyEditor'
+import { PanelManager }        from './ui/panels/PanelManager'
+import { Profiler }            from './ui/Profiler'
+import { SceneManager }        from './ui/SceneManager'
+import { Wanderer }            from './ui/Wanderer'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -55,13 +60,14 @@ export class LGS1920Context {
     #ui
     eventHandler = new MouseEventHandler()
     #viewer
+    #lang
+
 
     floatingMenu = {}
     journeys = new Map()
 
     constructor() {
         // Declare Stores and snapshots for states management by @valtio
-
         // Journey Editor store is used to manage the settings of the theJourney in edit
         this.#theJourneyEditorProxy = proxy(theJourneyEditor)
         // Main is global to the app
@@ -72,6 +78,13 @@ export class LGS1920Context {
         this.journeyEditorStore = this.#mainProxy.components.journeyEditor
 
         this.stores = new StoresManager()// TODO change all stores
+
+
+        // Progressive web app ?
+        this.pwa = window.matchMedia('(display-mode: standalone)').matches
+
+        // lang
+        this.#lang = 'en'
 
         // Get the first as current theJourney
         if (this.journeys.size) {
@@ -96,8 +109,42 @@ export class LGS1920Context {
                 ui:  UIUtils,
             },
             convert: UnitUtils.convert,
+            // Let's use Cesium if it isok  or window frame functions
+            requestAnimationFrame: (callback) => {
+                const cesiumRAF = window.Cesium && typeof window.Cesium.requestAnimationFrame === 'function'
+                                  ? window.Cesium.requestAnimationFrame
+                                  : null
+                return (cesiumRAF || requestAnimationFrame)(callback)
+            },
+            cancelAnimationFrame:  (rafId) => {
+                const cesiumCancel = window.Cesium && typeof window.Cesium.cancelAnimationFrame === 'function'
+                                     ? window.Cesium.cancelAnimationFrame
+                                     : null
+                if (cesiumCancel) {
+                    cesiumCancel(rafId)
+                }
+                else {
+                    cancelAnimationFrame(rafId)
+                }
+            },
         }
 
+    }
+
+    /**
+     *
+     * @return {string}
+     */
+    get lang() {
+        return this.#lang || 'en'
+    }
+
+    /**
+     *
+     * @param lang
+     */
+    set lang(lang) {
+        this.#lang = lang
     }
 
     /**
@@ -162,9 +209,15 @@ export class LGS1920Context {
         this.db = {
             lgs1920:  new LocalDB({
                                       name:             `${APP_KEY}${dbPrefix}`,
-                                      stores:           [JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE],
+                                      stores:  [
+                                          JOURNEYS_STORE, CURRENT_STORE, ORIGIN_STORE, POIS_STORE,
+                                          {
+                                              name:    WIDGETS_STORE,
+                                              indexes: [{name: 'group', keyPath: 'data.group'}],
+                                          },
+                                      ],
                                       manageTransients: false,
-                                      version:          4, // integer
+                                      version: 21, // integer
                                   }),
             settings: new LocalDB({
                                       name:    `settings-${APP_KEY}${dbPrefix}`,
@@ -179,6 +232,8 @@ export class LGS1920Context {
                                       version: 1, // integer
                                   }),
         }
+
+        //   this.db.lgs1920.forceRebuildStore(WIDGETS_STORE)
     }
 
     /**
@@ -329,17 +384,20 @@ export class LGS1920Context {
         __.ui.drawerManager = new PanelManager()
         __.ui.sceneManager = new SceneManager()
         __.ui.menuManager = new MenuManager()
+        __.ui.widgetManager = new WidgetManager()
+        __.ui.widgetCache = new WidgetCache()
 
-        // Init POI management
         __.ui.poiManager = new POIManager()
         __.ui.geocoder = new Geocoder()
+        __.ui.contextMenu = new ContextMenu()
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()
+        __.recorder = new ScreenMediaRecorder()
+        __.updater = new AppUpdateManager()
 
 
     }
 
 
 }
-

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-06
- * Last modified: 2025-07-06
+ * Created on: 2025-12-09
+ * Last modified: 2025-12-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -60,6 +60,11 @@ export const MapPOICategorySelectorFilter = memo(({onChange, handleCategories, h
         ))
     }, [pois.categories])
 
+    const handleBubbling = (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+    }
+
     // Memoized label slot
     const labelSlot = useMemo(() => (
         <div className="map-poi-category-filter" slot="label">
@@ -93,6 +98,7 @@ export const MapPOICategorySelectorFilter = memo(({onChange, handleCategories, h
             multiple
             onSlChange={handleCategories}
             placeholder="Select categories"
+            onSlAfterHide={handleBubbling}
             clearable
         >
             {clearIcon}

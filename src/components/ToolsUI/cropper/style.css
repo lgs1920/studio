@@ -1,0 +1,154 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-10-25
+ * Last modified: 2025-10-25
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
+:root {
+    --crop-border-color: var(--lgs-light-color);
+    --crop-handle-color: var(--lgs-light-color);
+    --crop-centered-color: var(--lgs-light-color);
+    --crop-centered-opacity: 0.5;
+    --crop-centered-line-width: 1px;
+    --crop-handle-size: 12px;
+    --crop-zindex: calc(var(--lgs-tools-ui-zindex) - 2);
+}
+
+.mobile {
+    --crop-handle-size: 16px;
+}
+
+.crop-container {
+    position: absolute;
+    z-index: var(--crop-zindex);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/***************************************
+ *   Crop Box Container
+ **************************************/
+
+.video-cropper {
+    margin: 0;
+}
+.crop-zone {
+    position: absolute;
+    z-index: calc(var(--crop-zindex) + 1);
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+    user-select: none;
+    pointer-events: none;
+    border: var(--border-width) solid var(--crop-border-color);
+    background-color: transparent;
+    --border-width: 1px;
+    touch-action: none;
+}
+
+
+.defined-crop-zone {
+    cursor: default;
+    pointer-events: none;
+}
+
+/***************************************
+ *  On map crop info
+ **************************************/
+.crop-info, .crop-info-custom {
+    font-size: var(--lgs-font-size-s);
+    position: absolute;
+    z-index: calc(var(--crop-zindex) + 1);
+    display: flex;
+
+    align-items: center;
+    width: max-content;
+    pointer-events: none;
+    opacity: 0.7;
+    gap: var(--lgs-gutter-xs);
+}
+
+.crop-info {
+    top: var(--lgs-gutter-xs);
+    left: var(--lgs-gutter-xs);
+}
+
+.crop-info-custom {
+    right: var(--lgs-gutter-xs);
+    bottom: var(--lgs-gutter-xs);
+}
+
+[class^="crop-info"] span {
+    padding-inline: var(--lgs-gutter-s);
+}
+
+[class^="crop-info"] :not(:last-child) {
+    border-right: 1px solid var(--lgs-card-on-map-border-color);
+}
+
+/***************************************
+ *  Overlay
+ **************************************/
+.crop-overlay {
+    position: absolute;
+    z-index: calc(var(--crop-zindex) + 1);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    user-select: none;
+    pointer-events: none;
+    background-color: var(--lgs-dark-color-90);
+    background-image: repeating-linear-gradient(
+            135deg,
+            var(--lgs-light-color-25) 0px,
+            var(--lgs-light-color-25) 2px,
+            transparent 2px,
+            transparent 20px
+    );
+
+    clip-path: inset(0 0 0 0);
+    clip-rule: evenodd;
+
+    backdrop-filter: blur(var(--lgs-blur));
+}
+
+/*******************************************************************************
+ * Cropper Editor
+ ******************************************************************************/
+
+.crop-ratio-widget-container {
+    position: absolute;
+    z-index: calc(var(--crop-zindex) + 2);
+}
+
+
+.crop-ratio-widget {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-direction: var(--buttons-bar-on-map-direction);
+    width: auto;
+    padding: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}
+
+.crop-ratio-widget.lgs-toolbar {
+    opacity: 1;
+}
+

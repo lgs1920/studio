@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-14
- * Last modified: 2025-06-14
+ * Created on: 2025-11-21
+ * Last modified: 2025-11-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,7 +16,6 @@
 
 import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
 import { LayersAndTerrainManager }                     from '@Core/ui/LayerAndTerrainManager'
-import { SlTooltip }                                   from '@shoelace-style/shoelace/dist/react'
 import { memo, useEffect }                             from 'react'
 import { proxy, useSnapshot }                          from 'valtio'
 import { subscribeKey }                                from 'valtio/utils'
@@ -29,7 +28,7 @@ const $providers = proxy({
                              [BASE_ENTITY]:    null,
                              [OVERLAY_ENTITY]: null,
                              [TERRAIN_ENTITY]: null,
-                         });
+                         })
 
 /** List of available layer types */
 const LAYERS_TYPE = [BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY]
@@ -43,6 +42,7 @@ const LAYERS_TYPE = [BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY]
 export const CreditsBar = () => {
 
     const providers = useSnapshot($providers)
+    const video = useSnapshot(lgs.stores.ui.video)
 
     /**
      * Component displaying provider credits.
@@ -54,23 +54,21 @@ export const CreditsBar = () => {
      * @returns {JSX.Element} The Credit component.
      */
     const Credit = memo(({type, provider}) => {
+
         const credits = () => {
             const layer = __.layersAndTerrainManager.getEntityProxy(lgs.settings.layers[type])
-            return `${type} : ${layer?.credits ?? provider.credits ?? `credits ${provider.name}`}`
-        };
+            return `${layer?.credits ?? provider.credits ?? `credits ${provider.name}`}`
+        }
 
         return (
             <a href={provider.url} target="_blank">
-                <SlTooltip hoist placement="top" content={credits()}>
-                    {provider.logo ? (
-                        <img src={provider.logo} alt={provider.name}/>
-                    ) : (
-                         <span className={'credits'}>{provider.name}</span>
-                     )}
-                </SlTooltip>
+                {provider.logo
+                 ? <img src={provider.logo} alt={provider.name}/>
+                 : <span className={'credits'}>{provider.name}</span>
+                }
             </a>
-        );
-    });
+        )
+    })
 
     /**
      * Retrieves and updates provider data dynamically.
@@ -85,7 +83,7 @@ export const CreditsBar = () => {
             [BASE_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.base),
             [OVERLAY_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.overlay),
             [TERRAIN_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.terrain),
-        };
+        }
 
         if (layer) {
             tmp[type] = manager.getProviderProxyByEntity(layer)
@@ -94,15 +92,15 @@ export const CreditsBar = () => {
         // Remove duplicate providers
         const used = new Set()
         Object.keys(tmp).forEach((key) => {
-            if (tmp[key] && !used.has(tmp[key].name)) {
+            if (tmp[key] && tmp[key].id !== 'cesium' && !used.has(tmp[key].name)) {
                 used.add(tmp[key].name)
                 $providers[key] = tmp[key]
             }
             else {
                 $providers[key] = undefined
             }
-        });
-    };
+        })
+    }
 
     // Initialize providers and subscribe to changes at once
     useEffect(() => {
@@ -120,27 +118,21 @@ export const CreditsBar = () => {
 
     return (
         <div className="credits-bar">
-            <div className="main-logo">
+            <div className="main-logo signage-style">
                 <img src="/assets/images/logo-lgs1920.png" alt="LGS1920 Logo"/>
             </div>
             <div className="provider-credits lgs-credits lgs-one-line-card on-map">
-                {providers.terrain && <><Credit id="terrain-credits" type={TERRAIN_ENTITY}
-                                                provider={providers.terrain}/>!</>}
-                {providers.overlay && <><Credit id="overlay-credits" type={OVERLAY_ENTITY}
-                                                provider={providers.overlay}/></>}
-                {providers.base && <><Credit id="layer-credits" type={BASE_ENTITY} provider={providers.base}/></>}
+                {providers.terrain && <Credit id="terrain-credits" type={TERRAIN_ENTITY}
+                                              provider={providers.terrain}/>}
+                {providers.overlay && <Credit id="overlay-credits" type={OVERLAY_ENTITY}
+                                              provider={providers.overlay}/>}
+                {providers.base && <Credit id="layer-credits" type={BASE_ENTITY} provider={providers.base}/>}
             </div>
             <div className="cesium-credits lgs-credits lgs-one-line-card on-map">
                 <a href="https://www.cesium.com/" target="_blank">
-                    <SlTooltip
-                        hoist
-                        placement="top"
-                        content="Built with CesiumJS, an Open Source JavaScript library for creating 3D globes"
-                    >
-                        <img src="/assets/images/Cesium_light_color.svg" alt="Cesium"/>
-                    </SlTooltip>
+                    <img src="/assets/images/Cesium_light_color.svg" alt="Cesium"/>
                 </a>
             </div>
         </div>
-    );
-};
+    )
+}

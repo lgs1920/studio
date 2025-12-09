@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-04
- * Last modified: 2025-07-04
+ * Created on: 2025-12-05
+ * Last modified: 2025-12-05
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,7 +20,7 @@ import { APP_EVENT }         from '@Core/constants'
 import { faAngle, faArrowsToCircle, faMountains, faVideo } from '@fortawesome/pro-regular-svg-icons'
 import { SlAnimation }       from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }             from '@Utils/FA2SL'
-import { meter, mile }       from '@Utils/UnitUtils'
+import { meter, foot } from '@Utils/UnitUtils'
 import { useEffect, useRef } from 'react'
 import { useSnapshot }       from 'valtio'
 
@@ -85,17 +85,19 @@ export const CameraAndTargetPanel = () => {
                             {__.convert(camera.target.longitude).to(lgs.settings.coordinateSystem.current)}
                             <sl-icon library="fa" name={FA2SL.set(faMountains)}/>
                             <NameValueUnit
-                                value={camera.target.height?.toFixed()}
+                                value={camera.target.height}
                                 className="camera-altitude"
-                                units={[meter, mile]}
+                                units={[meter, foot]}
+                                precision={0}
                             />
                             {__.ui.sceneManager.is2D && (
                                 <>
                                     <sl-icon library="fa" name={FA2SL.set(faVideo)}/>
                                     <NameValueUnit
-                                        value={camera.position?.height?.toFixed()}
+                                        value={camera.position?.height}
                                         className="camera-altitude"
-                                        units={[meter, mile]}
+                                        units={[meter, foot]}
+                                        precision={0}
                                     />
                                 </>
                             )}
@@ -121,9 +123,10 @@ export const CameraAndTargetPanel = () => {
                                     {__.convert(camera.position.longitude).to(lgs.settings.coordinateSystem.current)}
                                     <sl-icon library="fa" name={FA2SL.set(faMountains)}/>
                                     <NameValueUnit
-                                        value={camera.position.height?.toFixed()}
+                                        value={camera.position.height}
                                         className="camera-altitude"
-                                        units={[meter, mile]}
+                                        units={[meter, foot]}
+                                        precision={0}
                                     />
                                 </>
                             ) : (
@@ -139,22 +142,25 @@ export const CameraAndTargetPanel = () => {
                             onDoubleClick={() => ($ui.camera.showHPR = false)}
                         >
                             <NameValueUnit
-                                value={camera.position.heading?.toFixed()}
+                                value={camera.position.heading}
                                 className="camera-heading"
                                 text="Heading:"
                                 units="°"
+                                precision={0}
                             />
                             <NameValueUnit
-                                value={camera.position.pitch?.toFixed()}
+                                value={camera.position.pitch}
                                 className="camera-pitch"
                                 text="Pitch:"
                                 units="°"
+                                precision={0}
                             />
                             <NameValueUnit
-                                value={camera.position.roll?.toFixed()}
+                                value={camera.position.roll}
                                 className="camera-roll"
                                 text="Roll:"
                                 units="°"
+                                precision={0}
                             />
                         </CameraDataPanel>
                     )}
