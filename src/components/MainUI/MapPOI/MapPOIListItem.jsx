@@ -96,7 +96,7 @@ const POIDetailsWrapper = ({id, poi, classes, styles, preventDrawerClose}) => {
         const filteredPOI = filteredStore.get(id)
 
         // Camera focus + optional rotation when editing
-        if (lgs.settings.ui.poi.focusOnEdit && isGlobalDrawer && __.ui.drawerManager.over) {
+        if (lgs.settings.ui.poi.focusOnEdit && isGlobalDrawer) {
             const camera = lgs.mainProxy.components.camera
 
             if (__.ui.cameraManager.isRotating()) {
@@ -115,7 +115,7 @@ const POIDetailsWrapper = ({id, poi, classes, styles, preventDrawerClose}) => {
                 rotations:  1,
                 rotate:     lgs.settings.ui.poi.rotate,
                 panoramic:  false,
-                flyingTime: 0,
+                flyingTime: 2,
             })
 
             if (lgs.settings.ui.poi.rotate) {
