@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-07
- * Last modified: 2025-07-07
+ * Created on: 2025-12-09
+ * Last modified: 2025-12-09
  *
  *
  * Copyright © 2025 LGS1920
@@ -113,7 +113,7 @@ export class UIUtils {
     static initDetailsGroup = (detailsGroupElement) => {
 
         // Close all other details when one is shown
-        detailsGroupElement.addEventListener('sl-show', event => {
+        detailsGroupElement.addEventListener('sl-after-show', event => {
             if (event.target.localName === 'sl-details') {
                 [...detailsGroupElement.querySelectorAll('sl-details')]
                     .map(details => (details.open = event.target === details))
