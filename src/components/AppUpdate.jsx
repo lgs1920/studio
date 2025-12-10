@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-07
- * Last modified: 2025-12-07
+ * Created on: 2025-12-10
+ * Last modified: 2025-12-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -30,8 +30,8 @@ import { SlButton, SlDialog, SlIcon, SlSpinner } from '@shoelace-style/shoelace/
 import { FA2SL }                                                from '@Utils/FA2SL'
 import classNames                                               from 'classnames'
 import { useEffect, useState }                                  from 'react'
-import ReactMarkdown                                            from 'react-markdown'
-import { useSnapshot }                                          from 'valtio'
+import ReactMarkdown          from 'react-markdown'
+import { proxy, useSnapshot } from 'valtio'
 
 // Define the custom event name for consistency
 const CUSTOM_UPDATE_EVENT = 'lgs-update-available'
@@ -76,7 +76,11 @@ export const AppUpdate = ({mode = 'banner'}) => {
     const updaterStore = useSnapshot($updaterStore)
 
     // Snapshot of the settings store
-    const $pwa = lgs.settings.ui.pwa
+    let $pwa = lgs.settings.ui.pwa
+    // We need to force pwa during update
+    if (!$pwa) {
+        lgs.settings.ui.pwa = proxy({canInstall: true})
+    }
     const pwa = useSnapshot($pwa)
 
     // Local states for UI management (dialogs and temporary errors)
