@@ -1,10 +1,11 @@
 ## Open Source Code
 
 Licence : As of today, there's not yet any licence.
+So, at this time, any use or reproduction of code is only possible with our permission. Thank you.
 
 The application, including studio, backend,APIs, is based on :
 
-### Map and 3dD:
+### Map and 3D:
 * [cesiumjs](https://cesium.com/)  - The Map engine
 
 ### Code and devs:
