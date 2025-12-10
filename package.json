@@ -74,7 +74,7 @@
     "import": "^0.0.6",
     "jspdf": "^3.0.4",
     "luxon": "^3.7.2",
-    "mediabunny": "^1.25.7",
+    "mediabunny": "^1.25.8",
     "path": "^0.12.7",
     "pm2": "^6.0.14",
     "png-chunk-itxt": "^1.0.0",
