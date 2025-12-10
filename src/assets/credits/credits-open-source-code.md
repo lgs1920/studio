@@ -18,6 +18,7 @@ The application, including studio, backend,APIs, is based on :
 * [Shoelace](https://shoelace.style/) - The web components used for UI
 * [FontAwesome](https://fontawesome.com/) - The icons library
 * [echarts](https://echarts.apache.org/) - Chart library
+* [snapdom](https://snapdom.dev/) - next-generation DOM Capture Engine
 * [mediabunny](https://mediabunny.dev/) - Video reading/writing/encoding
 * [Moveable](https://daybrush.com/moveable/) - Drag and drop library (React package)
 
