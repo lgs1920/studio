@@ -1526,7 +1526,7 @@
 
     "mdurl": ["mdurl@1.0.1", "", {}, "sha512-/sKlQJCBYVY9Ers9hqzKou4H6V5UWc/M59TH2dvkt+84itfnq7uFOMLpOiOS4ujvHP4etln18fmIxA5R5fll0g=="],
 
-    "mediabunny": ["mediabunny@1.25.7", "", { "dependencies": { "@types/dom-mediacapture-transform": "^0.1.11", "@types/dom-webcodecs": "0.1.13" } }, "sha512-DL0E1h29HTDaD9bYRXLSSHiAoLbDBksrdYS+4OHWA+aNhQeN+CAGEG7EU6wlhPZ8MOpwXIeC7uv06lo4ziohQQ=="],
+    "mediabunny": ["mediabunny@1.25.8", "", { "dependencies": { "@types/dom-mediacapture-transform": "^0.1.11", "@types/dom-webcodecs": "0.1.13" } }, "sha512-2WCa9WtEbHOvg5rAWXQjVE+O/r01fpj65ymZdA2XhIeaWmdDQ40p32F0WY6tdBi+aeY+4ldwhAOpo0eyVrYTGg=="],
 
     "memoirist": ["memoirist@0.4.0", "", {}, "sha512-zxTgA0mSYELa66DimuNQDvyLq36AwDlTuVRbnQtB+VuTcKWm5Qc4z3WkSpgsFWHNhexqkIooqpv4hdcqrX5Nmg=="],
 

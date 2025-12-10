@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-03
- * Last modified: 2025-12-03
+ * Created on: 2025-12-10
+ * Last modified: 2025-12-10
  *
  *
  * Copyright © 2025 LGS1920
@@ -141,9 +141,10 @@ export const usePointerInteractions = ({
             }
 
             // Prevent native press-and-hold behavior on mobile
-            if (e.pointerType === 'touch') {
-                e.preventDefault()
-            }
+            // TODO : check if it has side effects on touch devices
+            // if (e.pointerType === 'touch') {
+            //   e.preventDefault()
+            // }
 
             const now = Date.now()
             const prevTap = state.lastTap

@@ -10,3 +10,6 @@
 * © OpenStreetMap ([Licence](https://www.openstreetmap.org/copyright)) & contributors ODBL
 * © OpenSnowMap.org CC-BY-SA.
 * © ArcGIS.
+* © MapTiler.
+* © SwissTopo.
+* © ThunderForest.
