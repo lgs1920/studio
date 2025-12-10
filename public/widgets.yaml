@@ -20,3 +20,17 @@ multi-purpose-widgets:
       mandatory: true
       component: "CreditsWidget"
 
+journey-widgets:
+  id: "journey-widgets"
+  name: "Journey Widgets"
+  description: "A collection of widgets related to journeys"
+  icon: "route"
+  widgets:
+    profile-widget:
+      id: "profile-widget"
+      name: "Profile"
+      description: "The journey profile widget"
+      icon: "chart-fft"
+      mandatory: false
+      max: 1
+      component: "ProfileWidget"
