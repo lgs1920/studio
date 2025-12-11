@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: app.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-04
- * Last modified: 2025-12-04
+ * Created on: 2025-12-11
+ * Last modified: 2025-12-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -118,7 +118,7 @@ body {
     align-items: center;
 }
 
-main-logo.xlarge {
+.main-logo.xlarge {
     --padding: calc(6 * var(--lgs-gutter));
 }
 
@@ -405,6 +405,7 @@ main-logo.xlarge {
 .widget-deck-panel section {
     display: flex;
     flex-direction: column;
+    width: 100%;
     gap: var(--lgs-gutter-xs);
 }
 
