@@ -17,7 +17,7 @@
 import { WIDGETS_CONFIGURATION } from '@Core/constants'
 import { faBox }                 from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon, SlTooltip }     from '@shoelace-style/shoelace/dist/react'
-import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/WidgetDynamicRender'
+import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { FA2SL }                 from '@Utils/FA2SL'
 import classNames                from 'classnames'
 import { useEffect, useRef }     from 'react'

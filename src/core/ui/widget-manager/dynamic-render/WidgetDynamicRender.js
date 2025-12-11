@@ -61,18 +61,11 @@ export class WidgetDynamicRenderer {
      */
     resolveAliasPath(aliasPath) {
         if (aliasPath.startsWith('@Core')) {
-            // Replaces '@Core' with the expected path from the project root 'src/core'
-            // Assumes the application entry point is at the project root level
             return aliasPath.replace('@Core', '/src/core')
         }
         if (aliasPath.startsWith('@Components')) {
             return aliasPath.replace('@Components', '/src/components')
         }
-        if (aliasPath.startsWith('@Utils')) {
-            return aliasPath.replace('@Utils', '/src/Utils')
-        }
-        // Add other aliases (like @Editor, @Stores, @Locales) as needed
-        // If no alias is matched, return the path as is (assuming it's relative or static)
         return aliasPath
     }
 
@@ -148,13 +141,9 @@ export class WidgetDynamicRenderer {
 
         if (!__.ui.widgetCache.has(theId) && canAddWidget) {
             if (theWidget?.component) {
-                // 1. Resolve the alias path provided in the widget definition
                 const resolvedPath = this.resolveAliasPath(theWidget?.path ?? DEFAULT_WIDGETS_LIST)
-
-                // 2. Construct the final path using the resolved string
                 const componentPath = `${resolvedPath}/${theWidget.component}.jsx`
 
-                // Lazily load the component file
                 const LazyWidget = lazy(() =>
                                             // Use @vite-ignore to tell Vite not to try to statically bundle this
                                             // import, relying on the web server to resolve the resolved path
@@ -179,6 +168,9 @@ export class WidgetDynamicRenderer {
                 // Cache the component and add the widget instance to the store list
                 __.ui.widgetCache.set(theId, group, LazyWidget)
                 $widget.list.set(theId, extraProps)
+
+                console.log('Final List Size:', $widget.list.size)
+                console.log('Widget added to list:', $widget.list.has(theId))
             }
         }
     }
