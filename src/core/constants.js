@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-07
- * Last modified: 2025-12-07
+ * Created on: 2025-12-11
+ * Last modified: 2025-12-11
  *
  *
  * Copyright © 2025 LGS1920
@@ -483,6 +483,7 @@ export const VIDEO_CROP_ZONE = 'video-crop-zone'
 export const VIDEO_TOOLS_WIDGETS = 'video-tools-widgets'
 export const CROP_TOOLS_WIDGETS = 'crop-tools-widgets'
 export const MULTI_PURPOSE_WIDGETS = 'multi-purpose-widgets'
+export const JOURNEY_WIDGETS = 'journey-widgets'
 
 export const WIDGETS_CAPABILITIES  = ['canRemove', 'canReset', 'canMaximize', 'canPosition', 'canEdit'],
              WIDGETS_CONFIGURATION = new Map([
@@ -497,8 +498,9 @@ export const WIDGETS_CAPABILITIES  = ['canRemove', 'canReset', 'canMaximize', 'c
                                                      icon:      faGavel,
                                                      component: null,
                                                  },
-                                                 ],
-                                             ],
-             )
+                                                 ],// Memoize widget configuration
+                                             ]),
+             DEFAULT_WIDGETS_LIST  = '@Components/MainUI/widgets/list'
+
 export const DYNAMIC_WIDGET_PART = 'dynamic-widget-part',
              STATIC_WIDGET_PART  = 'static-widget-part'

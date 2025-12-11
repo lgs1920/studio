@@ -7,20 +7,27 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-14
- * Last modified: 2025-11-14
+ * Created on: 2025-12-11
+ * Last modified: 2025-12-11
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { WIDGETS_CONFIGURATION }   from '@Core/constants'
-import { faBox }                   from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon, SlTooltip }       from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                   from '@Utils/FA2SL'
-import classNames                  from 'classnames'
-import { lazy, useEffect, useRef } from 'react'
-import { useSnapshot }             from 'valtio'
+import { WIDGETS_CONFIGURATION } from '@Core/constants'
+import { faBox }                 from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon, SlTooltip }     from '@shoelace-style/shoelace/dist/react'
+import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/WidgetDynamicRender'
+import { FA2SL }                 from '@Utils/FA2SL'
+import classNames                from 'classnames'
+import { useEffect, useRef }     from 'react'
+import { useSnapshot }           from 'valtio'
+
+/**
+ * Singleton instance of the widget renderer utility.
+ * @type {WidgetDynamicRenderer}
+ */
+const widgetDynamicRenderer = WidgetDynamicRenderer.instance
 
 /**
  * Widget panel that shows available widgets grouped by category.
@@ -31,135 +38,57 @@ import { useSnapshot }             from 'valtio'
  * @returns {JSX.Element}
  */
 export const WidgetsPanelContent = ({groups}) => {
+    // Variable to hold the reference to the main panel element
     const _widgetDeckPanel = useRef(null)
+    // Proxy variable for the widget store
     const $widget = lgs.stores.ui.widget
+    // Snapshot variable for immutable access to the widget store data
     const widget = useSnapshot($widget)
 
     /**
-     * Filters and returns only valid groups from the global registry
+     * Filters and returns only valid groups from the global registry.
+     * Delegates to the WidgetDynamicRenderer singleton.
      * @returns {Map<string, Object>}
      */
     const theGroups = () => {
-        const subGroups = new Map()
-        for (const group of groups) {
-            if (__.widgets.has(group)) {
-                subGroups.set(group, __.widgets.get(group))
-            }
-        }
-        return subGroups
+        return widgetDynamicRenderer.theGroups(groups)
     }
 
     /**
-     * Checks if a widget has reached its max allowed instances
+     * Checks if a widget has reached its max allowed instances.
+     * Delegates to the WidgetDynamicRenderer singleton.
      *
      * @param {string} groupKey - Group ID
      * @param {string} widgetKey - Widget ID
      * @returns {boolean}
      */
     const isMaxReached = (groupKey, widgetKey) => {
-        const group = __.widgets.get(groupKey)
-        const widgetDef = group?.widgets?.get(widgetKey)
-        const baseKey = widgetKey.split('#')[0]
-
-        const count = [...widget.list.keys()]
-            .map(k => k.split('#')[0])
-            .filter(k => k === baseKey).length
-
-        const max = widgetDef?.max ?? 1
-        return count >= max
+        return widgetDynamicRenderer.isMaxReached(groupKey, widgetKey)
     }
 
     /**
-     * Loads and renders a widget component if allowed
+     * Adds a new instance of a widget to the map by invoking the renderer.
+     * Delegates to the WidgetDynamicRenderer singleton.
      *
      * @param {string} group - Group ID
-     * @param {string} id - Widget ID
-     * @param {Object} extraProps - Optional props to pass to the widget
-     */
-    const renderMyComponent = async (group, id, extraProps = {}) => {
-        const groupsMap = theGroups()
-        if (!groupsMap.has(group)) {
-            return
-        }
-
-        const key = id.split('#')[0]
-        const theId = (key === id) ? __.ui.widgetManager.defineElementId(group, key) : id
-        const theWidget = groupsMap.get(group).widgets.get(key)
-
-        const count = [...$widget.list.keys()]
-            .map(k => k.split('#')[0])
-            .filter(k => k === key).length
-
-        const max = theWidget?.max ?? 1
-        const canAddWidget = count < max
-
-        if (!__.ui.widgetCache.has(theId) && canAddWidget) {
-            if (theWidget?.component) {
-                const LazyWidget = lazy(() =>
-                                            import(`./list/${theWidget.component}.jsx`)
-                                                .then(module => {
-                                                    if (module.default) {
-                                                        return module
-                                                    }
-                                                    if (module[theWidget.component]) {
-                                                        return {default: module[theWidget.component]}
-                                                    }
-                                                    throw new Error(`Component ${theWidget.component} not found`)
-                                                })
-                                                .catch(() => ({
-                                                    default: () => (
-                                                        <div className="widget-load-error">
-                                                            Failed to load {theWidget.component}
-                                                        </div>
-                                                    )
-                                                }))
-                )
-                __.ui.widgetCache.set(theId, group, LazyWidget)
-                $widget.list.set(theId, extraProps)
-            }
-        }
-    }
-
-    /**
-     * Adds a widget to the map
-     *
-     * @param {string} group - Group ID
-     * @param {string} key - Widget ID
+     * @param {string} key - Widget ID (base key)
      */
     const addWidget = (group, key) => {
-        renderMyComponent(group, key, {})
+        widgetDynamicRenderer.renderWidget(group, key, {})
     }
 
-    useEffect(() => {
-        const targetedGroups = theGroups()
-
-        const displayWidgetsInBase = async () => {
-            for (const [id, group] of targetedGroups.entries()) {
-                const widgets = await __.ui.widgetManager.getWidgetsByGroup(id)
-                for (const widget of widgets) {
-                    renderMyComponent(id, widget.id, {})
-                    $widget.list.set(widget.id, widget)
-                }
-            }
-        }
-
-        const displayMandatoryWidgets = () => {
-            for (const [groupId, group] of targetedGroups.entries()) {
-                for (const [id, widget] of group.widgets) {
-                    if (!$widget.list.has(id) && widget.mandatory) {
-                        renderMyComponent(groupId, id, {})
-                        $widget.list.set(id, widget)
-                    }
-                }
-            }
-        }
-
-        displayWidgetsInBase()
-        displayMandatoryWidgets()
-    }, [])
+    /**
+     * Computes the tooltip text, including remaining instance count if applicable.
+     *
+     * @param {string} groupKey - Group ID.
+     * @param {string} widgetKey - Widget ID (base key).
+     * @param {Object} widgetDef - The widget definition object.
+     * @returns {string} The tooltip text.
+     */
     const getTooltipText = (groupKey, widgetKey, widgetDef) => {
         const baseKey = widgetKey.split('#')[0]
 
+        // Count current instances of this base widget
         const count = [...widget.list.keys()]
             .map(k => k.split('#')[0])
             .filter(k => k === baseKey).length
@@ -174,15 +103,46 @@ export const WidgetsPanelContent = ({groups}) => {
         return tooltipText
     }
 
-    // TODO mandatory for widget mirroring but may be
-    // TODO it will be usefully in some cases
+    // Effect to initialize widgets based on base configuration and mandatory setting
+    useEffect(() => {
+        const targetedGroups = theGroups()
 
-    // useEffect(() => {
-    //     return () => {
-    //         __.ui.widgetCache.clear()
-    //         $widget.list.clear()
-    //     }
-    // }, [])
+        /**
+         * Loads and displays widgets configured in the base (persisted) list.
+         */
+        const displayWidgetsInBase = async () => {
+            for (const [id] of targetedGroups.entries()) {
+                // Get pre-configured/persisted widgets for this group
+                const widgets = await __.ui.widgetManager.getWidgetsByGroup(id)
+                for (const widgetToRender of widgets) {
+                    // Use the renderer to load and register the widget instance
+                    widgetDynamicRenderer.renderWidget(id, widgetToRender.id, {})
+                    // Ensure the full widget definition (if it came from persistence) is set
+                    $widget.list.set(widgetToRender.id, widgetToRender)
+                }
+            }
+        }
+
+        /**
+         * Loads and displays mandatory widgets that are not already active.
+         */
+        const displayMandatoryWidgets = () => {
+            for (const [groupId, group] of targetedGroups.entries()) {
+                for (const [id, widgetDef] of group.widgets) {
+                    // Check if the widget is mandatory and not currently in the list
+                    if (!$widget.list.has(id) && widgetDef.mandatory) {
+                        // Use the renderer to load and register the mandatory widget
+                        widgetDynamicRenderer.renderWidget(groupId, id, {})
+                        // Add the widget definition to the list with its base ID
+                        $widget.list.set(id, widgetDef)
+                    }
+                }
+            }
+        }
+
+        displayWidgetsInBase()
+        displayMandatoryWidgets()
+    }, [])
 
     return (
         <div className="widget-deck-panel lgs-card on-map" ref={_widgetDeckPanel}>
@@ -193,12 +153,13 @@ export const WidgetsPanelContent = ({groups}) => {
 
             {[...theGroups().entries()].map(([groupKey, groupValue]) => (
                 <section key={groupKey} className="widget-group">
-                    {[...groupValue.widgets.entries()].map(([widgetKey, widget]) => {
+                    {[...groupValue.widgets.entries()].map(([widgetKey, widgetDef]) => {
+                        // Check if the maximum number of instances for this widget has been reached
                         const reached = isMaxReached(groupKey, widgetKey)
 
                         return (
                             <SlTooltip key={widgetKey} hoist placement="right"
-                                       content={getTooltipText(groupKey, widgetKey, widget)}
+                                       content={getTooltipText(groupKey, widgetKey, widgetDef)}
                             >
                                 <div
                                     onClick={() => addWidget(groupKey, widgetKey)}
@@ -212,7 +173,7 @@ export const WidgetsPanelContent = ({groups}) => {
                                         library="fa"
                                         name={FA2SL.set(WIDGETS_CONFIGURATION.get(widgetKey)?.icon)}
                                     />
-                                    <span className="widget-name">{widget.name}</span>
+                                    <span className="widget-name">{widgetDef.name}</span>
                                 </div>
                             </SlTooltip>
                         )
