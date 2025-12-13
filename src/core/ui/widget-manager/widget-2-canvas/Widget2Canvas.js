@@ -152,7 +152,6 @@ export class Widget2Canvas {
             const xml = new XMLSerializer().serializeToString(el)
             const img = new Image()
             img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml)
-            console.log(encodeURIComponent(xml))
 
             await img.decode()
             return img
