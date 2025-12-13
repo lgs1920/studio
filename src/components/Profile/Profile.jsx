@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-06
- * Last modified: 2025-12-06
+ * Created on: 2025-12-13
+ * Last modified: 2025-12-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -32,6 +32,7 @@ import { ProfileChart }                                            from './Profi
 
 export const Profile = function Profile() {
 
+    return null
     const $main = lgs.mainProxy
     const main = useSnapshot($main)
 

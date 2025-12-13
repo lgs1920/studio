@@ -7,14 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-06-30
- * Last modified: 2025-06-29
+ * Created on: 2025-12-13
+ * Last modified: 2025-12-13
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { faChartLine }                 from '@fortawesome/pro-regular-svg-icons'
+import { JOURNEY_WIDGETS, SCENE_WIDGETS } from '@Core/constants'
+import { WidgetDynamicRenderer }          from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import { faChartLine }                    from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
@@ -25,21 +27,35 @@ import { useSnapshot }                 from 'valtio'
 
 export const ProfileButton = (props) => {
 
-    const mainStore = lgs.mainProxy
-    const mainSnap = useSnapshot(mainStore)
+    const $main = lgs.stores.main
+    const $profile = $main.components.profile
+    const main = useSnapshot($main)
+    const profile = main.components.profile
+    const widgetDynamicRenderer = new WidgetDynamicRenderer()
 
     const toggleProfileButton = (event) => {
-        mainStore.components.profile.show = !mainStore.components.profile.show
+        $profile.show = !$profile.show
+        if ($profile.show) {
+            addWidget(SCENE_WIDGETS, 'profile-widget')
+        }
+    }
+    const addWidget = (group, key) => {
+        // Global widget (outside Cropper) - no cropZone
+        const context = {
+            widgetEditor: false,
+            global:       true,
+        }
+        widgetDynamicRenderer.renderWidget(group, key, context)
     }
 
     TrackUtils.setProfileVisibility(lgs.theJourney)
 
     return (<>
-        {mainSnap.canViewProfile &&
-            <SlTooltip hoist placement={props.tooltip} content="Open the journey profile">
-                {<SlButton size={'small'} className={'square-button'} id={'open-the-profile-panel'}
+        {main.canViewProfile &&
+            <SlTooltip hoist placement={props.tooltip} content="Open the journey main">
+                {<SlButton size={'small'} className={'square-button'} id={'open-the-main-panel'}
                            onClick={toggleProfileButton}
-                           key={mainSnap.components.profile.key}>
+                           key={profile.key}>
                     <SlIcon slot="prefix" library="fa" name={FA2SL.set(faChartLine)}></SlIcon>
                 </SlButton>}
             </SlTooltip>
