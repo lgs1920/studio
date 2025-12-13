@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-29
- * Last modified: 2025-11-29
+ * Created on: 2025-12-13
+ * Last modified: 2025-12-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -1156,21 +1156,81 @@ export class WidgetCore {
         // let's search widgets type defines in app configuration and get some settings
         const widget = __.widgets.get(group ?? null)?.widgets.get(id)
         if (widget) {
-            return (!widget?.mandatory && widget?.use !== 1) ? `${id}#${uuid()}` : id
+            // THe id should be unic
+            return `${id}#${uuid()}`
         }
         // No widget found, id is enough, let's use it
         return id
     }
 
-    countWidgets = (group, key) => {
-        let count = 0
-        if (group) {
-            const widgets = __.widgets.get(group)?.widgets
-            if (widgets) {
-                count = widgets.size
+
+    #widgetsStats = (groupId, widgetId) => {
+        const $widget = lgs.stores.ui.widget
+        const group = __.widgets.get(groupId)
+        const base = widgetId.split('#')[0]
+        const widget = group?.widgets?.get(widgetId)
+        const max = widget?.max ?? 1
+        // we scan the cache to count widgets
+        const count = [...$widget.cache.entries()].reduce((acc, [id, w]) => {
+            if (id && w.group === groupId) {
+                const baseId = id.split('#')[0]
+                if (baseId === base) {
+                    acc++
+                }
             }
-        }
+            return acc
+        }, 0)
+        const maxReached = count >= max
+        return {max, maxReached, count}
+    }
+    /**
+     * Counts the instances of a widget that are present for a given group.
+     * The count is based on the widget ID (i.e. the left part before #).
+     *
+     * @param group - group id
+     * @param widget - widget id
+     * @returns {number} number of instances
+     *
+     */
+    countWidgets = (group, widget) => {
+        const {count} = this.#widgetsStats(group, widget)
         return count
+    }
+
+    /**
+     * Checks if a widget has reached its maximum allowed instances.
+     *
+     * @param {string} group - Group ID.
+     * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
+     * @returns {boolean} True if the max is reached, false otherwise.
+     */
+    isMaxWidgetsReached = (group, widget) => {
+        const {maxReached} = this.#widgetsStats(group, widget)
+        return maxReached
+    }
+
+    /**
+     * Returns maximum allowed widget instances.
+     *
+     * @param {string} group - Group ID.
+     * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
+     * @returns {number} the maximum  allowed instances
+     */
+    maxWidgets = (group, widget) => {
+        const {max} = this.#widgetsStats(group, widget)
+        return max
+    }
+
+    /**
+     * Checks how many instances of a widget remain for a given group.
+     *
+     * @param {string} group - Group ID.
+     * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
+     * @returns {number} The remaining number of instances.
+     */
+    remainingWidgets = (group, widget) => {
+        const {max, count} = this.#widgetsStats(group, widget)
+        return max - count
     }
 
     /**

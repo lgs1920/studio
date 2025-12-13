@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-11
- * Last modified: 2025-12-11
+ * Created on: 2025-12-13
+ * Last modified: 2025-12-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,7 +22,7 @@ import {
 }                                                 from '@fortawesome/duotone-regular-svg-icons'
 import { faAndroid, faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
 import { faCompass, faDesktop }                   from '@fortawesome/pro-regular-svg-icons'
-import { faGavel }                                from '@fortawesome/pro-solid-svg-icons'
+import { faChartFft, faGavel }                    from '@fortawesome/pro-solid-svg-icons'
 
 
 export const SLOGAN = 'Replay the World Outdoors!'
@@ -480,10 +480,11 @@ export const LGS_ANIMATION_SCALING = 'lgs-animation-scaling'
 export const LGS_WIDGET_SCALE_FACTOR = 1
 
 export const VIDEO_CROP_ZONE = 'video-crop-zone'
-export const VIDEO_TOOLS_WIDGETS = 'video-tools-widgets'
-export const CROP_TOOLS_WIDGETS = 'crop-tools-widgets'
-export const MULTI_PURPOSE_WIDGETS = 'multi-purpose-widgets'
-export const JOURNEY_WIDGETS = 'journey-widgets'
+export const VIDEO_TOOLS_WIDGETS   = 'video-tools-widgets',
+             CROP_TOOLS_WIDGETS    = 'crop-tools-widgets',
+             MULTI_PURPOSE_WIDGETS = 'multi-purpose-widgets',
+             JOURNEY_WIDGETS       = 'journey-widgets',
+             SCENE_WIDGETS         = 'scene-widgets'
 
 export const WIDGETS_CAPABILITIES  = ['canRemove', 'canReset', 'canMaximize', 'canPosition', 'canEdit'],
              WIDGETS_CONFIGURATION = new Map([
@@ -496,6 +497,13 @@ export const WIDGETS_CAPABILITIES  = ['canRemove', 'canReset', 'canMaximize', 'c
                                                  [
                                                      'credits-widget', {
                                                      icon:      faGavel,
+                                                     component: null,
+                                                 },
+                                                 ],
+
+                                                 [
+                                                     'profile-widget', {
+                                                     icon:      faChartFft,
                                                      component: null,
                                                  },
                                                  ],// Memoize widget configuration

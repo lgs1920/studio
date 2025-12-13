@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-25
- * Last modified: 2025-11-25
+ * Created on: 2025-12-13
+ * Last modified: 2025-12-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -144,14 +144,16 @@ export class Widget2Canvas {
                     node.setAttribute('transform', transform)
                 }
 
-                node.removeAttribute('class')
-                node.removeAttribute('id')
+                // node.removeAttribute('class')
+                // node.removeAttribute('id')
             })
 
             // Serialize to XML string
             const xml = new XMLSerializer().serializeToString(el)
             const img = new Image()
             img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml)
+            console.log(encodeURIComponent(xml))
+
             await img.decode()
             return img
         }

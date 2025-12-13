@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-04
- * Last modified: 2025-12-04
+ * Created on: 2025-12-13
+ * Last modified: 2025-12-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,6 +18,7 @@ import { MapPOIContextMenu } from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { VideoPresetWidget } from '@Components/MainUI/video/toolbox/VideoPresetWidget'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
 import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
+import { GlobalWidgetsRenderer } from '@Components/MainUI/widgets/GlobalWidgetsRenderer'
 import { WidgetContextMenu } from '@Components/MainUI/widgets/WidgetContextMenu'
 import { Cropper }           from '@Components/ToolsUI/cropper/Cropper'
 import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordingScreenArea'
@@ -29,6 +30,7 @@ export const ToolsUI = () => {
     const {usage} = useSnapshot(lgs.settings.ui.journeyToolbar)
     const {video} = useSnapshot(lgs.stores.ui)
     const $cropper = lgs.stores.ui.video.cropper
+
     return (
         <div id="lgs-tools-ui">
             {video.editing ? (
@@ -49,6 +51,8 @@ export const ToolsUI = () => {
                     {usage && <JourneyToolbarWidget id="journey-toolbar-widget"/>}
                  </>
              )}
+
+            <GlobalWidgetsRenderer/>
         </div>
     )
 }

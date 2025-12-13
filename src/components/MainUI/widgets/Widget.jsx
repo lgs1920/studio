@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-03
- * Last modified: 2025-12-03
+ * Created on: 2025-12-13
+ * Last modified: 2025-12-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -344,7 +344,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             if (success) {
                 _initialized.current = true
                 __.ui.widgetCache.mount(config.id)
-                $widget.list.set(config.id, {mounted: true})
+                $widget.list.set(config.id, {})
                 _widget.current.style.opacity = 1
 
                 if (interactionLocked) {

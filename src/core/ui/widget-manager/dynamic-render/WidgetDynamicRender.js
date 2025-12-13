@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-11
- * Last modified: 2025-12-11
+ * Created on: 2025-12-13
+ * Last modified: 2025-12-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -86,28 +86,6 @@ export class WidgetDynamicRenderer {
     }
 
     /**
-     * Checks if a widget has reached its maximum allowed instances.
-     *
-     * @param {string} groupKey - Group ID.
-     * @param {string} widgetKey - Widget ID (can include instance suffix, e.g., 'myWidget#1').
-     * @returns {boolean} True if the max is reached, false otherwise.
-     */
-    isMaxReached(groupKey, widgetKey) {
-        const $widget = lgs.stores.ui.widget
-        const group = __.widgets.get(groupKey)
-        const baseKey = widgetKey.split('#')[0]
-        const widgetDef = group?.widgets?.get(baseKey)
-
-        // Count instances of the base widget key currently in the store
-        const count = [...$widget.list.keys()]
-            .map(k => k.split('#')[0])
-            .filter(k => k === baseKey).length
-
-        const max = widgetDef?.max ?? 1
-        return count >= max
-    }
-
-    /**
      * Loads and registers a widget component, then adds it to the list
      * of active widgets if allowed (i.e., max instances not reached).
      *
@@ -130,14 +108,7 @@ export class WidgetDynamicRenderer {
 
         // Generate a unique ID for the instance if the provided ID is the base key
         const theId = (key === id) ? __.ui.widgetManager.defineElementId(group, key) : id
-
-        // Check if we can add a new instance
-        const count = [...$widget.list.keys()]
-            .map(k => k.split('#')[0])
-            .filter(k => k === key).length
-
-        const max = theWidget?.max ?? 1
-        const canAddWidget = count < max
+        const canAddWidget = !__.ui.widgetManager.isMaxWidgetsReached(group, key)
 
         if (!__.ui.widgetCache.has(theId) && canAddWidget) {
             if (theWidget?.component) {
@@ -156,10 +127,9 @@ export class WidgetDynamicRenderer {
                                                     if (module[theWidget.component]) {
                                                         return {default: module[theWidget.component]}
                                                     }
-                                                    throw new Error(`Component ${theWidget.component} not found in ${componentPath}`)
+                                                    throw new Error(`Component ${theWidget.component} not found in ${componentPath}. Available exports: ${Object.keys(module).join(', ')}`)
                                                 })
                                                 .catch(error => {
-                                                    // Log the error for debugging
                                                     console.error(`Failed to load widget component: ${theWidget.component} from ${componentPath}`, error)
                                                     throw error
                                                 }),
@@ -168,9 +138,6 @@ export class WidgetDynamicRenderer {
                 // Cache the component and add the widget instance to the store list
                 __.ui.widgetCache.set(theId, group, LazyWidget)
                 $widget.list.set(theId, extraProps)
-
-                console.log('Final List Size:', $widget.list.size)
-                console.log('Widget added to list:', $widget.list.has(theId))
             }
         }
     }

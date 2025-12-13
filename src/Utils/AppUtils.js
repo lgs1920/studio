@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-03
- * Last modified: 2025-12-03
+ * Created on: 2025-12-13
+ * Last modified: 2025-12-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -167,15 +167,25 @@ export class AppUtils {
             )
         __.widgets = new Map()
 
-        for (const [groupKey, groupValue] of Object.entries(raw)) {
-            const widgets = new Map()
-            for (const [widgetKey, widgetValue] of Object.entries(groupValue.widgets)) {
-                widgets.set(widgetKey, widgetValue)
-            }
-            const groupCopy = {...groupValue, widgets: widgets}
-            __.widgets.set(groupKey, groupCopy)
+        // Initialize groups with their metadata
+        for (const [groupKey, groupValue] of Object.entries(raw['widget-groups'])) {
+            __.widgets.set(groupKey, {
+                ...groupValue,
+                widgets: new Map(),
+            })
         }
 
+        // Assign widgets to their groups
+        for (const [widgetKey, widgetValue] of Object.entries(raw.widgets)) {
+            if (widgetValue.groups && Array.isArray(widgetValue.groups)) {
+                for (const groupId of widgetValue.groups) {
+                    const group = __.widgets.get(groupId)
+                    if (group) {
+                        group.widgets.set(widgetKey, widgetValue)
+                    }
+                }
+            }
+        }
 
         // Get the setting sections ID
         lgs.settingSections = Object.keys(settings)

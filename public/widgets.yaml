@@ -1,36 +1,53 @@
-multi-purpose-widgets:
-  id: "multi-purpose-widgets"
-  name: "Multi-purpose Widgets"
-  description: "A collection of widgets"
-  icon: "puzzle-piece"
-  widgets:
-    compass-widget:
-      id: "compass-widget"
-      name: "Compass"
-      description: "A compass widget"
-      icon: "compass"
-      mandatory: false
-      max: 1
-      component: "CompassWidget"
-    credits-widget:
-      id: "credits-widget"
-      name: "Credits"
-      description: "A credits widget"
-      icon: "user"
-      mandatory: true
-      component: "CreditsWidget"
+widget-groups:
+  multi-purpose-widgets:
+    id: "multi-purpose-widgets"
+    name: "Multi-purpose Widgets"
+    description: "A collection of widgets"
+    icon: "puzzle-piece"
 
-journey-widgets:
-  id: "journey-widgets"
-  name: "Journey Widgets"
-  description: "A collection of widgets related to journeys"
-  icon: "route"
-  widgets:
-    profile-widget:
-      id: "profile-widget"
-      name: "Profile"
-      description: "The journey profile widget"
-      icon: "chart-fft"
-      mandatory: false
-      max: 1
-      component: "ProfileWidget"
+  journey-widgets:
+    id: "journey-widgets"
+    name: "Journey Widgets"
+    description: "Widgets related to journeys"
+    icon: "route"
+
+  scene-widgets:
+    id: "scene-widgets"
+    name: "Scene Widgets"
+    description: "Widgets available on the scene"
+    icon: "image-landscape"
+
+widgets:
+  compass-widget:
+    id: "compass-widget"
+    name: "Compass"
+    description: "A compass widget"
+    icon: "compass"
+    mandatory: false
+    max: 1
+    component: "CompassWidget"
+    groups:
+      - "multi-purpose-widgets"
+
+  credits-widget:
+    id: "credits-widget"
+    name: "Credits"
+    description: "A credits widget"
+    icon: "user"
+    mandatory: true
+    component: "CreditsWidget"
+    groups:
+      - "multi-purpose-widgets"
+
+  profile-widget:
+    id: "profile-widget"
+    name: "Profile"
+    description: "The journey profile widget"
+    icon: "chart-fft"
+    mandatory: false
+    max: 1
+    component: "ProfileWidget"
+    path: "@Components/Profile"
+    groups:
+      - "journey-widgets"
+      - "scene-widgets"

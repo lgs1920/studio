@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-19
- * Last modified: 2025-11-19
+ * Created on: 2025-12-13
+ * Last modified: 2025-12-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -393,18 +393,54 @@ export class WidgetManager {
     }
 
     /**
-     * Applies crop dimensions to the overlay element.
-     * @param {Object} config - Widget configuration
-     */
-    applyCropToOverlay = config => this.#cropper.applyCropToOverlay(config)
-
-    /**
      * Retrieves or creates widget configuration for an element, including saved positions from browser DB.
      * @param {HTMLElement} element - The DOM element
      * @param {Object} initialConfig - Initial configuration
      * @returns {Promise<Object>} Widget configuration
      */
     retrieveConfig = async (element, initialConfig) => this.#core.retrieveConfig(element, initialConfig)
+    /**
+     * Counts the instances of a widget that are present for a given group.
+     * The count is based on the widget ID (i.e. the left part before #).
+     *
+     * @param group - group id
+     * @param widget - widget id
+     * @returns {number} number of instances
+     *
+     */
+    countWidgets = (group, widget) => this.#core.countWidgets(group, widget)
+    /**
+     * Checks if a widget has reached its maximum allowed instances.
+     *
+     * @param {string} group - Group ID.
+     * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
+     * @returns {boolean} True if the max is reached, false otherwise.
+     */
+    isMaxWidgetsReached = (group, widget) => this.#core.isMaxWidgetsReached(group, widget)
+    /**
+     * Returns maximum allowed widget instances.
+     *
+     * @param {string} group - Group ID.
+     * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
+     * @returns {number} the maximum  allowed instances
+     */
+    maxWidgets = (group, widget) => this.#core.maxWidgets(group, widget)
+
+    /**
+     * Applies crop dimensions to the overlay element.
+     * @param {Object} config - Widget configuration
+     */
+
+    /**
+     * Checks how many instances of a widget remain for a given group.
+     *
+     * @param {string} group - Group ID.
+     * @param {string} widget - Widget ID (can include ID prefixed, e.g., 'myWidget#uuid').
+     * @returns {number} The remaining number of instances.
+     */
+    remainingWidgets = (group, widget) => this.#core.remainingWidgets(group, widget)
+
+    applyCropToOverlay = config => this.#cropper.applyCropToOverlay(config)
 
     /**
      * Saves widget position and dimensions to the widgets DB.

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-11
- * Last modified: 2025-12-11
+ * Created on: 2025-12-13
+ * Last modified: 2025-12-13
  *
  *
  * Copyright © 2025 LGS1920
@@ -23,11 +23,6 @@ import classNames                from 'classnames'
 import { useEffect, useRef }     from 'react'
 import { useSnapshot }           from 'valtio'
 
-/**
- * Singleton instance of the widget renderer utility.
- * @type {WidgetDynamicRenderer}
- */
-const widgetDynamicRenderer = WidgetDynamicRenderer.instance
 
 /**
  * Widget panel that shows available widgets grouped by category.
@@ -40,6 +35,8 @@ const widgetDynamicRenderer = WidgetDynamicRenderer.instance
 export const WidgetsPanelContent = ({groups}) => {
     // Variable to hold the reference to the main panel element
     const _widgetDeckPanel = useRef(null)
+    const widgetDynamicRenderer = new WidgetDynamicRenderer()
+
     // Proxy variable for the widget store
     const $widget = lgs.stores.ui.widget
     // Snapshot variable for immutable access to the widget store data
@@ -52,18 +49,6 @@ export const WidgetsPanelContent = ({groups}) => {
      */
     const theGroups = () => {
         return widgetDynamicRenderer.theGroups(groups)
-    }
-
-    /**
-     * Checks if a widget has reached its max allowed instances.
-     * Delegates to the WidgetDynamicRenderer singleton.
-     *
-     * @param {string} groupKey - Group ID
-     * @param {string} widgetKey - Widget ID
-     * @returns {boolean}
-     */
-    const isMaxReached = (groupKey, widgetKey) => {
-        return widgetDynamicRenderer.isMaxReached(groupKey, widgetKey)
     }
 
     /**
@@ -82,26 +67,20 @@ export const WidgetsPanelContent = ({groups}) => {
      *
      * @param {string} groupKey - Group ID.
      * @param {string} widgetKey - Widget ID (base key).
-     * @param {Object} widgetDef - The widget definition object.
+     * @param {Object} widgetDesc - The widget definition object.
      * @returns {string} The tooltip text.
      */
-    const getTooltipText = (groupKey, widgetKey, widgetDef) => {
-        const baseKey = widgetKey.split('#')[0]
+    const getTooltipText = (groupKey, widgetKey, widgetDesc) => {
 
-        // Count current instances of this base widget
-        const count = [...widget.list.keys()]
-            .map(k => k.split('#')[0])
-            .filter(k => k === baseKey).length
-
-        const max = widgetDef?.max ?? 1
-        const remaining = max - count
-
-        let tooltipText = widgetDef.description || ''
+        const remaining = __.ui.widgetManager.remainingWidgets(groupKey, widgetKey)
+        const max = __.ui.widgetManager.maxWidgets(groupKey, widgetKey)
+        let tooltipText = widgetDesc.description || ''
         if (max > 1 && remaining > 0) {
             tooltipText += ` (${remaining} remaining)`
         }
         return tooltipText
     }
+
 
     // Effect to initialize widgets based on base configuration and mandatory setting
     useEffect(() => {
@@ -118,7 +97,7 @@ export const WidgetsPanelContent = ({groups}) => {
                     // Use the renderer to load and register the widget instance
                     widgetDynamicRenderer.renderWidget(id, widgetToRender.id, {})
                     // Ensure the full widget definition (if it came from persistence) is set
-                    $widget.list.set(widgetToRender.id, widgetToRender)
+                    $widget.list.set(widgetToRender.id, {})
                 }
             }
         }
@@ -134,7 +113,7 @@ export const WidgetsPanelContent = ({groups}) => {
                         // Use the renderer to load and register the mandatory widget
                         widgetDynamicRenderer.renderWidget(groupId, id, {})
                         // Add the widget definition to the list with its base ID
-                        $widget.list.set(id, widgetDef)
+                        $widget.list.set(id, {})
                     }
                 }
             }
@@ -155,7 +134,7 @@ export const WidgetsPanelContent = ({groups}) => {
                 <section key={groupKey} className="widget-group">
                     {[...groupValue.widgets.entries()].map(([widgetKey, widgetDef]) => {
                         // Check if the maximum number of instances for this widget has been reached
-                        const reached = isMaxReached(groupKey, widgetKey)
+                        const reached = __.ui.widgetManager.isMaxWidgetsReached(groupKey, widgetKey)
 
                         return (
                             <SlTooltip key={widgetKey} hoist placement="right"
