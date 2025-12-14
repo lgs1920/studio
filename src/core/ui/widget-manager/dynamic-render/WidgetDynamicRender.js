@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-13
- * Last modified: 2025-12-13
+ * Created on: 2025-12-14
+ * Last modified: 2025-12-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -91,10 +91,10 @@ export class WidgetDynamicRenderer {
      *
      * @param {string} group - Group ID.
      * @param {string} id - Widget ID (base key or full key with instance suffix).
-     * @param {Object} [extraProps={}] - Optional props to pass to the widget instance.
+     * @param {Object} [props={}] - Optional props to pass to the widget instance.
      * @returns {Promise<void>}
      */
-    async renderWidget(group, id, extraProps = {}) {
+    async renderWidget(group, id, props = {}) {
         const $widget = lgs.stores.ui.widget
         const groupsMap = this.theGroups([group])
 
@@ -105,15 +105,13 @@ export class WidgetDynamicRenderer {
         const key = id.split('#')[0]
         const theGroups = groupsMap.get(group)
         const theWidget = theGroups.widgets.get(key)
-
-        // Generate a unique ID for the instance if the provided ID is the base key
-        const theId = (key === id) ? __.ui.widgetManager.defineElementId(group, key) : id
         const canAddWidget = !__.ui.widgetManager.isMaxWidgetsReached(group, key)
+        if (!__.ui.widgetCache.has(key, {group: group}) && canAddWidget) {
 
-        if (!__.ui.widgetCache.has(theId) && canAddWidget) {
             if (theWidget?.component) {
                 const resolvedPath = this.resolveAliasPath(theWidget?.path ?? DEFAULT_WIDGETS_LIST)
                 const componentPath = `${resolvedPath}/${theWidget.component}.jsx`
+                const theId = (key === id) ? __.ui.widgetManager.defineElementId(group, key) : id
 
                 const LazyWidget = lazy(() =>
                                             // Use @vite-ignore to tell Vite not to try to statically bundle this
@@ -130,6 +128,8 @@ export class WidgetDynamicRenderer {
                                                     throw new Error(`Component ${theWidget.component} not found in ${componentPath}. Available exports: ${Object.keys(module).join(', ')}`)
                                                 })
                                                 .catch(error => {
+                                                    // Removes from the cache
+                                                    __.ui.widgetCache.delete(theId)
                                                     console.error(`Failed to load widget component: ${theWidget.component} from ${componentPath}`, error)
                                                     throw error
                                                 }),
@@ -137,7 +137,7 @@ export class WidgetDynamicRenderer {
 
                 // Cache the component and add the widget instance to the store list
                 __.ui.widgetCache.set(theId, group, LazyWidget)
-                $widget.list.set(theId, extraProps)
+                $widget.list.set(theId, props)
             }
         }
     }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-13
- * Last modified: 2025-12-13
+ * Created on: 2025-12-14
+ * Last modified: 2025-12-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -510,5 +510,9 @@ export const WIDGETS_CAPABILITIES  = ['canRemove', 'canReset', 'canMaximize', 'c
                                              ]),
              DEFAULT_WIDGETS_LIST  = '@Components/MainUI/widgets/list'
 
+export const SCENE_WIDGETS_BOARD = 'scene',
+             VIDEO_WIDGETS_BOARD = VIDEO_CROP_ZONE
+
 export const DYNAMIC_WIDGET_PART = 'dynamic-widget-part',
              STATIC_WIDGET_PART  = 'static-widget-part'
+

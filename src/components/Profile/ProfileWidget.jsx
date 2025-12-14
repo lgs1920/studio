@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-13
- * Last modified: 2025-12-13
+ * Created on: 2025-12-14
+ * Last modified: 2025-12-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,8 +19,8 @@ import {
     HOUR,
     JOURNEY_WIDGETS,
     LGS_VISUAL_WIDGET,
-    MULTI_PURPOSE_WIDGETS, SCENE_WIDGETS,
-}                                       from '@Core/constants'
+    MULTI_PURPOSE_WIDGETS, SCENE_WIDGETS, SCENE_WIDGETS_BOARD,
+} from '@Core/constants'
 import { Export }                       from '@Core/ui/Export'
 import { CHART_ELEVATION_VS_DISTANCE }  from '@Core/ui/Profiler'
 import './style.css'
@@ -30,21 +30,18 @@ import { useSnapshot }                  from 'valtio'
 import { ProfileChart }                 from './ProfileChart'
 
 export const ProfileWidget = ({id, context}) => {
-    // Context is a plain object, not a Valtio proxy - use it directly
-    const widgetEditor = context?.widgetEditor ?? false
-    const cropZone = context?.cropZone ?? ''
-
+    const {widgetEditor, widgetsBoard} = context
     const $profile = lgs.stores.main.components.profile
     const profile = useSnapshot($profile)
-    const [_container, setContainer] = useState(null)
+    const [container, setContainer] = useState(lgs.canvas)
 
-    // Set container when cropZone changes
+    // Set container when widgetsBoard changes
     useEffect(() => {
-        if (cropZone) {
-            const element = document.querySelector(`#${cropZone}.defined`)
+        if (widgetsBoard && widgetsBoard !== SCENE_WIDGETS_BOARD) {
+            const element = document.querySelector(`#${widgetsBoard}.defined`)
             setContainer(element)
         }
-    }, [cropZone])
+    }, [widgetsBoard])
 
     const snapshotAsImage = () => {
         const file = `${CHART_ELEVATION_VS_DISTANCE}-${__.app.slugify(
@@ -69,18 +66,19 @@ export const ProfileWidget = ({id, context}) => {
 
     // Memoize widget configuration
     const config = useMemo(() => {
-        if (widgetEditor) {
+        if (widgetEditor || widgetsBoard === SCENE_WIDGETS_BOARD) {
             return {
-                container:       _container,
+                container:       container,
                 contextMenu:     {
                     canReset:  true,
                     canEdit:   true,
                     canRemove: true,
+                    canPosition: true,
                 },
                 top:             '100%',
                 left:            '0px',
                 type:            LGS_VISUAL_WIDGET,
-                group:           _container ? JOURNEY_WIDGETS : SCENE_WIDGETS,
+                group:           context?.widgetsBoard === SCENE_WIDGETS_BOARD ? SCENE_WIDGETS : JOURNEY_WIDGETS,
                 margin:          5,
                 attachTo:        'bottom',
                 scalable:        true,
@@ -95,7 +93,7 @@ export const ProfileWidget = ({id, context}) => {
             }
         }
         return {}
-    }, [widgetEditor, _container])
+    }, [widgetEditor, container])
 
     return (
         <Widget isVisible={true} config={config}>

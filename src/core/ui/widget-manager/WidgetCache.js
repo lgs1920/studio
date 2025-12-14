@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-28
- * Last modified: 2025-11-28
+ * Created on: 2025-12-14
+ * Last modified: 2025-12-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -92,16 +92,50 @@ export class WidgetCache {
     delete = key => this.#cache.delete(key)
 
     /**
-     * Checks if a key exists in the cache.
-     * @param {string} key - Full or base key
-     * @param {boolean} [full=false] - If true, exact key match only
+     * Checks if a key exists in the cache and optionally verifies the group.
+     * @param {string} key - Full or base key.
+     * @param {Object} [options={}] - Options for the search.
+     * @param {string} [options.group] - The group the cached item must belong to.
+     * @param {boolean} [options.full=false] - If true, exact key match only.
      * @returns {boolean}
      */
-    has = (key, full = false) => {
-        if (full) {
-            return this.#cache.has(key)
+    has = (key, options = {}) => {
+        // Destructure options with default values
+        const {group, full = false} = options
+
+        /**
+         * Helper function to check if a cached value matches the specified group (if provided).
+         * @param {*} value - The cached value (an object with a 'group' attribute).
+         * @returns {boolean}
+         */
+        const isGroupMatch = (value) => {
+            // If no group is specified in options, any group is a match
+            if (group === undefined) {
+                return true
+            }
+            // Check if the cached value's group matches the specified group
+            return value && value.group === group
         }
-        return Array.from(this.#cache.keys()).some(k => k === key || k.startsWith(`${key}#`))
+
+        if (full) {
+            // Full key match: check if the exact key exists AND the group matches
+            if (this.#cache.has(key)) {
+                const cachedValue = this.#cache.get(key)
+                return isGroupMatch(cachedValue)
+            }
+            return false
+        }
+
+        // Base key match (startsWith): iterate over all keys
+        return Array.from(this.#cache.keys()).some(k => {
+            // Check if the key starts with the base key
+            if (k.startsWith(key)) {
+                const cachedValue = this.#cache.get(k)
+                // If the key matches, check if the group also matches
+                return isGroupMatch(cachedValue)
+            }
+            return false
+        })
     }
 
     /**

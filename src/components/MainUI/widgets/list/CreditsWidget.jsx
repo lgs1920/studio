@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-29
- * Last modified: 2025-11-29
+ * Created on: 2025-12-14
+ * Last modified: 2025-12-14
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,19 +24,19 @@ import { useSnapshot }                                 from 'valtio'
  * CreditsWidget component to display a compass in the widget editor
  * @param {Object} props - Component props
  * @param {string} props.id - Unique identifier for the widget
- * @param {Object} props.context - Valtio proxy context containing cropZone and widgetEditor
+ * @param {Object} props.context - Valtio proxy context containing widgetsBoard and widgetEditor
  * @returns {JSX.Element|null} The credits widget or null if not in editor mode or container is not ready
  */
 export const CreditsWidget = ({id, context}) => {
     // Get snapshot of context
-    const {widgetEditor, cropZone} = useSnapshot(context ?? {widgetEditor: false, cropZone: ''})
+    const {widgetEditor, widgetsBoard} = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
     const [_container, setContainer] = useState(null)
 
-    // Set container when cropZone changes
+    // Set container when widgetsBoard changes
     useEffect(() => {
-        const element = document.querySelector(`#${cropZone}.defined`)
+        const element = document.querySelector(`#${widgetsBoard}.defined`)
         setContainer(element)
-    }, [cropZone])
+    }, [widgetsBoard])
 
     // Memoize widget configuration
     const config = useMemo(() => {
