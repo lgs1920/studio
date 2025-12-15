@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-27
- * Last modified: 2025-11-27
+ * Created on: 2025-12-15
+ * Last modified: 2025-12-15
  *
  *
  * Copyright © 2025 LGS1920
@@ -93,6 +93,9 @@ export class CanvasOverlayComposer {
         // Create output canvas with opaque background (better for recording)
         this.#outputCanvas = document.createElement('canvas')
         this.#ctx = this.#outputCanvas.getContext('2d', {alpha: false})
+
+        this.#ctx.imageSmoothingEnabled = true
+        this.#ctx.imageSmoothingQuality = 'high'
 
         // Initialize DPR, size, and start rendering
         this.#updateSourceDpr()
@@ -197,9 +200,6 @@ export class CanvasOverlayComposer {
     #draw = () => {
         // Ensure WebGL rendering is finished (Cesium/Three.js)
         this.#flushWebGLBuffer?.()
-
-        // Source DPR can change every frame — always recompute
-        this.#updateSourceDpr()
 
         const ctx = this.#ctx
 
