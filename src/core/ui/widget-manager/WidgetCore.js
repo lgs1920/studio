@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-13
- * Last modified: 2025-12-13
+ * Created on: 2025-12-16
+ * Last modified: 2025-12-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -295,6 +295,9 @@ export class WidgetCore {
      * @param {boolean} isMouseOver - Whether mouse is over the element
      */
     manageControlBox = (moveable, setControlBoxProps, _controlBoxTimer, show, isMouseOver) => {
+        if (!moveable?.current?.target) {
+            return
+        }
         const elementId = this.retrieveElementId(moveable.current.target)
         const config = this.getWidgetConfig(elementId)
         const mv = this.getMoveable(elementId)
@@ -895,6 +898,7 @@ export class WidgetCore {
                 ttl:                    initialConfig.ttl ?? this.TTL,
                 type: initialConfig.type ?? LGS_WIDGET,
                 useRatio:              initialConfig.useRatio ?? true,
+                widgetsBoard: initialConfig.widgetsBoard,
             }
         }
         else {

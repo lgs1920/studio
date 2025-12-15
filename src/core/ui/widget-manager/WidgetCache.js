@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-14
- * Last modified: 2025-12-14
+ * Created on: 2025-12-16
+ * Last modified: 2025-12-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,7 +38,7 @@ export class WidgetCache {
     static #instance = null
 
     /** @type {import('valtio').Proxy<Map<string, CacheEntry>>} */
-    #cache
+    #cache = new Map()
 
     constructor() {
         if (WidgetCache.#instance) {
@@ -48,6 +48,7 @@ export class WidgetCache {
         this.#cache = lgs.stores.ui.widget.cache
         WidgetCache.#instance = this
     }
+
 
     /**
      * Retrieves the lazy-loaded component for a given key.
@@ -101,7 +102,7 @@ export class WidgetCache {
      */
     has = (key, options = {}) => {
         // Destructure options with default values
-        const {group, full = false} = options
+        const {group, full = false, widgetBoard} = options
 
         /**
          * Helper function to check if a cached value matches the specified group (if provided).

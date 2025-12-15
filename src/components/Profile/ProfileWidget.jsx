@@ -7,96 +7,182 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-14
- * Last modified: 2025-12-14
+ * Created on: 2025-12-16
+ * Last modified: 2025-12-16
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { Widget }                       from '@Components/MainUI/widgets/Widget'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useSnapshot }                         from 'valtio'
+import { Widget }                              from '@Components/MainUI/widgets/Widget'
 import {
     HOUR,
     JOURNEY_WIDGETS,
     LGS_VISUAL_WIDGET,
-    MULTI_PURPOSE_WIDGETS, SCENE_WIDGETS, SCENE_WIDGETS_BOARD,
+    SCENE_WIDGETS,
+    SCENE_WIDGETS_BOARD,
 } from '@Core/constants'
-import { Export }                       from '@Core/ui/Export'
-import { CHART_ELEVATION_VS_DISTANCE }  from '@Core/ui/Profiler'
+import { Export }                              from '@Core/ui/Export'
+import { CHART_ELEVATION_VS_DISTANCE }         from '@Core/ui/Profiler'
+import { UIToast }                             from '@Utils/UIToast'
+import { ProfileChart }                        from './ProfileChart'
 import './style.css'
-import { UIToast }                      from '@Utils/UIToast'
-import { useEffect, useMemo, useState } from 'react'
-import { useSnapshot }                  from 'valtio'
-import { ProfileChart }                 from './ProfileChart'
 
+/**
+ * The Profile Widget component displays the elevation profile chart and handles widget configuration.
+ * It is designed to support multiple instances with different contexts (e.g., different widget boards).
+ *
+ * @param {Object} props - Component properties.
+ * @param {string} props.id - Unique ID of the widget instance.
+ * @param {Object} props.context - Widget rendering context.
+ * @param {boolean} props.context.widgetEditor - Indicates if the widget is in edit mode.
+ * @param {string} props.context.widgetsBoard - The ID of the board where the widget is rendered.
+ * @returns {JSX.Element | null} The Profile Widget or null if context is missing.
+ */
 export const ProfileWidget = ({id, context}) => {
+    // Destructure context properties used as dependencies
     const {widgetEditor, widgetsBoard} = context
+
+    /**
+     * Proxy for the profile component state, used to update values.
+     * Accessible only inside the component to prevent initial mounting errors.
+     * @type {{show: boolean, key: string}}
+     */
     const $profile = lgs.stores.main.components.profile
+
+    /**
+     * Proxy for the video UI state (example of deep store access).
+     * @type {object}
+     */
+    const $video = lgs.stores.ui.video
+
+    /**
+     * Snapshot of the profile state, triggering re-renders on change (e.g., when profile.key changes).
+     * @type {{key: string}}
+     */
     const profile = useSnapshot($profile)
+
+    /**
+     * Snapshot of the video state (included for completeness).
+     * @type {object}
+     */
+    const video = useSnapshot($video)
+
+    /**
+     * State for the container element where the widget should attach.
+     * Initialized to the global canvas element (default attach point).
+     * @type {[HTMLElement, React.Dispatch<React.SetStateAction<HTMLElement>>]}
+     */
     const [container, setContainer] = useState(lgs.canvas)
 
-    // Set container when widgetsBoard changes
+    /**
+     * Adds or destroys the profile widget based on the required state.
+     * Delegates to the shared WidgetDynamicRenderer instance.
+     *
+     * @param {boolean} shouldShow - If true, renders the widget; otherwise, destroys it.
+     */
+    const manageProfileWidget = (shouldShow) => {
+        if (shouldShow) {
+            // Renders the widget in the SCENE_WIDGETS group on the SCENE_WIDGETS_BOARD
+            widgetDynamicRendererInstance.renderWidget(SCENE_WIDGETS, this.WIDGET_KEY, {
+                widgetsBoard: SCENE_WIDGETS_BOARD,
+            })
+        }
+        else {
+            // Destroys the widget, removing it from the DOM and releasing resources
+            widgetDynamicRendererInstance.destroyWidget(this.WIDGET_KEY)
+        }
+    }
+    /**
+     * Updates the container element reference when the widget board changes.
+     * If the board is not the main scene board, it looks up the specific board element.
+     */
     useEffect(() => {
         if (widgetsBoard && widgetsBoard !== SCENE_WIDGETS_BOARD) {
+            // Find the board element using its ID and the 'defined' class for safety
             const element = document.querySelector(`#${widgetsBoard}.defined`)
-            setContainer(element)
+            if (element) {
+                setContainer(element)
+            }
         }
-    }, [widgetsBoard])
+    }, [widgetsBoard]) // Re-run only when the board ID changes
 
+    /**
+     * Exports the chart content as a PNG image by reading the DOM element.
+     */
     const snapshotAsImage = () => {
         const file = `${CHART_ELEVATION_VS_DISTANCE}-${__.app.slugify(
             lgs.theJourney.title,
         )}`
-        const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
-        Export.toPNG(chart.getDom(), file).then(() => {
-            UIToast.success({
-                                caption: `Your chart has been exported successfully !`,
-                                text:    `into ${file}.png`,
-                            })
-        })
+        // Ensure the chart object exists before attempting to export
+        const chart = __.ui.profiler?.charts.get(CHART_ELEVATION_VS_DISTANCE)
+        if (chart) {
+            Export.toPNG(chart.getDom(), file).then(() => {
+                UIToast.success({
+                                    caption: `Your chart has been exported successfully !`,
+                                    text:    `into ${file}.png`,
+                                })
+            })
+        }
     }
 
-    // Set visibility once on mount
+    /**
+     * Sets the visibility state within the global profiler utility once on mount.
+     */
     useEffect(() => {
         __.ui.profiler?.setVisibility()
     }, [])
 
-    // Prepare data from track to profile - memoize to avoid recalculation
+    /**
+     * Prepares and memoizes the data required for the profile chart.
+     * Recalculates only if profile.key changes (signaling a journey change or reset).
+     * @returns {object | undefined} The prepared data for the chart.
+     */
     const data = useMemo(() => __.ui.profiler?.prepareData(), [profile.key])
 
-    // Memoize widget configuration
+    /**
+     * Memoizes the configuration object required for the generic Widget component.
+     * This logic determines widget grouping, positioning, and persistence settings based on the context.
+     */
     const config = useMemo(() => {
-        if (widgetEditor || widgetsBoard === SCENE_WIDGETS_BOARD) {
-            return {
-                container:       container,
-                contextMenu:     {
-                    canReset:  true,
-                    canEdit:   true,
-                    canRemove: true,
-                    canPosition: true,
-                },
-                top:             '100%',
-                left:            '0px',
-                type:            LGS_VISUAL_WIDGET,
-                group:           context?.widgetsBoard === SCENE_WIDGETS_BOARD ? SCENE_WIDGETS : JOURNEY_WIDGETS,
-                margin:          5,
-                attachTo:        'bottom',
-                scalable:        true,
-                id,
-                persist:         true,
-                transient:       true,
-                ttl:             HOUR,
-                mandatory:       false,
-                stopPropagation: true,
-                snap:            'svg',
-
-            }
+        return {
+            container:       container,
+            contextMenu:     {
+                canReset:    true,
+                canEdit:     true,
+                canRemove:   true,
+                canPosition: true,
+            },
+            top:             '100%',
+            left:            '0px',
+            type:            LGS_VISUAL_WIDGET,
+            group:        widgetsBoard === SCENE_WIDGETS_BOARD ? SCENE_WIDGETS : JOURNEY_WIDGETS,
+            margin:          5,
+            attachTo:        'bottom',
+            scalable:        true,
+            id,
+            persist:         true,
+            transient:       true,
+            ttl:             HOUR,
+            mandatory:       false,
+            stopPropagation: true,
+            snap:            'svg',
+            widgetsBoard: widgetsBoard,
         }
-        return {}
-    }, [widgetEditor, container])
+    }, [widgetEditor, container, widgetsBoard, id]) // Include all dependencies to ensure accurate recalculation
 
+    // Safety check: if the board is missing or the config generation failed, return null.
+    // We check Object.keys(config).length for cases where config returned {} inside useMemo.
+    if (!widgetsBoard || Object.keys(config).length === 0) {
+        return null
+    }
+
+    // Render the generic Widget wrapper with the determined config
     return (
         <Widget isVisible={true} config={config}>
+            {/* The inner div key forces a re-mount of the chart when the profile data context changes */}
             <div key={profile.key}>
                 {data &&
                     <div id={`profile-${CHART_ELEVATION_VS_DISTANCE}`} style={{width: '500px', height: '200px'}}>

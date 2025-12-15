@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-14
- * Last modified: 2025-12-14
+ * Created on: 2025-12-16
+ * Last modified: 2025-12-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,9 +17,9 @@ import { CameraAndTargetPanel }     from '@Components/cesium/CameraAndTargetPane
 import { MapPOIContextMenu } from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { VideoPresetWidget } from '@Components/MainUI/video/toolbox/VideoPresetWidget'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
-import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
-import { GlobalWidgetsRenderer } from '@Components/MainUI/widgets/GlobalWidgetsRenderer'
-import { WidgetContextMenu } from '@Components/MainUI/widgets/WidgetContextMenu'
+import { VideoSettingsInfo }    from '@Components/MainUI/video/VideoSettingsInfo'
+import { SceneWidgetsRenderer } from '@Components/MainUI/widgets/SceneWidgetsRenderer'
+import { WidgetContextMenu }    from '@Components/MainUI/widgets/WidgetContextMenu'
 import { Cropper }           from '@Components/ToolsUI/cropper/Cropper'
 import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordingScreenArea'
 import { JourneyToolbarWidget }     from '@Editor/JourneyToolbarWidget'
@@ -52,7 +52,7 @@ export const ToolsUI = () => {
                  </>
              )}
 
-            <GlobalWidgetsRenderer/>
+            <SceneWidgetsRenderer/>
         </div>
     )
 }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-02
- * Last modified: 2025-11-02
+ * Created on: 2025-12-16
+ * Last modified: 2025-12-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -41,17 +41,18 @@ export class WidgetDBManager {
 
         const scale = config.scale || {x: 1, y: 1}
         const record = {
-            id:        widgetId,
-            group:     config.group || null,
-            left:  config.position.left,
-            top:   config.position.top,
-            width:     config.cropDimensions?.width || config.dimensions.width,
-            height:    config.cropDimensions?.height || config.dimensions.height,
-            transient: config.transient,
-            ttl:       config.ttl || null,
-            scale: scale,
-            ratio:    config.ratio,
-            attachTo: config.attachTo,
+            id:           widgetId,
+            group:        config.group || null,
+            widgetsBoard: config.widgetsBoard,
+            left:         config.position.left,
+            top:          config.position.top,
+            width:        config.cropDimensions?.width || config.dimensions.width,
+            height:       config.cropDimensions?.height || config.dimensions.height,
+            transient:    config.transient,
+            ttl:          config.ttl || null,
+            scale:        scale,
+            ratio:        config.ratio,
+            attachTo:     config.attachTo,
         }
         await lgs.db.lgs1920.put(widgetId, record, WIDGETS_STORE, record.ttl)
 

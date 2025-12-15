@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-13
- * Last modified: 2025-12-13
+ * Created on: 2025-12-16
+ * Last modified: 2025-12-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -32,22 +32,21 @@ export const DynamicWidget = ({id, context, props = {}}) => {
      * Retrieve the lazy-loaded component from the global widget cache.
      * Cache entry expected format: { component: React.LazyExoticComponent<React.ComponentType<any>> }
      */
-    const LazyWidget = __.ui.widgetCache.get(id)?.component
+    const cacheEntry = __.ui.widgetCache.get(id)
+    const LazyWidget = cacheEntry?.component
 
     // Widget not found in registry → render nothing to avoid unnecessary DOM nodes
     if (!LazyWidget) {
+        console.warn('DynamicWidget: LazyWidget not found for id:', id)
         return false
     }
 
     // Explicit component reference for clarity and potential future debugging/hooks
     const Component = LazyWidget
 
-    // Merge context from both sources: props passed to DynamicWidget and props from store
-    const finalContext = context || props
-
     return (
         <Suspense fallback={<SlSpinner style={{fontSize: '2rem'}}/>}>
-            <Component id={id} {...props} context={finalContext}/>
+            <Component id={id} {...props} context={context || props}/>
         </Suspense>
     )
 }

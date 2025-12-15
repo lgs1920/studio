@@ -7,18 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-14
- * Last modified: 2025-12-14
+ * Created on: 2025-12-16
+ * Last modified: 2025-12-16
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { Compass }                             from '@Components/cesium/CompassUI/Compass'
-import { Widget }                              from '@Components/MainUI/widgets/Widget'
-import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
-import React, { useEffect, useMemo, useState } from 'react'
-import { useSnapshot }                         from 'valtio'
+import { Widget }                                                                 from '@Components/MainUI/widgets/Widget'
+import { DEFAULT_WIDGET_CONTEXT, HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
+import React, { useEffect, useMemo, useState }                                    from 'react'
+import { proxy, useSnapshot }                                                     from 'valtio'
 
 /**
  * CompassWidget component to display a compass in the widget editor
@@ -40,7 +40,6 @@ export const CompassWidget = ({id, context}) => {
 
     // Memoize widget configuration
     const config = useMemo(() => {
-        if (widgetEditor && _container) {
             return {
                 container: _container,
                 contextMenu: {
@@ -63,10 +62,8 @@ export const CompassWidget = ({id, context}) => {
                 max: {width: 300},
                 snap: 'svg',
                 margin: 0,
+                widgetsBoard: widgetsBoard,
             }
-        }
-
-        return {}
     }, [widgetEditor, _container])
 
     // Render only when widgetEditor is true and container is defined

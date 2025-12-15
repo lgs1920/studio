@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: GlobalWidgetsRenderer.jsx
+ * File: SceneWidgetsRenderer.jsx
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-14
- * Last modified: 2025-12-14
+ * Created on: 2025-12-16
+ * Last modified: 2025-12-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,17 +22,18 @@ import { useSnapshot }   from 'valtio'
  * Renders all global widgets (widgets with global: true).
  * These widgets are displayed outside of any Cropper container.
  */
-export const GlobalWidgetsRenderer = () => {
+export const SceneWidgetsRenderer = () => {
     const $widget = lgs.stores.ui.widget
     const {list} = useSnapshot($widget)
 
+    const allEntries = Array.from(list.entries())
+    const sceneWidgets = allEntries
+        .filter(([key, props]) => props?.widgetsBoard === SCENE_WIDGETS_BOARD)
     return (
         <>
-            {Array.from(list.entries())
-                .filter(([key, props]) => props?.widgetsBoard === SCENE_WIDGETS_BOARD)
-                .map(([key, props]) => (
-                    <DynamicWidget key={key} id={key} props={props}/>
-                ))}
+            {sceneWidgets.map(([key, props]) => (
+                <DynamicWidget key={key} id={key} props={props}/>
+            ))}
         </>
     )
 }

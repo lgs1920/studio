@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-14
- * Last modified: 2025-12-14
+ * Created on: 2025-12-16
+ * Last modified: 2025-12-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -61,7 +61,7 @@ export const WidgetsPanelContent = ({groups}) => {
      * @param {Object} [props={}] - Additional props to pass to the widget (not used here, later)
      */
     const addWidget = (group, key, props = {}) => {
-        widgetDynamicRenderer.renderWidget(group, key, {...props, widgetBoard: VIDEO_WIDGETS_BOARD})
+        widgetDynamicRenderer.renderWidget(group, key, {...props, widgetsBoard: VIDEO_WIDGETS_BOARD})
     }
 
     /**

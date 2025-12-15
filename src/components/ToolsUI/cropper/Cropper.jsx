@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-14
- * Last modified: 2025-12-14
+ * Created on: 2025-12-16
+ * Last modified: 2025-12-16
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
-import { WidgetsPanel }   from '@Components/MainUI/widgets/WidgetsPanel'
+import { WidgetsPanel } from '@Components/MainUI/widgets/WidgetsPanel'
 import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropRatioEditorWidget'
 /**
  * Cropper component for interactive crop region selection over canvas, video, or image elements.
@@ -82,11 +82,13 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 {overlay && <div className="crop-overlay" ref={_overlay}/>}
                 {children}
                 <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS, JOURNEY_WIDGETS]}/>
-                {Array.from(list.entries())
-                    .filter(([key, props]) => !props?.global)
-                    .map(([key, props]) => (
-                        <DynamicWidget key={key} id={key} props={props} context={context}/>
-                    ))}
+                {
+                    Array.from(list.entries())
+                        .filter(([key, props]) => props && Object.prototype.hasOwnProperty.call(props, 'widgetsBoard'))
+                        .map(([key, props]) => (
+                            <DynamicWidget key={key} id={key} props={props} context={context}/>
+                        ))
+                }
             </div>
         </>
     )

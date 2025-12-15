@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-13
- * Last modified: 2025-12-13
+ * Created on: 2025-12-16
+ * Last modified: 2025-12-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -297,7 +297,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
 
         let cancelled = false
-        config.id = __.ui.widgetManager.defineElementId(config.group, config.id)
+        // If ID already contains UUID (format: key#uuid), use it as-is to avoid double generation
+        const hasUUID = config.id && config.id.includes('#')
+        config.id = hasUUID ? config.id : __.ui.widgetManager.defineElementId(config.group, config.id)
 
         const clean = () => _w2c.current?.destroy()
 
@@ -336,6 +338,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 transient:       config.transient ?? false,
                 ttl:             config.ttl ?? null,
                 type:            config.type ?? LGS_WIDGET,
+                widgetsBoard: config.widgetsBoard || null,
             }
 
             const resolved = await __.ui.widgetManager.retrieveConfig(_widget.current, fullConfig)
@@ -344,7 +347,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             if (success) {
                 _initialized.current = true
                 __.ui.widgetCache.mount(config.id)
-                $widget.list.set(config.id, {})
+                // Preserve existing props instead of overwriting with empty object
+                if (!$widget.list.has(config.id)) {
+                    $widget.list.set(config.id, {})
+                }
                 _widget.current.style.opacity = 1
 
                 if (interactionLocked) {
@@ -368,8 +374,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         requestAnimationFrame(init)
 
         if (config.type === LGS_VISUAL_WIDGET) {
-            const id = __.ui.widgetManager.defineElementId(config.group, config.id)
-            $widget.list.set(id, {})
+            // If ID already contains UUID (format: key#uuid), use it as-is
+            // Otherwise, generate a new unique ID
+            const hasUUID = config.id && config.id.includes('#')
+            const id = hasUUID ? config.id : __.ui.widgetManager.defineElementId(config.group, config.id)
+            const existingProps = $widget.list.get(id)
+            // Preserve existing props if they exist, otherwise set empty object
+            if (!$widget.list.has(id)) {
+                $widget.list.set(id, {})
+            }
         }
 
         return () => {

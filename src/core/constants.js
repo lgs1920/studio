@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-14
- * Last modified: 2025-12-14
+ * Created on: 2025-12-16
+ * Last modified: 2025-12-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -486,29 +486,33 @@ export const VIDEO_TOOLS_WIDGETS   = 'video-tools-widgets',
              JOURNEY_WIDGETS       = 'journey-widgets',
              SCENE_WIDGETS         = 'scene-widgets'
 
-export const WIDGETS_CAPABILITIES  = ['canRemove', 'canReset', 'canMaximize', 'canPosition', 'canEdit'],
-             WIDGETS_CONFIGURATION = new Map([
-                                                 [
-                                                     'compass-widget', {
-                                                     icon:      faCompass,
-                                                     component: null,
-                                                 },
-                                                 ],
-                                                 [
-                                                     'credits-widget', {
-                                                     icon:      faGavel,
-                                                     component: null,
-                                                 },
-                                                 ],
+export const WIDGETS_CAPABILITIES   = ['canRemove', 'canReset', 'canMaximize', 'canPosition', 'canEdit'],
+             WIDGETS_CONFIGURATION  = new Map([
+                                                  [
+                                                      'compass-widget', {
+                                                      icon:      faCompass,
+                                                      component: null,
+                                                  },
+                                                  ],
+                                                  [
+                                                      'credits-widget', {
+                                                      icon:      faGavel,
+                                                      component: null,
+                                                  },
+                                                  ],
 
-                                                 [
-                                                     'profile-widget', {
-                                                     icon:      faChartFft,
-                                                     component: null,
-                                                 },
-                                                 ],// Memoize widget configuration
-                                             ]),
-             DEFAULT_WIDGETS_LIST  = '@Components/MainUI/widgets/list'
+                                                  [
+                                                      'profile-widget', {
+                                                      icon:      faChartFft,
+                                                      component: null,
+                                                  },
+                                                  ],// Memoize widget configuration
+                                              ]),
+             DEFAULT_WIDGETS_LIST   = '@Components/MainUI/widgets/list',
+             DEFAULT_WIDGET_CONTEXT = {
+                 widgetEditor: false,
+                 widgetsBoard: '',
+             }
 
 export const SCENE_WIDGETS_BOARD = 'scene',
              VIDEO_WIDGETS_BOARD = VIDEO_CROP_ZONE
