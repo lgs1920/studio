@@ -14,8 +14,8 @@
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { DEFAULT_WIDGETS_LIST, WIDGETS_STORE } from '@Core/constants'
-import { lazy }                                from 'react'
+import { DEFAULT_WIDGETS_LIST } from '@Core/constants'
+import { lazy }                 from 'react'
 
 /**
  * Singleton class responsible for dynamically rendering and managing widgets.
@@ -194,41 +194,5 @@ export class WidgetDynamicRenderer {
         }
         console.warn(`Attempted to destroy non-existent widget instance: ${widgetId}`)
         return false
-    }
-
-    /**
-     * Restores nd renders persisted widgets from IndexedDB by recreating them with their components
-     *
-     */
-    async renderFromDB() {
-        try {
-            const keys = await lgs.db.lgs1920.keys(WIDGETS_STORE)
-
-            for (const widgetId of keys) {
-                const widgetData = await lgs.db.lgs1920.get(widgetId, WIDGETS_STORE)
-                if (!widgetData || !widgetData.group) {
-                    continue
-                }
-
-                // Extract base key (before #)
-                const baseKey = widgetId.split('#')[0]
-
-                // Don't restore if already exists (shouldn't happen, but safety check)
-                if (__.ui.widgetCache.has(widgetId, {
-                    group:        widgetData.group,
-                    widgetsBoard: widgetData.widgetsBoard || 'scene',
-                })) {
-                    continue
-                }
-
-                // This will load the lazy component and add to cache
-                await this.renderWidget(widgetData.group, baseKey, {
-                    widgetsBoard: widgetData.widgetsBoard || 'scene', // Default board
-                })
-            }
-        }
-        catch (error) {
-            console.error('Failed to restore persisted widgets:', error)
-        }
     }
 }
