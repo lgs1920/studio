@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-19
- * Last modified: 2025-11-19
+ * Created on: 2025-12-16
+ * Last modified: 2025-12-16
  *
  *
  * Copyright © 2025 LGS1920
@@ -244,6 +244,9 @@ export const LGS1920 = () => {
 
                 // Set camera focus
                 setCameraFocus(lgs, starter, focusTarget, cameraStore)
+
+                // Read widgets in db and mount them into the cache as components
+                await __.ui.widgetCache.readFromDB()
 
                 // Mark UI as initialized
                 __.app.uiInit = true

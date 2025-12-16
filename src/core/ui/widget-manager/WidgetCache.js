@@ -24,7 +24,8 @@
  *     proxySet)
  */
 
-import { proxySet } from 'valtio/utils'
+import { WIDGETS_STORE } from '@Core/constants'
+import { proxySet }      from 'valtio/utils'
 
 /**
  * Utility class providing a clean, reactive API over the global Valtio proxy cache.
@@ -296,6 +297,30 @@ export class WidgetCache {
         const entry = this.#cache.get(key)
         if (entry?.synced) {
             entry.synced.clear()
+        }
+    }
+
+    /**
+     * Fill cache from DB
+     *
+     * @return {Promise<void>}
+     */
+    async readFromDB() {
+        const $widget = lgs.stores.ui.widget
+        try {
+            const keys = await lgs.db.lgs1920.keys(WIDGETS_STORE)
+            for (const widgetId of keys) {
+                const widgetData = await lgs.db.lgs1920.get(widgetId, WIDGETS_STORE)
+                if (!widgetData || !widgetData.group) {
+                    continue
+                }
+                __.ui.widgetCache.set(widgetId, widgetData.group, null, false)
+                $widget.list.set(widgetId, {widgetBoard: widgetData.widgetsBoard || 'scene'})
+
+            }
+        }
+        catch (error) {
+            console.error('Failed to restore persisted widgets:', error)
         }
     }
 }
