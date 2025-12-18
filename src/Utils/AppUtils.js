@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-13
- * Last modified: 2025-12-13
+ * Created on: 2025-12-18
+ * Last modified: 2025-12-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -117,21 +117,27 @@ export class AppUtils {
     }
 
     /**
-     * CamelCase a string ( aaa-bbb => aaaBbb, aaa-bbbCcc => aaaBbbCcc)
-     *
-     * @param string {string}
-     * @return {string}
+     * Converts a kebab-case string to camelCase or UpperCamelCase
+     * @param {string} string - The string to transform
+     * @param {boolean} [upper=false] - If true, returns UpperCamelCase (PascalCase)
+     * @returns {string}
      */
-    static camelCase = (string) => {
+    static camelCase = (string, upper = false) => {
         return string
             .split('-')
             .map((s, index) => {
-                if (index === 0) {
-                    return s[0].toLowerCase() + s.slice(1)
+                // Return empty string if segment is empty
+                if (!s) {
+                    return s
                 }
-                else {
+
+                // Force uppercase for the first letter if it is not the first segment or if upper is requested
+                if (index > 0 || upper) {
                     return s[0].toUpperCase() + s.slice(1)
                 }
+
+                // Default behavior for the first segment in lowerCamelCase
+                return s[0].toLowerCase() + s.slice(1)
             })
             .join('')
     }
