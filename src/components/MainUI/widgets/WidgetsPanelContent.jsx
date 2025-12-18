@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-16
- * Last modified: 2025-12-16
+ * Created on: 2025-12-18
+ * Last modified: 2025-12-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,9 +16,9 @@
 
 import { VIDEO_WIDGETS_BOARD, WIDGETS_CONFIGURATION } from '@Core/constants'
 import { WidgetDynamicRenderer }                      from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import { faBox }                 from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon, SlTooltip }     from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                 from '@Utils/FA2SL'
+import { faBox }             from '@fortawesome/pro-regular-svg-icons'
+import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }             from '@Utils/FA2SL'
 import classNames                                     from 'classnames'
 import { useEffect, useRef, useState }                from 'react'
 import { useSnapshot }                                from 'valtio'
@@ -61,7 +61,11 @@ export const WidgetsPanelContent = ({groups}) => {
      * @param {Object} [props={}] - Additional props to pass to the widget (not used here, later)
      */
     const addWidget = (group, key, props = {}) => {
-        widgetDynamicRenderer.renderWidget(group, key, {...props, widgetsBoard: VIDEO_WIDGETS_BOARD})
+        widgetDynamicRenderer.renderWidget(group, key, {
+            ...props,
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+            recreate:     true,
+        })
     }
 
     /**

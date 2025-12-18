@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-16
- * Last modified: 2025-12-16
+ * Created on: 2025-12-18
+ * Last modified: 2025-12-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -16,6 +16,7 @@
 
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
 import { SCENE_WIDGETS_BOARD } from '@Core/constants'
+import React, { useMemo } from 'react' // <--- Ajout de useMemo
 import { useSnapshot }   from 'valtio'
 
 /**
@@ -26,9 +27,10 @@ export const SceneWidgetsRenderer = () => {
     const $widget = lgs.stores.ui.widget
     const {list} = useSnapshot($widget)
 
-    const allEntries = Array.from(list.entries())
-    const sceneWidgets = allEntries
-        .filter(([key, props]) => props?.widgetsBoard === SCENE_WIDGETS_BOARD)
+    const sceneWidgets = useMemo(() => {
+        return Array.from(list.entries()).filter(([key, props]) => props?.widgetsBoard === SCENE_WIDGETS_BOARD)
+    }, [list])
+
     return (
         <>
             {sceneWidgets.map(([key, props]) => (

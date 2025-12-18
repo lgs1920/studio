@@ -7,15 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-16
- * Last modified: 2025-12-16
+ * Created on: 2025-12-18
+ * Last modified: 2025-12-18
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { SlSpinner } from '@shoelace-style/shoelace/dist/react'
-import { Suspense } from 'react'
+import { SCENE_WIDGETS_BOARD }           from '@Core/constants'
+import { WidgetDynamicRenderer }         from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import { SlSpinner }                     from '@shoelace-style/shoelace/dist/react'
+import { Suspense, useEffect, useState } from 'react'
+
 
 /**
  * Dynamically renders a registered widget using React Suspense for lazy loading.
@@ -28,17 +31,16 @@ import { Suspense } from 'react'
  * @returns {JSX.Element|false} Suspense-wrapped widget or false if not registered
  */
 export const DynamicWidget = ({id, context, props = {}}) => {
-    /**
-     * Retrieve the lazy-loaded component from the global widget cache.
-     * Cache entry expected format: { component: React.LazyExoticComponent<React.ComponentType<any>> }
-     */
-    const cacheEntry = __.ui.widgetCache.get(id)
-    const LazyWidget = cacheEntry?.component
+    const [LazyWidget, setLazyWidget] = useState(() => __.ui.widgetCache.get(id)?.component)
 
-    // Widget not found in registry → render nothing to avoid unnecessary DOM nodes
+    useEffect(() => {
+        if (!LazyWidget) {
+            ensureWidget(id).then(setLazyWidget)
+        }
+    }, [id])
+
     if (!LazyWidget) {
-        console.warn('DynamicWidget: LazyWidget not found for id:', id)
-        return false
+        return null
     }
 
     // Explicit component reference for clarity and potential future debugging/hooks
@@ -49,4 +51,26 @@ export const DynamicWidget = ({id, context, props = {}}) => {
             <Component id={id} {...props} context={context || props}/>
         </Suspense>
     )
+}
+
+async function ensureWidget(id) {
+    const cache = __.ui.widgetCache.get(id)
+    if (cache?.component) {
+        return cache.component
+    }
+
+    const renderer = new WidgetDynamicRenderer()
+    const widgetsBoard = lgs.stores.ui.widget.list.get(id)?.widgetsBoard
+    const recreate = true
+    const LazyWidget = await renderer.renderWidget(cache.group, id, {widgetsBoard, recreate})
+    if (LazyWidget) {
+        __.ui.widgetCache.set(id, {
+                                  component: LazyWidget,
+                                  group:     cache.group,
+                                  mounted:   cache.mounted,
+                                  widgetsBoard,
+                              },
+        )
+    }
+    return LazyWidget
 }

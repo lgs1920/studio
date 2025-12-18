@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-29
- * Last modified: 2025-11-29
+ * Created on: 2025-12-18
+ * Last modified: 2025-12-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,33 +27,29 @@
  *
  */
 
-import { VideoRecorderWidget }                                                                    from '@Components/MainUI/video/toolbox/VideoRecorderWidget'
-import {
-    VideoMessage,
-}                                                                                                 from '@Components/MainUI/video/VideoMessage'
-import {
-    VideoSettingsInfo,
-}                                                                                                 from '@Components/MainUI/video/VideoSettingsInfo'
-import {
-    DynamicWidget,
-}                                                                                                 from '@Components/MainUI/widgets/DynamicWidget'
-import {
-    CropOverlay,
-}                                                                                                 from '@Components/ToolsUI/cropper/CropOverlay'
+import { VideoRecorderWidget }                                  from '@Components/MainUI/video/toolbox/VideoRecorderWidget'
+import { VideoMessage }                                         from '@Components/MainUI/video/VideoMessage'
+import { VideoSettingsInfo }                                    from '@Components/MainUI/video/VideoSettingsInfo'
+import { DynamicWidget }                                        from '@Components/MainUI/widgets/DynamicWidget'
+import { CropOverlay }                                          from '@Components/ToolsUI/cropper/CropOverlay'
 import {
     DefinedCropZone,
-}                                                                                                 from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
-import { APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, VIDEO_CROP_ZONE, VIDEO_TOOLS_WIDGETS } from '@Core/constants'
+}                                                               from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
+import {
+    APP_KEY, CROP_TOOLS_WIDGETS, JOURNEY_WIDGETS, LGS_PROJECT, MINUTE, MULTI_PURPOSE_WIDGETS, SECOND, VIDEO_CROP_ZONE,
+    VIDEO_TOOLS_WIDGETS,
+    VIDEO_WIDGETS_BOARD,
+}                                                               from '@Core/constants'
 import {
     CanvasOverlayComposer,
-} from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
+}                                                               from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import {
     ScreenMediaRecorder,
-} from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { UIToast } from '@Utils/UIToast'
-import classNames                                                                                 from 'classnames'
-import React, { memo, useCallback, useEffect, useMemo, useRef }                                   from 'react'
-import { useSnapshot }                                                                            from 'valtio'
+}                                                               from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import { UIToast }                                              from '@Utils/UIToast'
+import classNames                                               from 'classnames'
+import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useSnapshot }                                          from 'valtio'
 
 export const VideoRecordingScreenArea = memo(() => {
     const $video = lgs.stores.ui.video
@@ -66,7 +62,7 @@ export const VideoRecordingScreenArea = memo(() => {
         return config?.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0}
     }, [])
 
-    const widgetCacheEntries = useMemo(() => [...__.ui.widgetCache.getAll().entries()], [])
+    const widgetCacheEntries = useMemo(() => [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).entries()], [])
 
     const isValidCrop =
               Number.isFinite(crop.left) &&
@@ -129,7 +125,7 @@ export const VideoRecordingScreenArea = memo(() => {
                   flushWebGLBuffer: () => lgs.scene.render(),
               })
 
-        ;[...__.ui.widgetCache.getAll().keys()].map(key => {
+        ;[...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()].map(key => {
             const getCanvas = () => __.ui.widgetManager.getElementById(key)?.querySelector('.lgs-widget-canvas')
             if (getCanvas() instanceof HTMLCanvasElement) {
                 composer.addOverlay(getCanvas)
@@ -193,7 +189,7 @@ export const VideoRecordingScreenArea = memo(() => {
                   flushWebGLBuffer: () => lgs.scene.render(),
               })
 
-        ;[...__.ui.widgetCache.getAll().keys()].map(key => {
+        ;[...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()].map(key => {
             const getCanvas = () => __.ui.widgetManager.getElementById(key)?.querySelector('.lgs-widget-canvas')
             if (getCanvas() instanceof HTMLCanvasElement) {
                 composer.addOverlay(getCanvas)
@@ -207,11 +203,30 @@ export const VideoRecordingScreenArea = memo(() => {
     }, [])
 
 
+    /**
+     * Waits for all specified widgets to be mounted and rendered in the DOM
+     * Emits WIDGET_NOT_MOUNTED if the timeout is reached
+     * @param {string[]} widgets - Array of widget identifiers
+     * @param {Function} [onReady] - Callback when all widgets are ready
+     * @returns {Function} Cleanup function to disconnect observer and clear timeout
+     */
     const waitingForAllWidgets = (widgets, onReady) => {
         if (!widgets || widgets.length === 0) {
             return () => {
             }
         }
+
+        // Setup timeout to handle hanging widget states
+        const _timeout = setTimeout(() => {
+            observer.disconnect()
+
+            // Notify system about mount failure after 15s
+            window.dispatchEvent(
+                new CustomEvent(__.ui.widgetManager.WIDGET_NOT_MOUNTED, {
+                    detail: widgets,
+                }),
+            )
+        }, 15 * SECOND)
 
         const observer = new MutationObserver(() => {
             const allMounted = widgets.every(k => __.ui.widgetCache.isMounted(k))
@@ -220,30 +235,39 @@ export const VideoRecordingScreenArea = memo(() => {
                 return el?.querySelector('.lgs-widget-canvas')
             })
 
-
             if (allMounted && allInDOM) {
+                // Clear safety timeout as conditions are met
+                clearTimeout(_timeout)
                 observer.disconnect()
 
                 window.dispatchEvent(
                     new CustomEvent(__.ui.widgetManager.ALL_WIDGETS_RENDERED_EVENT, {
                         detail: widgets,
-                    }),
+                    })
                 )
 
                 onReady?.(widgets)
             }
         })
 
-
         observer.observe(document.body, {childList: true, subtree: true})
 
-        // Return cleanup
-        return () => observer.disconnect()
+        // Return cleanup for both observer and timer
+        return () => {
+            clearTimeout(_timeout)
+            observer.disconnect()
+        }
     }
 
     useEffect(() => {
         //Once all the widgets are rendered, we can start the recording or the snapshot
-        waitingForAllWidgets([...__.ui.widgetCache.getAll().keys()], async (keys) => {
+        waitingForAllWidgets([
+                                 ...__.ui.widgetCache.getAll({
+                                                                 widgetsBoard: VIDEO_WIDGETS_BOARD,
+                                                                 // groups:
+                                                                 // [MULTI_PURPOSE_WIDGETS,JOURNEY_WIDGETS]
+                                                             }).keys(),
+                             ], async (keys) => {
             if ($video.preRecording) {
                 // Video pre-recording phase : ready to the recording
                 $video.preRecording = false

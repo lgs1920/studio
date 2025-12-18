@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-16
- * Last modified: 2025-12-16
+ * Created on: 2025-12-18
+ * Last modified: 2025-12-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -20,19 +20,14 @@
  * @property {Promise<React.Component>} component - Lazy-loaded component
  * @property {HTMLElement} [element] - Associated DOM element (optional)
  * @property {boolean} mounted - Indicates whether the widget is mounted for the current video
- * @property {proxySet<string>} [synced] - proxySet of keys this entry must stay in sync with (added for mob store
- *     proxySet)
  */
 
 import { WIDGETS_STORE } from '@Core/constants'
-import { proxySet }      from 'valtio/utils'
 
 /**
  * Utility class providing a clean, reactive API over the global Valtio proxy cache.
  * The proxy is stored in a private class field `#cache` for internal use.
  * All methods are arrow functions.
- *
- * Added getter/setter for `synced` to support the new `proxySet` in mob store.
  */
 export class WidgetCache {
     /** @type {WidgetCache|null} */
@@ -71,19 +66,18 @@ export class WidgetCache {
     }
 
     /**
-     * Stores or updates a cache entry.
-     * @param {string} key - Key (`<key>` or `<key>#<uuid>`)
-     * @param {string} group - Group identifier
-     * @param {Promise<React.Component>} lazyComponent - Lazy component
-     * @param {boolean} [mounted=false] - Initial mounted state for video
-     * @param {proxySet<string>} [synced=new proxySet()] - Keys to sync with (for mob store proxySet)
+     *
+     * @param key
+     * @param options
      */
-    set = (key, group, lazyComponent, mounted = false, synced = new proxySet()) => {
+    set = (key, options) => {
+        const {group, component, mounted, widgetsBoard} = options
+
         this.#cache.set(key, {
-            group,
-            component: lazyComponent,
-            mounted,
-            synced,
+            group:        group ?? null,
+            component:    component ?? null,//__.app.pascalCase(widgetId.split('#')[0]),
+            mounted:      mounted ?? false,
+            widgetsBoard: widgetsBoard ?? null,
         })
     }
 
@@ -94,47 +88,43 @@ export class WidgetCache {
     delete = key => this.#cache.delete(key)
 
     /**
-     * Checks if a key exists in the cache and optionally verifies the group.
+     * Checks if a key exists in the cache and validates against group and widgetsBoard criteria.
      * @param {string} key - Full or base key.
      * @param {Object} [options={}] - Options for the search.
      * @param {string} [options.group] - The group the cached item must belong to.
      * @param {boolean} [options.full=false] - If true, exact key match only.
+     * @param {string} [options.widgetsBoard] - The widgetsBoard the cached item must belong to.
      * @returns {boolean}
      */
     has = (key, options = {}) => {
-        // Destructure options with default values
-        const {group, full = false, widgetBoard} = options
+        const {group, full = false, widgetsBoard} = options
 
         /**
-         * Helper function to check if a cached value matches the specified group (if provided).
-         * @param {*} value - The cached value (an object with a 'group' attribute).
+         * Internal validator for metadata constraints.
+         * Ensures the cached entry aligns with the requested architectural scope.
+         * @param {Object} value - The cached entry metadata.
          * @returns {boolean}
          */
-        const isGroupMatch = (value) => {
-            // If no group is specified in options, any group is a match
-            if (group === undefined) {
-                return true
-            }
-            // Check if the cached value's group matches the specified group
-            return value && value.group === group
+        const isValidMatch = (value) => {
+            const groupMatch = group === undefined || (value && value.group === group)
+            const boardMatch = widgetsBoard === undefined || (value && value.widgetsBoard === widgetsBoard)
+
+            return groupMatch && boardMatch
         }
 
         if (full) {
-            // Full key match: check if the exact key exists AND the group matches
             if (this.#cache.has(key)) {
                 const cachedValue = this.#cache.get(key)
-                return isGroupMatch(cachedValue)
+                return isValidMatch(cachedValue)
             }
             return false
         }
 
-        // Base key match (startsWith): iterate over all keys
+        // Performance note: iteration over keys scales linearly with cache size
         return Array.from(this.#cache.keys()).some(k => {
-            // Check if the key starts with the base key
             if (k.startsWith(key)) {
                 const cachedValue = this.#cache.get(k)
-                // If the key matches, check if the group also matches
-                return isGroupMatch(cachedValue)
+                return isValidMatch(cachedValue)
             }
             return false
         })
@@ -181,10 +171,31 @@ export class WidgetCache {
     }
 
     /**
-     * Returns a read-only snapshot of the cache.
+     * Returns a filtered read-only snapshot of the cache using a configuration object
+     * @param {Object} [filters={}] - Filter configuration
+     * @param {string|string[]|null} [filters.groups=null] - Single group or array of groups
+     * @param {string|null} [filters.widgetsBoard=null] - Specific widgets board identifier
      * @returns {Map<string, CacheEntry>}
      */
-    getAll = () => new Map(this.#cache)
+    getAll = ({groups = null, widgetsBoard = null} = {}) => {
+        // Return early if no filters are applied
+        if (!groups && !widgetsBoard) {
+            return new Map(this.#cache)
+        }
+        // Normalize groups to an array to handle both string and string[]
+        const groupsFilter = groups ? (Array.isArray(groups) ? groups : [groups]) : null
+
+        const filteredEntries = Array.from(this.#cache).filter(([key, entry]) => {
+            // Validate entry against groups array if filter is active
+            const matchGroup = !groupsFilter || groupsFilter.includes(entry.group)
+            // Validate entry against widgetsBoard if filter is active
+            const matchBoard = !widgetsBoard || entry.widgetsBoard === widgetsBoard
+
+            return matchGroup && matchBoard
+        })
+
+        return new Map(filteredEntries)
+    }
 
     /**
      * Associates an HTMLElement with an existing entry.
@@ -237,70 +248,6 @@ export class WidgetCache {
     isMounted = key => this.#cache.get(key)?.mounted
 
     /**
-     * Gets the synced proxySet for a given key.
-     * @param {string} key - Widget key
-     * @returns {proxySet<string>|undefined}
-     */
-    getSynced = key => {
-        const entry = this.#cache.get(key)
-        return entry?.synced
-    }
-
-    /**
-     * proxySets or replaces the synced proxySet for a given key.
-     * @param {string} key - Widget key
-     * @param {proxySet<string>} synced - New sync set
-     */
-    setSynced = (key, synced) => {
-        const entry = this.#cache.get(key)
-        if (entry) {
-            entry.synced = synced
-        }
-    }
-
-    /**
-     * Adds one or more keys to the synced proxySet of an entry.
-     * @param {string} key - Widget key
-     * @param {string|string[]} keysToAdd - Key(s) to add to sync
-     */
-    addToSynced = (key, keysToAdd) => {
-        const entry = this.#cache.get(key)
-        if (!entry) {
-            return
-        }
-        if (!entry.synced) {
-            entry.synced = new proxySet()
-        }
-        const toAdd = Array.isArray(keysToAdd) ? keysToAdd : [keysToAdd]
-        toAdd.forEach(k => entry.synced.add(k))
-    }
-
-    /**
-     * Removes one or more keys from the synced proxySet of an entry.
-     * @param {string} key - Widget key
-     * @param {string|string[]} keysToRemove - Key(s) to remove from sync
-     */
-    removeFromSynced = (key, keysToRemove) => {
-        const entry = this.#cache.get(key)
-        if (!entry?.synced) {
-            return
-        }
-        const toRemove = Array.isArray(keysToRemove) ? keysToRemove : [keysToRemove]
-        toRemove.forEach(k => entry.synced.delete(k))
-    }
-
-    /**
-     * Clears the synced proxySet for a given key.
-     * @param {string} key - Widget key
-     */
-    clearSynced = key => {
-        const entry = this.#cache.get(key)
-        if (entry?.synced) {
-            entry.synced.clear()
-        }
-    }
-
-    /**
      * Fill cache from DB
      *
      * @return {Promise<void>}
@@ -314,8 +261,14 @@ export class WidgetCache {
                 if (!widgetData || !widgetData.group) {
                     continue
                 }
-                __.ui.widgetCache.set(widgetId, widgetData.group, null, false)
-                $widget.list.set(widgetId, {widgetBoard: widgetData.widgetsBoard || 'scene'})
+
+                __.ui.widgetCache.set(widgetId, {
+                    group:        widgetData.group,
+                    component:    null, // __.app.pascalCase(widgetId.split('#')[0]),
+                    widgetsBoard: widgetData.widgetsBoard,
+                })
+
+                $widget.list.set(widgetId, {widgetsBoard: widgetData.widgetsBoard || 'scene'})
 
             }
         }

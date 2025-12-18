@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-16
- * Last modified: 2025-12-16
+ * Created on: 2025-12-18
+ * Last modified: 2025-12-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -27,12 +27,6 @@ export class WidgetDynamicRenderer {
      * @type {WidgetDynamicRenderer}
      * */
     static #instance
-
-    /**
-     * @type {Map<string, Object>} Internal map to store references to active widgets or their configurations
-     * which are currently rendered or managed, keyed by the full widget ID.
-     */
-    #activeInstances = new Map()
 
     /**
      * Private constructor to enforce the singleton pattern.
@@ -60,7 +54,6 @@ export class WidgetDynamicRenderer {
      * Resets the internal state of the Singleton, effectively clearing all tracked active widget data.
      */
     reset() {
-        this.#activeInstances.clear()
         // Note: The caller must ensure that the cache (__.ui.widgetCache) and the store ($widget.list)
         // are also cleared externally if a full system reset is required.
     }
@@ -109,35 +102,35 @@ export class WidgetDynamicRenderer {
      */
     async renderWidget(group, key, props = {}) {
         const $widget = lgs.stores.ui.widget
-        const {widgetsBoard} = props
-        console.log(widgetsBoard, 'widgetsBoard')
+        const {widgetsBoard, recreate} = props
 
         // 1. Determine final ID and check max instance limit
         const groupsMap = this.theGroups([group])
         if (!groupsMap.has(group)) {
-            console.error(`Group "${group}" not found in widget registry`)
+            console.warn(`Group "${group}" not found in widget registry`)
             return
         }
 
         const theGroups = groupsMap.get(group)
-        const theWidget = theGroups.widgets.get(key)
+        const theWidget = theGroups.widgets.get(key.split('#')[0])
 
         // Check if widget with this base key already exists by checking BOTH cache AND store list
         // The store list ($widget.list) is the source of truth for currently rendered widgets
         // The cache may contain widgets that are not currently rendered
+        const existingInCache = __.ui.widgetCache.has(key, {group: group, full: false, widgetsBoard})
         const existingInList = Array.from($widget.list.keys()).find(id => id.startsWith(key))
-        const existingInCache = __.ui.widgetCache.has(key, {group: group, full: false})
 
         // Widget exists if it's in the list (rendered) OR in cache with matching group
         const alreadyExists = existingInList || existingInCache
-        const canAddWidget = !__.ui.widgetManager.isMaxWidgetsReached(group, key)
 
-        // If widget already exists in cache/store or cannot be added, we skip creation.
-        // We only proceed if it is not already cached AND we can add it (max instances not reached).
-        if (!alreadyExists && canAddWidget) {
-            // Determine the full unique ID for caching and store management
-            const widgetId = __.ui.widgetManager.defineElementId(group, key)
 
+        if (!alreadyExists || recreate) {
+            const canAddWidget = !__.ui.widgetManager.isMaxWidgetsReached(group, key)
+            if (!canAddWidget && !recreate) {
+                return null
+            }
+
+            const widgetId = recreate ? (existingInList ?? key) : __.ui.widgetManager.defineElementId(group, key)
             // Check if component path is defined
             if (theWidget?.component) {
                 const resolvedPath = this.resolveAliasPath(theWidget?.path ?? DEFAULT_WIDGETS_LIST)
@@ -164,10 +157,14 @@ export class WidgetDynamicRenderer {
                                                 }),
                 )
                 // Cache the component and add the widget instance to the store list
-                __.ui.widgetCache.set(widgetId, group, LazyWidget)
+                __.ui.widgetCache.set(widgetId, {
+                    group,
+                    component:    LazyWidget,
+                    widgetsBoard: props.widgetsBoard,
+                })
                 $widget.list.set(widgetId, props)
                 // Register the instance in the renderer's internal map
-                this.#activeInstances.set(widgetId, {group, key, props})
+                return LazyWidget
             }
 
             return widgetId
@@ -184,15 +181,8 @@ export class WidgetDynamicRenderer {
      * @returns {boolean} True if the widget was successfully destroyed and removed, false otherwise.
      */
     destroyWidget(widgetId) {
-        const $widget = lgs.stores.ui.widget
-
-        if (this.#activeInstances.has(widgetId)) {
-            this.#activeInstances.delete(widgetId)
-            $widget.list.delete(widgetId)
-            __.ui.widgetCache.delete(widgetId)
-            return true
-        }
-        console.warn(`Attempted to destroy non-existent widget instance: ${widgetId}`)
-        return false
+        lgs.stores.ui.widget.list.delete(widgetId)
+        __.ui.widgetCache.delete(widgetId)
+        return true
     }
 }

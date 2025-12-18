@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-16
- * Last modified: 2025-12-16
+ * Created on: 2025-12-18
+ * Last modified: 2025-12-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -31,7 +31,7 @@ export const CreditsWidget = ({id, context}) => {
     // Get snapshot of context
     const {widgetEditor, widgetsBoard} = useSnapshot(context ?? {widgetEditor: false, widgetsBoard: ''})
     const [_container, setContainer] = useState(null)
-    console.log(widgetsBoard)
+
     // Set container when widgetsBoard changes
     useEffect(() => {
         const element = document.querySelector(`#${widgetsBoard}.defined`)

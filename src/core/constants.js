@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-16
- * Last modified: 2025-12-16
+ * Created on: 2025-12-18
+ * Last modified: 2025-12-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -491,20 +491,20 @@ export const WIDGETS_CAPABILITIES   = ['canRemove', 'canReset', 'canMaximize', '
                                                   [
                                                       'compass-widget', {
                                                       icon:      faCompass,
-                                                      component: null,
+                                                      component: 'CompassWidget',
                                                   },
                                                   ],
                                                   [
                                                       'credits-widget', {
                                                       icon:      faGavel,
-                                                      component: null,
+                                                      component: 'CreditsWidget',
                                                   },
                                                   ],
 
                                                   [
                                                       'profile-widget', {
                                                       icon:      faChartFft,
-                                                      component: null,
+                                                      component: 'ProfileWidget',
                                                   },
                                                   ],// Memoize widget configuration
                                               ]),

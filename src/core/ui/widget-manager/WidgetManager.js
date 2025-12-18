@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-13
- * Last modified: 2025-12-13
+ * Created on: 2025-12-18
+ * Last modified: 2025-12-18
  *
  *
  * Copyright © 2025 LGS1920
@@ -57,6 +57,7 @@ export class WidgetManager {
 
     WIDGET_RENDERED_EVENT = 'widget-rendered'
     ALL_WIDGETS_RENDERED_EVENT = 'all-widgets-rendered'
+    WIDGET_NOT_MOUNTED = 'widget-not-mounted'
 
     /**
      * Creates or returns the singleton instance of WidgetManager.
