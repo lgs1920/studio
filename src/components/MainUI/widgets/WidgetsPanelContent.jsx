@@ -61,10 +61,11 @@ export const WidgetsPanelContent = ({groups}) => {
      * @param {Object} [props={}] - Additional props to pass to the widget (not used here, later)
      */
     const addWidget = (group, key, props = {}) => {
-        widgetDynamicRenderer.renderWidget(group, key, {
+        const id = !/#/.test(key) ? __.ui.widgetManager.defineElementId(group, key) : key
+        widgetDynamicRenderer.renderWidget(group, id, {
             ...props,
             widgetsBoard: VIDEO_WIDGETS_BOARD,
-            recreate:     true,
+            forceRefresh: true,
         })
     }
 
@@ -96,11 +97,11 @@ export const WidgetsPanelContent = ({groups}) => {
          * Loads and displays widgets configured in the base (persisted) list.
          */
         const displayWidgetsInBase = async () => {
-            for (const [id] of targetedGroups.entries()) {
+            for (const [groupId] of targetedGroups.entries()) {
                 // Get pre-configured/persisted widgets for this group
-                const widgets = await __.ui.widgetManager.getWidgetsByGroup(id)
+                const widgets = await __.ui.widgetManager.getWidgetsByGroup(groupId)
                 for (const widgetToRender of widgets) {
-                    addWidget(id, widgetToRender.id)
+                    addWidget(groupId, widgetToRender.id)                                           // 1st time
                 }
             }
         }
@@ -113,7 +114,7 @@ export const WidgetsPanelContent = ({groups}) => {
                 for (const [widgetId, widgetDef] of group.widgets) {
                     // Check if the widget is mandatory
                     if (widgetDef.mandatory) {
-                        addWidget(groupId, widgetId)
+                        addWidget(groupId, widgetId)                                            // 1st time
                     }
                 }
             }

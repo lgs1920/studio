@@ -261,7 +261,6 @@ export class WidgetCache {
                 if (!widgetData || !widgetData.group) {
                     continue
                 }
-
                 __.ui.widgetCache.set(widgetId, {
                     group:        widgetData.group,
                     component:    null, // __.app.pascalCase(widgetId.split('#')[0]),

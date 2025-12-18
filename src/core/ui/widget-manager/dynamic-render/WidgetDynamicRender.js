@@ -92,87 +92,100 @@ export class WidgetDynamicRenderer {
     }
 
     /**
-     * Loads and registers a widget component, then adds it to the list
-     * of active widgets if allowed (i.e., max instances not reached).
-     *
-     * @param {string} group - Group ID (e.g., SCENE_WIDGETS).
-     * @param {string} key - Widget base key (e.g., 'profile-widget').
-     * @param {Object} [props={}] - Optional props to pass to the widget instance (must include widgetsBoard).
-     * @returns {Promise<void>}
+     * Checks if a widget can be rendered based on cache and limits
+     * @param {string} group - Group ID
+     * @param {string} key - Widget base key
+     * @param {Object} props - Widget props containing widgetsBoard and forceRefresh
+     * @returns {{canRender: boolean, widgetId: string|null, existingInList: string|null}}
+     */
+    canRenderWidget = (group, key, props = {}) => {
+        const $widget = lgs.stores.ui.widget
+        const {widgetsBoard, forceRefresh} = props
+
+        const existingInCache = __.ui.widgetCache.has(key, {group, full: false, widgetsBoard})
+        const existingInList = Array.from($widget.list.keys()).find(id => id.startsWith(key))
+
+        // 1. If widget does not exist in list, we try to create it (ignoring forceRefresh)
+        if (!existingInList) {
+            const isMaxReached = __.ui.widgetManager.isMaxWidgetsReached(group, key)
+
+            if (!isMaxReached) {
+                const widgetId = __.ui.widgetManager.defineElementId(group, key)
+                return {canRender: true, widgetId, existingInList: null}
+            }
+
+            // Quota reached, cannot create
+            return {canRender: false, widgetId: null, existingInList: null}
+        }
+
+        // 2. If it exists, we only allow rendering if forceRefresh is explicitly true and it's in cache
+        if (forceRefresh && existingInCache) {
+            return {canRender: true, widgetId: existingInList, existingInList}
+        }
+
+        // Default: Already exists and no refresh requested
+        return {canRender: false, widgetId: null, existingInList}
+    }
+
+    /**
+     * Loads and registers a widget component
+     * @param {string} group - Group ID
+     * @param {string} key - Widget base key
+     * @param {Object} [props={}] - Widget props
+     * @returns {Promise<any|string|null>}
      */
     async renderWidget(group, key, props = {}) {
         const $widget = lgs.stores.ui.widget
-        const {widgetsBoard, recreate} = props
 
-        // 1. Determine final ID and check max instance limit
+        const {canRender, widgetId} = this.canRenderWidget(group, key, props)
+        if (!canRender) {
+            return null
+        }
+
         const groupsMap = this.theGroups([group])
-        if (!groupsMap.has(group)) {
-            console.warn(`Group "${group}" not found in widget registry`)
-            return
-        }
-
         const theGroups = groupsMap.get(group)
-        const theWidget = theGroups.widgets.get(key.split('#')[0])
-
-        // Check if widget with this base key already exists by checking BOTH cache AND store list
-        // The store list ($widget.list) is the source of truth for currently rendered widgets
-        // The cache may contain widgets that are not currently rendered
-        const existingInCache = __.ui.widgetCache.has(key, {group: group, full: false, widgetsBoard})
-        const existingInList = Array.from($widget.list.keys()).find(id => id.startsWith(key))
-
-        // Widget exists if it's in the list (rendered) OR in cache with matching group
-        const alreadyExists = existingInList || existingInCache
-
-
-        if (!alreadyExists || recreate) {
-            const canAddWidget = !__.ui.widgetManager.isMaxWidgetsReached(group, key)
-            if (!canAddWidget && !recreate) {
-                return null
-            }
-
-            const widgetId = recreate ? (existingInList ?? key) : __.ui.widgetManager.defineElementId(group, key)
-            // Check if component path is defined
-            if (theWidget?.component) {
-                const resolvedPath = this.resolveAliasPath(theWidget?.path ?? DEFAULT_WIDGETS_LIST)
-                const componentPath = `${resolvedPath}/${theWidget.component}.jsx`
-                const LazyWidget = lazy(() =>
-                                            // Use @vite-ignore to tell Vite not to try to statically bundle this
-                                            // import, relying on the web server to resolve the path at runtime.
-                                            import(/* @vite-ignore */ componentPath)
-                                                .then(module => {
-                                                    if (module.default) {
-                                                        return module
-                                                    }
-                                                    if (module[theWidget.component]) {
-                                                        return {default: module[theWidget.component]}
-                                                    }
-                                                    throw new Error(`Component ${theWidget.component} not found in ${componentPath}. Available exports: ${Object.keys(module).join(', ')}`)
-                                                })
-                                                .catch(error => {
-                                                    // On failure, remove the potential entry from the cache and store
-                                                    __.ui.widgetCache.delete(widgetId)
-                                                    $widget.list.delete(widgetId)
-                                                    console.error(`Failed to load widget component: ${theWidget.component} from ${componentPath}`, error)
-                                                    throw error
-                                                }),
-                )
-                // Cache the component and add the widget instance to the store list
-                __.ui.widgetCache.set(widgetId, {
-                    group,
-                    component:    LazyWidget,
-                    widgetsBoard: props.widgetsBoard,
-                })
-                $widget.list.set(widgetId, props)
-                // Register the instance in the renderer's internal map
-                return LazyWidget
-            }
-
-            return widgetId
+        if (!theGroups) {
+            console.warn(`Group "${group}" not found in widget registry`)
+            return null
         }
 
-        return null
-    }
+        const theWidget = theGroups.widgets.get(key.split('#')[0])
+        let LazyWidget = null
 
+        if (theWidget?.component) {
+            const resolvedPath = this.resolveAliasPath(theWidget.path ?? DEFAULT_WIDGETS_LIST)
+            const componentPath = `${resolvedPath}/${theWidget.component}.jsx`
+
+            LazyWidget = lazy(() =>
+                                  import(/* @vite-ignore */ componentPath)
+                                      .then(module => {
+                                          if (module.default) {
+                                              return module
+                                          }
+                                          if (module[theWidget.component]) {
+                                              return {default: module[theWidget.component]}
+                                          }
+                                          throw new Error(`Component ${theWidget.component} missing in ${componentPath}`)
+                                      })
+                                      .catch(error => {
+                                          __.ui.widgetCache.delete(widgetId)
+                                          $widget.list.delete(widgetId)
+                                          console.error(`Failed to load widget: ${theWidget.component}`, error)
+                                          throw error
+                                      }),
+            )
+        }
+
+        __.ui.widgetCache.set(widgetId, {
+            group,
+            component:    LazyWidget,
+            widgetsBoard: props.widgetsBoard,
+        })
+
+        $widget.list.set(widgetId, props)
+
+        return LazyWidget ?? widgetId
+    }
     /**
      * Destroys and removes a specific widget instance, cleaning up all internal references
      * from the cache and the main store list.

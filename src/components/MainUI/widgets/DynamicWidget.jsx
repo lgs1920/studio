@@ -61,8 +61,8 @@ async function ensureWidget(id) {
 
     const renderer = new WidgetDynamicRenderer()
     const widgetsBoard = lgs.stores.ui.widget.list.get(id)?.widgetsBoard
-    const recreate = true
-    const LazyWidget = await renderer.renderWidget(cache.group, id, {widgetsBoard, recreate})
+    const forceRefresh = true
+    const LazyWidget = await renderer.renderWidget(cache.group, id, {widgetsBoard, forceRefresh})
     if (LazyWidget) {
         __.ui.widgetCache.set(id, {
                                   component: LazyWidget,
