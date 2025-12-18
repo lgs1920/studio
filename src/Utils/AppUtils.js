@@ -142,6 +142,15 @@ export class AppUtils {
             .join('')
     }
 
+
+    /**
+     * Converts a kebab-case string ro PascalCase
+     * @param {string} string - The string to transform
+     * @param {boolean} [upper=false] - If true, returns UpperCamelCase (PascalCase)
+     * @returns {string}
+     */
+    static pascalCase = (string) => AppUtils.camelCase(string, true)
+
     /**
      * LGS1920Context initialisation
      *
