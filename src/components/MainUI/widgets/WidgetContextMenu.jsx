@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-03
- * Last modified: 2025-12-03
+ * Created on: 2025-12-19
+ * Last modified: 2025-12-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -19,6 +19,7 @@ import {
     faRegularSquareCirclePlus,
     faRegularSquareCircleMinus,
 }                               from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import {
     faArrowDown,
     faArrowDownLeft,
@@ -68,8 +69,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
 
     /** Completely removes the widget from cache, store and DOM */
     const removeWidget = () => {
-        __.ui.widgetCache.delete(targetId)
-        lgs.stores.ui.widget.list.delete(targetId)
+        new WidgetDynamicRenderer().destroyWidget(targetId)
         element && __.ui.widgetManager.disposeElement(element)
         closeMenu()
     }

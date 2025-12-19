@@ -138,8 +138,10 @@ export class WidgetDynamicRenderer {
      * Destroys and removes a specific widget instance.
      */
     destroyWidget(widgetId) {
-        lgs.stores.ui.widget.list.delete(widgetId)
+        const $widget = lgs.stores.ui.widget
+        $widget.list.delete(widgetId)
         __.ui.widgetCache.delete(widgetId)
+
         return true
     }
 }
