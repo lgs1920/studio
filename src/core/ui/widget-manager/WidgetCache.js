@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-18
- * Last modified: 2025-12-18
+ * Created on: 2025-12-19
+ * Last modified: 2025-12-19
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,39 +17,37 @@
 /**
  * @typedef {Object} CacheEntry
  * @property {string} group - Group identifier
- * @property {Promise<React.Component>} component - Lazy-loaded component
+ * @property {React.LazyExoticComponent} component - Lazy-loaded component
  * @property {HTMLElement} [element] - Associated DOM element (optional)
- * @property {boolean} mounted - Indicates whether the widget is mounted for the current video
+ * @property {boolean} mounted - Indicates whether the widget is mounted for the current session
+ * @property {string} widgetsBoard - The ID of the board containing the widget
  */
 
 import { WIDGETS_STORE } from '@Core/constants'
 
 /**
  * Utility class providing a clean, reactive API over the global Valtio proxy cache.
- * The proxy is stored in a private class field `#cache` for internal use.
- * All methods are arrow functions.
  */
 export class WidgetCache {
     /** @type {WidgetCache|null} */
     static #instance = null
 
-    /** @type {import('valtio').Proxy<Map<string, CacheEntry>>} */
-    #cache = new Map()
+    /** @type {Map<string, CacheEntry>} */
+    #cache
 
     constructor() {
         if (WidgetCache.#instance) {
             return WidgetCache.#instance
         }
-        // Valtio proxy is a plain object with Map-like methods (get, set, has, delete, clear, entries, keys)
+        // References the global Valtio proxy store
         this.#cache = lgs.stores.ui.widget.cache
         WidgetCache.#instance = this
     }
 
-
     /**
      * Retrieves the lazy-loaded component for a given key.
-     * @param {string} key - Full widget key
-     * @returns {Promise<React.Component>|null}
+     * @param {string} key - Unique widget instance ID
+     * @returns {React.LazyExoticComponent|null}
      */
     getComponent = key => {
         const entry = this.#cache.get(key)
@@ -57,70 +55,59 @@ export class WidgetCache {
     }
 
     /**
-     * Retrieves the cache element for a given key.
-     * @param {string} key - Full widget key
-     * @returns {Promise<React.Component>|null}
+     * Retrieves the full cache entry.
+     * @param {string} key
+     * @returns {CacheEntry|null}
      */
     get = key => {
         return this.#cache.get(key)
     }
 
     /**
-     *
-     * @param key
-     * @param options
+     * Sets or updates a cache entry.
+     * @param {string} key - Unique widget instance ID
+     * @param {Object} options - Entry metadata
      */
     set = (key, options) => {
         const {group, component, mounted, widgetsBoard} = options
 
         this.#cache.set(key, {
             group:        group ?? null,
-            component:    component ?? null,//__.app.pascalCase(widgetId.split('#')[0]),
+            component: component ?? null,
             mounted:      mounted ?? false,
             widgetsBoard: widgetsBoard ?? null,
         })
     }
 
     /**
-     * Deletes an entry by its key.
-     * @param {string} key - Full key
+     * Deletes an entry and its persistence in DB.
+     * @param {string} key
      */
-    delete = key => this.#cache.delete(key)
+    delete = async key => {
+        this.#cache.delete(key)
+        await lgs.db.lgs1920.delete(key, WIDGETS_STORE)
+    }
 
     /**
-     * Checks if a key exists in the cache and validates against group and widgetsBoard criteria.
-     * @param {string} key - Full or base key.
-     * @param {Object} [options={}] - Options for the search.
-     * @param {string} [options.group] - The group the cached item must belong to.
-     * @param {boolean} [options.full=false] - If true, exact key match only.
-     * @param {string} [options.widgetsBoard] - The widgetsBoard the cached item must belong to.
+     * Validates if a widget exists based on key, group, and board.
+     * @param {string} key - Base key or full ID
+     * @param {Object} [options={}]
      * @returns {boolean}
      */
     has = (key, options = {}) => {
         const {group, full = false, widgetsBoard} = options
 
-        /**
-         * Internal validator for metadata constraints.
-         * Ensures the cached entry aligns with the requested architectural scope.
-         * @param {Object} value - The cached entry metadata.
-         * @returns {boolean}
-         */
         const isValidMatch = (value) => {
             const groupMatch = group === undefined || (value && value.group === group)
             const boardMatch = widgetsBoard === undefined || (value && value.widgetsBoard === widgetsBoard)
-
             return groupMatch && boardMatch
         }
 
         if (full) {
-            if (this.#cache.has(key)) {
-                const cachedValue = this.#cache.get(key)
-                return isValidMatch(cachedValue)
-            }
-            return false
+            const cachedValue = this.#cache.get(key)
+            return !!(cachedValue && isValidMatch(cachedValue))
         }
 
-        // Performance note: iteration over keys scales linearly with cache size
         return Array.from(this.#cache.keys()).some(k => {
             if (k.startsWith(key)) {
                 const cachedValue = this.#cache.get(k)
@@ -131,66 +118,61 @@ export class WidgetCache {
     }
 
     /**
-     * Clears the entire cache.
+     * Clears all entries.
      */
     clear = () => this.#cache.clear()
 
     /**
-     * Clears all entries belonging to a specific group.
-     * @param {string} group - Group identifier
-     */
-    clearByGroup = group => {
-        for (const [key, value] of this.#cache) {
-            if (value.group === group) {
-                this.#cache.delete(key)
-            }
-        }
-    }
-
-    /**
-     * Counts entries matching the specified criteria.
-     * @param {string} [key] - Base key filter
-     * @param {string|string[]} [groups] - Group(s) filter
-     * @param {boolean} [full=false] - Exact key count
+     * Counts entries matching specific criteria.
+     * Essential for board-scoped quota management.
+     * @param {Object} filters
+     * @param {string} [filters.key] - Base key filter
+     * @param {string|string[]} [filters.groups] - Group filter
+     * @param {string} [filters.widgetsBoard] - Board filter
+     * @param {boolean} [filters.full=false] - Exact key match
      * @returns {number}
      */
-    count = (key, groups, full = false) => {
+    count = ({key, groups, widgetsBoard, full = false} = {}) => {
         let entries = Array.from(this.#cache.entries())
 
         if (full && key) {
-            return this.#cache.has(key) ? 1 : 0
+            const entry = this.#cache.get(key)
+            if (!entry) {
+                return 0
+            }
+            const boardMatch = !widgetsBoard || entry.widgetsBoard === widgetsBoard
+            return boardMatch ? 1 : 0
         }
+
         if (key) {
             entries = entries.filter(([k]) => k === key || k.startsWith(`${key}#`))
         }
+
         if (groups) {
             const groupArray = Array.isArray(groups) ? groups : [groups]
             entries = entries.filter(([, v]) => groupArray.includes(v.group))
         }
+
+        // Filtering by board ID to allow scoped quota calculations
+        if (widgetsBoard) {
+            entries = entries.filter(([, v]) => v.widgetsBoard === widgetsBoard)
+        }
+
         return entries.length
     }
 
     /**
-     * Returns a filtered read-only snapshot of the cache using a configuration object
-     * @param {Object} [filters={}] - Filter configuration
-     * @param {string|string[]|null} [filters.groups=null] - Single group or array of groups
-     * @param {string|null} [filters.widgetsBoard=null] - Specific widgets board identifier
-     * @returns {Map<string, CacheEntry>}
+     * Returns a snapshot of the cache based on filters.
      */
     getAll = ({groups = null, widgetsBoard = null} = {}) => {
-        // Return early if no filters are applied
         if (!groups && !widgetsBoard) {
             return new Map(this.#cache)
         }
-        // Normalize groups to an array to handle both string and string[]
         const groupsFilter = groups ? (Array.isArray(groups) ? groups : [groups]) : null
 
-        const filteredEntries = Array.from(this.#cache).filter(([key, entry]) => {
-            // Validate entry against groups array if filter is active
+        const filteredEntries = Array.from(this.#cache).filter(([, entry]) => {
             const matchGroup = !groupsFilter || groupsFilter.includes(entry.group)
-            // Validate entry against widgetsBoard if filter is active
             const matchBoard = !widgetsBoard || entry.widgetsBoard === widgetsBoard
-
             return matchGroup && matchBoard
         })
 
@@ -198,9 +180,7 @@ export class WidgetCache {
     }
 
     /**
-     * Associates an HTMLElement with an existing entry.
-     * @param {string} key - Widget key
-     * @param {HTMLElement} element - DOM element
+     * UI related methods for DOM and mounting state.
      */
     setElement = (key, element) => {
         const entry = this.#cache.get(key)
@@ -209,30 +189,13 @@ export class WidgetCache {
         }
     }
 
-    /**
-     * Marks the widget as mounted
-     * @param {string} key - Widget key
-     * @param {function} callback - Called once the widget has veen mounted
-     */
     mount = (key, callback = null) => {
         this.#setMounted(key, true)
         callback?.(key)
     }
 
-    /**
-     * Marks the widget as unmounted
-     * @param {string} key - Widget key
-     */
-    unmount = key => {
-        this.#setMounted(key, false)
-    }
+    unmount = key => this.#setMounted(key, false)
 
-    /**
-     * Updates the video-mounted state of an entry.
-     * @param {string} key - Widget key
-     * @param {boolean} mounted - New mounted state
-     * @private
-     */
     #setMounted = (key, mounted) => {
         const entry = this.#cache.get(key)
         if (entry) {
@@ -240,17 +203,10 @@ export class WidgetCache {
         }
     }
 
-    /**
-     * Gets the video-mounted state of an entry.
-     * @param {string} key - Widget key
-     * @returns {boolean|undefined}
-     */
     isMounted = key => this.#cache.get(key)?.mounted
 
     /**
-     * Fill cache from DB
-     *
-     * @return {Promise<void>}
+     * Hydrates the cache and the store list from the indexedDB persistence.
      */
     async readFromDB() {
         const $widget = lgs.stores.ui.widget
@@ -261,18 +217,20 @@ export class WidgetCache {
                 if (!widgetData || !widgetData.group) {
                     continue
                 }
-                __.ui.widgetCache.set(widgetId, {
+
+                this.set(widgetId, {
                     group:        widgetData.group,
-                    component:    null, // __.app.pascalCase(widgetId.split('#')[0]),
+                    component: null,
                     widgetsBoard: widgetData.widgetsBoard,
                 })
 
-                $widget.list.set(widgetId, {widgetsBoard: widgetData.widgetsBoard || 'scene'})
-
+                $widget.list.set(widgetId, {
+                    widgetsBoard: widgetData.widgetsBoard || 'scene',
+                })
             }
         }
         catch (error) {
-            console.error('Failed to restore persisted widgets:', error)
+            console.error('[WidgetCache] Failed to restore persisted widgets:', error)
         }
     }
 }

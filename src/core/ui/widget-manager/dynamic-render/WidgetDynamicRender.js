@@ -43,6 +43,8 @@ export class WidgetDynamicRenderer {
 
     /**
      * Filters and returns valid widget groups.
+     * @param {Iterable<string>} groups
+     * @returns {Map<string, Object>}
      */
     theGroups(groups) {
         const subGroups = new Map()
@@ -54,25 +56,34 @@ export class WidgetDynamicRenderer {
         return subGroups
     }
 
+
     /**
      * Checks if a widget can be rendered based on cache and limits.
+     * Quota calculations are now scoped to the specific widgetsBoard.
+     * @param {string} group - Group ID.
+     * @param {string} key - Widget base key.
+     * @param {Object} props - Widget props.
+     * @returns {{canRender: boolean, widgetId: string|null, existingInList: string|null}}
      */
     canRenderWidget = (group, key, props = {}) => {
-        const $widget = lgs.stores.ui.widget
         const {widgetsBoard, forceRefresh} = props
 
         const existingInCache = __.ui.widgetCache.has(key, {group, full: false, widgetsBoard})
         const existingInList = Array.from($widget.list.keys()).find(id => id.startsWith(key))
 
         if (!existingInList) {
-            const isMaxReached = __.ui.widgetManager.isMaxWidgetsReached(group, key)
+            // max reached logic is now scoped to the board
+            const isMaxReached = __.ui.widgetManager.isMaxWidgetsReached(group, key, widgetsBoard)
+
             if (!isMaxReached) {
                 const widgetId = __.ui.widgetManager.defineElementId(group, key)
                 return {canRender: true, widgetId, existingInList: null}
             }
+
             return {canRender: false, widgetId: null, existingInList: null}
         }
 
+        // if widget exists, only allow rendering if forceRefresh is active
         if (forceRefresh && existingInCache) {
             return {canRender: true, widgetId: existingInList, existingInList}
         }
@@ -99,10 +110,9 @@ export class WidgetDynamicRenderer {
         }
 
         const theWidget = theGroups.widgets.get(key.split('#')[0])
-        let LazyWidget = null // Declare in function scope
+        let LazyWidget = null
 
         if (theWidget?.component) {
-            // FIXED: Removed 'const' to avoid shadowing and update the outer variable
             LazyWidget = this.registry.getLazyComponent(theWidget.component)
 
             if (!LazyWidget) {
@@ -111,14 +121,14 @@ export class WidgetDynamicRenderer {
             }
         }
 
-        // Registering in the local memory cache
+        // registering in the local memory cache
         __.ui.widgetCache.set(widgetId, {
             group,
             component:    LazyWidget,
             widgetsBoard: props.widgetsBoard,
         })
 
-        // Update the Valtio proxy store
+        // update the Valtio proxy store
         $widget.list.set(widgetId, props)
 
         return LazyWidget ?? widgetId
