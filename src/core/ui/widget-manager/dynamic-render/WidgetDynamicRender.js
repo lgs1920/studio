@@ -56,6 +56,19 @@ export class WidgetDynamicRenderer {
         return subGroups
     }
 
+    /**
+     * Internal helper to find an existing widget ID in the store based on key and board.
+     * @param {string} key - The base widget key.
+     * @param {string} widgetsBoard - The specific board ID.
+     * @returns {string|null} The found widgetId or null.
+     */
+    findExistingInList(key, widgetsBoard) {
+        const $list = lgs.stores.ui.widget.list
+        return Array.from($list.keys()).find(id => {
+            const entry = $list.get(id)
+            return id.startsWith(key) && entry?.widgetsBoard === widgetsBoard
+        }) || null
+    }
 
     /**
      * Checks if a widget can be rendered based on cache and limits.
@@ -68,8 +81,9 @@ export class WidgetDynamicRenderer {
     canRenderWidget = (group, key, props = {}) => {
         const {widgetsBoard, forceRefresh} = props
 
+        // check if already in list for this specific board
+        const existingInList = this.findExistingInList(key, widgetsBoard)
         const existingInCache = __.ui.widgetCache.has(key, {group, full: false, widgetsBoard})
-        const existingInList = Array.from($widget.list.keys()).find(id => id.startsWith(key))
 
         if (!existingInList) {
             // max reached logic is now scoped to the board
