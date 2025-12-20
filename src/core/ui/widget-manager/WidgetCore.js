@@ -850,7 +850,7 @@ export class WidgetCore {
                                 : 'top-left')
 
             // set ratio key
-            let ratio = initialConfig.ratio ?? __.device.isPortrait ? '9x16' : '16x9'
+            let ratio = initialConfig.ratio ?? '1x1'
             if (initialConfig.type === LGS_VISUAL_WIDGET) {
                 ratio = lgs.configuration.widgetRatio
             }
