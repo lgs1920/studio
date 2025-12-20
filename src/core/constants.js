@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-18
- * Last modified: 2025-12-18
+ * Created on: 2025-12-20
+ * Last modified: 2025-12-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -289,7 +289,7 @@ export const LAYERS_DRAWER = 'layers-drawer'
 export const JOURNEY_EDITOR_DRAWER = 'journey-editor-drawer'
 export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'
 export const POIS_EDITOR_DRAWER = 'pois-editor-drawer'
-
+export const WIDGETS_EDITOR_DRAWER = 'widgets-editor-drawer'
 
 /** Jaurney, Track, POI **/
 
@@ -486,7 +486,13 @@ export const VIDEO_TOOLS_WIDGETS   = 'video-tools-widgets',
              JOURNEY_WIDGETS       = 'journey-widgets',
              SCENE_WIDGETS         = 'scene-widgets'
 
-export const WIDGETS_CAPABILITIES   = ['canRemove', 'canReset', 'canMaximize', 'canPosition', 'canEdit'],
+export const WIDGETS_CAPABILITIES = [
+           'canRemove',
+           'canReset',
+           'canMaximize',
+           'canPosition',
+           'canEdit',
+       ],
              WIDGETS_CONFIGURATION  = new Map([
                                                   [
                                                       'compass-widget', {
@@ -508,6 +514,8 @@ export const WIDGETS_CAPABILITIES   = ['canRemove', 'canReset', 'canMaximize', '
                                                   },
                                                   ],// Memoize widget configuration
                                               ]),
+
+
              DEFAULT_WIDGETS_LIST   = '@Components/MainUI/widgets/list',
              DEFAULT_WIDGET_CONTEXT = {
                  widgetEditor: false,

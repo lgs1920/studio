@@ -1,3 +1,5 @@
+# Groups and widgets icons should be defined twice, here and in constants.js
+
 widget-groups:
   multi-purpose-widgets:
     id: "multi-purpose-widgets"
@@ -20,7 +22,7 @@ widget-groups:
 widgets:
   compass-widget:
     id: "compass-widget"
-    name: "Compass"
+    name: "Compass Widget"
     description: "A compass widget"
     icon: "compass"
     mandatory: false
@@ -31,7 +33,7 @@ widgets:
 
   credits-widget:
     id: "credits-widget"
-    name: "Credits"
+    name: "Credits Widget"
     description: "A credits widget"
     icon: "user"
     mandatory: true
@@ -41,7 +43,7 @@ widgets:
 
   profile-widget:
     id: "profile-widget"
-    name: "Profile"
+    name: "Profile Widget"
     description: "The journey profile widget"
     icon: "chart-fft"
     mandatory: false

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-02
- * Last modified: 2025-12-02
+ * Created on: 2025-12-20
+ * Last modified: 2025-12-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -43,6 +43,8 @@ import { Panel as LayersPanel }                 from '../Settings/layers/Panel'
 import { PanelButton as LayersButton }          from '../Settings/layers/PanelButton'
 import { Panel as SettingsPanel }               from '../Settings/Panel'
 import { PanelButton as SettingsButton }        from '../Settings/PanelButton'
+import { Panel as WidgetEditorPanel } from './widgets/editor/Panel'
+
 import { CallForActions }                       from './CallForActions'
 import { CameraTarget }                         from './CameraTarget'
 import { CreditsBar }                           from './credits/CreditsBar'
@@ -246,6 +248,8 @@ export const MainUI = memo(() => {
                 <LayersPanel/>
                 <TracksEditor/>
                 <MapPOIEditPanel/>
+                <WidgetEditorPanel/>
+
             </div>
             <SupportUI/>
             <JourneyLoaderUI multiple/>

@@ -7,18 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-19
- * Last modified: 2025-12-19
+ * Created on: 2025-12-20
+ * Last modified: 2025-12-20
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { WIDGETS_CAPABILITIES } from '@Core/constants'
+import { WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
 import {
     faRegularSquareCirclePlus,
     faRegularSquareCircleMinus,
-}                               from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+}                                                      from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import {
     faArrowDown,
@@ -32,6 +32,7 @@ import {
     faCompress,
     faPlus,
     faTrashCan,
+    faPaintbrushPencil,
 }                               from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                from '@Utils/FA2SL'
@@ -73,6 +74,16 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
         element && __.ui.widgetManager.disposeElement(element)
         closeMenu()
     }
+
+    /** Launch the widget editor */
+    const editWidget = () => {
+        __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
+            action: 'edit-current',
+            entity: targetId,
+        })
+        closeMenu()
+    }
+
 
     /**
      * Resizes the widget by a relative factor.
@@ -154,6 +165,16 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                                 className="lgs-one-line-card on-map"
                                 onClick={() => resetSize(PERCENTAGE)}
                             />
+                        </SlTooltip>
+                    </li>
+                )}
+
+                {/* ----- Edit widget ----- */}
+                {hasCapabilities && config.contextMenu.canEdit && (
+                    <li onClick={editWidget}>
+                        <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>
+                        <SlTooltip content="Edit Widget" placement="left">
+                            <span>Edit</span>
                         </SlTooltip>
                     </li>
                 )}

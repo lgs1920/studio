@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-04
- * Last modified: 2025-12-04
+ * Created on: 2025-12-20
+ * Last modified: 2025-12-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -30,7 +30,6 @@
  * @class PanelManager
  * @singleton
  */
-import { ui } from '/src/core/stores/ui.js'
 
 export class PanelManager {
     /**
@@ -66,7 +65,7 @@ export class PanelManager {
      * @returns {Object} The drawers state object
      */
     get drawers() {
-        return ui.drawers
+        return lgs.stores.ui.drawers
     }
 
     /**
@@ -74,7 +73,7 @@ export class PanelManager {
      * @param {Object} value - The new drawers state
      */
     set drawers(value) {
-        Object.assign(ui.drawers, value)
+        Object.assign(lgs.stores.ui.drawers, value)
     }
 
     /**
@@ -148,8 +147,9 @@ export class PanelManager {
      * or omit/use null for the drawer's default tab (usually the first).
      */
     open = (id, options = {}) => {
-        ui.drawers.open = id
-        ui.drawers.action = options.action ?? ''
+        lgs.stores.ui.drawers.open = id
+        lgs.stores.ui.drawers.action = options.action ?? ''
+        lgs.stores.ui.drawers.entity = options.entity ?? null
 
         let tabToActivate = null
 
@@ -178,7 +178,7 @@ export class PanelManager {
     close = () => {
         // Remove focus from any active elements within the drawer
         document.activeElement?.blur()
-        ui.drawers.open = null
+        lgs.stores.ui.drawers.open = null
     }
 
     /**
@@ -252,7 +252,7 @@ export class PanelManager {
      * Resets the drawer manager's action state.
      */
     clean = () => {
-        ui.drawers.action = null
+        lgs.stores.ui.drawers.action = null
     }
 
     /**
@@ -306,7 +306,7 @@ export class PanelManager {
      * @param {string|null} id - The drawer ID to open, or null to close
      */
     setOpen(id) {
-        ui.drawers.open = id
+        lgs.stores.ui.drawers.open = id
     }
 
     /**
@@ -314,6 +314,6 @@ export class PanelManager {
      * @param {string|null} action - The action to set
      */
     setAction(action) {
-        lgs.stores.ui.drawers.action = action
+        lgs.stores.lgs.stores.ui.drawers.action = action
     }
 }

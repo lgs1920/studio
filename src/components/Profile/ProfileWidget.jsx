@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-16
- * Last modified: 2025-12-16
+ * Created on: 2025-12-20
+ * Last modified: 2025-12-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -163,6 +163,9 @@ export const ProfileWidget = ({id, context}) => {
             attachTo:        'bottom',
             scalable:        true,
             id,
+            min: {width: 150},
+            max: {width: 900},
+
             persist:         true,
             transient:       true,
             ttl:             HOUR,
