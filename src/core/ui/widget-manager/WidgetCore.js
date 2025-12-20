@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-16
- * Last modified: 2025-12-16
+ * Created on: 2025-12-20
+ * Last modified: 2025-12-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -361,7 +361,7 @@ export class WidgetCore {
         const attachTo = config.attachTo || (config.isCropper ? 'center' : 'top-left')
 
         let left, top
-        if (config.fromDB) {
+        if (config.fromDB && config.position.left && config.position?.top) {
             // Use saved position from DB, relative to the container
             left = config.position?.left ?? 0
             top = config.position?.top ?? 0
