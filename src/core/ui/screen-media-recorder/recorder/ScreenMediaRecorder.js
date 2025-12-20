@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-30
- * Last modified: 2025-11-30
+ * Created on: 2025-12-20
+ * Last modified: 2025-12-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -56,7 +56,7 @@ export class ScreenMediaRecorder extends EventTarget {
         {value: QUALITY_LOW, name: 'Low Quality', short: 'L'},
         {value: QUALITY_MEDIUM, name: 'Medium Quality', short: 'M'},
         {value: QUALITY_HIGH, name: 'High Quality', short: 'H'},
-        {value: QUALITY_VERY_HIGH, name: 'Very High Quality', short: 'V'},
+        {value: QUALITY_VERY_HIGH, name: 'Ultra High Quality', short: 'V'},
     ]
     /** Supported output frame rates */
     static FPS = [15, 30, 45, 60]
@@ -85,6 +85,14 @@ export class ScreenMediaRecorder extends EventTarget {
                                            fps:         2,
                                            name:        'High',
                                            description: 'Very High quality',
+                                       },
+                                       ],
+                                       [
+                                           'Ultra', {
+                                           quality:     3,
+                                           fps:         3,
+                                           name:        'Ultra',
+                                           description: 'Ultra High quality',
                                        },
                                        ],
                                        [
