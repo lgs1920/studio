@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-18
- * Last modified: 2025-12-18
+ * Created on: 2025-12-20
+ * Last modified: 2025-12-20
  *
  *
  * Copyright © 2025 LGS1920
@@ -38,8 +38,8 @@ import {
 import {
     APP_KEY, CROP_TOOLS_WIDGETS, JOURNEY_WIDGETS, LGS_PROJECT, MINUTE, MULTI_PURPOSE_WIDGETS, SECOND, VIDEO_CROP_ZONE,
     VIDEO_TOOLS_WIDGETS,
-    VIDEO_WIDGETS_BOARD,
-}                                                               from '@Core/constants'
+    VIDEO_WIDGETS_BOARD, WIDGETS_STORE,
+} from '@Core/constants'
 import {
     CanvasOverlayComposer,
 }                                                               from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
@@ -89,8 +89,8 @@ export const VideoRecordingScreenArea = memo(() => {
 
         // Set canvas source
         const configs = __.ui.widgetManager.getWidgetConfigByGroup(CROP_TOOLS_WIDGETS)
-        const widget = configs.find(config => config.id === VIDEO_CROP_ZONE)
-        if (!widget) {
+        const videoFrame = configs.find(config => config.id === VIDEO_CROP_ZONE)
+        if (!videoFrame) {
             console.warn('[VideoRecordingSettingsToolbar] No widget found for VIDEO_CROP_ZONE')
             return
         }
@@ -102,10 +102,10 @@ export const VideoRecordingScreenArea = memo(() => {
                                    filename:    APP_KEY,
                                    fps:     ScreenMediaRecorder.FPS[$video.fps],
                                    dimensions:  {
-                                       width:  widget.cropDimensions.width * __.device.dpr,
-                                       height: widget.cropDimensions.height * __.device.dpr,
+                                       width:  videoFrame.cropDimensions.width * __.device.dpr,
+                                       height: videoFrame.cropDimensions.height * __.device.dpr,
                                    },
-                                   ratio:       widget.ratio.value,
+                                   ratio:       videoFrame.ratio.value,
                                    metadata:    {
                                        artist:      lgs.servers.studio.name,
                                        date:        new Date(),
@@ -115,9 +115,8 @@ export const VideoRecordingScreenArea = memo(() => {
                                    },
                                    useWebGL:    true,
                                })
-
-        const {top: y, left: x, width, height} = widget.cropDimensions
-        widget.noResize = true
+        const {top: y, left: x, width, height} = videoFrame.cropDimensions
+        videoFrame.noResize = true
 
         const composer = new CanvasOverlayComposer(lgs.canvas, {
             clip: {x, y, width, height},
@@ -127,6 +126,7 @@ export const VideoRecordingScreenArea = memo(() => {
 
         ;[...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()].map(key => {
             const getCanvas = () => __.ui.widgetManager.getElementById(key)?.querySelector('.lgs-widget-canvas')
+            console.log(key, getCanvas())
             if (getCanvas() instanceof HTMLCanvasElement) {
                 composer.addOverlay(getCanvas)
             }
