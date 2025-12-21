@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-06
- * Last modified: 2025-07-06
+ * Created on: 2025-12-21
+ * Last modified: 2025-12-21
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { SETTING_EXCLUSIONS, SETTINGS_STORE } from '@Core/constants'
-import { detailedDiff }                       from 'deep-object-diff'
-import { proxy, subscribe }                   from 'valtio'
+import { SETTINGS_STORE }     from '@Core/constants'
+import { SETTING_EXCLUSIONS } from '@Core/settings/settingsExclusions'
+import { detailedDiff }       from 'deep-object-diff'
+import { proxy, subscribe }   from 'valtio'
 
 /**
  * A class to manage a section of settings, handling initialization, updates, and storage in IndexedDB.

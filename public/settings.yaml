@@ -338,3 +338,7 @@ ui:
   pwa:
     canInstall: true
 
+  ## Widgets
+  widgets:
+    default:           # Contains the default widgets settings
+    user:              # Contains the widgets settings the user wants as default
