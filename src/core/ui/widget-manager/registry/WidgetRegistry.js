@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-19
- * Last modified: 2025-12-19
+ * Created on: 2025-12-21
+ * Last modified: 2025-12-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -30,23 +30,29 @@ export class WidgetRegistry {
             return WidgetRegistry._instance
         }
 
-        // Scan directories
+        // Scan directories using Vite glob import
         this.#modules = import.meta.glob([
-                                             '/src/components/MainUI/widgets/list/*Widget.jsx',
-                                             '/src/components/MainUI/widgets/list/**/*Widget.jsx',
-                                             '/src/components/Profile/*Widget.jsx',
+                                             '/src/components/MainUI/widgets/list/*Widget*.jsx',
+                                             '/src/components/MainUI/widgets/list/**/*Widget*.jsx',
+                                             '/src/components/Profile/*Widget*.jsx',
                                          ])
+
         this.#buildIndex()
         WidgetRegistry._instance = this
     }
 
+    /**
+     * Build a flat index for quick access by component name.
+     * Prevents overwriting in case of collision to maintain consistency.
+     */
     #buildIndex() {
         for (const path in this.#modules) {
             const name = path.split('/').pop().replace('.jsx', '')
 
             if (this.#nameIndex.has(name)) {
-                // Production log: warning about name collision
-                console.warn(`[WidgetRegistry] Collision detected for "${name}". Multiple paths found. Use full path to resolve.`)
+                // Production log: maintain first discovered path and warn about collision
+                console.warn(`[WidgetRegistry] Collision detected for "${name}". Skipping: ${path}. Already registered: ${this.#nameIndex.get(name)}`)
+                continue
             }
 
             this.#nameIndex.set(name, path)
@@ -59,8 +65,6 @@ export class WidgetRegistry {
      * @returns {React.LazyExoticComponent|null}
      */
     getLazyComponent(identifier) {
-        // Resolve the internal path key: We check if the identifier is already a full path, otherwise look it up in
-        // the name index
         const resolvedPath = this.#modules[identifier] ? identifier : this.#nameIndex.get(identifier)
         const importFn = this.#modules[resolvedPath]
 
@@ -69,38 +73,44 @@ export class WidgetRegistry {
             return null
         }
 
-        /**
-         * Return a React.lazy component.
-         * We add a .then() block to handle various export types (default vs named).
-         */
         return lazy(() =>
                         importFn().then(module => {
-                            // Standard default export
+                            // Ensure we return an object compatible with React.lazy ({ default: Component })
                             if (module.default) {
                                 return module
                             }
 
-                            // Named export matching the filename
                             const name = resolvedPath.split('/').pop().replace('.jsx', '')
                             if (module[name]) {
                                 return {default: module[name]}
                             }
 
-                            // Fallback to the whole module
                             return {default: module}
                         }).catch(err => {
                             console.error(`[WidgetRegistry] Critical error loading "${resolvedPath}":`, err)
                             throw err
-                        }),
+                        })
         )
     }
 
     /**
-     * Check for duplicates
+     * Check for duplicates in the registry
      * @returns {string[]} List of duplicated component names
      */
     getCollisions() {
-        const names = Object.keys(this.#modules).map(p => p.split('/').pop())
-        return names.filter((name, index) => names.indexOf(name) !== index)
+        const seen = new Set()
+        const collisions = new Set()
+
+        for (const path in this.#modules) {
+            const name = path.split('/').pop()
+            if (seen.has(name)) {
+                collisions.add(name)
+            }
+            seen.add(name)
+        }
+        return Array.from(collisions)
     }
 }
+
+// Export a single instance to ensure singleton pattern across the app
+export const $widgetRegistry = new WidgetRegistry()

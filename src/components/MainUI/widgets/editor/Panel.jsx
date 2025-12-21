@@ -7,113 +7,143 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-20
- * Last modified: 2025-12-20
+ * Created on: 2025-12-21
+ * Last modified: 2025-12-21
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-
-import { POIS_EDITOR_DRAWER, WIDGETS_CONFIGURATION, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
-import { SlDrawer, SlIcon }                                                 from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                            from '@Utils/FA2SL'
-import { useCallback, useEffect, useState }                                 from 'react'
-import { useSnapshot }                                                      from 'valtio'
-import DrawerFooter                                                         from '../../../DrawerFooter'
+import { WIDGETS_CONFIGURATION, WIDGETS_EDITOR_DRAWER }        from '@Core/constants'
+import { WidgetRegistry }                                      from '@Core/ui/widget-manager/registry/WidgetRegistry'
+import { SlDrawer, SlIcon, SlSpinner }                         from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                               from '@Utils/FA2SL'
+import { Suspense, useCallback, useEffect, useState, useMemo } from 'react'
+import { useSnapshot }                                         from 'valtio'
+import DrawerFooter                                            from '../../../DrawerFooter'
 import './style.css'
 
 /**
  * A memoized React component for rendering the Points of Interest (POI) editor panel.
- * @returns {JSX.Element} The rendered drawer panel
+ * @returns {JSX.Element|null} The rendered drawer panel
  */
 export const Panel = () => {
+    // Accessing global proxies
+    const $ui = lgs.stores.ui
+    const $drawers = $ui.drawers
+    const $video = $ui.video
 
-    const $video = lgs.stores.ui.video
-    const drawers = useSnapshot(lgs.stores.ui.drawers)
-    const drawerOpen = drawers.open === WIDGETS_EDITOR_DRAWER && $video.editing
-
+    // Snapshots
+    const drawers = useSnapshot($drawers)
+    const video = useSnapshot($video)
     const menuSettings = useSnapshot(lgs.editorSettingsProxy.menu)
+
+    // Visibility logic
+    const isVisible = drawers.open === WIDGETS_EDITOR_DRAWER && video.editing
     const drawerPlacement = menuSettings.drawer
 
-    const [widget, setWidget] = useState(null)
-    const [data, setData] = useState({})
+    // Local state
+    const [widgetPosition, setWidgetPosition] = useState(null)
+    const [data, setData] = useState({name: '', description: '', icon: '', type: ''})
+    const [EditorComponent, setEditorComponent] = useState(null)
+
+    const _registry = useMemo(() => new WidgetRegistry(), [])
 
     /**
-     * Cleans up and closes the widgets editor drawer.
-     * @returns {void}
+     * Close handler: updates the proxy store.
      */
     const closeEditor = useCallback(() => {
-                                        // Only proceed if this specific drawer is currently open
-                                        if (__.ui.drawerManager.isCurrent(WIDGETS_EDITOR_DRAWER)) {
-                                            __.ui.drawerManager.close()
-                                        }
-                                        // Dispatch resize event (keep only if mandatory for scene/layout refresh)
-                                        window.dispatchEvent(new Event('resize'))
-                                    }
-        , [])
+        if (__.ui.drawerManager.isCurrent(WIDGETS_EDITOR_DRAWER)) {
+            __.ui.drawerManager.close()
+        }
+        $drawers.open = null
+        window.dispatchEvent(new Event('resize'))
+    }, [])
 
     /**
-     * Handles the sl-request-close event from <SlDrawer>.
-     * Prevents closing if the source is 'overlay' (e.g., click outside) but allows close button/Esc.
-     * @param {CustomEvent} event - Shoelace sl-request-close event
-     * @returns {void}
+     * Handle Shoelace close requests.
      */
     const handleRequestClose = useCallback((event) => {
-                                               // Prevent closing if the user clicks outside the drawer (overlay)
-                                               if (event.detail.source === 'overlay') {
-                                                   event.preventDefault()
-                                               }
-                                               else {
-                                                   // Allow closing via internal mechanism (e.g., Esc key, internal
-                                                   // close button)
-                                                   closeEditor()
-                                               }
-                                           }
-        , [closeEditor])
-    useEffect(() => {
-        if (drawers.entity) {
-            const type = drawers.entity.split('#')[0]
-            const cached = lgs.stores.ui.widget.cache.get(drawers.entity)
-            const theWidget = __.widgets.get(cached.group).widgets.get(type)
-            setData({
-                        type:        type,
-                        name:        theWidget.name,
-                        description: theWidget.description,
-                        icon:        FA2SL.set(WIDGETS_CONFIGURATION.get(type)?.icon),
-                    })
-            setWidget(__.ui.widgetManager.getWidgetPosition(drawers.entity))
+        if (event.detail.source === 'overlay') {
+            event.preventDefault()
         }
-    }, [drawers.entity])
+        else {
+            closeEditor()
+        }
+    }, [closeEditor])
 
-    if (!drawerOpen || !widget) {
-        __.ui.drawerManager.close()
+    /**
+     * Watcher for entity changes to load the correct widget editor.
+     */
+    useEffect(() => {
+        if (isVisible && drawers.entity) {
+            const type = drawers.entity.split('#')[0]
+            const cached = $ui.widget.cache.get(drawers.entity)
+
+            if (cached) {
+                const theWidget = __.widgets.get(cached.group).widgets.get(type)
+
+                setData({
+                            type,
+                            name:        theWidget.name,
+                            description: theWidget.description,
+                            icon:        FA2SL.set(WIDGETS_CONFIGURATION.get(type)?.icon),
+                        })
+
+                setWidgetPosition(__.ui.widgetManager.getWidgetPosition(drawers.entity))
+
+                // Using the specific naming convention (type + Editor)
+                const componentName = __.app.pascalCase(`${type}Editor`)
+                const LazyWidget = _registry.getLazyComponent(componentName)
+                setEditorComponent(() => LazyWidget)
+            }
+        }
+    }, [drawers.entity, isVisible, _registry, $ui.widget.cache])
+
+    // If not visible, we don't render the wrapper to allow a fresh mount later.
+    if (!isVisible) {
         return null
     }
+
     return (
-        <>
-            {drawerOpen && widget &&
-                <div className="drawer-wrapper">
-                    <SlDrawer
-                        id={WIDGETS_EDITOR_DRAWER}
-                        open={true}
-                        className="lgs-theme"
-                        placement={drawerPlacement}
-                        onSlRequestClose={handleRequestClose}
-                        onSlAfterHide={closeEditor}
-                        contained
-                    >
-                            <span slot="label">
-                                <SlIcon
-                                    library="fa"
-                                    name={data.icon}
-                                />
-                                {data.name}
-                            </span>
-                        <DrawerFooter/>
-                    </SlDrawer>
+        <div className="drawer-wrapper">
+            <SlDrawer
+                id={WIDGETS_EDITOR_DRAWER}
+                label={data.name}
+                open={isVisible}
+                className="lgs-theme"
+                placement={drawerPlacement}
+                onSlRequestClose={handleRequestClose}
+                onSlAfterHide={closeEditor}
+                contained
+            >
+                <div slot="label" className="drawer-header-title">
+                    <SlIcon library="fa" name={data.icon}/>
+                    <span>{data.name}</span>
                 </div>
-            }
-        </>
+
+                <div className="drawer-content">
+                    <Suspense fallback={
+                        <div className="drawer-loader">
+                            <SlSpinner style={{fontSize: '2rem'}}/>
+                        </div>
+                    }>
+                        {EditorComponent ? (
+                            <EditorComponent
+                                entity={drawers.entity}
+                                widgetData={data}
+                                position={widgetPosition}
+                            />
+                        ) : (
+                             <div className="error-placeholder">
+                                 Component for "{data.type}" not found.
+                             </div>
+                         )}
+                    </Suspense>
+                </div>
+
+                <DrawerFooter slot="footer"/>
+            </SlDrawer>
+        </div>
     )
 }
