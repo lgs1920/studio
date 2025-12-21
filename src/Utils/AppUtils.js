@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-18
- * Last modified: 2025-12-18
+ * Created on: 2025-12-21
+ * Last modified: 2025-12-21
  *
  *
  * Copyright © 2025 LGS1920
@@ -180,9 +180,13 @@ export class AppUtils {
             .then(res => res.text())
             .then(text => YAML.parse(text),
             )
-        __.widgets = new Map()
+
+        // add settings section
+        settings.widgets = raw.settings
+
 
         // Initialize groups with their metadata
+        __.widgets = new Map()
         for (const [groupKey, groupValue] of Object.entries(raw['widget-groups'])) {
             __.widgets.set(groupKey, {
                 ...groupValue,

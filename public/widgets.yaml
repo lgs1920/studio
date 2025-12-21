@@ -1,5 +1,6 @@
-# Groups and widgets icons should be defined twice, here and in constants.js
+# Groups and widgets
 
+# Icons should be defined twice, here and in constants.js
 widget-groups:
   multi-purpose-widgets:
     id: "multi-purpose-widgets"
@@ -53,3 +54,10 @@ widgets:
     groups:
       - "journey-widgets"
       - "scene-widgets"
+
+
+## Widgets settings
+settings:
+  management:        # Contains the widgets management settings
+  default:           # Contains the default widgets settings
+  user:              # Contains the widgets settings the user wants as default

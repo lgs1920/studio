@@ -330,15 +330,10 @@ ui:
     image: png         # for Image
     maxDuration: 5     # minutes
     maxSize: 200       # MB
-    fps: 1             # 0:15, 1:30, 3:45, 4:60 => VideoRecorder.FPS
-    quality: 1         # 0: low, 1: medium, 2: high, 3: very high => VideoRecorder.QUALITY
+    fps: 1             # 0:15, 1:30, 2:45, 3:60 => VideoRecorder.FPS
+    quality: 1         # 0: low, 1: medium, 2: high, 3: Ultra high => VideoRecorder.QUALITY
     ratio: null        # 16x9,9x16 ...
 
   ## PWA
   pwa:
     canInstall: true
-
-  ## Widgets
-  widgets:
-    default:           # Contains the default widgets settings
-    user:              # Contains the widgets settings the user wants as default
