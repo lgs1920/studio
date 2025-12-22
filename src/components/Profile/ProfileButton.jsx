@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-19
- * Last modified: 2025-12-19
+ * Created on: 2025-12-22
+ * Last modified: 2025-12-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -22,15 +22,17 @@
  *
  ******************************************************************************/
 
-import { SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
-import { WidgetDynamicRenderer }              from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import { SCENE_WIDGETS, SCENE_WIDGETS_BOARD, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
+import {
+    WidgetDynamicRenderer,
+}                                                                    from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { faChartLine }                        from '@fortawesome/pro-regular-svg-icons'
 import { SlButton, SlIcon, SlTooltip }        from '@shoelace-style/shoelace/dist/react'
 import './style.css'
 import { TrackUtils }                         from '@Utils/cesium/TrackUtils'
-import { FA2SL }                              from '@Utils/FA2SL'
-import { useEffect }                          from 'react'
-import { useSnapshot }                        from 'valtio'
+import { FA2SL }                                                     from '@Utils/FA2SL'
+import { useEffect, useState }                                       from 'react'
+import { useSnapshot }                                               from 'valtio'
 
 export const ProfileButton = (props) => {
     const $main = lgs.stores.main
@@ -70,6 +72,10 @@ export const ProfileButton = (props) => {
     const toggleProfileButton = () => {
         const $tmp = !$profile.show
         $profile.show = $tmp
+
+        if (!$profile.show && lgs.stores.ui.drawers.open === WIDGETS_EDITOR_DRAWER) {
+            lgs.stores.ui.drawers.open = null
+        }
     }
 
     const addWidget = async (group, key, options = {}) => {
