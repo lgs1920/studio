@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-16
- * Last modified: 2025-12-16
+ * Created on: 2025-12-22
+ * Last modified: 2025-12-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -17,8 +17,8 @@
 import { usePointerInteractions } from '@Components/MainUI/context-menu/usePointerInteractions'
 import {
     LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET, LGS_WIDGET_SCALE_FACTOR,
-    WIDGETS_CAPABILITIES,
-}                                 from '@Core/constants'
+    WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
+} from '@Core/constants'
 import {
     ScreenMediaRecorder,
 }                                 from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
@@ -80,10 +80,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const snapSettings = useMemo(() => {
         const s = config?.snapSensitivity ?? 'medium'
         return s === 'low'
-               ? {threshold: 15, gap: true}
+               ? {threshold: 20, gap: true}
                : s === 'high'
                  ? {threshold: 5, gap: false}
-                 : {threshold: 30, gap: true}
+                 : {threshold: 10, gap: true}
     }, [config?.snapSensitivity])
     const {threshold: snapThreshold, gap: snapGap} = snapSettings
 
@@ -222,7 +222,26 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (interactionLocked) {
             return
         }
-        __.ui.widgetManager.onDoubleClick(event, setPosition, _moveable)
+
+        // Check if we can Edit
+        const hasCapabilities = __.ui.widgetManager.hasCapabilities(
+            config.contextMenu,
+            WIDGETS_CAPABILITIES,
+        )
+        if (!hasCapabilities || config.contextMenu?.canEdit !== true) {
+            return
+        }
+
+        // Toggle action
+        if (lgs.stores.ui.drawers.open !== WIDGETS_EDITOR_DRAWER) {
+            __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
+                action: 'edit-current',
+                entity: config.id,
+            })
+        }
+        else {
+            __.ui.drawerManager.close()
+        }
     }, [interactionLocked])
 
     // Context menu – long-tap (mobile) or right-click (desktop)
