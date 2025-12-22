@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-20
- * Last modified: 2025-12-20
+ * Created on: 2025-12-22
+ * Last modified: 2025-12-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -35,8 +35,8 @@ import {
     faPaintbrushPencil,
 }                               from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                from '@Utils/FA2SL'
-import React                    from 'react'
+import { FA2SL }                      from '@Utils/FA2SL'
+import React, { useEffect, useState } from 'react'
 
 const PERCENTAGE = 0.1
 
@@ -52,6 +52,8 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
     // Retrieve DOM element and configuration for the targeted widget
     const element = __.ui.widgetManager.getElementById(targetId)
     const config = __.ui.widgetManager.getWidgetConfig(targetId)
+    const [isEditing, setEditMode] = useState(false)
+    const $drawers = lgs.stores.ui.drawers
 
     // Early return if the widget no longer exists or has no context-menu config
     if (!element || !config?.contextMenu) {
@@ -72,6 +74,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
     const removeWidget = () => {
         new WidgetDynamicRenderer().destroyWidget(targetId)
         element && __.ui.widgetManager.disposeElement(element)
+        setEditMode(false)
         closeMenu()
     }
 
@@ -83,7 +86,6 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
         })
         closeMenu()
     }
-
 
     /**
      * Resizes the widget by a relative factor.
@@ -130,6 +132,10 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
         closeMenu()
     }
 
+    useEffect(() => {
+        setEditMode($drawers.open === WIDGETS_EDITOR_DRAWER)
+    }, [$drawers.open])
+
     // --------------------------------------------------------------------- //
     // Render
     // --------------------------------------------------------------------- //
@@ -170,7 +176,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                 )}
 
                 {/* ----- Edit widget ----- */}
-                {hasCapabilities && config.contextMenu.canEdit && (
+                {hasCapabilities && config.contextMenu.canEdit && !isEditing && (
                     <li onClick={editWidget}>
                         <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>
                         <SlTooltip content="Edit Widget" placement="left">
@@ -180,7 +186,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                 )}
 
                 {/* ----- Remove widget ----- */}
-                {hasCapabilities && config.contextMenu.canRemove && (
+                {hasCapabilities && config.contextMenu.canRemove && !isEditing && (
                     <li onClick={removeWidget}>
                         <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
                         <SlTooltip content="Remove Widget" placement="left">

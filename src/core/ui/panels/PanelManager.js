@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-21
- * Last modified: 2025-12-21
+ * Created on: 2025-12-22
+ * Last modified: 2025-12-22
  *
  *
  * Copyright © 2025 LGS1920
@@ -179,6 +179,7 @@ export class PanelManager {
     close = () => {
         // Remove focus from any active elements within the drawer
         document.activeElement?.blur()
+        ui.drawers.open = null
     }
 
     /**

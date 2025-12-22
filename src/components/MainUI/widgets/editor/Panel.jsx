@@ -7,15 +7,17 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-21
- * Last modified: 2025-12-21
+ * Created on: 2025-12-22
+ * Last modified: 2025-12-22
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { WIDGETS_CONFIGURATION, WIDGETS_EDITOR_DRAWER }        from '@Core/constants'
-import { WidgetRegistry }                                      from '@Core/ui/widget-manager/registry/WidgetRegistry'
+import { SCENE_WIDGETS_BOARD, WIDGETS_CONFIGURATION, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
+import {
+    WidgetRegistry,
+}                                                                            from '@Core/ui/widget-manager/registry/WidgetRegistry'
 import { SlDrawer, SlIcon, SlSpinner }                         from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                               from '@Utils/FA2SL'
 import { Suspense, useCallback, useEffect, useState, useMemo } from 'react'
@@ -38,16 +40,16 @@ export const Panel = () => {
     const video = useSnapshot($video)
     const menuSettings = useSnapshot(lgs.editorSettingsProxy.menu)
 
-    // Visibility logic
-    const isVisible = drawers.open === WIDGETS_EDITOR_DRAWER && video.editing
-    const drawerPlacement = menuSettings.drawer
-
     // Local state
     const [widgetPosition, setWidgetPosition] = useState(null)
     const [data, setData] = useState({name: '', description: '', icon: '', type: ''})
     const [EditorComponent, setEditorComponent] = useState(null)
+    const cached = $ui.widget.cache.get(drawers.entity)
+    const widgetRegistry = useMemo(() => new WidgetRegistry(), [])
 
-    const _registry = useMemo(() => new WidgetRegistry(), [])
+    // Visibility logic
+    const isVisible = drawers.open === WIDGETS_EDITOR_DRAWER && (video.editing || cached?.widgetsBoard === SCENE_WIDGETS_BOARD)
+    const drawerPlacement = menuSettings.drawer
 
     /**
      * Close handler: updates the proxy store.
@@ -76,29 +78,30 @@ export const Panel = () => {
      * Watcher for entity changes to load the correct widget editor.
      */
     useEffect(() => {
-        if (isVisible && drawers.entity) {
-            const type = drawers.entity.split('#')[0]
-            const cached = $ui.widget.cache.get(drawers.entity)
 
-            if (cached) {
-                const theWidget = __.widgets.get(cached.group).widgets.get(type)
+        if (drawers.entity) {
+            if (isVisible) {
+                if (cached) {
+                    const type = drawers.entity.split('#')[0]
+                    const theWidget = __.widgets.get(cached.group).widgets.get(type)
 
-                setData({
-                            type,
-                            name:        theWidget.name,
-                            description: theWidget.description,
-                            icon:        FA2SL.set(WIDGETS_CONFIGURATION.get(type)?.icon),
-                        })
+                    setData({
+                                type,
+                                name:        theWidget.name,
+                                description: theWidget.description,
+                                icon:        FA2SL.set(WIDGETS_CONFIGURATION.get(type)?.icon),
+                            })
 
-                setWidgetPosition(__.ui.widgetManager.getWidgetPosition(drawers.entity))
+                    setWidgetPosition(__.ui.widgetManager.getWidgetPosition(drawers.entity))
 
-                // Using the specific naming convention (type + Editor)
-                const componentName = __.app.pascalCase(`${type}Editor`)
-                const LazyWidget = _registry.getLazyComponent(componentName)
-                setEditorComponent(() => LazyWidget)
+                    // Using the specific naming convention (type + Editor)
+                    const componentName = __.app.pascalCase(`${type}Editor`)
+                    const LazyWidget = widgetRegistry.getLazyComponent(componentName)
+                    setEditorComponent(() => LazyWidget)
+                }
             }
         }
-    }, [drawers.entity, isVisible, _registry, $ui.widget.cache])
+    }, [drawers.entity, isVisible, widgetRegistry, $ui.widget.cache])
 
     // If not visible, we don't render the wrapper to allow a fresh mount later.
     if (!isVisible) {
