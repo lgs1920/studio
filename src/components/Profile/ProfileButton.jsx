@@ -46,35 +46,46 @@ export const ProfileButton = (props) => {
     const WIDGET_KEY = 'profile-widget'
     const GROUP = SCENE_WIDGETS
 
-    useEffect(() => {
-        /**
-         * Async wrapper to handle the promise from renderWidget
-         */
-        const handleWidgetState = async () => {
-            // We have only one, search it !
-            const existing = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
-            if (!existing) {
-                // renderWidget returns the LazyComponent OR the ID
-                // In your implementation, we need to track what was added to lgs.stores.ui.widget.list
-                await addWidget(GROUP, WIDGET_KEY, {forceRefresh: true})
-            }
-            // else {
-            //     $profile.show = false
-            //     if (existing) {
-            //         renderer.destroyWidget(existing)
-            //     }
-            // }
+    const toggleProfileButton = async () => {
+        // Chercher si le widget existe déjà
+        const existing = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
+
+        if (!existing) {
+            // Cas 1 : Le widget n'existe pas → le créer et l'afficher
+            await addWidget(GROUP, WIDGET_KEY, {forceRefresh: true})
+            $profile.show = true
         }
+        else {
+            // Le widget existe
+            const widgetElement = __.ui.widgetManager.getElementById(existing)
+            const $restrictions = lgs.stores.ui.widget.restrictions
 
-        handleWidgetState()
-    }, [$profile.show])
+            // Vérifier si le widget est caché par le système vidéo
+            const isHiddenByVideoSystem = $restrictions.has(existing)
 
-    const toggleProfileButton = () => {
-        const $tmp = !$profile.show
-        $profile.show = $tmp
+            if (isHiddenByVideoSystem) {
+                // Ne rien faire si le widget est caché par le système vidéo
+                // (pendant un enregistrement par exemple)
+                return
+            }
 
-        if (!$profile.show && lgs.stores.ui.drawers.open === WIDGETS_EDITOR_DRAWER) {
-            lgs.stores.ui.drawers.open = null
+            if (widgetElement && widgetElement.classList.contains('lgs-widget-hidden')) {
+                // Cas 2 : Le widget existe mais est caché par l'utilisateur → l'afficher
+                widgetElement.classList.remove('lgs-widget-hidden')
+                $profile.show = true
+            }
+            else {
+                // Cas 3 : Le widget existe et est affiché → le masquer
+                if (widgetElement) {
+                    widgetElement.classList.add('lgs-widget-hidden')
+                }
+                $profile.show = false
+
+                // Fermer le drawer si ouvert
+                if (lgs.stores.ui.drawers.open === WIDGETS_EDITOR_DRAWER) {
+                    lgs.stores.ui.drawers.open = null
+                }
+            }
         }
     }
 
