@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-18
- * Last modified: 2025-12-18
+ * Created on: 2025-12-24
+ * Last modified: 2025-12-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -51,6 +51,11 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
             setOverlayElement(_overlay.current)
         }
     }, [overlay])
+
+    useEffect(() => {
+
+
+    }, [])
 
 
     return (

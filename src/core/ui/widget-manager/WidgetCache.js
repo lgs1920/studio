@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-19
- * Last modified: 2025-12-19
+ * Created on: 2025-12-24
+ * Last modified: 2025-12-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -232,5 +232,102 @@ export class WidgetCache {
         catch (error) {
             console.error('[WidgetCache] Failed to restore persisted widgets:', error)
         }
+    }
+
+    /**
+     * Returns all widgets that have a defined widgetsBoard different from the excluded ones.
+     * @param {string|string[]} excludedBoardIds - Single board ID or array of board IDs to exclude
+     * @returns {Map<string, CacheEntry>}
+     */
+    getAllExceptBoards = excludedBoardIds => {
+        const exclusions = Array.isArray(excludedBoardIds) ? excludedBoardIds : [excludedBoardIds]
+
+        const filteredEntries = Array.from(this.#cache.entries()).filter(([, entry]) => {
+            // Check if widgetsBoard is defined and not in the exclusion list
+            return entry.widgetsBoard && !exclusions.includes(entry.widgetsBoard)
+        })
+
+        return new Map(filteredEntries)
+    }
+
+    /**
+     * Hides all widgets that do not belong to the specified boards by moving them off-screen.
+     * Original positions are preserved in the $restrictions proxy for later restoration.
+     * Performance: Uses direct DOM manipulation to avoid unnecessary React re-renders.
+     * @param {string|string[]} excludeBoards - Board ID(s) to be kept visible.
+     */
+    hideAllExceptBoards = excludeBoards => {
+        const widgets = this.getAllExceptBoards(excludeBoards)
+        const $restrictions = lgs.stores.ui.widget.restrictions
+
+        widgets.forEach((value, id) => {
+            const element = __.ui.widgetManager.getElementById(id)
+            if (element && !$restrictions.has(id)) {
+                // Save original state to Valtio proxy
+                $restrictions.set(id, {
+                    top:   element.style.top,
+                    left:  element.style.left,
+                    board: value.widgetsBoard,
+                })
+
+                // Add CSS class to hide widget with !important rules
+                element.classList.add('lgs-widget-hidden')
+            }
+        })
+    }
+
+    /**
+     * Restores all previously hidden widgets to their original positions.
+     * @param {string|string[]} excludeBoards - Optional. If specified, restore widgets that are NOT on these boards
+     *                                          (i.e., restore widgets that were hidden by hideAllExceptBoards with the
+     *     same parameter). If not specified, restores ALL hidden widgets.
+     */
+    restoreAllHiddenWidgetsExcept = (excludeBoards) => {
+        const $restrictions = lgs.stores.ui.widget.restrictions
+        const boardsToExclude = excludeBoards ? (Array.isArray(excludeBoards) ? excludeBoards : [excludeBoards]) : null
+
+        const idsToRestore = []
+
+        $restrictions.forEach((pos, id) => {
+            // If excludeBoards is specified, only restore widgets that are NOT on those boards
+            // Use the board stored in restrictions for reliable filtering
+            if (boardsToExclude) {
+                if (!pos.board || boardsToExclude.includes(pos.board)) {
+                    return // Skip widgets that ARE on the excluded boards
+                }
+            }
+
+            const element = __.ui.widgetManager.getElementById(id)
+            if (element) {
+                // Remove CSS class that hides the widget
+                element.classList.remove('lgs-widget-hidden')
+
+                // Restore original positions if they were set
+                if (pos.left) {
+                    element.style.left = pos.left
+                }
+                if (pos.top) {
+                    element.style.top = pos.top
+                }
+
+                idsToRestore.push(id)
+            }
+        })
+
+        // Remove only the restored widgets from restrictions
+        idsToRestore.forEach(id => $restrictions.delete(id))
+
+        // If no board filter was specified, clear all restrictions
+        if (!boardsToExclude) {
+            $restrictions.clear()
+        }
+    }
+
+    /**
+     * Alias for backward compatibility
+     * @deprecated Use restoreAllHiddenWidgetsExcept instead
+     */
+    restoreAllHiddenWidgets = (excludeBoards) => {
+        return this.restoreAllHiddenWidgetsExcept(excludeBoards)
     }
 }

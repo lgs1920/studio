@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-11-28
- * Last modified: 2025-11-28
+ * Created on: 2025-12-24
+ * Last modified: 2025-12-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -18,6 +18,7 @@
  * VideoRecorderToolbar.jsx - Displays video recording controls and stats
  ******************************************************************************/
 import { FontAwesomeIcon }     from '@Components/FontAwesomeIcon'
+import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { faCircle }            from '@fortawesome/duotone-regular-svg-icons'
 import { faPause, faPlay, faStop, faXmark } from '@fortawesome/pro-regular-svg-icons'
@@ -132,6 +133,9 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 return
             }
 
+            // Widgets are already hidden by VideoRecordingSettingsToolbar
+            // No need to hide them again here
+
             updateState({
                             preRecording: false,
                             recording: true,
@@ -142,6 +146,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                             recordedSize: 0,
                         })
             showToast('warning', 'ON AIR!')
+
         }
 
         const handleInfo = (event) => {
@@ -193,6 +198,8 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             if (__.recorder?.isRecording() || $video.paused) {
                 __.recorder.stopVideo()
             }
+
+            __.ui.widgetCache.restoreAllHiddenWidgetsExcept(VIDEO_WIDGETS_BOARD)
 
             updateState({
                             preRecording: false,

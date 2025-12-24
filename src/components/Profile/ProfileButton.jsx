@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-22
- * Last modified: 2025-12-22
+ * Created on: 2025-12-24
+ * Last modified: 2025-12-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -53,17 +53,17 @@ export const ProfileButton = (props) => {
         const handleWidgetState = async () => {
             // We have only one, search it !
             const existing = renderer.findExistingInList(WIDGET_KEY, SCENE_WIDGETS_BOARD)
-            if (!existing && profile.show) {
+            if (!existing) {
                 // renderWidget returns the LazyComponent OR the ID
                 // In your implementation, we need to track what was added to lgs.stores.ui.widget.list
                 await addWidget(GROUP, WIDGET_KEY, {forceRefresh: true})
             }
-            else {
-                $profile.show = false
-                if (existing) {
-                    renderer.destroyWidget(existing)
-                }
-            }
+            // else {
+            //     $profile.show = false
+            //     if (existing) {
+            //         renderer.destroyWidget(existing)
+            //     }
+            // }
         }
 
         handleWidgetState()
