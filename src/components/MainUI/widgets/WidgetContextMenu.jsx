@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-22
- * Last modified: 2025-12-22
+ * Created on: 2025-12-24
+ * Last modified: 2025-12-24
  *
  *
  * Copyright © 2025 LGS1920
@@ -55,15 +55,10 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
     const [isEditing, setEditMode] = useState(false)
     const $drawers = lgs.stores.ui.drawers
 
-    // Early return if the widget no longer exists or has no context-menu config
-    if (!element || !config?.contextMenu) {
-        return null
-    }
-
-    const hasCapabilities = __.ui.widgetManager.hasCapabilities(
+    const hasCapabilities = config?.contextMenu ? __.ui.widgetManager.hasCapabilities(
         config.contextMenu,
         WIDGETS_CAPABILITIES,
-    )
+    ) : false
 
     // Helper to close the global context menu (shared store)
     const closeMenu = () => {
@@ -135,6 +130,11 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
     useEffect(() => {
         setEditMode($drawers.open === WIDGETS_EDITOR_DRAWER)
     }, [$drawers.open])
+
+    // Early return AFTER all hooks if the widget no longer exists or has no context-menu config
+    if (!element || !config?.contextMenu) {
+        return null
+    }
 
     // --------------------------------------------------------------------- //
     // Render
