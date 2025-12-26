@@ -438,7 +438,10 @@ body {
 }
 
 .widget-deck-entry span {
+    display: block;
+    width: 100%;
     white-space: nowrap;
+
 }
 
 .widget-menu-disabled {
