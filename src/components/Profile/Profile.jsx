@@ -7,174 +7,44 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-13
- * Last modified: 2025-12-13
+ * Created on: 2025-12-26
+ * Last modified: 2025-12-26
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
-import { faRegularArrowsRotateReverseMagnifyingGlass }             from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import { SlButton, SlDrawer, SlIcon, SlResizeObserver, SlTooltip } from '@shoelace-style/shoelace/dist/react'
+import { SlDrawer }               from '@shoelace-style/shoelace/dist/react'
 import './style.css'
-import { useSnapshot }                                             from 'valtio'
-import { Export }                      from '@Core/ui/Export'
+import { useSnapshot }            from 'valtio'
+import { useCallback, useEffect } from 'react'
 import { CHART_ELEVATION_VS_DISTANCE } from '@Core/ui/Profiler'
-import { FA2SL }                       from '@Utils/FA2SL'
-import { UIToast }                     from '@Utils/UIToast'
-import { DropdownToolbar }                                         from '../MainUI/DropdownToolbar'
-import { Toolbar }                                                 from '../MainUI/Toolbar'
-import { JourneySelector }                                         from '../TracksEditor/journey/JourneySelector'
-import { Utils }                                                   from '../TracksEditor/Utils'
-import { Wander }                                                  from '../Wander/Wander'
-import { ProfileChart }                                            from './ProfileChart'
+import { ProfileChart }           from './ProfileChart'
 
-
+/**
+ * Component displaying the elevation profile drawer
+ */
 export const Profile = function Profile() {
-
-    return null
     const $main = lgs.mainProxy
     const main = useSnapshot($main)
-
-    /**
-     * Avoid click outside drawer
-     */
-    const handleRequestClose = (event) => {
-        if (event.detail.source === 'overlay') {
-            event.preventDefault()
-        }
-    }
-    /**
-     * Close tracks editor pane
-     *
-     * @param event
-     */
-    const closeProfile = (event) => {
-        if (window.isOK(event)) {
-            $main.components.profile.show = false
-            //TODO manage 'profile/close' event and externalise
-            toggleMarker()
-        }
-    }
-
-    const toggleMarker = () => {
-        lgs.theTrack.marker.toggleVisibility()
-    }
-
-    const snapshotAsImage = () => {
-        const file = `${CHART_ELEVATION_VS_DISTANCE}-${__.app.slugify(lgs.theJourney.title)}`
-        const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
-        Export.toPNG( chart.getDom(), file).then(() => {
-            UIToast.success({
-                                caption: `Your chart has been exported successfully !`,
-                                text: `into ${file}.png`,
-                            })
-        })
-    }
-    const snapshotAsVector = () => {
-        const file = `${CHART_ELEVATION_VS_DISTANCE}-${__.app.slugify(lgs.theJourney.title)}`
-        const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
-        Export.toSVG( {
-                          dom: chart.getDom(),
-                          content:chart.getDataURL({type: 'svg'})
-                      }, file).then(() => {
-            UIToast.success({
-                                caption: `Your chart has been exported successfully !`,
-                                text: `into ${file}.svg`,
-                            })
-        })
-    }
-
-    const ProfileToolbar = (props) => {
-        return (
-            <>
-                {main.components.profile.zoom &&
-            <div className={'profile-additional'}>
-            {/* <SlTooltip hoist placement={props.placement} content="Hide Marker"> */}
-                {/*     <SlButton id={'toggle-marker-visibility'} className={'square-button'} onClick={toggleMarker}> */}
-            {/*         <SlIcon  slot="prefix" library="fa" name={FA2SL.set(faSolidCircleSlash)}/> */}
-            {/*     </SlButton> */}
-            {/* </SlTooltip> */}
-            <SlTooltip hoist placement={props.placement} content="Reset zoom">
-                <SlButton id={'open-the-profile-panel'} className={'square-button'} onClick={__.ui.profiler.resetZoom}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faRegularArrowsRotateReverseMagnifyingGlass)}/>
-                </SlButton>
-            </SlTooltip>
-        </div>
-            }
-            </>)
-    }
-
-    __.ui.profiler?.setVisibility()
-
-    //prepare data from track to profile
     const data = __.ui.profiler?.prepareData()
+    useEffect(() => {
+        // Sync visibility state with profiler service
+        __.ui.profiler?.setVisibility()
+    }, [$main.cabViewProfile, $main.components.profile.show])
 
-    const resizeProfile=event => {
-            const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
-            const container = document.getElementById(`profile-${CHART_ELEVATION_VS_DISTANCE}`)
-        if (container) {
-            const dimensions = container.getBoundingClientRect()
-            if (dimensions.width > 0) {
-                $main.components.profile.width = dimensions.width
-                $main.components.profile.height = dimensions.height
-            }
-        }
+
+    if (!main.canViewProfile || !main.components.profile.show) {
+        return null
     }
 
-    return (<>
-        {main.canViewProfile && main.components.profile.show &&
-            <div key={main.components.profile.key} className={'drawer-wrapper horizontal'}>
-                <SlDrawer id="profile-pane" open={true}
-                      onSlRequestClose={handleRequestClose}
-                      onSlAfterShow={()=> {
-                          window.dispatchEvent(new Event('resize'))
-                      }}
-                      contained
-                      onSlHide={closeProfile}
-                      placement="bottom"
-                      className={'lgs-theme'}
-            >
-
-
-                <div className="profile-toolbar" slot={'header-actions'}>
-                    <JourneySelector onChange={Utils.initJourneyEdition} single={true}/>
-
-                    <div className={'profile-tools-part'}>
-                        <Wander id={'profile-wander'}/>
-                        <Toolbar editor={true}
-                                 profile={false}
-                                 fileLoader={true}
-                                 snapshot={{png:snapshotAsImage,svg:snapshotAsVector}}
-                                 position={'horizontal'}
-                                 tooltip={'top'}
-                                 mode={'embed'}
-                                 center={<ProfileToolbar placement={'top'}/>}
-                        />
-                        <DropdownToolbar editor={true}
-                                         profile={false}
-                                         fileLoader={true}
-                                         snapshot={{png:snapshotAsImage,svg:snapshotAsVector}}
-                                         tooltip={'left'}
-                                         center={<ProfileToolbar placement={'left'}/>}
-                                         mode={'embed'}
-                                         icons={true}
-                                         placement={'left'}
-                        />
-                    </div>
+    return (
+        <>
+            {data && (
+                <div id={`profile-${CHART_ELEVATION_VS_DISTANCE}`}>
+                    <ProfileChart data={data}/>
                 </div>
-                {data &&
-                    <SlResizeObserver onSlResize={resizeProfile}>
-
-                    <div id={`profile-${CHART_ELEVATION_VS_DISTANCE}`} style={{width: '100%', height: '100%'}}>
-                    <ProfileChart data={data}
-                                  height={__.ui.css.getCSSVariable('--lgs-profile-chart-height')}
-                    />
-                    </div>
-                    </SlResizeObserver>
-
-                }
-            </SlDrawer>
-        </div>}
-    </>)
+            )}
+        </>
+    )
 }
