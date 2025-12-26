@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-13
- * Last modified: 2025-12-13
+ * Created on: 2025-12-26
+ * Last modified: 2025-12-26
  *
  *
  * Copyright © 2025 LGS1920
@@ -182,7 +182,7 @@ export class Widget2Canvas {
 
     #refreshStatic = async () => {
         //TODO Fix Static and dynamic Refresh  Github #301
-        const staticParts = this.#original.querySelectorAll(`.${STATIC_WIDGET_PART}`)
+        const staticParts = this.#original?.querySelectorAll(`.${STATIC_WIDGET_PART}`)
 
         if (staticParts.length > 0) {
             for (const el of staticParts) {
