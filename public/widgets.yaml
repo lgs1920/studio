@@ -55,9 +55,30 @@ widgets:
       - "journey-widgets"
       - "scene-widgets"
 
-
-## Widgets settings
-settings:
-  management:        # Contains the widgets management settings
-  default:           # Contains the default widgets settings
-  user:              # Contains the widgets settings the user wants as default
+    ## Configuration
+    configuration:
+      default:
+        show: true
+        ## Line chart
+        line:
+          width: 2   # pixels
+        ## Marker
+        marker:
+          ## On track
+          track:
+            show: true
+            size: 13          # Pixels
+            color: '#f2c55c'
+            border:
+              color: '#fff'
+              width: 2        # Pixels
+          ## On chart
+          chart:
+            size: 8           # Pixels
+            color: '#f2c55c'
+            border:
+              color: '#fff'
+              width: 2        # Pixel
+        minInterval: 150      #  TODO
+      user:
+      elements:

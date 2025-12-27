@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-07-02
- * Last modified: 2025-07-02
+ * Created on: 2025-12-27
+ * Last modified: 2025-12-27
  *
  *
  * Copyright © 2025 LGS1920
@@ -654,12 +654,12 @@ export class TrackUtils {
      * @return {boolean}
      */
     static setProfileVisibility(journey) {
-        lgs.mainProxy.canViewProfile =
-            lgs.settings.getProfile.show &&              // By configuration
+        lgs.stores.main.canViewProfile =
+            lgs.settings.widgets['profile-widget'].configuration.default.show &&              // By configuration
             journey !== undefined &&                        // During init
             journey !== null &&                             // same
             journey.visible &&                              // Journey visible
-            lgs.mainProxy.canViewJourneyData &&            // can view data
+            lgs.stores.main.canViewJourneyData &&            // can view data
             Array.from(journey.tracks.values())             // Has Altitude for each track
                 .every(track => track.hasAltitude)
 

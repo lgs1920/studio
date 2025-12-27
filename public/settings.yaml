@@ -196,33 +196,6 @@ poi:
       slug: picnic-area
 
 ########################################
-# Profile
-########################################
-profile:
-  show: true
-  ## Line chart
-  line:
-    width: 2   # pixels
-  ## Marker
-  marker:
-    ## On track
-    track:
-      show: true
-      size: 13          # Pixels
-      color: '#f2c55c'
-      border:
-        color: '#fff'
-        width: 2        # Pixels
-    ## On chart
-    chart:
-      size: 8           # Pixels
-      color: '#f2c55c'
-      border:
-        color: '#fff'
-        width: 2        # Pixel
-  minInterval: 150      # TODO
-
-########################################
 # Metrics and computations
 ########################################
 metrics:
