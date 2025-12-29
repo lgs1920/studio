@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-26
- * Last modified: 2025-12-26
+ * Created on: 2025-12-29
+ * Last modified: 2025-12-29
  *
  *
  * Copyright © 2025 LGS1920
@@ -156,7 +156,7 @@ export class Widget2Canvas {
             await img.decode()
             return img
         }
-
+        console.log(el)
         // Non-SVG fallback: rasterize via snapdom
         return await snapdom.toCanvas(el, options)
     }
@@ -170,7 +170,8 @@ export class Widget2Canvas {
     #renderPart = async (el) => {
         let target = el
 
-        if (!(el instanceof SVGElement)) {
+        // Search or a svg if needed
+        if (!(el instanceof SVGElement) && this.#options.type === 'svg') {
             const childSvg = el.querySelector('svg')
             if (childSvg) {
                 target = childSvg
@@ -184,7 +185,7 @@ export class Widget2Canvas {
         //TODO Fix Static and dynamic Refresh  Github #301
         const staticParts = this.#original?.querySelectorAll(`.${STATIC_WIDGET_PART}`)
 
-        if (staticParts.length > 0) {
+        if (staticParts && staticParts.length > 0) {
             for (const el of staticParts) {
                 const partCanvas = await this.#renderPart(el)
                 this.#replaceCanvas(partCanvas, partCanvas.width, partCanvas.height, this.#options.scale)
