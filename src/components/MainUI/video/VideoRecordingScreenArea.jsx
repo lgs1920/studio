@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-20
- * Last modified: 2025-12-20
+ * Created on: 2025-12-30
+ * Last modified: 2025-12-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -126,7 +126,6 @@ export const VideoRecordingScreenArea = memo(() => {
 
         ;[...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()].map(key => {
             const getCanvas = () => __.ui.widgetManager.getElementById(key)?.querySelector('.lgs-widget-canvas')
-            console.log(key, getCanvas())
             if (getCanvas() instanceof HTMLCanvasElement) {
                 composer.addOverlay(getCanvas)
             }

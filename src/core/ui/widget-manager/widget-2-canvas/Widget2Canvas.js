@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-29
- * Last modified: 2025-12-29
+ * Created on: 2025-12-30
+ * Last modified: 2025-12-30
  *
  *
  * Copyright © 2025 LGS1920
@@ -156,7 +156,6 @@ export class Widget2Canvas {
             await img.decode()
             return img
         }
-        console.log(el)
         // Non-SVG fallback: rasterize via snapdom
         return await snapdom.toCanvas(el, options)
     }
