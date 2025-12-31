@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-29
- * Last modified: 2025-12-29
+ * Created on: 2025-12-31
+ * Last modified: 2025-12-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -920,10 +920,10 @@ sl-input [slot="suffix"] {
  ******************************************************************************/
 
 sl-range {
+    width: 100%;
     --track-color-active: var(--lgs-track-color-active);
     --track-color-inactive: var(--lgs-track-color-inactive);
-    --thumb-size: var(--lgs-font-size-m);
-    width: 100%;
+    --thumb-size: var(--lgs-font-size);
 }
 
 .lgs-range {
@@ -961,11 +961,10 @@ sl-switch[align-right] {
     width: 100%;
 }
 
-sl-switch[align-right]::part(base) {
+sl-switch::part(base) {
     display: flex;
     align-items: center;
     gap: var(--sl-spacing-3x-small) var(--gap-width);
-    --thumb-size: var(--height)
 }
 
 sl-switch[align-right]::part(label) {
@@ -978,9 +977,17 @@ sl-switch[align-right]::part(control) {
     margin-left: auto
 }
 
-sl-switch[size="x-small"] {
+sl-switch {
     --height: 10px;
     --width: calc(2 * var(--height));
+}
+
+sl-switch[size="x-small"] label {
+    width: 6rem
+}
+
+sl-switch[size="x-small"]::part(base) {
+    --thumb-size: var(--height)
 }
 
 /*******************************************************************************

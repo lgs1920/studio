@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-26
- * Last modified: 2025-12-26
+ * Created on: 2025-12-31
+ * Last modified: 2025-12-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -24,10 +24,10 @@ import { ProfileChart }           from './ProfileChart'
 /**
  * Component displaying the elevation profile drawer
  */
-export const Profile = function Profile() {
+export const Profile = () => {
     const $main = lgs.mainProxy
     const main = useSnapshot($main)
-    const data = __.ui.profiler?.prepareData()
+    const profileData = __.ui.profiler?.prepareData()
     useEffect(() => {
         // Sync visibility state with profiler service
         __.ui.profiler?.setVisibility()
@@ -41,8 +41,10 @@ export const Profile = function Profile() {
     return (
         <>
             {data && (
-                <div id={`profile-${CHART_ELEVATION_VS_DISTANCE}`}>
-                    <ProfileChart data={data}/>
+                <div className={`profile ${CHART_ELEVATION_VS_DISTANCE}`}
+                     style={{}}
+                >
+                    <ProfileChart data={profileData}/>
                 </div>
             )}
         </>

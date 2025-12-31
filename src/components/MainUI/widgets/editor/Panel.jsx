@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-22
- * Last modified: 2025-12-22
+ * Created on: 2025-12-31
+ * Last modified: 2025-12-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -54,7 +54,10 @@ export const Panel = () => {
     /**
      * Close handler: updates the proxy store.
      */
-    const closeEditor = useCallback(() => {
+    const closeEditor = useCallback((event) => {
+        if (event && event.target.tagName !== 'SL-DRAWER') {
+            return
+        }
         if (__.ui.drawerManager.isCurrent(WIDGETS_EDITOR_DRAWER)) {
             __.ui.drawerManager.close()
         }
@@ -117,7 +120,7 @@ export const Panel = () => {
                 className="lgs-theme"
                 placement={drawerPlacement}
                 onSlRequestClose={handleRequestClose}
-                onSlAfterHide={closeEditor}
+                onSlHide={closeEditor}
                 contained
             >
                 <div slot="label" className="drawer-header-title">

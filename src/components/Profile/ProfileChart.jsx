@@ -7,30 +7,34 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-26
- * Last modified: 2025-12-26
+ * Created on: 2025-12-31
+ * Last modified: 2025-12-31
  *
  *
  * Copyright © 2025 LGS1920
  ******************************************************************************/
 
 import './style.css'
-import ReactECharts                                from 'echarts-for-react'
-import * as echarts                                from 'echarts/core'
-import { useEffect, useRef, useMemo, useCallback } from 'react'
-import { useSnapshot }                             from 'valtio'
 import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION } from '@Core/ui/Profiler'
+import ReactECharts                                         from 'echarts-for-react'
+import * as echarts                                         from 'echarts/core'
+import { useCallback, useEffect, useMemo, useRef }          from 'react'
+import { useSnapshot }                                      from 'valtio'
 
 /**
  * ProfileChart component to render elevation vs distance using ECharts
  * * @param {Object} props
- * @param {Object} props.data - Dataset and options for the chart
- * @param {Array} props.legends - Legend items
- * @returns {JSX.Element}
+ * @param {Object} data - Dataset and options for the chart
+ * @param id
+ * @param width
+ * @param height
+ * @returns {React.JSX.Element}
  */
-export const ProfileChart = (props) => {
-    const $main = lgs.mainProxy
-    const mainSnap = useSnapshot($main)
+export const ProfileChart = ({data, id, width, height}) => {
+    const $main = lgs.stores.main
+    const main = useSnapshot($main)
+    const configuration = lgs.settings.widgets['profile-widget'].configuration[id]
+
     const _instance = useRef(null)
 
     /**
@@ -38,7 +42,6 @@ export const ProfileChart = (props) => {
      */
     const buildSerie = useCallback((params) => {
         const rgbColor = __.ui.ui.hexToRGBA(params.color, 'rgb')
-        const profileSettings = lgs.settings.profile
 
         return {
             name:       params.name,
@@ -50,24 +53,25 @@ export const ProfileChart = (props) => {
                 y: ELEVATION,
             },
             showSymbol: false,
-            symbolSize: profileSettings.marker.chart.size + profileSettings.marker.chart.border.width,
             emphasis:   {disabled: true},
-            itemStyle: {
-                color:       rgbColor,
-                borderColor: profileSettings.marker.chart.border.color,
-                borderWidth: profileSettings.marker.chart.border.width,
-                opacity:     1,
-            },
-            lineStyle: {
+            // itemStyle: {
+            //     color:       rgbColor,
+            //     borderColor: profileSettings.marker.chart.border.color,
+            //     borderWidth: profileSettings.marker.chart.border.width,
+            //     opacity:     1,
+            // },
+            lineStyle:  {
                 color:   rgbColor,
-                width: profileSettings.line.width,
+                width: 1,
+                type:  'dashed',
                 opacity: 1,
             },
             areaStyle:  {
+
                 color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                     {offset: 0.5, color: __.ui.ui.RGB2RGBA(rgbColor, 0.5)},
                     {offset: 1, color: __.ui.ui.RGB2RGBA(rgbColor, 0.0)},
-                ])
+                ]),
             },
             dimensions: params.dimensions,
         }
@@ -77,25 +81,24 @@ export const ProfileChart = (props) => {
      * Compute chart options only when data or settings change
      */
     const chartOptions = useMemo(() => {
-        if (!props.data) {
+        if (!data) {
             return {}
         }
 
-        const gutter = 15
-        const series = props.data.dataset.map((_, index) => buildSerie({
-                                                                           name:       props.data.options[index].name,
-                                                                           dataset:    props.data.options[index].dataset,
-                                                                           color:      props.data.options[index].color,
-                                                                           dimensions: props.data.dimensions,
-                                                                       }))
+        const series = data.dataset.map((_, index) => buildSerie({
+                                                                     name:       data.options[index].name,
+                                                                     dataset:    data.options[index].dataset,
+                                                                     color:      data.options[index].color,
+                                                                     dimensions: data.dimensions,
+                                                                 }))
 
-        const distances = props.data.dataset.map(ds => ({
+        const distances = data.dataset.map(ds => ({
             start: ds.source[0][0],
             end:   ds.source[ds.source.length - 1][0],
         }))
 
-        const colors = props.data.options.map(opt => opt.color)
-
+        const colors = data.options.map(opt => opt.color)
+        const {max, interval} = __.ui.profiler.calculateNiceScale(Math.max(...distances, 3))
         return {
             toolbox:  {show: false},
             title:    {show: false},
@@ -108,7 +111,6 @@ export const ProfileChart = (props) => {
                                                                          params[0].dataIndex,
                                                                          ...params[0].data,
                                                                          distances,
-                                                                         colors,
                                                                      ])
                 },
                 padding:            0,
@@ -118,65 +120,72 @@ export const ProfileChart = (props) => {
             legend:   {
                 orient:       'horizontal',
                 bottom:       0,
-                data:         props.legends,
+                data: data.legends,
                 selectedMode: false,
+                show: true,
             },
             grid:     {
-                top:          0.5 * gutter,
-                left:         2 * gutter,
-                right:        gutter,
-                bottom:       2 * gutter,
-                containLabel: true,
+                top:          0.5 * lgs.gutter.n,
+                left:         2 * lgs.gutter.n,
+                right:        lgs.gutter.n,
+                bottom:       2 * lgs.gutter.n,
+                containLabel: false,
+                show:         false,
             },
             xAxis:    [
                 {
-                    type:        'value',
-                    name:        props.data.axisNames.x ?? '',
-                nameTextStyle: {
-                    align:      'right',
-                    verticalAlign: 'top',
-                    fontWeight: 'bold',
-                    padding:    [1.5 * gutter, 0, 0, 0],
-                },
-                    axisLabel:   {
+                    type:          'value',
+                    name:          data.axisNames.x ?? '',
+                    show:          true,
+                    max:           max,
+                    interval:      interval,
+                    nameTextStyle: {
+                        align:         'right',
+                        verticalAlign: 'top',
+                        fontWeight:    'bold',
+                        padding:       [1.5 * lgs.gutter.n, 0, 0, 0],
+                    },
+                    axisLabel:     {
                         alignMaxLabel: 'right',
                         showMaxLabel:  false,
+                    },
+                    axisLine:      {onZero: false},
+                    nameGap:       0,
+                    minInterval:   3,
+                    // max:         'dataMax',
                 },
-                    axisLine:    {onZero: false},
-                    nameGap:     0,
-                    minInterval: 5,
-                    max:         'dataMax',
-                }
             ],
             yAxis:    [
                 {
-                    type:         'value',
-                    name:         props.data.axisNames.y ?? '',
-                    nameRotate:   90,
-                    nameLocation: 'end',
-                nameTextStyle: {
-                    align:      'right',
-                    verticalAlign: 'bottom',
-                    fontWeight: 'bold',
-                    padding:    [0, 0, 3.5 * gutter, 0],
+                    type:          'value',
+                    nameRotate:    90,
+                    nameLocation:  'end',
+                    show:          true,
+                    nameTextStyle: {
+                        show:          false,
+                        align:         'right',
+                        verticalAlign: 'bottom',
+                        fontWeight:    'bold',
+                        padding:       [0, 0, 3.5 * lgs.gutter.n, 0],
+                    },
+                    minInterval:   3,
+                    min:           (val) => Math.floor(val.min / 100) * 100,
+
+                    splitNumber: 5,
+                    nameGap:     0,
                 },
-                    minInterval:  5,
-                    min:          (val) => Math.floor(val.min / 10) * 10,
-                    splitNumber:  7,
-                    nameGap:      0,
-                }
             ],
-            dataset:  props.data.dataset,
+            dataset:  data.dataset,
             series:   series,
             dataZoom: [{type: 'inside'}],
         }
-    }, [props.data, props.legends, buildSerie])
+    }, [data, buildSerie])
 
     /**
      * Handle chart resizing
      */
     const handleResize = useCallback(() => {
-        if (mainSnap.components.profile.show) {
+        if (main.components.profile.show) {
             const container = document.getElementById(`profile-${CHART_ELEVATION_VS_DISTANCE}`)
             if (container) {
                 const dimensions = container.getBoundingClientRect()
@@ -186,7 +195,7 @@ export const ProfileChart = (props) => {
                 }
             }
         }
-    }, [mainSnap.components.profile.show, $main])
+    }, [main.components.profile.show, $main])
 
     /**
      * Initialize chart instance and events
@@ -212,20 +221,24 @@ export const ProfileChart = (props) => {
         rendered: () => handleResize(),
     }
 
-    if (!props.data) {
+    if (!data) {
         return null
     }
 
     return (
-        <ReactECharts
-            option={chartOptions}
-            style={{
-                width:  mainSnap.components.profile.width,
-                height: mainSnap.components.profile.height,
-            }}
-            opts={{renderer: 'svg'}}
-            ref={_instance}
-            onEvents={eventHandlers}
-        />
+        <div className="profile-chart-container">
+            <ReactECharts
+                option={chartOptions}
+                notMerge={true}
+                lazyUpdate={true}
+                style={{
+                    width:  width,
+                    height: height,
+                }}
+                opts={{renderer: 'svg'}}
+                ref={_instance}
+                onEvents={eventHandlers}
+            />
+        </div>
     )
 }

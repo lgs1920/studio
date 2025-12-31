@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: style.css
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-12-31
+ * Last modified: 2025-12-31
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 :root {
     --lgs-profile-pane-height: 280px;
     --lgs-profile-chart-height: 200px;
@@ -28,10 +44,6 @@
     display: none;
 }
 
-#profile-container .apexcharts-canvas {
-    overflow: hidden;
-}
-
 .profile-wrapper {
     display: flex;
     flex-direction: column;
@@ -59,6 +71,19 @@
 
 #profile-pane header::part(title) {
     display: none;
+}
+
+.widget-background-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+
+sl-input.widget-border-field-width::part(input) {
+    width: 2.5rem;
+    padding-right: 0;
+    padding-left: 5px
 }
 
 .lgs-ui-toolbar.lgs-ui-dropdown-toolbar {
@@ -188,4 +213,12 @@
     left: 73px;
     width: 1027px;
     background: antiquewhite;
+}
+
+.profile-chart-container {
+    padding: var(--lgs-gutter-s);
+    border: 1px solid #ffffffaa;
+    border-radius: var(--lgs-border-radius-s);
+    background: #ffffff66;
+    backdrop-filter: blur(var(--lgs-blur));
 }

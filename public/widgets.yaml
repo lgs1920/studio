@@ -59,6 +59,12 @@ widgets:
     configuration:
       default:
         show: true
+        background:
+          show: true
+          color: #ffffff"
+          opacity: 0.5
+          blur: false
+
         ## Line chart
         line:
           width: 2   # pixels

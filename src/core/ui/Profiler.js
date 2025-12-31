@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Profiler.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2025-12-31
+ * Last modified: 2025-12-31
+ *
+ *
+ * Copyright © 2025 LGS1920
+ ******************************************************************************/
+
 import { faMountains }                                   from '@fortawesome/pro-regular-svg-icons'
 import { faArrowLeftLongToLine, faArrowRightLongToLine } from '@fortawesome/pro-solid-svg-icons'
 import { FA2SL }                                         from '@Utils/FA2SL'
@@ -43,7 +59,7 @@ export class Profiler {
         }
 
         const data = {
-            legend: {data:[]},
+            legend: {data: []},
             dataset:    [],
             options:    [],
             axisNames:  {},
@@ -75,8 +91,8 @@ export class Profiler {
                 })
                 data.dataset.push(trackDataset)
                 data.options.push({
-                                      color:   track.color,
-                                      name:    track.title,
+                                      color: track.color,
+                                      name:  track.title,
                                       //  marker:  track.marker.foregroundColor,
                                       dataset: track.slug,
                                   })
@@ -191,8 +207,6 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.getUnitSyst
     }
 
 
-
-
     /**
      * Update Color of tracks
      */
@@ -200,24 +214,24 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.getUnitSyst
         const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
         const options = {series: []}
 
-        Array.from(lgs.theJourney.tracks).forEach(([slug,track]) => {
+        Array.from(lgs.theJourney.tracks).forEach(([slug, track]) => {
             const color = __.ui.ui.hexToRGBA(track.color, 'rgb')
             options.series.push({
-                             itemStyle: {
-                                 color: color,
-                             },
+                                    itemStyle: {
+                                        color: color,
+                                    },
 
-                             lineStyle: {
-                                 color: color,
-                             },
+                                    lineStyle: {
+                                        color: color,
+                                    },
 
-                             areaStyle: {
-                                 color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                     {offset: 0.5, color: __.ui.ui.RGB2RGBA(color, 0.5)},
-                                     {offset: 1, color: __.ui.ui.RGB2RGBA(color, 0.0)},
-                                 ]),
-                             },
-                         })
+                                    areaStyle: {
+                                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                            {offset: 0.5, color: __.ui.ui.RGB2RGBA(color, 0.5)},
+                                            {offset: 1, color: __.ui.ui.RGB2RGBA(color, 0.0)},
+                                        ]),
+                                    },
+                                })
         })
 
         chart.setOption(options)
@@ -232,11 +246,11 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.getUnitSyst
      * Update Titles  and legends of Profile
      */
     updateTitle = () => {
-        const options = {legend:{data:[]},series: []}
+        const options = {legend: {data: []}, series: []}
         const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
-        Array.from(lgs.theJourney.tracks).forEach(([slug,track]) => {
+        Array.from(lgs.theJourney.tracks).forEach(([slug, track]) => {
             options.series.push({name: track.title})
-            options.legend.data.push({name:track.title})
+            options.legend.data.push({name: track.title})
         })
 
         chart.setOption(options)
@@ -254,10 +268,11 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.getUnitSyst
         const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
         if (event) {
             // We come from chart legend selection
-            const [slug,track] = Array.from(lgs.theJourney.tracks).find(([slug,track]) => track.title === event.name);
+            const [slug, track] = Array.from(lgs.theJourney.tracks).find(([slug, track]) => track.title === event.name)
             lgs.theJourney.tracks.get(slug).visible = false
-//TODO mettre la legend
-        } else {
+            //TODO mettre la legend
+        }
+        else {
 
             const selected = {}
             Array.from(lgs.theJourney.tracks).forEach(([slug, track]) => {
@@ -292,27 +307,27 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.getUnitSyst
      */
     initMarker = (
         {
-            force=false,
-            color=null,
-            borderColor= null,
-        }
+            force = false,
+            color = null,
+            borderColor = null,
+        },
     ) => {
         if (lgs.theTrack && (lgs.theTrack.marker === undefined || force)) {
-           lgs.theTrack.marker = new ProfileTrackMarker(
-               {
-                   track:lgs.theTrack,
-                   visible: false,
-                   color:color??lgs.theTrack.color,
-                   border:  {color: borderColor ?? 'transparent'},
-               },
-           )
-            __.ui.wanderer.marker  =lgs.theTrack.marker
+            lgs.theTrack.marker = new ProfileTrackMarker(
+                {
+                    track:   lgs.theTrack,
+                    visible: false,
+                    color:   color ?? lgs.theTrack.color,
+                    border:  {color: borderColor ?? 'transparent'},
+                },
+            )
+            __.ui.wanderer.marker = lgs.theTrack.marker
         }
     }
 
     resetZoom = () => {
-        const proxy=lgs.mainProxy
-        proxy.components.profile.zoom=false
+        const proxy = lgs.mainProxy
+        proxy.components.profile.zoom = false
     }
 
     /**
@@ -321,14 +336,50 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.getUnitSyst
      * @return {boolean}
      */
     setVisibility = (journey = lgs.theJourney) => {
-        lgs.mainProxy.canViewProfile =
-            lgs.settings.getProfile.show &&              // By configuration
-            journey !== undefined &&                        // During init
-            journey !== null &&                             // same
-            journey.visible &&                              // Journey visible
-            lgs.mainProxy.canViewJourneyData &&            // can view data
-            Array.from(journey.tracks.values())             // Has Altitude for each track
+        lgs.stores.main.canViewProfile =
+            lgs.settings.widgets['profile-widget'].configuration.default.show &&  // By configuration
+            journey !== undefined &&                                              // During init
+            journey !== null &&                                                   // same
+            journey.visible &&                                                    // Journey visible
+            lgs.mainProxy.canViewJourneyData &&                                   // can view data
+            Array.from(journey.tracks.values())                                   // Has Altitude for each track
                 .every(track => track.hasAltitude)
+    }
+
+    /**
+     * Calculates a clean axis scale based on desired interval count
+     * @param {number} dataMax - The maximum value in your dataset
+     * @param {number} tickCount - Desired number of intervals
+     * @returns {Object} { max, interval }
+     */
+    calculateNiceScale = (dataMax, tickCount = 5) => {
+        // Find the raw interval
+        const rawInterval = dataMax / tickCount
+
+        // Find the magnitude (power of 10)
+        const magnitude = Math.pow(10, Math.floor(Math.log10(rawInterval)))
+        const residual = rawInterval / magnitude
+
+        // Determine a "clean" step
+        let cleanStep
+        if (residual < 1.5) {
+            cleanStep = 1
+        }
+        else if (residual < 2.5) {
+            cleanStep = 2
+        }
+        else if (residual < 7) {
+            cleanStep = 5
+        }
+        else {
+            cleanStep = 10
+        }
+
+        const interval = cleanStep * magnitude
+        return {
+            interval,
+            max: interval * tickCount,
+        }
     }
 }
 
@@ -338,4 +389,3 @@ export const DISTANCE = 'Distance'
 export const TIME = 'Time'
 export const POINT = 'point'
 export const CHART_ELEVATION_VS_DISTANCE = `${ELEVATION}-${DISTANCE}`
-export const PROFILE_CHARTS = [CHART_ELEVATION_VS_DISTANCE]

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-20
- * Last modified: 2025-12-20
+ * Created on: 2025-12-31
+ * Last modified: 2025-12-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -171,7 +171,7 @@ export const ProfileWidget = ({id, context}) => {
             ttl:             HOUR,
             mandatory:       false,
             stopPropagation: true,
-            snap:            'svg',
+            snap: false,
             widgetsBoard: widgetsBoard,
         }
     }, [widgetEditor, container, widgetsBoard, id]) // Include all dependencies to ensure accurate recalculation
@@ -185,17 +185,13 @@ export const ProfileWidget = ({id, context}) => {
     // Render the generic Widget wrapper with the determined config
     return (
         <Widget isVisible={true} config={config}>
-            {/* The inner div key forces a re-mount of the chart when the profile data context changes */}
-            <div key={profile.key}>
                 {data &&
-                    <div id={`profile-${CHART_ELEVATION_VS_DISTANCE}`} style={{width: '500px', height: '200px'}}>
                         <ProfileChart data={data}
+                                      id={id}
                                       height={__.ui.css.getCSSVariable('--lgs-profile-chart-height')}
-                                      width={500}
+                                      width={profile.width}
                         />
-                    </div>
                 }
-            </div>
         </Widget>
     )
 }
