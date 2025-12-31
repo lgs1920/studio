@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-26
- * Last modified: 2025-12-26
+ * Created on: 2025-12-31
+ * Last modified: 2025-12-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -25,7 +25,6 @@ import { RotateButton }                 from '@Components/MainUI/RotateButton'
 import { TrackEditorButton }            from '@Components/MainUI/TrackEditorButton'
 import { VideoButton }                 from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
-import { Profile }              from '@Components/Profile/Profile'
 import { ProfileButton }                        from '@Components/Profile/ProfileButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import {

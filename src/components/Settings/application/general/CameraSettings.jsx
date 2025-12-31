@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-27
- * Last modified: 2025-02-27
+ * Created on: 2025-12-31
+ * Last modified: 2025-12-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -41,7 +41,7 @@ export const CameraSettings = (props) => {
             <>
                 {useSnapshot(lgs.settings.scene.mode).value * 1 === SCENE_MODE_3D.value &&
                     <>
-                        <div className="horizontal-alignment">
+                        <div className="drawer-horizontal-line">
                             <SlSwitch size="small" align-right checked={settings.showPosition}
                                       onSlChange={(event) => lgs.settings.ui.camera.showPosition = switchValue(event)}>
                                 {'Show Position'}
@@ -59,7 +59,7 @@ export const CameraSettings = (props) => {
 
                 }
 
-                <div className="horizontal-alignment">
+                <div className="drawer-horizontal-line">
                     <SlSwitch size="small" align-right checked={settings.targetIcon.show}
                               onSlChange={(event) => {
                                   lgs.settings.ui.camera.targetIcon.show = switchValue(event)
@@ -91,7 +91,7 @@ export const CameraSettings = (props) => {
     const TabPosition = () => {
         return (
             <>
-                <div className="horizontal-alignment two-columns">
+                <div className="drawer-horizontal-line two-columns">
                     <SlRadioGroup value={settings.start.app}
                                   size={'small'} onSlChange={handleStartFocus}
                     >
@@ -109,7 +109,7 @@ export const CameraSettings = (props) => {
                         <SlRadio value={FOCUS_LAST}>{'Last Camera Location'}</SlRadio>
                     </SlRadioGroup>
                 </div>
-                <div className="horizontal-alignment two-columns">
+                <div className="drawer-horizontal-line two-columns">
                     <SlSwitch size="small" align-right checked={settings.start.rotate.app}
                               onSlChange={(event) => lgs.settings.ui.camera.start.rotate.app = switchValue(event)}>
                         {'Rotation after initial focus'}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-21
- * Last modified: 2025-12-21
+ * Created on: 2025-12-31
+ * Last modified: 2025-12-31
  *
  *
  * Copyright © 2025 LGS1920
@@ -182,7 +182,7 @@ export class AppUtils {
             )
 
         // add settings section
-        settings.widgets = raw.settings
+        settings.widgets = raw.widgets
 
 
         // Initialize groups with their metadata
