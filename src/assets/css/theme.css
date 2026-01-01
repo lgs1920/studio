@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-31
- * Last modified: 2025-12-31
+ * Created on: 2026-01-01
+ * Last modified: 2026-01-01
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 :root {
@@ -989,12 +989,17 @@ sl-switch {
     --width: calc(2 * var(--height));
 }
 
+sl-switch[size="x-small"]
 sl-switch[size="x-small"] label {
     width: 6rem
 }
 
 sl-switch[size="x-small"]::part(base) {
     --thumb-size: var(--height)
+}
+
+sl-switch[size="x-small"]::part(label) slot {
+    margin-right: var(lgs-gutter-s)
 }
 
 /*******************************************************************************

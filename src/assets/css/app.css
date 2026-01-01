@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-31
- * Last modified: 2025-12-31
+ * Created on: 2026-01-01
+ * Last modified: 2026-01-01
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 @import url('https://fonts.googleapis.com/css2?family=Cookie&display=swap');
@@ -206,7 +206,7 @@ body {
     flex: 1;
     flex-direction: row;
     width: 100%;
-    gap: calc(3 * var(--lgs-gutter-s));
+    gap: calc(2 * var(--lgs-gutter-s));
 }
 
 .drawer-align-right {

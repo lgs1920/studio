@@ -7,19 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-31
- * Last modified: 2025-12-31
+ * Created on: 2026-01-01
+ * Last modified: 2026-01-01
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {
-    SlColorPicker, SlDivider, SlInput, SlRadioButton, SlRadioGroup, SlRange, SlSwitch,
-}                                        from '@shoelace-style/shoelace/dist/react'
-import { IMPERIAL, INTERNATIONAL }       from '@Utils/UnitUtils'
-import React, { useCallback, useEffect } from 'react'
-import { useSnapshot }                   from 'valtio'
+import { SlColorPicker, SlDivider, SlInput, SlRange, SlSwitch } from '@shoelace-style/shoelace/dist/react'
+import React, { useCallback, useEffect }                        from 'react'
+import { useSnapshot }                                          from 'valtio'
 
 /**
  * Editor for the Profile Widget configuration using a plain Object
@@ -55,39 +52,83 @@ export const ProfileWidgetEditor = ({entity}) => {
     const element = configuration.elements?.[entity]
 
     /**
-     * Updates the specific widget property
-     * Valtio detects changes to object properties automatically
+     * Internal utility to update nested properties in the Valtio proxy
+     * @param {string} path - Dot notation path (e.g., 'background.color')
+     * @param {any} value - The new value to assign
      */
-    const handleBooleanChange = useCallback((event, item) => {
-        console.log(window.isOK(event.target.checked))
-        if ($element) {
-            $element.item = event.target.checked
+    const updateElementValue = useCallback((path, value) => {
+        if (!$element) {
+            return
         }
 
-        console.log(event, item)
-        switch (item) {
-            case 'background':
-                $element.backdropFilter = null
-                $element.border = null
-                break
+        const keys = path.split('.')
+        let current = $element
 
-            default:
+        for (let i = 0; i < keys.length - 1; i++) {
+            const key = keys[i]
+            if (!current[key]) {
+                current[key] = {}
+            }
+            current = current[key]
         }
 
-        event.preventDefault()
-        event.stopPropagation()
-
+        const lastKey = keys[keys.length - 1]
+        current[lastKey] = value
     }, [$element])
 
-    // Safety check to prevent rendering with undefined data
-    if (!element) {
-        return null
-    }
+    /**
+     * Updates boolean properties and handles specific side effects
+     */
+    const handleBooleanChange = useCallback((event, path) => {
+        const value = event.target.checked
+        updateElementValue(path, value)
 
-    const handleChangeColor = (event) => {
-        console.log(event)
+        // Handle side effects for specific configuration paths
+        switch (path) {
+            case 'background.show':
+                if (!value) {
+                    $element.backdropFilter = null
+                    $element.border = {...$element.border, show: false}
+                }
+                break
+            default:
+                break
+        }
+
         event.preventDefault()
         event.stopPropagation()
+    }, [$element, updateElementValue])
+
+    /**
+     * Updates color properties from SlColorPicker
+     */
+    const handleChangeColor = useCallback((event, path) => {
+        // SlColorPicker value is accessed via event.target.value
+        const value = event.target.value
+        updateElementValue(path, value)
+
+        event.preventDefault()
+        event.stopPropagation()
+    }, [updateElementValue])
+
+    /**
+     * Updates numeric properties (thickness, opacity, etc.)
+     */
+    const handleChangeNumber = useCallback((event, path) => {
+        // Convert string input to float for numeric properties
+        const value = parseFloat(event.target.value)
+        updateElementValue(path, isNaN(value) ? 0 : value)
+
+        event.preventDefault()
+        event.stopPropagation()
+    }, [updateElementValue])
+
+    const opacityFormatter = value => {
+        return `${Math.round(value * 100)}%`
+    }
+
+    if (!element) {
+        return null
     }
 
     return (
@@ -96,121 +137,188 @@ export const ProfileWidgetEditor = ({entity}) => {
                 <SlSwitch
                     align-right="true"
                     size="x-small"
-                    checked={element.background ?? false}
-                    onSlInput={(e) => handleBooleanChange(e, 'background')}
+                    checked={element.background.show ?? false}
+                    onSlInput={(e) => handleBooleanChange(e, 'background.show')}
                 >
                     <label>{'Background'}</label>
                 </SlSwitch>
 
-                {element.background && (
+                {element.background.show && (
                     <div className="drawer-horizontal-line three-columns">
-                        <div className="drawer-horizontal-element xlarge-element">
-                            {'Opacity'}
-                            <SlRange min="0.1" max="1" step="0.05" value={element.backdropFilter ?? 0.5}/>
-                        </div>
                         <div className="drawer-horizontal-element">
                             {'Color'}
-                            <SlColorPicker size="small" disable={!element.background}
-                                           onSlChange={handleChangeColor} value={element.backgroundColor ?? 'none'}/>
+                            <SlColorPicker
+                                size="small"
+                                value={element.background.color ?? 'none'}
+                                onSlChange={(e) => handleChangeColor(e, 'background.color')}
+                            />
                         </div>
                         <div className="drawer-horizontal-element">
                             <SlSwitch
                                 align-right="true"
                                 size="x-small"
-                                checked={element.blur ?? false}
-                                onSlChange={(e) => handleBooleanChange(e, 'blur')}
+                                checked={element.background.blur ?? false}
+                                onSlChange={(e) => handleBooleanChange(e, 'background.blur')}
                             >
                                 {'Blur'}
                             </SlSwitch>
                         </div>
-                    </div>
-                )}
-
-                <SlDivider/>
-                <SlSwitch size="x-small" align-right="true" classNames="vertical-centered">
-                    <label>{'Border'}</label>
-                </SlSwitch>
-                {element.border && (
-                    <div className="drawer-horizontal-line  three-columns">
                         <div className="drawer-horizontal-element xlarge-element">
                             {'Opacity'}
-                            <SlRange min="0.1" max="1" step="0.05" value={element.backdropFilter ?? 0.5}/>
+                            <SlRange
+                                min="0.1" max="1" step="0.05"
+                                tooltipFormatter={opacityFormatter}
+                                value={element.background.opacity ?? 0.5}
+                                onSlChange={(e) => handleChangeNumber(e, 'background.opacity')}
+                            />
                         </div>
+                    </div>
+                )}
+                <SlDivider/>
+
+                <SlSwitch size="x-small" align-right="true"
+                          checked={element.border.show}
+                          onSlInput={(e) => handleBooleanChange(e, 'border.show')}
+                >
+                    <span>{'Border'}</span>
+                </SlSwitch>
+                {element.border.show && (
+                    <div className="drawer-horizontal-line three-columns">
                         <div className="drawer-horizontal-element">
-                            {'Color'}&nbsp;<SlColorPicker size="small" onSlChange={handleChangeColor}
-                                                          disable={!element.border}/>
+                            {'Color'}&nbsp;
+                            <SlColorPicker
+                                size="small"
+                                value={element.border.color}
+                                onSlChange={(e) => handleChangeColor(e, 'border.color')}
+                            />
                         </div>
                         <div className="drawer-horizontal-element">
                             {'Thickness'}
                             <SlInput type="number" min="1" max="10"
-                                     value={element.border ?? 1}
+                                     value={element.border.thickness ?? 1}
                                      size="small"
+                                     onSlInput={(e) => handleChangeNumber(e, 'border.thickness')}
                                      className={'widget-border-field-width'}>
                             </SlInput>
+                        </div>
+                        <div className="drawer-horizontal-element xlarge-element">
+                            {'Opacity'}
+                            <SlRange min="0.1" max="1" step="0.05"
+                                     tooltipFormatter={opacityFormatter}
+                                     value={element.border.opacity ?? 0.5}
+                                     onSlChange={(e) => handleChangeNumber(e, 'border.opacity')}
+                            />
                         </div>
                     </div>
                 )}
                 <SlDivider/>
 
+                {/* Axis Configuration Section */}
                 <div className="drawer-horizontal-line">
                     <div className="drawer-horizontal-element xlarge-element">{'Distance:'}</div>
                     <div className="drawer-horizontal-line three-columns">
-                        <SlSwitch className="drawer-align-right" size="x-small"
-                                  classNames="vertical-centered">{'Axis'}</SlSwitch>
-                        <SlSwitch size="x-small" classNames="vertical-centered">{'Labels'}</SlSwitch>
-                        <SlSwitch size="x-small" classNames="vertical-centered">{'Units'}</SlSwitch>
+                        <SlSwitch size="x-small" align-right checked={element.xAxis.main}
+                                  onSlInput={(e) => handleBooleanChange(e, 'xAxis.main')}
+                        >{'Axis'}&nbsp;</SlSwitch>
+                        <SlSwitch size="x-small" align-right checked={element.xAxis.second}
+                                  onSlInput={(e) => handleBooleanChange(e, 'xAxis.second')}
+                        >{'2nd'}&nbsp;</SlSwitch>
+                        <SlSwitch size="x-small" align-right checked={element.xAxis.labels}
+                                  onSlInput={(e) => handleBooleanChange(e, 'xAxis.labels')}
+                        >{'Labels'}&nbsp;</SlSwitch>
+                        <SlSwitch size="x-small" align-right checked={element.xAxis.units}
+                                  onSlInput={(e) => handleBooleanChange(e, 'xAxis.units')}
+                        >{'Units'}&nbsp;</SlSwitch>
                     </div>
                 </div>
 
                 <div className="drawer-horizontal-line">
                     <div className="drawer-horizontal-element xlarge-element">{'Elevation:'}</div>
                     <div className="drawer-horizontal-line three-columns">
-                        <SlSwitch className="drawer-align-right" size="x-small"
-                                  classNames="vertical-centered">{'Axis'}</SlSwitch>
-                        <SlSwitch size="x-small" classNames="vertical-centered">{'Labels'}</SlSwitch>
-                        <SlSwitch size="x-small" classNames="vertical-centered">{'Units'}</SlSwitch>
+                        <SlSwitch size="x-small" align-right checked={element.yAxis.main}
+                                  onSlInput={(e) => handleBooleanChange(e, 'yAxis.main')}
+                        >{'Axis'}&nbsp;</SlSwitch>
+                        <SlSwitch size="x-small" align-right checked={element.yAxis.second}
+                                  onSlInput={(e) => handleBooleanChange(e, 'yAxis.second')}
+                        >{'2nd'}&nbsp;</SlSwitch>
+                        <SlSwitch size="x-small" align-right checked={element.yAxis.labels}
+                                  onSlInput={(e) => handleBooleanChange(e, 'yAxis.labels')}
+                        >{'Labels'}&nbsp;</SlSwitch>
+                        <SlSwitch size="x-small" align-right checked={element.yAxis.units}
+                                  onSlInput={(e) => handleBooleanChange(e, 'yAxis.units')}
+                        >{'Units'}&nbsp;</SlSwitch>
                     </div>
                 </div>
 
-                <SlDivider/>
-                {'Main Axis:'}
-                <div className="drawer-horizontal-line  three-columns">
-                    <div className="drawer-horizontal-element xlarge-element">
-                        {'Opacity'}
-                        <SlRange min="0.1" max="1" step="0.05" value={element.backdropFilter ?? 0.5}/>
-                    </div>
-                    <div className="drawer-horizontal-element">
-                        {'Color'}&nbsp;<SlColorPicker size="small" onSlChange={handleChangeColor}
-                                                      disable={!element.border}/>
-                    </div>
-                    <div className="drawer-horizontal-element">
-                        {'Thickness'}
-                        <SlInput type="number" min="0.5" max="10" step="0.5"
-                                 value={element.border ?? 1}
-                                 size="small"
-                                 className={'widget-border-field-width'}>
-                        </SlInput>
-                    </div>
-                </div>
-                {'Secondary Axis:'}
-                <div className="drawer-horizontal-line  three-columns">
-                    <div className="drawer-horizontal-element xlarge-element">
-                        {'Opacity'}
-                        <SlRange min="0.1" max="1" step="0.05" value={element.backdropFilter ?? 0.5}/>
-                    </div>
-                    <div className="drawer-horizontal-element">
-                        {'Color'}&nbsp;<SlColorPicker size="small" onSlChange={handleChangeColor}
-                                                      disable={!element.border}/>
-                    </div>
-                    <div className="drawer-horizontal-element">
-                        {'Thickness'}
-                        <SlInput type="number" min="0.5" max="10" step="0.5"
-                                 value={element.border ?? 1}
-                                 size="small"
-                                 className={'widget-border-field-width'}>
-                        </SlInput>
-                    </div>
-                </div>
+
+                {/* Main Axis Details */}
+                {(element.xAxis.main || element.yAxis.main
+                        || element.xAxis.labels || element.yAxis.labels
+                        || element.xAxis.units || element.yAxis.units) &&
+                    <>
+                        <SlDivider/>
+                        {'Main Axis:'}
+                        <div className="drawer-horizontal-line three-columns">
+                            <div className="drawer-horizontal-element">
+                                {'Color'}&nbsp;
+                                <SlColorPicker size="small"
+                                               value={element.mainAxis.color}
+                                               onSlChange={(e) => handleChangeColor(e, 'mainAxis.color')}/>
+                            </div>
+                            {(element.xAxis.main || element.yAxis.main) &&
+                                <>
+                                    <div className="drawer-horizontal-element">
+                                        {'Thickness'}
+                                        <SlInput type="number" min="0.5" max="10" step="0.5"
+                                                 value={element.mainAxis.thickness ?? 1}
+                                                 size="small"
+                                                 onSlInput={(e) => handleChangeNumber(e, 'mainAxis.thickness')}
+                                                 className={'widget-border-field-width'}>
+                                        </SlInput>
+                                    </div>
+                                    <div className="drawer-horizontal-element xlarge-element">
+                                        {'Opacity'}
+                                        <SlRange min="0.1" max="1" step="0.05"
+                                                 tooltipFormatter={opacityFormatter}
+                                                 value={element.mainAxis.opacity ?? 0.8}
+                                                 onSlChange={(e) => handleChangeNumber(e, 'mainAxis.opacity')}/>
+                                    </div>
+                                </>
+                            }
+                        </div>
+                    </>
+                }
+
+                {/* Secondary Axis Details */}
+                {(element.xAxis.second || element.yAxis.second) &&
+                    <>
+                        {'Secondary Axis:'}
+                        <div className="drawer-horizontal-line three-columns">
+                            <div className="drawer-horizontal-element">
+                                {'Color'}&nbsp;
+                                <SlColorPicker size="small"
+                                               value={element.secondAxis.color}
+                                               onSlChange={(e) => handleChangeColor(e, 'secondAxis.color')}/>
+                            </div>
+                            <div className="drawer-horizontal-element">
+                                {'Thickness'}
+                                <SlInput type="number" min="0.5" max="10" step="0.5"
+                                         value={element.secondAxis.thickness ?? 0.5}
+                                         size="small"
+                                         onSlInput={(e) => handleChangeNumber(e, 'secondAxis.thickness')}
+                                         className={'widget-border-field-width'}>
+                                </SlInput>
+                            </div>
+                            <div className="drawer-horizontal-element xlarge-element">
+                                {'Opacity'}
+                                <SlRange min="0.1" max="1" step="0.05"
+                                         tooltipFormatter={opacityFormatter}
+                                         value={element.secondAxis.opacity ?? 0.5}
+                                         onSlChange={(e) => handleChangeNumber(e, 'secondAxis.opacity')}/>
+                            </div>
+                        </div>
+                    </>
+                }
             </section>
         </div>
     )

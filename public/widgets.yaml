@@ -61,30 +61,32 @@ widgets:
         show: true
         background:
           show: true
-          color: #ffffff"
+          color: "#ffffff"
           opacity: 0.5
           blur: false
+        border:
+          show: true
+          color: "#000000"
+          opacity: 0.5
+          thickness: 1
+        xAxis:
+          main: true
+          second: false
+          labels: false
+          units: false
+        yAxis:
+          main: true
+          second: false
+          labels: false
+          units: false
+        mainAxis:
+          color: "#ffffff"
+          opacity: 0.8
+          thickness: 1
+        secondAxis:
+          color: "#ffffff"
+          opacity: 0.5
+          thickness: 0.5
 
-        ## Line chart
-        line:
-          width: 2   # pixels
-        ## Marker
-        marker:
-          ## On track
-          track:
-            show: true
-            size: 13          # Pixels
-            color: '#f2c55c'
-            border:
-              color: '#fff'
-              width: 2        # Pixels
-          ## On chart
-          chart:
-            size: 8           # Pixels
-            color: '#f2c55c'
-            border:
-              color: '#fff'
-              width: 2        # Pixel
-        minInterval: 150      #  TODO
       user:
       elements:
