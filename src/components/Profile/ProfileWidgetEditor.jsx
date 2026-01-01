@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { SlColorPicker, SlDivider, SlInput, SlRange, SlSwitch } from '@shoelace-style/shoelace/dist/react'
-import React, { useCallback, useEffect }                        from 'react'
+import React, { useCallback, useEffect, useMemo } from 'react'
 import { useSnapshot }                                          from 'valtio'
 
 /**
@@ -28,6 +28,8 @@ import { useSnapshot }                                          from 'valtio'
 export const ProfileWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
+
+    const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
     /**
      * Initialization logic
@@ -148,7 +150,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                         <div className="drawer-horizontal-element">
                             {'Color'}
                             <SlColorPicker
-                                size="small"
+                                size="small" swatches={swatches}
                                 value={element.background.color ?? 'none'}
                                 onSlChange={(e) => handleChangeColor(e, 'background.color')}
                             />
@@ -187,7 +189,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                         <div className="drawer-horizontal-element">
                             {'Color'}&nbsp;
                             <SlColorPicker
-                                size="small"
+                                size="small" swatches={swatches}
                                 value={element.border.color}
                                 onSlChange={(e) => handleChangeColor(e, 'border.color')}
                             />
@@ -261,7 +263,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                         <div className="drawer-horizontal-line three-columns">
                             <div className="drawer-horizontal-element">
                                 {'Color'}&nbsp;
-                                <SlColorPicker size="small"
+                                <SlColorPicker size="small" swatches={swatches}
                                                value={element.mainAxis.color}
                                                onSlChange={(e) => handleChangeColor(e, 'mainAxis.color')}/>
                             </div>
@@ -296,7 +298,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                         <div className="drawer-horizontal-line three-columns">
                             <div className="drawer-horizontal-element">
                                 {'Color'}&nbsp;
-                                <SlColorPicker size="small"
+                                <SlColorPicker size="small" swatches={swatches}
                                                value={element.secondAxis.color}
                                                onSlChange={(e) => handleChangeColor(e, 'secondAxis.color')}/>
                             </div>
