@@ -148,7 +148,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                 {element.background.show && (
                     <div className="drawer-horizontal-line three-columns">
                         <div className="drawer-horizontal-element">
-                            {'Color'}
+                            {'Color'}&nbsp;
                             <SlColorPicker
                                 size="small" swatches={swatches}
                                 value={element.background.color ?? 'none'}
