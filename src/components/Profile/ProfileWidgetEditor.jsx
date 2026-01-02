@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-01
- * Last modified: 2026-01-01
+ * Created on: 2026-01-02
+ * Last modified: 2026-01-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,8 @@ import { useSnapshot }                                          from 'valtio'
 export const ProfileWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
+    const $element = $configuration.elements?.[entity]
+    const element = configuration.elements?.[entity]
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
@@ -49,9 +51,6 @@ export const ProfileWidgetEditor = ({entity}) => {
         }
     }, [entity, $configuration])
 
-    // Access proxies and snapshots via object keys
-    const $element = $configuration.elements?.[entity]
-    const element = configuration.elements?.[entity]
 
     /**
      * Internal utility to update nested properties in the Valtio proxy
@@ -89,10 +88,17 @@ export const ProfileWidgetEditor = ({entity}) => {
         switch (path) {
             case 'background.show':
                 if (!value) {
-                    $element.backdropFilter = null
-                    $element.border = {...$element.border, show: false}
+                    $element.background.blur = false
                 }
                 break
+            case 'xAxis.labels':
+                if (!value) {
+                    $element.xAxis.units = value
+                }
+            case 'yAxis.labels':
+                if (!value) {
+                    $element.yAxis.units = value
+                }
             default:
                 break
         }
@@ -152,7 +158,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                             <SlColorPicker
                                 size="small" swatches={swatches}
                                 value={element.background.color ?? 'none'}
-                                onSlChange={(e) => handleChangeColor(e, 'background.color')}
+                                onSlInput={(e) => handleChangeColor(e, 'background.color')}
                             />
                         </div>
                         <div className="drawer-horizontal-element">
@@ -171,7 +177,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                                 min="0.1" max="1" step="0.05"
                                 tooltipFormatter={opacityFormatter}
                                 value={element.background.opacity ?? 0.5}
-                                onSlChange={(e) => handleChangeNumber(e, 'background.opacity')}
+                                onSlInput={(e) => handleChangeNumber(e, 'background.opacity')}
                             />
                         </div>
                     </div>
@@ -208,7 +214,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                             <SlRange min="0.1" max="1" step="0.05"
                                      tooltipFormatter={opacityFormatter}
                                      value={element.border.opacity ?? 0.5}
-                                     onSlChange={(e) => handleChangeNumber(e, 'border.opacity')}
+                                     onSlInput={(e) => handleChangeNumber(e, 'border.opacity')}
                             />
                         </div>
                     </div>
@@ -224,11 +230,12 @@ export const ProfileWidgetEditor = ({entity}) => {
                         >{'Axis'}&nbsp;</SlSwitch>
                         <SlSwitch size="x-small" align-right checked={element.xAxis.second}
                                   onSlInput={(e) => handleBooleanChange(e, 'xAxis.second')}
-                        >{'2nd'}&nbsp;</SlSwitch>
+                        >{'Grid'}&nbsp;</SlSwitch>
                         <SlSwitch size="x-small" align-right checked={element.xAxis.labels}
                                   onSlInput={(e) => handleBooleanChange(e, 'xAxis.labels')}
                         >{'Labels'}&nbsp;</SlSwitch>
                         <SlSwitch size="x-small" align-right checked={element.xAxis.units}
+                                  disabled={!element.xAxis.labels}
                                   onSlInput={(e) => handleBooleanChange(e, 'xAxis.units')}
                         >{'Units'}&nbsp;</SlSwitch>
                     </div>
@@ -242,11 +249,12 @@ export const ProfileWidgetEditor = ({entity}) => {
                         >{'Axis'}&nbsp;</SlSwitch>
                         <SlSwitch size="x-small" align-right checked={element.yAxis.second}
                                   onSlInput={(e) => handleBooleanChange(e, 'yAxis.second')}
-                        >{'2nd'}&nbsp;</SlSwitch>
+                        >{'Grid'}&nbsp;</SlSwitch>
                         <SlSwitch size="x-small" align-right checked={element.yAxis.labels}
                                   onSlInput={(e) => handleBooleanChange(e, 'yAxis.labels')}
                         >{'Labels'}&nbsp;</SlSwitch>
                         <SlSwitch size="x-small" align-right checked={element.yAxis.units}
+                                  disabled={!element.yAxis.labels}
                                   onSlInput={(e) => handleBooleanChange(e, 'yAxis.units')}
                         >{'Units'}&nbsp;</SlSwitch>
                     </div>
@@ -283,7 +291,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                                         <SlRange min="0.1" max="1" step="0.05"
                                                  tooltipFormatter={opacityFormatter}
                                                  value={element.mainAxis.opacity ?? 0.8}
-                                                 onSlChange={(e) => handleChangeNumber(e, 'mainAxis.opacity')}/>
+                                                 onSlInput={(e) => handleChangeNumber(e, 'mainAxis.opacity')}/>
                                     </div>
                                 </>
                             }
@@ -300,7 +308,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                                 {'Color'}&nbsp;
                                 <SlColorPicker size="small" swatches={swatches}
                                                value={element.secondAxis.color}
-                                               onSlChange={(e) => handleChangeColor(e, 'secondAxis.color')}/>
+                                               onSlInput={(e) => handleChangeColor(e, 'secondAxis.color')}/>
                             </div>
                             <div className="drawer-horizontal-element">
                                 {'Thickness'}
@@ -316,7 +324,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                                 <SlRange min="0.1" max="1" step="0.05"
                                          tooltipFormatter={opacityFormatter}
                                          value={element.secondAxis.opacity ?? 0.5}
-                                         onSlChange={(e) => handleChangeNumber(e, 'secondAxis.opacity')}/>
+                                         onSlInput={(e) => handleChangeNumber(e, 'secondAxis.opacity')}/>
                             </div>
                         </div>
                     </>
