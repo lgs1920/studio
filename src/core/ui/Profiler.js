@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-31
- * Last modified: 2025-12-31
+ * Created on: 2026-01-02
+ * Last modified: 2026-01-02
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { faMountains }                                   from '@fortawesome/pro-regular-svg-icons'
@@ -101,8 +101,8 @@ export class Profiler {
         })
 
         data.axisNames = {
-            x: `${titles.x} - ${units.x[lgs.settings.getUnitSystem.current]}`,
-            y: `${titles.y} - ${units.y[lgs.settings.getUnitSystem.current]}`,
+            x: `(${units.x[lgs.settings.getUnitSystem.current]})`,
+            y: `(${units.y[lgs.settings.getUnitSystem.current]})`,
         }
 
         return data
