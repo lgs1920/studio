@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-09
- * Last modified: 2025-12-09
+ * Created on: 2026-01-02
+ * Last modified: 2026-01-02
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 import { COUNTRY_FLAGS_DIR } from '@Core/constants'
 
@@ -32,47 +32,52 @@ export class UIUtils {
     })
 
     /**
-     * Transform a color in hexa to rgb() or rgba()
-     *
-     * @param hex {string}  #RRGGBBAA,#RGB ou #RRGGBB
-     * @param format        output format (rgb | rgba), default rgba
-     * @return {string}       rgb() or rgba()
+     * Transforms a hex color string to rgb() or rgba() format
+     * Supports #RGB, #RRGGBB, and #RRGGBBAA
+     * * @param {string} hex - Color in hex format
+     * @param {'rgb' | 'rgba'} format - Output format
+     * @param {number} intensity - Manual alpha override (0 to 1)
+     * @returns {string} Functional CSS color string
      */
     static hexToRGBA = (hex, format = 'rgba', intensity = 1) => {
-        hex = hex.replace(/^#/, '0x')
+        let r, g, b, a
+        let cleanHex = hex.replace(/^#/, '')
 
-        // Transform #RGB to #RRGGBB orRRRRRGBFF
-        if (hex.length === 5) {
-            hex = hex.split('').map(char => char + char).join('')
-            if (format === 'rgba') {
-                hex += 'FF'
-            }
+        // Handle short format #RGB or #RGBA
+        if (cleanHex.length === 3 || cleanHex.length === 4) {
+            cleanHex = cleanHex.split('').map(char => char + char).join('')
         }
 
-        const alpha = hex.length === 10
+        if (cleanHex.length === 6) {
+            // Standard #RRGGBB
+            const intValue = parseInt(cleanHex, 16)
+            r = (intValue >> 16) & 0xff
+            g = (intValue >> 8) & 0xff
+            b = intValue & 0xff
+            a = 1
+        }
+        else if (cleanHex.length === 8) {
+            // #RRGGBBAA - Use unsigned right shift or separate parsing to avoid sign issues
+            r = parseInt(cleanHex.slice(0, 2), 16)
+            g = parseInt(cleanHex.slice(2, 4), 16)
+            b = parseInt(cleanHex.slice(4, 6), 16)
+            a = parseInt(cleanHex.slice(6, 8), 16) / 255
+        }
+        else {
+            // Fallback for invalid formats
+            return 'transparent'
+        }
 
-        // Extract colors
-        const r = hex >> (alpha ? 24 : 16) & 0xff
-        const g = hex >> (alpha ? 16 : 8) & 0xff
-        const b = hex >> (alpha ? 8 : 0) & 0xff
+        // Override alpha if intensity is specifically provided and not default
+        const alphaValue = (intensity !== 1) ? intensity : a
 
         if (format === 'rgb') {
-            return `rgb(${r},${g},${b})`
+            return `rgb(${r}, ${g}, ${b})`
         }
 
-        if (intensity && intensity !== 1) {
-            return `rgba(${r},${g},${b},${intensity})`
-        }
-
-        // and alpha,if it exists
-        if (alpha) {
-            const a = (hex & 0xff) / 0xff
-            return `rgba(${r},${g},${b},${a})`
-        }
-
-
+        // Format to fixed decimal to avoid long floating point strings
+        return `rgba(${r}, ${g}, ${b}, ${parseFloat(alphaValue.toFixed(3))})`
     }
-
     static hsla2Hex = (h, s, l, a) => {
         s /= 100
         l /= 100
