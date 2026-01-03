@@ -18,6 +18,7 @@ import { LGS_WIDGET_SCALE_FACTOR } from '@Core/constants'
 
 /**
  * CanvasOverlayComposer – Lightweight 2D compositor for HiDPI environments
+ * Handles backdrop blur and rounded corners clipping for overlays.
  */
 export class CanvasOverlayComposer {
     #sourceCanvas
@@ -84,6 +85,10 @@ export class CanvasOverlayComposer {
 
     /**
      * Adds an overlay with support for blur and rounded corners
+     * @param {HTMLElement|(() => HTMLElement)} element
+     * @param {Object} options
+     * @param {number} [options.blur=0]
+     * @param {number} [options.radius=0]
      */
     addOverlay = (element, options = {}) => {
         const el = typeof element === 'function' ? element() : element
@@ -123,7 +128,7 @@ export class CanvasOverlayComposer {
                                 y: posY,
                                 w: width / scaleFactor,
                                 h: height / scaleFactor,
-                                blur:   blur,
+                                blur: blur,
                                 radius: radius,
                             })
 
@@ -155,20 +160,20 @@ export class CanvasOverlayComposer {
             ctx.drawImage(this.#sourceCanvas, srcX, srcY, srcW, srcH, 0, 0, this.#outW, this.#outH)
         }
 
+        // 1. Draw background
         drawMainSource()
 
+        // 2. Draw overlays
         for (const o of this.#overlays) {
             const el = typeof o.element === 'function' ? o.element() : o.element
             if (!el) {
                 continue
             }
 
-            const hasEffect = o.blur > 0 || o.radius > 0
-
-            if (hasEffect) {
+            // If blur is needed, we must clip a blurred version of the background underneath
+            if (o.blur > 0) {
                 ctx.save()
                 ctx.beginPath()
-                // Use roundRect for masking (works for circle if radius is 50%)
                 if (o.radius > 0) {
                     ctx.roundRect(o.x, o.y, o.w, o.h, o.radius)
                 }
@@ -177,18 +182,14 @@ export class CanvasOverlayComposer {
                 }
                 ctx.clip()
 
-                if (o.blur > 0) {
-                    ctx.filter = `blur(${o.blur}px)`
-                    drawMainSource()
-                    ctx.filter = 'none'
-                }
-            }
-
-            ctx.drawImage(el, o.x, o.y, o.w, o.h)
-
-            if (hasEffect) {
+                ctx.filter = `blur(${o.blur}px)`
+                drawMainSource()
                 ctx.restore()
+                ctx.filter = 'none'
             }
+
+            // Draw the actual overlay element (no clipping here to preserve borders and anti-aliasing)
+            ctx.drawImage(el, o.x, o.y, o.w, o.h)
         }
     }
 

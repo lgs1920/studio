@@ -39,7 +39,7 @@ import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }                                          from 'valtio'
 
 /**
- * Extracts blur and radius values from an element or its children (max depth 2)
+ * Extracts blur and radius values from an element or its children (depth 2)
  * @param {HTMLElement} el
  * @param {number} depth
  * @returns {{blur: number, radius: number}}
@@ -51,18 +51,18 @@ const getStyles = (el, depth = 0) => {
 
     const style = window.getComputedStyle(el)
 
-    // Detect Blur
+    // Backdrop filter detection
     const filter = style.backdropFilter || style.webkitBackdropFilter
     const blurMatch = filter?.match(/blur\(([\d.]+)px\)/)
-    const blur = blurMatch ? parseFloat(blurMatch[1]) : 0
+    const blurValue = blurMatch ? parseFloat(blurMatch[1]) : 0
 
-    // Detect Radius
+    // Border radius detection
     const radiusMatch = style.borderRadius?.match(/(\d+)px/)
-    const radius = radiusMatch ? parseFloat(radiusMatch[1]) : 0
+    const radiusValue = radiusMatch ? parseFloat(radiusMatch[1]) : 0
 
-    // Return immediately if both are found
-    if (blur > 0 || radius > 0) {
-        return {blur, radius}
+    // Stop if any found
+    if (blurValue > 0 || radiusValue > 0) {
+        return {blur: blurValue, radius: radiusValue}
     }
 
     for (const child of el.children) {
@@ -106,17 +106,22 @@ export const VideoRecordingScreenArea = memo(() => {
         }
 
         __.recorder.initialize({
-                                   maxSize:     maxSize * 1048576,
+                                   maxSize:    maxSize * 1048576,
                                    maxDuration: maxDuration * MINUTE,
                                    quality: ScreenMediaRecorder.QUALITY[$video.quality].value,
-                                   filename:    APP_KEY,
-                                   fps:         ScreenMediaRecorder.FPS[$video.fps],
-                                   dimensions:  {
+                                   filename:   APP_KEY,
+                                   fps:        ScreenMediaRecorder.FPS[$video.fps],
+                                   dimensions: {
                                        width: videoFrame.cropDimensions.width * __.device.dpr,
                                        height: videoFrame.cropDimensions.height * __.device.dpr,
                                    },
-                                   ratio:       videoFrame.ratio.value,
-                                   useWebGL:    true,
+                                   ratio:      videoFrame.ratio.value,
+                                   metadata:   {
+                                       artist: lgs.servers.studio.name,
+                                       date:   new Date(),
+                                       album:  LGS_PROJECT,
+                                   },
+                                   useWebGL:   true,
                                })
 
         const {top: y, left: x, width, height} = videoFrame.cropDimensions
@@ -133,8 +138,8 @@ export const VideoRecordingScreenArea = memo(() => {
             const getCanvas = () => widgetEl?.querySelector('.lgs-widget-canvas')
 
             if (getCanvas() instanceof HTMLCanvasElement) {
-                const {blur, radius} = getStyles(widgetEl)
-                composer.addOverlay(getCanvas, {blur, radius})
+                const styles = getStyles(widgetEl)
+                composer.addOverlay(getCanvas, {blur: styles.blur, radius: styles.radius})
             }
         })
 
@@ -142,16 +147,18 @@ export const VideoRecordingScreenArea = memo(() => {
 
     }, [$video.ratio, maxSize, maxDuration, $video.quality, $video.fps])
 
+
     const handleVideoRecording = useCallback(async () => {
         try {
             initializeRecorder()
             await __.recorder.startVideo()
         }
         catch (error) {
-            Object.assign($video, {recording: false, paused: false})
+            Object.assign($video, {recording: false, paused: false, size: 0})
             UIToast.error({caption: 'Video capture', text: error.message})
         }
     }, [initializeRecorder])
+
 
     const handlePhotoSnapshot = useCallback(async () => {
         const configs = __.ui.widgetManager.getWidgetConfigByGroup(CROP_TOOLS_WIDGETS)
@@ -171,8 +178,8 @@ export const VideoRecordingScreenArea = memo(() => {
             const widgetEl = __.ui.widgetManager.getElementById(key)
             const getCanvas = () => widgetEl?.querySelector('.lgs-widget-canvas')
             if (getCanvas() instanceof HTMLCanvasElement) {
-                const {blur, radius} = getStyles(widgetEl)
-                composer.addOverlay(getCanvas, {blur, radius})
+                const styles = getStyles(widgetEl)
+                composer.addOverlay(getCanvas, {blur: styles.blur, radius: styles.radius})
             }
         })
 
