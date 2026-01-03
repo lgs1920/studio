@@ -7,25 +7,12 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-30
- * Last modified: 2025-12-30
+ * Created on: 2026-01-03
+ * Last modified: 2026-01-03
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
-
-/**
- * VideoRecordingScreenArea.jsx
- *
- * Main recording screen area.
- *
- * Renders:
- *  - Dark overlay outside the crop zone (clip-path)
- *  - Video recorder controls
- *  - Pulsing crop rectangle with settings info
- *  - All lazy-loaded widgets via DynamicWidget
- *
- */
 
 import { VideoRecorderWidget }                                  from '@Components/MainUI/video/toolbox/VideoRecorderWidget'
 import { VideoMessage }                                         from '@Components/MainUI/video/VideoMessage'
@@ -36,9 +23,9 @@ import {
     DefinedCropZone,
 }                                                               from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
 import {
-    APP_KEY, CROP_TOOLS_WIDGETS, JOURNEY_WIDGETS, LGS_PROJECT, MINUTE, MULTI_PURPOSE_WIDGETS, SECOND, VIDEO_CROP_ZONE,
+    APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, SECOND, VIDEO_CROP_ZONE,
     VIDEO_TOOLS_WIDGETS,
-    VIDEO_WIDGETS_BOARD, WIDGETS_STORE,
+    VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
 import {
     CanvasOverlayComposer,
@@ -50,6 +37,43 @@ import { UIToast }                                              from '@Utils/UIT
 import classNames                                               from 'classnames'
 import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }                                          from 'valtio'
+
+/**
+ * Extracts blur and radius values from an element or its children (max depth 2)
+ * @param {HTMLElement} el
+ * @param {number} depth
+ * @returns {{blur: number, radius: number}}
+ */
+const getStyles = (el, depth = 0) => {
+    if (!el || depth > 2) {
+        return {blur: 0, radius: 0}
+    }
+
+    const style = window.getComputedStyle(el)
+
+    // Detect Blur
+    const filter = style.backdropFilter || style.webkitBackdropFilter
+    const blurMatch = filter?.match(/blur\(([\d.]+)px\)/)
+    const blur = blurMatch ? parseFloat(blurMatch[1]) : 0
+
+    // Detect Radius
+    const radiusMatch = style.borderRadius?.match(/(\d+)px/)
+    const radius = radiusMatch ? parseFloat(radiusMatch[1]) : 0
+
+    // Return immediately if both are found
+    if (blur > 0 || radius > 0) {
+        return {blur, radius}
+    }
+
+    for (const child of el.children) {
+        const childStyles = getStyles(child, depth + 1)
+        if (childStyles.blur > 0 || childStyles.radius > 0) {
+            return childStyles
+        }
+    }
+
+    return {blur: 0, radius: 0}
+}
 
 export const VideoRecordingScreenArea = memo(() => {
     const $video = lgs.stores.ui.video
@@ -64,57 +88,37 @@ export const VideoRecordingScreenArea = memo(() => {
 
     const widgetCacheEntries = useMemo(() => [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).entries()], [])
 
-    const isValidCrop =
-              Number.isFinite(crop.left) &&
-              Number.isFinite(crop.top) &&
-              Number.isFinite(crop.width) &&
-              Number.isFinite(crop.height) &&
-              crop.width > 0 &&
-              crop.height > 0
+    const isValidCrop = Number.isFinite(crop.left) && crop.width > 0
 
-    // Sync crop pulse animation
     useEffect(() => {
         if (_cropZone.current) {
             _cropZone.current.style.animationPlayState = video.paused ? 'paused' : 'running'
         }
     }, [video.paused])
 
-    /**
-     * Initializes VideoRecorder with Cesium canvas
-     * @function
-     */
     const initializeRecorder = useCallback(() => {
-        // Save settings
         $video.settings = {quality: $video.quality, fps: $video.fps}
 
-        // Set canvas source
         const configs = __.ui.widgetManager.getWidgetConfigByGroup(CROP_TOOLS_WIDGETS)
         const videoFrame = configs.find(config => config.id === VIDEO_CROP_ZONE)
         if (!videoFrame) {
-            console.warn('[VideoRecordingSettingsToolbar] No widget found for VIDEO_CROP_ZONE')
             return
         }
-        // Configure recorder
+
         __.recorder.initialize({
-                                   maxSize:     maxSize * 1048576, // MB to bytes
-                                   maxDuration: maxDuration * MINUTE, // Minutes to milliseconds
+                                   maxSize:     maxSize * 1048576,
+                                   maxDuration: maxDuration * MINUTE,
                                    quality: ScreenMediaRecorder.QUALITY[$video.quality].value,
                                    filename:    APP_KEY,
-                                   fps:     ScreenMediaRecorder.FPS[$video.fps],
+                                   fps:         ScreenMediaRecorder.FPS[$video.fps],
                                    dimensions:  {
-                                       width:  videoFrame.cropDimensions.width * __.device.dpr,
+                                       width: videoFrame.cropDimensions.width * __.device.dpr,
                                        height: videoFrame.cropDimensions.height * __.device.dpr,
                                    },
                                    ratio:       videoFrame.ratio.value,
-                                   metadata:    {
-                                       artist:      lgs.servers.studio.name,
-                                       date:        new Date(),
-                                       description: `Visit ${lgs.servers.site.protocol}://${lgs.servers.site.domain}`,
-                                       album:       LGS_PROJECT,
-                                       genre:       'Adventure',
-                                   },
                                    useWebGL:    true,
                                })
+
         const {top: y, left: x, width, height} = videoFrame.cropDimensions
         videoFrame.noResize = true
 
@@ -125,166 +129,87 @@ export const VideoRecordingScreenArea = memo(() => {
               })
 
         ;[...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()].map(key => {
-            const getCanvas = () => __.ui.widgetManager.getElementById(key)?.querySelector('.lgs-widget-canvas')
+            const widgetEl = __.ui.widgetManager.getElementById(key)
+            const getCanvas = () => widgetEl?.querySelector('.lgs-widget-canvas')
+
             if (getCanvas() instanceof HTMLCanvasElement) {
-                composer.addOverlay(getCanvas)
+                const {blur, radius} = getStyles(widgetEl)
+                composer.addOverlay(getCanvas, {blur, radius})
             }
         })
+
         __.recorder.setCanvas(composer.getCanvas())
 
     }, [$video.ratio, maxSize, maxDuration, $video.quality, $video.fps])
 
-
-    /**
-     * Toggles video recording
-     * @function
-     * @returns {Promise<void>}
-     */
-    const handleVideoRecording = useCallback(async async => {
-        if (!__.recorder) {
-            console.warn('[VideoRecordingSettingsToolbar] Recorder not initialized')
-            return
-        }
-
+    const handleVideoRecording = useCallback(async () => {
         try {
             initializeRecorder()
             await __.recorder.startVideo()
         }
         catch (error) {
-            Object.assign($video, {
-                recording: false,
-                paused:    false,
-                size:      0,
-            })
-            UIToast.error({
-                              caption: 'Video capture',
-                              text:    `Stopped due to error:<br>${error.message} !`,
-                          })
+            Object.assign($video, {recording: false, paused: false})
+            UIToast.error({caption: 'Video capture', text: error.message})
         }
     }, [initializeRecorder])
 
-
-    /**
-     * Photo snapshot
-     * @function
-     * @returns {Promise<void>}
-     */
-    const handlePhotoSnapshot = useCallback(async async => {
-
-        // Set canvas source
+    const handlePhotoSnapshot = useCallback(async () => {
         const configs = __.ui.widgetManager.getWidgetConfigByGroup(CROP_TOOLS_WIDGETS)
         const widget = configs.find(config => config.id === VIDEO_CROP_ZONE)
         if (!widget) {
-            console.warn('[VideoRecordingSettingsToolbar] No widget found for VIDEO_CROP_ZONE')
             return
         }
 
         const {top: y, left: x, width, height} = widget.cropDimensions
-        widget.noResize = true
-
         const composer = new CanvasOverlayComposer(lgs.canvas, {
-                  clip:             {x, y, width, height},
+            clip: {x, y, width, height},
                   width, height,
                   flushWebGLBuffer: () => lgs.scene.render(),
               })
 
         ;[...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()].map(key => {
-            const getCanvas = () => __.ui.widgetManager.getElementById(key)?.querySelector('.lgs-widget-canvas')
+            const widgetEl = __.ui.widgetManager.getElementById(key)
+            const getCanvas = () => widgetEl?.querySelector('.lgs-widget-canvas')
             if (getCanvas() instanceof HTMLCanvasElement) {
-                composer.addOverlay(getCanvas)
+                const {blur, radius} = getStyles(widgetEl)
+                composer.addOverlay(getCanvas, {blur, radius})
             }
         })
 
-        // We capture the snapshot
         initializeRecorder()
         await __.recorder.captureScreenshot(composer.getCanvas())
+    }, [initializeRecorder])
 
-    }, [])
-
-
-    /**
-     * Waits for all specified widgets to be mounted and rendered in the DOM
-     * Emits WIDGET_NOT_MOUNTED if the timeout is reached
-     * @param {string[]} widgets - Array of widget identifiers
-     * @param {Function} [onReady] - Callback when all widgets are ready
-     * @returns {Function} Cleanup function to disconnect observer and clear timeout
-     */
     const waitingForAllWidgets = (widgets, onReady) => {
         if (!widgets || widgets.length === 0) {
             return () => {
             }
         }
-
-        // Setup timeout to handle hanging widget states
-        const _timeout = setTimeout(() => {
-            observer.disconnect()
-
-            // Notify system about mount failure after 15s
-            window.dispatchEvent(
-                new CustomEvent(__.ui.widgetManager.WIDGET_NOT_MOUNTED, {
-                    detail: widgets,
-                }),
-            )
-        }, 15 * SECOND)
-
         const observer = new MutationObserver(() => {
-            const allMounted = widgets.every(k => __.ui.widgetCache.isMounted(k))
-            const allInDOM = widgets.every(k => {
-                const el = __.ui.widgetManager.getElementById(k)
-                return el?.querySelector('.lgs-widget-canvas')
-            })
-
-            if (allMounted && allInDOM) {
-                // Clear safety timeout as conditions are met
-                clearTimeout(_timeout)
+            const allInDOM = widgets.every(k => __.ui.widgetManager.getElementById(k)?.querySelector('.lgs-widget-canvas'))
+            if (allInDOM) {
                 observer.disconnect()
-
-                window.dispatchEvent(
-                    new CustomEvent(__.ui.widgetManager.ALL_WIDGETS_RENDERED_EVENT, {
-                        detail: widgets,
-                    })
-                )
-
                 onReady?.(widgets)
             }
         })
-
         observer.observe(document.body, {childList: true, subtree: true})
-
-        // Return cleanup for both observer and timer
-        return () => {
-            clearTimeout(_timeout)
-            observer.disconnect()
-        }
+        return () => observer.disconnect()
     }
 
     useEffect(() => {
-        //Once all the widgets are rendered, we can start the recording or the snapshot
-        waitingForAllWidgets([
-                                 ...__.ui.widgetCache.getAll({
-                                                                 widgetsBoard: VIDEO_WIDGETS_BOARD,
-                                                                 // groups:
-                                                                 // [MULTI_PURPOSE_WIDGETS,JOURNEY_WIDGETS]
-                                                             }).keys(),
-                             ], async (keys) => {
+        const widgetKeys = [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()]
+        return waitingForAllWidgets(widgetKeys, async () => {
             if ($video.preRecording) {
-                // Video pre-recording phase : ready to the recording
                 $video.preRecording = false
                 $video.recording = true
                 await handleVideoRecording()
             }
             else if ($video.snapshot) {
-                // it's a photo snapshot, let's do it !
                 await handlePhotoSnapshot()
             }
-
-
         })
+    }, [handleVideoRecording, handlePhotoSnapshot])
 
-    }, [])
-
-
-    // Cleanup on unmount
     useEffect(() => {
         return () => {
             __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGETS, false)
@@ -292,54 +217,26 @@ export const VideoRecordingScreenArea = memo(() => {
         }
     }, [])
 
-    /** Early return when crop is not ready */
     if (!isValidCrop) {
         return null
     }
 
     const overlayStyle = useMemo(() => ({
-        clipPath: `polygon(
-            0% 0%, 100% 0%, 100% 100%, 0% 100%,
-            0% ${crop.top}px,
-            ${crop.left}px ${crop.top}px,
-            ${crop.left}px ${crop.top + crop.height}px,
-            ${crop.left + crop.width}px ${crop.top + crop.height}px,
-            ${crop.left + crop.width}px ${crop.top}px,
-            0% ${crop.top}px
-        )`,
-    }), [crop.left, crop.top, crop.width, crop.height])
-
+        clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% ${crop.top}px, ${crop.left}px ${crop.top}px, ${crop.left}px ${crop.top + crop.height}px, ${crop.left + crop.width}px ${crop.top + crop.height}px, ${crop.left + crop.width}px ${crop.top}px, 0% ${crop.top}px)`,
+    }), [crop])
 
     return (
         <>
             {!video.recording && <CropOverlay style={overlayStyle}/>}
-
             {video.recording && <VideoRecorderWidget id="video-recorder-widget"/>}
-
             <DefinedCropZone
                 context={$video.cropper}
-                className={classNames(
-                    {'video-recording-in-progress': video.recording},
-                    {'video-pre-recording-in-progress': video.preRecording},
-                    {'photo-snapshot-in-progress flash-effect flash-on': video.snapshot},
-                    {finalizing: video.finalizing},
-                )}
+                className={classNames({'video-recording-in-progress': video.recording}, {'video-pre-recording-in-progress': video.preRecording}, {'photo-snapshot-in-progress flash-effect flash-on': video.snapshot}, {finalizing: video.finalizing})}
                 infoComponent={<VideoSettingsInfo/>}
                 ref={_cropZone}
             />
-
-            {video.recording && <VideoMessage>{'Recording'}</VideoMessage>}
-            {video.paused && <VideoMessage>{'Recording paused'}</VideoMessage>}
-            {video.preRecording && <VideoMessage>{'Video setup in progress'}</VideoMessage>}
-            {video.finalizing && <VideoMessage>{'Video finalization'}</VideoMessage>}
-            {video.snapshot && <VideoMessage duration={2}>{'Snapshot'}</VideoMessage>}
-
-            {widgetCacheEntries.map(([key, {component: LazyComponent}]) => (
-                <DynamicWidget
-                    key={key}
-                    id={key}
-                    context={lgs.stores.ui.video.cropper}
-                />
+            {widgetCacheEntries.map(([key]) => (
+                <DynamicWidget key={key} id={key} context={lgs.stores.ui.video.cropper}/>
             ))}
         </>
     )
