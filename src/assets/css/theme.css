@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-01
- * Last modified: 2026-01-01
+ * Created on: 2026-01-03
+ * Last modified: 2026-01-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -56,8 +56,9 @@
     --lgs-font-size-l: 1.5rem;
     --lgs-font-size-xl: 2rem;
 
+    --lgs-main-ui-zindex: 800;
     --lgs-ui-layer-zindex: 300;
-    --lgs-tools-ui-zindex: 350;
+    --lgs-tools-ui-zindex: calc(var(--lgs-ui-layer-zindex) - 1);
     --lgs-drop-zone-zindex: 10;
     --lgs-context-menu-zindex: calc(var(--lgs-tools-ui-zindex) + 100);
 
