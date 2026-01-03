@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-31
- * Last modified: 2025-12-31
+ * Created on: 2026-01-03
+ * Last modified: 2026-01-03
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { proxyMap } from 'valtio/utils'
@@ -73,9 +73,6 @@ export const main = {
         },
 
         profile: {
-            visible: false,
-            show:  false,
-            key:   0,
             width:  '500px',
             height: '200px',
             zoom:  false,

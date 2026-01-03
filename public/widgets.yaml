@@ -62,30 +62,30 @@ widgets:
         background:
           show: true
           color: "#ffffff"
-          opacity: 0.5
-          blur: false
+          opacity: 0.15
+          blur: true
         border:
           show: true
-          color: "#000000"
+          color: "#ffffff"
           opacity: 0.5
           thickness: 1
         xAxis:
           main: true
-          second: false
-          labels: false
-          units: false
+          second: true
+          labels: true
+          units: true
         yAxis:
           main: true
-          second: false
-          labels: false
-          units: false
+          second: true
+          labels: true
+          units: true
         mainAxis:
-          color: "#ffffff"
+          color: "--lgs-dark-color" #CSS variable
           opacity: 0.8
           thickness: 1
         secondAxis:
-          color: "#ffffff"
-          opacity: 0.5
+          color: "--lgs-light-color" #CSS variable
+          opacity: 0.6
           thickness: 0.5
 
       user:

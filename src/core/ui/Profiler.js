@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-02
- * Last modified: 2026-01-02
+ * Created on: 2026-01-03
+ * Last modified: 2026-01-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -344,42 +344,6 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.getUnitSyst
             lgs.mainProxy.canViewJourneyData &&                                   // can view data
             Array.from(journey.tracks.values())                                   // Has Altitude for each track
                 .every(track => track.hasAltitude)
-    }
-
-    /**
-     * Calculates a clean axis scale based on desired interval count
-     * @param {number} dataMax - The maximum value in your dataset
-     * @param {number} tickCount - Desired number of intervals
-     * @returns {Object} { max, interval }
-     */
-    calculateNiceScale = (dataMax, tickCount = 5) => {
-        // Find the raw interval
-        const rawInterval = dataMax / tickCount
-
-        // Find the magnitude (power of 10)
-        const magnitude = Math.pow(10, Math.floor(Math.log10(rawInterval)))
-        const residual = rawInterval / magnitude
-
-        // Determine a "clean" step
-        let cleanStep
-        if (residual < 1.5) {
-            cleanStep = 1
-        }
-        else if (residual < 2.5) {
-            cleanStep = 2
-        }
-        else if (residual < 7) {
-            cleanStep = 5
-        }
-        else {
-            cleanStep = 10
-        }
-
-        const interval = cleanStep * magnitude
-        return {
-            interval,
-            max: interval * tickCount,
-        }
     }
 }
 

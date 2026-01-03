@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-02
- * Last modified: 2026-01-02
+ * Created on: 2026-01-03
+ * Last modified: 2026-01-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { SlColorPicker, SlDivider, SlInput, SlRange, SlSwitch } from '@shoelace-style/shoelace/dist/react'
+import { colord } from 'colord'
 import React, { useCallback, useEffect, useMemo } from 'react'
 import { useSnapshot }                                          from 'valtio'
 
@@ -135,6 +136,20 @@ export const ProfileWidgetEditor = ({entity}) => {
         return `${Math.round(value * 100)}%`
     }
 
+    /**
+     * Helper to convert hex + opacity to rgba string
+     */
+    const setColor = useCallback((item, alpha = false) => {
+        if (!item) {
+            return 'transparent'
+        }
+        if (item.color.startsWith('--')) {
+            const color = colord(__.ui.css.getCSSVariable(item.color))
+            return (alpha ? color.alpha(item.opacity ?? 1) : color).toRgbString()
+        }
+        return colord((alpha ? colord(item.color).alpha(item.opacity ?? 1) : item.color)).toRgbString()
+    }, [])
+
     if (!element) {
         return null
     }
@@ -157,7 +172,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                             {'Color'}&nbsp;
                             <SlColorPicker
                                 size="small" swatches={swatches}
-                                value={element.background.color ?? 'none'}
+                                value={setColor(element.background)}
                                 onSlInput={(e) => handleChangeColor(e, 'background.color')}
                             />
                         </div>
@@ -196,7 +211,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                             {'Color'}&nbsp;
                             <SlColorPicker
                                 size="small" swatches={swatches}
-                                value={element.border.color}
+                                value={setColor(element.border)}
                                 onSlChange={(e) => handleChangeColor(e, 'border.color')}
                             />
                         </div>
@@ -272,7 +287,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                             <div className="drawer-horizontal-element">
                                 {'Color'}&nbsp;
                                 <SlColorPicker size="small" swatches={swatches}
-                                               value={element.mainAxis.color}
+                                               value={setColor(element.mainAxis)}
                                                onSlChange={(e) => handleChangeColor(e, 'mainAxis.color')}/>
                             </div>
                             {(element.xAxis.main || element.yAxis.main) &&
@@ -307,7 +322,7 @@ export const ProfileWidgetEditor = ({entity}) => {
                             <div className="drawer-horizontal-element">
                                 {'Color'}&nbsp;
                                 <SlColorPicker size="small" swatches={swatches}
-                                               value={element.secondAxis.color}
+                                               value={setColor(element.secondAxis)}
                                                onSlInput={(e) => handleChangeColor(e, 'secondAxis.color')}/>
                             </div>
                             <div className="drawer-horizontal-element">

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-02
- * Last modified: 2026-01-02
+ * Created on: 2026-01-03
+ * Last modified: 2026-01-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import './style.css'
 import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION } from '@Core/ui/Profiler'
+import { colord } from 'colord'
 import ReactECharts                                         from 'echarts-for-react'
 import * as echarts                                         from 'echarts/core'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
@@ -38,17 +39,15 @@ export const ProfileChart = ({data, id, width, height}) => {
     const configuration = useSnapshot($configuration)
 
     const element = configuration.elements?.[id]
-    const _instance = useRef(null)
+    if (!element) {
+        if (!$configuration.elements || typeof $configuration.elements !== 'object') {
+            $configuration.elements = {}
+        }
+        const defaultValue = $configuration.user ?? $configuration.default
+        $configuration.elements[id] = defaultValue
+    }
 
-    /**
-     * Diagnostic: Log every render attempt with prop status
-     */
-    console.log(`[ProfileChart:${id}] Render Attempt:`, {
-        hasData:       !!data,
-        hasElement:    !!element,
-        dimensions:    {width, height},
-        dataSetsCount: data?.dataset?.length ?? 0,
-    })
+    const _instance = useRef(null)
 
     /**
      * Helper to convert hex + opacity to rgba string
@@ -57,7 +56,10 @@ export const ProfileChart = ({data, id, width, height}) => {
         if (!item) {
             return 'transparent'
         }
-        return __.ui.ui.hexToRGBA(item.color, 'rgba', item.opacity ?? 1)
+        if (item.color.startsWith('--')) {
+            return colord(__.ui.css.getCSSVariable(item.color)).alpha(item.opacity ?? 1).toRgbString()
+        }
+        return colord(item.color).alpha(item.opacity ?? 1).toRgbString()
     }, [])
 
     /**
@@ -250,7 +252,6 @@ export const ProfileChart = ({data, id, width, height}) => {
             return
         }
         const chart = _instance.current.getEchartsInstance()
-        console.log(`[ProfileChart:${id}] Applying dynamic style update via useEffect`)
         chart.setOption(getStyleOptions(element))
     }, [element, getStyleOptions, id])
 
@@ -265,7 +266,6 @@ export const ProfileChart = ({data, id, width, height}) => {
             const container = document.getElementById(`profile-${CHART_ELEVATION_VS_DISTANCE}`)
             if (container) {
                 const dimensions = container.getBoundingClientRect()
-                console.log(`[ProfileChart:${id}] Container resize dims:`, dimensions)
                 if (dimensions.width > 0) {
                     $main.components.profile.width = dimensions.width
                     $main.components.profile.height = dimensions.height
@@ -282,7 +282,6 @@ export const ProfileChart = ({data, id, width, height}) => {
             return
         }
         const chart = _instance.current.getEchartsInstance()
-        console.log(`[ProfileChart:${id}] Initializing Instance in global profiler`)
         __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
 
         const onDataZoom = () => {

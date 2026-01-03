@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-31
- * Last modified: 2025-12-31
+ * Created on: 2026-01-03
+ * Last modified: 2026-01-03
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -51,7 +51,6 @@ export const ProfileWidget = ({id, context}) => {
      * @type {{show: boolean, key: string}}
      */
     const $profile = lgs.stores.main.components.profile
-
     /**
      * Proxy for the video UI state (example of deep store access).
      * @type {object}
@@ -77,24 +76,6 @@ export const ProfileWidget = ({id, context}) => {
      */
     const [container, setContainer] = useState(lgs.canvas)
 
-    /**
-     * Adds or destroys the profile widget based on the required state.
-     * Delegates to the shared WidgetDynamicRenderer instance.
-     *
-     * @param {boolean} shouldShow - If true, renders the widget; otherwise, destroys it.
-     */
-    const manageProfileWidget = (shouldShow) => {
-        if (shouldShow) {
-            // Renders the widget in the SCENE_WIDGETS group on the SCENE_WIDGETS_BOARD
-            widgetDynamicRendererInstance.renderWidget(SCENE_WIDGETS, this.WIDGET_KEY, {
-                widgetsBoard: SCENE_WIDGETS_BOARD,
-            })
-        }
-        else {
-            // Destroys the widget, removing it from the DOM and releasing resources
-            widgetDynamicRendererInstance.destroyWidget(this.WIDGET_KEY)
-        }
-    }
     /**
      * Updates the container element reference when the widget board changes.
      * If the board is not the main scene board, it looks up the specific board element.
