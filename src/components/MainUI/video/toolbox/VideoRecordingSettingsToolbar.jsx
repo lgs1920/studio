@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-24
- * Last modified: 2025-12-24
+ * Created on: 2026-01-04
+ * Last modified: 2026-01-04
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /*******************************************************************************
@@ -44,8 +44,11 @@ export const VideoRecordingSettingsToolbar = memo(() => {
     const handleCancel = useCallback(() => {
         $video.editing = false
         __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
-        __.ui.contextMenu.hide()
+
         __.ui.widgetCache.restoreAllHiddenWidgetsExcept(VIDEO_WIDGETS_BOARD)
+        // hide some elements that can be visible
+        __.ui.contextMenu.hide()
+        __.ui.drawerManager.close()
     }, [])
 
     const handleSnapShot = useCallback(async (event) => {
