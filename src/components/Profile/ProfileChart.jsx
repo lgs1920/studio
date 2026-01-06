@@ -219,6 +219,7 @@ export const ProfileChart = ({data, id, width, height}) => {
 
         const styles = getStyleOptions(element)
         const yFloor = unitSystem === INTERNATIONAL ? 100 : 300 // Adapt floor based on meters vs feet
+        const xCeiling = unitSystem === INTERNATIONAL ? 1 : 1 // Round to next km or mile
 
         return {
             ...styles,
@@ -237,6 +238,7 @@ export const ProfileChart = ({data, id, width, height}) => {
                 {
                     ...styles.xAxis[0],
                     type:         'value',
+                    max: (val) => Math.ceil(val.max / xCeiling) * xCeiling,
                     splitNumber:  4,
                     onZero:       false,
                     nameLocation: 'end',
@@ -314,11 +316,17 @@ export const ProfileChart = ({data, id, width, height}) => {
 
         const chart = _instance.current.getEchartsInstance()
         const yFloor = unitSystem === INTERNATIONAL ? 100 : 300
+        const xCeiling = unitSystem === INTERNATIONAL ? 1 : 1
 
         chart.setOption({
                             dataset: processedDataset,
                             series:  baseOptions.series,
-                            xAxis:   baseOptions.xAxis,
+                            xAxis: [
+                                {
+                                    ...baseOptions.xAxis[0],
+                                    max: (val) => Math.ceil(val.max / xCeiling) * xCeiling,
+                                },
+                            ],
                             yAxis:   [
                                 {
                                     ...baseOptions.yAxis[0],
