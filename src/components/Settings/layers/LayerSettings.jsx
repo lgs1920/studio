@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: LayerSettings.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { Range }                                  from '@Components/Range'
 import { DEFAULT_LAYERS_COLOR_SETTINGS }          from '@Core/constants'
 import { faArrowRotateLeft, faXmark }             from '@fortawesome/pro-regular-svg-icons'

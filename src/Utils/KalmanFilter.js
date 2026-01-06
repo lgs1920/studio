@@ -1,4 +1,20 @@
-// From https://stackoverflow.com/questions/1134579/smooth-gps-data
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: KalmanFilter.js
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+    // From https://stackoverflow.com/questions/1134579/smooth-gps-data
 //--------------------------------------------------------------------
 
 export class GPSKalmanFilter {

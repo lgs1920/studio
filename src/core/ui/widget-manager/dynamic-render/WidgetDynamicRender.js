@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-19
- * Last modified: 2025-12-19
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WidgetRegistry } from '@Core/ui/widget-manager/registry/WidgetRegistry'
@@ -57,10 +57,10 @@ export class WidgetDynamicRenderer {
     }
 
     /**
-     * Internal helper to find an existing widget ID in the store based on key and board.
+     * Finds an existing widget ID in the store based on key and board.
      * @param {string} key - The base widget key.
      * @param {string} widgetsBoard - The specific board ID.
-     * @returns {string|null} The found widgetId or null.
+     * @returns {string|null}
      */
     findExistingInList(key, widgetsBoard) {
         const $list = lgs.stores.ui.widget.list
@@ -71,42 +71,37 @@ export class WidgetDynamicRenderer {
     }
 
     /**
-     * Checks if a widget can be rendered based on cache and limits.
-     * Quota calculations are now scoped to the specific widgetsBoard.
+     * Checks if a widget can be rendered based on global registry limits and board quotas.
+     * Supports multiple instances if max > 1.
      * @param {string} group - Group ID.
      * @param {string} key - Widget base key.
-     * @param {Object} props - Widget props.
+     * @param {Object} props - Widget props (including widgetsBoard).
      * @returns {{canRender: boolean, widgetId: string|null, existingInList: string|null}}
      */
     canRenderWidget = (group, key, props = {}) => {
         const {widgetsBoard, forceRefresh} = props
 
-        // check if already in list for this specific board
+        const isMaxReached = __.ui.widgetManager.isMaxWidgetsReached(group, key, widgetsBoard)
         const existingInList = this.findExistingInList(key, widgetsBoard)
         const existingInCache = __.ui.widgetCache.has(key, {group, full: false, widgetsBoard})
 
-        if (!existingInList) {
-            // max reached logic is now scoped to the board
-            const isMaxReached = __.ui.widgetManager.isMaxWidgetsReached(group, key, widgetsBoard)
-
-            if (!isMaxReached) {
-                const widgetId = __.ui.widgetManager.defineElementId(group, key)
-                return {canRender: true, widgetId, existingInList: null}
-            }
-
-            return {canRender: false, widgetId: null, existingInList: null}
+        // Scenario 1: Slot available for a new instance
+        if (!isMaxReached) {
+            const widgetId = __.ui.widgetManager.defineElementId(group, key)
+            return {canRender: true, widgetId, existingInList: null}
         }
 
-        // if widget exists, only allow rendering if forceRefresh is active
-        if (forceRefresh && existingInCache) {
+        // Scenario 2: Max reached, but we want to force a refresh/re-render of an existing instance
+        if (existingInList && forceRefresh && existingInCache) {
             return {canRender: true, widgetId: existingInList, existingInList}
         }
 
+        // Scenario 3: Max reached and no bypass allowed
         return {canRender: false, widgetId: null, existingInList}
     }
 
     /**
-     * Loads and registers a widget component.
+     * Loads, registers, and updates the store for a widget component.
      */
     async renderWidget(group, key, props = {}) {
         const $widget = lgs.stores.ui.widget
@@ -135,21 +130,21 @@ export class WidgetDynamicRenderer {
             }
         }
 
-        // registering in the local memory cache
+        // registering in the local memory cache for instance persistence
         __.ui.widgetCache.set(widgetId, {
             group,
             component:    LazyWidget,
             widgetsBoard: props.widgetsBoard,
         })
 
-        // update the Valtio proxy store
+        // push to Valtio store to trigger UI update
         $widget.list.set(widgetId, props)
 
         return LazyWidget ?? widgetId
     }
 
     /**
-     * Destroys and removes a specific widget instance.
+     * Destroys and removes a specific widget instance from memory and store.
      */
     destroyWidget(widgetId) {
         const $widget = lgs.stores.ui.widget

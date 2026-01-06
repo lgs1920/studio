@@ -2,16 +2,16 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: MapPOI.js
+ * File: MapTarget.js
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-02-24
- * Last modified: 2025-02-24
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { MapElement } from '@Core/MapElement'

@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: SelectLocation.jsx
+ *
+ * Author : LGS1920 Team
+ * email: contact@lgs1920.fr
+ *
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { faChevronRight, faTriangleExclamation, faXmark } from '@fortawesome/pro-regular-svg-icons'
 import { faBomb, faSearch }                               from '@fortawesome/pro-solid-svg-icons'
 import { SlAlert, SlButton, SlDivider, SlIcon }           from '@shoelace-style/shoelace/dist/react'
