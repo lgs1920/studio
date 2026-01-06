@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-31
- * Last modified: 2025-12-31
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { Compass }                      from '@Components/cesium/CompassUI/Compass'
@@ -230,16 +230,18 @@ export const MainUI = memo(() => {
                     <>
                 <CameraTarget/>
                 <div id="bottom-left-ui">
-                    {lgs.platform !== 'production' && (
-                        <div id="used-platform" className="lgs-card on-map">
-                            {lgs.platform}-{lgs.versions.studio}
-                        </div>
-                    )}
+
                 </div>
                 <div id="bottom-right-ui">
                     {!video.recording && <CreditsBar/>}
                 </div>
                     </>
+                )}
+
+                {lgs.platform !== 'production' && (
+                    <div id="used-platform">
+                        {lgs.platform}-{lgs.versions.studio}
+                    </div>
                 )}
                 <InformationPanel/>
                 <SettingsPanel/>
