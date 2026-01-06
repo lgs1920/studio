@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-03
- * Last modified: 2026-01-03
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,10 +80,11 @@ export class Profiler {
                     switch (type) {
                         case ELEVATION_VS_DISTANCE : {
                             coords = [
-                                __.convert(distance).to(units.x[lgs.settings.getUnitSystem.current]),
-                                __.convert(point.altitude).to(units.y[lgs.settings.getUnitSystem.current]),
+                                __.convert(distance).to(units.x[lgs.settings.unitSystem.current]),
+                                __.convert(point.altitude).to(units.y[lgs.settings.unitSystem.current]),
                                 null, //TODO Time
                                 point,
+                                lgs.settings.unitSystem.current,  // unit system
                             ]
                         }
                     }
@@ -101,9 +102,11 @@ export class Profiler {
         })
 
         data.axisNames = {
-            x: `(${units.x[lgs.settings.getUnitSystem.current]})`,
-            y: `(${units.y[lgs.settings.getUnitSystem.current]})`,
+            x: `(${units.x[lgs.settings.unitSystem.current]})`,
+            y: `(${units.y[lgs.settings.unitSystem.current]})`,
         }
+
+        data.unitSystem = lgs.settings.unitSystem.current
 
         return data
     }
@@ -144,16 +147,16 @@ export class Profiler {
             </div>`
 
         const altitude = `<sl-icon library="fa" name="${FA2SL.set(faMountains)}"  style="color:${colors[serie]}"></sl-icon>&nbsp;
-${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.getUnitSystem.current]}`
+${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.unitSystem.current]}`
         const global = distances.length > 1 ? `
             <div class="point-distance line" style="--line-color=${colors[serie]}">
             <span class="tooltip-icon"><sl-icon library="fa" name="${FA2SL.set(faArrowLeftLongToLine)}"></sl-icon></span>
             <span class="tooltip-data">
-                ${sprintf('%\' .1f', distance ?? 0)}  ${DISTANCE_UNITS[lgs.settings.getUnitSystem.current]}
+                ${sprintf('%\' .1f', distance ?? 0)}  ${DISTANCE_UNITS[lgs.settings.unitSystem.current]}
             </span>
             <span class="tooltip-data altitude">${altitude}</span>
             <span class="tooltip-data">
-            ${sprintf('%\' .1f', distance1 ? distance1 - distance : 0)}  ${DISTANCE_UNITS[lgs.settings.getUnitSystem.current]}</span>
+            ${sprintf('%\' .1f', distance1 ? distance1 - distance : 0)}  ${DISTANCE_UNITS[lgs.settings.unitSystem.current]}</span>
             <span  class="tooltip-icon">
             </span>
         </div> 
@@ -164,7 +167,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.getUnitSyst
             <sl-icon library="fa" name="${FA2SL.set(faArrowLeftLongToLine)}"  style="color:${colors[serie]}"></sl-icon>
             </span>
             <span class="tooltip-data">
-            ${sprintf('%\' .1f', distance - start2 ?? 0)}  ${DISTANCE_UNITS[lgs.settings.getUnitSystem.current]}
+            ${sprintf('%\' .1f', distance - start2 ?? 0)}  ${DISTANCE_UNITS[lgs.settings.unitSystem.current]}
             </span>
             <span  class="tooltip-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="27px" height="17px">
@@ -174,7 +177,7 @@ ${sprintf('%\' .1f', elevation ?? 0)} ${ELEVATION_UNITS[lgs.settings.getUnitSyst
             </span>
 
             <span class="tooltip-data">
-            ${sprintf('%\' .1f', distance2 ? distance2 - distance : 0)}  ${DISTANCE_UNITS[lgs.settings.getUnitSystem.current]}
+            ${sprintf('%\' .1f', distance2 ? distance2 - distance : 0)}  ${DISTANCE_UNITS[lgs.settings.unitSystem.current]}
             </span>
             <span class="tooltip-icon">
             <sl-icon library="fa" name="${FA2SL.set(faArrowRightLongToLine)}"  style="color:${colors[serie]}"></sl-icon>

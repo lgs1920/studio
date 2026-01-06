@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-03
- * Last modified: 2026-01-03
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -70,6 +70,12 @@ export const ProfileWidget = ({id, context}) => {
     const video = useSnapshot($video)
 
     /**
+     * Snapshot of the unit system state to trigger recalculation on unit changes.
+     */
+    const $unitStore = lgs.settings.unitSystem
+    const unitStore = useSnapshot($unitStore)
+
+    /**
      * State for the container element where the widget should attach.
      * Initialized to the global canvas element (default attach point).
      * @type {[HTMLElement, React.Dispatch<React.SetStateAction<HTMLElement>>]}
@@ -118,10 +124,10 @@ export const ProfileWidget = ({id, context}) => {
 
     /**
      * Prepares and memoizes the data required for the profile chart.
-     * Recalculates only if profile.key changes (signaling a journey change or reset).
+     * Recalculates if profile.key changes (signaling a journey change or reset) or if unit system changes.
      * @returns {object | undefined} The prepared data for the chart.
      */
-    const data = useMemo(() => __.ui.profiler?.prepareData(), [profile.key])
+    const data = useMemo(() => __.ui.profiler?.prepareData(), [profile.key, unitStore.current])
 
     /**
      * Memoizes the configuration object required for the generic Widget component.

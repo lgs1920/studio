@@ -7,16 +7,26 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-03
- * Last modified: 2026-01-03
+ * Created on: 2026-01-06
+ * Last modified: 2026-01-06
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: ProfileChart.jsx
+ *
+ ******************************************************************************/
+
 import './style.css'
 import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION } from '@Core/ui/Profiler'
-import { colord } from 'colord'
+import { INTERNATIONAL } from '@Utils/UnitUtils'
+import { colord }        from 'colord'
+import convert           from 'convert'
 import ReactECharts                                         from 'echarts-for-react'
 import * as echarts                                         from 'echarts/core'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
@@ -24,7 +34,6 @@ import { useSnapshot }                                      from 'valtio'
 
 /**
  * ProfileChart component to render elevation vs distance using ECharts
- * Uses Valtio for real-time style updates without full chart re-renders
  * @param {Object} props
  * @param {Object} props.data - Dataset and options for the chart
  * @param {string} props.id - Entity ID for configuration lookup
@@ -38,20 +47,32 @@ export const ProfileChart = ({data, id, width, height}) => {
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
 
-    const element = configuration.elements?.[id]
-    if (!element) {
-        if (!$configuration.elements || typeof $configuration.elements !== 'object') {
-            $configuration.elements = {}
-        }
-        const defaultValue = $configuration.user ?? $configuration.default
-        $configuration.elements[id] = defaultValue
-    }
+    const $unitStore = lgs.settings.unitSystem
+    const unitStore = useSnapshot($unitStore)
+    const unitSystem = unitStore.current
 
     const _instance = useRef(null)
 
     /**
-     * Helper to convert hex + opacity to rgba string
+     * Ensure configuration element exists for the given ID
+     * Initialized via useEffect to avoid mutation during render phase
      */
+    useEffect(() => {
+        if (!configuration.elements?.[id]) {
+            if (!$configuration.elements || typeof $configuration.elements !== 'object') {
+                $configuration.elements = {}
+            }
+            $configuration.elements[id] = $configuration.user ?? $configuration.default
+        }
+    }, [id, $configuration])
+
+    const element = configuration.elements?.[id]
+
+    const labels = useMemo(() => ({
+        distance:  unitSystem === INTERNATIONAL ? 'km' : 'mi',
+        elevation: unitSystem === INTERNATIONAL ? 'm' : 'ft',
+    }), [unitSystem])
+
     const setColor = useCallback((item) => {
         if (!item) {
             return 'transparent'
@@ -62,9 +83,6 @@ export const ProfileChart = ({data, id, width, height}) => {
         return colord(item.color).alpha(item.opacity ?? 1).toRgbString()
     }, [])
 
-    /**
-     * Centralized style generator to avoid code duplication
-     */
     const getStyleOptions = useCallback((config) => {
         const mainColor = setColor(config.mainAxis)
         const mainWidth = config.mainAxis.thickness
@@ -105,7 +123,7 @@ export const ProfileChart = ({data, id, width, height}) => {
                         showMaxLabel: !config.xAxis.units,
                         fontSize:     10,
                     },
-                    name:          config.xAxis.units ? (data?.axisNames?.x ?? '') : '',
+                    name: config.xAxis.units ? labels.distance : '',
                     nameTextStyle: {
                         color:         mainColor,
                         align:         'right',
@@ -139,7 +157,7 @@ export const ProfileChart = ({data, id, width, height}) => {
                         formatter:    (value) => `${value}`,
                         fontSize:     10,
                     },
-                    name:          config.yAxis.units ? (data?.axisNames?.y ?? '') : '',
+                    name: config.yAxis.units ? labels.elevation : '',
                     nameTextStyle: {
                         color:         mainColor,
                         align:         'right',
@@ -150,11 +168,17 @@ export const ProfileChart = ({data, id, width, height}) => {
                 },
             ],
         }
-    }, [data, setColor])
+    }, [setColor, labels])
 
-    /**
-     * Build a single series object for ECharts
-     */
+    const processedDataset = useMemo(() => {
+        if (!data?.dataset) {
+            return []
+        }
+
+        // Data is already converted by prepareData() in Profiler.js
+        return data.dataset
+    }, [data])
+
     const buildSerie = useCallback((params) => {
         const rgbColor = __.ui.ui.hexToRGBA(params.color, 'rgb')
         return {
@@ -176,9 +200,6 @@ export const ProfileChart = ({data, id, width, height}) => {
         }
     }, [])
 
-    /**
-     * Compute static chart options (Data and Structure)
-     */
     const baseOptions = useMemo(() => {
         if (!data || !element) {
             return {}
@@ -197,6 +218,7 @@ export const ProfileChart = ({data, id, width, height}) => {
         }))
 
         const styles = getStyleOptions(element)
+        const yFloor = unitSystem === INTERNATIONAL ? 100 : 300 // Adapt floor based on meters vs feet
 
         return {
             ...styles,
@@ -206,17 +228,10 @@ export const ProfileChart = ({data, id, width, height}) => {
                 trigger:     'axis',
                 axisPointer: {type: 'line'},
                 formatter:   (params) => __.ui.profiler.tooltipElevationVsDistance([
-                                                                                       params[0].seriesIndex, params[0].dataIndex, ...params[0].data, distances,
+                                                                                       params[0].seriesIndex, params[0].dataIndex, ...params[0].data, distances, unitSystem,
                                                                                    ]),
                 padding:     0,
                 enterable:   true,
-            },
-            legend:   {
-                orient:       'horizontal',
-                bottom:       0,
-                data: data.legends,
-                selectedMode: false,
-                show:         false,
             },
             xAxis:    [
                 {
@@ -232,31 +247,20 @@ export const ProfileChart = ({data, id, width, height}) => {
                 {
                     ...styles.yAxis[0],
                     type:         'value',
-                    min:          (val) => Math.floor(val.min / 100) * 100,
+                    min: (val) => Math.floor(val.min / yFloor) * yFloor,
                     splitNumber:  4,
                     nameLocation: 'end',
                     nameGap:      -5,
                 },
             ],
-            dataset:  data.dataset,
+            dataset:  processedDataset,
             series:   series,
             dataZoom: [{type: 'inside'}],
         }
-    }, [data, buildSerie, element, getStyleOptions])
+    }, [data, buildSerie, element, getStyleOptions, unitSystem, processedDataset])
 
     /**
-     * DYNAMIC STYLE INJECTION
-     */
-    useEffect(() => {
-        if (!_instance.current || !element) {
-            return
-        }
-        const chart = _instance.current.getEchartsInstance()
-        chart.setOption(getStyleOptions(element))
-    }, [element, getStyleOptions, id])
-
-    /**
-     * Handle chart resizing
+     * Handle chart resizing and store state updates
      */
     const handleResize = useCallback(() => {
         if (main.components.profile.show && _instance.current) {
@@ -272,38 +276,63 @@ export const ProfileChart = ({data, id, width, height}) => {
                 }
             }
         }
-    }, [main.components.profile.show, $main, id])
+    }, [main.components.profile.show, $main])
 
     /**
-     * Initialize chart instance and events
+     * Life cycle management: Instance registration, events and cleanup
      */
     useEffect(() => {
         if (!_instance.current) {
             return
         }
+
         const chart = _instance.current.getEchartsInstance()
         __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
 
         const onDataZoom = () => {
             $main.components.profile.zoom = true
         }
+
         chart.on('dataZoom', onDataZoom)
         window.addEventListener('resize', handleResize)
 
         return () => {
             chart.off('dataZoom', onDataZoom)
             window.removeEventListener('resize', handleResize)
+            __.ui.profiler.charts.delete(CHART_ELEVATION_VS_DISTANCE)
         }
-    }, [handleResize, $main, id])
+    }, [handleResize, $main])
 
     /**
-     * Diagnostic: Specific Early Exit check
+     * Unit & Dataset Synchronization
+     * Direct ECharts API call to update data without full re-merge
      */
+    useEffect(() => {
+        if (!_instance.current || !element || !data || !baseOptions) {
+            return
+        }
+
+        const chart = _instance.current.getEchartsInstance()
+        const yFloor = unitSystem === INTERNATIONAL ? 100 : 300
+
+        chart.setOption({
+                            dataset: processedDataset,
+                            series:  baseOptions.series,
+                            xAxis:   baseOptions.xAxis,
+                            yAxis:   [
+                                {
+                                    ...baseOptions.yAxis[0],
+                                    min: (val) => Math.floor(val.min / yFloor) * yFloor,
+                                },
+                            ],
+                        }, {
+                            replaceMerge: ['dataset', 'series', 'xAxis', 'yAxis'],
+                            lazyUpdate:   false,
+                        })
+
+    }, [processedDataset, baseOptions, element, data, unitSystem])
+
     if (!data || !element) {
-        console.warn(`[ProfileChart:${id}] Stopping render:`, {
-            missingData:    !data,
-            missingElement: !element,
-        })
         return null
     }
 
@@ -314,7 +343,7 @@ export const ProfileChart = ({data, id, width, height}) => {
                 width:           width,
                 height:          height,
                 backgroundColor: element.background.show ? setColor(element.background) : 'transparent',
-                backdropFilter:  element.background.blur ? 'blur(10px)' : 'none',
+                backdropFilter: element.background.blur ? 'blur(5px)' : 'none',
                 border:          element.border.show
                                  ? `${element.border.thickness}px solid ${setColor(element.border)}`
                                  : 'none',
@@ -323,8 +352,6 @@ export const ProfileChart = ({data, id, width, height}) => {
         >
             <ReactECharts
                 option={baseOptions}
-                notMerge={false}
-                lazyUpdate={true}
                 style={{width: '100%', height: '100%'}}
                 opts={{renderer: 'svg'}}
                 ref={_instance}
