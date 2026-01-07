@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-07
+ * Last modified: 2026-01-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -104,60 +104,61 @@ export class Widget2Canvas {
      * @returns {Promise<CanvasImageSource>} - Image or Canvas ready to draw
      */
     #elementToCanvasSource = async (el, options = {}) => {
-        if (el instanceof SVGElement) {
-            // Inline styles
-            el.querySelectorAll('*').forEach(node => {
-                const style = getComputedStyle(node)
-
-                const fill = style.getPropertyValue('fill')
-                if (fill && fill !== 'none') {
-                    node.setAttribute('fill', fill)
-                }
-
-                const stroke = style.getPropertyValue('stroke')
-                if (stroke && stroke !== 'none') {
-                    node.setAttribute('stroke', stroke)
-                }
-
-                const strokeWidth = style.getPropertyValue('stroke-width')
-                if (strokeWidth && strokeWidth !== '0px') {
-                    node.setAttribute('stroke-width', strokeWidth)
-                }
-
-                const fontFamily = style.getPropertyValue('font-family')
-                if (fontFamily) {
-                    node.setAttribute('font-family', fontFamily)
-                }
-
-                const fontSize = style.getPropertyValue('font-size')
-                if (fontSize) {
-                    node.setAttribute('font-size', fontSize)
-                }
-
-                const opacity = style.getPropertyValue('opacity')
-                if (opacity) {
-                    node.setAttribute('opacity', opacity)
-                }
-
-                const transform = style.getPropertyValue('transform')
-                if (transform && transform !== 'none') {
-                    node.setAttribute('transform', transform)
-                }
-
-                // node.removeAttribute('class')
-                // node.removeAttribute('id')
-            })
-
-            // Serialize to XML string
-            const xml = new XMLSerializer().serializeToString(el)
-            const img = new Image()
-            img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml)
-
-            await img.decode()
-            return img
-        }
+        // if (el instanceof SVGElement) {
+        //     // Inline styles
+        //     el.querySelectorAll('*').forEach(node => {
+        //         const style = getComputedStyle(node)
+        //
+        //         const fill = style.getPropertyValue('fill')
+        //         if (fill && fill !== 'none') {
+        //             node.setAttribute('fill', fill)
+        //         }
+        //
+        //         const stroke = style.getPropertyValue('stroke')
+        //         if (stroke && stroke !== 'none') {
+        //             node.setAttribute('stroke', stroke)
+        //         }
+        //
+        //         const strokeWidth = style.getPropertyValue('stroke-width')
+        //         if (strokeWidth && strokeWidth !== '0px') {
+        //             node.setAttribute('stroke-width', strokeWidth)
+        //         }
+        //
+        //         const fontFamily = style.getPropertyValue('font-family')
+        //         if (fontFamily) {
+        //             node.setAttribute('font-family', fontFamily)
+        //         }
+        //
+        //         const fontSize = style.getPropertyValue('font-size')
+        //         if (fontSize) {
+        //             node.setAttribute('font-size', fontSize)
+        //         }
+        //
+        //         const opacity = style.getPropertyValue('opacity')
+        //         if (opacity) {
+        //             node.setAttribute('opacity', opacity)
+        //         }
+        //
+        //         const transform = style.getPropertyValue('transform')
+        //         if (transform && transform !== 'none') {
+        //             node.setAttribute('transform', transform)
+        //         }
+        //
+        //         // node.removeAttribute('class')
+        //         // node.removeAttribute('id')
+        //     })
+        //
+        //     // Serialize to XML string
+        //     const xml = new XMLSerializer().serializeToString(el)
+        //     const img = new Image()
+        //     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml)
+        //
+        //     await img.decode()
+        //     return img
+        // }
         // Non-SVG fallback: rasterize via snapdom
         return await snapdom.toCanvas(el, options)
+        //return await screenshot.canvas(el)
     }
 
     /**
