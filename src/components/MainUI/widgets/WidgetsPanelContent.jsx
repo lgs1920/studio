@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-07
+ * Last modified: 2026-01-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -82,7 +82,7 @@ export const WidgetsPanelContent = ({groups}) => {
         const remaining = __.ui.widgetManager.remainingWidgets(groupKey, widgetKey)
         const max = __.ui.widgetManager.maxWidgets(groupKey, widgetKey)
         let tooltipText = widgetDesc.description || ''
-        if (max > 1 && remaining > 0) {
+        if (max > 1 && max < 10 && remaining > 0) {
             tooltipText += ` (${remaining} remaining)`
         }
         return tooltipText

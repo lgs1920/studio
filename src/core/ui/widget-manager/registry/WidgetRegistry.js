@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-21
- * Last modified: 2025-12-21
+ * Created on: 2026-01-07
+ * Last modified: 2026-01-07
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { lazy } from 'react'
@@ -35,6 +35,7 @@ export class WidgetRegistry {
                                              '/src/components/MainUI/widgets/list/*Widget*.jsx',
                                              '/src/components/MainUI/widgets/list/**/*Widget*.jsx',
                                              '/src/components/Profile/*Widget*.jsx',
+                                             '/src/components/Text/*Widget*.jsx',
                                          ])
 
         this.#buildIndex()

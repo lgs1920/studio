@@ -7,11 +7,11 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2025-12-21
- * Last modified: 2025-12-21
+ * Created on: 2026-01-07
+ * Last modified: 2026-01-07
  *
  *
- * Copyright © 2025 LGS1920
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { CESIUM_EVENTS as $CESIUM_EVENTS }        from '@Core/events/cesiumEvents'
@@ -21,7 +21,7 @@ import {
     faTelescope, faUnlock, faUser,
 }                                                 from '@fortawesome/duotone-regular-svg-icons'
 import { faAndroid, faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
-import { faCompass, faDesktop }                   from '@fortawesome/pro-regular-svg-icons'
+import { faCompass, faDesktop, faText }           from '@fortawesome/pro-regular-svg-icons'
 import { faChartFft, faGavel }                    from '@fortawesome/pro-solid-svg-icons'
 
 
@@ -481,7 +481,13 @@ export const WIDGETS_CAPABILITIES = [
                                                       icon:      faChartFft,
                                                       component: 'ProfileWidget',
                                                   },
-                                                  ],// Memoize widget configuration
+                                                  ],
+                                                  [
+                                                      'text-widget', {
+                                                      icon:      faText,
+                                                      component: 'TextWidget',
+                                                  },
+                                                  ],
                                               ]),
 
 

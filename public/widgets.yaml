@@ -90,3 +90,30 @@ widgets:
 
       user:
       elements:
+
+  text-widget:
+    id: "text-widget"
+    name: "Text Widget"
+    description: "The text widget"
+    icon: "Text"
+    mandatory: false
+    component: "TextWidget"
+    path: "@Components/Text"
+    max: 1000
+    groups:
+      - "journey-widgets"
+      - "scene-widgets"
+    configuration:
+      default:
+        text: "Enter your text here"
+        color: "#ffffff"
+        bgColor: transparent
+        opacity: 1
+        bgOpacity: 0.5
+        blur: false
+        size: 64
+        lineHeight: 1.2
+        orientation: 0
+        textAlign: "left"
+      user:
+      elements:
