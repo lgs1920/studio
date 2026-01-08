@@ -105,15 +105,31 @@ widgets:
       - "scene-widgets"
     configuration:
       default:
-        text: "Enter your text here"
+        text: "Enter text here"
         color: "#ffffff"
-        bgColor: transparent
+        background:
+          show: false
+          color: transparent
+          opacity: 0.15
+          blur: false
+        padding:
+          top: 5
+          right: 5
+          bottom: 5
+          left: 5
         opacity: 1
-        bgOpacity: 0.5
-        blur: false
-        size: 64
+        size: 16
+        fontFamily: "Roboto"
         lineHeight: 1.2
         orientation: 0
-        textAlign: "left"
+        textAlign: "center"
+        weight: "normal"
+        slant: "normal"
+        border:
+          show: false
+          color: "#ffffff"
+          radius: 0
+          thickness: 1
+          opacity: 1
       user:
       elements:
