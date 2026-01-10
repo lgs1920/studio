@@ -107,6 +107,7 @@ widgets:
       default:
         text: "Enter text here"
         color: "#ffffff"
+        shadow: false
         background:
           show: false
           color: transparent
@@ -124,12 +125,13 @@ widgets:
         orientation: 0
         textAlign: "center"
         weight: "normal"
-        slant: "normal"
+        style: "normal"
         border:
           show: false
           color: "#ffffff"
           radius: 0
           thickness: 1
           opacity: 1
+          shadow: false
       user:
       elements:

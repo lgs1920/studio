@@ -7,17 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-08
- * Last modified: 2026-01-08
+ * Created on: 2026-01-10
+ * Last modified: 2026-01-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { WIDGET_SHADOWS }                                           from '@Core/constants'
 import classNames                                          from 'classnames'
-import { colord }                                          from 'colord'
-import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { useSnapshot }                                     from 'valtio'
+import { colord }                                                   from 'colord'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useSnapshot }                                              from 'valtio'
 
 /**
  * Multi-line SVG text editor component.
@@ -122,18 +123,21 @@ export const EditableText = ({id, scale = 1}) => {
     const paddingLeft = element.padding?.left ?? 5
     const paddingRight = element.padding?.right ?? 5
     const paddingBottom = element.padding?.bottom ?? 5
-
     const commonStyles = {
         fontSize:   `${element.size}px`,
         fontFamily: element.fontFamily ?? 'Arial',
-        fontWeight: 'normal',
-        textAlign:  element.textAlign,
+        fontWeight: element.weight === 'bold' ? 'bolder' : 'normal',
+        fontStyle:  element.style,
+        textAlign:  element.align,
         lineHeight: `${element.size * element.lineHeight}px`,
         whiteSpace: 'pre', // Crucial for horizontal expansion
         margin:     '0',
         padding:    '0',
         boxSizing:  'border-box',
         overflow:   'hidden',
+        textShadow: element.shadow ? WIDGET_SHADOWS.get(element.shadow) : null,
+        color:      element.color,
+
     }
 
     return (
@@ -144,7 +148,7 @@ export const EditableText = ({id, scale = 1}) => {
                 position:        'relative',
                 padding:         `${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px`,
                 backgroundColor: element.background?.show ? setColor(element.background) : 'transparent',
-                backdropFilter:  element.background?.blur ? 'blur(5px)' : 'none',
+                backdropFilter: element.background?.blur ? 'blur(var(--lgs-blur-s))' : 'none',
                 border:          element.border?.show
                                  ? `${element.border.thickness}px solid ${setColor(element.border)}`
                                  : 'none',

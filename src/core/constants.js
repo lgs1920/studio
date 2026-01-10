@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-07
- * Last modified: 2026-01-07
+ * Created on: 2026-01-10
+ * Last modified: 2026-01-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -503,3 +503,9 @@ export const SCENE_WIDGETS_BOARD = 'scene',
 export const DYNAMIC_WIDGET_PART = 'dynamic-widget-part',
              STATIC_WIDGET_PART  = 'static-widget-part'
 
+export const WIDGET_SHADOWS = [
+    ['none', null],
+    ['small', ' var(--sl-shadow-medium)'],
+    ['medium', ' var(--sl-shadow-large)'],
+    ['large', ' var(--sl-shadow-x-large)'],
+]

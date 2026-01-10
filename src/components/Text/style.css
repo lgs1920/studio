@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-08
- * Last modified: 2026-01-08
+ * Created on: 2026-01-10
+ * Last modified: 2026-01-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -70,4 +70,128 @@
     100% {
         background-position: 100% 0, 0 100%, 0 0, 100% 100%;
     }
+}
+
+.text-widget-editor-header {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}
+
+.text-widget-editor-header * {
+    margin-left: auto;
+}
+
+.text-widget-editor .text-widget-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+
+.text-widget-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+.text-widget-toolbar .square-button.small::part(label) {
+    font-size: var(--lgs-font-size-s);
+    padding: 0;
+}
+
+/*******************************************************************************
+ * Text Widget Preview Styles
+ * * Target: SlTextarea (Shoelace)
+ * Logic: Auto-sizing with perfect vertical and horizontal centering.
+ ******************************************************************************/
+
+/* * Preview container
+ * Centers the widget over the tile background
+ */
+.text-widget-preview-area {
+    display: grid;
+    overflow: hidden;
+    width: 100%;
+    min-height: 250px;
+    border-radius: 4px;
+
+    background-color: #333333;
+    background-image: var(--lgs-tx-tiles);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 512px 512px;
+    place-items: center;
+}
+
+/* * Shoelace Base Shadow Part
+ * Allows the widget to shrink to content width
+ */
+.text-widget-preview-area::part(base) {
+    display: inline-flex;
+    width: auto;
+    max-width: 100%;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* * Layout wrapper */
+.text-widget-preview-area::part(form-control) {
+    display: inline-block;
+    margin: 1rem;
+}
+
+/* * The Input/Textarea element
+ * Core logic for auto-sizing and vertical centering
+ */
+.text-widget-preview-area::part(textarea) {
+    /* Font metrics */
+    font-family: var(--lgs-tx-font) !important;
+    font-size: var(--lgs-tx-size);
+    font-weight: var(--lgs-tx-weight);
+    font-style: var(--lgs-tx-style);
+    line-height: var(--lgs-tx-lh) !important;
+    display: grid;
+
+    /* * Auto-sizing logic */
+    overflow: hidden;
+    align-content: center;
+    box-sizing: border-box;
+    width: auto;
+
+    /* * Vertical Centering Fix
+     * Using grid on the textarea itself forces the text content
+     * to respect vertical alignment regardless of font metrics.
+     */
+    min-width: 120px;
+    margin: 0;
+    padding: 0.75rem;
+
+    /* Theming & Persistence */
+    resize: none;
+    text-align: var(--lgs-tx-align);
+
+    color: var(--lgs-tx-color) !important;
+    border: var(--lgs-tx-border);
+    border-radius: var(--lgs-tx-radius);
+
+    /* Border & Cleanup */
+    background-color: var(--lgs-tx-bg-color);
+    field-sizing: content;
+    --sl-input-color: var(--lgs-tx-color);
+
+    --sl-input-color-hover: var(--lgs-tx-color);
+    --sl-input-color-focus: var(--lgs-tx-color);
+    --sl-input-border-color-focus: transparent;
+}
+
+/* * Internal wrapper
+ * Ensures the Flexbox container centers the textarea base
+ */
+.text-widget-preview-area::part(form-control-input) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: auto;
 }

@@ -7,192 +7,158 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-09
- * Last modified: 2026-01-09
+ * Created on: 2026-01-10
+ * Last modified: 2026-01-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { TextEditorToolbar }                      from '@Components/Text/TextEditorToolbar'
+import { TextEditorToolbar }                                      from '@Components/Text/TextEditorToolbar'
 import {
     SlColorPicker, SlDivider, SlInput, SlOption, SlRange, SlSelect, SlSwitch, SlTextarea,
-}                                                 from '@shoelace-style/shoelace/dist/react'
-import { colord }                                 from 'colord'
-import React, { useCallback, useEffect, useMemo } from 'react'
-import { useSnapshot }                            from 'valtio'
+}                                                                 from '@shoelace-style/shoelace/dist/react'
+import { colord }                                                 from 'colord'
+import React, { useCallback, useEffect, useMemo, useState, memo } from 'react'
+import { useSnapshot }                                            from 'valtio'
 
 /**
- * Editor for the Profile Widget configuration using a plain Object
- * Keys are widget IDs (e.g., 'profile-widget#1234')
- * @param {Object} props
- * @param {string} props.entity - The unique ID of the widget
- * @returns {JSX.Element}
+ * Optimized sub-component to isolate text input renders
  */
+const OptimizedTextArea = memo(({value, onInput, styleVars}) => (
+    <SlTextarea
+        className="text-widget-preview-area"
+        resize="auto"
+        size="small"
+        value={value}
+        onSlInput={onInput}
+        style={styleVars}
+    />
+))
+
 export const TextWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['text-widget'].configuration
     const configuration = useSnapshot($configuration)
+
     const $element = $configuration.elements?.[entity]
     const element = configuration.elements?.[entity]
 
+    const [bgSnapshot, setBgSnapshot] = useState(null)
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const systemStack = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
 
     /**
-     * Initialization logic
-     * Runs only when the entity ID changes or configuration is reset
+     * Captures a 512px central square from the Cesium canvas
      */
     useEffect(() => {
-        // Ensure elements is at least an empty object
-        if (!$configuration.elements || typeof $configuration.elements !== 'object') {
-            $configuration.elements = {}
-        }
-
-        // Initialize defaults if the specific ID doesn't exist in the object
-        if (!$configuration.elements[entity]) {
-            const defaultValue = $configuration.user ?? $configuration.default
-            // We use a spread to create a new reactive object entry
-            $configuration.elements[entity] = {...defaultValue}
-        }
-    }, [entity, $configuration])
-
-
-    /**
-     * Internal utility to update nested properties in the Valtio proxy
-     * @param {string} path - Dot notation path (e.g., 'background.color')
-     * @param {any} value - The new value to assign
-     */
-    const updateElementValue = useCallback((path, value) => {
-        if (!$element) {
+        const viewer = lgs.viewer
+        if (!viewer) {
             return
         }
 
-        const keys = path.split('.')
-        let current = $element
+        const capture = () => {
+            const {canvas} = viewer
+            const size = 512
+            const x = (canvas.width - size) / 2
+            const y = (canvas.height - size) / 2
 
-        for (let i = 0; i < keys.length - 1; i++) {
-            const key = keys[i]
-            if (!current[key]) {
-                current[key] = {}
-            }
-            current = current[key]
+            const tmp = document.createElement('canvas')
+            tmp.width = size
+            tmp.height = size
+            const ctx = tmp.getContext('2d')
+            ctx.drawImage(canvas, x, y, size, size, 0, 0, size, size)
+            setBgSnapshot(tmp.toDataURL('image/webp', 0.6))
         }
 
-        const lastKey = keys[keys.length - 1]
-        current[lastKey] = value
+        const off = viewer.scene.postRender.addEventListener(() => {
+            capture()
+            off()
+        })
+
+        return () => {
+            setBgSnapshot(null)
+            off()
+        }
+    }, [entity])
+
+    /**
+     * High-speed mutation of the Valtio proxy
+     */
+    const fastUpdate = useCallback((path, val) => {
+        if (!$element) {
+            return
+        }
+        const keys = path.split('.')
+        let curr = $element
+        for (let i = 0; i < keys.length - 1; i++) {
+            if (!curr[keys[i]]) {
+                curr[keys[i]] = {}
+            }
+            curr = curr[keys[i]]
+        }
+        curr[keys[keys.length - 1]] = val
     }, [$element])
 
     /**
-     * Updates boolean properties and handles specific side effects
+     * Resolves color with alpha channel for transparency support
      */
-    const handleBooleanChange = useCallback((event, path) => {
-        const value = event.target.checked
-        updateElementValue(path, value)
-
-        // Handle side effects for specific configuration paths
-        switch (path) {
-            case 'background.show':
-                if (!value) {
-                    $element.background.blur = false
-                }
-                break
-            case 'xAxis.labels':
-                if (!value) {
-                    $element.xAxis.units = value
-                }
-            case 'yAxis.labels':
-                if (!value) {
-                    $element.yAxis.units = value
-                }
-            default:
-                break
-        }
-
-        event.preventDefault()
-        event.stopPropagation()
-    }, [$element, updateElementValue])
-
-    /**
-     * Updates color properties from SlColorPicker
-     */
-    const handleChangeColor = useCallback((event, path) => {
-        // SlColorPicker value is accessed via event.target.value
-        const value = event.target.value
-        updateElementValue(path, value)
-
-        event.preventDefault()
-        event.stopPropagation()
-    }, [updateElementValue])
-
-    /**
-     * Updates numeric properties (thickness, opacity, etc.)
-     */
-    const handleChangeNumber = useCallback((event, path) => {
-        // Convert string input to float for numeric properties
-        const value = parseFloat(event.target.value)
-        updateElementValue(path, isNaN(value) ? 0 : value)
-
-        event.preventDefault()
-        event.stopPropagation()
-    }, [updateElementValue])
-
-    const handleChangeText = useCallback((event) => {
-        updateElementValue('text', event.target.value)
-        event.preventDefault()
-        event.stopPropagation()
-    }, [updateElementValue])
-
-    const handleSelectTextShadow = useCallback((event) => {
-        updateElementValue('shadow', event.target.value)
-        event.preventDefault()
-        event.stopPropagation()
-    }, [updateElementValue])
-
-    const opacityFormatter = value => {
-        return `${Math.round(value * 100)}%`
-    }
-
-    /**
-     * Helper to convert hex + opacity to rgba string
-     */
-    const setColor = useCallback((item, alpha = false) => {
+    const getColor = useCallback((item, alpha = false) => {
         if (!item) {
             return 'transparent'
         }
-        if (item.color.startsWith('--')) {
-            const color = colord(__.ui.css.getCSSVariable(item.color))
-            return (alpha ? color.alpha(item.opacity ?? 1) : color).toRgbString()
-        }
-        return colord((alpha ? colord(item.color).alpha(item.opacity ?? 1) : item.color)).toRgbString()
+        const raw = item.color.startsWith('--') ? __.ui.css.getCSSVariable(item.color) : item.color
+        const c = colord(raw)
+        return alpha ? c.alpha(item.opacity ?? 1).toRgbString() : c.toRgbString()
     }, [])
 
     if (!element) {
         return null
     }
 
-    return (
-        <div className="lgs-card text-widget-editor">
-            <section>
-                <div className="text-widget-editor-header">
-                    {'Text'}
-                    <TextEditorToolbar id={entity}/>
-                </div>
-                <SlTextarea resize="auto" size="small"
-                            value={element.text}
-                            onSlInput={handleChangeText}>
-                </SlTextarea>
+    const dynamicVars = {
+        '--lgs-tx-tiles':    bgSnapshot ? `url(${bgSnapshot})` : 'none',
+        '--lgs-tx-bg-color': element.background?.show ? getColor(element.background, true) : 'transparent',
+        '--lgs-tx-color':    getColor(element, true),
+        '--lgs-tx-font':     element.fontFamily === 'System' ? systemStack : element.fontFamily,
+        '--lgs-tx-align':    element.align ?? 'left',
+        '--lgs-tx-size':     `${element.size ?? 16}px`,
+        '--lgs-tx-weight':   element.weight ?? 'normal',
+        '--lgs-tx-style':    element.style ?? 'normal',
+        '--lgs-tx-lh':       element.lineHeight ?? '1',
+        '--lgs-tx-border':   element.border?.show ? `${element.border.thickness}px solid ${getColor(element.border, true)}` : 'none',
+        '--lgs-tx-radius':   `${element.border?.radius ?? 0}px`,
+    }
 
-                <div className="drawer-horizontal-line three-columns">
+    return (
+        <div className="lgs-card text-widget-editor" style={dynamicVars}>
+            <section>
+                <header className="text-widget-editor-header">
+                    <div style={{
+                        display:        'flex',
+                        alignItems:     'center',
+                        justifyContent: 'space-between',
+                        marginBottom:   '8px',
+                    }}>
+                        <TextEditorToolbar id={entity} color={true} align={true} style={true}/>
+                    </div>
+                    <TextEditorToolbar id={entity} fonts={true} color={false} align={false} style={false}/>
+                </header>
+
+                <OptimizedTextArea
+                    key={`${element.lineHeight}-${element.fontFamily}`}
+                    value={element.text}
+                    onInput={(e) => fastUpdate('text', e.target.value)}
+                />
+
+                <div className="drawer-horizontal-line three-columns" style={{marginTop: '12px'}}>
                     <div className="drawer-horizontal-element">
                         {'Color'}&nbsp;
-                        <SlColorPicker
-                            size="small" swatches={swatches}
-                            value={setColor(element)}
-                            onSlInput={(e) => handleChangeColor(e, 'color')}
-                        />
+                        <SlColorPicker size="small" swatches={swatches} value={getColor(element)}
+                                       onSlInput={(e) => fastUpdate('color', e.target.value)}/>
                     </div>
                     <div className="drawer-horizontal-element">
                         <SlSelect hoist size="small" value={element.shadow ?? 'none'}
-                                  label={'Shadow'} onChange={handleSelectTextShadow}>
+                                  onSlChange={(e) => fastUpdate('shadow', e.target.value)}>
                             <SlOption value="none">{'None'}</SlOption>
                             <SlOption value="small">{'Small'}</SlOption>
                             <SlOption value="medium">{'Medium'}</SlOption>
@@ -201,90 +167,57 @@ export const TextWidgetEditor = ({entity}) => {
                     </div>
                     <div className="drawer-horizontal-element xlarge-element">
                         {'Opacity'}
-                        <SlRange
-                            min="0.1" max="1" step="0.05"
-                            tooltipFormatter={opacityFormatter}
-                            value={element.opacity ?? 0.5}
-                            onSlInput={(e) => handleChangeNumber(e, 'opacity')}
-                        />
+                        <SlRange min="0.1" max="1" step="0.05" value={element.opacity ?? 1}
+                                 onSlInput={(e) => fastUpdate('opacity', parseFloat(e.target.value))}/>
                     </div>
                 </div>
 
                 <SlDivider/>
-                <SlSwitch
-                    align-right="true"
-                    size="x-small"
-                    checked={element.background.show ?? false}
-                    onSlInput={(e) => handleBooleanChange(e, 'background.show')}
-                >
+
+                <SlSwitch size="x-small" checked={element.background?.show ?? false}
+                          onSlInput={(e) => fastUpdate('background.show', e.target.checked)}>
                     <label>{'Background'}</label>
                 </SlSwitch>
 
-                {element.background.show && (
+                {element.background?.show && (
                     <div className="drawer-horizontal-line three-columns">
                         <div className="drawer-horizontal-element">
-                            {'Color'}&nbsp;
-                            <SlColorPicker
-                                size="small" swatches={swatches}
-                                value={setColor(element.background)}
-                                onSlInput={(e) => handleChangeColor(e, 'background.color')}
-                            />
+                            <SlColorPicker size="small" swatches={swatches} value={getColor(element.background)}
+                                           onSlInput={(e) => fastUpdate('background.color', e.target.value)}/>
                         </div>
                         <div className="drawer-horizontal-element">
-                            <SlSwitch
-                                align-right="true"
-                                size="x-small"
-                                checked={element.background.blur ?? false}
-                                onSlChange={(e) => handleBooleanChange(e, 'background.blur')}
-                            >
-                                {'Blur'}
-                            </SlSwitch>
+                            <SlSwitch size="x-small" checked={element.background.blur ?? false}
+                                      onSlChange={(e) => fastUpdate('background.blur', e.target.checked)}>{'Blur'}</SlSwitch>
                         </div>
                         <div className="drawer-horizontal-element xlarge-element">
-                            {'Opacity'}
-                            <SlRange
-                                min="0.1" max="1" step="0.05"
-                                tooltipFormatter={opacityFormatter}
-                                value={element.background.opacity ?? 0.5}
-                                onSlInput={(e) => handleChangeNumber(e, 'background.opacity')}
-                            />
+                            <SlRange min="0.1" max="1" step="0.05" value={element.background.opacity ?? 0.5}
+                                     onSlInput={(e) => fastUpdate('background.opacity', parseFloat(e.target.value))}/>
                         </div>
                     </div>
                 )}
+
                 <SlDivider/>
 
-                <SlSwitch size="x-small" align-right="true"
-                          checked={element.border.show}
-                          onSlInput={(e) => handleBooleanChange(e, 'border.show')}
-                >
+                <SlSwitch size="x-small" checked={element.border?.show ?? false}
+                          onSlInput={(e) => fastUpdate('border.show', e.target.checked)}>
                     <span>{'Border'}</span>
                 </SlSwitch>
-                {element.border.show && (
+
+                {element.border?.show && (
                     <div className="drawer-horizontal-line three-columns">
                         <div className="drawer-horizontal-element">
-                            {'Color'}&nbsp;
-                            <SlColorPicker
-                                size="small" swatches={swatches}
-                                value={setColor(element.border)}
-                                onSlChange={(e) => handleChangeColor(e, 'border.color')}
-                            />
+                            <SlColorPicker size="small" swatches={swatches} value={getColor(element.border)}
+                                           onSlInput={(e) => fastUpdate('border.color', e.target.value)}/>
                         </div>
                         <div className="drawer-horizontal-element">
                             {'Thickness'}
-                            <SlInput type="number" min="1" max="10"
-                                     value={element.border.thickness ?? 1}
-                                     size="small"
-                                     onSlInput={(e) => handleChangeNumber(e, 'border.thickness')}
-                                     className={'widget-border-field-width'}>
-                            </SlInput>
+                            <SlInput type="number" min="1" max="10" value={element.border.thickness ?? 1} size="small"
+                                     onSlInput={(e) => fastUpdate('border.thickness', parseInt(e.target.value))}/>
                         </div>
                         <div className="drawer-horizontal-element xlarge-element">
                             {'Opacity'}
-                            <SlRange min="0.1" max="1" step="0.05"
-                                     tooltipFormatter={opacityFormatter}
-                                     value={element.border.opacity ?? 0.5}
-                                     onSlInput={(e) => handleChangeNumber(e, 'border.opacity')}
-                            />
+                            <SlRange min="0.1" max="1" step="0.05" value={element.border.opacity ?? 1}
+                                     onSlInput={(e) => fastUpdate('border.opacity', parseFloat(e.target.value))}/>
                         </div>
                     </div>
                 )}

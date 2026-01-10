@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-07
- * Last modified: 2026-01-07
+ * Created on: 2026-01-10
+ * Last modified: 2026-01-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -115,7 +115,6 @@ export const TextWidget = ({id, context}) => {
         return null
     }
 
-    console.log(id)
     // Render the generic Widget wrapper with the determined config
     return (
         <Widget isVisible={true} config={config}>
