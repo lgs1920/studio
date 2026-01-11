@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-11
+ * Last modified: 2026-01-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,9 +17,6 @@
 /**
  * Service Worker for LGS1920 Studio PWA - Auto-update mode
  * Automatically updates the app as soon as a new version is available
- * No user action required - skipWaiting() is called immediately on new version
- * Uses build.json, version.json, branch.json to detect changes
- * Cache name based on platform from servers.json
  */
 
 /**
@@ -27,8 +24,13 @@
  * @returns {Promise<string>} The cache name for the current environment
  */
 const getCacheName = async () => {
-    const servers = await fetch('servers.json').then(res => res.json())
-    return servers.platform
+    try {
+        const servers = await fetch('servers.json').then(res => res.json())
+        return `lgs-studio-${servers.platform}`
+    }
+    catch (e) {
+        return 'lgs-studio-default'
+    }
 }
 
 /**
@@ -40,8 +42,11 @@ const getBuildMetadata = async () => {
     let version = '0.0.0'
     let branch = 'main'
 
+    // Use a timestamp query param to bypass SW fetch interception for metadata
+    const cacheBuster = `?t=${Date.now()}`
+
     try {
-        const buildRes = await fetch('./build.json')
+        const buildRes = await fetch(`./build.json${cacheBuster}`)
         if (buildRes.ok) {
             const data = await buildRes.json()
             buildTime = data.date ? `${data.date}` : buildTime
@@ -52,7 +57,7 @@ const getBuildMetadata = async () => {
     }
 
     try {
-        const verRes = await fetch('./version.json')
+        const verRes = await fetch(`./version.json${cacheBuster}`)
         if (verRes.ok) {
             const data = await verRes.json()
             version = data.studio || data.backend || version
@@ -63,7 +68,7 @@ const getBuildMetadata = async () => {
     }
 
     try {
-        const branchRes = await fetch('./branch.json')
+        const branchRes = await fetch(`./branch.json${cacheBuster}`)
         if (branchRes.ok) {
             const data = await branchRes.json()
             branch = data.branch || branch
@@ -77,43 +82,34 @@ const getBuildMetadata = async () => {
 }
 
 /**
- * Logs current build information in console (debug)
- */
-const logBuildInfo = async () => {
-    const {buildTime, version, branch} = await getBuildMetadata()
-    console.info(`[Service Worker] LGS1920 Studio - Build: ${buildTime} | Version: ${version} | Branch: ${branch}`)
-}
-
-/**
  * Notifies all clients that a new version has been installed and activated
  */
 const notifyNewVersion = async () => {
     try {
         const {buildTime, version, branch} = await getBuildMetadata()
-        const clients = await self.clients.matchAll({includeUncontrolled: true})
+        const allClients = await self.clients.matchAll({includeUncontrolled: true})
         const message = {
             type: 'NEW_VERSION_AUTO_APPLIED',
             buildTime,
             version,
             branch,
         }
-        clients.forEach(client => client.postMessage(message))
-        console.info('[Service Worker] New version auto-applied and clients notified:', message)
+        allClients.forEach(client => client.postMessage(message))
     }
     catch (err) {
-        console.error('[Service Worker] Failed to notify clients of auto-update:', err)
+        console.error('[Service Worker] Failed to notify clients:', err)
     }
 }
 
 /**
  * Checks if current build differs from the one stored in cache
- * Updates the stored metadata and returns true if a new version is present
  * @returns {Promise<boolean>}
  */
 const isNewVersionAvailable = async () => {
     try {
         const current = await getBuildMetadata()
-        const cache = await caches.open(await getCacheName())
+        const cacheName = await getCacheName()
+        const cache = await caches.open(cacheName)
         const cachedResp = await cache.match('build_metadata')
         const previous = cachedResp ? await cachedResp.json() : {}
 
@@ -122,18 +118,19 @@ const isNewVersionAvailable = async () => {
                   previous.version !== current.version ||
                   previous.branch !== current.branch
 
-        // Always update stored metadata
-        await cache.put(
-            'build_metadata',
-            new Response(JSON.stringify(current), {
-                headers: {'Content-Type': 'application/json'},
-            }),
-        )
+        if (isNew) {
+            // Update stored metadata for next check
+            await cache.put(
+                'build_metadata',
+                new Response(JSON.stringify(current), {
+                    headers: {'Content-Type': 'application/json'},
+                }),
+            )
+        }
 
         return isNew
     }
     catch (err) {
-        console.error('[Service Worker] Error checking version:', err)
         return false
     }
 }
@@ -142,34 +139,32 @@ const isNewVersionAvailable = async () => {
 // Install
 // ====================================
 self.addEventListener('install', event => {
-    console.info('[Service Worker] Installing new version...')
-    event.waitUntil(
-        (async () => {
-            await logBuildInfo()
-            // Force immediate activation of the new worker
-            self.skipWaiting()
-            console.info('[Service Worker] Installation complete - skipWaiting() called')
-        })()
-    )
+    console.info('[Service Worker] Install event: skipping waiting...')
+    // Force this service worker to become the active service worker immediately
+    self.skipWaiting()
 })
 
 // ====================================
 // Activate
 // ====================================
 self.addEventListener('activate', event => {
-    console.info('[Service Worker] Activating new version...')
+    console.info('[Service Worker] Activate event: taking control and clearing cache...')
     event.waitUntil(
         (async () => {
-            // Take control of all clients immediately
+            // Become available to all clients (tabs) immediately
             await self.clients.claim()
 
             const hasNewVersion = await isNewVersionAvailable()
+
             if (hasNewVersion) {
+                // If version changed, clear ALL caches to ensure mobile
+                // doesn't hold old CSS/JS chunks
+                const names = await caches.keys()
+                await Promise.all(
+                    names.map(name => caches.delete(name)),
+                )
+                console.info('[Service Worker] Cache cleared due to version update')
                 await notifyNewVersion()
-                console.info('[Service Worker] New version automatically applied')
-            }
-            else {
-                console.info('[Service Worker] Same version - no update needed')
             }
         })()
     )
@@ -179,12 +174,21 @@ self.addEventListener('activate', event => {
 // Fetch
 // ====================================
 self.addEventListener('fetch', event => {
-    // Simple network-first strategy (you can customize later)
-    event.respondWith(fetch(event.request))
+    // Network-only strategy for metadata files to always get fresh version info
+    if (event.request.url.includes('.json')) {
+        return event.respondWith(fetch(event.request))
+    }
+
+    // Default strategy: Network first
+    event.respondWith(
+        fetch(event.request).catch(() => {
+            return caches.match(event.request)
+        }),
+    )
 })
 
 // ====================================
-// Message (optional - kept for debug or future use)
+// Message
 // ====================================
 self.addEventListener('message', event => {
     if (event.data?.type === 'GET_BUILD_INFO') {
