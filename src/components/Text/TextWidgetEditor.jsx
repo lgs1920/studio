@@ -47,9 +47,6 @@ export const TextWidgetEditor = ({entity}) => {
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
     const systemStack = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
 
-    /**
-     * Captures a 512px central square from the Cesium canvas
-     */
     useEffect(() => {
         const viewer = lgs.viewer
         if (!viewer) {
@@ -61,7 +58,6 @@ export const TextWidgetEditor = ({entity}) => {
             const size = 512
             const x = (canvas.width - size) / 2
             const y = (canvas.height - size) / 2
-
             const tmp = document.createElement('canvas')
             tmp.width = size
             tmp.height = size
@@ -74,17 +70,12 @@ export const TextWidgetEditor = ({entity}) => {
             capture()
             off()
         })
-
         return () => {
             setBgSnapshot(null)
             off()
         }
     }, [entity])
 
-    /**
-     * High-speed mutation of the Valtio proxy.
-     * Includes a type-safety check to recover from corrupted state (strings instead of objects).
-     */
     const fastUpdate = useCallback((path, val) => {
         if (!$element) {
             return
@@ -93,7 +84,6 @@ export const TextWidgetEditor = ({entity}) => {
         let curr = $element
         for (let i = 0; i < keys.length - 1; i++) {
             const key = keys[i]
-            // Ensure intermediate levels are objects, fixing potential string corruption
             if (!curr[key] || typeof curr[key] !== 'object') {
                 curr[key] = {}
             }
@@ -102,9 +92,6 @@ export const TextWidgetEditor = ({entity}) => {
         curr[keys[keys.length - 1]] = val
     }, [$element])
 
-    /**
-     * Resolves color with alpha channel. Safe against missing items.
-     */
     const getColor = useCallback((item, alpha = false) => {
         if (!item || !item.color) {
             return 'transparent'
@@ -117,6 +104,10 @@ export const TextWidgetEditor = ({entity}) => {
     if (!element) {
         return null
     }
+
+    const bgShadowColor = getColor(element.background?.shadow, true)
+    const txShadowColor = getColor(element.shadow, true)
+    const hasVisibleContainer = element.background?.show || element.border?.show
 
     const dynamicVars = {
         '--lgs-tx-tiles':    bgSnapshot ? `url(${bgSnapshot})` : 'none',
@@ -131,25 +122,20 @@ export const TextWidgetEditor = ({entity}) => {
         '--lgs-tx-border':   element.border?.show ? `${element.border.thickness}px solid ${getColor(element.border, true)}` : 'none',
         '--lgs-tx-radius':   `${element.border?.radius ?? 0}px`,
 
-        '--lgs-tx-elevation': element.shadow?.show ? (
-            element.shadow.value === 'small' ? 'var(--sl-shadow-x-medium)' :
-            element.shadow.value === 'large' ? 'var(--sl-shadow-x-large)' :
-            'var(--sl-shadow-large)'
-        ) : 'none',
+        // Blur is ONLY applied if background is shown
+        '--lgs-tx-blur': (element.background?.show && element.background?.blur) ? 'blur(8px)' : 'none',
 
-        '--lgs-bg-elevation': element.background?.shadow?.show ? (
-            element.background.shadow.value === 'small' ? 'var(--sl-shadow-small)' :
-            element.background.shadow.value === 'large' ? 'var(--sl-shadow-x-large)' :
-            'var(--sl-shadow-medium)'
+        '--lgs-bg-elevation': (element.background?.shadow?.show && hasVisibleContainer) ? (
+            element.background.shadow.value === 'small' ? `0 2px 8px ${bgShadowColor}` :
+            element.background.shadow.value === 'large' ? `0 16px 32px ${bgShadowColor}` :
+            `0 8px 16px ${bgShadowColor}`
         ) : 'none',
 
         '--lgs-tx-shadow': element.shadow?.show ? (
-            element.shadow.value === 'small' ? `0 1px 2px ${getColor(element.shadow, true)}` :
-            element.shadow.value === 'large' ? `0 4px 8px ${getColor(element.shadow, true)}` :
-            `0 2px 4px ${getColor(element.shadow, true)}`
+            element.shadow.value === 'small' ? `0 1px 2px ${txShadowColor}` :
+            element.shadow.value === 'large' ? `0 4px 8px ${txShadowColor}` :
+            `0 2px 4px ${txShadowColor}`
         ) : 'none',
-
-        '--lgs-tx-blur': element.background?.blur ? 'blur(5px)' : 'none',
     }
 
     return (
@@ -176,31 +162,20 @@ export const TextWidgetEditor = ({entity}) => {
                 {element.shadow?.show && (
                     <div className="drawer-horizontal-line three-columns">
                         <div className="drawer-horizontal-element">
-                            <SlColorPicker
-                                size="small"
-                                swatches={swatches}
-                                value={getColor(element.shadow)}
-                                onSlInput={(e) => fastUpdate('shadow.color', e.target.value)}
-                            />
+                            <SlColorPicker size="small" swatches={swatches} value={getColor(element.shadow)}
+                                           onSlInput={(e) => fastUpdate('shadow.color', e.target.value)}/>
                         </div>
                         <div className="drawer-horizontal-element">
-                            <SlSelect
-                                hoist
-                                size="small"
-                                value={element.shadow?.value ?? 'normal'}
-                                onSlChange={(e) => fastUpdate('shadow.value', e.target.value)}
-                            >
+                            <SlSelect hoist size="small" value={element.shadow?.value ?? 'normal'}
+                                      onSlChange={(e) => fastUpdate('shadow.value', e.target.value)}>
                                 <SlOption value="small">{'Small'}</SlOption>
                                 <SlOption value="normal">{'Medium'}</SlOption>
                                 <SlOption value="large">{'Large'}</SlOption>
                             </SlSelect>
                         </div>
                         <div className="drawer-horizontal-element xlarge-element">
-                            <SlRange
-                                min="0.1" max="1" step="0.05"
-                                value={element.shadow?.opacity ?? 1}
-                                onSlInput={(e) => fastUpdate('shadow.opacity', parseFloat(e.target.value))}
-                            />
+                            <SlRange min="0.1" max="1" step="0.05" value={element.shadow?.opacity ?? 1}
+                                     onSlInput={(e) => fastUpdate('shadow.opacity', parseFloat(e.target.value))}/>
                         </div>
                     </div>
                 )}
@@ -253,48 +228,38 @@ export const TextWidgetEditor = ({entity}) => {
                     </div>
                 )}
 
-                {element.border?.show || element.background?.show && (
+                {hasVisibleContainer && (
                     <>
                         <SlDivider/>
-                        <SlSwitch align-right size="x-small" checked={element.background.shadow?.show ?? false}
+                        <SlSwitch align-right size="x-small" checked={element.background?.shadow?.show ?? false}
                                   onSlInput={(e) => fastUpdate('background.shadow.show', e.target.checked)}>
                             <label>{'Box shadow'}</label>
                         </SlSwitch>
 
-                        {element.background.shadow?.show && (
+                        {element.background?.shadow?.show && (
                             <div className="drawer-horizontal-line three-columns">
                                 <div className="drawer-horizontal-element">
-                                    <SlColorPicker
-                                        size="small"
-                                        swatches={swatches}
-                                        value={getColor(element.background.shadow)}
-                                        onSlInput={(e) => fastUpdate('background.shadow.color', e.target.value)}
-                                    />
+                                    <SlColorPicker size="small" swatches={swatches}
+                                                   value={getColor(element.background.shadow)}
+                                                   onSlInput={(e) => fastUpdate('background.shadow.color', e.target.value)}/>
                                 </div>
                                 <div className="drawer-horizontal-element">
-                                    <SlSelect
-                                        hoist
-                                        size="small"
-                                        value={element.background.shadow?.value ?? 'normal'}
-                                        onSlChange={(e) => fastUpdate('background.shadow.value', e.target.value)}
-                                    >
+                                    <SlSelect hoist size="small" value={element.background.shadow?.value ?? 'normal'}
+                                              onSlChange={(e) => fastUpdate('background.shadow.value', e.target.value)}>
                                         <SlOption value="small">{'Small'}</SlOption>
                                         <SlOption value="normal">{'Medium'}</SlOption>
                                         <SlOption value="large">{'Large'}</SlOption>
                                     </SlSelect>
                                 </div>
                                 <div className="drawer-horizontal-element xlarge-element">
-                                    <SlRange
-                                        min="0.1" max="1" step="0.05"
-                                        value={element.background.shadow?.opacity ?? 1}
-                                        onSlInput={(e) => fastUpdate('background.shadow.opacity', parseFloat(e.target.value))}
-                                    />
+                                    <SlRange min="0.1" max="1" step="0.05"
+                                             value={element.background.shadow?.opacity ?? 1}
+                                             onSlInput={(e) => fastUpdate('background.shadow.opacity', parseFloat(e.target.value))}/>
                                 </div>
                             </div>
                         )}
                     </>
                 )}
-
             </section>
         </div>
     )
