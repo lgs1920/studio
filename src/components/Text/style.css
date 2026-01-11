@@ -129,7 +129,6 @@
     overflow: visible !important;
     width: auto;
     max-width: 100%;
-    transition: box-shadow 0.2s ease;
 
     /* Apply Custom Box Shadow */
     border: none !important;
@@ -137,7 +136,6 @@
 
     /* Force visibility of shadow */
     background: transparent !important;
-    box-shadow: var(--lgs-bg-elevation) !important;
 }
 
 /* * Layout wrapper
@@ -158,28 +156,34 @@
     font-weight: var(--lgs-tx-weight);
     font-style: var(--lgs-tx-style);
     line-height: var(--lgs-tx-lh) !important;
-    display: grid;
+    display: block;
 
     overflow: hidden;
-    align-content: center;
     box-sizing: border-box;
     width: auto;
     min-width: 120px;
+    max-width: 100%;
+    height: auto;
     margin: 0;
-    padding: 0.75rem;
+    padding: 0.75rem 0.75rem 1rem 0.75rem;
 
     resize: none;
     transition: text-shadow 0.2s ease,
     background-color 0.2s ease,
-    border 0.2s ease;
-
+    border 0.2s ease,
+    box-shadow 0.2s ease;
     text-align: var(--lgs-tx-align);
+
+    white-space: pre-wrap;
+
+    word-wrap: break-word;
     color: var(--lgs-tx-color) !important;
     border: var(--lgs-tx-border);
 
     /* Theming & Shadows */
     border-radius: var(--lgs-tx-radius);
     background-color: var(--lgs-tx-bg-color);
+    box-shadow: var(--lgs-bg-elevation);
     text-shadow: var(--lgs-tx-shadow);
 
     backdrop-filter: var(--lgs-tx-blur);

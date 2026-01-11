@@ -7,16 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-10
- * Last modified: 2026-01-10
+ * Created on: 2026-01-11
+ * Last modified: 2026-01-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WIDGET_SHADOWS }                                           from '@Core/constants'
+import { WIDGET_GOOGLE_FONTS, WIDGET_SHADOWS } from '@Core/constants'
+import { TextWidgetManager }                   from '@Core/ui/text-metrics/TextWidgetManager'
 import classNames                                          from 'classnames'
-import { colord }                                                   from 'colord'
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useSnapshot }                                              from 'valtio'
 
@@ -49,6 +49,20 @@ export const EditableText = ({id, scale = 1}) => {
 
     const $element = $configuration?.elements?.[id]
     const element = configuration?.elements?.[id]
+
+    // Inject Google Fonts into the document head
+    useEffect(() => {
+        const familiesParam = WIDGET_GOOGLE_FONTS.map(f => f.replace(/\s+/g, '+')).join('|')
+        const linkId = 'gfonts-editable-text'
+
+        if (!document.getElementById(linkId)) {
+            const link = document.createElement('link')
+            link.id = linkId
+            link.rel = 'stylesheet'
+            link.href = `https://fonts.googleapis.com/css?family=${familiesParam}&display=swap`
+            document.head.appendChild(link)
+        }
+    }, [])
 
     // Handle cursor position and focus
     useEffect(() => {
@@ -105,38 +119,32 @@ export const EditableText = ({id, scale = 1}) => {
         setIsEditing(false)
     }
 
-    const setColor = useCallback((item) => {
-        if (!item) {
-            return 'transparent'
-        }
-        const colorVal = item.color.startsWith('--')
-                         ? __.ui.css.getCSSVariable(item.color)
-                         : item.color
-        return colord(colorVal).alpha(item.opacity ?? 1).toRgbString()
-    }, [])
+    const widgetManager = useMemo(() => TextWidgetManager.instance, [])
 
     if (!element) {
         return null
     }
 
+    const cssVars = widgetManager.generateCSSVariables(element)
+
     const paddingTop = element.padding?.top ?? 5
     const paddingLeft = element.padding?.left ?? 5
     const paddingRight = element.padding?.right ?? 5
-    const paddingBottom = element.padding?.bottom ?? 5
+    const paddingBottom = (element.padding?.bottom ?? 5) + 5
     const commonStyles = {
-        fontSize:   `${element.size}px`,
-        fontFamily: element.fontFamily ?? 'Arial',
-        fontWeight: element.weight === 'bold' ? 'bolder' : 'normal',
-        fontStyle:  element.style,
-        textAlign:  element.align,
-        lineHeight: `${element.size * element.lineHeight}px`,
-        whiteSpace: 'pre', // Crucial for horizontal expansion
+        fontSize:   'var(--lgs-tx-size)',
+        fontFamily: 'var(--lgs-tx-font)',
+        fontWeight: 'var(--lgs-tx-weight)',
+        fontStyle:  'var(--lgs-tx-style)',
+        textAlign:  'var(--lgs-tx-align)',
+        lineHeight: `calc(${element.size}px * var(--lgs-tx-lh))`,
+        whiteSpace: 'pre',
         margin:     '0',
         padding:    '0',
         boxSizing:  'border-box',
-        overflow:   'hidden',
-        textShadow: element.shadow ? WIDGET_SHADOWS.get(element.shadow) : null,
-        color:      element.color,
+        overflow:   'visible',
+        textShadow: 'var(--lgs-tx-shadow)',
+        color:      'var(--lgs-tx-color)',
 
     }
 
@@ -144,15 +152,15 @@ export const EditableText = ({id, scale = 1}) => {
         <div
             className={classNames('lgs-editable-text-wrapper', {'text-editing-progress': isEditing})}
             style={{
+                ...cssVars,
                 display:         'inline-block',
                 position:        'relative',
                 padding:         `${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px`,
-                backgroundColor: element.background?.show ? setColor(element.background) : 'transparent',
-                backdropFilter: element.background?.blur ? 'blur(var(--lgs-blur-s))' : 'none',
-                border:          element.border?.show
-                                 ? `${element.border.thickness}px solid ${setColor(element.border)}`
-                                 : 'none',
-                borderRadius:    `${element.border?.radius ?? 0}px`,
+                backgroundColor: 'var(--lgs-tx-bg-color)',
+                backdropFilter:  'var(--lgs-tx-blur)',
+                border:          'var(--lgs-tx-border)',
+                borderRadius:    'var(--lgs-tx-radius)',
+                boxShadow:       'var(--lgs-bg-elevation)',
                 minWidth:        '20px',
             }}
         >
@@ -190,6 +198,7 @@ export const EditableText = ({id, scale = 1}) => {
                         border:     'none',
                         outline:    'none',
                         resize:     'none',
+                        overflow: 'hidden',
                         color:      element.color,
                         display:    'block',
                     }}

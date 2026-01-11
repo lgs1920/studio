@@ -15,10 +15,11 @@
  ******************************************************************************/
 
 import { TextEditorToolbar }                                      from '@Components/Text/TextEditorToolbar'
+import { WIDGET_SYSTEM_FONT_STACK } from '@Core/constants'
+import { TextWidgetManager }        from '@Core/ui/text-metrics/TextWidgetManager'
 import {
     SlColorPicker, SlDivider, SlInput, SlOption, SlRange, SlSelect, SlSwitch, SlTextarea,
 }                                                                 from '@shoelace-style/shoelace/dist/react'
-import { colord }                                                 from 'colord'
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSnapshot }                                            from 'valtio'
 
@@ -45,7 +46,6 @@ export const TextWidgetEditor = ({entity}) => {
 
     const [bgSnapshot, setBgSnapshot] = useState(null)
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
-    const systemStack = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
 
     useEffect(() => {
         const viewer = lgs.viewer
@@ -92,51 +92,19 @@ export const TextWidgetEditor = ({entity}) => {
         curr[keys[keys.length - 1]] = val
     }, [$element])
 
+    const widgetManager = useMemo(() => TextWidgetManager.instance, [])
+
     const getColor = useCallback((item, alpha = false) => {
-        if (!item || !item.color) {
-            return 'transparent'
-        }
-        const raw = item.color.startsWith('--') ? __.ui.css.getCSSVariable(item.color) : item.color
-        const c = colord(raw)
-        return alpha ? c.alpha(item.opacity ?? 1).toRgbString() : c.toRgbString()
-    }, [])
+        return widgetManager.getColor(item, alpha)
+    }, [widgetManager])
 
     if (!element) {
         return null
     }
 
-    const bgShadowColor = getColor(element.background?.shadow, true)
-    const txShadowColor = getColor(element.shadow, true)
     const hasVisibleContainer = element.background?.show || element.border?.show
 
-    const dynamicVars = {
-        '--lgs-tx-tiles':    bgSnapshot ? `url(${bgSnapshot})` : 'none',
-        '--lgs-tx-bg-color': element.background?.show ? getColor(element.background, true) : 'transparent',
-        '--lgs-tx-color':    getColor(element, true),
-        '--lgs-tx-font':     element.fontFamily === 'System' ? systemStack : element.fontFamily,
-        '--lgs-tx-align':    element.align ?? 'left',
-        '--lgs-tx-size':     `${element.size ?? 16}px`,
-        '--lgs-tx-weight':   element.weight ?? 'normal',
-        '--lgs-tx-style':    element.style ?? 'normal',
-        '--lgs-tx-lh':       element.lineHeight ?? '1',
-        '--lgs-tx-border':   element.border?.show ? `${element.border.thickness}px solid ${getColor(element.border, true)}` : 'none',
-        '--lgs-tx-radius':   `${element.border?.radius ?? 0}px`,
-
-        // Blur is ONLY applied if background is shown
-        '--lgs-tx-blur': (element.background?.show && element.background?.blur) ? 'blur(8px)' : 'none',
-
-        '--lgs-bg-elevation': (element.background?.shadow?.show && hasVisibleContainer) ? (
-            element.background.shadow.value === 'small' ? `0 2px 8px ${bgShadowColor}` :
-            element.background.shadow.value === 'large' ? `0 16px 32px ${bgShadowColor}` :
-            `0 8px 16px ${bgShadowColor}`
-        ) : 'none',
-
-        '--lgs-tx-shadow': element.shadow?.show ? (
-            element.shadow.value === 'small' ? `0 1px 2px ${txShadowColor}` :
-            element.shadow.value === 'large' ? `0 4px 8px ${txShadowColor}` :
-            `0 2px 4px ${txShadowColor}`
-        ) : 'none',
-    }
+    const dynamicVars = widgetManager.generateCSSVariables(element, bgSnapshot, WIDGET_SYSTEM_FONT_STACK)
 
     return (
         <div className="lgs-card text-widget-editor" style={dynamicVars}>

@@ -2,41 +2,104 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: TextMetricsManager.js
+ * File: TextWidgetManager.js
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-07
- * Last modified: 2026-01-07
+ * Created on: 2026-01-11
+ * Last modified: 2026-01-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { colord } from 'colord'
+
 /**
- * Manager responsible for calculating dimensions and positioning
- * between SVG text elements and HTML overlay inputs/textareas.
+ * Manager responsible for text widget styling, CSS variable generation,
+ * and positioning between SVG text elements and HTML overlay inputs/textareas.
  */
-export class TextMetricsManager {
-    /** @type {TextMetricsManager} */
+export class TextWidgetManager {
+    /** @type {TextWidgetManager} */
     static #instance
 
     constructor() {
-        if (TextMetricsManager.#instance) {
-            return TextMetricsManager.#instance
+        if (TextWidgetManager.#instance) {
+            return TextWidgetManager.#instance
         }
-        TextMetricsManager.#instance = this
+        TextWidgetManager.#instance = this
     }
 
     /**
-     * @returns {TextMetricsManager}
+     * @returns {TextWidgetManager}
      */
     static get instance() {
-        if (!TextMetricsManager.#instance) {
-            TextMetricsManager.#instance = new TextMetricsManager()
+        if (!TextWidgetManager.#instance) {
+            TextWidgetManager.#instance = new TextWidgetManager()
         }
-        return TextMetricsManager.#instance
+        return TextWidgetManager.#instance
+    }
+
+    /**
+     * Converts color with opacity to RGB string
+     * @param {Object} item - Object with color and opacity properties
+     * @param {boolean} alpha - Whether to apply alpha
+     * @returns {string}
+     */
+    getColor(item, alpha = false) {
+        if (!item || !item.color) {
+            return 'transparent'
+        }
+        const raw = item.color.startsWith('--') ? __.ui.css.getCSSVariable(item.color) : item.color
+        const c = colord(raw)
+        return alpha ? c.alpha(item.opacity ?? 1).toRgbString() : c.toRgbString()
+    }
+
+    /**
+     * Generates CSS variables for text widget styling
+     * @param {Object} element - Text element configuration
+     * @param {string} bgSnapshot - Background snapshot URL
+     * @param {string} systemStack - System font stack
+     * @returns {Object} CSS variables object
+     */
+    generateCSSVariables(element, bgSnapshot = null, systemStack = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif') {
+        if (!element) {
+            return {}
+        }
+
+        const bgShadowColor = this.getColor(element.background?.shadow, true)
+        const txShadowColor = this.getColor(element.shadow, true)
+        const hasVisibleContainer = element.background?.show || element.border?.show
+
+        return {
+            '--lgs-tx-tiles':    bgSnapshot ? `url(${bgSnapshot})` : 'none',
+            '--lgs-tx-bg-color': element.background?.show ? this.getColor(element.background, true) : 'transparent',
+            '--lgs-tx-color':    this.getColor(element, true),
+            '--lgs-tx-font':     element.fontFamily === 'System' ? systemStack : element.fontFamily,
+            '--lgs-tx-align':    element.align ?? 'left',
+            '--lgs-tx-size':     `${element.size ?? 16}px`,
+            '--lgs-tx-weight':   element.weight ?? 'normal',
+            '--lgs-tx-style':    element.style ?? 'normal',
+            '--lgs-tx-lh':       element.lineHeight ?? '1',
+            '--lgs-tx-border':   element.border?.show ? `${element.border.thickness}px solid ${this.getColor(element.border, true)}` : 'none',
+            '--lgs-tx-radius':   `${element.border?.radius ?? 0}px`,
+
+            // Blur is ONLY applied if background is shown
+            '--lgs-tx-blur': (element.background?.show && element.background?.blur) ? 'blur(8px)' : 'none',
+
+            '--lgs-bg-elevation': (element.background?.shadow?.show && hasVisibleContainer) ? (
+                element.background.shadow.value === 'small' ? `0 2px 8px ${bgShadowColor}` :
+                element.background.shadow.value === 'large' ? `0 16px 32px ${bgShadowColor}` :
+                `0 8px 16px ${bgShadowColor}`
+            ) : 'none',
+
+            '--lgs-tx-shadow': element.shadow?.show ? (
+                element.shadow.value === 'small' ? `0 1px 2px ${txShadowColor}` :
+                element.shadow.value === 'large' ? `0 4px 8px ${txShadowColor}` :
+                `0 2px 4px ${txShadowColor}`
+            ) : 'none',
+        }
     }
 
     /**

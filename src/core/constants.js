@@ -508,3 +508,35 @@ export const WIDGET_SHADOWS = new Map([
                                           ['normal', ' var(--sl-shadow-large)'],
     ['large', ' var(--sl-shadow-x-large)'],
                                       ])
+
+/**
+ * Google Fonts available for text widgets
+ * Alphabetically sorted list of fonts loaded from Google Fonts
+ */
+export const WIDGET_GOOGLE_FONTS = [
+    'Abril Fatface',
+    'Alumni Sans Pinstripe',
+    'Bangers',
+    'Creepster',
+    'Dancing Script',
+    'Fredoka One',
+    'Lobster',
+    'Luckiest Guy',
+    'Open Sans',
+    'Oswald',
+    'Pacifico',
+    'Quicksand',
+    'Roboto',
+    'Source Code Pro',
+].sort((a, b) => a.localeCompare(b))
+
+/**
+ * System font stack for text widgets
+ */
+export const WIDGET_SYSTEM_FONT_STACK = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+
+/**
+ * Complete list of font families for text widgets
+ * Includes system font and Google Fonts
+ */
+export const WIDGET_FONT_FAMILIES = ['System', ...WIDGET_GOOGLE_FONTS]

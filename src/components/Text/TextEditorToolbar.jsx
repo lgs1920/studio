@@ -7,13 +7,16 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-10
- * Last modified: 2026-01-10
+ * Created on: 2026-01-11
+ * Last modified: 2026-01-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import {
+    WIDGET_FONT_FAMILIES, WIDGET_GOOGLE_FONTS, WIDGET_SYSTEM_FONT_STACK,
+}                                          from '@Core/constants'
 import {
     faAlignCenter, faAlignLeft, faAlignRight, faBold, faItalic,
 }                                          from '@fortawesome/pro-solid-svg-icons'
@@ -46,22 +49,13 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
     /** @type {Object} Snapshot of the specific text element */
     const element = configuration.elements?.[id]
 
-    const googleFonts = useMemo(() => [
-        'Abril Fatface', 'Alumni Sans Pinstripe', 'Bangers', 'Creepster', 'Dancing Script',
-        'Fredoka One', 'Lobster', 'Luckiest Guy', 'Open Sans', 'Oswald', 'Pacifico', 'Quicksand',
-        'Roboto', 'Source Code Pro',
-    ].sort((a, b) => a.localeCompare(b)), [])
-
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
-
-    const fontFamilies = useMemo(() => ['System', ...googleFonts], [googleFonts])
-    const systemStack = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
 
     /**
      * Injects selected Google Fonts into the document head
      */
     useEffect(() => {
-        const familiesParam = googleFonts.map(f => f.replace(/\s+/g, '+')).join('|')
+        const familiesParam = WIDGET_GOOGLE_FONTS.map(f => f.replace(/\s+/g, '+')).join('|')
         const linkId = 'gfonts-toolbar-preview'
 
         if (!document.getElementById(linkId)) {
@@ -71,7 +65,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
             link.href = `https://fonts.googleapis.com/css?family=${familiesParam}&display=swap`
             document.head.appendChild(link)
         }
-    }, [googleFonts])
+    }, [])
 
     const alignmentDisabled = useMemo(() => {
         const text = element?.text ?? ''
@@ -130,7 +124,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
     }, [$element, element?.style])
 
     const currentFont = element?.fontFamily ?? 'System'
-    const appliedFontStack = currentFont === 'System' ? systemStack : currentFont
+    const appliedFontStack = currentFont === 'System' ? WIDGET_SYSTEM_FONT_STACK : currentFont
 
     return (
         <div className="text-widget-toolbar" style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
@@ -204,9 +198,10 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                         }}
                     >
                         <SlIcon slot="prefix" library="fa" name={FA2SL.set(faText)}/>
-                        {fontFamilies.map(font => (
+                        {WIDGET_FONT_FAMILIES.map(font => (
                             <SlOption key={font} value={font.replace(/\s/g, '_')}>
-                                <span style={{fontFamily: font === 'System' ? systemStack : font}}>{'Typeface'}</span>
+                                <span
+                                    style={{fontFamily: font === 'System' ? WIDGET_SYSTEM_FONT_STACK : font}}>{'Typeface'}</span>
                             </SlOption>
                         ))}
                     </SlSelect>
