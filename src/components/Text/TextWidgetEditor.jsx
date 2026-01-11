@@ -56,8 +56,8 @@ export const TextWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['text-widget'].configuration
     const configuration = useSnapshot($configuration)
 
-    const $element = $configuration.elements?.[entity]
-    const element = configuration.elements?.[entity]
+    const $element = $configuration?.elements?.[entity] ?? $configuration.user ?? $configuration.default
+    const element = configuration?.elements?.[entity] ?? configuration.user ?? configuration.default
 
     const [bgSnapshot, setBgSnapshot] = useState(null)
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])

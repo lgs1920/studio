@@ -33,8 +33,8 @@ export const EditableText = ({id, scale = 1}) => {
     const _input = useRef(null)
     const _cursor = useRef(0)
 
-    const $element = $configuration?.elements?.[id]
-    const element = configuration?.elements?.[id]
+    const $element = $configuration?.elements?.[id] ?? $configuration.user ?? $configuration.default
+    const element = configuration?.elements?.[id] ?? configuration.user ?? configuration.default
 
     /**
      * Dynamic font injection.
@@ -180,7 +180,7 @@ export const EditableText = ({id, scale = 1}) => {
                     minHeight:  hasMultipleLines ? '100%' : 'auto',
                 }}
             >
-                {(isEditing ? editingText : element.text) || '\u200B'}
+                {(isEditing ? editingText : element.text)}
                 {/* Trailing newline fix for DIV height calculation */}
                 {isEditing && editingText.endsWith('\n') ? '\n ' : ''}
             </div>
