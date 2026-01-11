@@ -26,16 +26,26 @@ import { useSnapshot }                                            from 'valtio'
 /**
  * Optimized sub-component to isolate text input renders
  */
-const OptimizedTextArea = memo(({value, onInput, styleVars}) => (
-    <SlTextarea
-        className="text-widget-preview-area"
-        resize="auto"
-        size="small"
-        value={value}
-        onSlInput={onInput}
-        style={styleVars}
-    />
-))
+const OptimizedTextArea = memo(({value, onInput, styleVars}) => {
+    const handleKeyDown = (e) => {
+        // Si Enter est pressé (sans Shift pour autoriser le comportement natif)
+        if (e.key === 'Enter') {
+            e.stopPropagation()
+        }
+    }
+
+    return (
+        <SlTextarea
+            className="text-widget-preview-area"
+            size="small"
+            value={value}
+            onSlInput={onInput}
+            onKeyDown={handleKeyDown}
+            style={styleVars}
+            enterkeyhint="enter"
+        />
+    )
+})
 
 export const TextWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['text-widget'].configuration

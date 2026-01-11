@@ -14,100 +14,64 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WIDGET_GOOGLE_FONTS, WIDGET_SHADOWS } from '@Core/constants'
-import { TextWidgetManager }                   from '@Core/ui/text-metrics/TextWidgetManager'
-import classNames                                          from 'classnames'
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { useSnapshot }                                              from 'valtio'
+import { TextWidgetManager }                           from '@Core/ui/text-metrics/TextWidgetManager'
+import classNames                                      from 'classnames'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
+import { useSnapshot }                                 from 'valtio'
 
-/**
- * Multi-line SVG text editor component.
- * @param {Object} props
- * @param {Object} props.id - Widget ID
- */
 export const EditableText = ({id, scale = 1}) => {
     const $configuration = lgs.settings.widgets['text-widget']?.configuration
     const configuration = useSnapshot($configuration)
 
     const [isEditing, setIsEditing] = useState(false)
     const [editingText, setEditingText] = useState('')
+    const [fontTick, setFontTick] = useState(0)
 
-    const _text = useRef(null)
     const _input = useRef(null)
     const _cursor = useRef(0)
-
-    // Isolation: ensures each widget instance is independent
-    useEffect(() => {
-        if ($configuration && !$configuration.elements?.[id]) {
-            if (!$configuration.elements || typeof $configuration.elements !== 'object') {
-                $configuration.elements = {}
-            }
-            const baseConfig = $configuration.user ?? $configuration.default
-            $configuration.elements[id] = JSON.parse(JSON.stringify(baseConfig))
-        }
-    }, [id, $configuration])
 
     const $element = $configuration?.elements?.[id]
     const element = configuration?.elements?.[id]
 
-    // Inject Google Fonts into the document head
+    // Restore font loading logic
     useEffect(() => {
-        const familiesParam = WIDGET_GOOGLE_FONTS.map(f => f.replace(/\s+/g, '+')).join('|')
-        const linkId = 'gfonts-editable-text'
+        if (!element?.fontFamily || element.fontFamily === 'System') {
+            return
+        }
+        const family = element.fontFamily
+        const fontId = `gfont-${family.replace(/\s+/g, '-').toLowerCase()}`
 
-        if (!document.getElementById(linkId)) {
+        const triggerRedraw = () => {
+            if (document.fonts) {
+                document.fonts.load(`1em "${family}"`).then(() => setFontTick(t => t + 1))
+            }
+        }
+
+        if (!document.getElementById(fontId)) {
             const link = document.createElement('link')
-            link.id = linkId
+            link.id = fontId
             link.rel = 'stylesheet'
-            link.href = `https://fonts.googleapis.com/css?family=${familiesParam}&display=swap`
+            link.href = `https://fonts.googleapis.com/css?family=${family.replace(/\s+/g, '+')}:400,700&display=swap`
+            link.onload = triggerRedraw
             document.head.appendChild(link)
         }
-    }, [])
+        else {
+            triggerRedraw()
+        }
+    }, [element?.fontFamily])
 
-    // Handle cursor position and focus
     useEffect(() => {
         if (isEditing && _input.current) {
             _input.current.focus()
-            const pos = _cursor.current
-            requestAnimationFrame(() => {
-                if (_input.current) {
-                    _input.current.setSelectionRange(pos, pos)
-                }
-            })
+            _input.current.setSelectionRange(_cursor.current, _cursor.current)
         }
     }, [isEditing])
 
-    /**
-     * Set cursor position based on click coordinates
-     */
     const handleStartEdit = (e) => {
         if (!element) {
             return
         }
-
-        let cursorPos = element.text.length
-
-        if (e && (document.caretPositionFromPoint || document.caretRangeFromPoint)) {
-            try {
-                if (document.caretPositionFromPoint) {
-                    const pos = document.caretPositionFromPoint(e.clientX, e.clientY)
-                    if (pos) {
-                        cursorPos = pos.offset
-                    }
-                }
-                else if (document.caretRangeFromPoint) {
-                    const range = document.caretRangeFromPoint(e.clientX, e.clientY)
-                    if (range) {
-                        cursorPos = range.startOffset
-                    }
-                }
-            }
-            catch (err) {
-                cursorPos = element.text.length
-            }
-        }
-
-        _cursor.current = cursorPos
+        _cursor.current = element.text.length
         setEditingText(element.text)
         setIsEditing(true)
     }
@@ -120,17 +84,30 @@ export const EditableText = ({id, scale = 1}) => {
     }
 
     const widgetManager = useMemo(() => TextWidgetManager.instance, [])
-
     if (!element) {
         return null
     }
 
     const cssVars = widgetManager.generateCSSVariables(element)
 
-    const paddingTop = element.padding?.top ?? 5
-    const paddingLeft = element.padding?.left ?? 5
-    const paddingRight = element.padding?.right ?? 5
-    const paddingBottom = (element.padding?.bottom ?? 5) + 5
+    // Détection si le texte a plusieurs lignes (besoin de centrage vertical)
+    const hasMultipleLines = (element.text || '').includes('\n')
+
+    // Padding proportionnel au lineHeight et fontSize pour éviter la troncature (réduit de moitié)
+    // des caractères descendants (g, p, q, y, j) et ascendants (h, k, l, b, d, f, t)
+    const fontSize = element.size ?? 16
+    const lineHeight = parseFloat(element.lineHeight ?? 1)
+    const lineHeightPx = fontSize * lineHeight
+
+    // Padding basé sur le lineHeight (réduit de moitié) :
+    // - Sides: ~0.25 de lineHeight
+    // - Bottom: ~0.35 de lineHeight (plus grand pour les descendants)
+    const textPaddingTop = Math.max(4, lineHeightPx * 0.25)
+    const textPaddingRight = Math.max(4, lineHeightPx * 0.25)
+    const textPaddingBottom = Math.max(5, lineHeightPx * 0.35)
+    const textPaddingLeft = Math.max(4, lineHeightPx * 0.25)
+
+    // STYLES ORIGINAUX : pre pour l'expansion horizontale
     const commonStyles = {
         fontSize:   'var(--lgs-tx-size)',
         fontFamily: 'var(--lgs-tx-font)',
@@ -140,76 +117,80 @@ export const EditableText = ({id, scale = 1}) => {
         lineHeight: `calc(${element.size}px * var(--lgs-tx-lh))`,
         whiteSpace: 'pre',
         margin:     '0',
-        padding:    '0',
+        padding:    `${textPaddingTop}px ${textPaddingRight}px ${textPaddingBottom}px ${textPaddingLeft}px`,
         boxSizing:  'border-box',
-        overflow:   'visible',
-        textShadow: 'var(--lgs-tx-shadow)',
         color:      'var(--lgs-tx-color)',
-
+        textShadow: 'var(--lgs-tx-shadow)',
+        overflow:   'visible',
     }
 
     return (
         <div
+            key={`f-${fontTick}`}
             className={classNames('lgs-editable-text-wrapper', {'text-editing-progress': isEditing})}
             style={{
                 ...cssVars,
                 display:         'inline-block',
                 position:        'relative',
-                padding:         `${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px`,
+                width:    'auto',
+                maxWidth: 'none',
                 backgroundColor: 'var(--lgs-tx-bg-color)',
                 backdropFilter:  'var(--lgs-tx-blur)',
                 border:          'var(--lgs-tx-border)',
                 borderRadius:    'var(--lgs-tx-radius)',
                 boxShadow:       'var(--lgs-bg-elevation)',
-                minWidth:        '20px',
+                padding:  `${element.padding?.top ?? 5}px ${element.padding?.right ?? 5}px ${element.padding?.bottom ?? 5}px ${element.padding?.left ?? 5}px`,
             }}
         >
-            {/* Mirror Div: Sizes the parent even when editing */}
             <div
-                ref={_text}
                 onClick={!isEditing ? handleStartEdit : undefined}
                 style={{
                     ...commonStyles,
-                    color:      element.color,
                     cursor:     'text',
                     userSelect: 'none',
                     visibility: isEditing ? 'hidden' : 'visible',
                     opacity:    element.opacity,
                     filter:     element.blur ? 'blur(2px)' : 'none',
+                    // Centrage vertical uniquement si texte sur plusieurs lignes
+                    display:    hasMultipleLines ? 'flex' : 'block',
+                    alignItems: hasMultipleLines ? 'center' : 'initial',
+                    minHeight:  hasMultipleLines ? '100%' : 'auto',
                 }}
             >
                 {(isEditing ? editingText : element.text) || '\u200B'}
                 {isEditing && editingText.endsWith('\n') ? '\n ' : ''}
             </div>
 
-            {/* Absolute Textarea overlay */}
             {isEditing && (
                 <textarea
                     ref={_input}
-                    rows={1}
+                    spellCheck={false}
                     style={{
                         ...commonStyles,
                         position:   'absolute',
-                        top:        `${paddingTop}px`,
-                        left:       `${paddingLeft}px`,
-                        width:      `calc(100% - ${paddingLeft + paddingRight}px)`,
-                        height:     `calc(100% - ${paddingTop + paddingBottom}px)`,
+                        top:    `${element.padding?.top ?? 5}px`,
+                        left:   `${element.padding?.left ?? 5}px`,
+                        width:  '100%',
+                        height: '100%',
                         background: 'transparent',
                         border:     'none',
                         outline:    'none',
                         resize:     'none',
                         overflow: 'hidden',
-                        color:      element.color,
                         display:    'block',
                     }}
                     value={editingText}
                     onChange={(e) => {
-                        setEditingText(e.target.value)
+                        const val = e.target.value
+                        setEditingText(val)
                         _cursor.current = e.target.selectionStart
+                        if ($element) {
+                            $element.text = val
+                        }
                     }}
                     onBlur={handleFinishEdit}
                     onKeyDown={(e) => {
-                        if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
+                        if (e.key === 'Escape') {
                             e.preventDefault()
                             handleFinishEdit()
                         }

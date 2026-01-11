@@ -72,6 +72,13 @@ export class TextWidgetManager {
         const txShadowColor = this.getColor(element.shadow, true)
         const hasVisibleContainer = element.background?.show || element.border?.show
 
+        // Calcul du padding proportionnel au lineHeight (réduit de moitié)
+        const fontSize = element.size ?? 16
+        const lineHeight = parseFloat(element.lineHeight ?? 1)
+        const lineHeightPx = fontSize * lineHeight
+        const paddingSide = Math.max(4, lineHeightPx * 0.25)
+        const paddingBottom = Math.max(5, lineHeightPx * 0.35)
+
         return {
             '--lgs-tx-tiles':    bgSnapshot ? `url(${bgSnapshot})` : 'none',
             '--lgs-tx-bg-color': element.background?.show ? this.getColor(element.background, true) : 'transparent',
@@ -84,6 +91,12 @@ export class TextWidgetManager {
             '--lgs-tx-lh':       element.lineHeight ?? '1',
             '--lgs-tx-border':   element.border?.show ? `${element.border.thickness}px solid ${this.getColor(element.border, true)}` : 'none',
             '--lgs-tx-radius':   `${element.border?.radius ?? 0}px`,
+
+            // Padding proportionnel au lineHeight pour éviter les troncatures
+            '--lgs-tx-padding-top':    `${paddingSide}px`,
+            '--lgs-tx-padding-right':  `${paddingSide}px`,
+            '--lgs-tx-padding-bottom': `${paddingBottom}px`,
+            '--lgs-tx-padding-left':   `${paddingSide}px`,
 
             // Blur is ONLY applied if background is shown
             '--lgs-tx-blur': (element.background?.show && element.background?.blur) ? 'blur(8px)' : 'none',
