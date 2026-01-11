@@ -19,6 +19,9 @@ import classNames                                      from 'classnames'
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { useSnapshot }                                 from 'valtio'
 
+/**
+ * Inline text editor with dynamic font loading and Valtio proxy synchronization.
+ */
 export const EditableText = ({id, scale = 1}) => {
     const $configuration = lgs.settings.widgets['text-widget']?.configuration
     const configuration = useSnapshot($configuration)
@@ -33,7 +36,11 @@ export const EditableText = ({id, scale = 1}) => {
     const $element = $configuration?.elements?.[id]
     const element = configuration?.elements?.[id]
 
-    // Restore font loading logic
+    /**
+     * Dynamic font injection.
+     * Checks if font is already in the document before injecting a new link.
+     * Uses FontFace API to notify the component when the binary is ready.
+     */
     useEffect(() => {
         if (!element?.fontFamily || element.fontFamily === 'System') {
             return
@@ -60,6 +67,10 @@ export const EditableText = ({id, scale = 1}) => {
         }
     }, [element?.fontFamily])
 
+    /**
+     * Focus management.
+     * Restores cursor position immediately after entering edit mode.
+     */
     useEffect(() => {
         if (isEditing && _input.current) {
             _input.current.focus()
@@ -67,6 +78,10 @@ export const EditableText = ({id, scale = 1}) => {
         }
     }, [isEditing])
 
+    /**
+     * Initiates edit mode.
+     * Snapshot text is used as the initial value for the controlled input.
+     */
     const handleStartEdit = (e) => {
         if (!element) {
             return
@@ -76,6 +91,9 @@ export const EditableText = ({id, scale = 1}) => {
         setIsEditing(true)
     }
 
+    /**
+     * Persists changes to the Valtio proxy upon completion.
+     */
     const handleFinishEdit = () => {
         if ($element) {
             $element.text = editingText
@@ -90,24 +108,29 @@ export const EditableText = ({id, scale = 1}) => {
 
     const cssVars = widgetManager.generateCSSVariables(element)
 
-    // Détection si le texte a plusieurs lignes (besoin de centrage vertical)
+    /**
+     * Layout conditions.
+     * Flexbox centering is only applied for multi-line content.
+     */
     const hasMultipleLines = (element.text || '').includes('\n')
 
-    // Padding proportionnel au lineHeight et fontSize pour éviter la troncature (réduit de moitié)
-    // des caractères descendants (g, p, q, y, j) et ascendants (h, k, l, b, d, f, t)
+    /**
+     * Proportional padding calculation.
+     * Scales based on fontSize and lineHeight to prevent clipping of ascenders and descenders.
+     */
     const fontSize = element.size ?? 16
     const lineHeight = parseFloat(element.lineHeight ?? 1)
     const lineHeightPx = fontSize * lineHeight
 
-    // Padding basé sur le lineHeight (réduit de moitié) :
-    // - Sides: ~0.25 de lineHeight
-    // - Bottom: ~0.35 de lineHeight (plus grand pour les descendants)
     const textPaddingTop = Math.max(4, lineHeightPx * 0.25)
     const textPaddingRight = Math.max(4, lineHeightPx * 0.25)
     const textPaddingBottom = Math.max(5, lineHeightPx * 0.35)
     const textPaddingLeft = Math.max(4, lineHeightPx * 0.25)
 
-    // STYLES ORIGINAUX : pre pour l'expansion horizontale
+    /**
+     * Visual and metric styles.
+     * Uses 'whiteSpace: pre' to allow horizontal container expansion (auto-size).
+     */
     const commonStyles = {
         fontSize:   'var(--lgs-tx-size)',
         fontFamily: 'var(--lgs-tx-font)',
@@ -139,9 +162,10 @@ export const EditableText = ({id, scale = 1}) => {
                 border:          'var(--lgs-tx-border)',
                 borderRadius:    'var(--lgs-tx-radius)',
                 boxShadow:       'var(--lgs-bg-elevation)',
-                padding:  `${element.padding?.top ?? 5}px ${element.padding?.right ?? 5}px ${element.padding?.bottom ?? 5}px ${element.padding?.left ?? 5}px`,
+                padding: '0',
             }}
         >
+            {/* Mirroring div to drive parent dimensions */}
             <div
                 onClick={!isEditing ? handleStartEdit : undefined}
                 style={{
@@ -151,13 +175,13 @@ export const EditableText = ({id, scale = 1}) => {
                     visibility: isEditing ? 'hidden' : 'visible',
                     opacity:    element.opacity,
                     filter:     element.blur ? 'blur(2px)' : 'none',
-                    // Centrage vertical uniquement si texte sur plusieurs lignes
                     display:    hasMultipleLines ? 'flex' : 'block',
                     alignItems: hasMultipleLines ? 'center' : 'initial',
                     minHeight:  hasMultipleLines ? '100%' : 'auto',
                 }}
             >
                 {(isEditing ? editingText : element.text) || '\u200B'}
+                {/* Trailing newline fix for DIV height calculation */}
                 {isEditing && editingText.endsWith('\n') ? '\n ' : ''}
             </div>
 
@@ -168,8 +192,10 @@ export const EditableText = ({id, scale = 1}) => {
                     style={{
                         ...commonStyles,
                         position:   'absolute',
-                        top:    `${element.padding?.top ?? 5}px`,
-                        left:   `${element.padding?.left ?? 5}px`,
+                        top:    '0',
+                        left:   '0',
+                        right:  '0',
+                        bottom: '0',
                         width:  '100%',
                         height: '100%',
                         background: 'transparent',
@@ -184,6 +210,7 @@ export const EditableText = ({id, scale = 1}) => {
                         const val = e.target.value
                         setEditingText(val)
                         _cursor.current = e.target.selectionStart
+                        // Real-time synchronization with Valtio proxy
                         if ($element) {
                             $element.text = val
                         }
