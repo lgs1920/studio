@@ -59,34 +59,51 @@ widgets:
     configuration:
       default:
         show: true
+
         background:
           show: true
           color: "#ffffff"
           opacity: 0.15
           blur: true
+          shadow:
+            show: true
+            value: normal
+            color: "#000000"
+            opacity: 0.5
+
         border:
           show: true
           color: "#ffffff"
           opacity: 0.5
           thickness: 1
+
         xAxis:
           main: true
           second: true
           labels: true
           units: true
+
         yAxis:
           main: true
           second: true
           labels: true
           units: true
+
         mainAxis:
           color: "--lgs-dark-color" #CSS variable
           opacity: 0.8
           thickness: 1
+
         secondAxis:
           color: "--lgs-light-color" #CSS variable
           opacity: 0.6
           thickness: 0.5
+
+        shadow:
+          show: true
+          value: 'normal'
+          color: "#000000"
+          opacity: 0.5
 
       user:
       elements:
