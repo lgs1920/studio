@@ -7,70 +7,78 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-11
+ * Last modified: 2026-01-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {defineConfig} from 'vite';
-import react from '@vitejs/plugin-react';
-import cesium from 'vite-plugin-cesium';
-import {VitePWA} from 'vite-plugin-pwa';
-import mdPlugin from 'vite-plugin-markdown';
-import data from './public/version.json' with {type: 'json'};
-import {execSync} from 'child_process';
-import fs from 'fs';
-import path from 'path';
+import {defineConfig} from 'vite'
+import react from '@vitejs/plugin-react'
+import cesium from 'vite-plugin-cesium'
+import {VitePWA} from 'vite-plugin-pwa'
+import mdPlugin from 'vite-plugin-markdown'
+import data from './public/version.json' with {type: 'json'}
+import {execSync} from 'child_process'
+import fs from 'fs'
+import path from 'path'
 
-
+/**
+ * Injects current git branch name into a local JSON file for development tracking.
+ * Runs only during dev server execution.
+ */
 function saveBranchInLocal() {
     return {
         name: 'inject-git-branch',
-        apply: 'serve',
+        apply: 'serve' as const,
         configureServer() {
-            const branchPath = path.resolve(__dirname, 'public/branch.json');
-            const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
+            const branchPath = path.resolve(__dirname, 'public/branch.json')
+            const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim()
 
-            let branchData = {};
+            let branchData: any = {}
             if (fs.existsSync(branchPath)) {
-                branchData = JSON.parse(fs.readFileSync(branchPath, 'utf-8'));
+                branchData = JSON.parse(fs.readFileSync(branchPath, 'utf-8'))
             }
 
             if (branchData.branch !== branch) {
-                branchData.branch = branch;
-                fs.writeFileSync(branchPath, JSON.stringify(branchData, null, 2));
-                console.log(`✅ Git branch "${branch}" injected into branch.json`);
+                branchData.branch = branch
+                fs.writeFileSync(branchPath, JSON.stringify(branchData, null, 2))
+                console.log(`✅ Git branch "${branch}" injected into branch.json`)
             } else {
-                console.log(`ℹ️ Git branch "${branch}" already present in branch.json`);
+                console.log(`ℹ️ Git branch "${branch}" already present in branch.json`)
             }
         }
-    };
+    }
 }
-
 
 const version = data.studio
 
-// https://vitejs.dev/config/
 export default defineConfig({
     plugins: [
         react(),
         cesium(),
         VitePWA({
-            registerType: 'prompt',
+            /* Immediate update for mobile devices to prevent stale CSS/JS cache */
+            registerType: 'autoUpdate',
             strategies: 'injectManifest',
             filename: 'service-worker-pwa.js',
             srcDir: 'public',
             injectManifest: {
+                /* Set to undefined as manifest logic is handled manually in service-worker-pwa.js */
                 injectionPoint: undefined,
             },
             manifest: false,
-            manifestFilename: 'manifest.webmanifest'
+            manifestFilename: 'manifest.webmanifest',
+            devOptions: {
+                enabled: true,
+                type: 'module'
+            }
         }),
         mdPlugin({mode: ['html', 'markdown']}),
         saveBranchInLocal()
     ],
+
     server: {
         allowedHosts: [
             'localhost',
@@ -78,7 +86,13 @@ export default defineConfig({
         ],
         host: 'dev.lgs1920.fr',
         port: 5173,
-        strictPort: true
+        strictPort: true,
+        /* Strict cache control headers to force mobile browsers to fetch latest assets during dev */
+        headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+        }
     },
 
     build: {
@@ -89,43 +103,48 @@ export default defineConfig({
         outDir: `./dist/${version}`,
         rollupOptions: {
             output: {
+                /* Ensure unique filenames with hashes to invalidate CDN and browser caches on production */
+                chunkFileNames: 'assets/js/[name]-[hash].js',
+                entryFileNames: 'assets/js/[name]-[hash].js',
                 assetFileNames: ({name}) => {
-                    if (name.endsWith('.css')) {
-                        return 'assets/css/[name].[hash].[ext]';
+                    if (name?.endsWith('.css')) {
+                        return 'assets/css/[name]-[hash][extname]'
                     }
-                    return 'assets/js/[name].[hash].[ext]';
+                    return 'assets/[name]-[hash][extname]'
                 }
             }
         }
     },
+
     resolve: {
         alias: [
             {
                 find: '@Utils',
-                replacement: Bun.fileURLToPath(new URL('./src/Utils', import.meta.url))
+                replacement: path.resolve(__dirname, 'src/Utils')
             },
             {
                 find: '@Editor',
-                replacement: Bun.fileURLToPath(new URL('./src/components/TracksEditor', import.meta.url))
+                replacement: path.resolve(__dirname, 'src/components/TracksEditor')
             },
             {
                 find: '@Components',
-                replacement: Bun.fileURLToPath(new URL('./src/components', import.meta.url))
+                replacement: path.resolve(__dirname, 'src/components')
             },
             {
                 find: '@Stores',
-                replacement: Bun.fileURLToPath(new URL('./src/core/stores', import.meta.url))
+                replacement: path.resolve(__dirname, 'src/core/stores')
             },
             {
                 find: '@Core',
-                replacement: Bun.fileURLToPath(new URL('./src/core', import.meta.url))
+                replacement: path.resolve(__dirname, 'src/core')
             },
             {
                 find: '@Locales',
-                replacement: Bun.fileURLToPath(new URL('./src/locales', import.meta.url))
-            },
+                replacement: path.resolve(__dirname, 'src/locales')
+            }
         ]
     },
+
     optimizeDeps: {
         exclude: [
             '@ffmpeg/core',
