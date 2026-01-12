@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-11
- * Last modified: 2026-01-11
+ * Created on: 2026-01-12
+ * Last modified: 2026-01-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -504,10 +504,17 @@ export const DYNAMIC_WIDGET_PART = 'dynamic-widget-part',
              STATIC_WIDGET_PART  = 'static-widget-part'
 
 export const WIDGET_SHADOWS = new Map([
-    ['small', ' var(--sl-shadow-medium)'],
+                                          ['small', ' var(--sl-shadow-medium)'],
                                           ['normal', ' var(--sl-shadow-large)'],
-    ['large', ' var(--sl-shadow-x-large)'],
+                                          ['large', ' var(--sl-shadow-x-large)'],
                                       ])
+export const WIDGET_RADIUS = new Map([
+                                         ['none', {name: 'None', value: '0'}],
+                                         ['small', {name: 'Small', value: ' var(--lgs-border-radius-s)'}],
+                                         ['medium', {name: 'Medium', value: ' var(--lgs-border-radius)'}],
+                                         ['large', {name: 'Large', value: ' var(--lgs-border-radius-l)'}],
+                                         ['pill', {name: 'Pill', value: ' 9999px'}],
+                                     ])
 
 /**
  * Google Fonts available for text widgets

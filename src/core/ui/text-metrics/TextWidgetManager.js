@@ -14,7 +14,8 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { colord } from 'colord'
+import { WIDGET_RADIUS } from '@Core/constants'
+import { colord }        from 'colord'
 
 export class TextWidgetManager {
     static #instance
@@ -68,12 +69,12 @@ export class TextWidgetManager {
             '--lgs-tx-style':    element.style ?? 'normal',
             '--lgs-tx-lh':       element.lineHeight ?? '1',
             '--lgs-tx-border':   element.border?.show ? `${element.border.thickness}px solid ${this.getColor(element.border, true)}` : 'none',
-            '--lgs-tx-radius':   `${element.border?.radius ?? 0}px`,
+            '--lgs-tx-radius': element.border?.show ? WIDGET_RADIUS.get(element.border.radius ?? 'none')?.value : '0',
             '--lgs-tx-padding-top':    `${paddingSide}px`,
             '--lgs-tx-padding-right':  `${paddingSide}px`,
             '--lgs-tx-padding-bottom': `${paddingBottom}px`,
             '--lgs-tx-padding-left':   `${paddingSide}px`,
-            '--lgs-tx-blur': (element.background?.show && element.background?.blur) ? 'blur(8px)' : 'none',
+            '--lgs-tx-blur':   (element.background?.show && element.background?.blur) ? 'blur(5px)' : 'none',
             '--lgs-bg-elevation': (element.background?.shadow?.show && hasVisibleContainer) ? (
                 element.background.shadow.value === 'small' ? `0 2px 8px ${bgShadowColor}` :
                 element.background.shadow.value === 'large' ? `0 16px 32px ${bgShadowColor}` :
@@ -84,6 +85,7 @@ export class TextWidgetManager {
                 element.shadow.value === 'large' ? `0 4px 8px ${txShadowColor}` :
                 `0 2px 4px ${txShadowColor}`
             ) : 'none',
+
         }
     }
 }

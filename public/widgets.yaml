@@ -146,7 +146,7 @@ widgets:
         border:
           show: false
           color: "#ffffff"
-          radius: 0
+          radius: none
           thickness: 1
           opacity: 1
           shadow: false

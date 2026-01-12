@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-12
+ * Last modified: 2026-01-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,9 +27,11 @@
     --lgs-inner-width: calc(100vw - var(--left) - var(--right));
     --lgs-inner-height: calc(100dvh - var(--top) - var(--bottom));
 
+    --lgs-border-radius-l: 1rem;
     --lgs-border-radius: 0.5rem;
     --lgs-border-radius-s: 0.25rem;
     --lgs-border-radius-xs: 0.15rem;
+    --lgs-border-radius-pill: 50%;
 
     --lgs-font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
     --lgs-font-line-height: 1.2;

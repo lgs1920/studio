@@ -14,9 +14,11 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { TextEditorToolbar }                                      from '@Components/Text/TextEditorToolbar'
-import { WIDGET_SYSTEM_FONT_STACK } from '@Core/constants'
-import { TextWidgetManager }        from '@Core/ui/text-metrics/TextWidgetManager'
+import { TextEditorToolbar }                       from '@Components/Text/TextEditorToolbar'
+import { WIDGET_RADIUS, WIDGET_SYSTEM_FONT_STACK } from '@Core/constants'
+import {
+    TextWidgetManager,
+}                                                  from '@Core/ui/text-metrics/TextWidgetManager'
 import {
     SlColorPicker, SlDivider, SlInput, SlOption, SlRange, SlSelect, SlSwitch, SlTextarea,
 }                                                                 from '@shoelace-style/shoelace/dist/react'
@@ -137,7 +139,7 @@ export const TextWidgetEditor = ({entity}) => {
 
                 <SlSwitch align-right size="x-small" checked={element.shadow?.show ?? false}
                           onSlInput={(e) => fastUpdate('shadow.show', e.target.checked)}>
-                    <label>{'Text shadow'}</label>
+                    <label>{'Text elevation'}</label>
                 </SlSwitch>
 
                 {element.shadow?.show && (
@@ -193,20 +195,42 @@ export const TextWidgetEditor = ({entity}) => {
                 </SlSwitch>
 
                 {element.border?.show && (
-                    <div className="drawer-horizontal-line three-columns">
-                        <div className="drawer-horizontal-element">
-                            <SlColorPicker size="small" swatches={swatches} value={getColor(element.border)}
-                                           onSlInput={(e) => fastUpdate('border.color', e.target.value)}/>
+                    <>
+                        <div className="drawer-horizontal-line three-columns">
+                            <div className="drawer-horizontal-element">
+                                <SlColorPicker size="small" swatches={swatches} value={getColor(element.border)}
+                                               onSlInput={(e) => fastUpdate('border.color', e.target.value)}/>
+                            </div>
+                            <div className="drawer-horizontal-element">
+                                <SlInput type="number" min="1" max="10" value={element.border.thickness ?? 1}
+                                         size="small"
+                                         onSlInput={(e) => fastUpdate('border.thickness', parseInt(e.target.value))}/>
+                            </div>
+                            <div className="drawer-horizontal-element xlarge-element">
+                                <SlRange min="0.1" max="1" step="0.05" value={element.border.opacity ?? 1}
+                                         onSlInput={(e) => fastUpdate('border.opacity', parseFloat(e.target.value))}/>
+                            </div>
                         </div>
-                        <div className="drawer-horizontal-element">
-                            <SlInput type="number" min="1" max="10" value={element.border.thickness ?? 1} size="small"
-                                     onSlInput={(e) => fastUpdate('border.thickness', parseInt(e.target.value))}/>
+
+
+                        <div className="drawer-horizontal-line three-columns">
+                            <div className="drawer-horizontal-element"></div>
+                            <div className="drawer-horizontal-element"></div>
+                            <div className="drawer-horizontal-element xlarge-element">
+                                Rounded <SlSelect hoist size="small"
+                                                value={element.border.radius ?? 'normal'}
+                                                onSlChange={(e) => fastUpdate('border.radius', e.target.value)}>
+                                {[...WIDGET_RADIUS.entries()].map(([_key, _data]) => (
+                                    <SlOption key={_key} value={_key}>
+                                        {_data.name}
+                                    </SlOption>
+                                ))}
+                            </SlSelect>
+                            </div>
+
                         </div>
-                        <div className="drawer-horizontal-element xlarge-element">
-                            <SlRange min="0.1" max="1" step="0.05" value={element.border.opacity ?? 1}
-                                     onSlInput={(e) => fastUpdate('border.opacity', parseFloat(e.target.value))}/>
-                        </div>
-                    </div>
+                    </>
+
                 )}
 
                 {hasVisibleContainer && (
@@ -214,7 +238,7 @@ export const TextWidgetEditor = ({entity}) => {
                         <SlDivider/>
                         <SlSwitch align-right size="x-small" checked={element.background?.shadow?.show ?? false}
                                   onSlInput={(e) => fastUpdate('background.shadow.show', e.target.checked)}>
-                            <label>{'Box shadow'}</label>
+                            <label>{'Box elevation'}</label>
                         </SlSwitch>
 
                         {element.background?.shadow?.show && (
@@ -225,7 +249,8 @@ export const TextWidgetEditor = ({entity}) => {
                                                    onSlInput={(e) => fastUpdate('background.shadow.color', e.target.value)}/>
                                 </div>
                                 <div className="drawer-horizontal-element">
-                                    <SlSelect hoist size="small" value={element.background.shadow?.value ?? 'normal'}
+                                    <SlSelect hoist size="small"
+                                              value={element.background.shadow?.value ?? 'normal'}
                                               onSlChange={(e) => fastUpdate('background.shadow.value', e.target.value)}>
                                         <SlOption value="small">{'Small'}</SlOption>
                                         <SlOption value="normal">{'Medium'}</SlOption>
