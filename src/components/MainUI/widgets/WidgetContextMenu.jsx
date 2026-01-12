@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-12
+ * Last modified: 2026-01-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,7 +68,17 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
     /** Completely removes the widget from cache, store and DOM */
     const removeWidget = () => {
         new WidgetDynamicRenderer().destroyWidget(targetId)
+
+        // remove from settings
+        const type = targetId.split('#')[0]
+        const elements = lgs.settings.widgets[type].configuration.elements
+        if (elements && elements[targetId]) {
+            delete elements[targetId]
+        }
+
+        // Remove from main DB
         element && __.ui.widgetManager.disposeElement(element)
+
         setEditMode(false)
         closeMenu()
     }
