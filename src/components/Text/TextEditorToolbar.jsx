@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-11
- * Last modified: 2026-01-11
+ * Created on: 2026-01-12
+ * Last modified: 2026-01-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,9 +45,9 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
     const configuration = useSnapshot($configuration)
 
     /** @type {Object} Proxy to the specific text element */
-    const $element = $configuration.elements?.[id]
+    const $element = $configuration?.elements?.[id] ?? $configuration.user ?? $configuration.default
     /** @type {Object} Snapshot of the specific text element */
-    const element = configuration.elements?.[id]
+    const element = configuration?.elements?.[id] ?? configuration.user ?? configuration.default
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
@@ -132,7 +132,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                 <>
                     <SlColorPicker
                         value={element?.color ?? '#000000'}
-                        onSlChange={handleColorChange}
+                        onSlInput={handleColorChange}
                         size="small"
                         swatches={swatches}
                     />

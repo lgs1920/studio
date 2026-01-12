@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-11
- * Last modified: 2026-01-11
+ * Created on: 2026-01-12
+ * Last modified: 2026-01-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { useSnapshot }                                 from 'valtio'
 
 /**
- * Inline text editor with dynamic font loading and Valtio proxy synchronization.
+ * Inline text editor with dynamic font loading and robust click-to-edit.
  */
 export const EditableText = ({id, scale = 1}) => {
     const $configuration = lgs.settings.widgets['text-widget']?.configuration
@@ -33,13 +33,10 @@ export const EditableText = ({id, scale = 1}) => {
     const _input = useRef(null)
     const _cursor = useRef(0)
 
-    const $element = $configuration?.elements?.[id] ?? $configuration.user ?? $configuration.default
     const element = configuration?.elements?.[id] ?? configuration.user ?? configuration.default
 
     /**
-     * Dynamic font injection.
-     * Checks if font is already in the document before injecting a new link.
-     * Uses FontFace API to notify the component when the binary is ready.
+     * Injects Google Fonts dynamically based on fontFamily setting.
      */
     useEffect(() => {
         if (!element?.fontFamily || element.fontFamily === 'System') {
@@ -68,8 +65,7 @@ export const EditableText = ({id, scale = 1}) => {
     }, [element?.fontFamily])
 
     /**
-     * Focus management.
-     * Restores cursor position immediately after entering edit mode.
+     * Manages focus and cursor position when entering edit mode.
      */
     useEffect(() => {
         if (isEditing && _input.current) {
@@ -79,25 +75,58 @@ export const EditableText = ({id, scale = 1}) => {
     }, [isEditing])
 
     /**
-     * Initiates edit mode.
-     * Snapshot text is used as the initial value for the controlled input.
+     * Ensures the proxy exists for writing.
+     */
+    const ensureProxyElement = () => {
+        if (!$configuration.elements) {
+            $configuration.elements = {}
+        }
+        if (!$configuration.elements[id]) {
+            $configuration.elements[id] = JSON.parse(JSON.stringify(element))
+        }
+        return $configuration.elements[id]
+    }
+
+    /**
+     * Switches to edit mode and calculates the character index.
      */
     const handleStartEdit = (e) => {
         if (!element) {
             return
         }
-        _cursor.current = element.text.length
+
+        ensureProxyElement()
+
+        let clickIndex = element.text.length
+
+        // Attempt to find the character position under the mouse
+        try {
+            if (document.caretRangeFromPoint) {
+                const range = document.caretRangeFromPoint(e.clientX, e.clientY)
+                if (range && range.startContainer.nodeType === Node.TEXT_NODE) {
+                    clickIndex = range.startOffset
+                }
+            }
+            else if (document.caretPositionFromPoint) {
+                const pos = document.caretPositionFromPoint(e.clientX, e.clientY)
+                if (pos && pos.offsetNode.nodeType === Node.TEXT_NODE) {
+                    clickIndex = pos.offset
+                }
+            }
+        }
+        catch (err) {
+            // Fallback to end of text if coordinate detection fails
+            clickIndex = element.text.length
+        }
+
+        _cursor.current = clickIndex
         setEditingText(element.text)
         setIsEditing(true)
     }
 
-    /**
-     * Persists changes to the Valtio proxy upon completion.
-     */
     const handleFinishEdit = () => {
-        if ($element) {
-            $element.text = editingText
-        }
+        const $target = ensureProxyElement()
+        $target.text = editingText
         setIsEditing(false)
     }
 
@@ -107,17 +136,8 @@ export const EditableText = ({id, scale = 1}) => {
     }
 
     const cssVars = widgetManager.generateCSSVariables(element)
-
-    /**
-     * Layout conditions.
-     * Flexbox centering is only applied for multi-line content.
-     */
     const hasMultipleLines = (element.text || '').includes('\n')
 
-    /**
-     * Proportional padding calculation.
-     * Scales based on fontSize and lineHeight to prevent clipping of ascenders and descenders.
-     */
     const fontSize = element.size ?? 16
     const lineHeight = parseFloat(element.lineHeight ?? 1)
     const lineHeightPx = fontSize * lineHeight
@@ -127,10 +147,6 @@ export const EditableText = ({id, scale = 1}) => {
     const textPaddingBottom = Math.max(5, lineHeightPx * 0.35)
     const textPaddingLeft = Math.max(4, lineHeightPx * 0.25)
 
-    /**
-     * Visual and metric styles.
-     * Uses 'whiteSpace: pre' to allow horizontal container expansion (auto-size).
-     */
     const commonStyles = {
         fontSize:   'var(--lgs-tx-size)',
         fontFamily: 'var(--lgs-tx-font)',
@@ -145,6 +161,8 @@ export const EditableText = ({id, scale = 1}) => {
         color:      'var(--lgs-tx-color)',
         textShadow: 'var(--lgs-tx-shadow)',
         overflow:   'visible',
+        outline:   'none',
+        boxShadow: 'none',
     }
 
     return (
@@ -165,7 +183,6 @@ export const EditableText = ({id, scale = 1}) => {
                 padding: '0',
             }}
         >
-            {/* Mirroring div to drive parent dimensions */}
             <div
                 onClick={!isEditing ? handleStartEdit : undefined}
                 style={{
@@ -181,7 +198,6 @@ export const EditableText = ({id, scale = 1}) => {
                 }}
             >
                 {(isEditing ? editingText : element.text)}
-                {/* Trailing newline fix for DIV height calculation */}
                 {isEditing && editingText.endsWith('\n') ? '\n ' : ''}
             </div>
 
@@ -209,11 +225,8 @@ export const EditableText = ({id, scale = 1}) => {
                     onChange={(e) => {
                         const val = e.target.value
                         setEditingText(val)
-                        _cursor.current = e.target.selectionStart
-                        // Real-time synchronization with Valtio proxy
-                        if ($element) {
-                            $element.text = val
-                        }
+                        const $target = ensureProxyElement()
+                        $target.text = val
                     }}
                     onBlur={handleFinishEdit}
                     onKeyDown={(e) => {

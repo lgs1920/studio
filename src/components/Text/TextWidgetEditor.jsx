@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-11
- * Last modified: 2026-01-11
+ * Created on: 2026-01-12
+ * Last modified: 2026-01-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,49 +23,36 @@ import {
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSnapshot }                                            from 'valtio'
 
-/**
- * Isolated text area to prevent parent re-renders on every keystroke.
- * Captures Enter key to prevent event bubbling within the editor context.
- */
-const OptimizedTextArea = memo(({value, onInput, styleVars}) => {
+const OptimizedTextArea = memo(({value, onInput, dynamicVars}) => {
     const handleKeyDown = (e) => {
-        // Allow native behavior while preventing potential side effects in the widget list
         if (e.key === 'Enter') {
             e.stopPropagation()
         }
     }
 
     return (
-        <SlTextarea
-            className="text-widget-preview-area"
-            size="small"
-            value={value}
-            onSlInput={onInput}
-            onKeyDown={handleKeyDown}
-            style={styleVars}
-            enterkeyhint="enter"
-        />
+        <div style={dynamicVars}>
+            <SlTextarea
+                className="text-widget-preview-area"
+                size="small"
+                value={value}
+                onSlInput={onInput}
+                onKeyDown={handleKeyDown}
+                enterkeyhint="enter"
+            />
+        </div>
     )
 })
 
-/**
- * Management panel for text widget properties.
- * Handles styling, font selection, and container effects.
- */
 export const TextWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['text-widget'].configuration
     const configuration = useSnapshot($configuration)
 
-    const $element = $configuration?.elements?.[entity] ?? $configuration.user ?? $configuration.default
     const element = configuration?.elements?.[entity] ?? configuration.user ?? configuration.default
 
     const [bgSnapshot, setBgSnapshot] = useState(null)
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
-    /**
-     * Background capture for transparency/blur previews.
-     * Takes a snapshot of the current canvas state behind the widget.
-     */
     useEffect(() => {
         const viewer = lgs.viewer
         if (!viewer) {
@@ -95,16 +82,22 @@ export const TextWidgetEditor = ({entity}) => {
         }
     }, [entity])
 
-    /**
-     * Updates specific nested paths within the element proxy.
-     * Ensures deep objects are initialized before assignment.
-     */
     const fastUpdate = useCallback((path, val) => {
-        if (!$element) {
+        if (!$configuration) {
             return
         }
+
+        if (!$configuration.elements) {
+            $configuration.elements = {}
+        }
+
+        if (!$configuration.elements[entity]) {
+            $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
+        }
+
+        const $target = $configuration.elements[entity]
         const keys = path.split('.')
-        let curr = $element
+        let curr = $target
         for (let i = 0; i < keys.length - 1; i++) {
             const key = keys[i]
             if (!curr[key] || typeof curr[key] !== 'object') {
@@ -113,28 +106,20 @@ export const TextWidgetEditor = ({entity}) => {
             curr = curr[key]
         }
         curr[keys[keys.length - 1]] = val
-    }, [$element])
+    }, [$configuration, entity, element])
 
     const widgetManager = useMemo(() => TextWidgetManager.instance, [])
-
-    const getColor = useCallback((item, alpha = false) => {
-        return widgetManager.getColor(item, alpha)
-    }, [widgetManager])
+    const getColor = useCallback((item, alpha = false) => widgetManager.getColor(item, alpha), [widgetManager])
 
     if (!element) {
         return null
     }
 
     const hasVisibleContainer = element.background?.show || element.border?.show
-
-    /**
-     * Dynamic CSS variable generation based on current element state.
-     * Syncs visual properties across the editor and the stage.
-     */
     const dynamicVars = widgetManager.generateCSSVariables(element, bgSnapshot, WIDGET_SYSTEM_FONT_STACK)
 
     return (
-        <div className="lgs-card text-widget-editor" style={dynamicVars}>
+        <div className="lgs-card text-widget-editor">
             <section>
                 <header className="text-widget-editor-header">
                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
@@ -147,9 +132,9 @@ export const TextWidgetEditor = ({entity}) => {
                     key={`${element.lineHeight}-${element.fontFamily}`}
                     value={element.text}
                     onInput={(e) => fastUpdate('text', e.target.value)}
+                    dynamicVars={dynamicVars}
                 />
 
-                {/* Text Shadow Controls */}
                 <SlSwitch align-right size="x-small" checked={element.shadow?.show ?? false}
                           onSlInput={(e) => fastUpdate('shadow.show', e.target.checked)}>
                     <label>{'Text shadow'}</label>
@@ -178,7 +163,6 @@ export const TextWidgetEditor = ({entity}) => {
 
                 <SlDivider/>
 
-                {/* Background & Blur Controls */}
                 <SlSwitch align-right size="x-small" checked={element.background?.show ?? false}
                           onSlInput={(e) => fastUpdate('background.show', e.target.checked)}>
                     <label>{'Background'}</label>
@@ -203,7 +187,6 @@ export const TextWidgetEditor = ({entity}) => {
 
                 <SlDivider/>
 
-                {/* Border Controls */}
                 <SlSwitch align-right size="x-small" checked={element.border?.show ?? false}
                           onSlInput={(e) => fastUpdate('border.show', e.target.checked)}>
                     <span>{'Border'}</span>
@@ -226,7 +209,6 @@ export const TextWidgetEditor = ({entity}) => {
                     </div>
                 )}
 
-                {/* Box Shadow Controls (only visible if container is active) */}
                 {hasVisibleContainer && (
                     <>
                         <SlDivider/>
