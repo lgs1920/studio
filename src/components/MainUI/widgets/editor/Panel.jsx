@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-13
+ * Last modified: 2026-01-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { EditorSkeleton } from '@Components/MainUI/widgets/editor/EditorSkeleton'
 import { SCENE_WIDGETS_BOARD, WIDGETS_CONFIGURATION, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
 import {
     WidgetRegistry,
@@ -129,11 +130,7 @@ export const Panel = () => {
                 </div>
 
                 <div className="drawer-content">
-                    <Suspense fallback={
-                        <div className="drawer-loader">
-                            <SlSpinner style={{fontSize: '2rem'}}/>
-                        </div>
-                    }>
+                    <Suspense fallback={<EditorSkeleton/>}>
                         {EditorComponent ? (
                             <EditorComponent
                                 entity={drawers.entity}
@@ -147,7 +144,6 @@ export const Panel = () => {
                          )}
                     </Suspense>
                 </div>
-
                 <DrawerFooter slot="footer"/>
             </SlDrawer>
         </div>

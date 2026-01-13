@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-12
- * Last modified: 2026-01-12
+ * Created on: 2026-01-13
+ * Last modified: 2026-01-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -1389,7 +1389,7 @@ hr {
 
 
 /*******************************************************************************
- * Cameraaaaaflsh
+ * Camera flash
  ******************************************************************************/
 .lgs-flash-effect::after {
     position: absolute;
