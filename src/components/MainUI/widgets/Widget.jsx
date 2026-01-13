@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-13
+ * Last modified: 2026-01-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,9 +35,6 @@ const DRAG_THRESHOLD = {touch: 30, mouse: 5}
 /**
  * Draggable, resizable and scalable widget with full pointer interaction support.
  *
- * All tap / double-tap / long-tap / right-click interactions are handled by
- * usePointerInteractions – no manual pointer event handling is required.
- *
  * @param {Object} props
  * @param {boolean} props.isVisible                 - Controls mounting of the widget
  * @param {string}  [props.className='']            - Additional CSS classes
@@ -48,14 +45,14 @@ const DRAG_THRESHOLD = {touch: 30, mouse: 5}
  */
 export const Widget = ({isVisible, className = '', children, config, childRef}) => {
     // Core DOM references
-    const _widget = useRef(null)               // Root widget element
-    const _moveable = useRef(null)               // react-moveable instance
-    const _controlBoxTimer = useRef(null)               // Debounce timer for control-box visibility
-    const _resizeRaf = useRef(0)                  // requestAnimationFrame handle for resize cleanup
-    const _children = childRef ?? useRef(null)   // Forwarded or internal child ref
-    const _dragConfirmed = useRef(false)              // true when the drag threshold has been crossed
-    const _dragStart = useRef({x: 0, y: 0})    // Coordinates where the drag gesture started
-    const _initialized = useRef(false)              // Prevents multiple initialisations
+    const _widget = useRef(null)
+    const _moveable = useRef(null)
+    const _controlBoxTimer = useRef(null)
+    const _resizeRaf = useRef(0)
+    const _children = childRef ?? useRef(null)
+    const _dragConfirmed = useRef(false)
+    const _dragStart = useRef({x: 0, y: 0})
+    const _initialized = useRef(false)
 
     // UI state
     const [bounds, setBounds] = useState({left: 0, top: 0, right: 0, bottom: 0})
@@ -70,13 +67,13 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const widget = useSnapshot($widget)
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
-    const _w2c = useRef(null)                        // Widget2Canvas instance (used during recording)
+    const _w2c = useRef(null)
 
-    // Interaction is locked while recording visual widgets
+    // Interaction lock logic
     const interactionLocked =
               (video.preRecording || video.recording || video.snapshot) && config.type === LGS_VISUAL_WIDGET
 
-    // Snap configuration based on widget sensitivity setting
+    // Snap configuration
     const snapSettings = useMemo(() => {
         const s = config?.snapSensitivity ?? 'medium'
         return s === 'low'
@@ -87,7 +84,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [config?.snapSensitivity])
     const {threshold: snapThreshold, gap: snapGap} = snapSettings
 
-    // Center guidelines – canvas centre point
+    // Guidelines computation
     const centerGuidelines = useMemo(() => {
         const container = config?.container ?? lgs.canvas
         if (!container) {
@@ -99,7 +96,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         return {verticalGuidelines: [cx], horizontalGuidelines: [cy]}
     }, [config?.container])
 
-    // Grid guidelines – optional regular grid
     const gridGuidelines = useMemo(() => {
         if (!config?.snapGrid || !lgs.canvas) {
             return {verticalGuidelines: [], horizontalGuidelines: []}
@@ -132,7 +128,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         return {verticalGuidelines: vertical, horizontalGuidelines: horizontal}
     }, [config?.snapGrid])
 
-    // Merge all guidelines and keep Moveable in sync when the container resizes
+    // Sync guidelines and observers
     useEffect(() => {
         const update = () => {
             const v = [...new Set([...centerGuidelines.verticalGuidelines, ...gridGuidelines.verticalGuidelines])].sort((a, b) => a - b)
@@ -151,7 +147,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         return () => observer.unobserve(container)
     }, [centerGuidelines, gridGuidelines])
 
-    // Hover handling – show / hide control box
+    // Visibility handlers for control box
     const handleMouseEnter = useCallback(() => {
         if (interactionLocked) {
             return
@@ -172,7 +168,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, false, false)
     }, [interactionLocked])
 
-    // react-moveable drag callbacks
+    // Drag lifecycle
     const handleDragStart = useCallback((event) => {
         setIsDragging(false)
         _dragConfirmed.current = false
@@ -192,7 +188,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         const clientX = input.touches?.[0]?.clientX ?? input.clientX ?? 0
         const clientY = input.touches?.[0]?.clientY ?? input.clientY ?? 0
 
-        // Detect real drag start (threshold crossed)
         if (!_dragConfirmed.current &&
             (Math.abs(clientX - _dragStart.current.x) >= threshold || Math.abs(clientY - _dragStart.current.y) >= threshold)) {
             _dragConfirmed.current = true
@@ -217,13 +212,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         _moveable.current?.updateRect()
     }, [isMouseOver])
 
-    // Double-click handling (delegated to widget manager)
+    /**
+     * Toggles the editor drawer based on current open state and entity ID.
+     * Only closes if the editor is already open on the exact same widget.
+     */
     const handleDoubleClick = useCallback((event) => {
         if (interactionLocked) {
             return
         }
 
-        // Check if we can Edit
         const hasCapabilities = __.ui.widgetManager.hasCapabilities(
             config.contextMenu,
             WIDGETS_CAPABILITIES,
@@ -232,19 +229,20 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             return
         }
 
-        // Toggle action
-        if (lgs.stores.ui.drawers.open !== WIDGETS_EDITOR_DRAWER) {
+        const drawers = lgs.stores.ui.drawers
+        const isCurrentEditor = drawers.open === WIDGETS_EDITOR_DRAWER && drawers.entity === config.id
+
+        if (isCurrentEditor) {
+            __.ui.drawerManager.close()
+        }
+        else {
             __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
                 action: 'edit-current',
                 entity: config.id,
             })
         }
-        else {
-            __.ui.drawerManager.close()
-        }
-    }, [interactionLocked])
+    }, [interactionLocked, config.id, config.contextMenu])
 
-    // Context menu – long-tap (mobile) or right-click (desktop)
     const openContextMenu = useCallback((event) => {
         if (interactionLocked) {
             return
@@ -260,7 +258,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     }, [interactionLocked, config?.id])
 
-    // Unified pointer interaction hook (tap / double-tap / long-tap / right-click)
     const pointerInteractionsRef = usePointerInteractions({
                                                               onDoubleTap:           handleDoubleClick,
                                                               onLongTapOrRightClick: openContextMenu,
@@ -268,37 +265,42 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                                                               preventContextMenu:    true,
                                                           })
 
-    // Scale / resize handlers (unchanged – delegated to widget manager)
+    // Transform handlers
     const handleScale = useCallback((event) => __.ui.widgetManager.onScale(event, {
         widget: _widget,
         child:  _children,
     }, setPosition), [])
+
     const handleScaleStart = useCallback((event) => {
         _children.current?.onScaleStart?.(event)
         __.ui.widgetManager.onScaleStart(event)
     }, [])
+
     const handleScaleEnd = useCallback((event) => {
         _children.current?.onScaleEnd?.(event)
         __.ui.widgetManager.onScaleEnd(event)
         _moveable.current?.updateRect()
     }, [])
+
     const handleResize = useCallback((event) => {
         event.target.style.width = `${event.width}px`
         event.target.style.height = `${event.height}px`
         __.ui.widgetManager.onResize(event, {widget: _widget, child: _children}, setPosition)
     }, [])
+
     const handleResizeStart = useCallback((event) => {
         _children.current?.onResizeStart?.(event)
         __.ui.widgetManager.onResizeStart(event)
     }, [])
+
     const handleResizeEnd = useCallback((event) => {
         _children.current?.onResizeEnd?.(event)
         __.ui.widgetManager.onResizeEnd(event)
         _moveable.current?.updateRect()
     }, [])
+
     const handleBound = useCallback(() => __.ui.widgetManager.setBoundStatus(_widget.current), [])
 
-    // Cleanup on unmount
     useEffect(() => {
         return () => {
             if (_resizeRaf.current) {
@@ -309,14 +311,13 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
     }, [])
 
-    // Widget lifecycle – mount / configure / dispose
+    // Lifecycle and registration
     useEffect(() => {
         if (!isVisible || !config) {
             return
         }
 
         let cancelled = false
-        // If ID already contains UUID (format: key#uuid), use it as-is to avoid double generation
         const hasUUID = config.id && config.id.includes('#')
         config.id = hasUUID ? config.id : __.ui.widgetManager.defineElementId(config.group, config.id)
 
@@ -366,7 +367,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             if (success) {
                 _initialized.current = true
                 __.ui.widgetCache.mount(config.id)
-                // Preserve existing props instead of overwriting with empty object
                 if (!$widget.list.has(config.id)) {
                     $widget.list.set(config.id, {})
                 }
@@ -393,12 +393,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         requestAnimationFrame(init)
 
         if (config.type === LGS_VISUAL_WIDGET) {
-            // If ID already contains UUID (format: key#uuid), use it as-is
-            // Otherwise, generate a new unique ID
             const hasUUID = config.id && config.id.includes('#')
             const id = hasUUID ? config.id : __.ui.widgetManager.defineElementId(config.group, config.id)
-            const existingProps = $widget.list.get(id)
-            // Preserve existing props if they exist, otherwise set empty object
             if (!$widget.list.has(id)) {
                 $widget.list.set(id, {})
             }
@@ -421,7 +417,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
     }, [isVisible, config, video.recording])
 
-    // Keep Moveable bounds in sync
     useEffect(() => _moveable.current?.updateRect(), [bounds])
 
     if (!isVisible || (config.type === LGS_VISUAL_WIDGET && !$widget.list.has(config?.id))) {
@@ -430,7 +425,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     return (
         <div className="lgs-widget-container">
-            {/* Widget root – all pointer interactions are attached via the hook */}
             <div
                 className={classNames(LGS_WIDGET, {
                     [className]:              !!className,
@@ -441,7 +435,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 })}
                 ref={(el) => {
                     _widget.current = el
-                    pointerInteractionsRef(el)               // Unified pointer handling
+                    pointerInteractionsRef(el)
                 }}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
@@ -449,7 +443,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 {children}
             </div>
 
-            {/* react-moveable control box */}
             <Moveable
                 className="lgs-widget-control-box"
                 container={lgs.canvas}
