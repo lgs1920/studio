@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-12
- * Last modified: 2026-01-12
+ * Created on: 2026-01-13
+ * Last modified: 2026-01-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,7 +57,6 @@ export class TextWidgetManager {
         const lineHeightPx = fontSize * lineHeight
         const paddingSide = Math.max(4, lineHeightPx * 0.25)
         const paddingBottom = Math.max(5, lineHeightPx * 0.35)
-
         return {
             '--lgs-tx-tiles':    bgSnapshot ? `url(${bgSnapshot})` : 'none',
             '--lgs-tx-bg-color': element.background?.show ? this.getColor(element.background, true) : 'transparent',
