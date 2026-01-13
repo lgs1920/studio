@@ -55,6 +55,8 @@ const OptimizedTextArea = memo(({value, onInput, dynamicVars}) => {
 export const TextWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['text-widget'].configuration
     const configuration = useSnapshot($configuration)
+
+    // Fallback to user or default configuration if entity-specific data is missing
     const element = configuration?.elements?.[entity] ?? configuration.user ?? configuration.default
 
     const [bgSnapshot, setBgSnapshot] = useState(null)
@@ -62,54 +64,56 @@ export const TextWidgetEditor = ({entity}) => {
     const widgetManager = useMemo(() => TextWidgetManager.instance, [])
 
     /**
-     * Captures the background area and updates bgSnapshot.
+     * Captures a localized snapshot of the canvas behind the widget.
+     * This snapshot is used to simulate backdrop-filter blur in the preview area.
      */
     useEffect(() => {
-        const widgetEl = __.ui.widgetManager.getElementById(entity)
-        const sourceCanvas = lgs.canvas
+        const _widgetEl = __.ui.widgetManager.getElementById(entity)
+        const _sourceCanvas = lgs.canvas
 
-        if (!widgetEl || !sourceCanvas) {
+        if (!_widgetEl || !_sourceCanvas) {
             return
         }
 
         lgs.scene.render()
 
-        const canvasRect = sourceCanvas.getBoundingClientRect()
-        const widgetRect = widgetEl.getBoundingClientRect()
+        const _canvasRect = _sourceCanvas.getBoundingClientRect()
+        const _widgetRect = _widgetEl.getBoundingClientRect()
 
-        const centerX = (widgetRect.left - canvasRect.left) + (widgetRect.width / 2)
-        const centerY = (widgetRect.top - canvasRect.top) + (widgetRect.height / 2)
+        const _centerX = (_widgetRect.left - _canvasRect.left) + (_widgetRect.width / 2)
+        const _centerY = (_widgetRect.top - _canvasRect.top) + (_widgetRect.height / 2)
 
-        const sourceX = Math.max(0, Math.min(centerX - (PREVIEW_SIZE / 2), canvasRect.width - PREVIEW_SIZE))
-        const sourceY = Math.max(0, Math.min(centerY - (PREVIEW_SIZE / 2), canvasRect.height - PREVIEW_SIZE))
+        const _sourceX = Math.max(0, Math.min(_centerX - (PREVIEW_SIZE / 2), _canvasRect.width - PREVIEW_SIZE))
+        const _sourceY = Math.max(0, Math.min(_centerY - (PREVIEW_SIZE / 2), _canvasRect.height - PREVIEW_SIZE))
 
-        const tempCanvas = document.createElement('canvas')
-        tempCanvas.width = PREVIEW_SIZE
-        tempCanvas.height = PREVIEW_SIZE
-        const ctx = tempCanvas.getContext('2d')
+        const _tempCanvas = document.createElement('canvas')
+        _tempCanvas.width = PREVIEW_SIZE
+        _tempCanvas.height = PREVIEW_SIZE
+        const _ctx = _tempCanvas.getContext('2d')
 
-        ctx.drawImage(
-            sourceCanvas,
-            sourceX, sourceY, PREVIEW_SIZE, PREVIEW_SIZE,
+        _ctx.drawImage(
+            _sourceCanvas,
+            _sourceX, _sourceY, PREVIEW_SIZE, PREVIEW_SIZE,
             0, 0, PREVIEW_SIZE, PREVIEW_SIZE,
         )
 
-        const dataUrl = tempCanvas.toDataURL('image/webp', 0.8)
+        const _dataUrl = _tempCanvas.toDataURL('image/webp', 0.8)
 
         setBgSnapshot({
-                          image:     dataUrl,
-                          offset:    {x: sourceX, y: sourceY},
-                          widgetPos: {x: widgetRect.left - canvasRect.left, y: widgetRect.top - canvasRect.top},
+                          image:     _dataUrl,
+                          offset:    {x: _sourceX, y: _sourceY},
+                          widgetPos: {x: _widgetRect.left - _canvasRect.left, y: _widgetRect.top - _canvasRect.top},
                       })
 
         return () => {
-            tempCanvas.width = 0
-            tempCanvas.height = 0
+            _tempCanvas.width = 0
+            _tempCanvas.height = 0
         }
     }, [entity])
 
     /**
-     * Path-based store update.
+     * Updates the proxy store using a deep path.
+     * Automatically initializes the elements map for the specific entity if required.
      */
     const fastUpdate = useCallback((path, val) => {
         if (!$configuration) {
@@ -124,22 +128,24 @@ export const TextWidgetEditor = ({entity}) => {
             $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
         }
 
-        const keys = path.split('.')
-        let curr = $configuration.elements[entity]
-        for (let i = 0; i < keys.length - 1; i++) {
-            const key = keys[i]
-            if (!curr[key] || typeof curr[key] !== 'object') {
-                curr[key] = {}
+        const _keys = path.split('.')
+        let _curr = $configuration.elements[entity]
+
+        for (let i = 0; i < _keys.length - 1; i++) {
+            const _key = _keys[i]
+            if (!_curr[_key] || typeof _curr[_key] !== 'object') {
+                _curr[_key] = {}
             }
-            curr = curr[key]
+            _curr = _curr[_key]
         }
-        curr[keys[keys.length - 1]] = val
+        _curr[_keys[_keys.length - 1]] = val
     }, [$configuration, entity, element])
 
     const getColor = useCallback((item, alpha = false) => widgetManager.getColor(item, alpha), [widgetManager])
 
     /**
-     * Compute variables: Ensure bgSnapshot is tracked in dependencies.
+     * Regenerates CSS variables for the preview area.
+     * Dependencies include the background snapshot and the element's current state.
      */
     const dynamicVars = useMemo(() => {
         return widgetManager.generateCSSVariables(
@@ -172,7 +178,7 @@ export const TextWidgetEditor = ({entity}) => {
                 />
 
                 <div className="editor-controls-wrapper">
-                    {/* Text Elevation Section */}
+                    {/* Shadow Settings */}
                     <SlSwitch align-right size="x-small" checked={element.shadow?.show ?? false}
                               onSlInput={(e) => fastUpdate('shadow.show', e.target.checked)}>
                         <label>Text elevation</label>
@@ -201,7 +207,7 @@ export const TextWidgetEditor = ({entity}) => {
 
                     <SlDivider/>
 
-                    {/* Background Section */}
+                    {/* Background Settings including Blur control */}
                     <SlSwitch align-right size="x-small" checked={element.background?.show ?? false}
                               onSlInput={(e) => fastUpdate('background.show', e.target.checked)}>
                         <label>Background</label>
@@ -214,8 +220,16 @@ export const TextWidgetEditor = ({entity}) => {
                                                onSlInput={(e) => fastUpdate('background.color', e.target.value)}/>
                             </div>
                             <div className="drawer-horizontal-element">
-                                <SlSwitch align-right size="x-small" checked={element.background.blur ?? false}
-                                          onSlChange={(e) => fastUpdate('background.blur', e.target.checked)}>Blur</SlSwitch>
+                                <div>
+                                <SlSwitch
+                                    align-right
+                                    size="x-small"
+                                    checked={element.background.blur ?? false}
+                                    onSlChange={(e) => fastUpdate('background.blur', e.target.checked)}
+                                >
+                                    {'Blur'}&nbsp;
+                                </SlSwitch>
+                                </div>
                             </div>
                             <div className="drawer-horizontal-element xlarge-element">
                                 <SlRange min="0.1" max="1" step="0.05" value={element.background.opacity ?? 0.5}
@@ -226,7 +240,7 @@ export const TextWidgetEditor = ({entity}) => {
 
                     <SlDivider/>
 
-                    {/* Border Section */}
+                    {/* Border & Radius Settings */}
                     <SlSwitch align-right size="x-small" checked={element.border?.show ?? false}
                               onSlInput={(e) => fastUpdate('border.show', e.target.checked)}>
                         <span>Border</span>
@@ -268,7 +282,7 @@ export const TextWidgetEditor = ({entity}) => {
                         </>
                     )}
 
-                    {/* Box Elevation Section */}
+                    {/* Container Elevation Settings */}
                     {hasVisibleContainer && (
                         <>
                             <SlDivider/>
