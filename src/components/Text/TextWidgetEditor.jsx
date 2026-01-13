@@ -14,23 +14,22 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: TextWidgetEditor.jsx
+ ******************************************************************************/
+
 import { TextEditorToolbar }                       from '@Components/Text/TextEditorToolbar'
 import { WIDGET_RADIUS, WIDGET_SYSTEM_FONT_STACK } from '@Core/constants'
-import {
-    TextWidgetManager,
-}                                                  from '@Core/ui/text-metrics/TextWidgetManager'
+import { TextWidgetManager }                 from '@Core/ui/text-metrics/TextWidgetManager'
 import {
     SlColorPicker, SlDivider, SlInput, SlOption, SlRange, SlSelect, SlSwitch, SlTextarea,
 }                                                                 from '@shoelace-style/shoelace/dist/react'
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import React, { memo, useCallback, useMemo } from 'react'
 import { useSnapshot }                                            from 'valtio'
 
-const PREVIEW_SIZE = 512
-
-/**
- * Optimized text area for preview.
- * Receives computed CSS variables for background snapshot and styling.
- */
 const OptimizedTextArea = memo(({value, onInput, dynamicVars}) => {
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
@@ -55,82 +54,28 @@ const OptimizedTextArea = memo(({value, onInput, dynamicVars}) => {
 export const TextWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['text-widget'].configuration
     const configuration = useSnapshot($configuration)
-
-    // Fallback to user or default configuration if entity-specific data is missing
     const element = configuration?.elements?.[entity] ?? configuration.user ?? configuration.default
 
-    const [bgSnapshot, setBgSnapshot] = useState(null)
+    // Consume the pre-rendered snapshot from the global store
+    const widgetStore = useSnapshot(lgs.stores.ui.widget)
+    const bgSnapshot = widgetStore.currentSnapshot
+
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
     const widgetManager = useMemo(() => TextWidgetManager.instance, [])
 
-    /**
-     * Captures a localized snapshot of the canvas behind the widget.
-     * This snapshot is used to simulate backdrop-filter blur in the preview area.
-     */
-    useEffect(() => {
-        const _widgetEl = __.ui.widgetManager.getElementById(entity)
-        const _sourceCanvas = lgs.canvas
-
-        if (!_widgetEl || !_sourceCanvas) {
-            return
-        }
-
-        lgs.scene.render()
-
-        const _canvasRect = _sourceCanvas.getBoundingClientRect()
-        const _widgetRect = _widgetEl.getBoundingClientRect()
-
-        const _centerX = (_widgetRect.left - _canvasRect.left) + (_widgetRect.width / 2)
-        const _centerY = (_widgetRect.top - _canvasRect.top) + (_widgetRect.height / 2)
-
-        const _sourceX = Math.max(0, Math.min(_centerX - (PREVIEW_SIZE / 2), _canvasRect.width - PREVIEW_SIZE))
-        const _sourceY = Math.max(0, Math.min(_centerY - (PREVIEW_SIZE / 2), _canvasRect.height - PREVIEW_SIZE))
-
-        const _tempCanvas = document.createElement('canvas')
-        _tempCanvas.width = PREVIEW_SIZE
-        _tempCanvas.height = PREVIEW_SIZE
-        const _ctx = _tempCanvas.getContext('2d')
-
-        _ctx.drawImage(
-            _sourceCanvas,
-            _sourceX, _sourceY, PREVIEW_SIZE, PREVIEW_SIZE,
-            0, 0, PREVIEW_SIZE, PREVIEW_SIZE,
-        )
-
-        const _dataUrl = _tempCanvas.toDataURL('image/webp', 0.8)
-
-        setBgSnapshot({
-                          image:     _dataUrl,
-                          offset:    {x: _sourceX, y: _sourceY},
-                          widgetPos: {x: _widgetRect.left - _canvasRect.left, y: _widgetRect.top - _canvasRect.top},
-                      })
-
-        return () => {
-            _tempCanvas.width = 0
-            _tempCanvas.height = 0
-        }
-    }, [entity])
-
-    /**
-     * Updates the proxy store using a deep path.
-     * Automatically initializes the elements map for the specific entity if required.
-     */
     const fastUpdate = useCallback((path, val) => {
         if (!$configuration) {
             return
         }
-
         if (!$configuration.elements) {
             $configuration.elements = {}
         }
-
         if (!$configuration.elements[entity]) {
             $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
         }
 
         const _keys = path.split('.')
         let _curr = $configuration.elements[entity]
-
         for (let i = 0; i < _keys.length - 1; i++) {
             const _key = _keys[i]
             if (!_curr[_key] || typeof _curr[_key] !== 'object') {
@@ -143,10 +88,6 @@ export const TextWidgetEditor = ({entity}) => {
 
     const getColor = useCallback((item, alpha = false) => widgetManager.getColor(item, alpha), [widgetManager])
 
-    /**
-     * Regenerates CSS variables for the preview area.
-     * Dependencies include the background snapshot and the element's current state.
-     */
     const dynamicVars = useMemo(() => {
         return widgetManager.generateCSSVariables(
             element,
@@ -178,7 +119,7 @@ export const TextWidgetEditor = ({entity}) => {
                 />
 
                 <div className="editor-controls-wrapper">
-                    {/* Shadow Settings */}
+                    {/* Elevation */}
                     <SlSwitch align-right size="x-small" checked={element.shadow?.show ?? false}
                               onSlInput={(e) => fastUpdate('shadow.show', e.target.checked)}>
                         <label>Text elevation</label>
@@ -207,7 +148,7 @@ export const TextWidgetEditor = ({entity}) => {
 
                     <SlDivider/>
 
-                    {/* Background Settings including Blur control */}
+                    {/* Background */}
                     <SlSwitch align-right size="x-small" checked={element.background?.show ?? false}
                               onSlInput={(e) => fastUpdate('background.show', e.target.checked)}>
                         <label>Background</label>
@@ -220,16 +161,14 @@ export const TextWidgetEditor = ({entity}) => {
                                                onSlInput={(e) => fastUpdate('background.color', e.target.value)}/>
                             </div>
                             <div className="drawer-horizontal-element">
-                                <div>
                                 <SlSwitch
                                     align-right
                                     size="x-small"
                                     checked={element.background.blur ?? false}
                                     onSlChange={(e) => fastUpdate('background.blur', e.target.checked)}
                                 >
-                                    {'Blur'}&nbsp;
+                                    Blur&nbsp;
                                 </SlSwitch>
-                                </div>
                             </div>
                             <div className="drawer-horizontal-element xlarge-element">
                                 <SlRange min="0.1" max="1" step="0.05" value={element.background.opacity ?? 0.5}
@@ -240,7 +179,7 @@ export const TextWidgetEditor = ({entity}) => {
 
                     <SlDivider/>
 
-                    {/* Border & Radius Settings */}
+                    {/* Border */}
                     <SlSwitch align-right size="x-small" checked={element.border?.show ?? false}
                               onSlInput={(e) => fastUpdate('border.show', e.target.checked)}>
                         <span>Border</span>
@@ -282,7 +221,7 @@ export const TextWidgetEditor = ({entity}) => {
                         </>
                     )}
 
-                    {/* Container Elevation Settings */}
+                    {/* Box Elevation */}
                     {hasVisibleContainer && (
                         <>
                             <SlDivider/>

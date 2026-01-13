@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-12
- * Last modified: 2026-01-12
+ * Created on: 2026-01-13
+ * Last modified: 2026-01-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -547,3 +547,6 @@ export const WIDGET_SYSTEM_FONT_STACK = '-apple-system, BlinkMacSystemFont, "Seg
  * Includes system font and Google Fonts
  */
 export const WIDGET_FONT_FAMILIES = ['System', ...WIDGET_GOOGLE_FONTS]
+
+export const WIDGET_EDITOR_PRE_RENDER_EVENT  = 'widget-editor-pre-render',
+             WIDGET_EDITOR_POST_RENDER_EVENT = 'widget-editor-post-render'

@@ -88,4 +88,27 @@ export class TextWidgetManager {
 
         }
     }
+
+    /**
+     * Captures the background and opens the editor.
+     * This runs BEFORE the Panel or TextWidgetEditor are even mounted.
+     */
+    async openTextEditor(group, key, entity) {
+        const _widgetEl = __.ui.widgetManager.getElementById(entity)
+        const _sourceCanvas = lgs.canvas
+
+        if (_widgetEl && _sourceCanvas) {
+            // 1. Force a clean render of the scene
+            lgs.scene.render()
+
+            // 2. Capture the snapshot immediately
+            const _snapshot = await this.captureBackgroundSnapshot(_widgetEl, _sourceCanvas)
+
+            // 3. Store it in a global proxy or cache accessible by the editor
+            lgs.stores.ui.widget.currentSnapshot = _snapshot
+        }
+
+        // 4. Finally, open the drawer
+        __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {entity})
+    }
 }

@@ -130,7 +130,6 @@ export const Panel = () => {
                 </div>
 
                 <div className="drawer-content">
-                    <Suspense fallback={<EditorSkeleton/>}>
                         {EditorComponent ? (
                             <EditorComponent
                                 entity={drawers.entity}
@@ -142,7 +141,6 @@ export const Panel = () => {
                                  Component for "{data.type}" not found.
                              </div>
                          )}
-                    </Suspense>
                 </div>
                 <DrawerFooter slot="footer"/>
             </SlDrawer>

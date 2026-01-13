@@ -17,6 +17,8 @@
 import { usePointerInteractions } from '@Components/MainUI/context-menu/usePointerInteractions'
 import {
     LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET, LGS_WIDGET_SCALE_FACTOR,
+    WIDGET_EDITOR_POST_RENDER_EVENT,
+    WIDGET_EDITOR_PRE_RENDER_EVENT,
     WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
 } from '@Core/constants'
 import {
@@ -146,6 +148,63 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         observer.observe(container)
         return () => observer.unobserve(container)
     }, [centerGuidelines, gridGuidelines])
+    /**
+     * Listen for pre-render events to perform background capture.
+     * Placed here because this component holds the actual DOM reference (_widget.current).
+     */
+    useEffect(() => {
+        const handlePreRender = (event) => {
+            const {entity} = event.detail
+
+            // Only act if this specific widget instance is targeted
+            if (entity !== config.id || !entity.includes('text-widget')) {
+                return
+            }
+
+            const _sourceCanvas = lgs.canvas
+            const _element = _widget.current
+            const PREVIEW_SIZE = 512
+
+            if (_element && _sourceCanvas) {
+                // Force a fresh render of the background scene
+                lgs.scene.render()
+
+                const _canvasRect = _sourceCanvas.getBoundingClientRect()
+                const _widgetRect = _element.getBoundingClientRect()
+
+                const _centerX = (_widgetRect.left - _canvasRect.left) + (_widgetRect.width / 2)
+                const _centerY = (_widgetRect.top - _canvasRect.top) + (_widgetRect.height / 2)
+
+                const _sourceX = Math.max(0, Math.min(_centerX - (PREVIEW_SIZE / 2), _canvasRect.width - PREVIEW_SIZE))
+                const _sourceY = Math.max(0, Math.min(_centerY - (PREVIEW_SIZE / 2), _canvasRect.height - PREVIEW_SIZE))
+
+                const _tempCanvas = document.createElement('canvas')
+                _tempCanvas.width = PREVIEW_SIZE
+                _tempCanvas.height = PREVIEW_SIZE
+                const _ctx = _tempCanvas.getContext('2d')
+
+                _ctx.drawImage(
+                    _sourceCanvas,
+                    _sourceX, _sourceY, PREVIEW_SIZE, PREVIEW_SIZE,
+                    0, 0, PREVIEW_SIZE, PREVIEW_SIZE,
+                )
+
+                // Update the global store: the Editor will pick this up instantly
+                $widget.currentSnapshot = {
+                    image:     _tempCanvas.toDataURL('image/webp', 0.8),
+                    offset:    {x: _sourceX, y: _sourceY},
+                    widgetPos: {x: _widgetRect.left - _canvasRect.left, y: _widgetRect.top - _canvasRect.top},
+                }
+
+                _tempCanvas.width = 0
+                _tempCanvas.height = 0
+            }
+            console.log('Widget preview captured!')
+        }
+
+        window.addEventListener(WIDGET_EDITOR_PRE_RENDER_EVENT, handlePreRender)
+        return () => window.removeEventListener(WIDGET_EDITOR_PRE_RENDER_EVENT, handlePreRender)
+    }, [config.id])
 
     // Visibility handlers for control box
     const handleMouseEnter = useCallback(() => {
@@ -236,10 +295,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             __.ui.drawerManager.close()
         }
         else {
+            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {
+                detail: {entity: config.id},
+            }))
             __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
                 action: 'edit-current',
                 entity: config.id,
             })
+            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {
+                detail: {entity: config.id},
+            }))
+
         }
     }, [interactionLocked, config.id, config.contextMenu])
 

@@ -14,30 +14,23 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER } from '@Core/constants'
+import { faRegularSquareCircleMinus, faRegularSquareCirclePlus } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import {
-    faRegularSquareCirclePlus,
-    faRegularSquareCircleMinus,
-}                                                      from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+    WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
+}                                                                from '@Core/constants'
 import {
-    faArrowDown,
-    faArrowDownLeft,
-    faArrowDownRight,
-    faArrowLeft,
-    faArrowRight,
-    faArrowUp,
-    faArrowUpLeft,
-    faArrowUpRight,
-    faCompress,
-    faPlus,
-    faTrashCan,
-    faPaintbrushPencil,
-}                               from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                      from '@Utils/FA2SL'
+    WidgetDynamicRenderer,
+}                                                                from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import {
+    faArrowDown, faArrowDownLeft, faArrowDownRight, faArrowLeft, faArrowRight, faArrowUp, faArrowUpLeft, faArrowUpRight,
+    faCompress, faPaintbrushPencil, faPlus, faTrashCan,
+}                                                                from '@fortawesome/pro-regular-svg-icons'
+import {
+    SlIcon, SlTooltip,
+}                                                                from '@shoelace-style/shoelace/dist/react'
+import { FA2SL }                                                 from '@Utils/FA2SL'
 import React, { useMemo } from 'react'
-import { useSnapshot }    from 'valtio'
+import { useSnapshot }                                           from 'valtio'
 
 const PERCENTAGE = 0.1
 
@@ -109,10 +102,18 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
             __.ui.drawerManager.close()
         }
         else {
+
+            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_PRE_RENDER_EVENT, {
+                detail: {entity: targetId},
+            }))
             __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
                 action: 'edit-current',
                 entity: targetId,
             })
+            window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {
+                detail: {entity: targetId},
+            }))
+
         }
         closeMenu()
     }

@@ -83,6 +83,10 @@
     margin-left: auto;
 }
 
+.text-widget-editor-header sl-button:not(.square-button) sl-icon:first-child {
+    margin-left: var(--lgs-gutter-s);
+}
+
 .text-widget-editor .text-widget-toolbar {
     display: flex;
     align-items: center;
