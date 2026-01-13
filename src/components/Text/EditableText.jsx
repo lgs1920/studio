@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-12
- * Last modified: 2026-01-12
+ * Created on: 2026-01-13
+ * Last modified: 2026-01-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -176,7 +176,7 @@ export const EditableText = ({id, scale = 1}) => {
                 width:    'auto',
                 maxWidth: 'none',
                 backgroundColor: 'var(--lgs-tx-bg-color)',
-                backdropFilter:  'var(--lgs-tx-blur)',
+                backdropFilter: 'blur(var(--lgs-tx-blur))',
                 border:          'var(--lgs-tx-border)',
                 borderRadius:    'var(--lgs-tx-radius)',
                 boxShadow:       'var(--lgs-bg-elevation)',
@@ -191,7 +191,7 @@ export const EditableText = ({id, scale = 1}) => {
                     userSelect: 'none',
                     visibility: isEditing ? 'hidden' : 'visible',
                     opacity:    element.opacity,
-                    filter:     element.blur ? 'blur(2px)' : 'none',
+                    // filter:     element.blur ? 'blur(2px)' : 'none',
                     display:    hasMultipleLines ? 'flex' : 'block',
                     alignItems: hasMultipleLines ? 'center' : 'initial',
                     minHeight:  hasMultipleLines ? '100%' : 'auto',

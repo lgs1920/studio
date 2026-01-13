@@ -57,6 +57,7 @@ export class TextWidgetManager {
         const lineHeightPx = fontSize * lineHeight
         const paddingSide = Math.max(4, lineHeightPx * 0.25)
         const paddingBottom = Math.max(5, lineHeightPx * 0.35)
+
         return {
             '--lgs-tx-tiles':    bgSnapshot ? `url(${bgSnapshot})` : 'none',
             '--lgs-tx-bg-color': element.background?.show ? this.getColor(element.background, true) : 'transparent',
@@ -73,7 +74,7 @@ export class TextWidgetManager {
             '--lgs-tx-padding-right':  `${paddingSide}px`,
             '--lgs-tx-padding-bottom': `${paddingBottom}px`,
             '--lgs-tx-padding-left':   `${paddingSide}px`,
-            '--lgs-tx-blur':   (element.background?.show && element.background?.blur) ? 'blur(5px)' : 'none',
+            '--lgs-tx-blur': (element.background?.show && element.background?.blur) ? 'var(--lgs-blur-s)' : '0',
             '--lgs-bg-elevation': (element.background?.shadow?.show && hasVisibleContainer) ? (
                 element.background.shadow.value === 'small' ? `0 2px 8px ${bgShadowColor}` :
                 element.background.shadow.value === 'large' ? `0 16px 32px ${bgShadowColor}` :
