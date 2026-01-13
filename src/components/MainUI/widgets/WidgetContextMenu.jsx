@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-12
- * Last modified: 2026-01-12
+ * Created on: 2026-01-13
+ * Last modified: 2026-01-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,65 +36,90 @@ import {
 }                               from '@fortawesome/pro-regular-svg-icons'
 import { SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                      from '@Utils/FA2SL'
-import React, { useEffect, useState } from 'react'
+import React, { useMemo } from 'react'
+import { useSnapshot }    from 'valtio'
 
 const PERCENTAGE = 0.1
 
 /**
- * Pure UI component that renders the context menu for a widget.
- * Receives only the widget ID (targetId) – no knowledge of positioning or visibility.
- * All actions close the global context menu via the shared store.
+ * Renders the context menu for a specific widget.
  *
- * @param {{ targetId: string | number }} props
- * @returns {JSX.Element|null} The menu markup or null if nothing can be shown
+ * @param {Object} props
+ * @param {string|number} props.targetId - Unique ID of the targeted widget
+ * @param {React.RefObject} props.menuRef - Ref for the menu container
  */
 export const WidgetContextMenu = ({targetId, menuRef}) => {
-    // Retrieve DOM element and configuration for the targeted widget
+    // Shared store state
+    const drawers = useSnapshot(lgs.stores.ui.drawers)
+
+    // Core widget data
     const element = __.ui.widgetManager.getElementById(targetId)
     const config = __.ui.widgetManager.getWidgetConfig(targetId)
-    const [isEditing, setEditMode] = useState(false)
-    const $drawers = lgs.stores.ui.drawers
 
-    const hasCapabilities = config?.contextMenu ? __.ui.widgetManager.hasCapabilities(
-        config.contextMenu,
-        WIDGETS_CAPABILITIES,
-    ) : false
+    // Memoized capabilities for performance
+    const capabilities = useMemo(() => {
+        if (!config?.contextMenu) {
+            return {}
+        }
+        return {
+            hasAny:      __.ui.widgetManager.hasCapabilities(config.contextMenu, WIDGETS_CAPABILITIES),
+            canReset:    config.contextMenu.canReset,
+            canEdit:     config.contextMenu.canEdit,
+            canRemove:   config.contextMenu.canRemove,
+            canPosition: config.contextMenu.canPosition,
+        }
+    }, [config])
 
-    // Helper to close the global context menu (shared store)
-    const closeMenu = () => {
-        __.ui.contextMenu.hide()
+    // Early return if widget is invalid
+    if (!element || !config || !capabilities.hasAny) {
+        return null
     }
 
-    /** Completely removes the widget from cache, store and DOM */
+    const closeMenu = () => __.ui.contextMenu.hide()
+
+    /**
+     * Triggers widget deletion and cleans up associated UI state
+     */
     const removeWidget = () => {
         new WidgetDynamicRenderer().destroyWidget(targetId)
 
-        // remove from settings
+        // Cleanup settings persistence
         const type = targetId.split('#')[0]
-        const elements = lgs.settings.widgets[type].configuration.elements
+        const elements = lgs.settings.widgets[type]?.configuration?.elements
         if (elements && elements[targetId]) {
             delete elements[targetId]
         }
 
-        // Remove from main DB
         element && __.ui.widgetManager.disposeElement(element)
 
-        setEditMode(false)
-        closeMenu()
-    }
+        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawers.entity === targetId) {
+            __.ui.drawerManager.close()
+        }
 
-    /** Launch the widget editor */
-    const editWidget = () => {
-        __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
-            action: 'edit-current',
-            entity: targetId,
-        })
         closeMenu()
     }
 
     /**
-     * Resizes the widget by a relative factor.
-     * Factor = 1 → reset to original size.
+     * Toggles or opens the editor drawer for the current entity
+     */
+    const editWidget = () => {
+        const isCurrentlyEditing = drawers.open === WIDGETS_EDITOR_DRAWER && drawers.entity === targetId
+
+        if (isCurrentlyEditing) {
+            __.ui.drawerManager.close()
+        }
+        else {
+            __.ui.drawerManager.open(WIDGETS_EDITOR_DRAWER, {
+                action: 'edit-current',
+                entity: targetId,
+            })
+        }
+        closeMenu()
+    }
+
+    /**
+     * Handles relative scaling operations
+     * @param {number} factor - Scale multiplier or 1 for reset
      */
     const resetSize = (factor) => {
         const elementId = __.ui.widgetManager.retrieveElementId(element)
@@ -113,16 +138,13 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
             )
         }
 
-        // Adapt scale & position to current container bounds
         config.scale = __.ui.widgetManager.adaptScaleToContainer(config, container)
         config.position = __.ui.widgetManager.adaptPositionToContainer(config, container)
 
-        // Persist if needed
         if (config.persist) {
             __.ui.widgetManager.saveWidgetPosition(elementId, config)
         }
 
-        // Apply visual changes
         __.ui.widgetManager.setScale(element, config.scale.x, config.scale.y)
         __.ui.widgetManager.applyPosition(element, config.position)
 
@@ -131,30 +153,16 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
         }
     }
 
-    /** Moves the widget to one of the predefined snap positions */
     const moveTo = (methodName) => {
         __.ui.widgetManager[methodName](element, lgs.gutter.xs)
         closeMenu()
     }
 
-    useEffect(() => {
-        setEditMode($drawers.open === WIDGETS_EDITOR_DRAWER)
-    }, [$drawers.open])
-
-    // Early return AFTER all hooks if the widget no longer exists or has no context-menu config
-    if (!element || !config?.contextMenu) {
-        return null
-    }
-
-    // --------------------------------------------------------------------- //
-    // Render
-    // --------------------------------------------------------------------- //
-
     return (
         <div className="lgs-context-menu widget-context-menu lgs-card on-map" ref={menuRef}>
             <ul>
-                {/* ----- Size controls ----- */}
-                {hasCapabilities && config.contextMenu.canReset && (
+                {/* Size controls */}
+                {capabilities.canReset && (
                     <li className="widget-grid-one-line widget-no-hover buttons-bar-on-map">
                         <SlTooltip content="Reset size" placement="top">
                             <SlIcon
@@ -185,8 +193,8 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                     </li>
                 )}
 
-                {/* ----- Edit widget ----- */}
-                {hasCapabilities && config.contextMenu.canEdit && !isEditing && (
+                {/* Edit action - Only show if not already being edited in the current entity context */}
+                {capabilities.canEdit && (drawers.open !== WIDGETS_EDITOR_DRAWER || drawers.entity !== targetId) && (
                     <li onClick={editWidget}>
                         <SlIcon library="fa" name={FA2SL.set(faPaintbrushPencil)}/>
                         <SlTooltip content="Edit Widget" placement="left">
@@ -195,8 +203,8 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                     </li>
                 )}
 
-                {/* ----- Remove widget ----- */}
-                {hasCapabilities && config.contextMenu.canRemove && !isEditing && (
+                {/* Remove action */}
+                {capabilities.canRemove && (
                     <li onClick={removeWidget}>
                         <SlIcon library="fa" name={FA2SL.set(faTrashCan)}/>
                         <SlTooltip content="Remove Widget" placement="left">
@@ -205,8 +213,8 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                     </li>
                 )}
 
-                {/* ----- Snap positioning grid ----- */}
-                {hasCapabilities && config.contextMenu.canPosition && (
+                {/* Positioning Grid */}
+                {capabilities.canPosition && (
                     <li className="widget-grid-position widget-no-hover buttons-bar-on-map">
                         <SlTooltip content="Top left">
                             <SlIcon library="fa" name={FA2SL.set(faArrowUpLeft)} className="lgs-one-line-card on-map"
