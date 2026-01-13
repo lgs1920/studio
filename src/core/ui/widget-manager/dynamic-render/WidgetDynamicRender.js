@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-13
+ * Last modified: 2026-01-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,11 +18,15 @@ import { WidgetRegistry } from '@Core/ui/widget-manager/registry/WidgetRegistry'
 
 /**
  * Singleton class responsible for dynamically rendering and managing widgets.
+ * Optimized to prevent "ghosting" and display delays.
  */
 export class WidgetDynamicRenderer {
     /** @type {WidgetDynamicRenderer} */
     static #instance
     registry = new WidgetRegistry()
+
+    // Memory cache for pre-resolved components
+    #resolvedComponents = new Map()
 
     constructor() {
         if (WidgetDynamicRenderer.#instance) {
@@ -38,14 +42,22 @@ export class WidgetDynamicRenderer {
         return WidgetDynamicRenderer.#instance
     }
 
-    reset() {
+    /**
+     * Pre-loads a widget component to ensure immediate display on first render.
+     */
+    async preloadWidget(group, key) {
+        const groupsMap = this.theGroups([group])
+        const theGroups = groupsMap.get(group)
+        const theWidget = theGroups?.widgets.get(key.split('#')[0])
+
+        if (theWidget?.component && !this.#resolvedComponents.has(theWidget.component)) {
+            const component = await this.registry.getLazyComponent(theWidget.component)
+            this.#resolvedComponents.set(theWidget.component, component)
+            return component
+        }
+        return this.#resolvedComponents.get(theWidget?.component)
     }
 
-    /**
-     * Filters and returns valid widget groups.
-     * @param {Iterable<string>} groups
-     * @returns {Map<string, Object>}
-     */
     theGroups(groups) {
         const subGroups = new Map()
         for (const group of groups) {
@@ -57,26 +69,7 @@ export class WidgetDynamicRenderer {
     }
 
     /**
-     * Finds an existing widget ID in the store based on key and board.
-     * @param {string} key - The base widget key.
-     * @param {string} widgetsBoard - The specific board ID.
-     * @returns {string|null}
-     */
-    findExistingInList(key, widgetsBoard) {
-        const $list = lgs.stores.ui.widget.list
-        return Array.from($list.keys()).find(id => {
-            const entry = $list.get(id)
-            return id.startsWith(key) && entry?.widgetsBoard === widgetsBoard
-        }) || null
-    }
-
-    /**
-     * Checks if a widget can be rendered based on global registry limits and board quotas.
-     * Supports multiple instances if max > 1.
-     * @param {string} group - Group ID.
-     * @param {string} key - Widget base key.
-     * @param {Object} props - Widget props (including widgetsBoard).
-     * @returns {{canRender: boolean, widgetId: string|null, existingInList: string|null}}
+     * Checks if a widget can be rendered.
      */
     canRenderWidget = (group, key, props = {}) => {
         const {widgetsBoard, forceRefresh} = props
@@ -85,23 +78,20 @@ export class WidgetDynamicRenderer {
         const existingInList = this.findExistingInList(key, widgetsBoard)
         const existingInCache = __.ui.widgetCache.has(key, {group, full: false, widgetsBoard})
 
-        // Scenario 1: Slot available for a new instance
         if (!isMaxReached) {
             const widgetId = __.ui.widgetManager.defineElementId(group, key)
             return {canRender: true, widgetId, existingInList: null}
         }
 
-        // Scenario 2: Max reached, but we want to force a refresh/re-render of an existing instance
         if (existingInList && forceRefresh && existingInCache) {
             return {canRender: true, widgetId: existingInList, existingInList}
         }
 
-        // Scenario 3: Max reached and no bypass allowed
         return {canRender: false, widgetId: null, existingInList}
     }
 
     /**
-     * Loads, registers, and updates the store for a widget component.
+     * Renders a widget. Ensures resolution is complete before store injection.
      */
     async renderWidget(group, key, props = {}) {
         const $widget = lgs.stores.ui.widget
@@ -114,43 +104,67 @@ export class WidgetDynamicRenderer {
         const groupsMap = this.theGroups([group])
         const theGroups = groupsMap.get(group)
         if (!theGroups) {
-            console.warn(`[WidgetDynamicRenderer] Group "${group}" not found`)
             return null
         }
 
         const theWidget = theGroups.widgets.get(key.split('#')[0])
-        let LazyWidget = null
+        let ResolvedComponent = null
 
         if (theWidget?.component) {
-            LazyWidget = this.registry.getLazyComponent(theWidget.component)
-
-            if (!LazyWidget) {
-                console.error(`[WidgetDynamicRenderer] Resolution failed for: ${theWidget.component}`)
-                return null
-            }
+            // CRITICAL: We wait for the component to be fully loaded into memory
+            // This prevents React from seeing an 'undefined' component during the first render
+            ResolvedComponent = await this.preloadWidget(group, key)
         }
 
-        // registering in the local memory cache for instance persistence
-        __.ui.widgetCache.set(widgetId, {
-            group,
-            component:    LazyWidget,
-            widgetsBoard: props.widgetsBoard,
+        return new Promise((resolve) => {
+            const commitUpdate = () => {
+                // Registering in cache with the resolved reference
+                __.ui.widgetCache.set(widgetId, {
+                    group,
+                    component:    ResolvedComponent,
+                    widgetsBoard: props.widgetsBoard,
+                })
+
+                // Only update the Valtio store once everything is ready in cache
+                $widget.list.set(widgetId, props)
+
+                resolve(ResolvedComponent ?? widgetId)
+            }
+
+            // High priority for the first render to avoid visual delay
+            const isNew = !$widget.list.has(widgetId)
+
+            if (isNew) {
+                // Immediate execution for new widgets
+                commitUpdate()
+            }
+            else {
+                // Schedule updates to keep the main thread fluid
+                if (window.requestIdleCallback) {
+                    window.requestIdleCallback(() => commitUpdate(), {timeout: 100})
+                }
+                else {
+                    setTimeout(commitUpdate, 0)
+                }
+            }
         })
+    }
 
-        // push to Valtio store to trigger UI update
-        $widget.list.set(widgetId, props)
-
-        return LazyWidget ?? widgetId
+    findExistingInList(key, widgetsBoard) {
+        const $list = lgs.stores.ui.widget.list
+        return Array.from($list.keys()).find(id => {
+            const entry = $list.get(id)
+            return id.startsWith(key) && entry?.widgetsBoard === widgetsBoard
+        }) || null
     }
 
     /**
-     * Destroys and removes a specific widget instance from memory and store.
+     * Properly removes a widget from store and cache.
      */
     destroyWidget(widgetId) {
         const $widget = lgs.stores.ui.widget
         $widget.list.delete(widgetId)
         __.ui.widgetCache.delete(widgetId)
-
         return true
     }
 }
