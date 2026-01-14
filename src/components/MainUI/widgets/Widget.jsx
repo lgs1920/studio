@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-14
- * Last modified: 2026-01-14
+ * Created on: 2026-01-15
+ * Last modified: 2026-01-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,6 +55,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const _dragConfirmed = useRef(false)
     const _dragStart = useRef({x: 0, y: 0})
     const _initialized = useRef(false)
+    const _prevRotate = useRef(0)
 
     // UI state
     const [bounds, setBounds] = useState({left: 0, top: 0, right: 0, bottom: 0})
@@ -148,15 +149,13 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         observer.observe(container)
         return () => observer.unobserve(container)
     }, [centerGuidelines, gridGuidelines])
+
     /**
      * Listen for pre-render events to perform background capture.
-     * Placed here because this component holds the actual DOM reference (_widget.current).
      */
     useEffect(() => {
         const handlePreRender = (event) => {
             const {entity} = event.detail
-
-            // Only act if this specific widget instance is targeted
             if (entity !== config.id || !entity.includes('text-widget')) {
                 return
             }
@@ -166,7 +165,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             const PREVIEW_SIZE = 512
 
             if (_element && _sourceCanvas) {
-                // Force a fresh render of the background scene
                 lgs.scene.render()
 
                 const _canvasRect = _sourceCanvas.getBoundingClientRect()
@@ -189,7 +187,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     0, 0, PREVIEW_SIZE, PREVIEW_SIZE,
                 )
 
-                // Update the global store: the Editor will pick this up instantly
                 $widget.currentSnapshot = {
                     image:     _tempCanvas.toDataURL('image/webp', 0.8),
                     offset:    {x: _sourceX, y: _sourceY},
@@ -199,7 +196,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 _tempCanvas.width = 0
                 _tempCanvas.height = 0
             }
-            console.log('Widget preview captured!')
         }
 
         window.addEventListener(WIDGET_EDITOR_PRE_RENDER_EVENT, handlePreRender)
@@ -255,13 +251,18 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
         const element = _widget.current
         if (element) {
-            const {scale} = __.ui.widgetManager.getTransform(element)
-            element.style.transform = `translate(${event.translate[0]}px, ${event.translate[1]}px) scale(${scale.x}, ${scale.y})`
+            const {scale, rotate} = __.ui.widgetManager.getTransform(element)
+            element.style.transform = `translate(${event.translate[0]}px, ${event.translate[1]}px) rotate(${rotate}deg) scale(${scale.x}, ${scale.y})`
+            event.target.style.transform = element.style.transform
+            _moveable.current.updateRect()
+
             __.ui.widgetManager.applyPosition(element, element.style.transform, _moveable, true, setControlBox)
         }
+
         __.ui.widgetManager.onDrag(event)
         _children.current?.handleDrag?.(event)
     }, [])
+
 
     const handleDragEnd = useCallback((event) => {
         __.ui.widgetManager.onDragEnd(event)
@@ -271,10 +272,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         _moveable.current?.updateRect()
     }, [isMouseOver])
 
-    /**
-     * Toggles the editor drawer based on current open state and entity ID.
-     * Only closes if the editor is already open on the exact same widget.
-     */
     const handleDoubleClick = useCallback((event) => {
         if (interactionLocked) {
             return
@@ -305,7 +302,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             window.dispatchEvent(new CustomEvent(WIDGET_EDITOR_POST_RENDER_EVENT, {
                 detail: {entity: config.id},
             }))
-
         }
     }, [interactionLocked, config.id, config.contextMenu])
 
@@ -321,7 +317,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         lgs.stores.ui.contextMenu.type = 'widget'
         lgs.stores.ui.contextMenu.targetId = config.id
         lgs.stores.ui.contextMenu.position = {x: clientX, y: clientY}
-
     }, [interactionLocked, config?.id])
 
     const pointerInteractionsRef = usePointerInteractions({
@@ -362,6 +357,26 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const handleResizeEnd = useCallback((event) => {
         _children.current?.onResizeEnd?.(event)
         __.ui.widgetManager.onResizeEnd(event)
+        _moveable.current?.updateRect()
+    }, [])
+
+    // Rotation handlers
+    const handleRotateStart = useCallback((event) => {
+        _children.current?.onRotateStart?.(event)
+        __.ui.widgetManager.onRotateStart(event)
+        _moveable.current?.updateRect()
+    }, [])
+
+    const handleRotate = useCallback((event) => {
+        _children.current?.onRotate?.(event)
+        __.ui.widgetManager.onRotate(event, {_prevRotate})
+        _moveable.current?.updateRect()
+    }, [])
+
+    const handleRotateEnd = useCallback((event) => {
+        _children.current?.onRotateEnd?.(event)
+        __.ui.widgetManager.onRotateEnd(event)
+        _moveable.current?.updateRect()
         _moveable.current?.updateRect()
     }, [])
 
@@ -442,7 +457,13 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 if (interactionLocked) {
                     _w2c.current = new Widget2Canvas(
                         _widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'),
-                        {embedFonts: true, scale: LGS_WIDGET_SCALE_FACTOR, type: fullConfig.snap},
+                        {
+                            embedFonts:      true,
+                            scale:           LGS_WIDGET_SCALE_FACTOR,
+                            type:            fullConfig.snap,
+                            outerTransforms: true,
+                            outerShadows:    true,
+                        },
                     )
                     await _w2c.current.init()
                     __.recorder.addEventListener(ScreenMediaRecorder.events.STOP, clean)
@@ -513,8 +534,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             <Moveable
                 className="lgs-widget-control-box"
                 container={lgs.canvas}
-                origin={true}
-                transformOrigin={['50%', '50%']}
+                origin={false}
                 ref={_moveable}
                 target={_widget}
                 draggable={interactionLocked ? false : config?.draggable ?? true}
@@ -529,25 +549,35 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 keepRatio={Boolean(
                     __.ui.widgetManager.getWidgetConfig(config?.id)?.ratio?.locked ?? config?.ratio?.locked,
                 )}
+
+
+                resizable={interactionLocked ? false : config?.resizable ?? false}
                 onResize={handleResize}
                 onResizeStart={handleResizeStart}
                 onResizeEnd={handleResizeEnd}
-                resizable={interactionLocked ? false : config?.resizable ?? false}
                 throttleResize={2}
+
+                scalable={interactionLocked ? false : config?.scalable ?? false}
                 onScale={handleScale}
                 onScaleStart={handleScaleStart}
                 onScaleEnd={handleScaleEnd}
                 onBeforeScale={(event) => event.inputEvent.shiftKey && event.setFixedDirection([0, 0])}
-                scalable={interactionLocked ? false : config?.scalable ?? false}
 
+                rotatable={interactionLocked ? false : config?.rotatable ?? false}
+                throttleRotate={1}
+                onRotateStart={handleRotateStart}
+                onRotate={handleRotate}
+                onRotateEnd={handleRotateEnd}
+                rotationPosition={'bottom'}
 
-                rotatable={config?.rotatable ?? false}
-                onRotateStart={({target}) => {
-                    console.log(target, target.style.transformOrigin)
+                pinchable={true}
+                onPinchStart={({target}) => {
+                    target.style.transformOrigin = '50% 50%'
                 }}
-                // onRotateEnd={({target}) => {
-                //     target.style.transformOrigin = `0 0`
-                // }}
+                onPinch={({target, transform}) => {
+                    target.style.transform = transform
+                }}
+
                 bounds={bounds}
                 elementGuidelines={[lgs.canvas]}
                 horizontalGuidelines={guidelines.horizontalGuidelines}
@@ -557,7 +587,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 snapGap={snapGap}
                 snapThreshold={snapThreshold}
                 snapRotationThreshold={5}
-                snapRotationDegrees={[0, 30, 45, 60, 90, 120, 135, 150, 180]}
+                snapRotationDegrees={[0, -30, -45, -60, -90, -120, -135, -150, -180]}
                 snappable={config?.snappable ?? true}
                 snapDirections={{top: true, right: true, bottom: true, left: true, center: true, middle: true}}
                 renderDirections={controlBox.renderDirections}

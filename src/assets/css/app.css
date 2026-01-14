@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-13
- * Last modified: 2026-01-13
+ * Created on: 2026-01-14
+ * Last modified: 2026-01-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -284,9 +284,29 @@ body {
     --height: calc(2 * var(--lgs-gutter)) !important;
 }
 
+/**
+ * Style override for Moveable origin point
+ * Using Font Awesome Free/Pro Unicode
+ */
+.moveable-control.moveable-origin {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border-color: var(--lgs-light-color-75) !important;
+    background: var(--lgs-dark-color-50) !important;
+}
+
 .lgs-widget-control-box .moveable-line {
     /* Always transparent whatever show control box parameter */
-    background: transparent !important /*var(--lgs-light-color-75) !important;*/
+    background: var(--lgs-light-color-75) !important;
+    /*background: transparent !important /*var(--lgs-light-color-75) !important;*/
+}
+
+/**
+ * Customize the Moveable rotation handle
+ */
+.moveable-control-box .moveable-control.moveable-rotation-control {
+    background: var(--lgs-light-color) !important;
 }
 
 .lgs-widget-control-box .moveable-guideline {

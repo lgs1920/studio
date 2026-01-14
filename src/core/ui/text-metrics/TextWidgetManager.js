@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-13
- * Last modified: 2026-01-13
+ * Created on: 2026-01-15
+ * Last modified: 2026-01-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -85,7 +85,6 @@ export class TextWidgetManager {
                 element.shadow.value === 'large' ? `0 4px 8px ${txShadowColor}` :
                 `0 2px 4px ${txShadowColor}`
             ) : 'none',
-
         }
     }
 

@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-13
- * Last modified: 2026-01-13
+ * Created on: 2026-01-15
+ * Last modified: 2026-01-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -70,6 +70,12 @@
     100% {
         background-position: 100% 0, 0 100%, 0 0, 100% 100%;
     }
+}
+
+.text-widget-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
 }
 
 .text-widget-editor-header {
@@ -143,6 +149,7 @@
 
     /* Force visibility of shadow */
     background: transparent !important;
+
 }
 
 /* * Layout wrapper
@@ -178,26 +185,28 @@
     transition: text-shadow 0.2s ease,
     background-color 0.2s ease,
     border 0.2s ease,
-    box-shadow 0.2s ease;
+    box-shadow 0.2s ease, transform 0.2s ease-in-out;
+    transform: var(--lgs-tx-transform);
+
     text-align: var(--lgs-tx-align);
 
     white-space: pre-wrap;
-
     word-wrap: break-word;
     color: var(--lgs-tx-color) !important;
-    border: var(--lgs-tx-border);
 
     /* Theming & Shadows */
+    border: var(--lgs-tx-border);
     border-radius: var(--lgs-tx-radius);
     background-color: var(--lgs-tx-bg-color);
     box-shadow: var(--lgs-bg-elevation);
-    text-shadow: var(--lgs-tx-shadow);
 
+    text-shadow: var(--lgs-tx-shadow);
     backdrop-filter: blur(var(--lgs-tx-blur));
     field-sizing: content;
     --sl-input-color: var(--lgs-tx-color);
     --sl-input-color-hover: var(--lgs-tx-color);
     --sl-input-color-focus: var(--lgs-tx-color);
+
     --sl-input-border-color-focus: transparent;
 }
 

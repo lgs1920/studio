@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-14
+ * Last modified: 2026-01-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,6 +51,7 @@ export class WidgetDBManager {
             transient:    config.transient,
             ttl:          config.ttl || null,
             scale:        scale,
+            rotate: config.rotate || 0,
             ratio:        config.ratio,
             attachTo:     config.attachTo,
         }

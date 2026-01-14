@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-15
+ * Last modified: 2026-01-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,7 @@
  * Delegates functionality to specialized classes.
  */
 import { WidgetDBManager } from '@Core/ui/widget-manager/WidgetDBManager'
+import { WidgetRotatable } from '@Core/ui/widget-manager/WidgetRotatable'
 import { WidgetCore }      from './WidgetCore'
 import { WidgetCropper }   from './WidgetCropper'
 import { WidgetDraggable } from './WidgetDraggable'
@@ -46,6 +47,9 @@ export class WidgetManager {
     /** @type {WidgetScalable} Instance of WidgetScalable */
     #scalable
 
+    /** @type {WidgetRotatable} Instance of WidgetRotatable */
+    #rotatable
+
     /** @type {WidgetTransform} Instance of WidgetTransform */
     #transform
 
@@ -61,7 +65,7 @@ export class WidgetManager {
 
     /**
      * Creates or returns the singleton instance of WidgetManager.
-     * @param {Object} store - Application store (currently unused)
+     * @param {Object} store - Application store
      */
     constructor(store) {
         if (WidgetManager.#instance) {
@@ -73,10 +77,12 @@ export class WidgetManager {
         this.#draggable = new WidgetDraggable(this, this.#cropper, this.#transform)
         this.#resizable = new WidgetResizable(this, this.#cropper)
         this.#scalable = new WidgetScalable(this, this.#cropper, this.#transform)
+        this.#rotatable = new WidgetRotatable(this, this.#transform)
         this.#position = new WidgetPosition(this)
         this.#core = new WidgetCore(this, this.#transform, this.#widgetDB)
         WidgetManager.#instance = this
     }
+
 
     /**
      * Gets the transform helper instance.
@@ -667,6 +673,17 @@ export class WidgetManager {
     parseTransform = transformString => this.#transform.parseTransform(transformString)
 
     /**
+     * Updates multiple transform values at once and applies them to the element.
+     * Useful for batch updates or complex operations like combined scaling and rotation.
+     * * @param {HTMLElement} element - The DOM element.
+     * @param {Object} transforms - The transform values to update.
+     * @param {Object} [transforms.translate] - Optional translate {x, y}.
+     * @param {Object} [transforms.scale] - Optional scale {x, y}.
+     * @param {number} [transforms.rotate] - Optional rotation in degrees.
+     */
+    setTransform = (element, transforms) => this.#transform.setTransform(element, transforms)
+
+    /**
      * Updates the scale values in the widget's transform.
      * @param {HTMLElement} element - The DOM element
      * @param {number} x - X scale value
@@ -721,4 +738,23 @@ export class WidgetManager {
      * @returns {{x: number, y: number}} The transform origin in pixels.
      */
     getTransformOriginFromString = (origin, rect) => this.#transform.getTransformOriginFromString(origin, rect)
+
+    /**
+     * Handles rotation interaction.
+     * @param {Object} event - Moveable rotate event
+     * @param {Object} refs - Object containing references like _prevRotate
+     */
+    onRotate = (event, refs) => this.#rotatable.onRotate(event, refs)
+
+    /**
+     * Handles the end of a rotation event.
+     * @param {Object} event - Moveable rotateEnd event
+     */
+    onRotateEnd = event => this.#rotatable.onRotateEnd(event)
+
+    /**
+     * Handles the start of a rotation event.
+     * @param {Object} event - Moveable rotateStart event
+     */
+    onRotateStart = event => this.#rotatable.onRotateStart(event)
 }

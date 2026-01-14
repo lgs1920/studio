@@ -935,6 +935,7 @@ export class WidgetCore {
                 }
                 config.group = savedWidget.group || config.group
                 config.scale = savedWidget.scale || {x: 1, y: 1}
+                config.rotate = savedWidget.rotate || 0
                 config.ratio = savedWidget.ratio
                 config.attachTo = 'top-left'
             }
@@ -1115,6 +1116,12 @@ export class WidgetCore {
         if (config.fromDB && config.scale && (config.scale.x !== 1 || config.scale.y !== 1)) {
             this.#widgetManager.transform.setScale(element, config.scale.x, config.scale.y)
         }
+
+        // Restore rotation
+        if (config.fromDB && config.rotate && config.rotate !== 0) {
+            this.#widgetManager.transform.setRotate(element, config.rotate)
+        }
+
 
         // Initialize resize observer and overlay
         this.monitorContainerResize(config, setBounds, moveable, element, setPosition)
