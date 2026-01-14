@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-14
+ * Last modified: 2026-01-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -1109,7 +1109,7 @@ export class WidgetCore {
         // Set default styles BEFORE any transform operations
         element.style.transform = 'none'
         element.style.opacity = initialConfig.opacity || 1
-        element.style.transformOrigin = '0 0'
+        element.style.transformOrigin = '50% 50%'
 
         // Restore scale transform if saved (must be AFTER style initialization)
         if (config.fromDB && config.scale && (config.scale.x !== 1 || config.scale.y !== 1)) {

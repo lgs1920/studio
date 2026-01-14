@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-13
- * Last modified: 2026-01-13
+ * Created on: 2026-01-14
+ * Last modified: 2026-01-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,15 +16,20 @@
 
 import { TextWidgetManager }                           from '@Core/ui/text-metrics/TextWidgetManager'
 import classNames                                      from 'classnames'
-import React, { useState, useRef, useEffect, useMemo } from 'react'
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useSnapshot }                                 from 'valtio'
 
 /**
  * Inline text editor with dynamic font loading and robust click-to-edit.
+ * Handles deletion when selected and not in edit mode.
  */
 export const EditableText = ({id, scale = 1}) => {
     const $configuration = lgs.settings.widgets['text-widget']?.configuration
     const configuration = useSnapshot($configuration)
+
+    // Access the global selection store
+    const $drawers = lgs.stores.ui.drawers
+    const drawers = useSnapshot($drawers)
 
     const [isEditing, setIsEditing] = useState(false)
     const [editingText, setEditingText] = useState('')
@@ -36,7 +41,35 @@ export const EditableText = ({id, scale = 1}) => {
     const element = configuration?.elements?.[id] ?? configuration.user ?? configuration.default
 
     /**
-     * Injects Google Fonts dynamically based on fontFamily setting.
+     * Placeholder for the removal logic.
+     */
+    const removeTextWidget = useCallback((entityId) => {
+        // Implementation handled by user
+        console.log(`Removing widget: ${entityId}`)
+    }, [])
+
+    /**
+     * Global keydown listener to handle deletion when the widget is selected
+     * but not being actively edited.
+     */
+    useEffect(() => {
+        const handleGlobalKeyDown = (e) => {
+            // Check if this specific widget is the current/selected one
+            const isCurrent = drawers.entity === id
+
+            if (isCurrent && !isEditing && (e.key === 'Delete' || e.key === 'Backspace')) {
+                // Prevent browser back-navigation or other defaults
+                e.preventDefault()
+                removeTextWidget(id)
+            }
+        }
+
+        window.addEventListener('keydown', handleGlobalKeyDown)
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+    }, [id, isEditing, drawers.entity, removeTextWidget])
+
+    /**
+     * Injects Google Fonts dynamically.
      */
     useEffect(() => {
         if (!element?.fontFamily || element.fontFamily === 'System') {
@@ -64,9 +97,6 @@ export const EditableText = ({id, scale = 1}) => {
         }
     }, [element?.fontFamily])
 
-    /**
-     * Manages focus and cursor position when entering edit mode.
-     */
     useEffect(() => {
         if (isEditing && _input.current) {
             _input.current.focus()
@@ -74,9 +104,6 @@ export const EditableText = ({id, scale = 1}) => {
         }
     }, [isEditing])
 
-    /**
-     * Ensures the proxy exists for writing.
-     */
     const ensureProxyElement = () => {
         if (!$configuration.elements) {
             $configuration.elements = {}
@@ -87,19 +114,13 @@ export const EditableText = ({id, scale = 1}) => {
         return $configuration.elements[id]
     }
 
-    /**
-     * Switches to edit mode and calculates the character index.
-     */
     const handleStartEdit = (e) => {
         if (!element) {
             return
         }
-
         ensureProxyElement()
 
         let clickIndex = element.text.length
-
-        // Attempt to find the character position under the mouse
         try {
             if (document.caretRangeFromPoint) {
                 const range = document.caretRangeFromPoint(e.clientX, e.clientY)
@@ -107,15 +128,8 @@ export const EditableText = ({id, scale = 1}) => {
                     clickIndex = range.startOffset
                 }
             }
-            else if (document.caretPositionFromPoint) {
-                const pos = document.caretPositionFromPoint(e.clientX, e.clientY)
-                if (pos && pos.offsetNode.nodeType === Node.TEXT_NODE) {
-                    clickIndex = pos.offset
-                }
-            }
         }
         catch (err) {
-            // Fallback to end of text if coordinate detection fails
             clickIndex = element.text.length
         }
 
@@ -142,11 +156,6 @@ export const EditableText = ({id, scale = 1}) => {
     const lineHeight = parseFloat(element.lineHeight ?? 1)
     const lineHeightPx = fontSize * lineHeight
 
-    const textPaddingTop = Math.max(4, lineHeightPx * 0.25)
-    const textPaddingRight = Math.max(4, lineHeightPx * 0.25)
-    const textPaddingBottom = Math.max(5, lineHeightPx * 0.35)
-    const textPaddingLeft = Math.max(4, lineHeightPx * 0.25)
-
     const commonStyles = {
         fontSize:   'var(--lgs-tx-size)',
         fontFamily: 'var(--lgs-tx-font)',
@@ -156,7 +165,7 @@ export const EditableText = ({id, scale = 1}) => {
         lineHeight: `calc(${element.size}px * var(--lgs-tx-lh))`,
         whiteSpace: 'pre',
         margin:     '0',
-        padding:    `${textPaddingTop}px ${textPaddingRight}px ${textPaddingBottom}px ${textPaddingLeft}px`,
+        padding: `${Math.max(4, lineHeightPx * 0.25)}px ${Math.max(4, lineHeightPx * 0.25)}px ${Math.max(5, lineHeightPx * 0.35)}px ${Math.max(4, lineHeightPx * 0.25)}px`,
         boxSizing:  'border-box',
         color:      'var(--lgs-tx-color)',
         textShadow: 'var(--lgs-tx-shadow)',
@@ -191,7 +200,6 @@ export const EditableText = ({id, scale = 1}) => {
                     userSelect: 'none',
                     visibility: isEditing ? 'hidden' : 'visible',
                     opacity:    element.opacity,
-                    // filter:     element.blur ? 'blur(2px)' : 'none',
                     display:    hasMultipleLines ? 'flex' : 'block',
                     alignItems: hasMultipleLines ? 'center' : 'initial',
                     minHeight:  hasMultipleLines ? '100%' : 'auto',
@@ -230,6 +238,11 @@ export const EditableText = ({id, scale = 1}) => {
                     }}
                     onBlur={handleFinishEdit}
                     onKeyDown={(e) => {
+                        // While editing, we stop propagation so keys like Backspace
+                        // only affect the text and don't trigger global deletion.
+                        if (e.key === 'Delete' || e.key === 'Backspace' || e.key === 'Escape') {
+                            e.stopPropagation()
+                        }
                         if (e.key === 'Escape') {
                             e.preventDefault()
                             handleFinishEdit()

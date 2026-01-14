@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-13
- * Last modified: 2026-01-13
+ * Created on: 2026-01-14
+ * Last modified: 2026-01-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -416,6 +416,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 ratio:           config.ratio ?? null,
                 resizeFromCenter: config.resizeFromCenter ?? false,
                 resizable:       config.resizable ?? false,
+                rotatable: config.rotatable ?? false,
                 scalable:        config.scalable ?? false,
                 showControlBox:  true,
                 snap:            config.snap ?? false,
@@ -512,7 +513,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             <Moveable
                 className="lgs-widget-control-box"
                 container={lgs.canvas}
-                origin={false}
+                origin={true}
+                transformOrigin={['50%', '50%']}
                 ref={_moveable}
                 target={_widget}
                 draggable={interactionLocked ? false : config?.draggable ?? true}
@@ -537,6 +539,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 onScaleEnd={handleScaleEnd}
                 onBeforeScale={(event) => event.inputEvent.shiftKey && event.setFixedDirection([0, 0])}
                 scalable={interactionLocked ? false : config?.scalable ?? false}
+
+
+                rotatable={config?.rotatable ?? false}
+                onRotateStart={({target}) => {
+                    console.log(target, target.style.transformOrigin)
+                }}
+                // onRotateEnd={({target}) => {
+                //     target.style.transformOrigin = `0 0`
+                // }}
                 bounds={bounds}
                 elementGuidelines={[lgs.canvas]}
                 horizontalGuidelines={guidelines.horizontalGuidelines}
@@ -545,6 +556,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 snapElement={true}
                 snapGap={snapGap}
                 snapThreshold={snapThreshold}
+                snapRotationThreshold={5}
+                snapRotationDegrees={[0, 30, 45, 60, 90, 120, 135, 150, 180]}
                 snappable={config?.snappable ?? true}
                 snapDirections={{top: true, right: true, bottom: true, left: true, center: true, middle: true}}
                 renderDirections={controlBox.renderDirections}
