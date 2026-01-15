@@ -118,7 +118,7 @@ export const TextWidgetEditor = ({entity}) => {
     /**
      * Apply rotation to the DOM element and update state
      */
-    const applyRotation = (val = null) => {
+    const applyRotation = async (val = null) => {
         const {translate, scale, rotate} = __.ui.widgetManager.getTransform(widget)
         if (val !== null) {
             setRotation(-val)
@@ -126,6 +126,13 @@ export const TextWidgetEditor = ({entity}) => {
             if (_moveable?.current) {
                 _moveable.current.updateRect()
             }
+            // Rotation is not persisted in settings but in widgets table
+            const initConfig = await __.ui.widgetManager.getWidgetConfig(entity)
+            const config = await __.ui.widgetManager.retrieveConfig(entity, initConfig)
+            config.rotate = -val
+            console.log(config)
+            __.ui.widgetManager.saveWidgetPosition(entity, config)
+
         }
         else {
             setRotation(rotate)
@@ -140,6 +147,7 @@ export const TextWidgetEditor = ({entity}) => {
             }
         }
     }, [entity])
+
 
     const getColor = useCallback((item, alpha = false) => widgetManager.getColor(item, alpha), [widgetManager])
 
