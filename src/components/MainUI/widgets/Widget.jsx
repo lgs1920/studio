@@ -372,7 +372,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     const handleRotate = useCallback((event) => {
-        _moveable.current?.updateRect()
         _children.current?.onRotate?.(event)
         __.ui.widgetManager.onRotate(event, {_prevRotate})
         const {rotate} = event
@@ -380,10 +379,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [])
 
     const handleRotateEnd = useCallback((event) => {
+        _moveable.current?.updateRect()
         _children.current?.onRotateEnd?.(event)
         __.ui.widgetManager.onRotateEnd(event)
         _moveable.current?.updateRect()
-        _moveable.current?.updateRect()
+
         if (event.lastEvent) {
             lgs.stores.ui.widget.current.rotate = event.lastEvent.rotate
         }
