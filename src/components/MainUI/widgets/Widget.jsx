@@ -72,6 +72,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const video = useSnapshot($video)
     const _w2c = useRef(null)
 
+    const throttleRotate = 1
+
     // Interaction lock logic
     const interactionLocked =
               (video.preRecording || video.recording || video.snapshot) && config.type === LGS_VISUAL_WIDGET
@@ -365,12 +367,16 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         _children.current?.onRotateStart?.(event)
         __.ui.widgetManager.onRotateStart(event)
         _moveable.current?.updateRect()
+
+
     }, [])
 
     const handleRotate = useCallback((event) => {
+        _moveable.current?.updateRect()
         _children.current?.onRotate?.(event)
         __.ui.widgetManager.onRotate(event, {_prevRotate})
-        _moveable.current?.updateRect()
+        const {rotate} = event
+        lgs.stores.ui.widget.current.rotate = Math.ceil(rotate)
     }, [])
 
     const handleRotateEnd = useCallback((event) => {
@@ -378,7 +384,16 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         __.ui.widgetManager.onRotateEnd(event)
         _moveable.current?.updateRect()
         _moveable.current?.updateRect()
+        if (event.lastEvent) {
+            lgs.stores.ui.widget.current.rotate = event.lastEvent.rotate
+        }
+
+
     }, [])
+
+    const selectWidget = event => {
+        lgs.stores.ui.widget.current = {id: config.id}
+    }
 
     const handleBound = useCallback(() => __.ui.widgetManager.setBoundStatus(_widget.current), [])
 
@@ -453,6 +468,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     $widget.list.set(config.id, {})
                 }
                 _widget.current.style.opacity = 1
+                lgs.stores.ui.widget.current.rotate = resolved.rotate
 
                 if (interactionLocked) {
                     _w2c.current = new Widget2Canvas(
@@ -535,6 +551,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 className="lgs-widget-control-box"
                 container={lgs.canvas}
                 origin={false}
+                onClick={selectWidget}
                 ref={_moveable}
                 target={_widget}
                 draggable={interactionLocked ? false : config?.draggable ?? true}
@@ -564,7 +581,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 onBeforeScale={(event) => event.inputEvent.shiftKey && event.setFixedDirection([0, 0])}
 
                 rotatable={interactionLocked ? false : config?.rotatable ?? false}
-                throttleRotate={1}
+                throttleRotate={throttleRotate}
                 onRotateStart={handleRotateStart}
                 onRotate={handleRotate}
                 onRotateEnd={handleRotateEnd}

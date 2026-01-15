@@ -99,11 +99,7 @@ export class TextWidgetManager {
         if (_widgetEl && _sourceCanvas) {
             // 1. Force a clean render of the scene
             lgs.scene.render()
-
-            // 2. Capture the snapshot immediately
             const _snapshot = await this.captureBackgroundSnapshot(_widgetEl, _sourceCanvas)
-
-            // 3. Store it in a global proxy or cache accessible by the editor
             lgs.stores.ui.widget.currentSnapshot = _snapshot
         }
 

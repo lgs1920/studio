@@ -22,7 +22,6 @@ import {
     TextWidgetManager,
 }                                                                         from '@Core/ui/text-metrics/TextWidgetManager'
 import { faArrowRotateLeft }                                              from '@fortawesome/pro-regular-svg-icons'
-import { faBold }                                                         from '@fortawesome/pro-solid-svg-icons'
 import {
     SlButton, SlColorPicker, SlDivider, SlIcon, SlInput, SlOption, SlRange, SlSelect, SlSwitch, SlTextarea, SlTooltip,
 }                                                                         from '@shoelace-style/shoelace/dist/react'
@@ -30,6 +29,9 @@ import { FA2SL }                                                          from '
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                                    from 'valtio'
 
+/**
+ * Optimized TextArea component with transform override during active editing
+ */
 const OptimizedTextArea = memo(({value, onInput, dynamicVars, onFocus, onBlur, isEditing}) => {
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
@@ -62,23 +64,40 @@ const OptimizedTextArea = memo(({value, onInput, dynamicVars, onFocus, onBlur, i
 })
 
 export const TextWidgetEditor = ({entity}) => {
+    // Valtio setup for settings and elements
     const $configuration = lgs.settings.widgets['text-widget'].configuration
     const configuration = useSnapshot($configuration)
     const element = configuration?.elements?.[entity] ?? configuration.user ?? configuration.default
     const widget = useMemo(() => __.ui.widgetManager.getElementById(entity), [entity])
 
+    // Global stores
     const $widgetStore = lgs.stores.ui.widget
     const widgetStore = useSnapshot($widgetStore)
     const bgSnapshot = widgetStore.currentSnapshot
 
+    // Explicit proxy reference for the current widget
+    const $current = lgs.stores.ui.widget.current
+    const current = useSnapshot($current)
+
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
     const widgetManager = useMemo(() => TextWidgetManager.instance, [])
 
-    const [rotation, setRotation] = useState(0)
+    /**
+     * localRotation handles the input display to avoid jumps caused by Valtio proxy updates
+     */
+    const [localRotation, setLocalRotation] = useState(0)
     const [isEditing, setIsEditing] = useState(false)
     const _timer = useRef(null)
-
     const _moveable = __.ui.widgetManager.getMoveable(entity)
+
+    /**
+     * Update local rotation state when the proxy changes (e.g. from Moveable on canvas)
+     */
+    useEffect(() => {
+        // Sync local UI with proxy value (inverse display as per your logic)
+        const currentRotate = current.rotate ?? __.ui.widgetManager.getTransform(widget).rotate ?? 0
+        setLocalRotation(-Math.ceil(currentRotate))
+    }, [current.rotate])
 
     const fastUpdate = useCallback((path, val) => {
         if (!$configuration) {
@@ -103,9 +122,6 @@ export const TextWidgetEditor = ({entity}) => {
         _curr[_keys[_keys.length - 1]] = val
     }, [$configuration, entity, element])
 
-    /**
-     * Reset the  timer to restore rotation
-     */
     const resetRotationTimer = useCallback(() => {
         if (_timer.current) {
             clearTimeout(_timer.current)
@@ -117,37 +133,31 @@ export const TextWidgetEditor = ({entity}) => {
 
     /**
      * Apply rotation to the DOM element and update state
+     * @param {number} val - Degrees value
      */
-    const applyRotation = async (val = null) => {
-        const {translate, scale, rotate} = __.ui.widgetManager.getTransform(widget)
-        if (val !== null) {
-            setRotation(-val)
-            __.ui.widgetManager.setTransform(widget, {translate, scale, rotate: -val})
-            if (_moveable?.current) {
-                _moveable.current.updateRect()
-            }
-            // Rotation is not persisted in settings but in widgets table
-            const initConfig = await __.ui.widgetManager.getWidgetConfig(entity)
-            const config = await __.ui.widgetManager.retrieveConfig(entity, initConfig)
-            config.rotate = -val
-            console.log(config)
-            __.ui.widgetManager.saveWidgetPosition(entity, config)
+    const applyRotation = async (val) => {
+        // Update local state immediately for input fluidity
+        setLocalRotation(val)
 
+        const {translate, scale} = __.ui.widgetManager.getTransform(widget)
+        const targetRotate = -val
+
+        // Update DOM transform immediately
+        __.ui.widgetManager.setTransform(widget, {translate, scale, rotate: targetRotate})
+
+        if (_moveable?.current) {
+            _moveable.current.updateRect()
         }
-        else {
-            setRotation(rotate)
-        }
+
+        // Update Valtio Proxy
+        $current.rotate = targetRotate
+
+        // Persist to widget configuration
+        const initConfig = await __.ui.widgetManager.getWidgetConfig(entity)
+        const config = await __.ui.widgetManager.retrieveConfig(entity, initConfig)
+        config.rotate = targetRotate
+        __.ui.widgetManager.saveWidgetPosition(entity, config)
     }
-
-    useEffect(() => {
-        applyRotation()
-        return () => {
-            if (_timer.current) {
-                clearTimeout(_timer.current)
-            }
-        }
-    }, [entity])
-
 
     const getColor = useCallback((item, alpha = false) => widgetManager.getColor(item, alpha), [widgetManager])
 
@@ -158,9 +168,9 @@ export const TextWidgetEditor = ({entity}) => {
                 bgSnapshot ? bgSnapshot.image : null,
                 WIDGET_SYSTEM_FONT_STACK,
             ),
-            '--lgs-tx-transform': `rotate(${rotation}deg)`,
+            '--lgs-tx-transform': `rotate(${-localRotation}deg)`,
         }
-    }, [element, bgSnapshot, rotation, widgetManager])
+    }, [element, bgSnapshot, localRotation, widgetManager])
 
     if (!element) {
         return null
@@ -192,25 +202,24 @@ export const TextWidgetEditor = ({entity}) => {
             />
 
             <div className="editor-controls-wrapper">
-
-                {/* Rotation Control Section */}
                 <div className="drawer-horizontal-line" style={{alignItems: 'center', marginBottom: '10px'}}>
                     <div className="drawer-horizontal-element">
-
-                        <SlInput align-right
-                                 size="small"
-                                 type="number" maxlength="2" min="-180" max="180" step="5"
-                                 value={-Math.ceil(rotation)}
-                                 onSlInput={(e) => applyRotation(parseFloat(e.target.value) || 0)}
+                        <SlInput
+                            align-right
+                            size="small"
+                            type="number"
+                            maxlength="2"
+                            step="1"
+                            min="-180" max="180"
+                            value={localRotation}
+                            onSlInput={(e) => applyRotation(parseFloat(e.target.value) || 0)}
                         >
                             <span slot="suffix">{'deg'} </span>
                             <span slot="label">{'Rotation'}</span>
                         </SlInput>
                         <SlTooltip content={'Reset'}>
-                            <SlButton size="small" onClick={() => applyRotation(0)}
-                                      className="className={'square-button'}">
-                                <SlIcon slot="prefix" size="small" library="fa"
-                                        name={FA2SL.set(faArrowRotateLeft)}/>
+                            <SlButton size="small" onClick={() => applyRotation(0)} className="square-button small">
+                                <SlIcon slot="prefix" size="small" library="fa" name={FA2SL.set(faArrowRotateLeft)}/>
                             </SlButton>
                         </SlTooltip>
                     </div>
@@ -320,7 +329,6 @@ export const TextWidgetEditor = ({entity}) => {
                     </>
                 )}
 
-                {/* Box Elevation */}
                 {hasVisibleContainer && (
                     <>
                         <SlDivider/>

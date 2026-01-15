@@ -185,7 +185,7 @@
     transition: text-shadow 0.2s ease,
     background-color 0.2s ease,
     border 0.2s ease,
-    box-shadow 0.2s ease, transform 0.2s ease-in-out;
+    box-shadow 0.2s ease;
     transform: var(--lgs-tx-transform);
 
     text-align: var(--lgs-tx-align);
