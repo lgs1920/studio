@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-07
- * Last modified: 2026-01-07
+ * Created on: 2026-01-17
+ * Last modified: 2026-01-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -156,7 +156,7 @@ export const WidgetsPanelContent = ({groups}) => {
 
     return (
 
-        <div className="widget-deck-panel lgs-card on-map" ref={_widgetDeckPanel}>
+        <div className="lgs-widget-menu widget-deck-panel lgs-card on-map" ref={_widgetDeckPanel}>
             <div className="widget-deck-entry widget-deck-title">
                 <SlIcon library="fa" name={FA2SL.set(faBox)}/>
                 <span>Widgets</span>

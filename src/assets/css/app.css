@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-14
- * Last modified: 2026-01-14
+ * Created on: 2026-01-17
+ * Last modified: 2026-01-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -298,8 +298,12 @@ body {
 
 .lgs-widget-control-box .moveable-line {
     /* Always transparent whatever show control box parameter */
+    background: transparent !important
+}
+
+.lgs-visual-widget:not(:has(.lgs-widget-menu)) + .lgs-widget-control-box > .moveable-line {
+    /* except for layout widgets */
     background: var(--lgs-light-color-75) !important;
-    /*background: transparent !important /*var(--lgs-light-color-75) !important;*/
 }
 
 /**
