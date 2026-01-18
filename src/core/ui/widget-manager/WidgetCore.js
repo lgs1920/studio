@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-14
- * Last modified: 2026-01-14
+ * Created on: 2026-01-18
+ * Last modified: 2026-01-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -1309,6 +1309,24 @@ export class WidgetCore {
 
         clone.classList.add('lgs-widget-clone')
         return clone
+    }
+    JavaScript
+    /**
+     * Calculates logical shadow margins for the composer.
+     * No scale needed here as addOverlay handles it internally.
+     * * @param {number} x - Offset X (e.g., 0)
+     * @param {number} y - Offset Y (e.g., 1)
+     * @param {number} blur - Blur radius (e.g., 2)
+     * @param {number} [spread=0] - Spread radius
+     * @returns {Object} { top, right, bottom, left }
+     */
+    getShadowMargins = (x, y, blur, spread = 0) => {
+        return {
+            top:    Math.max(0, blur + spread - y),
+            bottom: Math.max(0, blur + spread + y),
+            left:   Math.max(0, blur + spread - x),
+            right:  Math.max(0, blur + spread + x),
+        }
     }
 
 }

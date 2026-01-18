@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-15
- * Last modified: 2026-01-15
+ * Created on: 2026-01-18
+ * Last modified: 2026-01-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -651,6 +651,17 @@ export class WidgetManager {
      * @return {*|{x: *, y: *}|{x: *, y: *}} - scale
      */
     adaptScaleToContainer = (container, config) => this.#core.adaptScaleToContainer(container, config)
+
+    /**
+     * Calculates logical shadow margins for the composer.
+     * No scale needed here as addOverlay handles it internally.
+     * * @param {number} x - Offset X (e.g., 0)
+     * @param {number} y - Offset Y (e.g., 1)
+     * @param {number} blur - Blur radius (e.g., 2)
+     * @param {number} [spread=0] - Spread radius
+     * @returns {Object} { top, right, bottom, left }
+     */
+    getShadowMargins = (x, y, blur, spread = 0) => this.#core.getShadowMargins(x, y, blur, spread)
 
     /**
      * Builds a transform string from individual transformation values.
