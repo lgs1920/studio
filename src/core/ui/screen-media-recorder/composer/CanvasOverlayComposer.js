@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-18
+ * Last modified: 2026-01-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -96,7 +96,16 @@ export class CanvasOverlayComposer {
             return
         }
 
-        const {x, y, w, h, blur = 0, radius = 0} = options
+        const {
+                  x, y, w, h,
+                  contentW, contentH,
+                  blur          = 0,
+                  radius        = 0,
+                  rotate        = 0,
+                  scale         = 1,
+                  shadowMargins = {top: 0, right: 0, bottom: 0, left: 0},
+              } = options
+
         let posX, posY, width, height
 
         if (typeof x === 'number' && typeof y === 'number') {
@@ -121,15 +130,37 @@ export class CanvasOverlayComposer {
         }
 
         const scaleFactor = el.classList?.contains('lgs-widget-canvas') ? LGS_WIDGET_SCALE_FACTOR : 1
+        const cssScale = typeof scale === 'object' ? (scale.x ?? 1) : scale
+
+        // posX, posY is the position of the widget content (without shadow)
+        // contentW, contentH are the real content dimensions (without shadow)
+
+        const actualContentW = contentW || (width / scaleFactor)
+        const actualContentH = contentH || (height / scaleFactor)
+
+        // Calculate center based on content dimensions
+        const cx = posX + actualContentW / 2
+        const cy = posY + actualContentH / 2
+
+        console.log('addOverlay center calc:', {
+            posX, posY,
+            canvasSize:  {w: width, h: height},
+            contentSize: {w: actualContentW, h: actualContentH},
+            center:      {cx, cy},
+        })
 
         this.#overlays.push({
                                 element,
-                                x: posX,
-                                y: posY,
+                                cx, cy,
                                 w: width / scaleFactor,
                                 h: height / scaleFactor,
-                                blur: blur,
-                                radius: radius,
+                                contentW: actualContentW,
+                                contentH: actualContentH,
+                                blur,
+                                radius,
+                                rotate,
+                                scale:    cssScale,
+                                shadowMargins,
                             })
 
         this.#draw()
@@ -165,31 +196,61 @@ export class CanvasOverlayComposer {
 
         // 2. Draw overlays
         for (const o of this.#overlays) {
+            console.log(o)
             const el = typeof o.element === 'function' ? o.element() : o.element
             if (!el) {
                 continue
             }
 
+            const rad = (o.rotate * Math.PI) / 180
+
+            // Get the actual canvas dimensions (includes shadow)
+            const canvasW = el.width || o.w
+            const canvasH = el.height || o.h
+
             // If blur is needed, we must clip a blurred version of the background underneath
             if (o.blur > 0) {
                 ctx.save()
+
+                // --- Step A: Define the mask in widget-space ---
+                ctx.translate(o.cx, o.cy)
+                ctx.rotate(rad)
+                ctx.scale(o.scale, o.scale)
+
                 ctx.beginPath()
+                const hw = o.contentW / 2
+                const hh = o.contentH / 2
+
                 if (o.radius > 0) {
-                    ctx.roundRect(o.x, o.y, o.w, o.h, o.radius)
+                    ctx.roundRect(-hw, -hh, o.contentW, o.contentH, o.radius)
                 }
                 else {
-                    ctx.rect(o.x, o.y, o.w, o.h)
+                    ctx.rect(-hw, -hh, o.contentW, o.contentH)
                 }
-                ctx.clip()
+                ctx.clip() // The mask is now locked in! 🔒
+
+                // --- Step B: Reset transformation to draw the background correctly ---
+                // We go back to the base DPR scale so (0,0) is top-left of the whole canvas
+                ctx.setTransform(this.#dpr, 0, 0, this.#dpr, 0, 0)
 
                 ctx.filter = `blur(${o.blur}px)`
-                drawMainSource()
-                ctx.restore()
-                ctx.filter = 'none'
+                drawMainSource() // Now this draws at the correct screen position
+
+                ctx.restore() // Cleans up the clip and the filter
             }
 
-            // Draw the actual overlay element (no clipping here to preserve borders and anti-aliasing)
-            ctx.drawImage(el, o.x, o.y, o.w, o.h)
+            // Draw the canvas at its position with rotation and scale
+            ctx.save()
+            ctx.translate(o.cx, o.cy)
+            ctx.rotate(rad)
+            ctx.scale(o.scale, o.scale)
+
+            // The canvas includes shadow, so offset to center the content
+            const offsetX = -o.contentW / 2 - o.shadowMargins.left
+            const offsetY = -o.contentH / 2 - o.shadowMargins.top
+
+            ctx.drawImage(el, offsetX, offsetY, o.w, o.h)
+            ctx.restore()
         }
     }
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-18
+ * Last modified: 2026-01-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -75,6 +75,32 @@ const getStyles = (el, depth = 0) => {
     return {blur: 0, radius: 0}
 }
 
+/**
+ * Recursively finds box-shadow and converts it to logical margins
+ */
+const getShadowParameters = (el, depth = 0) => {
+    if (!el || depth > 2) {
+        return {top: 0, right: 0, bottom: 0, left: 0}
+    }
+    const style = window.getComputedStyle(el)
+    const shadow = style.boxShadow
+
+    if (shadow && shadow !== 'none') {
+        const values = shadow.match(/(-?[\d.]+)px/g)
+        if (values && values.length >= 2) {
+            const px = (v) => parseFloat(v) || 0
+            return __.ui.widgetManager.getShadowMargins(px(values[0]), px(values[1]), px(values[2]), px(values[3]))
+        }
+    }
+    for (const child of el.children) {
+        const childMargins = getShadowParameters(child, depth + 1)
+        if (childMargins.top > 0 || childMargins.bottom > 0 || childMargins.right > 0 || childMargins.left > 0) {
+            return childMargins
+        }
+    }
+    return {top: 0, right: 0, bottom: 0, left: 0}
+}
+
 export const VideoRecordingScreenArea = memo(() => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
@@ -135,11 +161,38 @@ export const VideoRecordingScreenArea = memo(() => {
 
         ;[...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()].map(key => {
             const widgetEl = __.ui.widgetManager.getElementById(key)
-            const getCanvas = () => widgetEl?.querySelector('.lgs-widget-canvas')
+            const canvasEl = widgetEl?.querySelector('.lgs-widget-canvas')
 
-            if (getCanvas() instanceof HTMLCanvasElement) {
+            if (canvasEl instanceof HTMLCanvasElement) {
+                const config = __.ui.widgetManager.getWidgetConfig(key)
                 const styles = getStyles(widgetEl)
-                composer.addOverlay(getCanvas, {blur: styles.blur, radius: styles.radius})
+                const shadowMargins = getShadowParameters(widgetEl)
+
+                // config.position contains coordinates relative to the Studio origin
+                // crop.left, crop.top are coordinates of the crop relative to the Studio origin
+                // The canvas includes the shadow, so we need to offset by shadow margins
+                const localX = config.position.left - crop.left - shadowMargins.left
+                const localY = config.position.top - crop.top - shadowMargins.top
+
+                // Get canvas CSS dimensions (logical pixels)
+                const canvasStyle = window.getComputedStyle(canvasEl)
+                const canvasWidth = parseFloat(canvasStyle.width)
+                const canvasHeight = parseFloat(canvasStyle.height)
+
+
+                composer.addOverlay(canvasEl, {
+                    x:        localX,
+                    y:        localY,
+                    w:        canvasWidth,
+                    h:        canvasHeight,
+                    contentW: config.dimensions.width,  // Real content dimensions for blur
+                    contentH: config.dimensions.height,
+                    blur:     styles.blur,
+                    radius:   styles.radius,
+                    rotate:   config.rotate || 0,
+                    scale:    config.scale || 1,
+                    shadowMargins,
+                })
             }
         })
 
@@ -176,10 +229,37 @@ export const VideoRecordingScreenArea = memo(() => {
 
         ;[...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()].map(key => {
             const widgetEl = __.ui.widgetManager.getElementById(key)
-            const getCanvas = () => widgetEl?.querySelector('.lgs-widget-canvas')
-            if (getCanvas() instanceof HTMLCanvasElement) {
+            const canvasEl = widgetEl?.querySelector('.lgs-widget-canvas')
+
+            if (canvasEl instanceof HTMLCanvasElement) {
+                const config = __.ui.widgetManager.getWidgetConfig(key)
                 const styles = getStyles(widgetEl)
-                composer.addOverlay(getCanvas, {blur: styles.blur, radius: styles.radius})
+                const shadowMargins = getShadowParameters(widgetEl)
+
+                // config.position contains coordinates relative to the Studio origin
+                // x, y are coordinates of the crop relative to the Studio origin
+                // The canvas includes the shadow, so we need to offset by shadow margins
+                const localX = config.position.left - x - shadowMargins.left
+                const localY = config.position.top - y - shadowMargins.top
+
+                // Get canvas CSS dimensions (logical pixels)
+                const canvasStyle = window.getComputedStyle(canvasEl)
+                const canvasWidth = parseFloat(canvasStyle.width)
+                const canvasHeight = parseFloat(canvasStyle.height)
+
+                composer.addOverlay(canvasEl, {
+                    x:        localX,
+                    y:        localY,
+                    w:        canvasWidth,
+                    h:        canvasHeight,
+                    contentW: config.dimensions.width,  // Real content dimensions for blur
+                    contentH: config.dimensions.height,
+                    blur:     styles.blur,
+                    radius:   styles.radius,
+                    rotate:   config.rotate || 0,
+                    scale:    config.scale || 1,
+                    shadowMargins,
+                })
             }
         })
 

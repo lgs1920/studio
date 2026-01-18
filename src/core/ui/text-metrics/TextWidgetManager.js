@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-15
- * Last modified: 2026-01-15
+ * Created on: 2026-01-18
+ * Last modified: 2026-01-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -74,7 +74,7 @@ export class TextWidgetManager {
             '--lgs-tx-padding-right':  `${paddingSide}px`,
             '--lgs-tx-padding-bottom': `${paddingBottom}px`,
             '--lgs-tx-padding-left':   `${paddingSide}px`,
-            '--lgs-tx-blur': (element.background?.show && element.background?.blur) ? 'var(--lgs-blur-s)' : '0',
+            '--lgs-tx-blur': (element.background?.show && element.background?.blur) ? 'var(--lgs-blur)' : '0',
             '--lgs-bg-elevation': (element.background?.shadow?.show && hasVisibleContainer) ? (
                 element.background.shadow.value === 'small' ? `0 2px 8px ${bgShadowColor}` :
                 element.background.shadow.value === 'large' ? `0 16px 32px ${bgShadowColor}` :
