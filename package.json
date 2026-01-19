@@ -57,7 +57,7 @@
     "classnames": "^2.5.1",
     "color": "^5.0.3",
     "colord": "^2.9.3",
-    "convert": "^5.14.1",
+    "convert": "^6.0.0",
     "deep-object-diff": "^1.1.9",
     "dotenv": "^17.2.3",
     "easy-file-picker": "^1.2.0",
