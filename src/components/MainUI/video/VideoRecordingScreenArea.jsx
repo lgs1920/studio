@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-18
- * Last modified: 2026-01-18
+ * Created on: 2026-01-20
+ * Last modified: 2026-01-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -185,8 +185,8 @@ export const VideoRecordingScreenArea = memo(() => {
                     y:        localY,
                     w:        canvasWidth,
                     h:        canvasHeight,
-                    contentW: config.dimensions.width,  // Real content dimensions for blur
-                    contentH: config.dimensions.height,
+                    contentWidth:  config.dimensions.width,  // Real content dimensions for blur
+                    contentHeight: config.dimensions.height,
                     blur:     styles.blur,
                     radius:   styles.radius,
                     rotate:   config.rotate || 0,

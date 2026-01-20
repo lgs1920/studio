@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-19
- * Last modified: 2026-01-19
+ * Created on: 2026-01-20
+ * Last modified: 2026-01-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,11 +16,15 @@
 
 import { LGS_WIDGET_SCALE_FACTOR } from '@Core/constants'
 
+// Build Metadata
+// Generated on: 2026-01-20 21:30:15
+// Build ID: LGS-COMP-20260120-2130-D20-STABLE
+
 /**
  * CanvasOverlayComposer
- * A high-performance 2D compositor designed for HiDPI environments.
- * It manages a main source canvas and overlays elements with advanced effects
- * like backdrop blur, rounded clipping, and shadow-aware positioning.
+ * High-fidelity compositor using a transform-first approach.
+ * By applying scale via the context matrix, all geometric properties
+ * (dimensions, radius, offsets) are naturally projected.
  */
 export class CanvasOverlayComposer {
     #sourceCanvas
@@ -35,14 +39,6 @@ export class CanvasOverlayComposer {
     #sourceDpr = 1
     #flushWebGLBuffer = null
 
-    /**
-     * @param {HTMLCanvasElement} sourceCanvas - The background source provider
-     * @param {Object} [options={}] - Configuration options
-     * @param {Object} [options.clip] - Source clipping area {x, y, width, height}
-     * @param {number} [options.width=1920] - Logical output width
-     * @param {number} [options.height=1080] - Logical output height
-     * @param {Function} [options.flushWebGLBuffer] - WebGL synchronization callback
-     */
     constructor(sourceCanvas, options = {}) {
         if (!(sourceCanvas instanceof HTMLCanvasElement)) {
             throw new Error('CanvasOverlayComposer: sourceCanvas must be an HTMLCanvasElement')
@@ -74,19 +70,11 @@ export class CanvasOverlayComposer {
         this.#loop()
     }
 
-    /**
-     * Updates the source DPR based on the physical/CSS ratio of the source canvas
-     * @private
-     */
     #updateSourceDpr = () => {
         const rect = this.#sourceCanvas.getBoundingClientRect()
         this.#sourceDpr = rect.width > 0 ? this.#sourceCanvas.width / rect.width : 1
     }
 
-    /**
-     * Adjusts the output canvas buffer size for HiDPI displays
-     * @private
-     */
     #resizeOutputCanvas = () => {
         const physicalW = Math.round(this.#outW * this.#dpr)
         const physicalH = Math.round(this.#outH * this.#dpr)
@@ -99,29 +87,27 @@ export class CanvasOverlayComposer {
         this.#ctx.setTransform(this.#dpr, 0, 0, this.#dpr, 0, 0)
     }
 
-    /**
-     * @returns {HTMLCanvasElement} The result canvas element
-     */
     getCanvas = () => this.#outputCanvas
 
-    /**
-     * Adds an overlay to the rendering stack and computes its transformation metadata.
-     * @param {HTMLElement|(() => HTMLElement)} element - The source element (Canvas, Video, or Image) or a function
-     *     returning it.
-     * @param {Object} [options={}] - Configuration for positioning and effects.
-     * @param {number} [options.x] - Custom logical X position. If omitted, calculated via getBoundingClientRect.
-     * @param {number} [options.y] - Custom logical Y position. If omitted, calculated via getBoundingClientRect.
-     * @param {number} [options.w] - Custom logical width of the full buffer (including shadows).
-     * @param {number} [options.h] - Custom logical height of the full buffer (including shadows).
-     * @param {number} [options.contentW] - The explicit width of the UI component area (excluding shadows).
-     * @param {number} [options.contentH] - The explicit height of the UI component area (excluding shadows).
-     * @param {number} [options.blur=0] - Backdrop blur radius in pixels.
-     * @param {number} [options.borderWidth=0] - Uniform border thickness in logical pixels.
-     * @param {number} [options.radius=0] - Corner radius in pixels (relative to buffer resolution).
-     * @param {number} [options.rotate=0] - Rotation in degrees.
-     * @param {number|Object} [options.scale=1] - Transform scale factor.
-     * @param {Object} [options.shadowMargins] - Padding around content for shadow rendering.
-     */
+    #traceRoundedRect(ctx, x, y, w, h, r) {
+        ctx.beginPath()
+        if (r <= 0) {
+            ctx.rect(x, y, w, h)
+            return
+        }
+        const radius = Math.min(r, w / 2, h / 2)
+        ctx.moveTo(x + radius, y)
+        ctx.lineTo(x + w - radius, y)
+        ctx.arcTo(x + w, y, x + w, y + radius, radius)
+        ctx.lineTo(x + w, y + h - radius)
+        ctx.arcTo(x + w, y + h, x + w - radius, y + h, radius)
+        ctx.lineTo(x + radius, y + h)
+        ctx.arcTo(x, y + h, x, y + h - radius, radius)
+        ctx.lineTo(x, y + radius)
+        ctx.arcTo(x, y, x + radius, y, radius)
+        ctx.closePath()
+    }
+
     addOverlay = (element, options = {}) => {
         const el = typeof element === 'function' ? element() : element
         if (!el) {
@@ -130,9 +116,8 @@ export class CanvasOverlayComposer {
 
         const {
                   x, y, w, h,
-                  contentW, contentH,
+                  contentWidth, contentHeight,
                   blur          = 0,
-                  borderWidth = 0,
                   radius        = 0,
                   rotate        = 0,
                   scale         = 1,
@@ -141,71 +126,54 @@ export class CanvasOverlayComposer {
 
         let posX, posY, width, height
 
+        // Calculate logical base size (ignoring external CSS scale)
         if (typeof x === 'number' && typeof y === 'number') {
             posX = x
             posY = y
-            width = w ?? el.width ?? 0
-            height = h ?? el.height ?? 0
+            width = w ?? (el.width / this.#dpr)
+            height = h ?? (el.height / this.#dpr)
         }
         else {
             const rect = el.getBoundingClientRect()
             const sourceRect = this.#sourceCanvas.getBoundingClientRect()
-
-            posX = (rect.left - sourceRect.left) * this.#sourceDpr
-            posY = (rect.top - sourceRect.top) * this.#sourceDpr
-            width = rect.width * this.#sourceDpr
-            height = rect.height * this.#sourceDpr
-
+            posX = rect.left - sourceRect.left
+            posY = rect.top - sourceRect.top
             if (this.#clip) {
                 posX -= this.#clip.x
                 posY -= this.#clip.y
             }
+            width = rect.width
+            height = rect.height
         }
 
-        const isWidget = el.classList?.contains('lgs-widget-canvas')
-        const scaleFactor = isWidget ? LGS_WIDGET_SCALE_FACTOR : 1
+        const scaleFactor = el.classList?.contains('lgs-widget-canvas') ? LGS_WIDGET_SCALE_FACTOR : 1
         const cssScale = typeof scale === 'object' ? (scale.x ?? 1) : scale
 
-        const actualContentW = contentW || (width / scaleFactor)
-        const actualContentH = contentH || (height / scaleFactor)
+        // Base logical dimensions (normalized only by the internal buffer factor)
+        const baseContentW = contentWidth || (width / scaleFactor)
+        const baseContentH = contentHeight || (height / scaleFactor)
 
-        // The pivot point is the center of the UI component area
-        const contentPosX = posX + shadowMargins.left
-        const contentPosY = posY + shadowMargins.top
-        const cx = contentPosX + actualContentW / 2
-        const cy = contentPosY + actualContentH / 2
+        // The pivot must be the logical center of the element in the final layout
+        const cx = posX + shadowMargins.left + baseContentW / 2
+        const cy = posY + shadowMargins.top + baseContentH / 2
 
         this.#overlays.push({
                                 element,
                                 cx, cy,
-                                w: width / scaleFactor,
-                                h: height / scaleFactor,
-                                contentW: actualContentW,
-                                contentH: actualContentH,
+                                w:             width / scaleFactor,
+                                h:             height / scaleFactor,
+                                contentWidth:  baseContentW,
+                                contentHeight: baseContentH,
                                 blur,
-                                borderWidth,
-                                radius,
+                                radius, // Stored as logical pixels
                                 rotate,
-                                scale: cssScale,
-                                scaleFactor,
+                                scale:         cssScale,
                                 shadowMargins,
                             })
 
         this.#draw()
     }
 
-    /**
-     * Removes all overlays and refreshes display
-     */
-    clearOverlays = () => {
-        this.#overlays = []
-        this.#draw()
-    }
-
-    /**
-     * Core rendering process
-     * @private
-     */
     #draw = () => {
         this.#flushWebGLBuffer?.()
         const ctx = this.#ctx
@@ -226,101 +194,69 @@ export class CanvasOverlayComposer {
             ctx.drawImage(this.#sourceCanvas, srcX, srcY, srcW, srcH, 0, 0, this.#outW, this.#outH)
         }
 
-        // 1. Draw background source
         drawMainSource()
 
-        // 2. Process overlays
-        for (const o of this.#overlays) {
-            const el = typeof o.element === 'function' ? o.element() : o.element
+        for (const overlay of this.#overlays) {
+            const el = typeof overlay.element === 'function' ? overlay.element() : overlay.element
             if (!el) {
                 continue
             }
 
-            const rad = (o.rotate * Math.PI) / 180
+            const rad = (overlay.rotate * Math.PI) / 180
+            const hw = overlay.contentWidth / 2
+            const hh = overlay.contentHeight / 2
 
-            // Apply Backdrop Blur with Border awareness
-            if (o.blur > 0) {
+            // Backdrop Blur
+            if (overlay.blur > 0) {
                 ctx.save()
-                ctx.translate(o.cx, o.cy)
+                ctx.translate(overlay.cx, overlay.cy)
                 ctx.rotate(rad)
-                ctx.scale(o.scale, o.scale)
+                ctx.scale(overlay.scale, overlay.scale)
 
-                ctx.beginPath()
-
-                // Inset the mask by (borderWidth + anti-aliasing safety)
-                // to prevent blur bleeding under or outside the borders.
-                const inset = 0.5 + o.borderWidth * o.scale
-                const hw = Math.max(0, (o.contentW / 2) - inset)
-                const hh = Math.max(0, (o.contentH / 2) - inset)
-
-                // Radius must be normalized to logical geometry (scaleFactor) and reduced by inset
-                const r = Math.max(0, (o.radius / o.scaleFactor) * o.scale - inset)
-
-                if (r > 0) {
-                    ctx.roundRect(-hw, -hh, hw * 2, hh * 2, r)
-                }
-                else {
-                    ctx.rect(-hw, -hh, hw * 2, hh * 2)
-                }
+                this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius)
                 ctx.clip()
 
-                // Draw blurred background inside the mask
-                ctx.setTransform(this.#dpr, 0, 0, this.#dpr, 0, 0)
-                ctx.filter = `blur(${o.blur}px)`
+                ctx.resetTransform()
+                ctx.scale(this.#dpr, this.#dpr)
+                ctx.filter = `blur(${overlay.blur}px)`
                 drawMainSource()
+
                 ctx.restore()
             }
 
-            // Draw Overlay Element
             ctx.save()
-            ctx.translate(o.cx, o.cy)
+            ctx.translate(overlay.cx, overlay.cy)
             ctx.rotate(rad)
-            ctx.scale(o.scale, o.scale)
+            ctx.scale(overlay.scale, overlay.scale)
 
-            // Content mapping: origin (0,0) is centered on the content box
-            const contentCenterInCanvasX = o.shadowMargins.left + o.contentW / 2
-            const contentCenterInCanvasY = o.shadowMargins.top + o.contentH / 2
+            // DEBUG: The red border now perfectly matches the scaled radius
+            ctx.strokeStyle = 'red'
+            ctx.lineWidth = 1 / overlay.scale
+            this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius)
+            ctx.stroke()
 
-            const offsetX = -contentCenterInCanvasX
-            const offsetY = -contentCenterInCanvasY
-
-            ctx.drawImage(el, offsetX, offsetY, o.w, o.h)
+            this.#drawSnapshotAligned(ctx, el, overlay, hw, hh)
             ctx.restore()
         }
     }
 
-    /**
-     * Animation loop
-     * @private
-     */
+    #drawSnapshotAligned(ctx, el, overlay, hw, hh) {
+        // Position relative to the pivot. shadowMargins are base logical pixels.
+        const dx = -hw - overlay.shadowMargins.left
+        const dy = -hh - overlay.shadowMargins.top
+
+        ctx.drawImage(
+            el,
+            0, 0, el.width, el.height,
+            dx, dy, overlay.w, overlay.h,
+        )
+    }
+
     #loop = () => {
         this.#draw()
         this.#raf = requestAnimationFrame(this.#loop)
     }
 
-    /**
-     * Updates logical resolution
-     * @param {number} width
-     * @param {number} height
-     */
-    setSize = (width, height) => {
-        this.#outW = width
-        this.#outH = height
-        this.#resizeOutputCanvas()
-        this.#draw()
-    }
-
-    /**
-     * Refreshes scaling on window resize
-     */
-    handleResize = () => {
-        this.#resizeOutputCanvas()
-        this.#draw()
-    }
-
-    /**
-     * Cleanup resources
-     */
     dispose = () => {
         if (this.#raf) {
             cancelAnimationFrame(this.#raf)
