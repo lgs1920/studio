@@ -16,10 +16,6 @@
 
 import { LGS_WIDGET_SCALE_FACTOR } from '@Core/constants'
 
-// Build Metadata
-// Generated on: 2026-01-20 23:45:10
-// Build ID: LGS-COMP-20260120-2345-H01-FINAL
-
 /**
  * CanvasOverlayComposer
  * Version H01: Focus sur le respect du ratio d'aspect et la précision du tracé d'arc.
@@ -175,14 +171,20 @@ export class CanvasOverlayComposer {
         this.#draw()
     }
 
+    /**
+     * Main render loop for the composer
+     * Handles backdrop filters, scaling, and overlay positioning
+     */
     #draw = () => {
         this.#flushWebGLBuffer?.()
         const ctx = this.#ctx
 
+        // Clear and set base background
         ctx.clearRect(0, 0, this.#outW, this.#outH)
         ctx.fillStyle = '#000000'
         ctx.fillRect(0, 0, this.#outW, this.#outH)
 
+        // Source canvas coordinates calculation
         let srcX = 0, srcY = 0, srcW = this.#sourceCanvas.width, srcH = this.#sourceCanvas.height
         if (this.#clip) {
             srcX = this.#clip.x * this.#sourceDpr
@@ -195,6 +197,7 @@ export class CanvasOverlayComposer {
             ctx.drawImage(this.#sourceCanvas, srcX, srcY, srcW, srcH, 0, 0, this.#outW, this.#outH)
         }
 
+        // Background layer
         drawMainSource()
 
         for (const overlay of this.#overlays) {
@@ -202,23 +205,25 @@ export class CanvasOverlayComposer {
             if (!el) {
                 continue
             }
+
             const rad = (overlay.rotate * Math.PI) / 180
             const hw = overlay.contentWidth / 2
             const hh = overlay.contentHeight / 2
+            const radius = overlay.radius * overlay.scale
 
             ctx.save()
+
+            // --- Transformations ---
             ctx.translate(overlay.cx, overlay.cy)
             ctx.rotate(rad)
             ctx.scale(overlay.scale, overlay.scale)
 
-            // Backdrop Blur
+            // --- A. Backdrop Blur ---
+            // We only apply the blur if a radius and blur amount are defined
             if (overlay.blur > 0) {
                 ctx.save()
-                this.#traceRoundedRect(ctx,
-                                       -hw, -hh,
-                                       overlay.contentWidth,
-                                       overlay.contentHeight,
-                                       overlay.radius * overlay.scale)
+                // Clip path for the blurred area
+                this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, radius)
                 ctx.clip()
 
                 ctx.resetTransform()
@@ -228,19 +233,22 @@ export class CanvasOverlayComposer {
                 ctx.restore()
             }
 
-            // Debug Border
-            ctx.strokeStyle = 'red'
-            ctx.lineWidth = 1 / overlay.scale
-            this.#traceRoundedRect(ctx,
-                                   -hw, -hh,
-                                   overlay.contentWidth,
-                                   overlay.contentHeight,
-                                   overlay.radius * overlay.scale)
-            ctx.stroke()
-
-            // Snapshot
+            // --- B. Snapshot / Widget Rendering ---
             const dx = -hw - overlay.shadowMargins.left
-            const dy = -hh - overlay.shadowMargins.bottom
+            const dy = -hh - overlay.shadowMargins.top
+
+            ctx.save()
+
+            /**
+             * Conditional Clipping
+             * We only clip if there is a radius and the source is not already a pre-rounded canvas
+             * This avoids double anti-aliasing artifacts (black borders)
+             */
+            const isWidget = el.classList?.contains('lgs-widget-canvas')
+            if (radius > 0 && !isWidget) {
+                this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, radius)
+                ctx.clip()
+            }
 
             ctx.drawImage(
                 el,
@@ -250,9 +258,17 @@ export class CanvasOverlayComposer {
 
             ctx.restore()
 
+            // --- C. Debug Tools (Optional) ---
+            /*
+             ctx.strokeStyle = 'red'
+             ctx.lineWidth = 1 / overlay.scale
+             this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, radius)
+             ctx.stroke()
+             */
+
+            ctx.restore()
         }
     }
-
     #loop = () => {
         this.#draw()
         this.#raf = requestAnimationFrame(this.#loop)
