@@ -89,7 +89,6 @@ export class CanvasOverlayComposer {
 
     #traceRoundedRect(ctx, x, y, w, h, r) {
         ctx.beginPath()
-        // Protection contre les rayons trop larges par rapport à la boite
         const radius = Math.max(0, Math.min(r, w / 2, h / 2))
 
         if (radius === 0) {
@@ -201,20 +200,23 @@ export class CanvasOverlayComposer {
             if (!el) {
                 continue
             }
-
             const rad = (overlay.rotate * Math.PI) / 180
-            const hw = overlay.contentWidth / 2 - 2 * overlay.border
-            const hh = overlay.contentHeight / 2 - 2 * overlay.border
+            const hw = overlay.contentWidth / 2
+            const hh = overlay.contentHeight / 2
 
             ctx.save()
             ctx.translate(overlay.cx, overlay.cy)
             ctx.rotate(rad)
             ctx.scale(overlay.scale, overlay.scale)
 
-            // --- A. Backdrop Blur ---
+            // Backdrop Blur
             if (overlay.blur > 0) {
                 ctx.save()
-                this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius * overlay.scale)
+                this.#traceRoundedRect(ctx,
+                                       -hw, -hh,
+                                       overlay.contentWidth,
+                                       overlay.contentHeight,
+                                       overlay.radius * overlay.scale)
                 ctx.clip()
 
                 ctx.resetTransform()
@@ -224,15 +226,19 @@ export class CanvasOverlayComposer {
                 ctx.restore()
             }
 
-            // --- B. Debug Border ---
+            // Debug Border
             ctx.strokeStyle = 'red'
             ctx.lineWidth = 1 / overlay.scale
-            this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius * overlay.scale)
+            this.#traceRoundedRect(ctx,
+                                   -hw, -hh,
+                                   overlay.contentWidth,
+                                   overlay.contentHeight,
+                                   overlay.radius * overlay.scale)
             ctx.stroke()
 
-            // --- C. Snapshot ---
+            // Snapshot
             const dx = -hw - overlay.shadowMargins.left
-            const dy = -hh - overlay.shadowMargins.top
+            const dy = -hh - overlay.shadowMargins.bottom
 
             ctx.drawImage(
                 el,
@@ -241,6 +247,7 @@ export class CanvasOverlayComposer {
             )
 
             ctx.restore()
+
         }
     }
 
