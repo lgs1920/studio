@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-15
- * Last modified: 2026-01-15
+ * Created on: 2026-01-21
+ * Last modified: 2026-01-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -99,7 +99,24 @@ export const TextWidgetEditor = ({entity}) => {
         setLocalRotation(-Math.ceil(currentRotate))
     }, [current.rotate])
 
+    /**
+     * Schedules a Moveable rect update after the DOM has likely finished re-rendering
+     */
+    const scheduleMoveableUpdate = useCallback(() => {
+        if (_moveable?.current) {
+            requestAnimationFrame(() => {
+                _moveable.current.updateRect()
+            })
+        }
+    }, [_moveable])
+
     const fastUpdate = useCallback((path, val) => {
+
+        // Update handles
+        if (_moveable?.current) {
+            _moveable.current.updateRect()
+        }
+
         if (!$configuration) {
             return
         }
@@ -120,7 +137,10 @@ export const TextWidgetEditor = ({entity}) => {
             _curr = _curr[_key]
         }
         _curr[_keys[_keys.length - 1]] = val
+
+
     }, [$configuration, entity, element])
+
 
     const resetRotationTimer = useCallback(() => {
         if (_timer.current) {
@@ -162,6 +182,7 @@ export const TextWidgetEditor = ({entity}) => {
     const getColor = useCallback((item, alpha = false) => widgetManager.getColor(item, alpha), [widgetManager])
 
     const dynamicVars = useMemo(() => {
+
         return {
             ...widgetManager.generateCSSVariables(
                 element,
@@ -191,6 +212,7 @@ export const TextWidgetEditor = ({entity}) => {
                 value={element.text}
                 onInput={(e) => {
                     fastUpdate('text', e.target.value)
+                    scheduleMoveableUpdate()
                     if (isEditing) {
                         resetRotationTimer()
                     }

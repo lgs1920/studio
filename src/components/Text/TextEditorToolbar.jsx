@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-12
- * Last modified: 2026-01-12
+ * Created on: 2026-01-21
+ * Last modified: 2026-01-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,6 +51,25 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
 
+    const _moveable = __.ui.widgetManager.getMoveable(id)
+
+    const scheduleUpdate = useCallback(() => {
+        if (!_moveable?.current) {
+            return
+        }
+
+        // First update immediately
+        requestAnimationFrame(() => {
+            _moveable.current.updateRect()
+
+            // Second update slightly delayed to catch font-swaps or slow layout shifts
+            setTimeout(() => {
+                _moveable.current?.updateRect()
+            }, 50)
+        })
+    }, [_moveable])
+
+
     /**
      * Injects selected Google Fonts into the document head
      */
@@ -76,7 +95,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
         if (alignmentDisabled && $element && $element.align !== 'left') {
             $element.align = 'left'
         }
-    }, [alignmentDisabled, $element])
+    }, [alignmentDisabled, $element, scheduleUpdate])
 
     /**
      * Handlers using the correct mapping between proxy and snapshot
@@ -84,44 +103,50 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
     const handleFontChange = useCallback((e) => {
         if ($element) {
             $element.fontFamily = e.target.value.replace(/_/g, ' ')
+            scheduleUpdate()
         }
-    }, [$element])
+    }, [$element, scheduleUpdate])
 
     const handleSizeChange = useCallback((e) => {
         if ($element) {
             $element.size = Number(e.target.value)
+            scheduleUpdate()
         }
-    }, [$element])
+    }, [$element, scheduleUpdate])
 
     const handleLineHeightChange = useCallback((e) => {
         if ($element) {
             $element.lineHeight = e.target.value
+            scheduleUpdate()
         }
-    }, [$element])
+    }, [$element, scheduleUpdate])
 
     const handleColorChange = useCallback((e) => {
         if ($element) {
             $element.color = e.target.value
+            scheduleUpdate()
         }
-    }, [$element])
+    }, [$element, scheduleUpdate])
 
     const handleOpacityChange = useCallback((e) => {
         if ($element) {
             $element.opacity = parseFloat(e.target.value)
         }
-    }, [$element])
+    }, [$element, scheduleUpdate])
 
     const toggleBold = useCallback(() => {
         if ($element) {
             $element.weight = element?.weight === 'bold' ? 'normal' : 'bold'
+            scheduleUpdate()
         }
-    }, [$element, element?.weight])
+    }, [$element, element?.weight, scheduleUpdate])
 
     const toggleItalic = useCallback(() => {
         if ($element) {
             $element.style = element?.style === 'italic' ? 'normal' : 'italic'
+            scheduleUpdate()
         }
-    }, [$element, element?.style])
+    }, [$element, element?.style, scheduleUpdate])
 
     const currentFont = element?.fontFamily ?? 'System'
     const appliedFontStack = currentFont === 'System' ? WIDGET_SYSTEM_FONT_STACK : currentFont

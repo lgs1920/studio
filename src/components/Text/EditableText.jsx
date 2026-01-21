@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-14
- * Last modified: 2026-01-14
+ * Created on: 2026-01-21
+ * Last modified: 2026-01-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,7 @@ import { useSnapshot }                                 from 'valtio'
 export const EditableText = ({id, scale = 1}) => {
     const $configuration = lgs.settings.widgets['text-widget']?.configuration
     const configuration = useSnapshot($configuration)
+    const _moveable = __.ui.widgetManager.getMoveable(id)
 
     // Access the global selection store
     const $drawers = lgs.stores.ui.drawers
@@ -95,6 +96,12 @@ export const EditableText = ({id, scale = 1}) => {
         else {
             triggerRedraw()
         }
+
+        // Update handles
+        if (_moveable?.current) {
+            _moveable.current.updateRect()
+        }
+
     }, [element?.fontFamily])
 
     useEffect(() => {
@@ -142,12 +149,20 @@ export const EditableText = ({id, scale = 1}) => {
         const $target = ensureProxyElement()
         $target.text = editingText
         setIsEditing(false)
+        // Update handles
+        if (_moveable?.current) {
+            _moveable.current.updateRect()
+        }
     }
 
     const widgetManager = useMemo(() => TextWidgetManager.instance, [])
     if (!element) {
         return null
     }
+    // Ensure the height of the ghost div is correct even with trailing returns
+    const displayValue = isEditing
+                         ? (editingText + (editingText.endsWith('\n') ? '\u00A0' : ''))
+                         : element.text
 
     const cssVars = widgetManager.generateCSSVariables(element)
     const hasMultipleLines = (element.text || '').includes('\n')
@@ -163,7 +178,7 @@ export const EditableText = ({id, scale = 1}) => {
         fontStyle:  'var(--lgs-tx-style)',
         textAlign:  'var(--lgs-tx-align)',
         lineHeight: `calc(${element.size}px * var(--lgs-tx-lh))`,
-        whiteSpace: 'pre',
+        whiteSpace: 'pre-wrap',
         margin:     '0',
         padding: `${Math.max(4, lineHeightPx * 0.25)}px ${Math.max(4, lineHeightPx * 0.25)}px ${Math.max(5, lineHeightPx * 0.35)}px ${Math.max(4, lineHeightPx * 0.25)}px`,
         boxSizing:  'border-box',
@@ -173,6 +188,20 @@ export const EditableText = ({id, scale = 1}) => {
         outline:   'none',
         boxShadow: 'none',
     }
+
+    /**
+     * Updates handles on text change or edit mode toggle
+     */
+    useEffect(() => {
+        if (_moveable?.current) {
+            // We use requestAnimationFrame to wait for the next paint
+            // ensuring the DOM nodes have their new dimensions
+            const frame = requestAnimationFrame(() => {
+                _moveable.current.updateRect()
+            })
+            return () => cancelAnimationFrame(frame)
+        }
+    }, [editingText, isEditing, element.text, _moveable])
 
     return (
         <div
@@ -184,6 +213,7 @@ export const EditableText = ({id, scale = 1}) => {
                 position:        'relative',
                 width:    'auto',
                 maxWidth: 'none',
+                overflow: 'hidden',
                 backgroundColor: 'var(--lgs-tx-bg-color)',
                 backdropFilter: 'blur(var(--lgs-tx-blur))',
                 border:          'var(--lgs-tx-border)',
@@ -205,8 +235,9 @@ export const EditableText = ({id, scale = 1}) => {
                     minHeight:  hasMultipleLines ? '100%' : 'auto',
                 }}
             >
-                {(isEditing ? editingText : element.text)}
-                {isEditing && editingText.endsWith('\n') ? '\n ' : ''}
+                {/* {(isEditing ? editingText : element.text)} */}
+                {/* {isEditing && editingText.endsWith('\n') ? '\n ' : ''} */}
+                {displayValue}
             </div>
 
             {isEditing && (
@@ -227,10 +258,11 @@ export const EditableText = ({id, scale = 1}) => {
                         outline:    'none',
                         resize:     'none',
                         overflow: 'hidden',
+                        borderRadius: 'inherit',
                         display:    'block',
                     }}
                     value={editingText}
-                    onChange={(e) => {
+                    onInput={(e) => {
                         const val = e.target.value
                         setEditingText(val)
                         const $target = ensureProxyElement()
