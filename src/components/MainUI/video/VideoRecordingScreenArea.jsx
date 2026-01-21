@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-20
- * Last modified: 2026-01-20
+ * Created on: 2026-01-21
+ * Last modified: 2026-01-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,15 +54,19 @@ const getStyles = (el, depth = 0) => {
     // Backdrop filter detection
     const filter = style.backdropFilter || style.webkitBackdropFilter
     const blurMatch = filter?.match(/blur\(([\d.]+)px\)/)
-    const blurValue = blurMatch ? parseFloat(blurMatch[1]) : 0
+    const blur = blurMatch ? parseFloat(blurMatch[1]) : 0
 
     // Border radius detection
     const radiusMatch = style.borderRadius?.match(/(\d+)px/)
-    const radiusValue = radiusMatch ? parseFloat(radiusMatch[1]) : 0
+    const radius = radiusMatch ? parseFloat(radiusMatch[1]) : 0
+
+    // Border width detection
+    const borderWidthMatch = style.borderWidth?.match(/([\d.]+)px/)
+    const border = borderWidthMatch ? parseFloat(borderWidthMatch[1]) : 0
 
     // Stop if any found
-    if (blurValue > 0 || radiusValue > 0) {
-        return {blur: blurValue, radius: radiusValue}
+    if (blur > 0 || radius > 0 || border > 0) {
+        return {blur, radius, border}
     }
 
     for (const child of el.children) {
@@ -72,7 +76,7 @@ const getStyles = (el, depth = 0) => {
         }
     }
 
-    return {blur: 0, radius: 0}
+    return {blur: 0, radius: 0, border: 0}
 }
 
 /**
@@ -189,6 +193,7 @@ export const VideoRecordingScreenArea = memo(() => {
                     contentHeight: config.dimensions.height,
                     blur:     styles.blur,
                     radius:   styles.radius,
+                    border: styles.border,
                     rotate:   config.rotate || 0,
                     scale:    config.scale || 1,
                     shadowMargins,
@@ -234,6 +239,7 @@ export const VideoRecordingScreenArea = memo(() => {
             if (canvasEl instanceof HTMLCanvasElement) {
                 const config = __.ui.widgetManager.getWidgetConfig(key)
                 const styles = getStyles(widgetEl)
+                console.log(styles)
                 const shadowMargins = getShadowParameters(widgetEl)
 
                 // config.position contains coordinates relative to the Studio origin
@@ -256,6 +262,7 @@ export const VideoRecordingScreenArea = memo(() => {
                     contentH: config.dimensions.height,
                     blur:     styles.blur,
                     radius:   styles.radius,
+                    border: styles.border,
                     rotate:   config.rotate || 0,
                     scale:    config.scale || 1,
                     shadowMargins,

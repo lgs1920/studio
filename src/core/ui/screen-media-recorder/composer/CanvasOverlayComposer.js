@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-20
- * Last modified: 2026-01-20
+ * Created on: 2026-01-21
+ * Last modified: 2026-01-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,14 +17,12 @@
 import { LGS_WIDGET_SCALE_FACTOR } from '@Core/constants'
 
 // Build Metadata
-// Generated on: 2026-01-20 21:30:15
-// Build ID: LGS-COMP-20260120-2130-D20-STABLE
+// Generated on: 2026-01-20 23:45:10
+// Build ID: LGS-COMP-20260120-2345-H01-FINAL
 
 /**
  * CanvasOverlayComposer
- * High-fidelity compositor using a transform-first approach.
- * By applying scale via the context matrix, all geometric properties
- * (dimensions, radius, offsets) are naturally projected.
+ * Version H01: Focus sur le respect du ratio d'aspect et la précision du tracé d'arc.
  */
 export class CanvasOverlayComposer {
     #sourceCanvas
@@ -91,20 +89,19 @@ export class CanvasOverlayComposer {
 
     #traceRoundedRect(ctx, x, y, w, h, r) {
         ctx.beginPath()
-        if (r <= 0) {
+        // Protection contre les rayons trop larges par rapport à la boite
+        const radius = Math.max(0, Math.min(r, w / 2, h / 2))
+
+        if (radius === 0) {
             ctx.rect(x, y, w, h)
             return
         }
-        const radius = Math.min(r, w / 2, h / 2)
+
         ctx.moveTo(x + radius, y)
-        ctx.lineTo(x + w - radius, y)
-        ctx.arcTo(x + w, y, x + w, y + radius, radius)
-        ctx.lineTo(x + w, y + h - radius)
-        ctx.arcTo(x + w, y + h, x + w - radius, y + h, radius)
-        ctx.lineTo(x + radius, y + h)
-        ctx.arcTo(x, y + h, x, y + h - radius, radius)
-        ctx.lineTo(x, y + radius)
-        ctx.arcTo(x, y, x + radius, y, radius)
+        ctx.arcTo(x + w, y, x + w, y + h, radius)
+        ctx.arcTo(x + w, y + h, x, y + h, radius)
+        ctx.arcTo(x, y + h, x, y, radius)
+        ctx.arcTo(x, y, x + w, y, radius)
         ctx.closePath()
     }
 
@@ -121,17 +118,16 @@ export class CanvasOverlayComposer {
                   radius        = 0,
                   rotate        = 0,
                   scale         = 1,
+                  border = 0,
                   shadowMargins = {top: 0, right: 0, bottom: 0, left: 0},
               } = options
 
-        let posX, posY, width, height
+        let posX, posY, rawWidth
 
-        // Calculate logical base size (ignoring external CSS scale)
         if (typeof x === 'number' && typeof y === 'number') {
             posX = x
             posY = y
-            width = w ?? (el.width / this.#dpr)
-            height = h ?? (el.height / this.#dpr)
+            rawWidth = w ?? (el.width / this.#dpr)
         }
         else {
             const rect = el.getBoundingClientRect()
@@ -142,31 +138,35 @@ export class CanvasOverlayComposer {
                 posX -= this.#clip.x
                 posY -= this.#clip.y
             }
-            width = rect.width
-            height = rect.height
+            rawWidth = rect.width
         }
 
         const scaleFactor = el.classList?.contains('lgs-widget-canvas') ? LGS_WIDGET_SCALE_FACTOR : 1
+        const imgAspectRatio = el.height / el.width
+
+        const logicalContentW = contentWidth || (rawWidth / scaleFactor)
+        const logicalContentH = contentHeight || (logicalContentW * imgAspectRatio)
+
+        const totalW = logicalContentW + shadowMargins.left + shadowMargins.right
+        const totalH = totalW * imgAspectRatio
+
         const cssScale = typeof scale === 'object' ? (scale.x ?? 1) : scale
 
-        // Base logical dimensions (normalized only by the internal buffer factor)
-        const baseContentW = contentWidth || (width / scaleFactor)
-        const baseContentH = contentHeight || (height / scaleFactor)
-
-        // The pivot must be the logical center of the element in the final layout
-        const cx = posX + shadowMargins.left + baseContentW / 2
-        const cy = posY + shadowMargins.top + baseContentH / 2
+        // Pivot centré sur le contenu
+        const cx = posX + shadowMargins.left + logicalContentW / 2
+        const cy = posY + shadowMargins.top + logicalContentH / 2
 
         this.#overlays.push({
                                 element,
                                 cx, cy,
-                                w:             width / scaleFactor,
-                                h:             height / scaleFactor,
-                                contentWidth:  baseContentW,
-                                contentHeight: baseContentH,
+                                w:             totalW,
+                                h:             totalH,
+                                contentWidth:  logicalContentW,
+                                contentHeight: logicalContentH,
                                 blur,
-                                radius, // Stored as logical pixels
+                                radius,
                                 rotate,
+                                border,
                                 scale:         cssScale,
                                 shadowMargins,
                             })
@@ -203,53 +203,45 @@ export class CanvasOverlayComposer {
             }
 
             const rad = (overlay.rotate * Math.PI) / 180
-            const hw = overlay.contentWidth / 2
-            const hh = overlay.contentHeight / 2
-
-            // Backdrop Blur
-            if (overlay.blur > 0) {
-                ctx.save()
-                ctx.translate(overlay.cx, overlay.cy)
-                ctx.rotate(rad)
-                ctx.scale(overlay.scale, overlay.scale)
-
-                this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius)
-                ctx.clip()
-
-                ctx.resetTransform()
-                ctx.scale(this.#dpr, this.#dpr)
-                ctx.filter = `blur(${overlay.blur}px)`
-                drawMainSource()
-
-                ctx.restore()
-            }
+            const hw = overlay.contentWidth / 2 - 2 * overlay.border
+            const hh = overlay.contentHeight / 2 - 2 * overlay.border
 
             ctx.save()
             ctx.translate(overlay.cx, overlay.cy)
             ctx.rotate(rad)
             ctx.scale(overlay.scale, overlay.scale)
 
-            // DEBUG: The red border now perfectly matches the scaled radius
+            // --- A. Backdrop Blur ---
+            if (overlay.blur > 0) {
+                ctx.save()
+                this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius * overlay.scale)
+                ctx.clip()
+
+                ctx.resetTransform()
+                ctx.scale(this.#dpr, this.#dpr)
+                ctx.filter = `blur(${overlay.blur}px)`
+                drawMainSource()
+                ctx.restore()
+            }
+
+            // --- B. Debug Border ---
             ctx.strokeStyle = 'red'
             ctx.lineWidth = 1 / overlay.scale
-            this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius)
+            this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius * overlay.scale)
             ctx.stroke()
 
-            this.#drawSnapshotAligned(ctx, el, overlay, hw, hh)
+            // --- C. Snapshot ---
+            const dx = -hw - overlay.shadowMargins.left
+            const dy = -hh - overlay.shadowMargins.top
+
+            ctx.drawImage(
+                el,
+                0, 0, el.width, el.height,
+                dx, dy, overlay.w, overlay.h,
+            )
+
             ctx.restore()
         }
-    }
-
-    #drawSnapshotAligned(ctx, el, overlay, hw, hh) {
-        // Position relative to the pivot. shadowMargins are base logical pixels.
-        const dx = -hw - overlay.shadowMargins.left
-        const dy = -hh - overlay.shadowMargins.top
-
-        ctx.drawImage(
-            el,
-            0, 0, el.width, el.height,
-            dx, dy, overlay.w, overlay.h,
-        )
     }
 
     #loop = () => {
