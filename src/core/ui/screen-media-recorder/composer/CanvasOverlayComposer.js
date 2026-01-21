@@ -126,7 +126,7 @@ export class CanvasOverlayComposer {
         if (typeof x === 'number' && typeof y === 'number') {
             posX = x
             posY = y
-            rawWidth = w ?? (el.width / this.#dpr)
+            rawWidth = w ?? (el.width /* / this.#dpr */)
         }
         else {
             const rect = el.getBoundingClientRect()
@@ -143,15 +143,17 @@ export class CanvasOverlayComposer {
         const scaleFactor = el.classList?.contains('lgs-widget-canvas') ? LGS_WIDGET_SCALE_FACTOR : 1
         const imgAspectRatio = el.height / el.width
 
+
+        const cssScale = typeof scale === 'object' ? (scale.x ?? 1) : scale
+        // The content dimensions in logical pixel
         const logicalContentW = contentWidth || (rawWidth / scaleFactor)
         const logicalContentH = contentHeight || (logicalContentW * imgAspectRatio)
 
-        const totalW = logicalContentW + shadowMargins.left + shadowMargins.right
+        // Apply the shadow margins.
+        const totalW = logicalContentW + (shadowMargins.left + shadowMargins.right)
         const totalH = totalW * imgAspectRatio
 
-        const cssScale = typeof scale === 'object' ? (scale.x ?? 1) : scale
-
-        // Pivot centré sur le contenu
+        // Pivot centered on the actual content (excluding shadows for rotation)
         const cx = posX + shadowMargins.left + logicalContentW / 2
         const cy = posY + shadowMargins.top + logicalContentH / 2
 
