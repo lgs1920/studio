@@ -7,28 +7,26 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-21
- * Last modified: 2026-01-21
+ * Created on: 2026-01-22
+ * Last modified: 2026-01-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-
-import { TextWidgetManager }                           from '@Core/ui/text-metrics/TextWidgetManager'
+import { TextWidgetManager } from '@Core/ui/text-metrics/TextWidgetManager'
 import classNames                                      from 'classnames'
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useSnapshot }                                 from 'valtio'
 
 /**
- * Inline text editor with dynamic font loading and robust click-to-edit.
- * Handles deletion when selected and not in edit mode.
+ * Inline text editor with dynamic font loading.
+ * Ensures style consistency between display and edit modes by overriding browser defaults.
  */
 export const EditableText = ({id, scale = 1}) => {
     const $configuration = lgs.settings.widgets['text-widget']?.configuration
     const configuration = useSnapshot($configuration)
     const _moveable = __.ui.widgetManager.getMoveable(id)
 
-    // Access the global selection store
     const $drawers = lgs.stores.ui.drawers
     const drawers = useSnapshot($drawers)
 
@@ -42,24 +40,20 @@ export const EditableText = ({id, scale = 1}) => {
     const element = configuration?.elements?.[id] ?? configuration.user ?? configuration.default
 
     /**
-     * Placeholder for the removal logic.
+     * Widget removal logic
      */
     const removeTextWidget = useCallback((entityId) => {
-        // Implementation handled by user
         console.log(`Removing widget: ${entityId}`)
     }, [])
 
     /**
-     * Global keydown listener to handle deletion when the widget is selected
-     * but not being actively edited.
+     * Handles deletion keys when the widget is selected
      */
     useEffect(() => {
         const handleGlobalKeyDown = (e) => {
-            // Check if this specific widget is the current/selected one
             const isCurrent = drawers.entity === id
 
             if (isCurrent && !isEditing && (e.key === 'Delete' || e.key === 'Backspace')) {
-                // Prevent browser back-navigation or other defaults
                 e.preventDefault()
                 removeTextWidget(id)
             }
@@ -70,7 +64,7 @@ export const EditableText = ({id, scale = 1}) => {
     }, [id, isEditing, drawers.entity, removeTextWidget])
 
     /**
-     * Injects Google Fonts dynamically.
+     * Loads Google Fonts and updates moveable UI
      */
     useEffect(() => {
         if (!element?.fontFamily || element.fontFamily === 'System') {
@@ -97,7 +91,6 @@ export const EditableText = ({id, scale = 1}) => {
             triggerRedraw()
         }
 
-        // Update handles
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
@@ -149,53 +142,48 @@ export const EditableText = ({id, scale = 1}) => {
         const $target = ensureProxyElement()
         $target.text = editingText
         setIsEditing(false)
-        // Update handles
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
     }
 
     const widgetManager = useMemo(() => TextWidgetManager.instance, [])
+
     if (!element) {
         return null
     }
-    // Ensure the height of the ghost div is correct even with trailing returns
+
     const displayValue = isEditing
-                         ? (editingText + (editingText.endsWith('\n') ? '\u00A0' : ''))
+                         ? (editingText.replace(/\n$/, '\n '))
                          : element.text
 
     const cssVars = widgetManager.generateCSSVariables(element)
-    const hasMultipleLines = (element.text || '').includes('\n')
 
     const fontSize = element.size ?? 16
     const lineHeight = parseFloat(element.lineHeight ?? 1)
     const lineHeightPx = fontSize * lineHeight
 
     const commonStyles = {
+        font:       'inherit', // Force break from browser default font stacks
         fontSize:   'var(--lgs-tx-size)',
         fontFamily: 'var(--lgs-tx-font)',
         fontWeight: 'var(--lgs-tx-weight)',
         fontStyle:  'var(--lgs-tx-style)',
         textAlign:  'var(--lgs-tx-align)',
         lineHeight: `calc(${element.size}px * var(--lgs-tx-lh))`,
-        whiteSpace: 'pre-wrap',
+        whiteSpace: 'pre',
         margin:     '0',
-        padding: `${Math.max(4, lineHeightPx * 0.25)}px ${Math.max(4, lineHeightPx * 0.25)}px ${Math.max(5, lineHeightPx * 0.35)}px ${Math.max(4, lineHeightPx * 0.25)}px`,
+        padding:    `${Math.max(4, lineHeightPx * 0.25)}px`,
         boxSizing:  'border-box',
         color:      'var(--lgs-tx-color)',
         textShadow: 'var(--lgs-tx-shadow)',
         overflow:   'visible',
-        outline:   'none',
-        boxShadow: 'none',
+        outline:    'none',
+        caretColor: 'var(--lgs-tx-color)',
     }
 
-    /**
-     * Updates handles on text change or edit mode toggle
-     */
     useEffect(() => {
         if (_moveable?.current) {
-            // We use requestAnimationFrame to wait for the next paint
-            // ensuring the DOM nodes have their new dimensions
             const frame = requestAnimationFrame(() => {
                 _moveable.current.updateRect()
             })
@@ -211,15 +199,13 @@ export const EditableText = ({id, scale = 1}) => {
                 ...cssVars,
                 display:         'inline-block',
                 position:        'relative',
-                width:    'auto',
-                maxWidth: 'none',
-                overflow: 'hidden',
+                minWidth: '1ch',
                 backgroundColor: 'var(--lgs-tx-bg-color)',
                 backdropFilter: 'blur(var(--lgs-tx-blur))',
                 border:          'var(--lgs-tx-border)',
                 borderRadius:    'var(--lgs-tx-radius)',
                 boxShadow:       'var(--lgs-bg-elevation)',
-                padding: '0',
+                opacity:  element.opacity, // Opacity applied here so it covers both states
             }}
         >
             <div
@@ -229,15 +215,10 @@ export const EditableText = ({id, scale = 1}) => {
                     cursor:     'text',
                     userSelect: 'none',
                     visibility: isEditing ? 'hidden' : 'visible',
-                    opacity:    element.opacity,
-                    display:    hasMultipleLines ? 'flex' : 'block',
-                    alignItems: hasMultipleLines ? 'center' : 'initial',
-                    minHeight:  hasMultipleLines ? '100%' : 'auto',
+                    minHeight: '1em',
                 }}
             >
-                {/* {(isEditing ? editingText : element.text)} */}
-                {/* {isEditing && editingText.endsWith('\n') ? '\n ' : ''} */}
-                {displayValue}
+                {displayValue || '\u00A0'}
             </div>
 
             {isEditing && (
@@ -247,19 +228,16 @@ export const EditableText = ({id, scale = 1}) => {
                     style={{
                         ...commonStyles,
                         position:   'absolute',
-                        top:    '0',
-                        left:   '0',
-                        right:  '0',
-                        bottom: '0',
-                        width:  '100%',
-                        height: '100%',
+                        top:     '0',
+                        left:    '0',
+                        width:   '100%',
+                        height:  '100%',
                         background: 'transparent',
                         border:     'none',
-                        outline:    'none',
                         resize:     'none',
                         overflow: 'hidden',
-                        borderRadius: 'inherit',
                         display:    'block',
+                        padding: `${Math.max(4, lineHeightPx * 0.25)}px`, // Match ghost div padding exactly
                     }}
                     value={editingText}
                     onInput={(e) => {
@@ -270,8 +248,6 @@ export const EditableText = ({id, scale = 1}) => {
                     }}
                     onBlur={handleFinishEdit}
                     onKeyDown={(e) => {
-                        // While editing, we stop propagation so keys like Backspace
-                        // only affect the text and don't trigger global deletion.
                         if (e.key === 'Delete' || e.key === 'Backspace' || e.key === 'Escape') {
                             e.stopPropagation()
                         }
