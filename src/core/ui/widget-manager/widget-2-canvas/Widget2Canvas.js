@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-18
- * Last modified: 2026-01-18
+ * Created on: 2026-01-22
+ * Last modified: 2026-01-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { DYNAMIC_WIDGET_PART, STATIC_WIDGET_PART } from '@Core/constants'
-import { snapdom }                                 from '@zumer/snapdom'
+import { DYNAMIC_WIDGET_PART, LGS_WIDGET_SCALE_FACTOR, STATIC_WIDGET_PART } from '@Core/constants'
+import { snapdom }                                                          from '@zumer/snapdom'
 
 /**
  * Widget2Canvas — Ultra-fast DOM-to-canvas mirror
@@ -105,30 +105,80 @@ export class Widget2Canvas {
         this.#updateCanvas(buffer)
     }
 
+
+    /**
+     * Converts an element to a high-quality canvas source.
+     * Scaled to match device pixel ratio or custom scale for maximum sharpness.
+     */
     #elementToCanvasSource = async (el, options = {}) => {
         if (el instanceof SVGElement) {
+            const $clone = el.cloneNode(true)
             const style = getComputedStyle(el)
-            // Ensure SVG has intrinsic dimensions
-            if (!el.getAttribute('width')) {
-                el.setAttribute('width', el.clientWidth || style.width)
-            }
-            if (!el.getAttribute('height')) {
-                el.setAttribute('height', el.clientHeight || style.height)
+
+            // Custom scale for high-end export
+            const scale = options.scale || LGS_WIDGET_SCALE_FACTOR
+
+            // Get original bounding box dimensions
+            const bbox = el.getBBox?.()
+            const baseWidth = el.clientWidth || bbox?.width || parseFloat(style.width) || 512
+            const baseHeight = el.clientHeight || bbox?.height || parseFloat(style.height) || 512
+
+            // Set high-resolution dimensions
+            const scaledWidth = baseWidth * scale
+            const scaledHeight = baseHeight * scale
+
+            $clone.setAttribute('width', scaledWidth)
+            $clone.setAttribute('height', scaledHeight)
+
+            // 3. Force ViewBox
+            if (!el.getAttribute('viewBox')) {
+                // We use the base dimensions to ensure the 'camera' captures the original area
+                $clone.setAttribute('viewBox', `0 0 ${baseWidth} ${baseHeight}`)
             }
 
-            const xml = new XMLSerializer().serializeToString(el)
+            // Ensure aspect ratio is preserved during scaling
+            $clone.setAttribute('preserveAspectRatio', 'xMidYMid meet')
+
+            // Inline computed styles
+            const allElements = el.querySelectorAll('*')
+            const allClones = $clone.querySelectorAll('*')
+
+            allClones.forEach((target, index) => {
+                const original = allElements[index]
+                if (!original) {
+                    return
+                }
+
+                const computed = getComputedStyle(original)
+
+                target.style.fill = computed.fill
+                target.style.stroke = computed.stroke
+                target.style.strokeWidth = computed.strokeWidth
+                target.style.opacity = computed.opacity
+
+                // Critical for elements that use CSS transitions or transforms
+                if (computed.transform !== 'none') {
+                    target.style.transform = computed.transform
+                    target.style.transformOrigin = computed.transformOrigin
+                }
+            })
+
+            const xml = new XMLSerializer().serializeToString($clone)
             const img = new Image()
-            img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml)
+
+            const utf8Bytes = new TextEncoder().encode(xml)
+            const base64 = btoa(String.fromCharCode(...utf8Bytes))
+            img.src = `data:image/svg+xml;base64,${base64}`
 
             await img.decode()
             return img
         }
+
         return await snapdom.toCanvas(el, options)
     }
-
     #renderPart = async (el) => {
         let target = el
-        if (!(el instanceof SVGElement) && this.#options.type === 'svg') {
+        if (el instanceof SVGElement || this.#options.type === 'svg') {
             const childSvg = el.querySelector('svg')
             if (childSvg) {
                 target = childSvg
@@ -139,41 +189,43 @@ export class Widget2Canvas {
 
     /**
      * Updates the visible canvas while maintaining HiDPI consistency.
+     * Uses a single canvas instance to keep video streams alive.
      * @param {HTMLCanvasElement|HTMLImageElement} source
      */
     #updateCanvas = (source) => {
-        const newCanvas = document.createElement('canvas')
         const scale = this.#options.scale
-
-        // The internal buffer MUST be physical pixels (HiDPI)
-        newCanvas.width = source.width
-        newCanvas.height = source.height
-        newCanvas.className = 'lgs-widget-canvas'
-
-        // The CSS size MUST be logical pixels
         const logicalW = source.width / scale
         const logicalH = source.height / scale
-        newCanvas.style.width = `${logicalW}px`
-        newCanvas.style.height = `${logicalH}px`
 
-        // Hide the canvas visually - it's only used for video composition
-        newCanvas.style.position = 'absolute'
-        newCanvas.style.visibility = 'hidden'
-        newCanvas.style.pointerEvents = 'none'
+        // 1. If the canvas doesn't exist, create it once
+        if (!this.#canvas) {
+            this.#canvas = document.createElement('canvas')
+            this.#canvas.className = 'lgs-widget-canvas'
 
-        const ctx = newCanvas.getContext('2d')
+            // Internal configuration for video composition
+            this.#canvas.style.position = 'absolute'
+            this.#canvas.style.visibility = 'hidden'
+            this.#canvas.style.pointerEvents = 'none'
+
+            // Insert into DOM only once
+            this.#original.before(this.#canvas)
+        }
+
+        // 2. Update physical dimensions only if they changed to avoid flickering
+        if (this.#canvas.width !== source.width || this.#canvas.height !== source.height) {
+            this.#canvas.width = source.width
+            this.#canvas.height = source.height
+            this.#canvas.style.width = `${logicalW}px`
+            this.#canvas.style.height = `${logicalH}px`
+        }
+
+        // 3. Draw onto the PERMANENT canvas instance
+        const ctx = this.#canvas.getContext('2d')
+
+        // Production note: Clear before drawing to handle transparency correctly
+        ctx.clearRect(0, 0, this.#canvas.width, this.#canvas.height)
         ctx.drawImage(source, 0, 0)
-
-        if (this.#canvas) {
-            this.#canvas.replaceWith(newCanvas)
-        }
-        else {
-            this.#original.before(newCanvas)
-        }
-
-        this.#canvas = newCanvas
     }
-
     getContext = () => this.#canvas?.getContext('2d') ?? null
     getCanvas = () => this.#canvas
 
