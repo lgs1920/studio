@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-21
- * Last modified: 2026-01-21
+ * Created on: 2026-01-22
+ * Last modified: 2026-01-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -524,7 +524,6 @@ export const WIDGET_GOOGLE_FONTS = [
     'Abril Fatface',
     'Alumni Sans Pinstripe',
     'Bangers',
-    'Creepster',
     'Dancing Script',
     'Fredoka One',
     'Lobster',
@@ -534,7 +533,6 @@ export const WIDGET_GOOGLE_FONTS = [
     'Pacifico',
     'Quicksand',
     'Roboto',
-    'Source Code Pro',
 ].sort((a, b) => a.localeCompare(b))
 
 /**
