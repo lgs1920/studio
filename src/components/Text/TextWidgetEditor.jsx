@@ -63,15 +63,20 @@ const OptimizedTextArea = memo(({value, onInput, dynamicVars, onFocus, onBlur, i
 export const TextWidgetEditor = ({entity}) => {
     const $configuration = lgs.settings.widgets['text-widget'].configuration
     const configuration = useSnapshot($configuration)
-    const element = configuration?.elements?.[entity] ?? configuration.user ?? configuration.default
-    const widget = useMemo(() => __.ui.widgetManager.getElementById(entity), [entity])
 
+    // Snapshot of the parent store to detect re-assignments of 'current'
     const $widgetStore = lgs.stores.ui.widget
     const widgetStore = useSnapshot($widgetStore)
-    const bgSnapshot = widgetStore.currentSnapshot
 
+    // Identity resolution: store current selection takes priority for reactivity
+    const activeId = widgetStore.current?.id || entity
+
+    // Proxy reference for mutations
     const $current = lgs.stores.ui.widget.current
-    const current = useSnapshot($current)
+
+    const element = configuration?.elements?.[activeId] ?? configuration.user ?? configuration.default
+    const widget = useMemo(() => __.ui.widgetManager.getElementById(activeId), [activeId])
+    const bgSnapshot = widgetStore.currentSnapshot
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
     const widgetManager = useMemo(() => TextWidgetManager.instance, [])
@@ -79,46 +84,25 @@ export const TextWidgetEditor = ({entity}) => {
     const [localRotation, setLocalRotation] = useState(0)
     const [isEditing, setIsEditing] = useState(false)
     const _timer = useRef(null)
-    const _moveable = __.ui.widgetManager.getMoveable(entity)
-
-    /**
-     * Sync local UI with proxy rotation
-     */
-    useEffect(() => {
-        const currentRotate = current.rotate ?? __.ui.widgetManager.getTransform(widget).rotate ?? 0
-        setLocalRotation(-Math.ceil(currentRotate))
-    }, [current.rotate, widget])
-
-    /**
-     * Schedules a Moveable rect update after DOM paint
-     */
-    const scheduleMoveableUpdate = useCallback(() => {
-        if (_moveable?.current) {
-            requestAnimationFrame(() => {
-                _moveable.current.updateRect()
-            })
-        }
-    }, [_moveable])
+    const _moveable = __.ui.widgetManager.getMoveable(activeId)
 
     /**
      * Deep update for configuration proxy.
-     * Ensures intermediate objects are initialized from resolved element snapshot.
+     * Inherits from snapshot to prevent state loss during partial updates.
      */
     const fastUpdate = useCallback((path, val) => {
         if (!$configuration) {
             return
         }
-
         if (!$configuration.elements) {
             $configuration.elements = {}
         }
-
-        if (!$configuration.elements[entity]) {
-            $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
+        if (!$configuration.elements[activeId]) {
+            $configuration.elements[activeId] = JSON.parse(JSON.stringify(element))
         }
 
         const _keys = path.split('.')
-        let _curr = $configuration.elements[entity]
+        let _curr = $configuration.elements[activeId]
         let _source = element
 
         for (let i = 0; i < _keys.length - 1; i++) {
@@ -129,61 +113,68 @@ export const TextWidgetEditor = ({entity}) => {
             _curr = _curr[_key]
             _source = _source?.[_key]
         }
-
         _curr[_keys[_keys.length - 1]] = val
-
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }, [$configuration, entity, element, _moveable])
+    }, [$configuration, activeId, element, _moveable])
 
     /**
-     * Restores rotation transform after editing session
+     * Sync local rotation on activeId change or store rotation update
      */
-    const resetRotationTimer = useCallback(() => {
-        if (_timer.current) {
-            clearTimeout(_timer.current)
+    useEffect(() => {
+        if (!widget) {
+            return
         }
-        _timer.current = setTimeout(() => {
-            setIsEditing(false)
-        }, 1000)
-    }, [])
+        const transform = __.ui.widgetManager.getTransform(widget)
+        const currentRotate = widgetStore.current?.rotate ?? transform.rotate ?? 0
+        setLocalRotation(-Math.ceil(currentRotate))
+    }, [activeId, widget, widgetStore.current?.rotate])
 
     /**
-     * Apply rotation to the DOM element and update stores
+     * Update rotation in DOM and stores
      */
     const applyRotation = async (val) => {
         setLocalRotation(val)
-
         const {translate, scale} = __.ui.widgetManager.getTransform(widget)
         const targetRotate = -val
 
         __.ui.widgetManager.setTransform(widget, {translate, scale, rotate: targetRotate})
-
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
 
-        $current.rotate = targetRotate
+        if ($current) {
+            $current.rotate = targetRotate
+        }
 
-        const initConfig = await __.ui.widgetManager.getWidgetConfig(entity)
-        const config = await __.ui.widgetManager.retrieveConfig(entity, initConfig)
+        const initConfig = await __.ui.widgetManager.getWidgetConfig(activeId)
+        const config = await __.ui.widgetManager.retrieveConfig(activeId, initConfig)
         config.rotate = targetRotate
-        __.ui.widgetManager.saveWidgetPosition(entity, config)
+        __.ui.widgetManager.saveWidgetPosition(activeId, config)
     }
+
+    const resetRotationTimer = useCallback(() => {
+        if (_timer.current) {
+            clearTimeout(_timer.current)
+        }
+        _timer.current = setTimeout(() => setIsEditing(false), 1000)
+    }, [])
+
+    const scheduleMoveableUpdate = useCallback(() => {
+        if (_moveable?.current) {
+            requestAnimationFrame(() => _moveable.current.updateRect())
+        }
+    }, [_moveable])
 
     const getColor = useCallback((item, alpha = false) => widgetManager.getColor(item, alpha), [widgetManager])
 
     const dynamicVars = useMemo(() => {
         return {
-            ...widgetManager.generateCSSVariables(
-                element,
-                bgSnapshot ? bgSnapshot.image : null,
-                WIDGET_SYSTEM_FONT_STACK,
-            ),
+            ...widgetManager.generateCSSVariables(element, bgSnapshot?.image, WIDGET_SYSTEM_FONT_STACK),
             '--lgs-tx-transform': `rotate(${-localRotation}deg)`,
         }
-    }, [element, bgSnapshot, localRotation, widgetManager])
+    }, [element, bgSnapshot?.image, localRotation, widgetManager])
 
     if (!element) {
         return null
@@ -192,12 +183,12 @@ export const TextWidgetEditor = ({entity}) => {
     const hasVisibleContainer = element.background?.show || element.border?.show
 
     return (
-        <div className="lgs-card text-widget-editor">
+        <div className="lgs-card text-widget-editor" key={activeId}>
             <header className="text-widget-editor-header">
                 <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                    <TextEditorToolbar id={entity} color={true} align={true} style={true}/>
+                    <TextEditorToolbar id={activeId} color={true} align={true} style={true}/>
                 </div>
-                <TextEditorToolbar id={entity} fonts={true} color={false} align={false} style={false}/>
+                <TextEditorToolbar id={activeId} fonts={true} color={false} align={false} style={false}/>
             </header>
 
             <OptimizedTextArea
@@ -228,10 +219,10 @@ export const TextWidgetEditor = ({entity}) => {
                             value={localRotation}
                             onSlInput={(e) => applyRotation(parseFloat(e.target.value) || 0)}
                         >
-                            <span slot="suffix">{'deg'} </span>
-                            <span slot="label">{'Rotation'}</span>
+                            <span slot="suffix">deg </span>
+                            <span slot="label">Rotation</span>
                         </SlInput>
-                        <SlTooltip content={'Reset'}>
+                        <SlTooltip content="Reset">
                             <SlButton size="small" onClick={() => applyRotation(0)} className="square-button small">
                                 <SlIcon slot="prefix" size="small" library="fa" name={FA2SL.set(faArrowRotateLeft)}/>
                             </SlButton>
@@ -241,6 +232,7 @@ export const TextWidgetEditor = ({entity}) => {
 
                 <SlDivider/>
 
+                {/* Text Elevation */}
                 <SlSwitch align-right size="x-small" checked={element.shadow?.show ?? false}
                           onSlInput={(e) => fastUpdate('shadow.show', e.target.checked)}>
                     <label>Text elevation</label>
@@ -269,6 +261,7 @@ export const TextWidgetEditor = ({entity}) => {
 
                 <SlDivider/>
 
+                {/* Background */}
                 <SlSwitch align-right size="x-small" checked={element.background?.show ?? false}
                           onSlInput={(e) => fastUpdate('background.show', e.target.checked)}>
                     <label>Background</label>
@@ -299,6 +292,7 @@ export const TextWidgetEditor = ({entity}) => {
 
                 <SlDivider/>
 
+                {/* Border */}
                 <SlSwitch align-right size="x-small" checked={element.border?.show ?? false}
                           onSlInput={(e) => fastUpdate('border.show', e.target.checked)}>
                     <span>Border</span>
