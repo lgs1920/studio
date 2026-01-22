@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-21
- * Last modified: 2026-01-21
+ * Created on: 2026-01-22
+ * Last modified: 2026-01-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,7 +40,7 @@ const OptimizedTextArea = memo(({value, onInput, dynamicVars, onFocus, onBlur, i
     }
 
     /**
-     * Override transform during edit session
+     * Override transform during edit session to avoid cursor misalignment
      */
     const style = {
         ...dynamicVars,
@@ -64,44 +64,33 @@ const OptimizedTextArea = memo(({value, onInput, dynamicVars, onFocus, onBlur, i
 })
 
 export const TextWidgetEditor = ({entity}) => {
-    // Valtio setup for settings and elements
     const $configuration = lgs.settings.widgets['text-widget'].configuration
     const configuration = useSnapshot($configuration)
+
+    // Resolve element from hierarchy: specific instance > user pref > default
     const element = configuration?.elements?.[entity] ?? configuration.user ?? configuration.default
     const widget = useMemo(() => __.ui.widgetManager.getElementById(entity), [entity])
 
-    // Global stores
     const $widgetStore = lgs.stores.ui.widget
     const widgetStore = useSnapshot($widgetStore)
     const bgSnapshot = widgetStore.currentSnapshot
 
-    // Explicit proxy reference for the current widget
     const $current = lgs.stores.ui.widget.current
     const current = useSnapshot($current)
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
     const widgetManager = useMemo(() => TextWidgetManager.instance, [])
 
-    /**
-     * localRotation handles the input display to avoid jumps caused by Valtio proxy updates
-     */
     const [localRotation, setLocalRotation] = useState(0)
     const [isEditing, setIsEditing] = useState(false)
     const _timer = useRef(null)
     const _moveable = __.ui.widgetManager.getMoveable(entity)
 
-    /**
-     * Update local rotation state when the proxy changes (e.g. from Moveable on canvas)
-     */
     useEffect(() => {
-        // Sync local UI with proxy value (inverse display as per your logic)
         const currentRotate = current.rotate ?? __.ui.widgetManager.getTransform(widget).rotate ?? 0
         setLocalRotation(-Math.ceil(currentRotate))
     }, [current.rotate])
 
-    /**
-     * Schedules a Moveable rect update after the DOM has likely finished re-rendering
-     */
     const scheduleMoveableUpdate = useCallback(() => {
         if (_moveable?.current) {
             requestAnimationFrame(() => {
@@ -110,36 +99,42 @@ export const TextWidgetEditor = ({entity}) => {
         }
     }, [_moveable])
 
+    /**
+     * Deep update for configuration proxy.
+     * Ensures target element and sub-objects are correctly initialized to prevent state loss.
+     */
     const fastUpdate = useCallback((path, val) => {
-
-        // Update handles
-        if (_moveable?.current) {
-            _moveable.current.updateRect()
-        }
-
         if (!$configuration) {
             return
         }
+
         if (!$configuration.elements) {
             $configuration.elements = {}
         }
+
+        // Initialize element from current resolved snapshot if missing in proxy
         if (!$configuration.elements[entity]) {
             $configuration.elements[entity] = JSON.parse(JSON.stringify(element))
         }
 
         const _keys = path.split('.')
         let _curr = $configuration.elements[entity]
+
         for (let i = 0; i < _keys.length - 1; i++) {
             const _key = _keys[i]
+            // Ensure intermediate objects exist
             if (!_curr[_key] || typeof _curr[_key] !== 'object') {
                 _curr[_key] = {}
             }
             _curr = _curr[_key]
         }
+
         _curr[_keys[_keys.length - 1]] = val
 
-
-    }, [$configuration, entity, element])
+        if (_moveable?.current) {
+            _moveable.current.updateRect()
+        }
+    }, [$configuration, entity, element, _moveable])
 
 
     const resetRotationTimer = useCallback(() => {
@@ -151,28 +146,20 @@ export const TextWidgetEditor = ({entity}) => {
         }, 1000)
     }, [])
 
-    /**
-     * Apply rotation to the DOM element and update state
-     * @param {number} val - Degrees value
-     */
     const applyRotation = async (val) => {
-        // Update local state immediately for input fluidity
         setLocalRotation(val)
 
         const {translate, scale} = __.ui.widgetManager.getTransform(widget)
         const targetRotate = -val
 
-        // Update DOM transform immediately
         __.ui.widgetManager.setTransform(widget, {translate, scale, rotate: targetRotate})
 
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
 
-        // Update Valtio Proxy
         $current.rotate = targetRotate
 
-        // Persist to widget configuration
         const initConfig = await __.ui.widgetManager.getWidgetConfig(entity)
         const config = await __.ui.widgetManager.retrieveConfig(entity, initConfig)
         config.rotate = targetRotate
@@ -182,7 +169,6 @@ export const TextWidgetEditor = ({entity}) => {
     const getColor = useCallback((item, alpha = false) => widgetManager.getColor(item, alpha), [widgetManager])
 
     const dynamicVars = useMemo(() => {
-
         return {
             ...widgetManager.generateCSSVariables(
                 element,
@@ -236,10 +222,10 @@ export const TextWidgetEditor = ({entity}) => {
                             value={localRotation}
                             onSlInput={(e) => applyRotation(parseFloat(e.target.value) || 0)}
                         >
-                            <span slot="suffix">{'deg'} </span>
-                            <span slot="label">{'Rotation'}</span>
+                            <span slot="suffix">deg </span>
+                            <span slot="label">Rotation</span>
                         </SlInput>
-                        <SlTooltip content={'Reset'}>
+                        <SlTooltip content="Reset">
                             <SlButton size="small" onClick={() => applyRotation(0)} className="square-button small">
                                 <SlIcon slot="prefix" size="small" library="fa" name={FA2SL.set(faArrowRotateLeft)}/>
                             </SlButton>
@@ -249,7 +235,7 @@ export const TextWidgetEditor = ({entity}) => {
 
                 <SlDivider/>
 
-                {/* Elevation */}
+                {/* Text Elevation Section */}
                 <SlSwitch align-right size="x-small" checked={element.shadow?.show ?? false}
                           onSlInput={(e) => fastUpdate('shadow.show', e.target.checked)}>
                     <label>Text elevation</label>
@@ -258,8 +244,12 @@ export const TextWidgetEditor = ({entity}) => {
                 {element.shadow?.show && (
                     <div className="drawer-horizontal-line three-columns">
                         <div className="drawer-horizontal-element">
-                            <SlColorPicker size="small" swatches={swatches} value={getColor(element.shadow)}
-                                           onSlInput={(e) => fastUpdate('shadow.color', e.target.value)}/>
+                            <SlColorPicker
+                                size="small"
+                                swatches={swatches}
+                                value={getColor(element.shadow)}
+                                onSlInput={(e) => fastUpdate('shadow.color', e.target.value)}
+                            />
                         </div>
                         <div className="drawer-horizontal-element">
                             <SlSelect hoist size="small" value={element.shadow?.value ?? 'normal'}
@@ -278,7 +268,7 @@ export const TextWidgetEditor = ({entity}) => {
 
                 <SlDivider/>
 
-                {/* Background */}
+                {/* Background Section */}
                 <SlSwitch align-right size="x-small" checked={element.background?.show ?? false}
                           onSlInput={(e) => fastUpdate('background.show', e.target.checked)}>
                     <label>Background</label>
@@ -287,8 +277,12 @@ export const TextWidgetEditor = ({entity}) => {
                 {element.background?.show && (
                     <div className="drawer-horizontal-line three-columns">
                         <div className="drawer-horizontal-element">
-                            <SlColorPicker size="small" swatches={swatches} value={getColor(element.background)}
-                                           onSlInput={(e) => fastUpdate('background.color', e.target.value)}/>
+                            <SlColorPicker
+                                size="small"
+                                swatches={swatches}
+                                value={getColor(element.background)}
+                                onSlInput={(e) => fastUpdate('background.color', e.target.value)}
+                            />
                         </div>
                         <div className="drawer-horizontal-element">
                             <SlSwitch
@@ -309,7 +303,7 @@ export const TextWidgetEditor = ({entity}) => {
 
                 <SlDivider/>
 
-                {/* Border */}
+                {/* Border Section */}
                 <SlSwitch align-right size="x-small" checked={element.border?.show ?? false}
                           onSlInput={(e) => fastUpdate('border.show', e.target.checked)}>
                     <span>Border</span>
@@ -319,8 +313,12 @@ export const TextWidgetEditor = ({entity}) => {
                     <>
                         <div className="drawer-horizontal-line three-columns">
                             <div className="drawer-horizontal-element">
-                                <SlColorPicker size="small" swatches={swatches} value={getColor(element.border)}
-                                               onSlInput={(e) => fastUpdate('border.color', e.target.value)}/>
+                                <SlColorPicker
+                                    size="small"
+                                    swatches={swatches}
+                                    value={getColor(element.border)}
+                                    onSlInput={(e) => fastUpdate('border.color', e.target.value)}
+                                />
                             </div>
                             <div className="drawer-horizontal-element">
                                 <SlInput type="number" min="1" max="10" value={element.border.thickness ?? 1}
@@ -362,9 +360,12 @@ export const TextWidgetEditor = ({entity}) => {
                         {element.background?.shadow?.show && (
                             <div className="drawer-horizontal-line three-columns">
                                 <div className="drawer-horizontal-element">
-                                    <SlColorPicker size="small" swatches={swatches}
-                                                   value={getColor(element.background.shadow)}
-                                                   onSlInput={(e) => fastUpdate('background.shadow.color', e.target.value)}/>
+                                    <SlColorPicker
+                                        size="small"
+                                        swatches={swatches}
+                                        value={getColor(element.background.shadow)}
+                                        onSlInput={(e) => fastUpdate('background.shadow.color', e.target.value)}
+                                    />
                                 </div>
                                 <div className="drawer-horizontal-element">
                                     <SlSelect hoist size="small"
