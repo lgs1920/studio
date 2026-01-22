@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-18
- * Last modified: 2026-01-18
+ * Created on: 2026-01-22
+ * Last modified: 2026-01-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -1179,7 +1179,7 @@ export class WidgetCore {
         const $widget = lgs.stores.ui.widget
         const group = __.widgets.get(groupId)
         const base = widgetId.split('#')[0]
-        const widget = group?.widgets?.get(widgetId)
+        const widget = group?.widgets?.get(base)
         const max = widget?.max ?? 1
         // we scan the cache to count widgets
         const count = [...$widget.cache.entries()].reduce((acc, [id, w]) => {
@@ -1310,7 +1310,7 @@ export class WidgetCore {
         clone.classList.add('lgs-widget-clone')
         return clone
     }
-    JavaScript
+
     /**
      * Calculates logical shadow margins for the composer.
      * No scale needed here as addOverlay handles it internally.
