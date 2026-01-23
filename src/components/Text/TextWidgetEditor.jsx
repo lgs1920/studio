@@ -70,13 +70,24 @@ export const TextWidgetEditor = ({entity}) => {
     const $drawers = lgs.stores.ui.drawers
     const drawers = useSnapshot($drawers)
 
-    // Identity resolution: store current selection takes priority for reactivity
-    const activeId = widgetStore.current?.id || entity
+    // Identity resolution: prefer drawer entity when it targets a text widget
+    const entityId = typeof entity === 'string' ? entity : ''
+    const isEntityTextWidget = entityId.split('#')[0] === 'text-widget'
+    const activeId = isEntityTextWidget ? entityId : widgetStore.current?.id || entity
     const normalizedId = typeof activeId === 'string' ? activeId : ''
     const isTextWidget = normalizedId.split('#')[0] === 'text-widget'
 
     // Proxy reference for mutations
     const $current = lgs.stores.ui.widget.current
+    useEffect(() => {
+        if (!isEntityTextWidget || !entityId) {
+            return
+        }
+        if (widgetStore.current?.id === entityId) {
+            return
+        }
+        $widgetStore.current = {id: entityId}
+    }, [entityId, isEntityTextWidget, $widgetStore, widgetStore.current?.id])
 
     const element = isTextWidget
                     ? (configuration?.elements?.[normalizedId] ?? configuration.user ?? configuration.default)

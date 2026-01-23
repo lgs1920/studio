@@ -406,6 +406,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase !== widgetBase) {
             __.ui.drawerManager.close()
         }
+        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase === widgetBase &&
+            drawers.entity !== config.id) {
+            lgs.stores.ui.drawers.entity = config.id
+        }
         lgs.stores.ui.widget.current = {id: config.id}
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
     }, [config.id, drawers.entity, drawers.open, interactionLocked])
