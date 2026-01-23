@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-22
- * Last modified: 2026-01-22
+ * Created on: 2026-01-23
+ * Last modified: 2026-01-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { TextEditorToolbar }                                              from '@Components/Text/TextEditorToolbar'
 import {
-    WIDGET_RADIUS, WIDGET_SYSTEM_FONT_STACK,
+    WIDGET_RADIUS, WIDGET_SYSTEM_FONT_STACK, WIDGETS_EDITOR_DRAWER,
 }                                                                         from '@Core/constants'
 import {
     TextWidgetManager,
@@ -67,15 +67,26 @@ export const TextWidgetEditor = ({entity}) => {
     // Snapshot of the parent store to detect re-assignments of 'current'
     const $widgetStore = lgs.stores.ui.widget
     const widgetStore = useSnapshot($widgetStore)
+    const $drawers = lgs.stores.ui.drawers
+    const drawers = useSnapshot($drawers)
 
     // Identity resolution: store current selection takes priority for reactivity
     const activeId = widgetStore.current?.id || entity
+    const normalizedId = typeof activeId === 'string' ? activeId : ''
+    const isTextWidget = normalizedId.split('#')[0] === 'text-widget'
 
     // Proxy reference for mutations
     const $current = lgs.stores.ui.widget.current
 
-    const element = configuration?.elements?.[activeId] ?? configuration.user ?? configuration.default
-    const widget = useMemo(() => __.ui.widgetManager.getElementById(activeId), [activeId])
+    const element = isTextWidget
+                    ? (configuration?.elements?.[normalizedId] ?? configuration.user ?? configuration.default)
+                    : null
+    const widget = useMemo(() => {
+        if (!isTextWidget || !normalizedId) {
+            return null
+        }
+        return __.ui.widgetManager.getElementById(normalizedId)
+    }, [isTextWidget, normalizedId])
     const bgSnapshot = widgetStore.currentSnapshot
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
@@ -84,25 +95,30 @@ export const TextWidgetEditor = ({entity}) => {
     const [localRotation, setLocalRotation] = useState(0)
     const [isEditing, setIsEditing] = useState(false)
     const _timer = useRef(null)
-    const _moveable = __.ui.widgetManager.getMoveable(activeId)
+    const _moveable = useMemo(() => {
+        if (!isTextWidget || !normalizedId) {
+            return null
+        }
+        return __.ui.widgetManager.getMoveable(normalizedId)
+    }, [isTextWidget, normalizedId])
 
     /**
      * Deep update for configuration proxy.
      * Inherits from snapshot to prevent state loss during partial updates.
      */
     const fastUpdate = useCallback((path, val) => {
-        if (!$configuration) {
+        if (!isTextWidget || !$configuration || !normalizedId) {
             return
         }
         if (!$configuration.elements) {
             $configuration.elements = {}
         }
-        if (!$configuration.elements[activeId]) {
-            $configuration.elements[activeId] = JSON.parse(JSON.stringify(element))
+        if (!$configuration.elements[normalizedId]) {
+            $configuration.elements[normalizedId] = JSON.parse(JSON.stringify(element))
         }
 
         const _keys = path.split('.')
-        let _curr = $configuration.elements[activeId]
+        let _curr = $configuration.elements[normalizedId]
         let _source = element
 
         for (let i = 0; i < _keys.length - 1; i++) {
@@ -117,24 +133,27 @@ export const TextWidgetEditor = ({entity}) => {
         if (_moveable?.current) {
             _moveable.current.updateRect()
         }
-    }, [$configuration, activeId, element, _moveable])
+    }, [$configuration, element, isTextWidget, normalizedId, _moveable])
 
     /**
      * Sync local rotation on activeId change or store rotation update
      */
     useEffect(() => {
-        if (!widget) {
+        if (!isTextWidget || !widget) {
             return
         }
         const transform = __.ui.widgetManager.getTransform(widget)
         const currentRotate = widgetStore.current?.rotate ?? transform.rotate ?? 0
         setLocalRotation(-Math.ceil(currentRotate))
-    }, [activeId, widget, widgetStore.current?.rotate])
+    }, [isTextWidget, widget, widgetStore.current?.rotate])
 
     /**
      * Update rotation in DOM and stores
      */
     const applyRotation = async (val) => {
+        if (!isTextWidget || !widget || !normalizedId) {
+            return
+        }
         setLocalRotation(val)
         const {translate, scale} = __.ui.widgetManager.getTransform(widget)
         const targetRotate = -val
@@ -148,10 +167,10 @@ export const TextWidgetEditor = ({entity}) => {
             $current.rotate = targetRotate
         }
 
-        const initConfig = await __.ui.widgetManager.getWidgetConfig(activeId)
-        const config = await __.ui.widgetManager.retrieveConfig(activeId, initConfig)
+        const initConfig = await __.ui.widgetManager.getWidgetConfig(normalizedId)
+        const config = await __.ui.widgetManager.retrieveConfig(normalizedId, initConfig)
         config.rotate = targetRotate
-        __.ui.widgetManager.saveWidgetPosition(activeId, config)
+        __.ui.widgetManager.saveWidgetPosition(normalizedId, config)
     }
 
     const resetRotationTimer = useCallback(() => {
@@ -170,13 +189,27 @@ export const TextWidgetEditor = ({entity}) => {
     const getColor = useCallback((item, alpha = false) => widgetManager.getColor(item, alpha), [widgetManager])
 
     const dynamicVars = useMemo(() => {
+        if (!isTextWidget || !element) {
+            return {}
+        }
         return {
             ...widgetManager.generateCSSVariables(element, bgSnapshot?.image, WIDGET_SYSTEM_FONT_STACK),
             '--lgs-tx-transform': `rotate(${-localRotation}deg)`,
         }
-    }, [element, bgSnapshot?.image, localRotation, widgetManager])
+    }, [bgSnapshot?.image, element, isTextWidget, localRotation, widgetManager])
 
-    if (!element) {
+    useEffect(() => {
+        if (isTextWidget) {
+            return
+        }
+        const drawerEntity = typeof drawers.entity === 'string' ? drawers.entity : ''
+        const isTextDrawer = drawerEntity.split('#')[0] === 'text-widget'
+        if (isTextDrawer && drawers.open === WIDGETS_EDITOR_DRAWER) {
+            __.ui.drawerManager.close()
+        }
+    }, [drawers.entity, drawers.open, isTextWidget])
+
+    if (!isTextWidget || !element) {
         return null
     }
 

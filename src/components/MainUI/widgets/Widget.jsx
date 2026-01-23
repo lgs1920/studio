@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-15
- * Last modified: 2026-01-15
+ * Created on: 2026-01-23
+ * Last modified: 2026-01-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,11 +68,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     // Global stores (valtio)
     const $widget = lgs.stores.ui.widget
     const widget = useSnapshot($widget)
+    const $drawers = lgs.stores.ui.drawers
+    const drawers = useSnapshot($drawers)
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
     const _w2c = useRef(null)
 
     const throttleRotate = 1
+    const selectedId = widget.current?.id ?? null
+    const isSelected = selectedId === config.id
 
     // Interaction lock logic
     const interactionLocked =
@@ -206,15 +210,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     // Visibility handlers for control box
     const handleMouseEnter = useCallback(() => {
-        if (interactionLocked) {
+        if (interactionLocked || (selectedId && !isSelected)) {
             return
         }
         setIsMouseOver(true)
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, false, true)
-    }, [interactionLocked])
+    }, [interactionLocked, isSelected, selectedId])
 
     const handleMouseLeave = useCallback((event) => {
-        if (interactionLocked || _dragConfirmed.current) {
+        if (interactionLocked || _dragConfirmed.current || (selectedId && !isSelected)) {
             return
         }
         const rect = _widget.current?.getBoundingClientRect()
@@ -223,7 +227,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
         setIsMouseOver(false)
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, false, false)
-    }, [interactionLocked])
+    }, [interactionLocked, isSelected, selectedId])
 
     // Drag lifecycle
     const handleDragStart = useCallback((event) => {
@@ -278,6 +282,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (interactionLocked) {
             return
         }
+        lgs.stores.ui.widget.current = {id: config.id}
 
         const hasCapabilities = __.ui.widgetManager.hasCapabilities(
             config.contextMenu,
@@ -391,9 +396,19 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     }, [])
 
-    const selectWidget = event => {
+    const selectWidget = useCallback(() => {
+        if (interactionLocked) {
+            return
+        }
+        const drawerEntity = typeof drawers.entity === 'string' ? drawers.entity : ''
+        const drawerBase = drawerEntity.split('#')[0]
+        const widgetBase = typeof config.id === 'string' ? config.id.split('#')[0] : ''
+        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase !== widgetBase) {
+            __.ui.drawerManager.close()
+        }
         lgs.stores.ui.widget.current = {id: config.id}
-    }
+        __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
+    }, [config.id, drawers.entity, drawers.open, interactionLocked])
 
     const handleBound = useCallback(() => __.ui.widgetManager.setBoundStatus(_widget.current), [])
 
@@ -406,6 +421,45 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             setIsDragging(false)
         }
     }, [])
+
+    useEffect(() => {
+        if (isSelected) {
+            return
+        }
+        if (_controlBoxTimer.current) {
+            clearTimeout(_controlBoxTimer.current)
+            _controlBoxTimer.current = null
+        }
+        setControlBox({renderDirections: [], zoom: 0, opacity: 0})
+    }, [isSelected])
+
+    useEffect(() => {
+        if (!isSelected) {
+            return
+        }
+        const handleOutsidePointerDown = (event) => {
+            const target = event.target
+            const widgetEl = _widget.current
+            if (!widgetEl || !target) {
+                return
+            }
+            const elementTarget = target instanceof Element ? target : target.parentElement
+            const isMoveableControl = elementTarget?.closest('.lgs-widget-control-box') ||
+                elementTarget?.closest('.moveable-control') ||
+                elementTarget?.closest('.moveable-line')
+            if (elementTarget && (widgetEl.contains(elementTarget) || isMoveableControl)) {
+                return
+            }
+            lgs.stores.ui.widget.current = {id: null}
+            if (_controlBoxTimer.current) {
+                clearTimeout(_controlBoxTimer.current)
+                _controlBoxTimer.current = null
+            }
+            setControlBox({renderDirections: [], zoom: 0, opacity: 0})
+        }
+        document.addEventListener('pointerdown', handleOutsidePointerDown, true)
+        return () => document.removeEventListener('pointerdown', handleOutsidePointerDown, true)
+    }, [isSelected])
 
     // Lifecycle and registration
     useEffect(() => {
@@ -541,6 +595,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     _widget.current = el
                     pointerInteractionsRef(el)
                 }}
+                onPointerDown={selectWidget}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
             >
