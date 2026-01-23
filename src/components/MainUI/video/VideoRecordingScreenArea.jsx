@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-21
- * Last modified: 2026-01-21
+ * Created on: 2026-01-23
+ * Last modified: 2026-01-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -105,6 +105,44 @@ const getShadowParameters = (el, depth = 0) => {
     return {top: 0, right: 0, bottom: 0, left: 0}
 }
 
+const resolveWidgetScale = (el, configScale) => {
+    const baseScaleX = typeof configScale === 'object' ? (configScale?.x ?? 1) : (configScale ?? 1)
+    const baseScaleY = typeof configScale === 'object' ? (configScale?.y ?? baseScaleX) : (configScale ?? 1)
+
+    if (!el) {
+        return {x: baseScaleX, y: baseScaleY}
+    }
+
+    const style = window.getComputedStyle(el)
+    const transform = style.transform
+    let matrixScaleX = 0
+    let matrixScaleY = 0
+
+    if (transform && transform !== 'none') {
+        try {
+            const matrix = new DOMMatrixReadOnly(transform)
+            matrixScaleX = Math.hypot(matrix.a, matrix.b)
+            matrixScaleY = Math.hypot(matrix.c, matrix.d)
+        }
+        catch (error) {
+            matrixScaleX = 0
+            matrixScaleY = 0
+        }
+    }
+
+    // Fallback using the rendered size ratio (handles ancestor transforms)
+    const rect = el.getBoundingClientRect()
+    const cssWidth = parseFloat(style.width) || rect.width
+    const cssHeight = parseFloat(style.height) || rect.height
+    const ratioScaleX = cssWidth ? rect.width / cssWidth : 0
+    const ratioScaleY = cssHeight ? rect.height / cssHeight : 0
+
+    return {
+        x: matrixScaleX || ratioScaleX || baseScaleX,
+        y: matrixScaleY || ratioScaleY || baseScaleY,
+    }
+}
+
 export const VideoRecordingScreenArea = memo(() => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
@@ -182,20 +220,23 @@ export const VideoRecordingScreenArea = memo(() => {
                 const canvasStyle = window.getComputedStyle(canvasEl)
                 const canvasWidth = parseFloat(canvasStyle.width)
                 const canvasHeight = parseFloat(canvasStyle.height)
+                const widgetScale = resolveWidgetScale(widgetEl, config.scale)
 
+                const contentWidth = Math.max(0, canvasWidth - (shadowMargins.left + shadowMargins.right))
+                const contentHeight = Math.max(0, canvasHeight - (shadowMargins.top + shadowMargins.bottom))
 
                 composer.addOverlay(canvasEl, {
                     x:        localX,
                     y:        localY,
                     w:        canvasWidth,
                     h:        canvasHeight,
-                    contentWidth:  config.dimensions.width,  // Real content dimensions for blur
-                    contentHeight: config.dimensions.height,
+                    contentWidth,
+                    contentHeight,
                     blur:     styles.blur,
                     radius:   styles.radius,
                     border: styles.border,
                     rotate:   config.rotate || 0,
-                    scale:    config.scale || 1,
+                    scale: widgetScale,
                     shadowMargins,
                 })
             }
@@ -239,7 +280,6 @@ export const VideoRecordingScreenArea = memo(() => {
             if (canvasEl instanceof HTMLCanvasElement) {
                 const config = __.ui.widgetManager.getWidgetConfig(key)
                 const styles = getStyles(widgetEl)
-                console.log(styles)
                 const shadowMargins = getShadowParameters(widgetEl)
 
                 // config.position contains coordinates relative to the Studio origin
@@ -252,19 +292,22 @@ export const VideoRecordingScreenArea = memo(() => {
                 const canvasStyle = window.getComputedStyle(canvasEl)
                 const canvasWidth = parseFloat(canvasStyle.width)
                 const canvasHeight = parseFloat(canvasStyle.height)
+                const widgetScale = resolveWidgetScale(widgetEl, config.scale)
+                const contentWidth = Math.max(0, canvasWidth - (shadowMargins.left + shadowMargins.right))
+                const contentHeight = Math.max(0, canvasHeight - (shadowMargins.top + shadowMargins.bottom))
 
                 composer.addOverlay(canvasEl, {
                     x:        localX,
                     y:        localY,
                     w:        canvasWidth,
                     h:        canvasHeight,
-                    contentW: config.dimensions.width,  // Real content dimensions for blur
-                    contentH: config.dimensions.height,
+                    contentWidth,
+                    contentHeight,
                     blur:     styles.blur,
                     radius:   styles.radius,
                     border: styles.border,
                     rotate:   config.rotate || 0,
-                    scale:    config.scale || 1,
+                    scale: widgetScale,
                     shadowMargins,
                 })
             }

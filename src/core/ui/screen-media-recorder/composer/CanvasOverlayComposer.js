@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-21
- * Last modified: 2026-01-21
+ * Created on: 2026-01-23
+ * Last modified: 2026-01-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,6 +58,7 @@ export class CanvasOverlayComposer {
         this.#ctx.imageSmoothingEnabled = true
         this.#ctx.imageSmoothingQuality = 'high'
 
+
         this.#updateSourceDpr()
         this.#resizeOutputCanvas()
         this.#draw()
@@ -82,6 +83,11 @@ export class CanvasOverlayComposer {
     }
 
     getCanvas = () => this.#outputCanvas
+
+    #radiusScaleFactor = (scaleX) => {
+        const safeScale = Number.isFinite(scaleX) ? Math.abs(scaleX) : 1
+        return Math.min(1.4, Math.max(1, safeScale))
+    }
 
     #traceRoundedRect(ctx, x, y, w, h, r) {
         ctx.beginPath()
@@ -117,12 +123,13 @@ export class CanvasOverlayComposer {
                   shadowMargins = {top: 0, right: 0, bottom: 0, left: 0},
               } = options
 
-        let posX, posY, rawWidth
+        let posX, posY, rawWidth, rawHeight
 
         if (typeof x === 'number' && typeof y === 'number') {
             posX = x
             posY = y
             rawWidth = w ?? (el.width /* / this.#dpr */)
+            rawHeight = h ?? (el.height /* / this.#dpr */)
         }
         else {
             const rect = el.getBoundingClientRect()
@@ -134,24 +141,29 @@ export class CanvasOverlayComposer {
                 posY -= this.#clip.y
             }
             rawWidth = rect.width
+            rawHeight = rect.height
         }
 
-        const scaleFactor = el.classList?.contains('lgs-widget-canvas') ? LGS_WIDGET_SCALE_FACTOR : 1
-        const imgAspectRatio = el.height / el.width
+        const hasExplicitSize = typeof w === 'number' && typeof h === 'number'
+        const scaleFactor = el.classList?.contains('lgs-widget-canvas') && !hasExplicitSize
+                            ? LGS_WIDGET_SCALE_FACTOR
+                            : 1
 
 
-        const cssScale = typeof scale === 'object' ? (scale.x ?? 1) : scale
+        const cssScale = typeof scale === 'object'
+                         ? {x: scale.x ?? 1, y: scale.y ?? scale.x ?? 1}
+                         : {x: scale ?? 1, y: scale ?? 1}
         // The content dimensions in logical pixel
         const logicalContentW = contentWidth || (rawWidth / scaleFactor)
-        const logicalContentH = contentHeight || (logicalContentW * imgAspectRatio)
+        const logicalContentH = contentHeight || (rawHeight / scaleFactor)
 
         // Apply the shadow margins.
         const totalW = logicalContentW + (shadowMargins.left + shadowMargins.right)
-        const totalH = totalW * imgAspectRatio
+        const totalH = logicalContentH + (shadowMargins.top + shadowMargins.bottom)
 
         // Pivot centered on the actual content (excluding shadows for rotation)
-        const cx = posX + shadowMargins.left + logicalContentW / 2
-        const cy = posY + shadowMargins.top + logicalContentH / 2
+        const cx = posX + (shadowMargins.left + logicalContentW / 2) * cssScale.x
+        const cy = posY + (shadowMargins.top + logicalContentH / 2) * cssScale.y
 
         this.#overlays.push({
                                 element,
@@ -209,14 +221,16 @@ export class CanvasOverlayComposer {
             const rad = (overlay.rotate * Math.PI) / 180
             const hw = overlay.contentWidth / 2
             const hh = overlay.contentHeight / 2
-            const radius = overlay.radius * overlay.scale
+            const scaleX = overlay.scale?.x ?? overlay.scale ?? 1
+            const scaleY = overlay.scale?.y ?? overlay.scale ?? scaleX
+            const radius = overlay.radius * scaleX * this.#radiusScaleFactor(scaleX)
 
             ctx.save()
 
             // --- Transformations ---
             ctx.translate(overlay.cx, overlay.cy)
             ctx.rotate(rad)
-            ctx.scale(overlay.scale, overlay.scale)
+            ctx.scale(scaleX, scaleY)
 
             // --- A. Backdrop Blur ---
             // We only apply the blur if a radius and blur amount are defined
@@ -228,7 +242,8 @@ export class CanvasOverlayComposer {
 
                 ctx.resetTransform()
                 ctx.scale(this.#dpr, this.#dpr)
-                ctx.filter = `blur(${overlay.blur}px)`
+                const blurPx = overlay.blur * scaleX
+                ctx.filter = `blur(${blurPx}px)`
                 drawMainSource()
                 ctx.restore()
             }
@@ -245,7 +260,8 @@ export class CanvasOverlayComposer {
              * This avoids double anti-aliasing artifacts (black borders)
              */
             const isWidget = el.classList?.contains('lgs-widget-canvas')
-            if (radius > 0 && !isWidget) {
+            const shouldClip = radius > 0 && (!isWidget || overlay.blur > 0 || overlay.border > 0)
+            if (shouldClip) {
                 this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, radius)
                 ctx.clip()
             }
@@ -259,14 +275,13 @@ export class CanvasOverlayComposer {
             ctx.restore()
 
             // --- C. Debug Tools (Optional) ---
-            /*
-             ctx.strokeStyle = 'red'
-             ctx.lineWidth = 1 / overlay.scale
-             this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, radius)
-             ctx.stroke()
-             */
+            ctx.strokeStyle = 'red'
+            ctx.lineWidth = 1 / Math.max(scaleX, scaleY)
+            this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, radius)
+            ctx.stroke()
 
             ctx.restore()
+
         }
     }
     #loop = () => {
