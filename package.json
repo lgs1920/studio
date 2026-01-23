@@ -71,7 +71,7 @@
     "geo-coordinates-parser": "^1.7.4",
     "geojson-extent": "^0.3.2",
     "geojson-minimum-bounding-rectangle": "^2.0.3",
-    "html-react-parser": "5.2.11",
+    "html-react-parser": "5.2.12",
     "html2canvas": "^1.4.1",
     "idb": "^8.0.3",
     "import": "^0.0.6",
@@ -125,7 +125,7 @@
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-markdown": "^2.2.0",
-    "vitest": "^4.0.17"
+    "vitest": "^4.0.18"
   },
   "module": "index.ts",
   "trustedDependencies": [
