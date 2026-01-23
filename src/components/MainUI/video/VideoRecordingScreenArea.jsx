@@ -148,6 +148,7 @@ export const VideoRecordingScreenArea = memo(() => {
     const video = useSnapshot($video)
     const {maxSize, maxDuration} = useSnapshot(lgs.settings.ui.video)
     const _cropZone = useRef(null)
+    const _composer = useRef(null)
 
     const crop = useMemo(() => {
         const config = __.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE)
@@ -157,6 +158,11 @@ export const VideoRecordingScreenArea = memo(() => {
     const widgetCacheEntries = useMemo(() => [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).entries()], [])
 
     const isValidCrop = Number.isFinite(crop.left) && crop.width > 0
+
+    const disposeComposer = useCallback(() => {
+        _composer.current?.dispose()
+        _composer.current = null
+    }, [])
 
     useEffect(() => {
         if (_cropZone.current) {
@@ -195,11 +201,13 @@ export const VideoRecordingScreenArea = memo(() => {
         const {top: y, left: x, width, height} = videoFrame.cropDimensions
         videoFrame.noResize = true
 
+        disposeComposer()
         const composer = new CanvasOverlayComposer(lgs.canvas, {
             clip: {x, y, width, height},
             width, height,
                   flushWebGLBuffer: () => lgs.scene.render(),
               })
+        _composer.current = composer
 
         ;[...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()].map(key => {
             const widgetEl = __.ui.widgetManager.getElementById(key)
@@ -244,7 +252,7 @@ export const VideoRecordingScreenArea = memo(() => {
 
         __.recorder.setCanvas(composer.getCanvas())
 
-    }, [$video.ratio, maxSize, maxDuration, $video.quality, $video.fps])
+    }, [$video.ratio, disposeComposer, maxDuration, maxSize, $video.fps, $video.quality])
 
 
     const handleVideoRecording = useCallback(async () => {
@@ -314,7 +322,12 @@ export const VideoRecordingScreenArea = memo(() => {
         })
 
         initializeRecorder()
-        await __.recorder.captureScreenshot(composer.getCanvas())
+        try {
+            await __.recorder.captureScreenshot(composer.getCanvas())
+        }
+        finally {
+            composer.dispose()
+        }
     }, [initializeRecorder])
 
     const waitingForAllWidgets = (widgets, onReady) => {
@@ -351,8 +364,22 @@ export const VideoRecordingScreenArea = memo(() => {
         return () => {
             __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGETS, false)
             __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
+            disposeComposer()
         }
-    }, [])
+    }, [disposeComposer])
+
+    useEffect(() => {
+        const handleStop = () => disposeComposer()
+        __.recorder.addEventListener(ScreenMediaRecorder.events.STOP, handleStop)
+        __.recorder.addEventListener(ScreenMediaRecorder.events.CANCEL, handleStop)
+        __.recorder.addEventListener(ScreenMediaRecorder.events.FINALIZE, handleStop)
+
+        return () => {
+            __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, handleStop)
+            __.recorder.removeEventListener(ScreenMediaRecorder.events.CANCEL, handleStop)
+            __.recorder.removeEventListener(ScreenMediaRecorder.events.FINALIZE, handleStop)
+        }
+    }, [disposeComposer])
 
     if (!isValidCrop) {
         return null

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-22
- * Last modified: 2026-01-22
+ * Created on: 2026-01-23
+ * Last modified: 2026-01-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,7 @@ export class Widget2Canvas {
     #original = null
     #canvas = null
     #options = {}
+    #observer = null
     #pendingRefresh = false
 
     constructor(target, options = {}) {
@@ -38,7 +39,7 @@ export class Widget2Canvas {
             ...options,
         }
 
-        const observer = new MutationObserver((mutations) => {
+        this.#observer = new MutationObserver((mutations) => {
             if (!mutations.length || this.#pendingRefresh) {
                 return
             }
@@ -53,7 +54,7 @@ export class Widget2Canvas {
             })
         })
 
-        observer.observe(target, {
+        this.#observer.observe(target, {
             childList:  true,
             subtree:    true,
             attributes: true,
@@ -69,6 +70,10 @@ export class Widget2Canvas {
      * Main refresh logic. Composites all widget parts into a single canvas.
      */
     refresh = async () => {
+        if (!this.#original) {
+            return
+        }
+
         const staticParts = this.#original?.querySelectorAll(`.${STATIC_WIDGET_PART}`)
         const dynamicParts = this.#original?.querySelectorAll(`.${DYNAMIC_WIDGET_PART}`)
 
@@ -230,6 +235,9 @@ export class Widget2Canvas {
     getCanvas = () => this.#canvas
 
     destroy = () => {
+        this.#observer?.disconnect()
+        this.#observer = null
+        this.#pendingRefresh = false
         this.#canvas?.remove()
         this.#canvas = null
         this.#original = null
