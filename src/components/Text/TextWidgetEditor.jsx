@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-23
- * Last modified: 2026-01-23
+ * Created on: 2026-01-24
+ * Last modified: 2026-01-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -378,39 +378,39 @@ export const TextWidgetEditor = ({entity}) => {
                     </>
                 )}
 
-                {hasVisibleContainer && (
-                    <>
-                        <SlDivider/>
-                        <SlSwitch align-right size="x-small" checked={element.background?.shadow?.show ?? false}
-                                  onSlInput={(e) => fastUpdate('background.shadow.show', e.target.checked)}>
-                            <label>Box elevation</label>
-                        </SlSwitch>
+                {/* {hasVisibleContainer && ( */}
+                {/*     <> */}
+                {/*         <SlDivider/> */}
+                {/*         <SlSwitch align-right size="x-small" checked={element.background?.shadow?.show ?? false} */}
+                {/*                   onSlInput={(e) => fastUpdate('background.shadow.show', e.target.checked)}> */}
+                {/*             <label>Box elevation</label> */}
+                {/*         </SlSwitch> */}
 
-                        {element.background?.shadow?.show && (
-                            <div className="drawer-horizontal-line three-columns">
-                                <div className="drawer-horizontal-element">
-                                    <SlColorPicker size="small" swatches={swatches}
-                                                   value={getColor(element.background.shadow)}
-                                                   onSlInput={(e) => fastUpdate('background.shadow.color', e.target.value)}/>
-                                </div>
-                                <div className="drawer-horizontal-element">
-                                    <SlSelect hoist size="small"
-                                              value={element.background.shadow?.value ?? 'normal'}
-                                              onSlChange={(e) => fastUpdate('background.shadow.value', e.target.value)}>
-                                        <SlOption value="small">Small</SlOption>
-                                        <SlOption value="normal">Medium</SlOption>
-                                        <SlOption value="large">Large</SlOption>
-                                    </SlSelect>
-                                </div>
-                                <div className="drawer-horizontal-element xlarge-element">
-                                    <SlRange min="0.1" max="1" step="0.05"
-                                             value={element.background.shadow?.opacity ?? 1}
-                                             onSlInput={(e) => fastUpdate('background.shadow.opacity', parseFloat(e.target.value))}/>
-                                </div>
-                            </div>
-                        )}
-                    </>
-                )}
+                {/*         {element.background?.shadow?.show && ( */}
+                {/*             <div className="drawer-horizontal-line three-columns"> */}
+                {/*                 <div className="drawer-horizontal-element"> */}
+                {/*                     <SlColorPicker size="small" swatches={swatches} */}
+                {/*                                    value={getColor(element.background.shadow)} */}
+                {/*                                    onSlInput={(e) => fastUpdate('background.shadow.color', e.target.value)}/> */}
+                {/*                 </div> */}
+                {/*                 <div className="drawer-horizontal-element"> */}
+                {/*                     <SlSelect hoist size="small" */}
+                {/*                               value={element.background.shadow?.value ?? 'normal'} */}
+                {/*                               onSlChange={(e) => fastUpdate('background.shadow.value', e.target.value)}> */}
+                {/*                         <SlOption value="small">Small</SlOption> */}
+                {/*                         <SlOption value="normal">Medium</SlOption> */}
+                {/*                         <SlOption value="large">Large</SlOption> */}
+                {/*                     </SlSelect> */}
+                {/*                 </div> */}
+                {/*                 <div className="drawer-horizontal-element xlarge-element"> */}
+                {/*                     <SlRange min="0.1" max="1" step="0.05" */}
+                {/*                              value={element.background.shadow?.opacity ?? 1} */}
+                {/*                              onSlInput={(e) => fastUpdate('background.shadow.opacity', parseFloat(e.target.value))}/> */}
+                {/*                 </div> */}
+                {/*             </div> */}
+                {/*         )} */}
+                {/*     </> */}
+                {/* )} */}
             </div>
         </div>
     )
