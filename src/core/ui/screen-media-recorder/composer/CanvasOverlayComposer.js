@@ -215,7 +215,7 @@ export class CanvasOverlayComposer {
             const rad = (overlay.rotate * Math.PI) / 180
             const hw = overlay.contentWidth / 2
             const hh = overlay.contentHeight / 2
-            const radius = Math.max(0, Math.min(overlay.radius, hw, hh))
+            const radius = Math.max(0, Math.min(overlay.radius * overlay.scale, hw, hh))
 
             ctx.save()
             ctx.translate(overlay.cx, overlay.cy)
