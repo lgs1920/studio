@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-23
- * Last modified: 2026-01-23
+ * Created on: 2026-01-24
+ * Last modified: 2026-01-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -232,7 +232,6 @@ export const VideoRecordingScreenArea = memo(() => {
 
                 const contentWidth = Math.max(0, canvasWidth - (shadowMargins.left + shadowMargins.right))
                 const contentHeight = Math.max(0, canvasHeight - (shadowMargins.top + shadowMargins.bottom))
-
                 composer.addOverlay(canvasEl, {
                     x:        localX,
                     y:        localY,

@@ -121,12 +121,13 @@ export class CanvasOverlayComposer {
                   shadowMargins = {top: 0, right: 0, bottom: 0, left: 0},
               } = options
 
-        let posX, posY, rawWidth
+        let posX, posY, rawWidth, rawHeight
 
         if (typeof x === 'number' && typeof y === 'number') {
             posX = x
             posY = y
             rawWidth = w ?? (el.width /* / this.#dpr */)
+            rawHeight = h ?? el.height
         }
         else {
             const rect = el.getBoundingClientRect()
@@ -138,24 +139,33 @@ export class CanvasOverlayComposer {
                 posY -= this.#clip.y
             }
             rawWidth = rect.width
+            rawHeight = rect.height
         }
 
-        const scaleFactor = el.classList?.contains('lgs-widget-canvas') ? LGS_WIDGET_SCALE_FACTOR : 1
+        const hasExplicitLogicalSize = typeof w === 'number' || typeof h === 'number' ||
+            typeof contentWidth === 'number' || typeof contentHeight === 'number'
+        const scaleFactor = hasExplicitLogicalSize
+                            ? 1
+                            : (el.classList?.contains('lgs-widget-canvas') ? LGS_WIDGET_SCALE_FACTOR : 1)
         const imgAspectRatio = el.height / el.width
 
 
         const cssScale = typeof scale === 'object' ? (scale.x ?? 1) : scale
         // The content dimensions in logical pixel
-        const logicalContentW = contentWidth || (rawWidth / scaleFactor)
-        const logicalContentH = contentHeight || (logicalContentW * imgAspectRatio)
+        const logicalContentW = typeof contentWidth === 'number'
+                                ? contentWidth
+                                : (rawWidth / scaleFactor)
+        const logicalContentH = typeof contentHeight === 'number'
+                                ? contentHeight
+                                : ((rawHeight ?? (logicalContentW * imgAspectRatio)) / scaleFactor)
 
         // Apply the shadow margins.
         const totalW = logicalContentW + (shadowMargins.left + shadowMargins.right)
-        const totalH = totalW * imgAspectRatio
+        const totalH = logicalContentH + (shadowMargins.top + shadowMargins.bottom)
 
-        // Pivot centered on the actual content (excluding shadows for rotation)
-        const cx = posX + shadowMargins.left + logicalContentW / 2
-        const cy = posY + shadowMargins.top + logicalContentH / 2
+        // Pivot centered on the full box (content + shadows)
+        const cx = posX + totalW / 2
+        const cy = posY + totalH / 2
 
         this.#overlays.push({
                                 element,
@@ -205,11 +215,13 @@ export class CanvasOverlayComposer {
             const rad = (overlay.rotate * Math.PI) / 180
             const hw = overlay.contentWidth / 2
             const hh = overlay.contentHeight / 2
+            const radius = Math.max(0, Math.min(overlay.radius, hw, hh))
 
             ctx.save()
             ctx.translate(overlay.cx, overlay.cy)
             ctx.rotate(rad)
-            ctx.scale(overlay.scale, overlay.scale)
+            const viewScale = overlay.scale / this.#dpr
+            ctx.scale(viewScale, viewScale)
 
             // Backdrop Blur
             if (overlay.blur > 0) {
@@ -218,12 +230,12 @@ export class CanvasOverlayComposer {
                                        -hw, -hh,
                                        overlay.contentWidth,
                                        overlay.contentHeight,
-                                       overlay.radius * overlay.scale)
+                                       radius)
                 ctx.clip()
 
                 ctx.resetTransform()
                 ctx.scale(this.#dpr, this.#dpr)
-                ctx.filter = `blur(${overlay.blur}px)`
+                ctx.filter = `blur(${overlay.blur * this.#dpr}px)`
                 drawMainSource()
                 ctx.restore()
             }
@@ -235,12 +247,12 @@ export class CanvasOverlayComposer {
                                    -hw, -hh,
                                    overlay.contentWidth,
                                    overlay.contentHeight,
-                                   overlay.radius * overlay.scale)
+                                   radius)
             ctx.stroke()
 
             // Snapshot
             const dx = -hw - overlay.shadowMargins.left
-            const dy = -hh - overlay.shadowMargins.bottom
+            const dy = -hh - overlay.shadowMargins.top
 
             ctx.drawImage(
                 el,

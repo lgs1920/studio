@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-23
- * Last modified: 2026-01-23
+ * Created on: 2026-01-24
+ * Last modified: 2026-01-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -204,7 +204,7 @@ export const EditableText = ({id, scale = 1}) => {
                 backdropFilter: 'blur(var(--lgs-tx-blur))',
                 border:          'var(--lgs-tx-border)',
                 borderRadius:    'var(--lgs-tx-radius)',
-                boxShadow:       'var(--lgs-bg-elevation)',
+                boxShadow: 'var(--lgs-bg-elevation)',
                 overflow: 'hidden',
                 opacity:  element.opacity, // Opacity applied here so it covers both states
             }}
