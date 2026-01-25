@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-15
- * Last modified: 2026-01-15
+ * Created on: 2026-01-25
+ * Last modified: 2026-01-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,21 +46,7 @@
     left: calc(-1 * var(--outline-width) - 1px);
 
     content: "";
-    animation: label-border-dance var(--label-border-dance-duration) infinite linear;
-
     pointer-events: none;
-
-    border-radius: inherit;
-    background-image: linear-gradient(90deg, var(--lgs-widget-editing-bg-color) 50%, var(--lgs-widget-editing-color) 50%),
-    linear-gradient(90deg, var(--lgs-widget-editing-bg-color) 50%, var(--lgs-widget-editing-color) 50%),
-    linear-gradient(0deg, var(--lgs-widget-editing-bg-color) 50%, var(--lgs-widget-editing-color) 50%),
-    linear-gradient(0deg, var(--lgs-widget-editing-bg-color) 50%, var(--lgs-widget-editing-color) 50%);
-
-    background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
-    background-size: var(--dashing-width) var(--outline-width),
-    var(--dashing-width) var(--outline-width),
-    var(--outline-width) var(--dashing-width),
-    var(--outline-width) var(--dashing-width);
 }
 
 @keyframes label-border-dance {
