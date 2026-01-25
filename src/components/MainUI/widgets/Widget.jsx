@@ -449,6 +449,28 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             if (!widgetEl || !target) {
                 return
             }
+            const isInDrawer = (() => {
+                const path = event.composedPath ? event.composedPath() : [target]
+                const elements = path.filter(node => node instanceof HTMLElement)
+                // Check light DOM ancestry
+                if (elements.some(el => el.closest?.('sl-drawer'))) {
+                    return true
+                }
+                // Check shadow host ancestry
+                if (elements.some(el => el.getRootNode?.()?.host?.tagName === 'SL-DRAWER')) {
+                    return true
+                }
+                // Check overlays/backdrops used by Shoelace drawer
+                if (elements.some(el => el.classList?.contains('drawer__overlay') ||
+                    el.classList?.contains('sl-drawer__overlay') ||
+                    el.classList?.contains('sl-backdrop'))) {
+                    return true
+                }
+                return false
+            })()
+            if (isInDrawer) {
+                return
+            }
             const elementTarget = target instanceof Element ? target : target.parentElement
             const isMoveableControl = elementTarget?.closest('.lgs-widget-control-box') ||
                 elementTarget?.closest('.moveable-control') ||
