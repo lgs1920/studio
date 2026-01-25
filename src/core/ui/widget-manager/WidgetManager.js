@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-18
- * Last modified: 2026-01-18
+ * Created on: 2026-01-25
+ * Last modified: 2026-01-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -569,6 +569,13 @@ export class WidgetManager {
      * @param {boolean} lockRatio - Whether to lock the ratio
      */
     updateCropRatio = (cropzoneId, value, aspectRatio, lockRatio) => this.#cropper.updateCropRatio(cropzoneId, value, aspectRatio, lockRatio)
+
+    /**
+     * Dispatches a crop update event to listeners.
+     * @param {Object} config - Widget configuration
+     * @param {string} phase - Update phase
+     */
+    dispatchCropUpdate = (config, phase) => this.#cropper.dispatchCropUpdate(config, phase)
 
     /**
      * Computes crop dimensions.
