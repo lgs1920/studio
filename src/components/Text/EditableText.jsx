@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-24
- * Last modified: 2026-01-24
+ * Created on: 2026-01-25
+ * Last modified: 2026-01-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-import { TextWidgetManager } from '@Core/ui/text-metrics/TextWidgetManager'
+import { WIDGETS_EDITOR_DRAWER } from '@Core/constants'
+import { TextWidgetManager }     from '@Core/ui/text-metrics/TextWidgetManager'
 import classNames                                      from 'classnames'
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useSnapshot }                                 from 'valtio'
@@ -50,8 +51,39 @@ export const EditableText = ({id, scale = 1}) => {
      * Handles deletion keys when the widget is selected
      */
     useEffect(() => {
+        const isTypingNode = (node) => {
+            if (!node) {
+                return false
+            }
+            // Native inputs/textareas
+            if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
+                return true
+            }
+            if (node instanceof HTMLElement) {
+                if (node.isContentEditable) {
+                    return true
+                }
+                // Shoelace hosts or descendants
+                if (node.closest && node.closest('sl-textarea, sl-input, input, textarea')) {
+                    return true
+                }
+            }
+            return false
+        }
+
         const handleGlobalKeyDown = (e) => {
             const isCurrent = drawers.entity === id
+            // If the widget editor drawer is open on this entity, never intercept typing
+            if (drawers.open === WIDGETS_EDITOR_DRAWER && isCurrent) {
+                return
+            }
+
+            // Skip if focus is inside any typing surface (shadow or light DOM)
+            const path = e.composedPath ? e.composedPath() : [e.target]
+            const active = document.activeElement
+            if (isTypingNode(e.target) || isTypingNode(active) || path.some(isTypingNode)) {
+                return
+            }
 
             if (isCurrent && !isEditing && (e.key === 'Delete' || e.key === 'Backspace')) {
                 e.preventDefault()
@@ -59,8 +91,8 @@ export const EditableText = ({id, scale = 1}) => {
             }
         }
 
-        window.addEventListener('keydown', handleGlobalKeyDown)
-        return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+        window.addEventListener('keydown', handleGlobalKeyDown, true)
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown, true)
     }, [id, isEditing, drawers.entity, removeTextWidget])
 
     /**

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-24
- * Last modified: 2026-01-24
+ * Created on: 2026-01-25
+ * Last modified: 2026-01-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,6 +35,10 @@ import { useSnapshot }                                                    from '
 const OptimizedTextArea = memo(({value, onInput, dynamicVars, onFocus, onBlur, isEditing}) => {
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
+            e.stopPropagation()
+        }
+        if (e.key === 'Backspace') {
+            // Prevent bubbling to global listeners that might delete the widget
             e.stopPropagation()
         }
     }
