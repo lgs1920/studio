@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-23
- * Last modified: 2026-01-23
+ * Created on: 2026-01-25
+ * Last modified: 2026-01-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -243,7 +243,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, isMouseOver)
     }, [isMouseOver])
 
-    const handleDrag = useCallback((event) => {
+    const handleDrag = useCallback(async (event) => {
         const input = event.inputEvent
         const threshold = input.pointerType === 'touch' ? DRAG_THRESHOLD.touch : DRAG_THRESHOLD.mouse
         const clientX = input.touches?.[0]?.clientX ?? input.clientX ?? 0
@@ -265,17 +265,18 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             __.ui.widgetManager.applyPosition(element, element.style.transform, _moveable, true, setControlBox)
         }
 
-        __.ui.widgetManager.onDrag(event)
+        await __.ui.widgetManager.onDrag(event)
         _children.current?.handleDrag?.(event)
     }, [])
 
 
-    const handleDragEnd = useCallback((event) => {
-        __.ui.widgetManager.onDragEnd(event)
+    const handleDragEnd = useCallback(async (event) => {
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, false, isMouseOver)
         setIsDragging(false)
         _dragConfirmed.current = false
         _moveable.current?.updateRect()
+        await __.ui.widgetManager.onDragEnd(event)
+
     }, [isMouseOver])
 
     const handleDoubleClick = useCallback((event) => {

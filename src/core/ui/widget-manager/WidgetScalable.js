@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-25
+ * Last modified: 2026-01-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -153,16 +153,19 @@ export class WidgetScalable {
         event.target.classList.remove('scaling', LGS_ANIMATION_SCALING)
 
         const config = await this.#widgetManager.retrieveConfig(event.target)
+
+        // Commit any translate that happened during scale to position
+        this.#widgetTransform.commitTranslateToPosition(event.target)
+
+        // Now get the transforms (scale without translate)
         const transforms = this.#widgetTransform.getTransform(event.target)
         config.scale = transforms.scale
 
-        const {x, y} = event.target.getBoundingClientRect()
-        const style = getComputedStyle(event.target)
-
-        config.position = {
-            left: parseFloat(x) - parseFloat(style.marginLeft),
-            top:  parseFloat(y) - parseFloat(style.marginTop),
-        }
+        // Position was already updated by commitTranslateToPosition
+        // Just make sure config.position is in sync
+        const left = parseFloat(event.target.style.left || '0')
+        const top = parseFloat(event.target.style.top || '0')
+        config.position = {left, top}
 
         if (config.persist) {
             this.#widgetManager.saveWidgetPosition(config.id, config)
