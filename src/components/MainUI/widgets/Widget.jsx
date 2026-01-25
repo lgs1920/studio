@@ -81,6 +81,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     // Interaction lock logic
     const interactionLocked =
               (video.preRecording || video.recording || video.snapshot) && config.type === LGS_VISUAL_WIDGET
+    const showGhostOnly = video.recording && config.type === LGS_VISUAL_WIDGET
 
     // Snap configuration
     const snapSettings = useMemo(() => {
@@ -541,6 +542,13 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         },
                     )
                     await _w2c.current.init()
+                    const canvas = _w2c.current.getCanvas?.()
+                    if (canvas) {
+                        canvas.style.visibility = showGhostOnly ? 'visible' : 'hidden'
+                    }
+                    if (_widget.current) {
+                        _widget.current.style.visibility = showGhostOnly ? 'hidden' : 'visible'
+                    }
                     __.recorder.addEventListener(ScreenMediaRecorder.events.STOP, clean)
                     __.recorder.addEventListener(ScreenMediaRecorder.events.CANCEL, clean)
                 }
@@ -581,6 +589,26 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [isVisible, config, video.recording])
 
     useEffect(() => _moveable.current?.updateRect(), [bounds])
+
+    useEffect(() => {
+        const canvas = _w2c.current?.getCanvas?.()
+        if (showGhostOnly) {
+            if (canvas) {
+                canvas.style.visibility = 'visible'
+            }
+            if (_widget.current) {
+                _widget.current.style.visibility = 'hidden'
+            }
+        }
+        else {
+            if (canvas) {
+                canvas.style.visibility = 'hidden'
+            }
+            if (_widget.current) {
+                _widget.current.style.visibility = 'visible'
+            }
+        }
+    }, [showGhostOnly])
 
     if (!isVisible || (config.type === LGS_VISUAL_WIDGET && !$widget.list.has(config?.id))) {
         return null
