@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-13
- * Last modified: 2026-01-13
+ * Created on: 2026-01-25
+ * Last modified: 2026-01-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -70,12 +70,14 @@ export const Panel = () => {
      * Handle Shoelace close requests.
      */
     const handleRequestClose = useCallback((event) => {
-        if (event.detail.source === 'overlay') {
-            event.preventDefault()
-        }
-        else {
+        const src = event.detail?.source
+        // On touch devices, taps inside the drawer were bubbling as "overlay"/undefined and closing it.
+        // Only allow close when explicitly requested (close button or keyboard).
+        if (src === 'close-button' || src === 'keyboard') {
             closeEditor()
+            return
         }
+        event.preventDefault()
     }, [closeEditor])
 
     /**
