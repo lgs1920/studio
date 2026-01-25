@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-24
- * Last modified: 2026-01-24
+ * Created on: 2026-01-25
+ * Last modified: 2026-01-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -243,12 +243,12 @@ export class CanvasOverlayComposer {
             // Debug Border
             ctx.strokeStyle = 'red'
             ctx.lineWidth = 1 / overlay.scale
-            this.#traceRoundedRect(ctx,
-                                   -hw, -hh,
-                                   overlay.contentWidth,
-                                   overlay.contentHeight,
-                                   radius)
-            ctx.stroke()
+            // this.#traceRoundedRect(ctx,
+            //                        -hw, -hh,
+            //                        overlay.contentWidth,
+            //                        overlay.contentHeight,
+            //                        radius)
+            //ctx.stroke()
 
             // Snapshot
             const dx = -hw - overlay.shadowMargins.left
