@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-11
- * Last modified: 2026-01-11
+ * Created on: 2026-01-25
+ * Last modified: 2026-01-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -67,7 +67,7 @@ const hasVersionChanged = async () => {
 
         if (!cachedResp) {
             return true
-        } // First time or cache cleared
+        }
 
         const previous = await cachedResp.json()
         return previous.buildTime !== current.buildTime ||
@@ -82,7 +82,7 @@ const hasVersionChanged = async () => {
 // ====================================
 // Install
 // ====================================
-self.addEventListener('install', event => {
+self.addEventListener('install', () => {
     self.skipWaiting()
 })
 
@@ -96,19 +96,16 @@ self.addEventListener('activate', event => {
 
             const changed = await hasVersionChanged()
             if (changed) {
-                console.info('[SW] New version detected, updating metadata and clearing old assets...')
                 const cacheName = await getCacheName()
-
-                // Clear all caches to remove old hashed CSS/JS
                 const names = await caches.keys()
+
+                // Effective cleanup of previous cached assets
                 await Promise.all(names.map(n => caches.delete(n)))
 
-                // Store new metadata
                 const current = await getBuildMetadata()
                 const newCache = await caches.open(cacheName)
                 await newCache.put('build_metadata', new Response(JSON.stringify(current)))
 
-                // Notify clients
                 const clients = await self.clients.matchAll()
                 clients.forEach(c => c.postMessage({type: 'VERSION_UPDATED', ...current}))
             }
@@ -120,23 +117,34 @@ self.addEventListener('activate', event => {
 // Fetch (Stale-while-revalidate for speed)
 // ====================================
 self.addEventListener('fetch', event => {
-    // Always bypass cache for metadata and dev servers
-    if (event.request.url.includes('.json') || event.request.url.includes('localhost')) {
-        return event.respondWith(fetch(event.request))
+    const url = new URL(event.request.url)
+
+    // Filter out unsupported schemes and specific routes
+    if (
+        !url.protocol.startsWith('http') ||
+        url.hostname === 'localhost' ||
+        url.pathname.endsWith('.json') ||
+        event.request.method !== 'GET'
+    ) {
+        return
     }
 
     event.respondWith(
-        caches.match(event.request).then(response => {
-            const fetchPromise = fetch(event.request).then(networkResponse => {
-                if (networkResponse.ok) {
-                    const cacheCopy = networkResponse.clone()
-                    getCacheName().then(name => {
-                        caches.open(name).then(cache => cache.put(event.request, cacheCopy))
-                    })
-                }
-                return networkResponse
-            })
-            return response || fetchPromise
+        caches.match(event.request).then(cachedResponse => {
+            const fetchPromise = fetch(event.request)
+                .then(networkResponse => {
+                    // Cache only valid same-origin or CORS responses
+                    if (networkResponse && networkResponse.ok && networkResponse.type === 'basic') {
+                        const cacheCopy = networkResponse.clone()
+                        getCacheName().then(name => {
+                            caches.open(name).then(cache => cache.put(event.request, cacheCopy))
+                        })
+                    }
+                    return networkResponse
+                })
+                .catch(() => cachedResponse)
+
+            return cachedResponse || fetchPromise
         }),
     )
 })
