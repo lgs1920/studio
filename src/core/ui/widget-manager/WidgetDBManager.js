@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-25
- * Last modified: 2026-01-25
+ * Created on: 2026-01-26
+ * Last modified: 2026-01-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,40 +33,21 @@ export class WidgetDBManager {
 
     /**
      * Saves widget position and dimensions to the widgets DB.
+     *
+     * MODIFICATION: Cette classe reste agnostique - elle ne fait QUE stocker les données.
+     * Les calculs de conversion pixels->ratios sont faits dans WidgetCore.preparePositionDataForStorage()
+     *
+     * Les données stockées contiennent maintenant:
+     * - leftRatio: Position left en pourcentage (%) par rapport au conteneur
+     * - topRatio: Position top en pourcentage (%) par rapport au conteneur
+     * - Au lieu de left/top en pixels comme avant
+     *
      * @param {string} widgetId - The widget ID
-     * @param {Object} config - Widget configuration
+     * @param {Object} positionData - Position data to store (already formatted with ratios)
      * @returns {Promise<void>}
      */
-    saveWidgetPosition = async (widgetId, config) => {
-        const scale = config.scale || {x: 1, y: 1}
-
-        // Save position relative to container in pixels (not ratios)
-        let relativeLeft = 0
-        let relativeTop = 0
-
-        if (config.container) {
-            const containerRect = config.container.getBoundingClientRect()
-            relativeLeft = config.position.left - containerRect.left
-            relativeTop = config.position.top - containerRect.top
-        }
-
-        const record = {
-            id:           widgetId,
-            group:        config.group || null,
-            widgetsBoard: config.widgetsBoard,
-            left: relativeLeft,
-            top:  relativeTop,
-            width:        config.cropDimensions?.width || config.dimensions.width,
-            height:       config.cropDimensions?.height || config.dimensions.height,
-            transient:    config.transient,
-            ttl:          config.ttl || null,
-            scale:        scale,
-            rotate: config.rotate || 0,
-            ratio:        config.ratio,
-            attachTo:     config.attachTo,
-        }
-        await lgs.db.lgs1920.put(widgetId, record, WIDGETS_STORE, record.ttl)
-
+    saveWidgetPosition = async (widgetId, positionData) => {
+        await lgs.db.lgs1920.put(widgetId, positionData, WIDGETS_STORE, positionData.ttl)
     }
 
     /**

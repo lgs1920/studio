@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-26
+ * Last modified: 2026-01-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -146,7 +146,6 @@ export const ProfileWidget = ({id, context}) => {
             left:            '0px',
             type:            LGS_VISUAL_WIDGET,
             group:        widgetsBoard === SCENE_WIDGETS_BOARD ? SCENE_WIDGETS : JOURNEY_WIDGETS,
-            margin:          5,
             attachTo:        'bottom',
             scalable:        true,
             id,

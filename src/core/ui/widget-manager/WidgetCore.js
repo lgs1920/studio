@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-25
- * Last modified: 2026-01-25
+ * Created on: 2026-01-26
+ * Last modified: 2026-01-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -655,97 +655,59 @@ export class WidgetCore {
             // Get container and widget rects for bounds checks
             const containerRect = config.container.getBoundingClientRect()
 
-            // Adapt scale if widget is too large for container
+            // MODIFICATION: Recalculate position from stored ratios when resizing (not on first load)
+            // Au premier chargement (first=true): on utilise la position déjà convertie dans retrieveConfig
+            // Aux resizes suivants (first=false): on recalcule depuis les ratios pour s'adapter à la nouvelle taille
+            if (!first && config.savedRatios) {
+                const leftRatio = config.savedRatios.leftRatio
+                const topRatio = config.savedRatios.topRatio
+                // Conversion ratio -> pixels basée sur la nouvelle taille du conteneur
+                const relativeLeft = (leftRatio / 100) * containerRect.width
+                const relativeTop = (topRatio / 100) * containerRect.height
+
+                config.position = {
+                    left: containerRect.left + relativeLeft,
+                    top:  containerRect.top + relativeTop,
+                }
+            }
+
+            // MODIFICATION: Adapt scale if widget is too large for container
+            // Vérifie si le widget rentre dans le conteneur, sinon réduit son scale
+            // Ceci s'applique au premier chargement ET aux resizes
             let scaleWasAdapted = false
             if (config.type === LGS_VISUAL_WIDGET) {
                 const oldScale = {...config.scale}
                 config.scale = this.adaptScaleToContainer(config, containerRect)
 
-                // If scale changed, update the element and force bounds check
+                // If scale changed, update the element
                 if (oldScale.x !== config.scale.x || oldScale.y !== config.scale.y) {
                     this.#widgetTransform.setScale(element, config.scale.x, config.scale.y)
                     scaleWasAdapted = true
-
-                    // After scale change, recalculate position to keep widget in container
-                    // Widget's relative position to container should be preserved
-                    const currentRelativeLeft = config.position.left - containerRect.left
-                    const currentRelativeTop = config.position.top - containerRect.top
-
-                    // Recalculate absolute position with current container position
-                    config.position = {
-                        left: containerRect.left + currentRelativeLeft,
-                        top:  containerRect.top + currentRelativeTop,
-                    }
-
-                    // Update element position
-                    element.style.left = `${config.position.left}px`
-                    element.style.top = `${config.position.top}px`
-
-                    // After scale change, we need to recheck bounds even if fromDB
-                    config.fromDB = false
                 }
             }
 
-            // Check if widget is out of bounds and reposition if necessary
-            // Skip this check ONLY on first render if widget was restored from DB AND scale wasn't changed
-            const skipBoundsCheck = first && config.fromDB && !scaleWasAdapted
+            // MODIFICATION: Adapt position to ensure widget stays within container bounds
+            // Vérifie si le widget dépasse les bords, sinon ajuste left/top
+            // Ceci s'applique au premier chargement ET aux resizes
+            const adaptedPosition = this.adaptPositionToContainer(config, containerRect)
+            let positionWasAdapted = false
+            if (adaptedPosition.left !== config.position.left || adaptedPosition.top !== config.position.top) {
+                config.position = adaptedPosition
+                positionWasAdapted = true
+            }
 
-            if (!skipBoundsCheck) {
-                // Need to get fresh widgetRect after potential scale change
-                const widgetRect = element.getBoundingClientRect()
-                const margin = Number.isFinite(config.margin) ? config.margin : 5
-                let newLeft = config.position.left
-                let newTop = config.position.top
-                let isOutOfBounds = false
-                const outOfBoundsDetails = {
-                    widgetId:         config.id,
-                    top:              false,
-                    bottom:           false,
-                    left:             false,
-                    right:            false,
-                    margin:           margin,
-                    originalPosition: {...config.position},
-                    newPosition:      null,
-                }
+            // Update element position if it changed
+            if ((!first && config.savedRatios) || scaleWasAdapted || positionWasAdapted) {
+                element.style.left = `${config.position.left}px`
+                element.style.top = `${config.position.top}px`
+                setPosition(config.position)
+            }
 
-                // Detect out-of-bounds conditions
-                if (widgetRect.left < containerRect.left + margin) {
-                    newLeft = containerRect.left + margin
-                    outOfBoundsDetails.left = true
-                    isOutOfBounds = true
-                }
-                else if (widgetRect.right > containerRect.right - margin) {
-                    newLeft = containerRect.right - widgetRect.width - margin
-                    outOfBoundsDetails.right = true
-                    isOutOfBounds = true
-                }
-                if (widgetRect.top < containerRect.top + margin) {
-                    newTop = containerRect.top + margin
-                    outOfBoundsDetails.top = true
-                    isOutOfBounds = true
-                }
-                else if (widgetRect.bottom > containerRect.bottom - margin) {
-                    newTop = containerRect.bottom - widgetRect.height - margin
-                    outOfBoundsDetails.bottom = true
-                    isOutOfBounds = true
-                }
-
-                // Reposition widget if out of bounds
-                if (isOutOfBounds) {
-                    config.position = {left: newLeft, top: newTop}
-                    outOfBoundsDetails.newPosition = {left: newLeft, top: newTop}
-                    element.style.left = `${newLeft}px`
-                    element.style.top = `${newTop}px`
-                    setPosition(config.position)
-
-                    // Dispatch custom event for out-of-bounds
-                    const outOfBoundsEvent = new CustomEvent('widgetOutOfBounds', {
-                        detail:     outOfBoundsDetails,
-                        bubbles:    true,
-                        cancelable: true,
-                    })
-                    element.dispatchEvent(outOfBoundsEvent)
-                }
+            // MODIFICATION: Save to DB if position or scale was adapted
+            // Si le widget a été adapté (scale ou position modifié), on sauvegarde les nouvelles valeurs en ratios
+            if ((scaleWasAdapted || positionWasAdapted) && config.persist) {
+                const positionData = this.preparePositionDataForStorage(config.id, config)
+                this.#widgetDB.saveWidgetPosition(config.id, positionData)
             }
 
             // Clear fromDB flag after first resize so future resizes apply constraints
@@ -972,6 +934,7 @@ export class WidgetCore {
                 config.group = initialConfig.group
             }
         }
+
         // Restore position from IndexedDB if available
         config.fromDB = false
         if (config.persist) {
@@ -979,17 +942,36 @@ export class WidgetCore {
             if (savedWidget) {
                 config.fromDB = true
 
-                // Restore position from relative pixels
+                // Restore position from ratios (%)
                 const containerRect = config.container?.getBoundingClientRect()
                 let absoluteLeft = 0
                 let absoluteTop = 0
 
                 if (containerRect) {
-                    // Position is stored relative to container in pixels
-                    const relativeLeft = savedWidget.left || 0
-                    const relativeTop = savedWidget.top || 0
-                    absoluteLeft = containerRect.left + relativeLeft
-                    absoluteTop = containerRect.top + relativeTop
+                    // Convert ratios (%) to pixels
+                    const leftRatio = savedWidget.leftRatio ?? savedWidget.left ?? 0
+                    const topRatio = savedWidget.topRatio ?? savedWidget.top ?? 0
+
+                    // If we have ratios (new format), use them
+                    if (savedWidget.leftRatio !== undefined && savedWidget.topRatio !== undefined) {
+                        // Conversion ratio -> pixels basée sur la taille actuelle du conteneur
+                        const relativeLeft = (leftRatio / 100) * containerRect.width
+                        const relativeTop = (topRatio / 100) * containerRect.height
+                        absoluteLeft = containerRect.left + relativeLeft
+                        absoluteTop = containerRect.top + relativeTop
+
+                        // Store ratios for use during resize
+                        // Ces ratios seront réutilisés dans monitorContainerResize lors du resize du conteneur
+                        config.savedRatios = {
+                            leftRatio: leftRatio,
+                            topRatio:  topRatio,
+                        }
+                    }
+                    // Otherwise fallback to old pixel format for backward compatibility
+                    else {
+                        absoluteLeft = containerRect.left + (savedWidget.left || 0)
+                        absoluteTop = containerRect.top + (savedWidget.top || 0)
+                    }
                 }
                 else {
                     absoluteLeft = savedWidget.left || 0
@@ -1019,13 +1001,6 @@ export class WidgetCore {
             }
         }
 
-        // Constrain and adapt widget size to its container
-        // Note: Position adaptation is handled in computeInitialPosition (called from setupElement)
-        // We only adapt scale here for visual widgets
-        const container = config?.container.getBoundingClientRect()
-        if (container && config.type === LGS_VISUAL_WIDGET) {
-            config.scale = this.adaptScaleToContainer(config, container)
-        }
         // Save it locally
         this.#widgets.set(elementId, config)
 
@@ -1033,69 +1008,114 @@ export class WidgetCore {
     }
 
     /**
-     * Constrains position within container bounds
+     * MODIFICATION: Constrains position within container bounds
      *
-     * @param container{width,height} - Container dimensions
+     * Vérifie si le widget dépasse les bords du conteneur et ajuste left/top si nécessaire
+     * Cette fonction est appelée:
+     * - Au premier chargement (dans monitorContainerResize avec first=true)
+     * - À chaque resize du conteneur (dans monitorContainerResize avec first=false)
+     *
+     * Logique:
+     * - Si le widget dépasse à gauche ou en haut: on le remet au bord (container.left ou container.top)
+     * - Si le widget dépasse à droite ou en bas: on le recule pour qu'il rentre
+     *
+     * @param container{width,height} - Container dimensions (getBoundingClientRect)
      * @param config - Widget configuration
-     * @return {*|{x: *, y: *}|{x: *, y: *}} - scale
-     * @return {{left: *, top: *}}
+     * @return {{left: number, top: number}} - Nouvelle position contrainte dans le conteneur
      */
     adaptPositionToContainer = (config, container) => {
-        //
         return {
             left: Math.max(
-                container.left + config.margin,
-                Math.min(config.position.left, container.right - config.dimensions.width * config.scale.x - config.margin),
+                container.left,
+                Math.min(config.position.left, container.right - config.dimensions.width * config.scale.x),
             ),
             top:  Math.max(
-                container.top + config.margin,
-                Math.min(config.position.top, container.bottom - config.dimensions.height * config.scale.y - config.margin),
+                container.top,
+                Math.min(config.position.top, container.bottom - config.dimensions.height * config.scale.y),
             ),
         }
     }
 
     /**
-     * Adapts widget size to container size. It provides a new scale value.
+     * Prepares position data for storage in database.
+     * Converts pixel positions to ratios (%) relative to container.
      *
-     * @param config - Widget configuration
-     * @param container{width,height} - Container dimensions
-     * @return {*|{x: *, y: *}|{x: *, y: *}} - scale
+     * @param {string} widgetId - The widget ID
+     * @param {Object} config - Widget configuration
+     * @returns {Object} Position data formatted for storage avec leftRatio/topRatio au lieu de left/top
      */
-    adaptScaleToContainer = (config, container) => {
-        const maxW = container.width - 2 * config.margin
-        const maxH = container.height - 2 * config.margin
+    preparePositionDataForStorage = (widgetId, config) => {
+        const scale = config.scale || {x: 1, y: 1}
 
-        // Minimum scale to prevent widgets from becoming invisible
-        const MIN_SCALE = 0.1
+        // Calculate position as ratios (%) relative to container
+        let leftRatio = 0
+        let topRatio = 0
 
-        // Ensure widget fits inside container with config.margin, using uniform scale to preserve aspect ratio
-        if ((config.ratio?.locked || config.useRatio) && config.ratio?.aspectRatio) {
-            // Ratio is enforced (locked or useRatio) → compute scaled height from width
-            const sw = config.dimensions.width * config.scale.x
-            const sh = config.dimensions.height * config.scale.y
-            if (sw > maxW || sh > maxH) {
-                const tmp = Math.max(MIN_SCALE, Math.min(maxW / config.dimensions.width, maxH / config.dimensions.height))
-                config.scale = {x: tmp, y: tmp}
-            }
-        }
-        else {
-            // No ratio constraint → compute scale to fit in container
-            const sw = config.dimensions.width * config.scale.x
-            const sh = config.dimensions.height * config.scale.y
-            if (sw > maxW || sh > maxH) {
-                // Widget is too large, compute new scale to fit
-                const scaleX = maxW / config.dimensions.width
-                const scaleY = maxH / config.dimensions.height
-                // Use uniform scale (minimum of both) to preserve aspect ratio, but enforce minimum
-                const newScale = Math.max(MIN_SCALE, Math.min(scaleX, scaleY))
-                config.scale = {x: newScale, y: newScale}
-            }
+        if (config.container) {
+            const containerRect = config.container.getBoundingClientRect()
+            // Position relative par rapport au conteneur (en pixels)
+            const relativeLeft = config.position.left - containerRect.left
+            const relativeTop = config.position.top - containerRect.top
+
+            // Convert to ratios (%) - MODIFICATION PRINCIPALE
+            leftRatio = containerRect.width > 0 ? (relativeLeft / containerRect.width) * 100 : 0
+            topRatio = containerRect.height > 0 ? (relativeTop / containerRect.height) * 100 : 0
         }
 
-        return config.scale
+        return {
+            id:           widgetId,
+            group:        config.group || null,
+            widgetsBoard: config.widgetsBoard,
+            leftRatio:    leftRatio,  // MODIFICATION: ratio au lieu de left
+            topRatio:     topRatio,   // MODIFICATION: ratio au lieu de top
+            width:        config.cropDimensions?.width || config.dimensions.width,
+            height:       config.cropDimensions?.height || config.dimensions.height,
+            transient:    config.transient,
+            ttl:          config.ttl || null,
+            scale:        scale,
+            rotate:       config.rotate || 0,
+            ratio:        config.ratio,
+            attachTo:     config.attachTo,
+        }
     }
 
+    /**
+     * Adapts widget size to container size.
+     * strictly caps the current scale to the container limits.
+     *
+     * Logic:
+     * - Calculate the maximum scale allowed by the container dimensions
+     * - Return the minimum between the current scale and the allowed scale
+     *
+     * @param config - Widget configuration (contains dimensions and current scale)
+     * @param container - Container dimensions
+     * @return {{x: number, y: number}} - Scale (clamped to fit container)
+     */
+    adaptScaleToContainer = (config, container) => {
+        const MIN_SCALE = 0.1
 
+        // 1. Calculate the absolute limit imposed by the container on the base dimensions
+        const limitX = container.width / config.dimensions.width * config.scale.x
+        const limitY = container.height / config.dimensions.heightconfig.scale.y
+
+        // 2. The max allowed scale is the smallest ratio (to fit completely inside)
+        const maxAllowedScale = Math.min(limitX, limitY)
+
+        // 3. We strictly clamp the current scale.
+        // - If current scale > maxAllowedScale -> we reduce it to maxAllowedScale (it was too big)
+        // - If current scale < maxAllowedScale -> we keep current scale (it fits)
+        let finalScale = Math.min(config.scale.x, maxAllowedScale)
+        console.log({
+                        config, maxAllowedScale, finalScale,
+                    })
+        // Safety floor
+        if (finalScale < MIN_SCALE) {
+            finalScale = MIN_SCALE
+        }
+
+
+        return {x: finalScale, y: finalScale}
+    }
     /**
      * Clones a context menu configuration object by ensuring all expected boolean attributes are defined.
      * If an attribute is missing in the source object, it will be set to false in the clone.
@@ -1197,16 +1217,15 @@ export class WidgetCore {
         element.style.opacity = initialConfig.opacity || 1
         element.style.transformOrigin = '50% 50%'
 
-        // Restore scale transform if saved (must be AFTER style initialization)
-        if (config.fromDB && config.scale && (config.scale.x !== 1 || config.scale.y !== 1)) {
+        // Apply scale transform if exists (for all widgets)
+        if (config.scale && (config.scale.x !== 1 || config.scale.y !== 1)) {
             this.#widgetManager.transform.setScale(element, config.scale.x, config.scale.y)
         }
 
         // Restore rotation
-        if (config.fromDB && config.rotate && config.rotate !== 0) {
+        if (config.rotate && config.rotate !== 0) {
             this.#widgetManager.transform.setRotate(element, config.rotate)
         }
-
 
         // Initialize resize observer and overlay
         this.monitorContainerResize(config, setBounds, moveable, element, setPosition)
@@ -1219,10 +1238,10 @@ export class WidgetCore {
         this.setConfig(elementId, config)
         this.setMoveable(elementId, moveable)
 
-        // Don't save immediately after setup if restored from DB - position is already correct
-        // It will be saved on next drag/scale/resize
+        // Save to DB only for new widgets (not from DB)
         if (config.persist && !config.fromDB) {
-            await this.#widgetDB.saveWidgetPosition(elementId, config)
+            const positionData = this.preparePositionDataForStorage(elementId, config)
+            await this.#widgetDB.saveWidgetPosition(elementId, positionData)
         }
         return true
     }
