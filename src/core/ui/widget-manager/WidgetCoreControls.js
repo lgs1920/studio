@@ -291,8 +291,21 @@ export class WidgetCoreControls {
      * @param {Function} setPosition - Function to set position
      */
     monitorContainerResize = (config, setBounds, moveable, element, setPosition) => {
-        if (config.observer) {
+        const target = config.isCropper ? element : config.container
+        if (!target) {
             return
+        }
+        if (config.observer && config.observedTarget === target) {
+            return
+        }
+        if (config.observer && config.observedTarget !== target) {
+            try {
+                config.observer.unobserve(config.observedTarget)
+            }
+            catch (_) {
+            }
+            config.observer.disconnect()
+            config.observer = null
         }
         const elementId = config.id
 
@@ -473,10 +486,11 @@ export class WidgetCoreControls {
                 }
             }
         }
-        if (config.container) {
+        if (target) {
             handleResize(true)
             config.observer = new ResizeObserver(this.#throttle(handleResize, 100))
-            config.observer.observe(config.container)
+            config.observer.observe(target)
+            config.observedTarget = target
         }
     }
 
@@ -485,7 +499,7 @@ export class WidgetCoreControls {
      *
      * @param container{width,height} - Container dimensions (getBoundingClientRect)
      * @param config - Widget configuration
-     * @return {{left: number, top: number}} - Nouvelle position contrainte dans le conteneur
+     * @return {{left: number, top: number}} - new position
      */
     adaptPositionToContainer = (config, container) => {
         if (config.type === LGS_VISUAL_WIDGET) {
@@ -535,15 +549,32 @@ export class WidgetCoreControls {
      * @return {{x: number, y: number}} - Scale (clamped to fit container)
      */
     adaptScaleToContainer = (config, container) => {
+        if (config.type !== LGS_VISUAL_WIDGET) {
+            return config.scale || {x: 1, y: 1}
+        }
         const MIN_SCALE = 0.1
-        const limitX = container.width / config.dimensions.width
-        const limitY = container.height / config.dimensions.height
+        const width = config.dimensions?.width ?? 0
+        const height = config.dimensions?.height ?? 0
+        const scaleX = config.scale?.x ?? 1
+        const scaleY = config.scale?.y ?? 1
+        const angle = (config.rotate ?? 0) * (Math.PI / 180)
+        const absCos = Math.abs(Math.cos(angle))
+        const absSin = Math.abs(Math.sin(angle))
+        const scaledWidth = width * scaleX
+        const scaledHeight = height * scaleY
+        const rotatedWidth = (scaledWidth * absCos) + (scaledHeight * absSin)
+        const rotatedHeight = (scaledWidth * absSin) + (scaledHeight * absCos)
+
+        const limitX = rotatedWidth > 0 ? container.width / rotatedWidth : 1
+        const limitY = rotatedHeight > 0 ? container.height / rotatedHeight : 1
         const maxAllowedScale = Math.min(limitX, limitY)
         let finalScale = Math.min(config.scale.x, maxAllowedScale)
 
         if (finalScale < MIN_SCALE) {
             finalScale = MIN_SCALE
         }
+
+        console.log('Resscale')
         return {x: finalScale, y: finalScale}
     }
 

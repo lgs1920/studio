@@ -717,6 +717,16 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 snapRotationDegrees={[0, -30, -45, -60, -90, -120, -135, -150, -180]}
                 snappable={config?.snappable ?? true}
                 snapDirections={{top: true, right: true, bottom: true, left: true, center: true, middle: true}}
+                elementSnapDirections={{
+                    top:    true,
+                    left:   true,
+                    bottom: true,
+                    right:  true,
+                    center: true,
+                    middle: true,
+                }}
+                maxSnapElementGuidelineDistance={10}
+
                 renderDirections={controlBox.renderDirections}
                 zoom={controlBox.zoom}
                 onRender={(event) => !config.isCropper && (event.target.style.cssText += event.cssText)}

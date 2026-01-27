@@ -463,6 +463,9 @@ export class WidgetManager {
      */
     saveWidgetPosition = async (widgetId, config) => {
         const positionData = this.#registry.preparePositionDataForStorage(widgetId, config)
+        if (!positionData) {
+            return
+        }
         await this.#widgetDB.saveWidgetPosition(widgetId, positionData)
     }
 

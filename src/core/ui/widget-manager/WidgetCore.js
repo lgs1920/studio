@@ -632,8 +632,21 @@ export class WidgetCore {
      * @param {Function} setPosition - Function to set position
      */
     monitorContainerResize = (config, setBounds, moveable, element, setPosition) => {
-        if (config.observer) {
+        const target = config.isCropper ? element : config.container
+        if (!target) {
             return
+        }
+        if (config.observer && config.observedTarget === target) {
+            return
+        }
+        if (config.observer && config.observedTarget !== target) {
+            try {
+                config.observer.unobserve(config.observedTarget)
+            }
+            catch (_) {
+            }
+            config.observer.disconnect()
+            config.observer = null
         }
         const elementId = config.id
 
@@ -839,10 +852,11 @@ export class WidgetCore {
                 }
             }
         }
-        if (config.container) {
+        if (target) {
             handleResize(true)
             config.observer = new ResizeObserver(this.#throttle(handleResize, 100))
-            config.observer.observe(config.container)
+            config.observer.observe(target)
+            config.observedTarget = target
         }
     }
 
@@ -1114,22 +1128,27 @@ export class WidgetCore {
      * @return {{x: number, y: number}} - Scale (clamped to fit container)
      */
     adaptScaleToContainer = (config, container) => {
+        if (config.type !== LGS_VISUAL_WIDGET) {
+            return config.scale || {x: 1, y: 1}
+        }
         const MIN_SCALE = 0.1
 
-        // 1. Calculate the absolute limit imposed by the container on the base dimensions
-        const limitX = container.width / config.dimensions.width * config.scale.x
-        const limitY = container.height / config.dimensions.heightconfig.scale.y
+        const width = config.dimensions?.width ?? 0
+        const height = config.dimensions?.height ?? 0
+        const scaleX = config.scale?.x ?? 1
+        const scaleY = config.scale?.y ?? 1
+        const angle = (config.rotate ?? 0) * (Math.PI / 180)
+        const absCos = Math.abs(Math.cos(angle))
+        const absSin = Math.abs(Math.sin(angle))
+        const scaledWidth = width * scaleX
+        const scaledHeight = height * scaleY
+        const rotatedWidth = (scaledWidth * absCos) + (scaledHeight * absSin)
+        const rotatedHeight = (scaledWidth * absSin) + (scaledHeight * absCos)
 
-        // 2. The max allowed scale is the smallest ratio (to fit completely inside)
+        const limitX = rotatedWidth > 0 ? container.width / rotatedWidth : 1
+        const limitY = rotatedHeight > 0 ? container.height / rotatedHeight : 1
         const maxAllowedScale = Math.min(limitX, limitY)
-
-        // 3. We strictly clamp the current scale.
-        // - If current scale > maxAllowedScale -> we reduce it to maxAllowedScale (it was too big)
-        // - If current scale < maxAllowedScale -> we keep current scale (it fits)
         let finalScale = Math.min(config.scale.x, maxAllowedScale)
-        console.log({
-                        config, maxAllowedScale, finalScale,
-                    })
         // Safety floor
         if (finalScale < MIN_SCALE) {
             finalScale = MIN_SCALE
