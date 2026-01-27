@@ -422,8 +422,12 @@ export class WidgetCoreRegistry {
 
         const containerRect = config.container.getBoundingClientRect()
 
-        const centerX = config.position.left + (config.dimensions.width / 2)
-        const centerY = config.position.top + (config.dimensions.height / 2)
+        const useCropDimensions = config.isCropper && Number.isFinite(config.cropDimensions?.width) && Number.isFinite(config.cropDimensions?.height)
+        const width = useCropDimensions ? config.cropDimensions.width : config.dimensions.width
+        const height = useCropDimensions ? config.cropDimensions.height : config.dimensions.height
+
+        const centerX = config.position.left + (width / 2)
+        const centerY = config.position.top + (height / 2)
 
         const relativeCenterX = centerX - containerRect.left
         const relativeCenterY = centerY - containerRect.top
@@ -439,8 +443,8 @@ export class WidgetCoreRegistry {
             widgetsBoard: config.widgetsBoard,
             leftRatio: leftRatio,
             topRatio:  topRatio,
-            width:     config.dimensions.width,
-            height:    config.dimensions.height,
+            width:  width,
+            height: height,
             scale:     $scale,
             rotate:       config.rotate || 0,
             ratio:        config.ratio,

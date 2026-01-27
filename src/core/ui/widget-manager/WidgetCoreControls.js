@@ -488,28 +488,41 @@ export class WidgetCoreControls {
      * @return {{left: number, top: number}} - Nouvelle position contrainte dans le conteneur
      */
     adaptPositionToContainer = (config, container) => {
-        const scaleX = config.scale?.x ?? 1
-        const scaleY = config.scale?.y ?? 1
-        const width = config.dimensions?.width ?? 0
-        const height = config.dimensions?.height ?? 0
-        const offsetX = (width * (1 - scaleX)) / 2
-        const offsetY = (height * (1 - scaleY)) / 2
+        if (config.type === LGS_VISUAL_WIDGET) {
+            const scaleX = config.scale?.x ?? 1
+            const scaleY = config.scale?.y ?? 1
+            const width = config.dimensions?.width ?? 0
+            const height = config.dimensions?.height ?? 0
+            const offsetX = (width * (1 - scaleX)) / 2
+            const offsetY = (height * (1 - scaleY)) / 2
 
-        const boundingLeft = config.position.left + offsetX
-        const boundingTop = config.position.top + offsetY
+            const boundingLeft = config.position.left + offsetX
+            const boundingTop = config.position.top + offsetY
 
-        const clampedBoundingLeft = Math.max(
-            container.left,
-            Math.min(boundingLeft, container.right - width * scaleX),
-        )
-        const clampedBoundingTop = Math.max(
-            container.top,
-            Math.min(boundingTop, container.bottom - height * scaleY),
-        )
+            const clampedBoundingLeft = Math.max(
+                container.left,
+                Math.min(boundingLeft, container.right - width * scaleX),
+            )
+            const clampedBoundingTop = Math.max(
+                container.top,
+                Math.min(boundingTop, container.bottom - height * scaleY),
+            )
+
+            return {
+                left: clampedBoundingLeft - offsetX,
+                top:  clampedBoundingTop - offsetY,
+            }
+        }
 
         return {
-            left: clampedBoundingLeft - offsetX,
-            top:  clampedBoundingTop - offsetY,
+            left: Math.max(
+                container.left,
+                Math.min(config.position.left, container.right - config.dimensions.width * config.scale.x),
+            ),
+            top:  Math.max(
+                container.top,
+                Math.min(config.position.top, container.bottom - config.dimensions.height * config.scale.y),
+            ),
         }
     }
 
