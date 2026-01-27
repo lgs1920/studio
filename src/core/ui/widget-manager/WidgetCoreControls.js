@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-26
- * Last modified: 2026-01-26
+ * Created on: 2026-01-27
+ * Last modified: 2026-01-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -481,27 +481,35 @@ export class WidgetCoreControls {
     }
 
     /**
-     * MODIFICATION: Constrains position within container bounds
-     *
-     * Vérifie si le widget dépasse les bords du conteneur et ajuste left/top si nécessaire
-     * Cette fonction est appelée:
-     * - Au premier chargement (dans monitorContainerResize avec first=true)
-     * - À chaque resize du conteneur (dans monitorContainerResize avec first=false)
+     * Constrains position within container bounds
      *
      * @param container{width,height} - Container dimensions (getBoundingClientRect)
      * @param config - Widget configuration
      * @return {{left: number, top: number}} - Nouvelle position contrainte dans le conteneur
      */
     adaptPositionToContainer = (config, container) => {
+        const scaleX = config.scale?.x ?? 1
+        const scaleY = config.scale?.y ?? 1
+        const width = config.dimensions?.width ?? 0
+        const height = config.dimensions?.height ?? 0
+        const offsetX = (width * (1 - scaleX)) / 2
+        const offsetY = (height * (1 - scaleY)) / 2
+
+        const boundingLeft = config.position.left + offsetX
+        const boundingTop = config.position.top + offsetY
+
+        const clampedBoundingLeft = Math.max(
+            container.left,
+            Math.min(boundingLeft, container.right - width * scaleX),
+        )
+        const clampedBoundingTop = Math.max(
+            container.top,
+            Math.min(boundingTop, container.bottom - height * scaleY),
+        )
+
         return {
-            left: Math.max(
-                container.left,
-                Math.min(config.position.left, container.right - config.dimensions.width * config.scale.x),
-            ),
-            top:  Math.max(
-                container.top,
-                Math.min(config.position.top, container.bottom - config.dimensions.height * config.scale.y),
-            ),
+            left: clampedBoundingLeft - offsetX,
+            top:  clampedBoundingTop - offsetY,
         }
     }
 
@@ -519,9 +527,7 @@ export class WidgetCoreControls {
         const limitY = container.height / config.dimensions.height
         const maxAllowedScale = Math.min(limitX, limitY)
         let finalScale = Math.min(config.scale.x, maxAllowedScale)
-        console.log({
-                        config, limitX, limitY, maxAllowedScale, finalScale,
-                    })
+
         if (finalScale < MIN_SCALE) {
             finalScale = MIN_SCALE
         }

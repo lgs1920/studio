@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-15
- * Last modified: 2026-01-15
+ * Created on: 2026-01-27
+ * Last modified: 2026-01-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -269,7 +269,7 @@ export class WidgetTransform {
             const newTop = currentTop + transforms.translate.y
 
             // Update element style and config position
-            element.style.transformOrigin = '50% 50%'
+            //element.style.transformOrigin = '50% 50%'
             element.style.left = `${newLeft}px`
             element.style.top = `${newTop}px`
 
@@ -384,7 +384,6 @@ export class WidgetTransform {
      * @example
      * const rect = element.getBoundingClientRect();
      * const origin = getTransformOriginFromString({ x: '100%', y: '0%' }, rect);
-     * console.log(origin); // { x: rect.width, y: 0 }
      */
     getTransformOriginFromString = (origin, rect) => {
         const parse = (value, size) => {

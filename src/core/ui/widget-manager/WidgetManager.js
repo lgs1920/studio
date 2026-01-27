@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-26
- * Last modified: 2026-01-26
+ * Created on: 2026-01-27
+ * Last modified: 2026-01-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -455,17 +455,7 @@ export class WidgetManager {
     applyCropToOverlay = config => this.#cropper.applyCropToOverlay(config)
 
     /**
-     * MODIFICATION: Saves widget position and dimensions to the widgets DB.
-     *
-     * Cette fonction est appelée par tous les événements qui modifient la position/scale d'un widget:
-     * - Drag (WidgetDraggable.onDragEnd)
-     * - Resize (WidgetResizable.onResizeEnd)
-     * - Scale (WidgetScalable.onScaleEnd)
-     * - Rotate (WidgetRotatable.onRotateEnd)
-     * - Container resize avec adaptation (WidgetCore.monitorContainerResize)
-     *
-     * Elle délègue à preparePositionDataForStorage() pour la conversion pixels->ratios
-     * puis à WidgetDBManager pour le stockage effectif
+     * Saves widget position and dimensions to the widgets DB.
      *
      * @param {string} widgetId - The widget ID
      * @param {Object} config - Widget configuration

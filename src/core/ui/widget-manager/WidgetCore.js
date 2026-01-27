@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-26
- * Last modified: 2026-01-26
+ * Created on: 2026-01-27
+ * Last modified: 2026-01-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -655,10 +655,8 @@ export class WidgetCore {
             // Get container and widget rects for bounds checks
             const containerRect = config.container.getBoundingClientRect()
 
-            // MODIFICATION: Recalculate position from stored ratios when resizing (not on first load)
-            // Au premier chargement (first=true): on utilise la position déjà convertie dans retrieveConfig
-            // Aux resizes suivants (first=false): on recalcule depuis les ratios pour s'adapter à la nouvelle taille
-            if (!first && config.savedRatios) {
+            // Recalculate position from stored ratios when resizing (not on first load)
+            if (!first && config.position) {
                 const leftRatio = config.savedRatios.leftRatio
                 const topRatio = config.savedRatios.topRatio
                 // Conversion ratio -> pixels basée sur la nouvelle taille du conteneur
@@ -671,9 +669,7 @@ export class WidgetCore {
                 }
             }
 
-            // MODIFICATION: Adapt scale if widget is too large for container
-            // Vérifie si le widget rentre dans le conteneur, sinon réduit son scale
-            // Ceci s'applique au premier chargement ET aux resizes
+            //  Adapt scale if widget is too large for container
             let scaleWasAdapted = false
             if (config.type === LGS_VISUAL_WIDGET) {
                 const oldScale = {...config.scale}
@@ -1024,15 +1020,28 @@ export class WidgetCore {
      * @return {{left: number, top: number}} - Nouvelle position contrainte dans le conteneur
      */
     adaptPositionToContainer = (config, container) => {
+        const scaleX = config.scale?.x ?? 1
+        const scaleY = config.scale?.y ?? 1
+        const width = config.dimensions?.width ?? 0
+        const height = config.dimensions?.height ?? 0
+        const offsetX = (width * (1 - scaleX)) / 2
+        const offsetY = (height * (1 - scaleY)) / 2
+
+        const boundingLeft = config.position.left + offsetX
+        const boundingTop = config.position.top + offsetY
+
+        const clampedBoundingLeft = Math.max(
+            container.left,
+            Math.min(boundingLeft, container.right - width * scaleX),
+        )
+        const clampedBoundingTop = Math.max(
+            container.top,
+            Math.min(boundingTop, container.bottom - height * scaleY),
+        )
+
         return {
-            left: Math.max(
-                container.left,
-                Math.min(config.position.left, container.right - config.dimensions.width * config.scale.x),
-            ),
-            top:  Math.max(
-                container.top,
-                Math.min(config.position.top, container.bottom - config.dimensions.height * config.scale.y),
-            ),
+            left: clampedBoundingLeft - offsetX,
+            top:  clampedBoundingTop - offsetY,
         }
     }
 

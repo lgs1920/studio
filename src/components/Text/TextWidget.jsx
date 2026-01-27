@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-10
- * Last modified: 2026-01-10
+ * Created on: 2026-01-27
+ * Last modified: 2026-01-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -94,7 +94,7 @@ export const TextWidget = ({id, context}) => {
             type:            LGS_VISUAL_WIDGET,
             group:           widgetsBoard === SCENE_WIDGETS_BOARD ? SCENE_WIDGETS : JOURNEY_WIDGETS,
             margin:          5,
-            attachTo:        'center',
+            attachTo: 'center',
             scalable:        true,
             rotatable:       true,
             id,

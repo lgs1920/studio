@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-26
- * Last modified: 2026-01-26
+ * Created on: 2026-01-27
+ * Last modified: 2026-01-27
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { LGS_VISUAL_WIDGET, LGS_WIDGET, SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
-import { v4 as uuid }                                                  from 'uuid'
+import { LGS_VISUAL_WIDGET, SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
+import { v4 as uuid }                                      from 'uuid'
 
 /**
  * Handles widget registry, persistence, and configuration lifecycle.
@@ -266,7 +266,8 @@ export class WidgetCoreRegistry {
 
     /**
      * Retrieves or creates widget configuration for an element, including saved positions from browser DB.
-     * @param {HTMLElement} element - The DOM element
+     * Calculates absolute positioning based on invariant center ratios to handle rotation/scale.
+     * * @param {HTMLElement} element - The DOM element
      * @param {Object} initialConfig - Initial configuration
      * @returns {Promise<Object>} Widget configuration
      */
@@ -274,7 +275,9 @@ export class WidgetCoreRegistry {
         const elementId = initialConfig.id && typeof initialConfig.id === 'string' && initialConfig.id.trim()
                           ? initialConfig.id
                           : this.retrieveElementId(element) || uuid()
+
         let config
+
         if (!this.#widgets.has(elementId)) {
             const anchor = initialConfig.isCropper
                            ? (initialConfig.attachTo && this.#validPositions.includes(initialConfig.attachTo) ? initialConfig.attachTo : 'center')
@@ -284,7 +287,6 @@ export class WidgetCoreRegistry {
                                 ? initialConfig.position
                                 : 'top-left')
 
-            // set ratio key
             let ratio = initialConfig.ratio ?? '1x1'
             if (initialConfig.type === LGS_VISUAL_WIDGET) {
                 ratio = lgs.configuration.widgetRatio
@@ -349,118 +351,100 @@ export class WidgetCoreRegistry {
             }
         }
 
-        // Restore position from IndexedDB if available
         config.fromDB = false
+
         if (config.persist) {
             const savedWidget = await __.ui.widgetManager.getWidgetPosition(elementId)
-            if (savedWidget) {
-                config.fromDB = true
 
-                // Restore position from ratios (%)
+            if (savedWidget && savedWidget.leftRatio !== undefined) {
+                config.fromDB = true
                 const containerRect = config.container?.getBoundingClientRect()
-                let absoluteLeft = 0
-                let absoluteTop = 0
 
                 if (containerRect) {
-                    // Convert ratios (%) to pixels
-                    const leftRatio = savedWidget.leftRatio ?? savedWidget.left ?? 0
-                    const topRatio = savedWidget.topRatio ?? savedWidget.top ?? 0
+                    // Ratios represent the center point of the widget
+                    const leftRatio = savedWidget.leftRatio
+                    const topRatio = savedWidget.topRatio
 
-                    // If we have ratios (new format), use them
-                    if (savedWidget.leftRatio !== undefined && savedWidget.topRatio !== undefined) {
-                        // Conversion ratio -> pixels basée sur la taille actuelle du conteneur
-                        const relativeLeft = (leftRatio / 100) * containerRect.width
-                        const relativeTop = (topRatio / 100) * containerRect.height
-                        absoluteLeft = containerRect.left + relativeLeft
-                        absoluteTop = containerRect.top + relativeTop
+                    // Calculate absolute center position in pixels
+                    const absoluteCenterX = (leftRatio / 100) * containerRect.width
+                    const absoluteCenterY = (topRatio / 100) * containerRect.height
 
-                        // Store ratios for use during resize
-                        // Ces ratios seront réutilisés dans monitorContainerResize lors du resize du conteneur
-                        config.savedRatios = {
-                            leftRatio: leftRatio,
-                            topRatio:  topRatio,
-                        }
+                    // Convert center to top-left layout position
+                    // origin 50% 50% means: top-left = center - (size / 2)
+                    const absoluteLeft = containerRect.left + absoluteCenterX - (savedWidget.width / 2)
+                    const absoluteTop = containerRect.top + absoluteCenterY - (savedWidget.height / 2)
+
+                    config.savedRatios = {leftRatio, topRatio}
+
+                    config.position = {
+                        left: absoluteLeft,
+                        top:  absoluteTop,
                     }
-                    // Otherwise fallback to old pixel format for backward compatibility
-                    else {
-                        absoluteLeft = containerRect.left + (savedWidget.left || 0)
-                        absoluteTop = containerRect.top + (savedWidget.top || 0)
+
+                    config.dimensions = {
+                        width:  savedWidget.width,
+                        height: savedWidget.height,
+                    }
+
+                    config.cropDimensions = {
+                        left:   absoluteLeft,
+                        top:    absoluteTop,
+                        width:  savedWidget.width,
+                        height: savedWidget.height,
                     }
                 }
-                else {
-                    absoluteLeft = savedWidget.left || 0
-                    absoluteTop = savedWidget.top || 0
-                }
 
-                config.position = {
-                    left: absoluteLeft,
-                    top:  absoluteTop,
-                }
-                config.dimensions = {
-                    width:  savedWidget.width,
-                    height: savedWidget.height,
-                }
-                config.cropDimensions = {
-                    top:    absoluteTop,
-                    left:   absoluteLeft,
-                    width:  savedWidget.width,
-                    height: savedWidget.height,
-                }
                 config.group = savedWidget.group || config.group
                 config.scale = savedWidget.scale || {x: 1, y: 1}
                 config.rotate = savedWidget.rotate || 0
                 config.ratio = savedWidget.ratio
-                // Keep original attachTo if saved, don't force 'top-left'
-                config.attachTo = savedWidget.attachTo || config.attachTo || 'top-left'
+                config.attachTo = savedWidget.attachTo || config.attachTo || 'center'
             }
         }
 
-        // Save it locally
         this.#widgets.set(elementId, config)
-
         return config
     }
 
     /**
      * Prepares position data for storage in database.
-     * Converts pixel positions to ratios (%) relative to container.
+     * Calculates ratios based on the widget's logical center to ensure stability.
      *
      * @param {string} widgetId - The widget ID
      * @param {Object} config - Widget configuration
-     * @returns {Object} Position data formatted for storage avec leftRatio/topRatio au lieu de left/top
+     * @returns {Object|null} Position data
      */
     preparePositionDataForStorage = (widgetId, config) => {
-        const scale = config.scale || {x: 1, y: 1}
-
-        // Calculate position as ratios (%) relative to container
-        let leftRatio = 0
-        let topRatio = 0
-
-        if (config.container) {
-            const containerRect = config.container.getBoundingClientRect()
-            // Position relative par rapport au conteneur (en pixels)
-            const relativeLeft = config.position.left - containerRect.left
-            const relativeTop = config.position.top - containerRect.top
-
-            // Convert to ratios (%) - MODIFICATION PRINCIPALE
-            leftRatio = containerRect.width > 0 ? (relativeLeft / containerRect.width) * 100 : 0
-            topRatio = containerRect.height > 0 ? (relativeTop / containerRect.height) * 100 : 0
+        const element = this.getElementById(widgetId)
+        if (!element || !config.container) {
+            return null
         }
+
+        const containerRect = config.container.getBoundingClientRect()
+
+        const centerX = config.position.left + (config.dimensions.width / 2)
+        const centerY = config.position.top + (config.dimensions.height / 2)
+
+        const relativeCenterX = centerX - containerRect.left
+        const relativeCenterY = centerY - containerRect.top
+
+        const leftRatio = containerRect.width > 0 ? (relativeCenterX / containerRect.width) * 100 : 0
+        const topRatio = containerRect.height > 0 ? (relativeCenterY / containerRect.height) * 100 : 0
+
+        const $scale = config.scale || {x: 1, y: 1}
 
         return {
             id:           widgetId,
             group:        config.group || null,
             widgetsBoard: config.widgetsBoard,
-            leftRatio:    leftRatio,  // MODIFICATION: ratio au lieu de left
-            topRatio:     topRatio,   // MODIFICATION: ratio au lieu de top
-            width:        config.cropDimensions?.width || config.dimensions.width,
-            height:       config.cropDimensions?.height || config.dimensions.height,
-            transient:    config.transient,
-            ttl:          config.ttl || null,
-            scale:        scale,
+            leftRatio: leftRatio,
+            topRatio:  topRatio,
+            width:     config.dimensions.width,
+            height:    config.dimensions.height,
+            scale:     $scale,
             rotate:       config.rotate || 0,
             ratio:        config.ratio,
-            attachTo:     config.attachTo,
+            attachTo:  config.attachTo || 'center',
         }
     }
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-25
- * Last modified: 2026-01-25
+ * Created on: 2026-01-27
+ * Last modified: 2026-01-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -230,7 +230,7 @@ export const EditableText = ({id, scale = 1}) => {
             style={{
                 ...cssVars,
                 display:         'inline-block',
-                position:        'relative',
+                //    position:        'relative',
                 minWidth: '1ch',
                 backgroundColor: 'var(--lgs-tx-bg-color)',
                 backdropFilter: 'blur(var(--lgs-tx-blur))',
