@@ -535,9 +535,24 @@ export class WidgetCoreControls {
      * @return {{x: number, y: number}} - Scale (clamped to fit container)
      */
     adaptScaleToContainer = (config, container) => {
+        if (config.type !== LGS_VISUAL_WIDGET) {
+            return config.scale || {x: 1, y: 1}
+        }
         const MIN_SCALE = 0.1
-        const limitX = container.width / config.dimensions.width
-        const limitY = container.height / config.dimensions.height
+        const width = config.dimensions?.width ?? 0
+        const height = config.dimensions?.height ?? 0
+        const scaleX = config.scale?.x ?? 1
+        const scaleY = config.scale?.y ?? 1
+        const angle = (config.rotate ?? 0) * (Math.PI / 180)
+        const absCos = Math.abs(Math.cos(angle))
+        const absSin = Math.abs(Math.sin(angle))
+        const scaledWidth = width * scaleX
+        const scaledHeight = height * scaleY
+        const rotatedWidth = (scaledWidth * absCos) + (scaledHeight * absSin)
+        const rotatedHeight = (scaledWidth * absSin) + (scaledHeight * absCos)
+
+        const limitX = rotatedWidth > 0 ? container.width / rotatedWidth : 1
+        const limitY = rotatedHeight > 0 ? container.height / rotatedHeight : 1
         const maxAllowedScale = Math.min(limitX, limitY)
         let finalScale = Math.min(config.scale.x, maxAllowedScale)
 
