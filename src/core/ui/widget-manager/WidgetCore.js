@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-27
- * Last modified: 2026-01-27
+ * Created on: 2026-01-28
+ * Last modified: 2026-01-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -632,7 +632,7 @@ export class WidgetCore {
      * @param {Function} setPosition - Function to set position
      */
     monitorContainerResize = (config, setBounds, moveable, element, setPosition) => {
-        const target = config.isCropper ? element : config.container
+        const target = config.container
         if (!target) {
             return
         }
@@ -667,9 +667,10 @@ export class WidgetCore {
 
             // Get container and widget rects for bounds checks
             const containerRect = config.container.getBoundingClientRect()
+            const allowAutoAdapt = this.windowResizing
 
             // Recalculate position from stored ratios when resizing (not on first load)
-            if (!first && config.position) {
+            if (allowAutoAdapt && !first && config.position) {
                 const leftRatio = config.savedRatios.leftRatio
                 const topRatio = config.savedRatios.topRatio
                 // Conversion ratio -> pixels basée sur la nouvelle taille du conteneur
@@ -684,7 +685,7 @@ export class WidgetCore {
 
             //  Adapt scale if widget is too large for container
             let scaleWasAdapted = false
-            if (config.type === LGS_VISUAL_WIDGET) {
+            if (allowAutoAdapt && config.type === LGS_VISUAL_WIDGET) {
                 const oldScale = {...config.scale}
                 config.scale = this.adaptScaleToContainer(config, containerRect)
 
@@ -700,7 +701,8 @@ export class WidgetCore {
             // Ceci s'applique au premier chargement ET aux resizes
             const adaptedPosition = this.adaptPositionToContainer(config, containerRect)
             let positionWasAdapted = false
-            if (adaptedPosition.left !== config.position.left || adaptedPosition.top !== config.position.top) {
+            if (allowAutoAdapt &&
+                (adaptedPosition.left !== config.position.left || adaptedPosition.top !== config.position.top)) {
                 config.position = adaptedPosition
                 positionWasAdapted = true
             }
@@ -714,7 +716,7 @@ export class WidgetCore {
 
             // MODIFICATION: Save to DB if position or scale was adapted
             // Si le widget a été adapté (scale ou position modifié), on sauvegarde les nouvelles valeurs en ratios
-            if ((scaleWasAdapted || positionWasAdapted) && config.persist) {
+            if (allowAutoAdapt && (scaleWasAdapted || positionWasAdapted) && config.persist) {
                 const positionData = this.preparePositionDataForStorage(config.id, config)
                 this.#widgetDB.saveWidgetPosition(config.id, positionData)
             }

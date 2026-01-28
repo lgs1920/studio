@@ -291,7 +291,7 @@ export class WidgetCoreControls {
      * @param {Function} setPosition - Function to set position
      */
     monitorContainerResize = (config, setBounds, moveable, element, setPosition) => {
-        const target = config.isCropper ? element : config.container
+        const target = config.container
         if (!target) {
             return
         }
@@ -324,11 +324,12 @@ export class WidgetCoreControls {
             this.setBoundStatus(element, config)
 
             const containerRect = config.container.getBoundingClientRect()
+            const allowAutoAdapt = this.#registry.windowResizing
             const margin = Number.isFinite(config.margin) ? config.margin : 0
             let isOutOfBounds = false
             const outOfBoundsDetails = {top: false, bottom: false, left: false, right: false}
 
-            if (!first && config.savedRatios) {
+            if (allowAutoAdapt && !first && config.savedRatios) {
                 const leftRatio = config.savedRatios.leftRatio
                 const topRatio = config.savedRatios.topRatio
                 const relativeLeft = (leftRatio / 100) * containerRect.width
@@ -341,7 +342,7 @@ export class WidgetCoreControls {
             }
 
             let scaleWasAdapted = false
-            if (config.type === LGS_VISUAL_WIDGET) {
+            if (allowAutoAdapt && config.type === LGS_VISUAL_WIDGET) {
                 const oldScale = {...config.scale}
                 config.scale = this.adaptScaleToContainer(config, containerRect)
 
@@ -353,7 +354,8 @@ export class WidgetCoreControls {
 
             const adaptedPosition = this.adaptPositionToContainer(config, containerRect)
             let positionWasAdapted = false
-            if (adaptedPosition.left !== config.position.left || adaptedPosition.top !== config.position.top) {
+            if (allowAutoAdapt &&
+                (adaptedPosition.left !== config.position.left || adaptedPosition.top !== config.position.top)) {
                 config.position = adaptedPosition
                 positionWasAdapted = true
             }
@@ -364,7 +366,7 @@ export class WidgetCoreControls {
                 setPosition(config.position)
             }
 
-            if ((scaleWasAdapted || positionWasAdapted) && config.persist) {
+            if (allowAutoAdapt && (scaleWasAdapted || positionWasAdapted) && config.persist) {
                 __.ui.widgetManager.saveWidgetPosition(config.id, config)
             }
 
