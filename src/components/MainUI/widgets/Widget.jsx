@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-27
- * Last modified: 2026-01-27
+ * Created on: 2026-01-28
+ * Last modified: 2026-01-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -81,7 +81,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     // Interaction lock logic
     const interactionLocked =
               (video.preRecording || video.recording || video.snapshot) && config.type === LGS_VISUAL_WIDGET
-    const showGhostOnly = video.recording && config.type === LGS_VISUAL_WIDGET
+    const showGhostOnly = Boolean(config?.showGhostDuringRecording) &&
+        video.recording &&
+        config.type === LGS_VISUAL_WIDGET
 
     // Snap configuration
     const snapSettings = useMemo(() => {
@@ -553,17 +555,19 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 lgs.stores.ui.widget.current.rotate = resolved.rotate
 
                 if (interactionLocked) {
-                    _w2c.current = new Widget2Canvas(
-                        _widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'),
-                        {
-                            embedFonts:      true,
-                            scale:           LGS_WIDGET_SCALE_FACTOR,
-                            type:            fullConfig.snap,
-                            outerTransforms: true,
-                            outerShadows:    true,
-                        },
-                    )
-                    await _w2c.current.init()
+                    if (!_w2c.current) {
+                        _w2c.current = new Widget2Canvas(
+                            _widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'),
+                            {
+                                embedFonts:      true,
+                                scale:           LGS_WIDGET_SCALE_FACTOR,
+                                type:            fullConfig.snap,
+                                outerTransforms: true,
+                                outerShadows:    true,
+                            },
+                        )
+                        await _w2c.current.init()
+                    }
                     const canvas = _w2c.current.getCanvas?.()
                     if (canvas) {
                         canvas.style.visibility = showGhostOnly ? 'visible' : 'hidden'
@@ -575,6 +579,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     __.recorder.addEventListener(ScreenMediaRecorder.events.CANCEL, clean)
                 }
                 else {
+                    if (_w2c.current) {
+                        _w2c.current.destroy()
+                        _w2c.current = null
+                    }
                     _moveable.current?.updateRect()
                 }
             }
@@ -613,6 +621,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     useEffect(() => _moveable.current?.updateRect(), [bounds])
 
     useEffect(() => {
+        return () => {
+            if (_w2c.current) {
+                _w2c.current.destroy()
+                _w2c.current = null
+            }
+        }
+    }, [])
+
+    useEffect(() => {
         const canvas = _w2c.current?.getCanvas?.()
         if (showGhostOnly) {
             if (canvas) {
@@ -645,6 +662,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     [LGS_ANIMATION_DRAGGING]: config.animationWhenDragging,
                     [LGS_ANIMATION_RESIZING]: config.animationWhenResizing,
                     dragging:                 _dragConfirmed.current,
+                    'recording-locked': interactionLocked,
                 })}
                 ref={(el) => {
                     _widget.current = el

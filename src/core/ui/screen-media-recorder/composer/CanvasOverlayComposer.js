@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-25
- * Last modified: 2026-01-25
+ * Created on: 2026-01-28
+ * Last modified: 2026-01-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -121,16 +121,23 @@ export class CanvasOverlayComposer {
                   shadowMargins = {top: 0, right: 0, bottom: 0, left: 0},
               } = options
 
+        const elRect = el.getBoundingClientRect ? el.getBoundingClientRect() : null
+        const hasNumericWidth = typeof el.width === 'number'
+        const hasNumericHeight = typeof el.height === 'number'
+        const elDpr = elRect && elRect.width > 0 && hasNumericWidth ? (el.width / elRect.width) : 1
+        const elLogicalWidth = hasNumericWidth ? (el.width / elDpr) : (elRect?.width ?? 0)
+        const elLogicalHeight = hasNumericHeight ? (el.height / elDpr) : (elRect?.height ?? 0)
+
         let posX, posY, rawWidth, rawHeight
 
         if (typeof x === 'number' && typeof y === 'number') {
             posX = x
             posY = y
-            rawWidth = w ?? (el.width /* / this.#dpr */)
-            rawHeight = h ?? el.height
+            rawWidth = w ?? elLogicalWidth
+            rawHeight = h ?? elLogicalHeight
         }
         else {
-            const rect = el.getBoundingClientRect()
+            const rect = elRect
             const sourceRect = this.#sourceCanvas.getBoundingClientRect()
             posX = rect.left - sourceRect.left
             posY = rect.top - sourceRect.top
@@ -220,7 +227,7 @@ export class CanvasOverlayComposer {
             ctx.save()
             ctx.translate(overlay.cx, overlay.cy)
             ctx.rotate(rad)
-            const viewScale = overlay.scale / this.#dpr
+            const viewScale = overlay.scale
             ctx.scale(viewScale, viewScale)
 
             // Backdrop Blur

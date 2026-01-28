@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-27
- * Last modified: 2026-01-27
+ * Created on: 2026-01-28
+ * Last modified: 2026-01-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -574,7 +574,6 @@ export class WidgetCoreControls {
             finalScale = MIN_SCALE
         }
 
-        console.log('Resscale')
         return {x: finalScale, y: finalScale}
     }
 

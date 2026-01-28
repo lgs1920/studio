@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-23
- * Last modified: 2026-01-23
+ * Created on: 2026-01-28
+ * Last modified: 2026-01-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -199,8 +199,8 @@ export class Widget2Canvas {
      */
     #updateCanvas = (source) => {
         const scale = this.#options.scale
-        const logicalW = source.width / scale
-        const logicalH = source.height / scale
+        const logicalW = this.#original?.offsetWidth ?? (source.width / scale)
+        const logicalH = this.#original?.offsetHeight ?? (source.height / scale)
 
         // 1. If the canvas doesn't exist, create it once
         if (!this.#canvas) {
