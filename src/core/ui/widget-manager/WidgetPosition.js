@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-27
- * Last modified: 2026-01-27
+ * Created on: 2026-01-28
+ * Last modified: 2026-01-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -53,73 +53,111 @@ export class WidgetPosition {
 
         const container = config.container.getBoundingClientRect()
         const widget = element.getBoundingClientRect()
-        const defaultWidth = widget.width || 200
-        const defaultHeight = widget.height || 200
+        const scaleX = config.scale?.x ?? 1
+        const scaleY = config.scale?.y ?? 1
+        const widgetWidth = widget.width > 0 ? widget.width : 0
+        const widgetHeight = widget.height > 0 ? widget.height : 0
+        const fallbackWidth = widgetWidth || 200
+        const fallbackHeight = widgetHeight || 200
+        const baseWidth = config.isCropper
+                          ? (config.cropDimensions?.width ?? fallbackWidth)
+                          : (config.dimensions?.width ?? (fallbackWidth / (scaleX || 1)))
+        const baseHeight = config.isCropper
+                           ? (config.cropDimensions?.height ?? fallbackHeight)
+                           : (config.dimensions?.height ?? (fallbackHeight / (scaleY || 1)))
+        const scaledWidth = baseWidth * scaleX
+        const scaledHeight = baseHeight * scaleY
+        const angle = (config.rotate ?? 0) * (Math.PI / 180)
+        const absCos = Math.abs(Math.cos(angle))
+        const absSin = Math.abs(Math.sin(angle))
+        const rotatedWidth = (scaledWidth * absCos) + (scaledHeight * absSin)
+        const rotatedHeight = (scaledWidth * absSin) + (scaledHeight * absCos)
 
-        let left, top
+        let centerX, centerY
 
         // Calculate position based on anchor point
         const positionMap = {
             'center':       () => ({
-                left: (container.width - defaultWidth) / 2 + container.left,
-                top:  (container.height - defaultHeight) / 2 + container.top,
+                centerX: container.left + (container.width / 2),
+                centerY: container.top + (container.height / 2),
             }),
             'top':          () => ({
-                left: (container.width - defaultWidth) / 2 + container.left,
-                top:  container.top + margin,
+                centerX: container.left + (container.width / 2),
+                centerY: container.top + margin + (rotatedHeight / 2),
             }),
             'left':         () => ({
-                left: container.left + margin,
-                top:  (container.height - defaultHeight) / 2 + container.top,
+                centerX: container.left + margin + (rotatedWidth / 2),
+                centerY: container.top + (container.height / 2),
             }),
             'right':        () => ({
-                left: container.right - defaultWidth - margin,
-                top:  (container.height - defaultHeight) / 2 + container.top,
+                centerX: container.right - margin - (rotatedWidth / 2),
+                centerY: container.top + (container.height / 2),
             }),
             'bottom':       () => ({
-                left: (container.width - defaultWidth) / 2 + container.left,
-                top:  container.bottom - defaultHeight - margin,
+                centerX: container.left + (container.width / 2),
+                centerY: container.bottom - margin - (rotatedHeight / 2),
             }),
             'top-left':     () => ({
-                left: container.left + margin,
-                top:  container.top + margin,
+                centerX: container.left + margin + (rotatedWidth / 2),
+                centerY: container.top + margin + (rotatedHeight / 2),
             }),
             'top-right':    () => ({
-                left: container.right - defaultWidth - margin,
-                top:  container.top + margin,
+                centerX: container.right - margin - (rotatedWidth / 2),
+                centerY: container.top + margin + (rotatedHeight / 2),
             }),
             'bottom-left':  () => ({
-                left: container.left + margin,
-                top:  container.bottom - defaultHeight - margin,
+                centerX: container.left + margin + (rotatedWidth / 2),
+                centerY: container.bottom - margin - (rotatedHeight / 2),
             }),
             'bottom-right': () => ({
-                left: container.right - defaultWidth - margin,
-                top:  container.bottom - defaultHeight - margin,
+                centerX: container.right - margin - (rotatedWidth / 2),
+                centerY: container.bottom - margin - (rotatedHeight / 2),
             }),
         }
 
         // Apply position based on anchor
         if (positionMap[anchor]) {
-            ({left, top} = positionMap[anchor]())
+            ({centerX, centerY} = positionMap[anchor]())
         }
         else {
-            ({left, top} = positionMap['center']()) // Fallback to center
+            ({centerX, centerY} = positionMap['center']()) // Fallback to center
         }
 
-        // Constrain position within container bounds
+        // Constrain visual bounds by clamping the center point
+        const minCenterX = container.left + margin + (rotatedWidth / 2)
+        const maxCenterX = container.right - margin - (rotatedWidth / 2)
+        const minCenterY = container.top + margin + (rotatedHeight / 2)
+        const maxCenterY = container.bottom - margin - (rotatedHeight / 2)
+        const clampedCenterX = Math.min(Math.max(centerX, minCenterX), maxCenterX)
+        const clampedCenterY = Math.min(Math.max(centerY, minCenterY), maxCenterY)
         config.position = {
-            left: Math.max(container.left + margin, Math.min(left, container.right - defaultWidth - margin)),
-            top:  Math.max(container.top + margin, Math.min(top, container.bottom - defaultHeight - margin)),
+            left: clampedCenterX - (baseWidth / 2),
+            top:  clampedCenterY - (baseHeight / 2),
         }
 
         config.attachTo = anchor
 
         // Apply position to element
-        element.style.left = `${left}px`
-        element.style.top = `${top}px`
+        element.style.left = `${config.position.left}px`
+        element.style.top = `${config.position.top}px`
         element.style.transformOrigin = `50% 50%`
         if (config.setPosition) {
             config.setPosition(config.position)
+        }
+
+        // Keep ratios aligned with center-based persistence
+        const useCropDimensions = config.isCropper &&
+            Number.isFinite(config.cropDimensions?.width) &&
+            Number.isFinite(config.cropDimensions?.height)
+        const ratioWidth = useCropDimensions ? config.cropDimensions.width : baseWidth
+        const ratioHeight = useCropDimensions ? config.cropDimensions.height : baseHeight
+        const ratioCenterX = config.position.left + (ratioWidth / 2)
+        const ratioCenterY = config.position.top + (ratioHeight / 2)
+        const relativeCenterX = ratioCenterX - container.left
+        const relativeCenterY = ratioCenterY - container.top
+        config.savedRatios = {
+            leftRatio: container.width > 0 ? (relativeCenterX / container.width) * 100 : 0,
+            topRatio:  container.height > 0 ? (relativeCenterY / container.height) * 100 : 0,
         }
 
         if (config.persist) {
