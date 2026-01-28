@@ -14,8 +14,8 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { DYNAMIC_WIDGET_PART, LGS_WIDGET_SCALE_FACTOR, STATIC_WIDGET_PART } from '@Core/constants'
-import { snapdom }                                                          from '@zumer/snapdom'
+import { DYNAMIC_WIDGET_PART, LGS_WIDGET_SCALE_EFFECTIVE, STATIC_WIDGET_PART } from '@Core/constants'
+import { snapdom }                                                             from '@zumer/snapdom'
 
 /**
  * Widget2Canvas — Ultra-fast DOM-to-canvas mirror
@@ -121,7 +121,7 @@ export class Widget2Canvas {
             const style = getComputedStyle(el)
 
             // Custom scale for high-end export
-            const scale = options.scale || LGS_WIDGET_SCALE_FACTOR
+            const scale = options.scale || LGS_WIDGET_SCALE_EFFECTIVE
 
             // Get original bounding box dimensions
             const bbox = el.getBBox?.()

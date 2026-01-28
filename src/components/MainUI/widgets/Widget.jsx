@@ -16,7 +16,8 @@
 
 import { usePointerInteractions } from '@Components/MainUI/context-menu/usePointerInteractions'
 import {
-    LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET, LGS_WIDGET_SCALE_FACTOR,
+    LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET,
+    LGS_WIDGET_SCALE_EFFECTIVE,
     WIDGET_EDITOR_POST_RENDER_EVENT,
     WIDGET_EDITOR_PRE_RENDER_EVENT,
     WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
@@ -560,7 +561,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                             _widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'),
                             {
                                 embedFonts:      true,
-                                scale:           LGS_WIDGET_SCALE_FACTOR,
+                                scale: LGS_WIDGET_SCALE_EFFECTIVE,
                                 type:            fullConfig.snap,
                                 outerTransforms: true,
                                 outerShadows:    true,
