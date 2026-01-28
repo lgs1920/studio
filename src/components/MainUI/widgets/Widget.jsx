@@ -617,7 +617,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, clean)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CANCEL, clean)
         }
-    }, [isVisible, config, video.recording])
+    }, [isVisible, config, video.preRecording, video.recording, video.snapshot])
 
     useEffect(() => _moveable.current?.updateRect(), [bounds])
 

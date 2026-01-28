@@ -449,6 +449,8 @@ export const LGS_ANIMATION_SCALING = 'lgs-animation-scaling'
 export const LGS_WIDGET_SCALE_BASE = 4
 const LGS_WIDGET_DPR = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1
 export const LGS_WIDGET_SCALE_EFFECTIVE = Math.min(LGS_WIDGET_SCALE_BASE, LGS_WIDGET_SCALE_BASE / LGS_WIDGET_DPR)
+export const LGS_WIDGET_SCALE_FACTOR = LGS_WIDGET_SCALE_EFFECTIVE
+export const WIDGET_MOUNT_TIMEOUT = 20000
 
 export const VIDEO_CROP_ZONE = 'video-crop-zone'
 export const VIDEO_TOOLS_WIDGETS   = 'video-tools-widgets',

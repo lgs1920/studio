@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-24
- * Last modified: 2026-01-24
+ * Created on: 2026-01-28
+ * Last modified: 2026-01-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,7 @@ import {
     APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, SECOND, VIDEO_CROP_ZONE,
     VIDEO_TOOLS_WIDGETS,
     VIDEO_WIDGETS_BOARD,
+    WIDGET_MOUNT_TIMEOUT,
 } from '@Core/constants'
 import {
     CanvasOverlayComposer,
@@ -33,10 +34,11 @@ import {
 import {
     ScreenMediaRecorder,
 }                                                               from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import { WidgetMountErrorDialog } from '@Components/MainUI/video/WidgetMountErrorDialog'
 import { UIToast }                                              from '@Utils/UIToast'
-import classNames                                               from 'classnames'
-import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react'
-import { useSnapshot }                                          from 'valtio'
+import classNames from 'classnames'
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSnapshot } from 'valtio'
 
 /**
  * Extracts blur and radius values from an element or its children (depth 2)
@@ -149,6 +151,10 @@ export const VideoRecordingScreenArea = memo(() => {
     const {maxSize, maxDuration} = useSnapshot(lgs.settings.ui.video)
     const _cropZone = useRef(null)
     const _composer = useRef(null)
+    const _pendingFinish = useRef(null)
+    const [mountTimeoutOpen, setMountTimeoutOpen] = useState(false)
+    const [mountTimeoutError, setMountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
+    const [mountTimeoutAction, setMountTimeoutAction] = useState('record')
 
     const crop = useMemo(() => {
         const config = __.ui.widgetManager.getWidgetConfig(VIDEO_CROP_ZONE)
@@ -346,8 +352,27 @@ export const VideoRecordingScreenArea = memo(() => {
     }
 
     useEffect(() => {
+        if (!$video.preRecording && !$video.snapshot) {
+            return
+        }
         const widgetKeys = [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()]
-        return waitingForAllWidgets(widgetKeys, async () => {
+        if (!widgetKeys || widgetKeys.length === 0) {
+            if ($video.preRecording) {
+                $video.preRecording = false
+                $video.recording = true
+                void handleVideoRecording()
+            }
+            else if ($video.snapshot) {
+                void handlePhotoSnapshot()
+            }
+            return
+        }
+        let done = false
+        const finish = async () => {
+            if (done) {
+                return
+            }
+            done = true
             if ($video.preRecording) {
                 $video.preRecording = false
                 $video.recording = true
@@ -356,8 +381,48 @@ export const VideoRecordingScreenArea = memo(() => {
             else if ($video.snapshot) {
                 await handlePhotoSnapshot()
             }
-        })
-    }, [handleVideoRecording, handlePhotoSnapshot])
+        }
+
+        const cleanup = waitingForAllWidgets(widgetKeys, finish)
+
+        const timeoutId = setTimeout(() => {
+            if (done) {
+                return
+            }
+            const missing = widgetKeys.filter(k => {
+                const el = __.ui.widgetManager.getElementById(k)
+                return !el?.querySelector('.lgs-widget-canvas')
+            })
+            _pendingFinish.current = finish
+            window.dispatchEvent(new CustomEvent('widget-mount-timeout', {
+                detail: {
+                    missing,
+                    timeoutMs: WIDGET_MOUNT_TIMEOUT,
+                    action:    $video.preRecording ? 'record' : 'snapshot',
+                },
+            }))
+        }, WIDGET_MOUNT_TIMEOUT)
+        return () => {
+            cleanup?.()
+            clearTimeout(timeoutId)
+            if (_pendingFinish.current === finish) {
+                _pendingFinish.current = null
+            }
+        }
+    }, [handleVideoRecording, handlePhotoSnapshot, $video.preRecording, $video.snapshot])
+
+    useEffect(() => {
+        const handleTimeout = (event) => {
+            const missing = Array.isArray(event?.detail?.missing) ? event.detail.missing : []
+            const timeoutMs = event?.detail?.timeoutMs ?? WIDGET_MOUNT_TIMEOUT
+            const action = event?.detail?.action || 'record'
+            setMountTimeoutError({missing, timeoutMs})
+            setMountTimeoutAction(action)
+            setMountTimeoutOpen(true)
+        }
+        window.addEventListener('widget-mount-timeout', handleTimeout)
+        return () => window.removeEventListener('widget-mount-timeout', handleTimeout)
+    }, [])
 
     useEffect(() => {
         return () => {
@@ -392,6 +457,26 @@ export const VideoRecordingScreenArea = memo(() => {
         <>
             {!video.recording && <CropOverlay style={overlayStyle}/>}
             {video.recording && <VideoRecorderWidget id="video-recorder-widget"/>}
+            <WidgetMountErrorDialog
+                open={mountTimeoutOpen}
+                error={mountTimeoutError}
+                action={mountTimeoutAction}
+                onConfirm={() => {
+                    setMountTimeoutOpen(false)
+                    _pendingFinish.current?.()
+                    _pendingFinish.current = null
+                }}
+                onCancel={() => {
+                    setMountTimeoutOpen(false)
+                    _pendingFinish.current = null
+                    $video.preRecording = false
+                    $video.recording = false
+                    $video.snapshot = false
+                    $video.finalizing = false
+                    $video.editing = true
+                    $video.step = 1
+                }}
+            />
             <DefinedCropZone
                 context={$video.cropper}
                 className={classNames({'video-recording-in-progress': video.recording}, {'video-pre-recording-in-progress': video.preRecording}, {'photo-snapshot-in-progress flash-effect flash-on': video.snapshot}, {finalizing: video.finalizing})}
