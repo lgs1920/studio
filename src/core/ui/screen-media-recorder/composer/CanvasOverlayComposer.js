@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { LGS_WIDGET_SCALE_FACTOR } from '@Core/constants'
+import { LGS_WIDGET_SCALE_EFFECTIVE } from '@Core/constants'
 
 // Build Metadata
 // Generated on: 2026-01-20 23:45:10
@@ -153,7 +153,7 @@ export class CanvasOverlayComposer {
             typeof contentWidth === 'number' || typeof contentHeight === 'number'
         const scaleFactor = hasExplicitLogicalSize
                             ? 1
-                            : (el.classList?.contains('lgs-widget-canvas') ? LGS_WIDGET_SCALE_FACTOR : 1)
+                            : (el.classList?.contains('lgs-widget-canvas') ? LGS_WIDGET_SCALE_EFFECTIVE : 1)
         const imgAspectRatio = el.height / el.width
 
 

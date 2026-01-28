@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-22
- * Last modified: 2026-01-22
+ * Created on: 2026-01-28
+ * Last modified: 2026-01-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -446,7 +446,9 @@ export const LGS_VISUAL_WIDGET = 'lgs-visual-widget'
 export const LGS_ANIMATION_DRAGGING = 'lgs-animation-dragging'
 export const LGS_ANIMATION_RESIZING = 'lgs-animation-resizing'
 export const LGS_ANIMATION_SCALING = 'lgs-animation-scaling'
-export const LGS_WIDGET_SCALE_FACTOR = 4
+export const LGS_WIDGET_SCALE_BASE = 4
+const LGS_WIDGET_DPR = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1
+export const LGS_WIDGET_SCALE_EFFECTIVE = Math.min(LGS_WIDGET_SCALE_BASE, LGS_WIDGET_SCALE_BASE / LGS_WIDGET_DPR)
 
 export const VIDEO_CROP_ZONE = 'video-crop-zone'
 export const VIDEO_TOOLS_WIDGETS   = 'video-tools-widgets',
