@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-28
- * Last modified: 2026-01-28
+ * Created on: 2026-01-29
+ * Last modified: 2026-01-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -212,6 +212,14 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         return () => window.removeEventListener(WIDGET_EDITOR_PRE_RENDER_EVENT, handlePreRender)
     }, [config.id])
 
+    // Checks if the event path contains an sl-drawer element
+    const hasDrawerInPath = (event) => {
+        const path = event.composedPath()
+        return path.some(target =>
+                             target.tagName?.toLowerCase() === 'sl-drawer',
+        )
+    }
+
     // Visibility handlers for control box
     const handleMouseEnter = useCallback(() => {
         if (interactionLocked || (selectedId && !isSelected)) {
@@ -235,9 +243,14 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     // Drag lifecycle
     const handleDragStart = useCallback((event) => {
+        const input = event?.inputEvent
+        if (!input || hasDrawerInPath(input)) {
+            event.stopDrag()
+            return
+        }
+
         setIsDragging(false)
         _dragConfirmed.current = false
-        const input = event.inputEvent
         _dragStart.current = {
             x: input.touches?.[0]?.clientX ?? input.clientX ?? 0,
             y: input.touches?.[0]?.clientY ?? input.clientY ?? 0,
@@ -249,6 +262,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
     const handleDrag = useCallback(async (event) => {
         const input = event.inputEvent
+        if (!input || hasDrawerInPath(input)) {
+            event.stopDrag()
+            return
+        }
         const threshold = input.pointerType === 'touch' ? DRAG_THRESHOLD.touch : DRAG_THRESHOLD.mouse
         const clientX = input.touches?.[0]?.clientX ?? input.clientX ?? 0
         const clientY = input.touches?.[0]?.clientY ?? input.clientY ?? 0
@@ -678,12 +695,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
             <Moveable
                 className="lgs-widget-control-box"
+                style={{
+                    /* Désactive les pointerEvents sur Moveable si le widget n'est pas actif.
+                     Cela empêche Moveable d'intercepter le drag alors qu'on veut juste cliquer.
+                     */
+                    pointerEvents: isSelected ? 'auto' : 'none',
+                }}
                 container={lgs.canvas}
                 origin={false}
-                onClick={selectWidget}
                 ref={_moveable}
                 target={_widget}
-                draggable={interactionLocked ? false : config?.draggable ?? true}
+                draggable={!interactionLocked && (config?.draggable ?? true)}
                 edgeDraggable={true}
                 edge={['w', 'e', 's', 'n']}
                 onDrag={handleDrag}
@@ -692,24 +714,24 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 throttleDrag={2}
                 onBound={handleBound}
                 preventDefault={false}
+                stopPropagation={true}
                 keepRatio={Boolean(
                     __.ui.widgetManager.getWidgetConfig(config?.id)?.ratio?.locked ?? config?.ratio?.locked,
                 )}
 
-
-                resizable={interactionLocked ? false : config?.resizable ?? false}
+                resizable={!interactionLocked && (config?.resizable ?? false)}
                 onResize={handleResize}
                 onResizeStart={handleResizeStart}
                 onResizeEnd={handleResizeEnd}
                 throttleResize={2}
 
-                scalable={interactionLocked ? false : config?.scalable ?? false}
+                scalable={!interactionLocked && (config?.scalable ?? false)}
                 onScale={handleScale}
                 onScaleStart={handleScaleStart}
                 onScaleEnd={handleScaleEnd}
                 onBeforeScale={(event) => event.inputEvent.shiftKey && event.setFixedDirection([0, 0])}
 
-                rotatable={interactionLocked ? false : config?.rotatable ?? false}
+                rotatable={!interactionLocked && (config?.rotatable ?? false)}
                 throttleRotate={throttleRotate}
                 onRotateStart={handleRotateStart}
                 onRotate={handleRotate}
