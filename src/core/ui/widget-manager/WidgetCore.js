@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-28
- * Last modified: 2026-01-28
+ * Created on: 2026-01-29
+ * Last modified: 2026-01-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -377,8 +377,12 @@ export class WidgetCore {
         }
         else {
             // Use provided left/top or center for croppers, relative to the container
-            left = config.isCropper ? (container.width - defaultWidth) / 2 : container.left + this.#widgetTransform.parsePosition(config.left ?? '50%', container.width)
-            top = config.isCropper ? (container.height - defaultHeight) / 2 : container.top + this.#widgetTransform.parsePosition(config.top ?? '50%', container.height)
+            left = config.isCropper
+                   ? container.left + (container.width - defaultWidth) / 2
+                   : container.left + this.#widgetTransform.parsePosition(config.left ?? '50%', container.width)
+            top = config.isCropper
+                  ? container.top + (container.height - defaultHeight) / 2
+                  : container.top + this.#widgetTransform.parsePosition(config.top ?? '50%', container.height)
             // Adjust position based on anchor point, skip center adjustment for croppers
             const adjustments = {
                 center:         () => config.isCropper ? ({left, top}) : ({
@@ -488,12 +492,17 @@ export class WidgetCore {
         }
         if (config.observer) {
             try {
-                config.observer.unobserve(config.container)
+                config.observer.unobserve(config.observedTarget ?? config.container)
             }
             catch (_) {
             }
             config.observer.disconnect()
             config.observer = null
+            config.observedTarget = null
+        }
+        if (config.windowResizeHandler) {
+            window.removeEventListener('resize', config.windowResizeHandler)
+            config.windowResizeHandler = null
         }
         this.#widgets.delete(elementId)
         this.#moveables.delete(elementId)
@@ -636,9 +645,6 @@ export class WidgetCore {
         if (!target) {
             return
         }
-        if (config.observer && config.observedTarget === target) {
-            return
-        }
         if (config.observer && config.observedTarget !== target) {
             try {
                 config.observer.unobserve(config.observedTarget)
@@ -668,9 +674,21 @@ export class WidgetCore {
             // Get container and widget rects for bounds checks
             const containerRect = config.container.getBoundingClientRect()
             const allowAutoAdapt = this.windowResizing
+            const margin = Number.isFinite(config.margin) ? config.margin : 0
+            let isOutOfBounds = false
+            const outOfBoundsDetails = {top: false, bottom: false, left: false, right: false}
+            const oldContainerWidth = oldBounds.right - oldBounds.left
+            const oldContainerHeight = oldBounds.bottom - oldBounds.top
+            const newContainerWidth = newBounds.right - newBounds.left
+            const newContainerHeight = newBounds.bottom - newBounds.top
+            const isContainerShrinking = newContainerWidth < oldContainerWidth ||
+                newContainerHeight < oldContainerHeight
+            if (config.isCropper && allowAutoAdapt && !isContainerShrinking) {
+                return
+            }
 
             // Recalculate position from stored ratios when resizing (not on first load)
-            if (allowAutoAdapt && !first && config.position) {
+            if (allowAutoAdapt && !first && config.position && !config.isCropper) {
                 const leftRatio = config.savedRatios.leftRatio
                 const topRatio = config.savedRatios.topRatio
                 // Conversion ratio -> pixels basée sur la nouvelle taille du conteneur
@@ -699,12 +717,13 @@ export class WidgetCore {
             // MODIFICATION: Adapt position to ensure widget stays within container bounds
             // Vérifie si le widget dépasse les bords, sinon ajuste left/top
             // Ceci s'applique au premier chargement ET aux resizes
-            const adaptedPosition = this.adaptPositionToContainer(config, containerRect)
             let positionWasAdapted = false
-            if (allowAutoAdapt &&
-                (adaptedPosition.left !== config.position.left || adaptedPosition.top !== config.position.top)) {
-                config.position = adaptedPosition
-                positionWasAdapted = true
+            if (allowAutoAdapt && !config.isCropper) {
+                const adaptedPosition = this.adaptPositionToContainer(config, containerRect)
+                if (adaptedPosition.left !== config.position.left || adaptedPosition.top !== config.position.top) {
+                    config.position = adaptedPosition
+                    positionWasAdapted = true
+                }
             }
 
             // Update element position if it changed
@@ -716,7 +735,7 @@ export class WidgetCore {
 
             // MODIFICATION: Save to DB if position or scale was adapted
             // Si le widget a été adapté (scale ou position modifié), on sauvegarde les nouvelles valeurs en ratios
-            if (allowAutoAdapt && (scaleWasAdapted || positionWasAdapted) && config.persist) {
+            if (allowAutoAdapt && !config.isCropper && (scaleWasAdapted || positionWasAdapted) && config.persist) {
                 const positionData = this.preparePositionDataForStorage(config.id, config)
                 this.#widgetDB.saveWidgetPosition(config.id, positionData)
             }
@@ -758,66 +777,73 @@ export class WidgetCore {
             }
 
             // Update cropper position and dimensions
-            if (config.isCropper && this.windowResizing && !config.persist) {
+            if (config.isCropper && this.windowResizing && isContainerShrinking) {
                 const containerRect = config.container.getBoundingClientRect()
                 const currentWidth = config.cropDimensions?.width || 200
                 const currentHeight = config.cropDimensions?.height || 200
                 const maxWidth = containerRect.width - 2 * margin
                 const maxHeight = containerRect.height - 2 * margin
-                let newWidth = currentWidth
-                let newHeight = currentHeight
-                // Maintain aspect ratio if locked
-                if (config.ratio?.locked) {
-                    const aspectRatio = config.ratio.aspectRatio
-                    newWidth = Math.min(currentWidth, maxWidth)
-                    newHeight = newWidth / aspectRatio
-                    if (newHeight > maxHeight) {
-                        newHeight = maxHeight
-                        newWidth = newHeight * aspectRatio
-                    }
-                }
-                else {
-                    newWidth = Math.min(currentWidth, maxWidth)
-                    newHeight = Math.min(currentHeight, maxHeight)
-                }
-                // Recalculate position for cropper, maintaining relative center
                 let newLeft = config.position.left
                 let newTop = config.position.top
-                // Use centerRatio if available, otherwise calculate from current position
-                const centerRatio = config.centerRatio || {
-                    x: (config.position.left + currentWidth / 2) / containerRect.width,
-                    y: (config.position.top + currentHeight / 2) / containerRect.height,
+                let newWidth = currentWidth
+                let newHeight = currentHeight
+                const clampPosition = (width, height) => {
+                    if (newLeft < newBounds.left + margin) {
+                        newLeft = newBounds.left + margin
+                        outOfBoundsDetails.left = true
+                        isOutOfBounds = true
+                    }
+                    else if (newLeft + width > newBounds.right - margin) {
+                        newLeft = newBounds.right - width - margin
+                        outOfBoundsDetails.right = true
+                        isOutOfBounds = true
+                    }
+                    if (newTop < newBounds.top + margin) {
+                        newTop = newBounds.top + margin
+                        outOfBoundsDetails.top = true
+                        isOutOfBounds = true
+                    }
+                    else if (newTop + height > newBounds.bottom - margin) {
+                        newTop = newBounds.bottom - height - margin
+                        outOfBoundsDetails.bottom = true
+                        isOutOfBounds = true
+                    }
                 }
-                // Calculate new position based on centerRatio
-                newLeft = centerRatio.x * containerRect.width - newWidth / 2
-                newTop = centerRatio.y * containerRect.height - newHeight / 2
-                // Constrain position within bounds, applying margin only to colliding sides
-                if (newLeft < newBounds.left + margin) {
-                    newLeft = newBounds.left + margin
-                    outOfBoundsDetails.left = true
-                    isOutOfBounds = true
+                // Move first to keep the cropzone inside the container
+                clampPosition(currentWidth, currentHeight)
+                const needsResize = currentWidth > maxWidth || currentHeight > maxHeight
+                if (needsResize) {
+                    // Maintain aspect ratio if locked
+                    if (config.ratio?.locked) {
+                        const aspectRatio = config.ratio.aspectRatio
+                        newWidth = Math.min(currentWidth, maxWidth)
+                        newHeight = newWidth / aspectRatio
+                        if (newHeight > maxHeight) {
+                            newHeight = maxHeight
+                            newWidth = newHeight * aspectRatio
+                        }
+                    }
+                    else {
+                        newWidth = Math.min(currentWidth, maxWidth)
+                        newHeight = Math.min(currentHeight, maxHeight)
+                    }
+                    const centerRatio = {
+                        x: (newLeft - containerRect.left + currentWidth / 2) / containerRect.width,
+                        y: (newTop - containerRect.top + currentHeight / 2) / containerRect.height,
+                    }
+                    newLeft = containerRect.left + centerRatio.x * containerRect.width - newWidth / 2
+                    newTop = containerRect.top + centerRatio.y * containerRect.height - newHeight / 2
+                    clampPosition(newWidth, newHeight)
                 }
-                else if (newLeft + newWidth > newBounds.right - margin) {
-                    newLeft = newBounds.right - newWidth - margin
-                    outOfBoundsDetails.right = true
-                    isOutOfBounds = true
+                const positionChanged = newLeft !== config.position.left || newTop !== config.position.top
+                const sizeChanged = newWidth !== currentWidth || newHeight !== currentHeight
+                if (!positionChanged && !sizeChanged) {
+                    return
                 }
-                if (newTop < newBounds.top + margin) {
-                    newTop = newBounds.top + margin
-                    outOfBoundsDetails.top = true
-                    isOutOfBounds = true
-                }
-                else if (newTop + newHeight > newBounds.bottom - margin) {
-                    newTop = newBounds.bottom - newHeight - margin
-                    outOfBoundsDetails.bottom = true
-                    isOutOfBounds = true
-                }
-                // Update centerRatio after repositioning
                 config.centerRatio = {
-                    x: (newLeft + newWidth / 2) / containerRect.width,
-                    y: (newTop + newHeight / 2) / containerRect.height,
+                    x: (newLeft - containerRect.left + newWidth / 2) / containerRect.width,
+                    y: (newTop - containerRect.top + newHeight / 2) / containerRect.height,
                 }
-                // Update crop dimensions and position
                 config.cropDimensions = {
                     left:   newLeft,
                     top:    newTop,
@@ -828,21 +854,15 @@ export class WidgetCore {
                     left: newLeft,
                     top:  newTop,
                 }
-                // Apply dimensions and position synchronously
                 element.style.width = `${newWidth}px`
                 element.style.height = `${newHeight}px`
                 element.style.left = `${newLeft}px`
                 element.style.top = `${newTop}px`
-                // Apply clip-path immediately
                 this.#widgetManager.applyCropToOverlay(config)
-                // Update Moveable only if necessary
                 if (mv && mv.current && (config.transform || config.isCropper)) {
                     mv.current.updateRect()
                 }
-                // Dispatch crop update
-                this.#widgetManager.cropDimensions(config, false)
                 setPosition(config.position)
-                // Update out-of-bounds event for cropper if necessary
                 if (isOutOfBounds) {
                     outOfBoundsDetails.newPosition = {left: newLeft, top: newTop}
                     const outOfBoundsEvent = new CustomEvent('widgetOutOfBounds', {
@@ -854,11 +874,24 @@ export class WidgetCore {
                 }
             }
         }
-        if (target) {
-            handleResize(true)
-            config.observer = new ResizeObserver(this.#throttle(handleResize, 100))
-            config.observer.observe(target)
-            config.observedTarget = target
+        if (config.observer && config.observedTarget === target) {
+            if (config.isCropper && !config.windowResizeHandler) {
+                config.windowResizeHandler = this.#throttle(() => handleResize(false), 100)
+                window.addEventListener('resize', config.windowResizeHandler)
+            }
+            return
+        }
+        if (config.windowResizeHandler) {
+            window.removeEventListener('resize', config.windowResizeHandler)
+            config.windowResizeHandler = null
+        }
+        handleResize(true)
+        config.observer = new ResizeObserver(this.#throttle(handleResize, 100))
+        config.observer.observe(target)
+        config.observedTarget = target
+        if (config.isCropper) {
+            config.windowResizeHandler = this.#throttle(() => handleResize(false), 100)
+            window.addEventListener('resize', config.windowResizeHandler)
         }
     }
 

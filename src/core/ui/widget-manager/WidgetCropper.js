@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-29
+ * Last modified: 2026-01-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -85,7 +85,20 @@ export class WidgetCropper {
         if (!config?.isCropper || !config.outsideOverlay || !config.cropDimensions) {
             return
         }
-        const {left, top, width, height} = config.cropDimensions
+        let {left, top, width, height} = config.cropDimensions
+        const overlayRect = config.outsideOverlay.getBoundingClientRect()
+        if (config.element) {
+            const cropRect = config.element.getBoundingClientRect()
+            left = cropRect.left - overlayRect.left
+            top = cropRect.top - overlayRect.top
+            width = cropRect.width
+            height = cropRect.height
+        }
+        else if (config.container) {
+            const containerRect = config.container.getBoundingClientRect()
+            left = left - containerRect.left
+            top = top - containerRect.top
+        }
         // Ensure dimensions are valid before applying clip-path
         if (Number.isFinite(left) && Number.isFinite(top) && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
             config.outsideOverlay.style.clipPath = this.openWindowInOverlay({left, top, width, height})
