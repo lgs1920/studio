@@ -31,6 +31,7 @@ import ReactECharts                                         from 'echarts-for-re
 import * as echarts                                         from 'echarts/core'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot }                                      from 'valtio'
+import { usePreviewChartResize } from '@Components/MainUI/widgets/editor/usePreviewChartResize'
 
 /**
  * ProfileChart component to render elevation vs distance using ECharts
@@ -309,26 +310,7 @@ export const ProfileChart = ({data, id, width, height, preview = false}) => {
         }
     }, [handleResize, $main, preview])
 
-    useEffect(() => {
-        if (!preview || !_instance.current) {
-            return
-        }
-        const chart = _instance.current.getEchartsInstance()
-        let raf1 = 0
-        let raf2 = 0
-        raf1 = requestAnimationFrame(() => {
-            chart.resize()
-            raf2 = requestAnimationFrame(() => chart.resize())
-        })
-        return () => {
-            if (raf1) {
-                cancelAnimationFrame(raf1)
-            }
-            if (raf2) {
-                cancelAnimationFrame(raf2)
-            }
-        }
-    }, [preview, width, height])
+    usePreviewChartResize(_instance, preview, [width, height])
 
     /**
      * Unit & Dataset Synchronization
