@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-30
+ * Last modified: 2026-01-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,7 +41,7 @@ import { useSnapshot }                                      from 'valtio'
  * @param {number|string} props.height
  * @returns {React.JSX.Element}
  */
-export const ProfileChart = ({data, id, width, height}) => {
+export const ProfileChart = ({data, id, width, height, preview = false}) => {
     const $main = lgs.stores.main
     const main = useSnapshot($main)
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
@@ -225,7 +225,8 @@ export const ProfileChart = ({data, id, width, height}) => {
             ...styles,
             toolbox:  {show: false},
             title:    {show: false},
-            tooltip:  {
+            animation: preview ? false : undefined,
+            tooltip:   preview ? {show: false} : {
                 trigger:     'axis',
                 axisPointer: {type: 'line'},
                 formatter:   (params) => __.ui.profiler.tooltipElevationVsDistance([
@@ -257,14 +258,17 @@ export const ProfileChart = ({data, id, width, height}) => {
             ],
             dataset:  processedDataset,
             series:   series,
-            dataZoom: [{type: 'inside'}],
+            dataZoom:  preview ? [] : [{type: 'inside'}],
         }
-    }, [data, buildSerie, element, getStyleOptions, unitSystem, processedDataset])
+    }, [data, buildSerie, element, getStyleOptions, unitSystem, processedDataset, preview])
 
     /**
      * Handle chart resizing and store state updates
      */
     const handleResize = useCallback(() => {
+        if (preview) {
+            return
+        }
         if (main.components.profile.show && _instance.current) {
             const chart = _instance.current.getEchartsInstance()
             chart.resize()
@@ -278,13 +282,13 @@ export const ProfileChart = ({data, id, width, height}) => {
                 }
             }
         }
-    }, [main.components.profile.show, $main])
+    }, [preview, main.components.profile.show, $main])
 
     /**
      * Life cycle management: Instance registration, events and cleanup
      */
     useEffect(() => {
-        if (!_instance.current) {
+        if (!_instance.current || preview) {
             return
         }
 
@@ -303,7 +307,7 @@ export const ProfileChart = ({data, id, width, height}) => {
             window.removeEventListener('resize', handleResize)
             __.ui.profiler.charts.delete(CHART_ELEVATION_VS_DISTANCE)
         }
-    }, [handleResize, $main])
+    }, [handleResize, $main, preview])
 
     /**
      * Unit & Dataset Synchronization
@@ -363,7 +367,9 @@ export const ProfileChart = ({data, id, width, height}) => {
                 style={{width: '100%', height: '100%'}}
                 opts={{renderer: 'svg'}}
                 ref={_instance}
-                onEvents={{rendered: handleResize}}
+                onEvents={preview ? undefined : {rendered: handleResize}}
+                notMerge={false}
+                lazyUpdate={preview}
             />
         </div>
     )

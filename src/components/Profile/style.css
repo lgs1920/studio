@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-30
+ * Last modified: 2026-01-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -77,6 +77,45 @@
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-xs);
+}
+
+.profile-widget-editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.profile-widget-preview {
+    margin-bottom: 1rem;
+    padding: var(--lgs-gutter-xs);
+    border-radius: var(--sl-border-radius-medium);
+    background-color: var(--sl-panel-background-color);
+    background-image: var(--lgs-profile-preview-bg);
+    background-position: center;
+    background-size: cover;
+}
+
+.profile-widget-preview-surface {
+    display: flex;
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
+    height: 220px;
+    border-radius: var(--sl-border-radius-medium);
+    background: transparent;
+}
+
+.profile-widget-preview-chart {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.profile-widget-editor-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 

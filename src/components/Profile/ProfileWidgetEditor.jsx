@@ -7,17 +7,23 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-01-30
+ * Last modified: 2026-01-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SlColorPicker, SlDivider, SlInput, SlRange, SlSwitch } from '@shoelace-style/shoelace/dist/react'
-import { colord } from 'colord'
-import React, { useCallback, useEffect, useMemo } from 'react'
+import { LGSScrollbars }                                                             from '@Components/MainUI/LGSScrollbars'
+import { DISTANCE, ELEVATION, POINT, TIME }                                          from '@Core/ui/Profiler'
+import {
+    SlColorPicker, SlDivider, SlInput, SlRange, SlSwitch,
+}                                                                                    from '@shoelace-style/shoelace/dist/react'
+import { colord }                                                                    from 'colord'
+import React, { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react'
 import { useSnapshot }                                          from 'valtio'
+import { ProfileChart }                                                              from './ProfileChart'
+import './style.css'
 
 /**
  * Editor for the Profile Widget configuration using a plain Object
@@ -31,8 +37,168 @@ export const ProfileWidgetEditor = ({entity}) => {
     const configuration = useSnapshot($configuration)
     const $element = $configuration.elements?.[entity]
     const element = configuration.elements?.[entity]
+    const widgetStore = useSnapshot(lgs.stores.ui.widget)
+    const profileState = useSnapshot(lgs.stores.main.components.profile)
+    const unitStore = useSnapshot(lgs.settings.unitSystem)
+    const previewRef = useRef(null)
+    const [previewSize, setPreviewSize] = useState({width: 0, height: 0})
 
     const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const previewBg = widgetStore.currentSnapshot?.image || null
+    const previewStyle = useMemo(() => ({
+        '--lgs-profile-preview-bg': previewBg ? `url(${previewBg})` : 'none',
+    }), [previewBg])
+    const previewChartSize = useMemo(() => {
+        const ratio = (profileState.width > 0 && profileState.height > 0)
+                      ? (profileState.width / profileState.height)
+                      : (previewSize.width > 0 && previewSize.height > 0
+                         ? (previewSize.width / previewSize.height)
+                         : (16 / 9))
+        const maxWidth = previewSize.width * 0.8
+        const maxHeight = previewSize.height * 0.8
+        if (!Number.isFinite(ratio) || ratio <= 0 || maxWidth <= 0 || maxHeight <= 0) {
+            return null
+        }
+        let width = maxWidth
+        let height = width / ratio
+        if (height > maxHeight) {
+            height = maxHeight
+            width = height * ratio
+        }
+        return {width, height}
+    }, [profileState.width, profileState.height, previewSize.width, previewSize.height])
+
+    useLayoutEffect(() => {
+        if (!previewRef.current) {
+            return
+        }
+        const updateSize = () => {
+            const rect = previewRef.current.getBoundingClientRect()
+            if (rect.width > 0 && rect.height > 0) {
+                setPreviewSize(prev =>
+                                   (prev.width === rect.width && prev.height === rect.height)
+                                   ? prev
+                                   : {width: rect.width, height: rect.height},
+                )
+            }
+        }
+        updateSize()
+        const observer = new ResizeObserver(updateSize)
+        observer.observe(previewRef.current)
+        return () => observer.disconnect()
+    }, [])
+
+    const realData = useMemo(() => __.ui.profiler?.prepareData(), [profileState.key, unitStore.current])
+    const previewColor = useMemo(() => {
+        return realData?.options?.[0]?.color ?? '#3b82f6'
+    }, [realData])
+
+    const previewBounds = useMemo(() => {
+        if (!realData?.dataset?.length) {
+            return {x: {min: 0, max: 2}, y: {min: 100, max: 260}}
+        }
+        let minX = Infinity
+        let maxX = -Infinity
+        let minY = Infinity
+        let maxY = -Infinity
+        realData.dataset.forEach((dataset) => {
+            dataset.source.forEach((row) => {
+                const x = row?.[0]
+                const y = row?.[1]
+                if (typeof x === 'number') {
+                    minX = Math.min(minX, x)
+                    maxX = Math.max(maxX, x)
+                }
+                if (typeof y === 'number') {
+                    minY = Math.min(minY, y)
+                    maxY = Math.max(maxY, y)
+                }
+            })
+        })
+        if (!Number.isFinite(minX) || !Number.isFinite(maxX) || minX === maxX) {
+            minX = 0
+            maxX = 2
+        }
+        if (!Number.isFinite(minY) || !Number.isFinite(maxY) || minY === maxY) {
+            minY = 100
+            maxY = 260
+        }
+        const round = (value) => Math.round(value * 100) / 100
+        const roundedXMin = round(minX)
+        const roundedXMax = round(maxX)
+        const roundedYMin = round(minY)
+        const roundedYMax = round(maxY)
+        return {
+            x: {min: Math.min(roundedXMin, minX), max: Math.max(roundedXMax, maxX)},
+            y: {min: Math.min(roundedYMin, minY), max: Math.max(roundedYMax, maxY)},
+        }
+    }, [realData])
+
+    const previewEndpoints = useMemo(() => {
+        const firstDataset = realData?.dataset?.[0]
+        const firstRow = firstDataset?.source?.[0]
+        const lastRow = firstDataset?.source?.[firstDataset?.source?.length - 1]
+        return {
+            start: {x: firstRow?.[0], y: firstRow?.[1]},
+            end:   {x: lastRow?.[0], y: lastRow?.[1]},
+        }
+    }, [realData])
+
+    const previewData = useMemo(() => {
+        const unitSystem = unitStore.current
+        const minX = previewBounds.x.min
+        const maxX = previewBounds.x.max
+        const minY = previewBounds.y.min
+        const maxY = previewBounds.y.max
+        const rangeX = maxX - minX
+        const rangeY = maxY - minY
+        const maxAltitude = previewBounds.y.max
+        const points = [
+            {
+                distance:  typeof previewEndpoints.start.x === 'number' ? previewEndpoints.start.x : minX,
+                elevation: typeof previewEndpoints.start.y === 'number' ? previewEndpoints.start.y : minY,
+                latitude:  48.8566,
+                longitude: 2.3522,
+            },
+            {distance: minX + rangeX * 0.18, elevation: maxAltitude, latitude: 48.8575, longitude: 2.3572},
+            {distance: minX + rangeX * 0.36, elevation: minY + rangeY * 0.35, latitude: 48.8584, longitude: 2.3621},
+            {distance: minX + rangeX * 0.52, elevation: maxY - rangeY * 0.15, latitude: 48.8592, longitude: 2.3673},
+            {distance: minX + rangeX * 0.72, elevation: minY + rangeY * 0.6, latitude: 48.8601, longitude: 2.3719},
+            {
+                distance:  typeof previewEndpoints.end.x === 'number' ? previewEndpoints.end.x : maxX,
+                elevation: typeof previewEndpoints.end.y === 'number' ? previewEndpoints.end.y : maxY,
+                latitude:  48.8612,
+                longitude: 2.3761,
+            },
+        ]
+        return {
+            legend:     {data: ['Sample']},
+            dataset:    [
+                {
+                    id:     'sample-track',
+                    source: points.map(point => ([
+                        point.distance,
+                        point.elevation,
+                        null,
+                        {
+                            latitude:  point.latitude,
+                            longitude: point.longitude,
+                            altitude:  point.elevation,
+                            time:      null,
+                        },
+                        unitSystem,
+                    ])),
+                },
+            ],
+            options:    [
+                {color: previewColor, name: 'Sample', dataset: 'sample-track'},
+            ],
+            axisNames:  {x: '', y: ''},
+            dimensions: [DISTANCE, ELEVATION, TIME, POINT],
+            unitSystem,
+            previewBounds,
+        }
+    }, [unitStore.current, previewColor, previewBounds, previewEndpoints])
 
     /**
      * Initialization logic
@@ -155,8 +321,28 @@ export const ProfileWidgetEditor = ({entity}) => {
     }
 
     return (
-        <div className="lgs-card">
-            <section className="widget-background-section">
+        <div className="lgs-card profile-widget-editor">
+            <div className="profile-widget-preview" style={previewStyle}>
+                <div className="profile-widget-preview-surface" ref={previewRef}>
+                    <div className="profile-widget-preview-chart" style={previewChartSize ? {
+                        width:  `${previewChartSize.width}px`,
+                        height: `${previewChartSize.height}px`,
+                    } : undefined}>
+                        {previewChartSize && (
+                            <ProfileChart
+                                preview
+                                data={previewData}
+                                id={entity}
+                                height={previewChartSize.height}
+                                width={previewChartSize.width}
+                            />
+                        )}
+                    </div>
+                </div>
+            </div>
+            <div className="profile-widget-editor-scroll">
+                <LGSScrollbars>
+                    <section className="widget-background-section">
                 <SlSwitch
                     align-right="true"
                     size="x-small"
@@ -344,7 +530,9 @@ export const ProfileWidgetEditor = ({entity}) => {
                         </div>
                     </>
                 }
-            </section>
+                    </section>
+                </LGSScrollbars>
+            </div>
         </div>
     )
 }

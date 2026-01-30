@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-29
- * Last modified: 2026-01-29
+ * Created on: 2026-01-30
+ * Last modified: 2026-01-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -166,7 +166,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     useEffect(() => {
         const handlePreRender = (event) => {
             const {entity} = event.detail
-            if (entity !== config.id || !entity.includes('text-widget')) {
+            if (entity !== config.id) {
                 return
             }
 
